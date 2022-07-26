@@ -712,10 +712,6 @@ public class ColumnFamilyDescriptorBuilder {
       return this;
     }
 
-    /**
-     * @param key Key whose key and value we're to remove from HCD parameters.
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor removeValue(final Bytes key) {
       return setValue(key, (Bytes) null);
     }

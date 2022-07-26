@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,9 +33,6 @@ public class RpcRetryingCallerFactory {
   private final ConnectionConfiguration connectionConf;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
-  /* These below data members are UNUSED!!! */
-  private final boolean enableBackPressure;
-  private ServerStatisticTracker stats;
 
   public RpcRetryingCallerFactory(Configuration conf) {
     this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
@@ -48,15 +44,6 @@ public class RpcRetryingCallerFactory {
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
       AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
-    enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
-      HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
-  }
-
-  /**
-   * Set the tracker that should be used for tracking statistics about the server
-   */
-  public void setStatisticTracker(ServerStatisticTracker statisticTracker) {
-    this.stats = statisticTracker;
   }
 
   /**
@@ -102,9 +89,6 @@ public class RpcRetryingCallerFactory {
       factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
         new Class[] { Configuration.class }, new Object[] { configuration });
     }
-
-    // setting for backwards compat with existing caller factories, rather than in the ctor
-    factory.setStatisticTracker(stats);
     return factory;
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
@@ -73,7 +74,7 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
       // We will fail the call directly if we can not write it out.
       promise.trySuccess();
     } else {
-      ctx.write(msg, promise);
+      NettyFutureUtils.consume(ctx.write(msg, promise));
     }
   }
 
@@ -84,7 +85,7 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
       switch (bcEvt.action) {
         case FLUSH:
           for (Call call : id2Call.values()) {
-            ctx.write(call);
+            NettyFutureUtils.safeWrite(ctx, call);
           }
           break;
         case FAIL:

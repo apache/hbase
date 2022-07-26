@@ -97,6 +97,7 @@ public final class ConnectionUtils {
   }
 
   /**
+   * Inject a nonce generator for testing.
    * @param conn The connection for which to replace the generator.
    * @param cnm  Replaces the nonce generator used, for testing.
    * @return old nonce generator.

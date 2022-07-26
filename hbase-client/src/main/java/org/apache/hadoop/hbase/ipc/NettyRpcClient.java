@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -78,7 +79,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   @Override
   protected void closeInternal() {
     if (shutdownGroupWhenClose) {
-      group.shutdownGracefully();
+      NettyFutureUtils.consume(group.shutdownGracefully());
     }
   }
 }

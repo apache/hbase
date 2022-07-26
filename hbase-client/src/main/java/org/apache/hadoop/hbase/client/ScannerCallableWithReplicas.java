@@ -262,6 +262,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     throw new IOException("Imposible? Arrive at an unreachable line...");
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void updateCurrentlyServingReplica(ScannerCallable scanner, Result[] result,
     AtomicBoolean done, ExecutorService pool) {
     if (done.compareAndSet(false, true)) {
@@ -308,10 +309,10 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   /**
-   * @return true when the most recent RPC response indicated that the response was a heartbeat
-   *         message. Heartbeat messages are sent back from the server when the processing of the
-   *         scan request exceeds a certain time threshold. Heartbeats allow the server to avoid
-   *         timeouts during long running scan operations.
+   * Returns true when the most recent RPC response indicated that the response was a heartbeat
+   * message. Heartbeat messages are sent back from the server when the processing of the scan
+   * request exceeds a certain time threshold. Heartbeats allow the server to avoid timeouts during
+   * long running scan operations.
    */
   public boolean isHeartbeatMessage() {
     return currentScannerCallable != null && currentScannerCallable.isHeartbeatMessage();

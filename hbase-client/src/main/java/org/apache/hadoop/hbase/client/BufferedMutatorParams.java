@@ -147,8 +147,8 @@ public class BufferedMutatorParams implements Cloneable {
   }
 
   /**
-   * @return Name of the class we will use when we construct a {@link BufferedMutator} instance or
-   *         null if default implementation.
+   * Returns Name of the class we will use when we construct a {@link BufferedMutator} instance or
+   * null if default implementation.
    */
   public String getImplementationClassName() {
     return this.implementationClassName;

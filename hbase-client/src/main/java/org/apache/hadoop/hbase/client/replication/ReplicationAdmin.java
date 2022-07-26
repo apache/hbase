@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -65,7 +63,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @InterfaceAudience.Public
 @Deprecated
 public class ReplicationAdmin implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationAdmin.class);
 
   public static final String TNAME = "tableName";
   public static final String CFNAME = "columnFamilyName";

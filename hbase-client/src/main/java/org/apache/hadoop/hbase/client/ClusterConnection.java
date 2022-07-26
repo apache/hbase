@@ -72,6 +72,7 @@ public interface ClusterConnection extends Connection {
   boolean isTableEnabled(TableName tableName) throws IOException;
 
   /**
+   * Check if a table is disabled.
    * @param tableName table name
    * @return true if the table is disabled, false otherwise
    * @throws IOException if a remote or network exception occurs
@@ -95,6 +96,7 @@ public interface ClusterConnection extends Connection {
   HRegionLocation locateRegion(final TableName tableName, final byte[] row) throws IOException;
 
   /**
+   * Clear the region location cache.
    * @deprecated {@link #clearRegionLocationCache()} instead.
    */
   @Deprecated
@@ -179,6 +181,7 @@ public interface ClusterConnection extends Connection {
     final boolean offlined) throws IOException;
 
   /**
+   * Gets the locations of the region in the specified table, <i>tableName</i>, for a given row.
    * @param tableName table to get regions of
    * @param row       the row
    * @param useCache  Should we use the cache to retrieve the region information.
@@ -190,6 +193,7 @@ public interface ClusterConnection extends Connection {
     throws IOException;
 
   /**
+   * Gets the locations of the region in the specified table, <i>tableName</i>, for a given row.
    * @param tableName table to get regions of
    * @param row       the row
    * @param useCache  Should we use the cache to retrieve the region information.
@@ -280,8 +284,8 @@ public interface ClusterConnection extends Connection {
   MetricsConnection getConnectionMetrics();
 
   /**
-   * @return true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
-   *         supports cell blocks.
+   * Returns true when this connection uses a {@link org.apache.hadoop.hbase.codec.Codec} and so
+   * supports cell blocks.
    */
   boolean hasCellBlockSupport();
 

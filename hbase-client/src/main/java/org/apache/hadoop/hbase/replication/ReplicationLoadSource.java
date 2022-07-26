@@ -68,6 +68,7 @@ public final class ReplicationLoadSource {
   }
 
   /**
+   * Get the timestamp of the last shipped operation.
    * @deprecated Since 2.0.0. Will be removed in 3.0.0.
    * @see #getTimestampOfLastShippedOp()
    */

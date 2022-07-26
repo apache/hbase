@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -428,6 +427,8 @@ public class TestAsyncProcess {
             try {
               Thread.sleep(sleep);
             } catch (InterruptedException e) {
+              // Restore interrupt status
+              Thread.currentThread().interrupt();
             }
           }
           return mr;
@@ -525,15 +526,14 @@ public class TestAsyncProcess {
   @Test
   public void testListRowAccess() {
     int count = 10;
-    List<String> values = new LinkedList<>();
+    List<String> values = new ArrayList<>();
     for (int i = 0; i != count; ++i) {
       values.add(String.valueOf(i));
     }
 
-    ListRowAccess<String> taker = new ListRowAccess(values);
+    ListRowAccess<String> taker = new ListRowAccess<>(values);
     assertEquals(count, taker.size());
 
-    int restoreCount = 0;
     int takeCount = 0;
     Iterator<String> it = taker.iterator();
     while (it.hasNext()) {
@@ -1330,7 +1330,7 @@ public class TestAsyncProcess {
     MyAsyncProcess ap = new MyAsyncProcess(conn, copyConf);
     try (HTable ht = (HTable) conn.getTable(DUMMY_TABLE)) {
       ht.multiAp = ap;
-      List<Get> gets = new LinkedList<>();
+      List<Get> gets = new ArrayList<>();
       gets.add(new Get(DUMMY_BYTES_1));
       gets.add(new Get(DUMMY_BYTES_2));
       try {
@@ -1349,7 +1349,7 @@ public class TestAsyncProcess {
       assertEquals(readTimeout, ap.previousTimeout);
       ap.previousTimeout = -1;
 
-      List<Delete> deletes = new LinkedList<>();
+      List<Delete> deletes = new ArrayList<>();
       deletes.add(new Delete(DUMMY_BYTES_1));
       deletes.add(new Delete(DUMMY_BYTES_2));
       ht.delete(deletes);

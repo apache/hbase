@@ -873,6 +873,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
+   * Whether or not the results are partial.
    * @deprecated the word 'partial' ambiguous, use {@link #mayHaveMoreCellsInRow()} instead.
    *             Deprecated since 1.4.0.
    * @see #mayHaveMoreCellsInRow()

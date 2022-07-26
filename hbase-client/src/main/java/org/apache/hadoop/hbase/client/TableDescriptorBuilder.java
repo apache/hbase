@@ -501,6 +501,7 @@ public class TableDescriptorBuilder {
   }
 
   /**
+   * Set the table owner
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
    */
@@ -511,6 +512,7 @@ public class TableDescriptorBuilder {
   }
 
   /**
+   * Set the table owner
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
    */
@@ -1506,6 +1508,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1515,6 +1518,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner.
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1525,6 +1529,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner.
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1543,6 +1548,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Parse the serialized representation of a {@link ModifyableTableDescriptor}
      * @param bytes A pb serialized {@link ModifyableTableDescriptor} instance with pb magic prefix
      * @return An instance of {@link ModifyableTableDescriptor} made from <code>bytes</code> n
      *         * @see #toByteArray()

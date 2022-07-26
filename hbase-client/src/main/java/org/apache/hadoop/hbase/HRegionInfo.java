@@ -221,7 +221,7 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * Construct HRegionInfo with explicit parameters
-   * @param tableName the table descriptor
+   * @param tableName the table name
    * @param startKey  first key in region
    * @param endKey    end of key range
    * @param split     true if this region has split and we have daughter regions regions that may or
@@ -234,37 +234,37 @@ public class HRegionInfo implements RegionInfo {
 
   /**
    * Construct HRegionInfo with explicit parameters
-   * @param tableName the table descriptor
+   * @param tableName the table name
    * @param startKey  first key in region
    * @param endKey    end of key range
    * @param split     true if this region has split and we have daughter regions regions that may or
    *                  may not hold references to this region.
-   * @param regionid  Region id to use. n
+   * @param regionId  Region id to use.
    */
   public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
-    final boolean split, final long regionid) throws IllegalArgumentException {
-    this(tableName, startKey, endKey, split, regionid, DEFAULT_REPLICA_ID);
+    final boolean split, final long regionId) throws IllegalArgumentException {
+    this(tableName, startKey, endKey, split, regionId, DEFAULT_REPLICA_ID);
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
-   * @param tableName the table descriptor
+   * @param tableName the table name
    * @param startKey  first key in region
    * @param endKey    end of key range
    * @param split     true if this region has split and we have daughter regions regions that may or
    *                  may not hold references to this region.
-   * @param regionid  Region id to use.
-   * @param replicaId the replicaId to use n
+   * @param regionId  Region id to use.
+   * @param replicaId the replicaId to use
    */
   public HRegionInfo(final TableName tableName, final byte[] startKey, final byte[] endKey,
-    final boolean split, final long regionid, final int replicaId) throws IllegalArgumentException {
+    final boolean split, final long regionId, final int replicaId) throws IllegalArgumentException {
     super();
     if (tableName == null) {
       throw new IllegalArgumentException("TableName cannot be null");
     }
     this.tableName = tableName;
     this.offLine = false;
-    this.regionId = regionid;
+    this.regionId = regionId;
     this.replicaId = replicaId;
     if (this.replicaId > MAX_REPLICA_ID) {
       throw new IllegalArgumentException("ReplicaId cannot be greater than" + MAX_REPLICA_ID);
@@ -280,7 +280,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Costruct a copy of another HRegionInfo n
+   * Construct a copy of another HRegionInfo
    */
   public HRegionInfo(RegionInfo other) {
     super();
@@ -303,8 +303,10 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Make a region name of passed parameters. n * @param startKey Can be null
-   * @param regionid  Region id (Usually timestamp from when region was created).
+   * Make a region name of passed parameters.
+   * @param tableName the table name
+   * @param startKey  Can be null
+   * @param regionId  Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format (such that it contains its
    *                  encoded name?).
    * @return Region name made of passed tableName, startKey and id
@@ -314,12 +316,14 @@ public class HRegionInfo implements RegionInfo {
   @Deprecated
   @InterfaceAudience.Private
   public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
-    final long regionid, boolean newFormat) {
-    return RegionInfo.createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
+    final long regionId, boolean newFormat) {
+    return RegionInfo.createRegionName(tableName, startKey, Long.toString(regionId), newFormat);
   }
 
   /**
-   * Make a region name of passed parameters. n * @param startKey Can be null
+   * Make a region name of passed parameters.
+   * @param tableName the table name
+   * @param startKey  Can be null
    * @param id        Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format (such that it contains its
    *                  encoded name?).
@@ -335,10 +339,12 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Make a region name of passed parameters. n * @param startKey Can be null
-   * @param regionid Region id (Usually timestamp from when region was created). n * @param
-   *                 newFormat should we create the region name in the new format (such that it
-   *                 contains its encoded name?).
+   * Make a region name of passed parameters.
+   * @param tableName the table name
+   * @param startKey  Can be null
+   * @param regionId  Region id (Usually timestamp from when region was created).
+   * @param newFormat should we create the region name in the new format (such that it contains its
+   *                  encoded name?).
    * @return Region name made of passed tableName, startKey, id and replicaId
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link RegionInfo#createRegionName(TableName, byte[], long, int, boolean)}.
@@ -346,13 +352,15 @@ public class HRegionInfo implements RegionInfo {
   @Deprecated
   @InterfaceAudience.Private
   public static byte[] createRegionName(final TableName tableName, final byte[] startKey,
-    final long regionid, int replicaId, boolean newFormat) {
-    return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionid)),
+    final long regionId, int replicaId, boolean newFormat) {
+    return RegionInfo.createRegionName(tableName, startKey, Bytes.toBytes(Long.toString(regionId)),
       replicaId, newFormat);
   }
 
   /**
-   * Make a region name of passed parameters. n * @param startKey Can be null
+   * Make a region name of passed parameters.
+   * @param tableName the table name
+   * @param startKey  Can be null
    * @param id        Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format (such that it contains its
    *                  encoded name?).
@@ -368,9 +376,11 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
-   * Make a region name of passed parameters. n * @param startKey Can be null
-   * @param id Region id (Usually timestamp from when region was created). n * @param newFormat
-   *           should we create the region name in the new format
+   * Make a region name of passed parameters.
+   * @param tableName the table name
+   * @param startKey  Can be null
+   * @param id        Region id (Usually timestamp from when region was created)
+   * @param newFormat should we create the region name in the new format
    * @return Region name made of passed tableName, startKey, id and replicaId
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link RegionInfo#createRegionName(TableName, byte[], byte[], int, boolean)}.
@@ -546,6 +556,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Set or clear the split status flag.
    * @param split set split status
    */
   public void setSplit(boolean split) {
@@ -684,6 +695,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Serialize a {@link HRegionInfo} into a byte array.
    * @return This instance serialized as protobuf w/ a magic pb prefix.
    * @see #parseFrom(byte[])
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
@@ -695,6 +707,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Parse a serialized representation of a {@link HRegionInfo}.
    * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes
    *         null
    * @see #toByteArray()
@@ -708,6 +721,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Parse a serialized representation of a {@link HRegionInfo}.
    * @return A deserialized {@link HRegionInfo} or null if we failed deserialize or passed bytes
    *         null
    * @see #toByteArray()
@@ -725,6 +739,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Parse a serialized representation of a {@link HRegionInfo}.
    * @param bytes A pb RegionInfo serialized with a pb magic prefix.
    * @return A deserialized {@link HRegionInfo} n * @see #toByteArray()
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
@@ -736,6 +751,7 @@ public class HRegionInfo implements RegionInfo {
   }
 
   /**
+   * Parse a serialized representation of a {@link HRegionInfo}.
    * @param bytes  A pb RegionInfo serialized with a pb magic prefix.
    * @param offset starting point in the byte array
    * @param len    length to read on the byte array

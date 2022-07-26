@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
  * Callable that handles the <code>multi</code> method call going against a single regionserver;
  * i.e. A RegionServerCallable for the multi call (It is NOT a RegionServerCallable that goes
  * against multiple regions).
- * @param <R>
  */
 @InterfaceAudience.Private
 class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse> {

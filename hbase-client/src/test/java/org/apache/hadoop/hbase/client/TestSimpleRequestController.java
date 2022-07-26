@@ -101,7 +101,7 @@ public class TestSimpleRequestController {
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(key, value);
     try {
-      SimpleRequestController controller = new SimpleRequestController(conf);
+      new SimpleRequestController(conf);
       fail("The " + key + " must be bigger than zero");
     } catch (IllegalArgumentException e) {
       // Expected

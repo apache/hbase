@@ -176,6 +176,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Check if a given family name is allowed.
    * @param b Family name.
    * @return <code>b</code>
    * @throws IllegalArgumentException If not null and not a legitimate family name: i.e. 'printable'
@@ -205,19 +206,12 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getNameAsString();
   }
 
-  /**
-   * @param key The key.
-   * @return The value.
-   */
   @Override
   public byte[] getValue(byte[] key) {
     return delegatee.getValue(key);
   }
 
-  /**
-   * @param key The key.
-   * @return The value as a string.
-   */
+  @Override
   public String getValue(String key) {
     byte[] value = getValue(Bytes.toBytes(key));
     return value == null ? null : Bytes.toString(value);
@@ -228,35 +222,22 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getValues();
   }
 
-  /**
-   * @param key   The key.
-   * @param value The value.
-   * @return this (for chained invocation)
-   */
   public HColumnDescriptor setValue(byte[] key, byte[] value) {
     getDelegateeForModification().setValue(key, value);
     return this;
   }
 
-  /**
-   * @param key Key whose key and value we're to remove from HCD parameters.
-   */
   public void remove(final byte[] key) {
     getDelegateeForModification().removeValue(new Bytes(key));
   }
 
-  /**
-   * @param key   The key.
-   * @param value The value.
-   * @return this (for chained invocation)
-   */
   public HColumnDescriptor setValue(String key, String value) {
     getDelegateeForModification().setValue(key, value);
     return this;
   }
 
   /**
-   * @return compression type being used for the column family
+   * Returns compression type being used for the column family
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>). Use
    *             {@link #getCompressionType()}.
@@ -267,7 +248,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @return compression type being used for the column family for major compaction
+   * Returns compression type being used for the column family for major compaction
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
    *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>). Use
    *             {@link #getCompactionCompressionType()}.
@@ -283,6 +264,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set maximum versions to keep
    * @param value maximum number of versions
    * @return this (for chained invocation)
    */
@@ -320,6 +302,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set block size to use when writing
    * @param value Blocksize to use when writing out storefiles/hfiles on this column family.
    * @return this (for chained invocation)
    */
@@ -423,6 +406,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the in memory flag.
    * @param value True if we are to favor keeping all values for this column family in the
    *              HRegionServer cache
    * @return this (for chained invocation)
@@ -438,6 +422,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the in memory compaction policy.
    * @param value the prefered in-memory compaction policy for this column family
    * @return this (for chained invocation)
    */
@@ -452,6 +437,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the keep deleted cells policy.
    * @param value True if deleted rows should not be collected immediately.
    * @return this (for chained invocation)
    */
@@ -481,6 +467,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the time to live of cell contents
    * @param value Time-to-live of cell contents, in seconds.
    * @return this (for chained invocation)
    */
@@ -490,6 +477,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the time to live of cell contents
    * @param value Time to live of cell contents, in human readable format
    * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
    * @return this (for chained invocation)
@@ -505,6 +493,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the minimum number of versions to keep.
    * @param value The minimum number of versions to keep. (used when timeToLive is set)
    * @return this (for chained invocation)
    */
@@ -519,6 +508,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the block cache enabled flag.
    * @param value True if hfile DATA type blocks should be cached (We always cache INDEX and BLOOM
    *              blocks; you cannot turn this off).
    * @return this (for chained invocation)
@@ -534,6 +524,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set the bloom filter type.
    * @param value bloom filter type
    * @return this (for chained invocation)
    */
@@ -547,10 +538,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getScope();
   }
 
-  /**
-   * @param value the scope tag
-   * @return this (for chained invocation)
-   */
   public HColumnDescriptor setScope(int value) {
     getDelegateeForModification().setScope(value);
     return this;
@@ -562,6 +549,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the cache data on write flag.
    * @param value true if we should cache data blocks on write
    * @return this (for chained invocation)
    */
@@ -571,7 +559,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * This is a noop call from HBase 2.0 onwards
+   * Set or clear the cache in L1 flag. This is a noop call from HBase 2.0 onwards
    * @return this (for chained invocation)
    * @deprecated Since 2.0 and will be removed in 3.0 with out any replacement. Caching data in on
    *             heap Cache, when there are both on heap LRU Cache and Bucket Cache will no longer
@@ -588,6 +576,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the cache indexes on write flag.
    * @param value true if we should cache index blocks on write
    * @return this (for chained invocation)
    */
@@ -602,6 +591,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the cache bloom filters on write flag.
    * @param value true if we should cache bloomfilter blocks on write
    * @return this (for chained invocation)
    */
@@ -616,6 +606,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the evict bloom filters on close flag.
    * @param value true if we should evict cached blocks from the blockcache on close
    * @return this (for chained invocation)
    */
@@ -630,6 +621,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Set or clear the prefetch on open flag.
    * @param value true if we should prefetch blocks into the blockcache on open
    * @return this (for chained invocation)
    */
@@ -638,9 +630,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return this;
   }
 
-  /**
-   * @see java.lang.Object#toString()
-   */
   @Override
   public String toString() {
     return delegatee.toString();
@@ -660,9 +649,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return ColumnFamilyDescriptorBuilder.getDefaultValues();
   }
 
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
@@ -674,9 +660,6 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return false;
   }
 
-  /**
-   * @see java.lang.Object#hashCode()
-   */
   @Override
   public int hashCode() {
     return delegatee.hashCode();
@@ -688,7 +671,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * @return This instance serialized with pb with pb magic prefix
+   * Returns This instance serialized with pb with pb magic prefix
    * @see #parseFrom(byte[])
    */
   public byte[] toByteArray() {
@@ -696,6 +679,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
+   * Parse a serialized representation of a {@link HColumnDescriptor}
    * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
    * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code> n * @see
    *         #toByteArray()

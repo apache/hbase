@@ -38,7 +38,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -155,6 +154,7 @@ public class MetaTableAccessor {
   private static final byte SEPARATED_BYTE = 0x00;
 
   @InterfaceAudience.Private
+  @SuppressWarnings("ImmutableEnumChecker")
   public enum QueryType {
     ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
     REGION(HConstants.CATALOG_FAMILY),
@@ -364,8 +364,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Return all regioninfos listed in the 'info:merge*' columns of the
-   *         <code>regionName</code> row.
+   * Returns Return all regioninfos listed in the 'info:merge*' columns of the
+   * <code>regionName</code> row.
    */
   @Nullable
   public static List<RegionInfo> getMergeRegions(Connection connection, byte[] regionName)
@@ -381,8 +381,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
-   *         match the regex 'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
+   * match the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static Map<String, RegionInfo> getMergeRegionsWithName(Cell[] cells) {
@@ -408,8 +408,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match the regex
-   *         'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized regioninfo values taken from column values that match the regex
+   * 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static List<RegionInfo> getMergeRegions(Cell[] cells) {
@@ -418,8 +418,8 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @return True if any merge regions present in <code>cells</code>; i.e. the column in
-   *         <code>cell</code> matches the regex 'info:merge.*'.
+   * Returns True if any merge regions present in <code>cells</code>; i.e. the column in
+   * <code>cell</code> matches the regex 'info:merge.*'.
    */
   public static boolean hasMergeRegions(Cell[] cells) {
     for (Cell cell : cells) {
@@ -483,6 +483,7 @@ public class MetaTableAccessor {
     return getListOfRegionInfos(result);
   }
 
+  @SuppressWarnings("MixedMutabilityReturnType")
   private static List<RegionInfo>
     getListOfRegionInfos(final List<Pair<RegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) {
@@ -496,8 +497,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @param tableName table we're working with
-   * @return start row for scanning META according to query type
+   * Returns start row for scanning META according to query type
    */
   public static byte[] getTableStartRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
@@ -518,8 +518,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @param tableName table we're working with
-   * @return stop row for scanning META according to query type
+   * Returns stop row for scanning META according to query type
    */
   public static byte[] getTableStopRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
@@ -641,9 +640,10 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Get the user regions a given server is hosting.
    * @param connection connection we're using
    * @param serverName server whose regions we're interested in
-   * @return List of user regions installed on this server (does not include catalog regions). n
+   * @return List of user regions installed on this server (does not include catalog regions).
    */
   public static NavigableMap<RegionInfo, Result> getServerUserRegions(Connection connection,
     final ServerName serverName) throws IOException {
@@ -1284,7 +1284,7 @@ public class MetaTableAccessor {
       if (info == null) {
         return true;
       }
-      if (!(info.getTable().equals(tableName))) {
+      if (!info.getTable().equals(tableName)) {
         return false;
       }
       return super.visit(rowResult);
@@ -1321,14 +1321,14 @@ public class MetaTableAccessor {
     if (splitA != null) {
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITA_QUALIFIER)
-        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(RegionInfo.toByteArray(splitA))
-        .build());
+        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+        .setValue(RegionInfo.toByteArray(splitA)).build());
     }
     if (splitB != null) {
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.SPLITB_QUALIFIER)
-        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(RegionInfo.toByteArray(splitB))
-        .build());
+        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+        .setValue(RegionInfo.toByteArray(splitB)).build());
     }
     return put;
   }
@@ -1509,8 +1509,8 @@ public class MetaTableAccessor {
       String qualifier = String.format(HConstants.MERGE_QUALIFIER_PREFIX_STR + "%04d", counter++);
       put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
         .setFamily(HConstants.CATALOG_FAMILY).setQualifier(Bytes.toBytes(qualifier))
-        .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(RegionInfo.toByteArray(ri))
-        .build());
+        .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put)
+        .setValue(RegionInfo.toByteArray(ri)).build());
     }
     return put;
   }
@@ -1852,7 +1852,7 @@ public class MetaTableAccessor {
   public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
     p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
       .setFamily(getCatalogFamily()).setQualifier(HConstants.REGIONINFO_QUALIFIER)
-      .setTimestamp(p.getTimestamp()).setType(Type.Put)
+      .setTimestamp(p.getTimestamp()).setType(Cell.Type.Put)
       // Serialize the Default Replica HRI otherwise scan of hbase:meta
       // shows an info:regioninfo value with encoded name and region
       // name that differs from that of the hbase;meta row.
@@ -1872,8 +1872,8 @@ public class MetaTableAccessor {
         .setQualifier(getStartCodeColumn(replicaId)).setTimestamp(p.getTimestamp())
         .setType(Cell.Type.Put).setValue(Bytes.toBytes(sn.getStartcode())).build())
       .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
-        .setQualifier(getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp()).setType(Type.Put)
-        .setValue(Bytes.toBytes(openSeqNum)).build());
+        .setQualifier(getSeqNumColumn(replicaId)).setTimestamp(p.getTimestamp())
+        .setType(Cell.Type.Put).setValue(Bytes.toBytes(openSeqNum)).build());
   }
 
   private static void writeRegionName(ByteArrayOutputStream out, byte[] regionName) {
@@ -1922,7 +1922,7 @@ public class MetaTableAccessor {
     byte[] value = getParentsBytes(parents);
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(REPLICATION_PARENT_QUALIFIER)
-      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(value).build());
+      .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(value).build());
   }
 
   public static Put makePutForReplicationBarrier(RegionInfo regionInfo, long openSeqNum, long ts)
@@ -1938,7 +1938,7 @@ public class MetaTableAccessor {
   public static void addReplicationBarrier(Put put, long openSeqNum) throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
       .setFamily(HConstants.REPLICATION_BARRIER_FAMILY).setQualifier(HConstants.SEQNUM_QUALIFIER)
-      .setTimestamp(put.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
+      .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(openSeqNum))
       .build());
   }
 
@@ -1946,8 +1946,8 @@ public class MetaTableAccessor {
     CellBuilder builder = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
     return p
       .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
-        .setQualifier(getServerColumn(replicaId)).setTimestamp(p.getTimestamp()).setType(Type.Put)
-        .build())
+        .setQualifier(getServerColumn(replicaId)).setTimestamp(p.getTimestamp())
+        .setType(Cell.Type.Put).build())
       .add(builder.clear().setRow(p.getRow()).setFamily(getCatalogFamily())
         .setQualifier(getStartCodeColumn(replicaId)).setTimestamp(p.getTimestamp())
         .setType(Cell.Type.Put).build())
@@ -2096,7 +2096,7 @@ public class MetaTableAccessor {
   private static Put addSequenceNum(Put p, long openSeqNum, int replicaId) throws IOException {
     return p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
       .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getSeqNumColumn(replicaId))
-      .setTimestamp(p.getTimestamp()).setType(Type.Put).setValue(Bytes.toBytes(openSeqNum))
+      .setTimestamp(p.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(openSeqNum))
       .build());
   }
 }

@@ -408,9 +408,13 @@ public class AsyncMetaTableAccessor {
    *         can't deserialize the result.
    */
   private static Optional<RegionLocations> getRegionLocations(final Result r) {
-    if (r == null) return Optional.empty();
+    if (r == null) {
+      return Optional.empty();
+    }
     Optional<RegionInfo> regionInfo = getHRegionInfo(r, getRegionInfoColumn());
-    if (!regionInfo.isPresent()) return Optional.empty();
+    if (!regionInfo.isPresent()) {
+      return Optional.empty();
+    }
 
     List<HRegionLocation> locations = new ArrayList<HRegionLocation>(1);
     NavigableMap<byte[], NavigableMap<byte[], byte[]>> familyMap = r.getNoVersionMap();
@@ -418,15 +422,18 @@ public class AsyncMetaTableAccessor {
     locations.add(getRegionLocation(r, regionInfo.get(), 0));
 
     NavigableMap<byte[], byte[]> infoMap = familyMap.get(getCatalogFamily());
-    if (infoMap == null) return Optional.of(new RegionLocations(locations));
+    if (infoMap == null) {
+      return Optional.of(new RegionLocations(locations));
+    }
 
     // iterate until all serverName columns are seen
     int replicaId = 0;
     byte[] serverColumn = getServerColumn(replicaId);
-    SortedMap<byte[], byte[]> serverMap = null;
-    serverMap = infoMap.tailMap(serverColumn, false);
+    SortedMap<byte[], byte[]> serverMap = infoMap.tailMap(serverColumn, false);
 
-    if (serverMap.isEmpty()) return Optional.of(new RegionLocations(locations));
+    if (serverMap.isEmpty()) {
+      return Optional.of(new RegionLocations(locations));
+    }
 
     for (Map.Entry<byte[], byte[]> entry : serverMap.entrySet()) {
       replicaId = parseReplicaIdFromServerColumn(entry.getKey());

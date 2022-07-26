@@ -160,6 +160,7 @@ public class SnapshotDescription {
   }
 
   /**
+   * Get the table name as a string.
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #getTableName()} or
    *             {@link #getTableNameAsString()} instead.
    * @see #getTableName()

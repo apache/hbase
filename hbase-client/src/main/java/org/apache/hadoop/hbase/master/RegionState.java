@@ -384,6 +384,7 @@ public class RegionState {
   /**
    * A slower (but more easy-to-read) stringification
    */
+  @SuppressWarnings("JavaUtilDate")
   public String toDescriptiveString() {
     long relTime = EnvironmentEdgeManager.currentTime() - stamp;
     return hri.getRegionNameAsString() + " state=" + state + ", ts=" + new Date(stamp) + " ("

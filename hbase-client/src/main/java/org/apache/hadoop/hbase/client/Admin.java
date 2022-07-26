@@ -268,8 +268,8 @@ public interface Admin extends Abortable, Closeable {
    * Get a table descriptor.
    * @param tableName as a {@link TableName}
    * @return the read-only tableDescriptor
-   * @throws org.apache.hadoop.hbase.TableNotFoundException
-   * @throws IOException                                    if a remote or network exception occurs
+   * @throws TableNotFoundException if the table was not found
+   * @throws IOException            if a remote or network exception occurs
    * @deprecated since 2.0 version and will be removed in 3.0 version. Use
    *             {@link #getDescriptor(TableName)}.
    */

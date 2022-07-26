@@ -166,6 +166,7 @@ public class Append extends Mutation {
    * Add column and value to this Append operation. n * @return This instance
    */
   @SuppressWarnings("unchecked")
+  @Override
   public Append add(final Cell cell) {
     try {
       super.add(cell);

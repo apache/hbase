@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,7 +45,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -782,7 +780,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public HTableDescriptor[] deleteTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
+    List<HTableDescriptor> failed = new ArrayList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       try {
         deleteTable(table.getTableName());
@@ -900,7 +898,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor[] enableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
+    List<HTableDescriptor> failed = new ArrayList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableDisabled(table.getTableName())) {
         try {
@@ -960,7 +958,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public HTableDescriptor[] disableTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> failed = new LinkedList<>();
+    List<HTableDescriptor> failed = new ArrayList<>();
     for (HTableDescriptor table : listTables(pattern)) {
       if (isTableEnabled(table.getTableName())) {
         try {
@@ -1455,6 +1453,7 @@ public class HBaseAdmin implements Admin {
     move(encodedRegionName, (ServerName) null);
   }
 
+  @Override
   public void move(final byte[] encodedRegionName, ServerName destServerName) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
@@ -1557,7 +1556,7 @@ public class HBaseAdmin implements Admin {
       MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
     Map<ServerName,
       List<RegionInfo>> regionInfoByServerName = pairs.stream()
-        .filter(pair -> !(pair.getFirst().isOffline())).filter(pair -> pair.getSecond() != null)
+        .filter(pair -> !pair.getFirst().isOffline()).filter(pair -> pair.getSecond() != null)
         .collect(Collectors.groupingBy(pair -> pair.getSecond(),
           Collectors.mapping(pair -> pair.getFirst(), Collectors.toList())));
 
@@ -2836,7 +2835,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException {
-    List<SnapshotDescription> matched = new LinkedList<>();
+    List<SnapshotDescription> matched = new ArrayList<>();
     List<SnapshotDescription> snapshots = listSnapshots();
     for (SnapshotDescription snapshot : snapshots) {
       if (pattern.matcher(snapshot.getName()).matches()) {
@@ -2857,7 +2856,7 @@ public class HBaseAdmin implements Admin {
     Pattern snapshotNamePattern) throws IOException {
     TableName[] tableNames = listTableNames(tableNamePattern);
 
-    List<SnapshotDescription> tableSnapshots = new LinkedList<>();
+    List<SnapshotDescription> tableSnapshots = new ArrayList<>();
     List<SnapshotDescription> snapshots = listSnapshots(snapshotNamePattern);
 
     List<TableName> listOfTableNames = Arrays.asList(tableNames);
@@ -2959,7 +2958,7 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public List<QuotaSettings> getQuota(QuotaFilter filter) throws IOException {
-    List<QuotaSettings> quotas = new LinkedList<>();
+    List<QuotaSettings> quotas = new ArrayList<>();
     try (QuotaRetriever retriever = QuotaRetriever.open(conf, filter)) {
       Iterator<QuotaSettings> iterator = retriever.iterator();
       while (iterator.hasNext()) {
@@ -3015,21 +3014,6 @@ public class HBaseAdmin implements Admin {
         }
       }
     };
-  }
-
-  /**
-   * Simple {@link Abortable}, throwing RuntimeException on abort.
-   */
-  private static class ThrowableAbortable implements Abortable {
-    @Override
-    public void abort(String why, Throwable e) {
-      throw new RuntimeException(why, e);
-    }
-
-    @Override
-    public boolean isAborted() {
-      return true;
-    }
   }
 
   @Override

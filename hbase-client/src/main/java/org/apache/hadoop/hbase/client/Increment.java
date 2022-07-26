@@ -275,7 +275,7 @@ public class Increment extends Mutation {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Increment)) {
       return false;
     }
     Row other = (Row) obj;

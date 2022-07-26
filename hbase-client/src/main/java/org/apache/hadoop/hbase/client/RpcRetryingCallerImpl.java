@@ -156,7 +156,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         if (duration > callTimeout) {
           String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration + ": "
             + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
-          throw (SocketTimeoutException) (new SocketTimeoutException(msg).initCause(t));
+          throw (SocketTimeoutException) new SocketTimeoutException(msg).initCause(t);
         }
       } finally {
         interceptor.updateFailureInfo(context);
@@ -235,7 +235,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
 
   private int getTimeout(int callTimeout) {
     int timeout = tracker.getRemainingTime(callTimeout);
-    if (timeout <= 0 || rpcTimeout > 0 && rpcTimeout < timeout) {
+    if (timeout <= 0 || (rpcTimeout > 0 && rpcTimeout < timeout)) {
       timeout = rpcTimeout;
     }
     return timeout;

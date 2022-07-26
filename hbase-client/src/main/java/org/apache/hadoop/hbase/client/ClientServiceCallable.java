@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 /**
  * A RegionServerCallable set to use the Client protocol. Also includes some utility methods so can
  * hide protobuf references here rather than have them sprinkled about the code base.
- * @param <T>
  */
 @InterfaceAudience.Private
 public abstract class ClientServiceCallable<T>

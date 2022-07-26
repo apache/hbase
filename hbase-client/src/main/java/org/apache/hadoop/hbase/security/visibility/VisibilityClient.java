@@ -198,10 +198,11 @@ public class VisibilityClient {
   }
 
   /**
-   * Retrieve the list of visibility labels defined in the system. n * @param regex The regular
-   * expression to filter which labels are returned.
-   * @return labels The list of visibility labels defined in the system. n * @deprecated Use
-   *         {@link #listLabels(Connection,String)} instead.
+   * Retrieve the list of visibility labels defined in the system.
+   * @param conf  the configuration to use
+   * @param regex The regular expression to filter which labels are returned.
+   * @return labels The list of visibility labels defined in the system.
+   * @deprecated Use {@link #listLabels(Connection,String)} instead.
    */
   @Deprecated
   public static ListLabelsResponse listLabels(Configuration conf, final String regex)
