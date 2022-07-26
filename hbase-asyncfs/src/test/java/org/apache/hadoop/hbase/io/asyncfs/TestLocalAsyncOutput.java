@@ -50,7 +50,7 @@ public class TestLocalAsyncOutput {
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
 
   @AfterClass
-  public static void tearDownAfterClass() throws IOException {
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.cleanupTestDir();
     GROUP.shutdownGracefully();
   }

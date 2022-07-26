@@ -72,7 +72,7 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     }
 
     try {
-      admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+      admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false).get();
     } catch (Exception ex) {
       getLogger().warn("Merge failed, might be caused by other chaos: " + ex.getMessage());
     }

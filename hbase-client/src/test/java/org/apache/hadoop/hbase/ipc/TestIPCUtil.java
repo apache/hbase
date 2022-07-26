@@ -121,7 +121,7 @@ public class TestIPCUtil {
   }
 
   @Test
-  public void testExecute() throws IOException {
+  public void testExecute() throws Exception {
     EventLoop eventLoop = new DefaultEventLoop();
     MutableInt executed = new MutableInt(0);
     MutableInt numStackTraceElements = new MutableInt(0);
@@ -156,7 +156,7 @@ public class TestIPCUtil {
       });
       FutureUtils.get(future);
     } finally {
-      eventLoop.shutdownGracefully();
+      eventLoop.shutdownGracefully().get();
     }
   }
 }

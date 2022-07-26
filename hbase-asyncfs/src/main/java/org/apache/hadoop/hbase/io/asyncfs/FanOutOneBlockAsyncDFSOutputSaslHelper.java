@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWrite;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleState.READER_IDLE;
 
@@ -448,12 +449,12 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
       size += CodedOutputStream.computeRawVarint32Size(size);
       ByteBuf buf = ctx.alloc().buffer(size);
       proto.writeDelimitedTo(new ByteBufOutputStream(buf));
-      ctx.write(buf);
+      safeWrite(ctx, buf);
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-      ctx.write(ctx.alloc().buffer(4).writeInt(SASL_TRANSFER_MAGIC_NUMBER));
+      safeWrite(ctx, ctx.alloc().buffer(4).writeInt(SASL_TRANSFER_MAGIC_NUMBER));
       sendSaslMessage(ctx, new byte[0]);
       ctx.flush();
       step++;
@@ -642,7 +643,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         cBuf.addComponent(buf);
         cBuf.writerIndex(cBuf.writerIndex() + buf.readableBytes());
       } else {
-        ctx.write(msg);
+        safeWrite(ctx, msg);
       }
     }
 
@@ -656,7 +657,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
         ByteBuf buf = ctx.alloc().ioBuffer(4 + wrapped.length);
         buf.writeInt(wrapped.length);
         buf.writeBytes(wrapped);
-        ctx.write(buf);
+        safeWrite(ctx, buf);
       }
       ctx.flush();
     }

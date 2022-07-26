@@ -91,6 +91,17 @@ public final class FutureUtils {
   }
 
   /**
+   * Log the error if the future indicates any failure.
+   */
+  public static void consume(CompletableFuture<?> future) {
+    addListener(future, (r, e) -> {
+      if (e != null) {
+        LOG.warn("Async operation fails", e);
+      }
+    });
+  }
+
+  /**
    * Return a {@link CompletableFuture} which is same with the given {@code future}, but execute all
    * the callbacks in the given {@code executor}.
    */

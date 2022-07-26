@@ -232,6 +232,7 @@ public class TestWakeUpUnexpectedProcedure {
     UTIL.shutdownMiniCluster();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   @Test
   public void test() throws Exception {
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(NAME).get(0).getRegionInfo();

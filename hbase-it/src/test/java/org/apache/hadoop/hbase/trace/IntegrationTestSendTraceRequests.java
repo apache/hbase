@@ -154,7 +154,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           }
         }
       };
-      service.submit(runnable);
+      service.execute(runnable);
     }
   }
 
@@ -198,7 +198,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
         }
       };
-      service.submit(runnable);
+      service.execute(runnable);
     }
   }
 
