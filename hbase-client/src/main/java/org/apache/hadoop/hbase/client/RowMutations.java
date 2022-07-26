@@ -70,6 +70,7 @@ public class RowMutations implements Row {
   }
 
   /**
+   * Add a mutation
    * @param mutation The data to send.
    * @throws IOException if the row of added mutation doesn't match the original row
    */
@@ -78,6 +79,7 @@ public class RowMutations implements Row {
   }
 
   /**
+   * Add a list of mutations
    * @param mutations The data to send.
    * @throws IOException if the row of added mutation doesn't match the original row
    */

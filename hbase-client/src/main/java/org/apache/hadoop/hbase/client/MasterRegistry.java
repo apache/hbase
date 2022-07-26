@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.util.DNS.ServerType;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.base.Strings;
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
@@ -78,7 +79,8 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   public static Set<ServerName> parseMasterAddrs(Configuration conf) throws UnknownHostException {
     Set<ServerName> masterAddrs = new HashSet<>();
     String configuredMasters = getMasterAddr(conf);
-    for (String masterAddr : configuredMasters.split(MASTER_ADDRS_CONF_SEPARATOR)) {
+    for (String masterAddr : Splitter.onPattern(MASTER_ADDRS_CONF_SEPARATOR)
+      .split(configuredMasters)) {
       HostAndPort masterHostPort =
         HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
       masterAddrs.add(ServerName.valueOf(masterHostPort.toString(), ServerName.NON_STARTCODE));

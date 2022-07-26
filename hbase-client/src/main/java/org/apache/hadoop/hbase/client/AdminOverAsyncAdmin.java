@@ -379,6 +379,7 @@ class AdminOverAsyncAdmin implements Admin {
     return get(admin.balancerSwitch(onOrOff, synchronous));
   }
 
+  @Override
   public BalanceResponse balance(BalanceRequest request) throws IOException {
     return get(admin.balance(request));
   }

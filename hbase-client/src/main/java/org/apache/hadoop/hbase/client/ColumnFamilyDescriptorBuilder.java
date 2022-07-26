@@ -42,9 +42,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 
-/**
- * @since 2.0.0
- */
 @InterfaceAudience.Public
 public class ColumnFamilyDescriptorBuilder {
   // For future backward compatibility
@@ -330,6 +327,7 @@ public class ColumnFamilyDescriptorBuilder {
   }
 
   /**
+   * Check if the column family name is legal.
    * @param b Family name.
    * @return <code>b</code>
    * @throws IllegalArgumentException If not null and not a legitimate family name: i.e. 'printable'
@@ -398,6 +396,7 @@ public class ColumnFamilyDescriptorBuilder {
   }
 
   /**
+   * Serialize the table descriptor to a byte array.
    * @param desc The table descriptor to serialize
    * @return This instance serialized with pb with pb magic prefix
    */
@@ -690,11 +689,6 @@ public class ColumnFamilyDescriptorBuilder {
       return Collections.unmodifiableMap(values);
     }
 
-    /**
-     * @param key   The key.
-     * @param value The value.
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor setValue(byte[] key, byte[] value) {
       return setValue(toBytesOrNull(key, Function.identity()),
         toBytesOrNull(value, Function.identity()));
@@ -708,11 +702,6 @@ public class ColumnFamilyDescriptorBuilder {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
 
-    /**
-     * @param key   The key.
-     * @param value The value.
-     * @return this (for chained invocation)
-     */
     private ModifyableColumnFamilyDescriptor setValue(Bytes key, Bytes value) {
       if (value == null || value.getLength() == 0) {
         values.remove(key);
@@ -749,6 +738,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the maximum number of versions to retain.
      * @param maxVersions maximum number of versions
      * @return this (for chained invocation)
      */
@@ -768,7 +758,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set minimum and maximum versions to keep
+     * Set minimum and maximum versions to keep.
      * @param minVersions minimal number of versions
      * @param maxVersions maximum number of versions
      * @return this (for chained invocation)
@@ -795,10 +785,6 @@ public class ColumnFamilyDescriptorBuilder {
       return getStringOrDefault(BLOCKSIZE_BYTES, Integer::valueOf, DEFAULT_BLOCKSIZE);
     }
 
-    /**
-     * @param s Blocksize to use when writing out storefiles/hfiles on this column family.
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor setBlocksize(int s) {
       return setValue(BLOCKSIZE_BYTES, Integer.toString(s));
     }
@@ -901,6 +887,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the inMemory flag
      * @param inMemory True if we are to favor keeping all values for this column family in the
      *                 HRegionServer cache
      * @return this (for chained invocation)
@@ -915,10 +902,6 @@ public class ColumnFamilyDescriptorBuilder {
         n -> MemoryCompactionPolicy.valueOf(n.toUpperCase()), null);
     }
 
-    /**
-     * @param inMemoryCompaction the prefered in-memory compaction policy for this column family
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor
       setInMemoryCompaction(MemoryCompactionPolicy inMemoryCompaction) {
       return setValue(IN_MEMORY_COMPACTION_BYTES, inMemoryCompaction.name());
@@ -930,10 +913,6 @@ public class ColumnFamilyDescriptorBuilder {
         DEFAULT_KEEP_DELETED);
     }
 
-    /**
-     * @param keepDeletedCells True if deleted rows should not be collected immediately.
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
       return setValue(KEEP_DELETED_CELLS_BYTES, keepDeletedCells.name());
     }
@@ -959,6 +938,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the time to live
      * @param timeToLive Time-to-live of cell contents, in seconds.
      * @return this (for chained invocation)
      */
@@ -967,9 +947,10 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the time to live
      * @param timeToLive Time-to-live of cell contents, in seconds.
      * @return this (for chained invocation)
-     * @throws org.apache.hadoop.hbase.exceptions.HBaseException
+     * @throws org.apache.hadoop.hbase.exceptions.HBaseException exception
      */
     public ModifyableColumnFamilyDescriptor setTimeToLive(String timeToLive) throws HBaseException {
       return setTimeToLive(Integer.parseInt(PrettyPrinter.valueOf(timeToLive, Unit.TIME_INTERVAL)));
@@ -981,6 +962,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set minimum versions to retain.
      * @param minVersions The minimum number of versions to keep. (used when timeToLive is set)
      * @return this (for chained invocation)
      */
@@ -1010,6 +992,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the blockCacheEnabled flag
      * @param blockCacheEnabled True if hfile DATA type blocks should be cached (We always cache
      *                          INDEX and BLOOM blocks; you cannot turn this off).
      * @return this (for chained invocation)
@@ -1034,10 +1017,6 @@ public class ColumnFamilyDescriptorBuilder {
         DEFAULT_REPLICATION_SCOPE);
     }
 
-    /**
-     * @param scope the scope tag
-     * @return this (for chained invocation)
-     */
     public ModifyableColumnFamilyDescriptor setScope(int scope) {
       return setValue(REPLICATION_SCOPE_BYTES, Integer.toString(scope));
     }
@@ -1049,6 +1028,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the setCacheDataOnWrite flag
      * @param value true if we should cache data blocks on write
      * @return this (for chained invocation)
      */
@@ -1063,6 +1043,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the setCacheIndexesOnWrite flag
      * @param value true if we should cache index blocks on write
      * @return this (for chained invocation)
      */
@@ -1077,6 +1058,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the setCacheBloomsOnWrite flag.
      * @param value true if we should cache bloomfilter blocks on write
      * @return this (for chained invocation)
      */
@@ -1091,6 +1073,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the setEvictBlocksOnClose flag.
      * @param value true if we should evict cached blocks from the blockcache on close
      * @return this (for chained invocation)
      */
@@ -1105,6 +1088,7 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
+     * Set the setPrefetchBlocksOnOpen flag
      * @param value true if we should prefetch blocks into the blockcache on open
      * @return this (for chained invocation)
      */
@@ -1232,19 +1216,17 @@ public class ColumnFamilyDescriptorBuilder {
       return COMPARATOR.compare(this, other);
     }
 
-    /**
-     * @return This instance serialized with pb with pb magic prefix
-     * @see #parseFrom(byte[])
-     */
+    /** Returns This instance serialized with pb with pb magic prefix */
     private byte[] toByteArray() {
       return ProtobufUtil.prependPBMagic(ProtobufUtil.toColumnFamilySchema(this).toByteArray());
     }
 
     /**
+     * Parse the serialized representation of a {@link ModifyableColumnFamilyDescriptor}
      * @param bytes A pb serialized {@link ModifyableColumnFamilyDescriptor} instance with pb magic
      *              prefix
      * @return An instance of {@link ModifyableColumnFamilyDescriptor} made from <code>bytes</code>
-     *         n * @see #toByteArray()
+     * @see #toByteArray()
      */
     private static ColumnFamilyDescriptor parseFrom(final byte[] bytes)
       throws DeserializationException {
@@ -1290,8 +1272,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Remove a configuration setting represented by the key from the {@link #configuration} map. n
-     * * @return this (for chained invocation)
+     * Remove a configuration setting represented by the key from the {@link #configuration} map.
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor removeConfiguration(final String key) {
       return setConfiguration(key, null);
@@ -1303,8 +1285,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the encryption algorithm for use with this family n * @return this (for chained
-     * invocation)
+     * Set the encryption algorithm for use with this family
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionType(String algorithm) {
       return setValue(ENCRYPTION_BYTES, algorithm);
@@ -1316,7 +1298,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the raw crypto key attribute for the family n * @return this (for chained invocation)
+     * Set the raw crypto key attribute for the family
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionKey(byte[] keyBytes) {
       return setValue(ENCRYPTION_KEY_BYTES, new Bytes(keyBytes));

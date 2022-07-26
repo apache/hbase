@@ -42,9 +42,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 
-/**
- * @since 2.0.0
- */
 @InterfaceAudience.Private
 public class AccessControlUtil {
   private AccessControlUtil() {
@@ -226,13 +223,12 @@ public class AccessControlUtil {
    */
   public static TablePermission toTablePermission(AccessControlProtos.TablePermission proto) {
     Permission.Action[] actions = toPermissionActions(proto.getActionList());
-    TableName table = null;
-    byte[] qualifier = null;
-    byte[] family = null;
     if (!proto.hasTableName()) {
       throw new IllegalStateException("TableName cannot be empty");
     }
-    table = ProtobufUtil.toTableName(proto.getTableName());
+    TableName table = ProtobufUtil.toTableName(proto.getTableName());
+    byte[] family = null;
+    byte[] qualifier = null;
     if (proto.hasFamily()) {
       family = proto.getFamily().toByteArray();
     }
@@ -265,13 +261,12 @@ public class AccessControlUtil {
     if (proto.getType() == AccessControlProtos.Permission.Type.Table) {
       AccessControlProtos.TablePermission perm = proto.getTablePermission();
       Permission.Action[] actions = toPermissionActions(perm.getActionList());
-      byte[] qualifier = null;
-      byte[] family = null;
-      TableName table = null;
       if (!perm.hasTableName()) {
         throw new IllegalStateException("TableName cannot be empty");
       }
-      table = ProtobufUtil.toTableName(perm.getTableName());
+      TableName table = ProtobufUtil.toTableName(perm.getTableName());
+      byte[] family = null;
+      byte[] qualifier = null;
       if (perm.hasFamily()) {
         family = perm.getFamily().toByteArray();
       }

@@ -208,6 +208,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
    * @param other the locations to merge with
    * @return an RegionLocations object with merged locations or the same object if nothing is merged
    */
+  @SuppressWarnings("ReferenceEquality")
   public RegionLocations mergeLocations(RegionLocations other) {
     assert other != null;
 
@@ -280,6 +281,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
    * @return an RegionLocations object with updated locations or the same object if nothing is
    *         updated
    */
+  @SuppressWarnings("ReferenceEquality")
   public RegionLocations updateLocation(HRegionLocation location, boolean checkForEquals,
     boolean force) {
     assert location != null;

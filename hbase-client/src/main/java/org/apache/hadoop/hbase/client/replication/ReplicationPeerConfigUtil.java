@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -113,8 +114,8 @@ public final class ReplicationPeerConfigUtil {
     }
 
     ReplicationProtos.TableCF.Builder tableCFBuilder = ReplicationProtos.TableCF.newBuilder();
-    String[] tables = tableCFsConfig.split(";");
-    List<ReplicationProtos.TableCF> tableCFList = new ArrayList<>(tables.length);
+    List<String> tables = Splitter.on(';').splitToList(tableCFsConfig);
+    List<ReplicationProtos.TableCF> tableCFList = new ArrayList<>(tables.size());
 
     for (String tab : tables) {
       // 1 ignore empty table config
@@ -124,9 +125,9 @@ public final class ReplicationPeerConfigUtil {
       }
       // 2 split to "table" and "cf1,cf2"
       // for each table: "table#cf1,cf2" or "table"
-      String[] pair = tab.split(":");
-      String tabName = pair[0].trim();
-      if (pair.length > 2 || tabName.length() == 0) {
+      Iterator<String> i = Splitter.on(':').split(tab).iterator();
+      String tabName = i.next().trim();
+      if (tabName.length() == 0) {
         LOG.info("incorrect format:" + tableCFsConfig);
         continue;
       }
@@ -135,16 +136,17 @@ public final class ReplicationPeerConfigUtil {
       // split namespace from tableName
       String ns = "default";
       String tName = tabName;
-      String[] dbs = tabName.split("\\.");
-      if (dbs != null && dbs.length == 2) {
-        ns = dbs[0];
-        tName = dbs[1];
+      List<String> dbs = Splitter.on('.').splitToList(tabName);
+      if (dbs != null && dbs.size() == 2) {
+        Iterator<String> ii = dbs.iterator();
+        ns = ii.next();
+        tName = ii.next();
       }
       tableCFBuilder.setTableName(ProtobufUtil.toProtoTableName(TableName.valueOf(ns, tName)));
 
       // 3 parse "cf1,cf2" part to List<cf>
-      if (pair.length == 2) {
-        String[] cfsList = pair[1].split(",");
+      if (i.hasNext()) {
+        List<String> cfsList = Splitter.on(',').splitToList(i.next());
         for (String cf : cfsList) {
           String cfName = cf.trim();
           if (cfName.length() > 0) {
@@ -241,6 +243,7 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
+   * Parse the serialized representation of a peer configuration.
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
    * @throws DeserializationException deserialization exception
@@ -384,10 +387,9 @@ public final class ReplicationPeerConfigUtil {
   }
 
   /**
-   * @param peerConfig peer config of replication peer
-   * @return Serialized protobuf of <code>peerConfig</code> with pb magic prefix prepended suitable
-   *         for use as content of a this.peersZNode; i.e. the content of PEER_ID znode under
-   *         /hbase/replication/peers/PEER_ID
+   * Returns Serialized protobuf of <code>peerConfig</code> with pb magic prefix prepended suitable
+   * for use as content of a this.peersZNode; i.e. the content of PEER_ID znode under
+   * /hbase/replication/peers/PEER_ID
    */
   public static byte[] toByteArray(final ReplicationPeerConfig peerConfig) {
     byte[] bytes = convert(peerConfig).toByteArray();

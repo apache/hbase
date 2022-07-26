@@ -57,14 +57,18 @@ class ConnectionId {
   }
 
   @Override
+  @SuppressWarnings("ReferenceEquality")
   public boolean equals(Object obj) {
-    if (obj instanceof ConnectionId) {
-      ConnectionId id = (ConnectionId) obj;
-      return address.equals(id.address)
-        && ((ticket != null && ticket.equals(id.ticket)) || (ticket == id.ticket))
-        && Objects.equals(this.serviceName, id.serviceName);
+    if (obj == this) {
+      return true;
     }
-    return false;
+    if (!(obj instanceof ConnectionId)) {
+      return false;
+    }
+    ConnectionId id = (ConnectionId) obj;
+    return address.equals(id.address)
+      && ((ticket != null && ticket.equals(id.ticket)) || (ticket == id.ticket))
+      && Objects.equals(this.serviceName, id.serviceName);
   }
 
   @Override // simply use the default Object#hashcode() ?

@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -102,6 +103,7 @@ public class TestSimpleRequestController {
       new SimpleRequestController(conf);
       fail("The " + key + " must be bigger than zero");
     } catch (IllegalArgumentException e) {
+      // Expected
     }
   }
 
@@ -121,7 +123,7 @@ public class TestSimpleRequestController {
     final int maxConcurrentTasksPerRegion = 1;
     final AtomicLong tasksInProgress = new AtomicLong(0);
     final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    final Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker countChecker =
       new SimpleRequestController.TaskCountChecker(maxTotalConcurrentTasks,
         maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion, tasksInProgress,
@@ -284,7 +286,7 @@ public class TestSimpleRequestController {
     int maxConcurrentTasksPerRegion = 1;
     AtomicLong tasksInProgress = new AtomicLong(0);
     Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker checker = new SimpleRequestController.TaskCountChecker(
       maxTotalConcurrentTasks, maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion,
       tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
@@ -358,10 +360,8 @@ public class TestSimpleRequestController {
       try {
         barrier.await();
         controller.waitForMaximumCurrentTasks(max.get(), 123, 1, null);
-      } catch (InterruptedIOException e) {
+      } catch (InterruptedIOException | InterruptedException | BrokenBarrierException e) {
         Assert.fail(e.getMessage());
-      } catch (InterruptedException | BrokenBarrierException e) {
-        e.printStackTrace();
       }
     };
     // First test that our runnable thread only exits when tasks is zero.

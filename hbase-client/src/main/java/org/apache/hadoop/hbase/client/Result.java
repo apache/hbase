@@ -894,8 +894,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @return the associated statistics about the region from which this was returned. Can be
-   *         <tt>null</tt> if stats are disabled.
+   * Returns the associated statistics about the region from which this was returned. Can be
+   * <tt>null</tt> if stats are disabled.
    */
   public RegionLoadStats getStats() {
     return stats;
