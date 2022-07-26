@@ -35,6 +35,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * summaries" in SIGMOD 2001
  */
 @InterfaceAudience.Private
+@SuppressWarnings("JdkObsolete") // This is a use case for LinkedList
 public class MetricSampleQuantiles {
 
   /**
