@@ -43,10 +43,6 @@ public class MetricsTableAggregateSourceImpl extends BaseSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
-  private void register(MetricsTableSource source) {
-    source.registerMetrics();
-  }
-
   @Override
   public void deleteTableSource(String table) {
     try {

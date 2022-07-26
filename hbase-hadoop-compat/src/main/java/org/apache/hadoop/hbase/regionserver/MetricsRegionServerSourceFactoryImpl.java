@@ -27,10 +27,12 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServerSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   public static enum FactoryStorage {
     INSTANCE;
 
-    private Object aggLock = new Object();
+    private final Object aggLock = new Object();
     private MetricsRegionAggregateSourceImpl regionAggImpl;
     private MetricsUserAggregateSourceImpl userAggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
@@ -46,6 +48,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     }
   }
 
+  @Override
   public synchronized MetricsUserAggregateSourceImpl getUserAggregate() {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.userAggImpl == null) {
@@ -91,6 +94,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
   }
 
+  @Override
   public MetricsIOSource createIO(MetricsIOWrapper wrapper) {
     return new MetricsIOSourceImpl(wrapper);
   }

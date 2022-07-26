@@ -43,6 +43,7 @@ public class MetricsExecutorImpl implements MetricsExecutor {
     }
   }
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum ExecutorSingleton {
     INSTANCE;
 
