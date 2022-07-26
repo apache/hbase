@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security;
 
 import java.util.Base64;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import javax.security.sasl.Sasl;
@@ -65,8 +64,7 @@ public class SaslUtil {
 
   /** Splitting fully qualified Kerberos name into parts */
   public static String[] splitKerberosName(String fullName) {
-    List<String> result = Splitter.onPattern("[/@]").splitToList(fullName);
-    return result.toArray(new String[result.size()]);
+    return Splitter.onPattern("[/@]").splitToStream(fullName).toArray(String[]::new);
   }
 
   public static String encodeIdentifier(byte[] identifier) {
