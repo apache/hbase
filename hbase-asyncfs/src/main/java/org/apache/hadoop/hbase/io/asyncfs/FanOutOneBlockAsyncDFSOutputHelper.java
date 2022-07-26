@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeClose;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
@@ -409,7 +412,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     buffer.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
     buffer.writeByte(Op.WRITE_BLOCK.code);
     proto.writeDelimitedTo(new ByteBufOutputStream(buffer));
-    channel.writeAndFlush(buffer);
+    safeWriteAndFlush(channel, buffer);
   }
 
   private static void initialize(Configuration conf, Channel channel, DatanodeInfo dnInfo,
@@ -418,7 +421,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     throws IOException {
     Promise<Void> saslPromise = channel.eventLoop().newPromise();
     trySaslNegotiate(conf, channel, dnInfo, timeoutMs, client, accessToken, saslPromise);
-    saslPromise.addListener(new FutureListener<Void>() {
+    addListener(saslPromise, new FutureListener<Void>() {
 
       @Override
       public void operationComplete(Future<Void> future) throws Exception {
@@ -462,7 +465,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
       Promise<Channel> promise = eventLoopGroup.next().newPromise();
       futureList.add(promise);
       String dnAddr = dnInfo.getXferAddr(connectToDnViaHostname);
-      new Bootstrap().group(eventLoopGroup).channel(channelClass)
+      addListener(new Bootstrap().group(eventLoopGroup).channel(channelClass)
         .option(CONNECT_TIMEOUT_MILLIS, timeoutMs).handler(new ChannelInitializer<Channel>() {
 
           @Override
@@ -471,7 +474,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
             // channel connected. Leave an empty implementation here because netty does not allow
             // a null handler.
           }
-        }).connect(NetUtils.createSocketAddr(dnAddr)).addListener(new ChannelFutureListener() {
+        }).connect(NetUtils.createSocketAddr(dnAddr)), new ChannelFutureListener() {
 
           @Override
           public void operationComplete(ChannelFuture future) throws Exception {
@@ -593,12 +596,12 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         if (!succ) {
           if (futureList != null) {
             for (Future<Channel> f : futureList) {
-              f.addListener(new FutureListener<Channel>() {
+              addListener(f, new FutureListener<Channel>() {
 
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
                   if (future.isSuccess()) {
-                    future.getNow().close();
+                    safeClose(future.getNow());
                   }
                 }
               });

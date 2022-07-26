@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -684,9 +686,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             }
             final long putStartTime = System.currentTimeMillis();
             final CompletableFuture<Void> putFuture = table.put(put);
-            putFuture.thenRun(() -> {
+            addListener(putFuture, (r, e) -> {
               inflight.decrementAndGet();
-              if (!putFuture.isCompletedExceptionally()) {
+              if (e == null) {
                 output.getCounter(Counts.RPC_TIME_MS)
                   .increment(System.currentTimeMillis() - putStartTime);
                 output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(put.heapSize());
@@ -732,9 +734,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                   }
                   final long incrStartTime = System.currentTimeMillis();
                   final CompletableFuture<Result> incrFuture = table.increment(increment);
-                  incrFuture.thenRun(() -> {
+                  addListener(incrFuture, (r, e) -> {
                     inflight.decrementAndGet();
-                    if (!incrFuture.isCompletedExceptionally()) {
+                    if (e == null) {
                       output.getCounter(Counts.RPC_TIME_MS)
                         .increment(System.currentTimeMillis() - incrStartTime);
                       output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(increment.heapSize());
