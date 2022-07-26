@@ -831,6 +831,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       output.printf(locale, "            99.9%% <= %2.2f%n", snapshot.get999thPercentile());
       output.printf(locale, "             count = %d%n", histogram.getCount());
 
+      // if printStatRanges was enabled with -d arg, below we'll create an approximate histogram
+      // of counts based on the configured ranges in RANGES. Each range of sizes (i.e. <= 50, <=
+      // 100, etc) will have a count printed if any values were seen in that range. If no values
+      // were seen for a range, that range will be excluded to keep the output small.
       if (stats.hasRangeCounts()) {
         long lastVal = 0;
         long lastRange = 0;
