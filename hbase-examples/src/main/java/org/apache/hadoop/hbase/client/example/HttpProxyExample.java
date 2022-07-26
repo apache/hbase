@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client.example;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -71,6 +72,11 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  *
  * Use HTTP GET to fetch data, and use HTTP PUT to put data. Encode the value as the request content
  * when doing PUT.
+ * <p>
+ * Notice that, future class methods will all return a new Future, so you always have one future
+ * that will not been checked, so we need to suppress error-prone "FutureReturnValueIgnored"
+ * warnings on the methods such as join and stop. In your real production code, you should use your
+ * own convenient way to address the warning.
  */
 @InterfaceAudience.Private
 public class HttpProxyExample {
@@ -148,7 +154,7 @@ public class HttpProxyExample {
         resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
       }
       resp.headers().set(HttpHeaderNames.CONTENT_TYPE, "text-plain; charset=UTF-8");
-      ctx.writeAndFlush(resp);
+      safeWriteAndFlush(ctx, resp);
     }
 
     private Params parse(FullHttpRequest req) {
@@ -239,6 +245,7 @@ public class HttpProxyExample {
         }).bind(port).syncUninterruptibly().channel();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void join() {
     serverChannel.closeFuture().awaitUninterruptibly();
   }
@@ -251,6 +258,7 @@ public class HttpProxyExample {
     }
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void stop() throws IOException {
     serverChannel.close().syncUninterruptibly();
     serverChannel = null;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.consume;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -93,9 +94,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException, InterruptedException {
+  public static void tearDown() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
-      EVENT_LOOP_GROUP.shutdownGracefully().sync();
+      EVENT_LOOP_GROUP.shutdownGracefully().get();
     }
     shutdownMiniDFSCluster();
   }
@@ -262,7 +263,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     byte[] b = new byte[50 * 1024 * 1024];
     Bytes.random(b);
     out.write(b);
-    out.flush(false);
+    consume(out.flush(false));
     assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
     assertEquals(b.length, FS.getFileStatus(f).getLen());
