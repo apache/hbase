@@ -52,8 +52,8 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
   }
 
   @AfterClass
-  public static void tearDownAfterClass() {
-    GROUP.shutdownGracefully();
+  public static void tearDownAfterClass() throws Exception {
+    GROUP.shutdownGracefully().get();
   }
 
   @Override
