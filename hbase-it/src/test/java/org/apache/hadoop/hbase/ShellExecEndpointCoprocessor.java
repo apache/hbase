@@ -108,7 +108,7 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
   private void runBackgroundTask(final Shell.ShellCommandExecutor shell,
     final RpcCallback<ShellExecResponse> done) {
     final long sleepDuration = conf.getLong(BACKGROUND_DELAY_MS_KEY, DEFAULT_BACKGROUND_DELAY_MS);
-    backgroundExecutor.submit(() -> {
+    backgroundExecutor.execute(() -> {
       try {
         // sleep first so that the RPC can ACK. race condition here as we have no means of blocking
         // until the IPC response has been acknowledged by the client.

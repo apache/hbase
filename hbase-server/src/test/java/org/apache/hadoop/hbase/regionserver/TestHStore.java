@@ -1284,7 +1284,7 @@ public class TestHStore {
       storeFlushCtx.prepare();
     };
     ExecutorService service = Executors.newSingleThreadExecutor();
-    service.submit(flush);
+    service.execute(flush);
     // we get scanner from pipeline and snapshot but they are empty. -- phase (2/5)
     // this is blocked until we recreate the active memstore -- phase (3/5)
     // we get scanner from active memstore but it is empty -- phase (5/5)
@@ -1321,7 +1321,7 @@ public class TestHStore {
       public void getScanners(MyStore store) throws IOException {
         final long tmpId = id++;
         ExecutorService s = Executors.newSingleThreadExecutor();
-        s.submit(() -> {
+        s.execute(() -> {
           try {
             // flush the store before storescanner updates the scanners from store.
             // The current data will be flushed into files, and the memstore will
