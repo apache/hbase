@@ -156,7 +156,6 @@ public class TestCoprocessorEndpointTracing {
     final CompletableFuture<Map<byte[], String>> future = new CompletableFuture<>();
     final AsyncTable.CoprocessorCallback<EchoResponseProto> callback =
       new AsyncTable.CoprocessorCallback<EchoResponseProto>() {
-        @SuppressWarnings("ArrayAsKeyOfSetOrMap")
         final ConcurrentMap<byte[], String> results = new ConcurrentHashMap<>();
 
         @Override
@@ -265,7 +264,6 @@ public class TestCoprocessorEndpointTracing {
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
       final CoprocessorRpcUtils.BlockingRpcCallback<EchoResponseProto> callback =
         new CoprocessorRpcUtils.BlockingRpcCallback<>();
-      @SuppressWarnings("ArrayAsKeyOfSetOrMap")
       final ConcurrentMap<byte[], EchoResponseProto> results = new ConcurrentHashMap<>();
       TraceUtil.trace(() -> {
         try {
@@ -377,7 +375,6 @@ public class TestCoprocessorEndpointTracing {
       final Descriptors.MethodDescriptor descriptor =
         TestProtobufRpcProto.getDescriptor().findMethodByName("echo");
       final EchoRequestProto request = EchoRequestProto.newBuilder().setMessage("hello").build();
-      @SuppressWarnings("ArrayAsKeyOfSetOrMap")
       final ConcurrentMap<byte[], EchoResponseProto> results = new ConcurrentHashMap<>();
       TraceUtil.trace(() -> {
         try {

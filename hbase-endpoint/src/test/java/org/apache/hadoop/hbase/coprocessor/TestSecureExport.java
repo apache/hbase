@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -80,6 +79,7 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos;
@@ -389,9 +389,7 @@ public class TestSecureExport {
         try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
           Table table = conn.getTable(importHtd.getTableName());
           ResultScanner scanner = table.getScanner(scan)) {
-          MutableInt count = new MutableInt();
-          scanner.forEach((r) -> count.increment());
-          assertEquals(rowCount, count.intValue());
+          assertEquals(rowCount, Iterables.size(scanner));
         }
         return null;
       };
