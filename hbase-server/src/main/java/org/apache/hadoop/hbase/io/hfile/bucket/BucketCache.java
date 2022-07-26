@@ -566,13 +566,16 @@ public class BucketCache implements BlockCache, HeapSize {
   /**
    * This method is invoked after the bucketEntry is removed from {@link BucketCache#backingMap}
    */
-  void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber) {
+  void blockEvicted(BlockCacheKey cacheKey, BucketEntry bucketEntry, boolean decrementBlockNumber,
+    boolean evictedByEvictionProcess) {
     bucketEntry.markAsEvicted();
     blocksByHFile.remove(cacheKey);
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
     }
-    cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
+    if (evictedByEvictionProcess) {
+      cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
+    }
   }
 
   /**
@@ -602,7 +605,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
-    return doEvictBlock(cacheKey, null);
+    return doEvictBlock(cacheKey, null, false);
   }
 
   /**
@@ -614,7 +617,8 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param bucketEntry {@link BucketEntry} matched {@link BlockCacheKey} to evict.
    * @return true to indicate whether we've evicted successfully or not.
    */
-  private boolean doEvictBlock(BlockCacheKey cacheKey, BucketEntry bucketEntry) {
+  private boolean doEvictBlock(BlockCacheKey cacheKey, BucketEntry bucketEntry,
+    boolean evictedByEvictionProcess) {
     if (!cacheEnabled) {
       return false;
     }
@@ -625,14 +629,14 @@ public class BucketCache implements BlockCache, HeapSize {
     final BucketEntry bucketEntryToUse = bucketEntry;
 
     if (bucketEntryToUse == null) {
-      if (existedInRamCache) {
+      if (existedInRamCache && evictedByEvictionProcess) {
         cacheStats.evicted(0, cacheKey.isPrimary());
       }
       return existedInRamCache;
     } else {
       return bucketEntryToUse.withWriteLock(offsetLock, () -> {
         if (backingMap.remove(cacheKey, bucketEntryToUse)) {
-          blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache);
+          blockEvicted(cacheKey, bucketEntryToUse, !existedInRamCache, evictedByEvictionProcess);
           return true;
         }
         return false;
@@ -682,7 +686,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   boolean evictBucketEntryIfNoRpcReferenced(BlockCacheKey blockCacheKey, BucketEntry bucketEntry) {
     if (!bucketEntry.isRpcRef()) {
-      return doEvictBlock(blockCacheKey, bucketEntry);
+      return doEvictBlock(blockCacheKey, bucketEntry, true);
     }
     return false;
   }
@@ -803,7 +807,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * blocks evicted
    * @param why Why we are being called
    */
-  private void freeSpace(final String why) {
+  void freeSpace(final String why) {
     // Ensure only one freeSpace progress at a time
     if (!freeSpaceLock.tryLock()) {
       return;
@@ -997,7 +1001,7 @@ public class BucketCache implements BlockCache, HeapSize {
     BucketEntry previousEntry = backingMap.put(key, bucketEntry);
     if (previousEntry != null && previousEntry != bucketEntry) {
       previousEntry.withWriteLock(offsetLock, () -> {
-        blockEvicted(key, previousEntry, false);
+        blockEvicted(key, previousEntry, false, false);
         return null;
       });
     }
@@ -1148,7 +1152,7 @@ public class BucketCache implements BlockCache, HeapSize {
         final BucketEntry bucketEntry = bucketEntries[i];
         bucketEntry.withWriteLock(offsetLock, () -> {
           if (backingMap.remove(key, bucketEntry)) {
-            blockEvicted(key, bucketEntry, false);
+            blockEvicted(key, bucketEntry, false, false);
           }
           return null;
         });
