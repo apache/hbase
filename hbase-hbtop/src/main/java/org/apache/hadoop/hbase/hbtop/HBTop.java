@@ -120,7 +120,7 @@ public class HBTop extends Configured implements Tool {
         try {
           delay = Integer.parseInt(commandLine.getOptionValue("delay"));
         } catch (NumberFormatException ignored) {
-          delay = 0;
+          // Deliberately ignored, we handle the issue below.
         }
 
         if (delay < 1) {
