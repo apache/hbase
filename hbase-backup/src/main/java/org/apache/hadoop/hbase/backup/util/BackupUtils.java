@@ -283,14 +283,8 @@ public final class BackupUtils {
     if (tables == null) {
       return null;
     }
-    List<String> list =
-      Splitter.onPattern(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND).splitToList(tables);
-    TableName[] ret = new TableName[list.size()];
-    int i = 0;
-    for (String table : list) {
-      ret[i++] = TableName.valueOf(table);
-    }
-    return ret;
+    return Splitter.on(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND).splitToStream(tables)
+      .map(TableName::valueOf).toArray(TableName[]::new);
   }
 
   /**

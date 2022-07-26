@@ -1088,18 +1088,12 @@ public final class BackupCommands {
         throw new IOException(INCORRECT_USAGE);
       }
       super.execute();
-
       String setName = args[2];
-      List<String> tables = Splitter.on(',').splitToList(args[3]);
-      TableName[] tableNames = new TableName[tables.size()];
-      int i = 0;
-      for (String table : tables) {
-        tableNames[i++] = TableName.valueOf(table);
-      }
+      TableName[] tableNames =
+        Splitter.on(',').splitToStream(args[3]).map(TableName::valueOf).toArray(TableName[]::new);
       try (final BackupAdminImpl admin = new BackupAdminImpl(conn)) {
         admin.addToBackupSet(setName, tableNames);
       }
-
     }
 
     private BackupCommand getCommand(String cmdStr) throws IOException {

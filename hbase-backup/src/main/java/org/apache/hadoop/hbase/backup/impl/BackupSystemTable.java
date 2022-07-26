@@ -308,6 +308,7 @@ public final class BackupSystemTable implements Closeable {
   public Map<byte[], List<Path>>[] readBulkLoadedFiles(String backupId, List<TableName> sTableList)
     throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
+    @SuppressWarnings("unchecked")
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
     try (Table table = connection.getTable(bulkLoadTableName);
       ResultScanner scanner = table.getScanner(scan)) {
@@ -1645,7 +1646,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val, StandardCharsets.UTF_8).split(",");
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
@@ -1726,8 +1728,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      List<String> result = Splitter.on(',').splitToList(new String(val, StandardCharsets.UTF_8));
-      return result.toArray(new String[result.size()]);
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
