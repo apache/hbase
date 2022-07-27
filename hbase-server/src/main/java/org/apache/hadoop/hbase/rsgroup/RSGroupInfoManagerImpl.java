@@ -219,7 +219,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       );
     }
 
-    String getRSGroup(String namespace, String tablename) {
+    synchronized String getRSGroup(String namespace, String tablename) {
       if (rsgroupMappingScript == null) {
         return null;
       }
