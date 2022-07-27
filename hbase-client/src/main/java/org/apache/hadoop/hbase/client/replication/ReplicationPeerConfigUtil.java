@@ -125,7 +125,6 @@ public final class ReplicationPeerConfigUtil {
       }
       // 2 split to "table" and "cf1,cf2"
       // for each table: "table#cf1,cf2" or "table"
-      // Iterator<String> i = Splitter.on(':').split(tab).
       List<String> pair = Splitter.on(':').splitToList(tab);
       if (pair.size() > 2) {
         LOG.info("incorrect format:" + tableCFsConfig);
