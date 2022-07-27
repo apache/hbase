@@ -138,11 +138,32 @@ public interface MasterServices extends Server {
   long createSystemTable(final TableDescriptor tableDescriptor) throws IOException;
 
   /**
-   * Delete a table
-   * @param tableName The table name nnn
+   * Delete a table, this is used for backcompitible Unit test.
+   * @param tableName The table name
+   * @param nonceGroup
+   * @param nonce
+   * @throws IOException
    */
-  long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
-    throws IOException;
+  default long deleteTable(
+    final TableName tableName,
+    final long nonceGroup,
+    final long nonce) throws IOException{
+    return deleteTable(tableName, nonceGroup, nonce, true);
+  }
+
+  /**
+   * Delete a table
+   * @param tableName The table name
+   * @param nonceGroup
+   * @param nonce
+   * @param archive
+   * @throws IOException
+   */
+  long deleteTable(
+      final TableName tableName,
+      final long nonceGroup,
+      final long nonce,
+      final boolean archive) throws IOException;
 
   /**
    * Truncate a table
