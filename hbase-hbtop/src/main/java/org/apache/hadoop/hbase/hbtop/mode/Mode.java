@@ -31,6 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Represents a display mode in the top screen.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("ImmutableEnumChecker")
 public enum Mode {
   NAMESPACE("Namespace", "Record per Namespace", new NamespaceModeStrategy()),
   TABLE("Table", "Record per Table", new TableModeStrategy()),
