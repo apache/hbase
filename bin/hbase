@@ -304,7 +304,7 @@ fi
 for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
   if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
      [ "${f}" != "htrace-core.jar$" ] && \
-     [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+     [[ ! "${f}" =~ ^.*/slf4j-reload4j.*$ ]]; then
     CLASSPATH="${CLASSPATH}:${f}"
   fi
 done
@@ -641,7 +641,7 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
     for f in "${HBASE_HOME}"/lib/client-facing-thirdparty/*.jar; do
       if [[ ! "${f}" =~ ^.*/htrace-core-3.*\.jar$ ]] && \
          [ "${f}" != "htrace-core.jar$" ] && \
-         [[ ! "${f}" =~ ^.*/slf4j-log4j.*$ ]]; then
+         [[ ! "${f}" =~ ^.*/slf4j-reload4j.*$ ]]; then
         echo -n ":${f}"
       fi
     done
@@ -773,7 +773,7 @@ fi
 
 HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # by now if we're running a command it means we need logging
-for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j-log4j*.jar; do
+for f in ${HBASE_HOME}/lib/client-facing-thirdparty/slf4j-reload4j*.jar; do
   if [ -f "${f}" ]; then
     CLASSPATH="${CLASSPATH}:${f}"
     break
