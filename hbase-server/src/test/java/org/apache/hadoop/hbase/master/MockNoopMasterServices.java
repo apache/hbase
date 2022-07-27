@@ -261,7 +261,7 @@ public class MockNoopMasterServices implements MasterServices {
       final TableName tableName,
       final boolean preserveSplits,
       final long nonceGroup,
-      final long nonce) throws IOException 
+      final long nonce) throws IOException {
     return -1;
   }
 
