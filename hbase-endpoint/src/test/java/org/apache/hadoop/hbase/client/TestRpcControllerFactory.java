@@ -155,71 +155,70 @@ public class TestRpcControllerFactory {
     // change one of the connection properties so we get a new Connection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
-    Connection connection = ConnectionFactory.createConnection(conf);
-    Table table = connection.getTable(tableName);
-    byte[] row = Bytes.toBytes("row");
-    Put p = new Put(row);
-    p.addColumn(fam1, fam1, Bytes.toBytes("val0"));
-    table.put(p);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(tableName)) {
+        byte[] row = Bytes.toBytes("row");
+        Put p = new Put(row);
+        p.addColumn(fam1, fam1, Bytes.toBytes("val0"));
+        table.put(p);
 
-    Integer counter = 1;
-    counter = verifyCount(counter);
+        Integer counter = 1;
+        counter = verifyCount(counter);
 
-    Delete d = new Delete(row);
-    d.addColumn(fam1, fam1);
-    table.delete(d);
-    counter = verifyCount(counter);
+        Delete d = new Delete(row);
+        d.addColumn(fam1, fam1);
+        table.delete(d);
+        counter = verifyCount(counter);
 
-    Put p2 = new Put(row);
-    p2.addColumn(fam1, Bytes.toBytes("qual"), Bytes.toBytes("val1"));
-    table.batch(Lists.newArrayList(p, p2), null);
-    // this only goes to a single server, so we don't need to change the count here
-    counter = verifyCount(counter);
+        Put p2 = new Put(row);
+        p2.addColumn(fam1, Bytes.toBytes("qual"), Bytes.toBytes("val1"));
+        table.batch(Lists.newArrayList(p, p2), null);
+        // this only goes to a single server, so we don't need to change the count here
+        counter = verifyCount(counter);
 
-    Append append = new Append(row);
-    append.addColumn(fam1, fam1, Bytes.toBytes("val2"));
-    table.append(append);
-    counter = verifyCount(counter);
+        Append append = new Append(row);
+        append.addColumn(fam1, fam1, Bytes.toBytes("val2"));
+        table.append(append);
+        counter = verifyCount(counter);
 
-    // and check the major lookup calls as well
-    Get g = new Get(row);
-    table.get(g);
-    counter = verifyCount(counter);
+        // and check the major lookup calls as well
+        Get g = new Get(row);
+        table.get(g);
+        counter = verifyCount(counter);
 
-    ResultScanner scan = table.getScanner(fam1);
-    scan.next();
-    scan.close();
-    counter = verifyCount(counter + 1);
+        ResultScanner scan = table.getScanner(fam1);
+        scan.next();
+        scan.close();
+        counter = verifyCount(counter + 1);
 
-    Get g2 = new Get(row);
-    table.get(Lists.newArrayList(g, g2));
-    // same server, so same as above for not changing count
-    counter = verifyCount(counter);
+        Get g2 = new Get(row);
+        table.get(Lists.newArrayList(g, g2));
+        // same server, so same as above for not changing count
+        counter = verifyCount(counter);
 
-    // make sure all the scanner types are covered
-    Scan scanInfo = new Scan(row);
-    // regular small
-    scanInfo.setSmall(true);
-    counter = doScan(table, scanInfo, counter);
+        // make sure all the scanner types are covered
+        Scan scanInfo = new Scan(row);
+        // regular small
+        scanInfo.setSmall(true);
+        counter = doScan(table, scanInfo, counter);
 
-    // reversed, small
-    scanInfo.setReversed(true);
-    counter = doScan(table, scanInfo, counter);
+        // reversed, small
+        scanInfo.setReversed(true);
+        counter = doScan(table, scanInfo, counter);
 
-    // reversed, regular
-    scanInfo.setSmall(false);
-    counter = doScan(table, scanInfo, counter + 1);
+        // reversed, regular
+        scanInfo.setSmall(false);
+        doScan(table, scanInfo, counter + 1);
 
-    // make sure we have no priority count
-    verifyPriorityGroupCount(HConstants.ADMIN_QOS, 0);
-    // lets set a custom priority on a get
-    Get get = new Get(row);
-    get.setPriority(HConstants.ADMIN_QOS);
-    table.get(get);
-    verifyPriorityGroupCount(HConstants.ADMIN_QOS, 1);
-
-    table.close();
-    connection.close();
+        // make sure we have no priority count
+        verifyPriorityGroupCount(HConstants.ADMIN_QOS, 0);
+        // lets set a custom priority on a get
+        Get get = new Get(row);
+        get.setPriority(HConstants.ADMIN_QOS);
+        table.get(get);
+        verifyPriorityGroupCount(HConstants.ADMIN_QOS, 1);
+      }
+    }
   }
 
   int doScan(Table table, Scan scan, int expectedCount) throws IOException {

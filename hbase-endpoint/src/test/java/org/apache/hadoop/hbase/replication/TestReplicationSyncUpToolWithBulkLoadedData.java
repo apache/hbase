@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -83,14 +84,13 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     /**
      * Prepare 16 random hfile ranges required for creating hfiles
      */
-    Iterator<String> randomHFileRangeListIterator = null;
     Set<String> randomHFileRanges = new HashSet<>(16);
     for (int i = 0; i < 16; i++) {
-      randomHFileRanges.add(UTIL1.getRandomUUID().toString());
+      randomHFileRanges.add(HBaseTestingUtility.getRandomUUID().toString());
     }
     List<String> randomHFileRangeList = new ArrayList<>(randomHFileRanges);
     Collections.sort(randomHFileRangeList);
-    randomHFileRangeListIterator = randomHFileRangeList.iterator();
+    Iterator<String> randomHFileRangeListIterator = randomHFileRangeList.iterator();
 
     /**
      * at Master: t1_syncup: Load 100 rows into cf1, and 3 rows into norep t2_syncup: Load 200 rows

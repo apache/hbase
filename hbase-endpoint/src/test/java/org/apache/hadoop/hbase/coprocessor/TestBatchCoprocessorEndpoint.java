@@ -126,14 +126,14 @@ public class TestBatchCoprocessorEndpoint {
         builder.build(), ROWS[0], ROWS[ROWS.length - 1],
         ColumnAggregationNullResponseSumResponse.getDefaultInstance());
 
-    int sumResult = 0;
-    int expectedResult = 0;
+    long sumResult = 0;
+    long expectedResult = 0;
     for (Map.Entry<byte[], ColumnAggregationNullResponseSumResponse> e : results.entrySet()) {
       LOG.info(
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = 0; i < rowSeperator2; i++) {
+    for (long i = 0; i < rowSeperator2; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -167,14 +167,14 @@ public class TestBatchCoprocessorEndpoint {
     Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results =
       sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0], ROWS[ROWS.length - 1]);
-    int sumResult = 0;
-    int expectedResult = 0;
+    long sumResult = 0;
+    long expectedResult = 0;
     for (Map.Entry<byte[], SumResponse> e : results.entrySet()) {
       LOG.info(
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = 0; i < ROWSIZE; i++) {
+    for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -190,7 +190,7 @@ public class TestBatchCoprocessorEndpoint {
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = rowSeperator1; i < ROWSIZE; i++) {
+    for (long i = rowSeperator1; i < ROWSIZE; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -202,14 +202,14 @@ public class TestBatchCoprocessorEndpoint {
     Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results =
       sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0], ROWS[ROWS.length - 1]);
-    int sumResult = 0;
-    int expectedResult = 0;
+    long sumResult = 0;
+    long expectedResult = 0;
     for (Map.Entry<byte[], SumResponse> e : results.entrySet()) {
       LOG.info(
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = 0; i < ROWSIZE; i++) {
+    for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -223,7 +223,7 @@ public class TestBatchCoprocessorEndpoint {
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = rowSeperator1; i < ROWSIZE; i++) {
+    for (long i = rowSeperator1; i < ROWSIZE; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -262,14 +262,14 @@ public class TestBatchCoprocessorEndpoint {
       hasError = true;
     }
 
-    int sumResult = 0;
-    int expectedResult = 0;
+    long sumResult = 0;
+    long expectedResult = 0;
     for (Map.Entry<byte[], ColumnAggregationWithErrorsSumResponse> e : results.entrySet()) {
       LOG.info(
         "Got value " + e.getValue().getSum() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue().getSum();
     }
-    for (int i = 0; i < rowSeperator2; i++) {
+    for (long i = 0; i < rowSeperator2; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);

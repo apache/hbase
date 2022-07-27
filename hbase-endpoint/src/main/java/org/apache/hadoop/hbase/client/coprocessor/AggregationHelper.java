@@ -84,7 +84,7 @@ public final class AggregationHelper {
    * @return the instance
    * @throws IOException Either we couldn't instantiate the method object, or "parseFrom" failed.
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   // Used server-side too by Aggregation Coprocesor Endpoint. Undo this interdependence. TODO.
   public static <T extends Message> T getParsedGenericInstance(Class<?> runtimeClass, int position,
     ByteString b) throws IOException {

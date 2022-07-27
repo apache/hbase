@@ -91,6 +91,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
       this.tableName = tableName;
     }
 
+    @Override
     public void doAnAction() throws Exception {
       long iteration = numBulkLoads.getAndIncrement();
       Path dir = UTIL.getDataTestDirOnTestFS(String.format("bulkLoad_%08d", iteration));
@@ -118,8 +119,8 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
           LOG.debug("Going to connect to server " + getLocation() + " for row "
             + Bytes.toStringBinary(getRow()));
           try (Table table = conn.getTable(getTableName())) {
-            boolean loaded = new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths, null,
-              bulkToken, getLocation().getRegionInfo().getStartKey());
+            new SecureBulkLoadEndpointClient(table).bulkLoadHFiles(famPaths, null, bulkToken,
+              getLocation().getRegionInfo().getStartKey());
           }
           return null;
         }
@@ -150,6 +151,7 @@ public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionS
     }
   }
 
+  @Override
   void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
     throws Exception {
     setupTable(tableName, 10);

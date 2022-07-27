@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Scan;
@@ -50,12 +51,12 @@ import org.slf4j.LoggerFactory;
  * aggregate function at a region level. {@link ColumnInterpreter} is used to interpret column
  * value. This class is parameterized with the following (these are the types with which the
  * {@link ColumnInterpreter} is parameterized, and for more description on these, refer to
- * {@link ColumnInterpreter}):
- * @param <T> Cell value data type
- * @param <S> Promoted data type
- * @param <P> PB message that is used to transport initializer specific bytes
- * @param <Q> PB message that is used to transport Cell (&lt;T&gt;) instance
- * @param <R> PB message that is used to transport Promoted (&lt;S&gt;) instance
+ * {@link ColumnInterpreter}):<br>
+ * &lt;T&gt; Cell value data type<br>
+ * &lt;S&gt; Promoted data type<br>
+ * &lt;P&gt; PB message that is used to transport initializer specific bytes<br>
+ * &lt;Q&gt; PB message that is used to transport Cell (&lt;T&gt;) instance<br>
+ * &lt;R&gt; PB message that is used to transport Promoted (&lt;S&gt;) instance<br>
  */
 @InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message>
@@ -107,10 +108,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     log.info("Maximum from this region is "
@@ -160,10 +158,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     log.info("Minimum from this region is "
@@ -216,10 +211,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     log.debug("Sum from this region is " + env.getRegion().getRegionInfo().getRegionNameAsString()
@@ -267,10 +259,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     log.info("Row counter from this region is "
@@ -331,10 +320,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
@@ -397,10 +383,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
@@ -462,10 +445,7 @@ public class AggregateImplementation<T, S, P extends Message, Q extends Message,
       CoprocessorRpcUtils.setControllerException(controller, e);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
