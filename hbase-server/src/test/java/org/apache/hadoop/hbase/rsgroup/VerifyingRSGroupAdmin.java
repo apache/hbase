@@ -178,6 +178,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.deleteTableAsync(tableName);
   }
 
+  @Override public Future<Void> deleteTableAsync(TableName tableName, boolean archive)
+    throws IOException {
+    return admin.deleteTableAsync(tableName, archive);
+  }
+
   public Future<Void> truncateTableAsync(TableName tableName, boolean preserveSplits)
     throws IOException {
     return admin.truncateTableAsync(tableName, preserveSplits);

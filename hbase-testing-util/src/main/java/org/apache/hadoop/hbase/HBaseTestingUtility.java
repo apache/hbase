@@ -1857,6 +1857,20 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Drop an existing table
    * @param tableName existing table
+   * @param archive if archive the table
+   */
+  public void deleteTable(TableName tableName, boolean archive) throws IOException {
+    try {
+      getAdmin().disableTable(tableName);
+    } catch (TableNotEnabledException e) {
+      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+    }
+    getAdmin().deleteTable(tableName, archive);
+  }
+
+  /**
+   * Drop an existing table
+   * @param tableName existing table
    */
   public void deleteTableIfAny(TableName tableName) throws IOException {
     try {

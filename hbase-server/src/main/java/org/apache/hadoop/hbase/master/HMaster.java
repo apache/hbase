@@ -2342,12 +2342,40 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return tableName.equals(TableName.META_TABLE_NAME);
   }
 
+  private void checkSnapshot(TableName tableName, boolean archive) throws IOException{
+    /*
+    * If decide to delete the table without archive, need to make sure the table has no snapshot
+    * Meanwhile, the check will scan the snapshots which will do list and open, if there is lots
+    * of snapshot, the performance may be impacted, should evaluate the performance between directly
+    * archive and snapshot scan
+    * TODO: find some any way to get if the table snapshotted or not
+    */
+    if(!archive){
+      LOG.debug("Scan the snapshot to check if there is snapshot for:"
+        + tableName.getNameAsString());
+
+      //List all the snapshots
+      List<SnapshotDescription> snapShotslist = snapshotManager.getCompletedSnapshots();
+      List<String> tableList = snapShotslist.stream().map(n -> n.getTable()).
+        filter(c -> c.equals(tableName.getNameAsString())).
+        collect(Collectors.toList());
+      if(!tableList.isEmpty() || snapshotManager.isTakingSnapshot(tableName)){
+        throw new DoNotRetryIOException("There is snapshot for the table and archive is needed");
+      }
+    }
+  }
+
   @Override
   public long deleteTable(
       final TableName tableName,
       final long nonceGroup,
-      final long nonce) throws IOException {
+      final long nonce,
+      final boolean archive) throws IOException {
     checkInitialized();
+
+    //Check if there is snapshot for the table if without archive called for deleteTable
+    checkSnapshot(tableName,archive);
+
 
     return MasterProcedureUtil.submitProcedure(
         new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
@@ -2363,7 +2391,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         // checks. This will block only the beginning of the procedure. See HBASE-19953.
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
         submitProcedure(new DeleteTableProcedure(procedureExecutor.getEnvironment(),
-            tableName, latch));
+            tableName, latch, archive));
         latch.await();
 
         getMaster().getMasterCoprocessorHost().postDeleteTable(tableName);

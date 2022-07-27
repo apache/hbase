@@ -185,6 +185,11 @@ class AdminOverAsyncAdmin implements Admin {
     return admin.deleteTable(tableName);
   }
 
+  @Override public Future<Void> deleteTableAsync(TableName tableName, boolean archive)
+    throws IOException {
+    return admin.deleteTable(tableName, archive);
+  }
+
   @Override
   public Future<Void> truncateTableAsync(TableName tableName, boolean preserveSplits)
       throws IOException {

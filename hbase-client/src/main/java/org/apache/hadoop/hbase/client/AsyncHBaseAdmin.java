@@ -147,8 +147,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> deleteTable(TableName tableName) {
-    return wrap(rawAdmin.deleteTable(tableName));
+  public CompletableFuture<Void> deleteTable(TableName tableName, boolean archive) {
+    return wrap(rawAdmin.deleteTable(tableName, archive));
   }
 
   @Override
