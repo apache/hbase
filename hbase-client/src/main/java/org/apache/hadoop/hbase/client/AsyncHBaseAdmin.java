@@ -150,11 +150,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> deleteTable(TableName tableName, boolean archive) {
     return wrap(rawAdmin.deleteTable(tableName, archive));
   }
-  
+
+  @Override
   public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
     return wrap(rawAdmin.modifyTableStoreFileTracker(tableName, dstSFT));
   }
-
 
   @Override
   public CompletableFuture<Void> truncateTable(TableName tableName, boolean preserveSplits) {

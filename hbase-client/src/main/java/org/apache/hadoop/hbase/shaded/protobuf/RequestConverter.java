@@ -1017,11 +1017,8 @@ public final class RequestConverter {
   /**
    * Creates a protocol buffer DeleteTableRequest n * @return a DeleteTableRequest
    */
-  public static DeleteTableRequest buildDeleteTableRequest(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce,
-      final boolean archive) {
+  public static DeleteTableRequest buildDeleteTableRequest(final TableName tableName,
+    final long nonceGroup, final long nonce, final boolean archive) {
     DeleteTableRequest.Builder builder = DeleteTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setNonceGroup(nonceGroup);

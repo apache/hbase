@@ -1813,7 +1813,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Drop an existing table
    * @param tableName existing table
-   * @param archive if archive the table
+   * @param archive   if archive the table
    */
   public void deleteTable(TableName tableName, boolean archive) throws IOException {
     try {
