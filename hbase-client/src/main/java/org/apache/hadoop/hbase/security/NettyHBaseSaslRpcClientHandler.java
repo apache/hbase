@@ -93,7 +93,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       LOG.trace("SASL negotiation for {} is complete", provider.getSaslAuthMethod().getName());
     }
     ChannelPipeline p = ctx.pipeline();
-    saslRpcClient.setupSaslHandler(ctx.pipeline());
+    saslRpcClient.setupSaslHandler(p);
     p.remove(SaslChallengeDecoder.class);
     p.remove(this);
 
