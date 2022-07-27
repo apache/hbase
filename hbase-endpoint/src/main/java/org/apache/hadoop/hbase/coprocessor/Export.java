@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -111,6 +110,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     return run(conf, arguments.getFirst(), arguments.getSecond(), arguments.getThird());
   }
 
+  @SuppressWarnings("ModifiedButNotUsed")
   public static Map<byte[], Response> run(final Configuration conf, TableName tableName, Scan scan,
     Path dir) throws Throwable {
     FileSystem fs = dir.getFileSystem(conf);
@@ -127,7 +127,6 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
         table.coprocessorService(ExportProtos.ExportService.class, scan.getStartRow(),
           scan.getStopRow(), (ExportProtos.ExportService service) -> {
             ServerRpcController controller = new ServerRpcController();
-            Map<byte[], ExportProtos.ExportResponse> rval = new TreeMap<>(Bytes.BYTES_COMPARATOR);
             CoprocessorRpcUtils.BlockingRpcCallback<ExportProtos.ExportResponse> rpcCallback =
               new CoprocessorRpcUtils.BlockingRpcCallback<>();
             service.export(controller, request, rpcCallback);
@@ -192,7 +191,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
 
   private static List<SequenceFile.Writer.Option> getWriterOptions(final Configuration conf,
     final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
-    List<SequenceFile.Writer.Option> rval = new LinkedList<>();
+    List<SequenceFile.Writer.Option> rval = new ArrayList<>(5);
     rval.add(SequenceFile.Writer.keyClass(ImmutableBytesWritable.class));
     rval.add(SequenceFile.Writer.valueClass(Result.class));
     rval.add(getOutputPath(conf, info, request));
