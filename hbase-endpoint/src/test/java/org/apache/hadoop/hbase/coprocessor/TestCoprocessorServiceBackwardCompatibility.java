@@ -57,11 +57,11 @@ public class TestCoprocessorServiceBackwardCompatibility {
     implements CoprocessorService, SingletonCoprocessorService {
     // depending on the value passed thru DummyRequest, the following fields would be incremented
     // value == MASTER
-    static int numMaster = 0;
+    static long numMaster = 0;
     // value == REGIONSERVER
-    static int numRegionServer = 0;
+    static long numRegionServer = 0;
     // value == REGION
-    static int numRegion = 0;
+    static long numRegion = 0;
 
     @Override
     public Service getService() {

@@ -108,7 +108,7 @@ public class TestRowProcessorEndpoint {
   private final AtomicInteger failures = new AtomicInteger(0);
 
   private static HBaseTestingUtility util = new HBaseTestingUtility();
-  private static volatile int expectedCounter = 0;
+  private static AtomicInteger expectedCounter = new AtomicInteger();
   private static int rowSize, row2Size;
 
   private volatile static Table table = null;
@@ -348,11 +348,11 @@ public class TestRowProcessorEndpoint {
         counter = kvs.isEmpty() ? 0 : Bytes.toInt(CellUtil.cloneValue(kvs.iterator().next()));
 
         // Assert counter value
-        assertEquals(expectedCounter, counter);
+        assertEquals(expectedCounter.get(), counter);
 
         // Increment counter and send it to both memstore and wal edit
         counter += 1;
-        expectedCounter += 1;
+        expectedCounter.incrementAndGet();
 
         Put p = new Put(row);
         KeyValue kv = new KeyValue(row, FAM, COUNTER, now, Bytes.toBytes(counter));
@@ -581,6 +581,7 @@ public class TestRowProcessorEndpoint {
         this.row = row;
       }
 
+      @Override
       public Collection<byte[]> getRowsToLock() {
         return Collections.singleton(row);
       }

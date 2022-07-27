@@ -692,10 +692,9 @@ public class AggregationClient implements Closeable {
   public <R, S, P extends Message, Q extends Message, T extends Message> double
     std(final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<List<S>, Long> p = getStdArgs(table, ci, scan);
-    double res = 0d;
     double avg = ci.divideForAvg(p.getFirst().get(0), p.getSecond());
     double avgOfSumSq = ci.divideForAvg(p.getFirst().get(1), p.getSecond());
-    res = avgOfSumSq - (avg) * (avg); // variance
+    double res = avgOfSumSq - avg * avg; // variance
     res = Math.pow(res, 0.5);
     return res;
   }
@@ -868,14 +867,6 @@ public class AggregationClient implements Closeable {
   }
 
   byte[] getBytesFromResponse(ByteString response) {
-    ByteBuffer bb = response.asReadOnlyByteBuffer();
-    bb.rewind();
-    byte[] bytes;
-    if (bb.hasArray()) {
-      bytes = bb.array();
-    } else {
-      bytes = response.toByteArray();
-    }
-    return bytes;
+    return response.toByteArray();
   }
 }
