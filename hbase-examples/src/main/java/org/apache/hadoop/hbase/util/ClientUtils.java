@@ -110,16 +110,12 @@ public final class ClientUtils {
   }
 
   /**
-   * Helper to translate byte[]s to UTF8 strings
+   * Helper to translate a byte buffer to UTF8 strings
    * @param buf byte buffer
    * @return UTF8 decoded string value
    */
   public static String utf8(final ByteBuffer buf) {
-    try {
-      return Bytes.toString(buf);
-    } catch (IllegalArgumentException e) {
-      return "[INVALID UTF-8]";
-    }
+    return buf.toString();
   }
 
 }

@@ -485,28 +485,14 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Returns String made from <code>b</code>
+   * @param b Presumed UTF-8 encoded byte array.
+   * @return String made from <code>b</code>
    */
   public static String toString(final byte[] b) {
     if (b == null) {
       return null;
     }
     return toString(b, 0, b.length);
-  }
-
-  /**
-   * Returns String made from <code>b</code>
-   */
-  public static String toString(ByteBuffer buf) {
-    if (buf == null) {
-      return null;
-    }
-    if (!buf.hasArray()) {
-      buf = ByteBuffer.wrap(buf.array(), buf.arrayOffset(), buf.remaining());
-      return toString(buf.array());
-    } else {
-      return toString(buf.array(), buf.arrayOffset(), buf.remaining());
-    }
   }
 
   /**
@@ -2446,5 +2432,4 @@ public class Bytes implements Comparable<Bytes> {
     }
     return result;
   }
-
 }
