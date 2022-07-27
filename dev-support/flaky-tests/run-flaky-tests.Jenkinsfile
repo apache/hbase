@@ -46,13 +46,14 @@ pipeline {
         sh '''#!/usr/bin/env bash
           set -e
           declare -a curl_args=(--fail)
-          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository")
+          tmpdir=$(realpath target)
+          declare -a mvn_args=(--batch-mode -fn -Dbuild.id="${BUILD_ID}" -Dmaven.repo.local="${WORKSPACE}/local-repository" -Djava.io.tmpdir=${tmpdir})
           if [ "${DEBUG}" = "true" ]; then
             curl_args=("${curl_args[@]}" -v)
             mvn_args=("${mvn_args[@]}" -X)
             set -x
           fi
-          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
+          curl "${curl_args[@]}" -o includes.txt "${JENKINS_URL}/job/HBase-Find-Flaky-Tests/job/${BRANCH_NAME}/lastSuccessfulBuild/artifact/output/includes"
           if [ -s includes.txt ]; then
             rm -rf local-repository/org/apache/hbase
             mvn clean "${mvn_args[@]}"

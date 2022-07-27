@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -50,15 +48,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
-import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 @InterfaceAudience.Private
-public class DeleteTableProcedure
-    extends AbstractStateMachineTableProcedure<DeleteTableState> {
+public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<DeleteTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(DeleteTableProcedure.class);
 
   private List<RegionInfo> regions;
@@ -88,7 +86,7 @@ public class DeleteTableProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, DeleteTableState state)
-      throws InterruptedException {
+    throws InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -212,8 +210,7 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData.Builder state =
@@ -221,7 +218,7 @@ public class DeleteTableProcedure
         .setUserInfo(MasterProcedureUtil.toProtoUserInfo(getUser()))
         .setTableName(ProtobufUtil.toProtoTableName(tableName));
     if (regions != null) {
-      for (RegionInfo hri: regions) {
+      for (RegionInfo hri : regions) {
         state.addRegionInfo(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -229,19 +226,18 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.DeleteTableStateData state =
-        serializer.deserialize(MasterProcedureProtos.DeleteTableStateData.class);
+      serializer.deserialize(MasterProcedureProtos.DeleteTableStateData.class);
     setUser(MasterProcedureUtil.toUserInfo(state.getUserInfo()));
     tableName = ProtobufUtil.toTableName(state.getTableName());
     if (state.getRegionInfoCount() == 0) {
       regions = null;
     } else {
       regions = new ArrayList<>(state.getRegionInfoCount());
-      for (HBaseProtos.RegionInfo hri: state.getRegionInfoList()) {
+      for (HBaseProtos.RegionInfo hri : state.getRegionInfoList()) {
         regions.add(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -250,15 +246,14 @@ public class DeleteTableProcedure
   private boolean prepareDelete(final MasterProcedureEnv env) throws IOException {
     try {
       env.getMasterServices().checkTableModifiable(tableName);
-    } catch (TableNotFoundException|TableNotDisabledException e) {
+    } catch (TableNotFoundException | TableNotDisabledException e) {
       setFailure("master-delete-table", e);
       return false;
     }
     return true;
   }
 
-  private boolean preDelete(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+  private boolean preDelete(final MasterProcedureEnv env) throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final TableName tableName = this.tableName;
@@ -267,8 +262,7 @@ public class DeleteTableProcedure
     return true;
   }
 
-  private void postDelete(final MasterProcedureEnv env)
-      throws IOException, InterruptedException {
+  private void postDelete(final MasterProcedureEnv env) throws IOException, InterruptedException {
     deleteTableStates(env, tableName);
 
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
@@ -278,9 +272,8 @@ public class DeleteTableProcedure
     }
   }
 
-  protected static void deleteFromFs(final MasterProcedureEnv env,
-      final TableName tableName, final List<RegionInfo> regions,
-      final boolean archive) throws IOException {
+  protected static void deleteFromFs(final MasterProcedureEnv env, final TableName tableName,
+    final List<RegionInfo> regions, final boolean archive) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final FileSystem fs = mfs.getFileSystem();
 
@@ -294,16 +287,15 @@ public class DeleteTableProcedure
           if (RegionReplicaUtil.isDefaultReplica(region)) {
             regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, region));
             List<RegionInfo> mergeRegions =
-                env.getAssignmentManager().getRegionStateStore().getMergeRegions(region);
+              env.getAssignmentManager().getRegionStateStore().getMergeRegions(region);
             if (!CollectionUtils.isEmpty(mergeRegions)) {
-              mergeRegions.stream().forEach(
-                r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
+              mergeRegions.stream()
+                .forEach(r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));
             }
           }
         }
-        HFileArchiver
-          .archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
-            regionDirList);
+        HFileArchiver.archiveRegions(env.getMasterConfiguration(), fs, mfs.getRootDir(), tableDir,
+          regionDirList);
         if (!regionDirList.isEmpty()) {
           LOG.debug("Archived {} regions", tableName);
         }
@@ -362,15 +354,15 @@ public class DeleteTableProcedure
         deletes.add(new Delete(result.getRow(), now));
       }
       if (!deletes.isEmpty()) {
-        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from " +
-          TableName.META_TABLE_NAME);
+        LOG.warn("Deleting some vestigial " + deletes.size() + " rows of " + tableName + " from "
+          + TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }
   }
 
   protected static void deleteFromMeta(final MasterProcedureEnv env, final TableName tableName,
-      List<RegionInfo> regions) throws IOException {
+    List<RegionInfo> regions) throws IOException {
     // Clean any remaining rows for this table.
     cleanRegionsInMeta(env, tableName);
 
@@ -387,7 +379,7 @@ public class DeleteTableProcedure
   }
 
   protected static void deleteAssignmentState(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+    final TableName tableName) throws IOException {
     // Clean up regions of the table in RegionStates.
     LOG.debug("Removing '" + tableName + "' from region states.");
     env.getMasterServices().getAssignmentManager().deleteTable(tableName);
@@ -398,13 +390,13 @@ public class DeleteTableProcedure
   }
 
   protected static void deleteTableDescriptorCache(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+    final TableName tableName) throws IOException {
     LOG.debug("Removing '" + tableName + "' descriptor.");
     env.getMasterServices().getTableDescriptors().remove(tableName);
   }
 
   protected static void deleteTableStates(final MasterProcedureEnv env, final TableName tableName)
-      throws IOException {
+    throws IOException {
     if (!tableName.isSystemTable()) {
       ProcedureSyncWait.getMasterQuotaManager(env).removeTableFromNamespaceQuota(tableName);
     }

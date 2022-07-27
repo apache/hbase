@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.util.Objects;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -30,7 +29,8 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class DelayedUtil {
-  private DelayedUtil() { }
+  private DelayedUtil() {
+  }
 
   /**
    * Add a timeout to a Delay
@@ -74,11 +74,9 @@ public final class DelayedUtil {
     }
   };
 
-  /**
-   * @return null (if an interrupt) or an instance of E; resets interrupt on calling thread.
-   */
+  /** Returns null (if an interrupt) or an instance of E; resets interrupt on calling thread. */
   public static <E extends Delayed> E takeWithoutInterrupt(final DelayQueue<E> queue,
-      final long timeout, final TimeUnit timeUnit) {
+    final long timeout, final TimeUnit timeUnit) {
     try {
       return queue.poll(timeout, timeUnit);
     } catch (InterruptedException e) {
@@ -87,9 +85,7 @@ public final class DelayedUtil {
     }
   }
 
-  /**
-   * @return Time remaining as milliseconds.
-   */
+  /** Returns Time remaining as milliseconds. */
   public static long getRemainingTime(final TimeUnit resultUnit, final long timeout) {
     final long currentTime = EnvironmentEdgeManager.currentTime();
     if (currentTime >= timeout) {
@@ -104,7 +100,7 @@ public final class DelayedUtil {
 
   private static long getTimeout(final Delayed o) {
     assert o instanceof DelayedWithTimeout : "expected DelayedWithTimeout instance, got " + o;
-    return ((DelayedWithTimeout)o).getTimeout();
+    return ((DelayedWithTimeout) o).getTimeout();
   }
 
   public static abstract class DelayedObject implements DelayedWithTimeout {
@@ -146,7 +142,7 @@ public final class DelayedUtil {
         return false;
       }
 
-      return Objects.equals(getObject(), ((DelayedContainer)other).getObject());
+      return Objects.equals(getObject(), ((DelayedContainer) other).getObject());
     }
 
     @Override

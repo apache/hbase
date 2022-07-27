@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,25 +17,26 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
-import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
 /**
  * Implement SASL logic for netty rpc client.
@@ -61,24 +62,24 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   /**
    * @param saslPromise {@code true} if success, {@code false} if server tells us to fallback to
-   *          simple.
+   *                    simple.
    */
   public NettyHBaseSaslRpcClientHandler(Promise<Boolean> saslPromise, UserGroupInformation ugi,
-      SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
-      InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed,
-      Configuration conf) throws IOException {
+    SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
+    InetAddress serverAddr, SecurityInfo securityInfo, boolean fallbackAllowed, Configuration conf)
+    throws IOException {
     this.saslPromise = saslPromise;
     this.ugi = ugi;
     this.conf = conf;
     this.provider = provider;
     this.saslRpcClient = new NettyHBaseSaslRpcClient(conf, provider, token, serverAddr,
-        securityInfo, fallbackAllowed, conf.get(
-        "hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
+      securityInfo, fallbackAllowed, conf.get("hbase.rpc.protection",
+        SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
     LOG.trace("Sending token size={} from initSASLContext.", response.length);
-    ctx.writeAndFlush(
+    NettyFutureUtils.safeWriteAndFlush(ctx,
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
 
@@ -91,18 +92,21 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     if (LOG.isTraceEnabled()) {
       LOG.trace("SASL negotiation for {} is complete", provider.getSaslAuthMethod().getName());
     }
+    ChannelPipeline p = ctx.pipeline();
+    saslRpcClient.setupSaslHandler(p);
+    p.remove(SaslChallengeDecoder.class);
+    p.remove(this);
 
-    saslRpcClient.setupSaslHandler(ctx.pipeline());
     setCryptoAESOption();
 
     saslPromise.setSuccess(true);
   }
 
   private void setCryptoAESOption() {
-    boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.
-        getSaslQop().equalsIgnoreCase(saslRpcClient.getSaslQOP());
-    needProcessConnectionHeader = saslEncryptionEnabled && conf.getBoolean(
-        "hbase.rpc.crypto.encryption.aes.enabled", false);
+    boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.getSaslQop()
+      .equalsIgnoreCase(saslRpcClient.getSaslQOP());
+    needProcessConnectionHeader =
+      saslEncryptionEnabled && conf.getBoolean("hbase.rpc.crypto.encryption.aes.enabled", false);
   }
 
   public boolean isNeedProcessConnectionHeader() {
@@ -111,6 +115,9 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) {
+    // dispose the saslRpcClient when the channel is closed, since saslRpcClient is final, it is
+    // safe to reference it in lambda expr.
+    NettyFutureUtils.addListener(ctx.channel().closeFuture(), f -> saslRpcClient.dispose());
     try {
       byte[] initialResponse = ugi.doAs(new PrivilegedExceptionAction<byte[]>() {
 
@@ -171,14 +178,12 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    saslRpcClient.dispose();
     saslPromise.tryFailure(new ConnectionClosedException("Connection closed"));
     ctx.fireChannelInactive();
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    saslRpcClient.dispose();
     saslPromise.tryFailure(cause);
   }
 }

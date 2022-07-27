@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,12 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVisibilityLabelsOpWithDifferentUsersNoACL.class);
+    HBaseClassTestRule.forClass(TestVisibilityLabelsOpWithDifferentUsersNoACL.class);
 
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
@@ -72,7 +72,7 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     conf = TEST_UTIL.getConfiguration();
     VisibilityTestUtil.enableVisiblityLabels(conf);
     String currentUser = User.getCurrent().getName();
-    conf.set("hbase.superuser", "admin,"+currentUser);
+    conf.set("hbase.superuser", "admin," + currentUser);
     TEST_UTIL.startMiniCluster(2);
 
     // Wait for the labels table to become available
@@ -91,21 +91,21 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   @Test
   public void testLabelsTableOpsWithDifferentUsers() throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
-        } catch (Throwable e) {
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+          } catch (Throwable e) {
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     VisibilityLabelsResponse response = SUPERUSER.runAs(action);
     assertTrue(response.getResult(0).getException().getValue().isEmpty());
     assertTrue(response.getResult(1).getException().getValue().isEmpty());
 
-    // Ideally this should not be allowed.  this operation should fail or do nothing.
+    // Ideally this should not be allowed. this operation should fail or do nothing.
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
@@ -117,22 +117,22 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
       }
     };
     response = NORMAL_USER1.runAs(action);
-    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
-        .getResult(0).getException().getName());
-    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
-        .getResult(1).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException",
+      response.getResult(0).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException",
+      response.getResult(1).getException().getName());
 
     PrivilegedExceptionAction<GetAuthsResponse> action1 =
-        new PrivilegedExceptionAction<GetAuthsResponse>() {
-      @Override
-      public GetAuthsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.getAuths(conn, "user1");
-        } catch (Throwable e) {
+      new PrivilegedExceptionAction<GetAuthsResponse>() {
+        @Override
+        public GetAuthsResponse run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            return VisibilityClient.getAuths(conn, "user1");
+          } catch (Throwable e) {
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     GetAuthsResponse authsResponse = NORMAL_USER.runAs(action1);
     assertTrue(authsResponse.getAuthList().isEmpty());
     authsResponse = NORMAL_USER1.runAs(action1);
@@ -147,22 +147,22 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     assertTrue(authsList.contains(PRIVATE));
 
     PrivilegedExceptionAction<VisibilityLabelsResponse> action2 =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          return VisibilityClient.clearAuths(conn, new String[] {
-              CONFIDENTIAL, PRIVATE }, "user1");
-        } catch (Throwable e) {
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            return VisibilityClient.clearAuths(conn, new String[] { CONFIDENTIAL, PRIVATE },
+              "user1");
+          } catch (Throwable e) {
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     response = NORMAL_USER1.runAs(action2);
-    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
-        .getResult(0).getException().getName());
-    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException", response
-        .getResult(1).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException",
+      response.getResult(0).getException().getName());
+    assertEquals("org.apache.hadoop.hbase.security.AccessDeniedException",
+      response.getResult(1).getException().getName());
     response = SUPERUSER.runAs(action2);
     assertTrue(response.getResult(0).getException().getValue().isEmpty());
     assertTrue(response.getResult(1).getException().getValue().isEmpty());
@@ -172,18 +172,18 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
 
   private static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      @Override
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        @Override
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityClient.addLabels(conn, labels);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     SUPERUSER.runAs(action);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -27,8 +28,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
@@ -37,13 +39,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * Sends responses of RPC back to clients.
  */
+@Deprecated
 @InterfaceAudience.Private
 class SimpleRpcServerResponder extends Thread {
 
   private final SimpleRpcServer simpleRpcServer;
   private final Selector writeSelector;
   private final Set<SimpleServerRpcConnection> writingCons =
-      Collections.newSetFromMap(new ConcurrentHashMap<>());
+    Collections.newSetFromMap(new ConcurrentHashMap<>());
 
   SimpleRpcServerResponder(SimpleRpcServer simpleRpcServer) throws IOException {
     this.simpleRpcServer = simpleRpcServer;
@@ -152,7 +155,7 @@ class SimpleRpcServerResponder extends Thread {
         }
       } catch (Exception e) {
         SimpleRpcServer.LOG
-            .warn(getName() + ": exception in Responder " + StringUtils.stringifyException(e), e);
+          .warn(getName() + ": exception in Responder " + StringUtils.stringifyException(e), e);
       }
     }
     SimpleRpcServer.LOG.info(getName() + ": stopped");
@@ -176,8 +179,10 @@ class SimpleRpcServerResponder extends Thread {
         if (connection == null) {
           throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
         }
-        if (connection.lastSentTime > 0 &&
-            now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
+        if (
+          connection.lastSentTime > 0
+            && now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout
+        ) {
           conWithOldCalls.add(connection);
         }
       }
@@ -215,20 +220,43 @@ class SimpleRpcServerResponder extends Thread {
     }
   }
 
+  private BufferChain wrapWithSasl(HBaseSaslRpcServer saslServer, BufferChain bc)
+    throws IOException {
+    // Looks like no way around this; saslserver wants a byte array. I have to make it one.
+    // THIS IS A BIG UGLY COPY.
+    byte[] responseBytes = bc.getBytes();
+    byte[] token;
+    // synchronization may be needed since there can be multiple Handler
+    // threads using saslServer or Crypto AES to wrap responses.
+    synchronized (saslServer) {
+      token = saslServer.wrap(responseBytes, 0, responseBytes.length);
+    }
+    if (SimpleRpcServer.LOG.isTraceEnabled()) {
+      SimpleRpcServer.LOG
+        .trace("Adding saslServer wrapped token of size " + token.length + " as call response.");
+    }
+
+    ByteBuffer[] responseBufs = new ByteBuffer[2];
+    responseBufs[0] = ByteBuffer.wrap(Bytes.toBytes(token.length));
+    responseBufs[1] = ByteBuffer.wrap(token);
+    return new BufferChain(responseBufs);
+  }
+
   /**
    * Process the response for this call. You need to have the lock on
    * {@link org.apache.hadoop.hbase.ipc.SimpleServerRpcConnection#responseWriteLock}
-   * @return true if we proceed the call fully, false otherwise.
-   * @throws IOException
+   * @return true if we proceed the call fully, false otherwise. n
    */
   private boolean processResponse(SimpleServerRpcConnection conn, RpcResponse resp)
-      throws IOException {
+    throws IOException {
     boolean error = true;
     BufferChain buf = resp.getResponse();
+    if (conn.useWrap) {
+      buf = wrapWithSasl(conn.saslServer, buf);
+    }
     try {
       // Send as much data as we can in the non-blocking fashion
-      long numBytes =
-          this.simpleRpcServer.channelWrite(conn.channel, buf);
+      long numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);
       if (numBytes < 0) {
         throw new HBaseIOException("Error writing on the socket " + conn);
       }
@@ -256,11 +284,10 @@ class SimpleRpcServerResponder extends Thread {
   /**
    * Process all the responses for this connection
    * @return true if all the calls were processed or that someone else is doing it. false if there *
-   *         is still some work to do. In this case, we expect the caller to delay us.
-   * @throws IOException
+   *         is still some work to do. In this case, we expect the caller to delay us. n
    */
   private boolean processAllResponses(final SimpleServerRpcConnection connection)
-      throws IOException {
+    throws IOException {
     // We want only one writer on the channel for a connection at a time.
     connection.responseWriteLock.lock();
     try {

@@ -22,24 +22,30 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsReplicationSourceFactoryImpl implements MetricsReplicationSourceFactory {
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private static enum SourceHolder {
     INSTANCE;
-    final MetricsReplicationSourceImpl source = new MetricsReplicationSourceImpl();
+
+    private final MetricsReplicationSourceImpl source = new MetricsReplicationSourceImpl();
   }
 
-  @Override public MetricsReplicationSinkSource getSink() {
+  @Override
+  public MetricsReplicationSinkSource getSink() {
     return new MetricsReplicationSinkSourceImpl(SourceHolder.INSTANCE.source);
   }
 
-  @Override public MetricsReplicationSourceSource getSource(String id) {
+  @Override
+  public MetricsReplicationSourceSource getSource(String id) {
     return new MetricsReplicationSourceSourceImpl(SourceHolder.INSTANCE.source, id);
   }
 
-  @Override public MetricsReplicationTableSource getTableSource(String tableName) {
+  @Override
+  public MetricsReplicationTableSource getTableSource(String tableName) {
     return new MetricsReplicationTableSourceImpl(SourceHolder.INSTANCE.source, tableName);
   }
 
-  @Override public MetricsReplicationGlobalSourceSourceImpl getGlobalSource() {
+  @Override
+  public MetricsReplicationGlobalSourceSourceImpl getGlobalSource() {
     return new MetricsReplicationGlobalSourceSourceImpl(SourceHolder.INSTANCE.source);
   }
 }

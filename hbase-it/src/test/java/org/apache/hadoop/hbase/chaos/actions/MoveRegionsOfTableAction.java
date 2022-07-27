@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -32,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-* Action that tries to move every region of a table.
-*/
+ * Action that tries to move every region of a table.
+ */
 public class MoveRegionsOfTableAction extends Action {
   private static final Logger LOG = LoggerFactory.getLogger(MoveRegionsOfTableAction.class);
   private final long sleepTime;
@@ -46,7 +45,8 @@ public class MoveRegionsOfTableAction extends Action {
     this.maxTime = maxSleepTime;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -88,14 +88,14 @@ public class MoveRegionsOfTableAction extends Action {
     }
   }
 
-  static ServerName [] getServers(Admin admin) throws IOException {
+  static ServerName[] getServers(Admin admin) throws IOException {
     Collection<ServerName> serversList = admin.getRegionServers();
     return serversList.toArray(new ServerName[0]);
   }
 
-  static void moveRegion(Admin admin, ServerName [] servers, RegionInfo regionInfo, Logger logger) {
+  static void moveRegion(Admin admin, ServerName[] servers, RegionInfo regionInfo, Logger logger) {
     try {
-      ServerName destServerName = servers[RandomUtils.nextInt(0, servers.length)];
+      ServerName destServerName = servers[ThreadLocalRandom.current().nextInt(servers.length)];
       logger.debug("Moving {} to {}", regionInfo.getRegionNameAsString(), destServerName);
       admin.move(regionInfo.getEncodedNameAsBytes(), destServerName);
     } catch (Exception ex) {

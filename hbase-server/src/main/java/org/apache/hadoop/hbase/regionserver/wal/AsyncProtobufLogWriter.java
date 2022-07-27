@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,15 +25,19 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ByteBufferWriter;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutput;
 import org.apache.hadoop.hbase.io.asyncfs.AsyncFSOutputHelper;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException;
+import org.apache.hadoop.hbase.wal.AbstractWALRoller;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -52,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
  */
 @InterfaceAudience.Private
 public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
-    implements AsyncFSWALProvider.AsyncWriter {
+  implements AsyncFSWALProvider.AsyncWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncProtobufLogWriter.class);
 
@@ -66,8 +70,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
    */
   private volatile long finalSyncedLength = -1;
 
-  private static final class OutputStreamWrapper extends OutputStream
-      implements ByteBufferWriter {
+  private static final class OutputStreamWrapper extends OutputStream implements ByteBufferWriter {
 
     private final AsyncFSOutput out;
 
@@ -108,16 +111,25 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   }
 
   private OutputStream asyncOutputWrapper;
+  private long waitTimeout;
 
   public AsyncProtobufLogWriter(EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) {
+    Class<? extends Channel> channelClass) {
     this.eventLoopGroup = eventLoopGroup;
     this.channelClass = channelClass;
+    // Reuse WAL_ROLL_WAIT_TIMEOUT here to avoid an infinite wait if somehow a wait on a future
+    // never completes. The objective is the same. We want to propagate an exception to trigger
+    // an abort if we seem to be hung.
+    if (this.conf == null) {
+      this.conf = HBaseConfiguration.create();
+    }
+    this.waitTimeout = this.conf.getLong(AbstractWALRoller.WAL_ROLL_WAIT_TIMEOUT,
+      AbstractWALRoller.DEFAULT_WAL_ROLL_WAIT_TIMEOUT);
   }
 
   /*
    * @return class name which is recognized by hbase-1.x to avoid ProtobufLogReader throwing error:
-   *   IOException: Got unknown writer class: AsyncProtobufLogWriter
+   * IOException: Got unknown writer class: AsyncProtobufLogWriter
    */
   @Override
   protected String getWriterClassName() {
@@ -128,9 +140,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
   public void append(Entry entry) {
     int buffered = output.buffered();
     try {
-      entry.getKey().
-        getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
-          .writeDelimitedTo(asyncOutputWrapper);
+      entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size()).build()
+        .writeDelimitedTo(asyncOutputWrapper);
     } catch (IOException e) {
       throw new AssertionError("should not happen", e);
     }
@@ -162,9 +173,8 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
       output.recoverAndClose(null);
     }
     /**
-     * We have to call {@link AsyncFSOutput#getSyncedLength()}
-     * after {@link AsyncFSOutput#close()} to get the final length
-     * synced to underlying filesystem because {@link AsyncFSOutput#close()}
+     * We have to call {@link AsyncFSOutput#getSyncedLength()} after {@link AsyncFSOutput#close()}
+     * to get the final length synced to underlying filesystem because {@link AsyncFSOutput#close()}
      * may also flush some data to underlying filesystem.
      */
     this.finalSyncedLength = this.output.getSyncedLength();
@@ -177,23 +187,34 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize, StreamSlowMonitor monitor) throws IOException,
-      StreamLacksCapabilityException {
+    short replication, long blockSize, StreamSlowMonitor monitor)
+    throws IOException, StreamLacksCapabilityException {
     this.output = AsyncFSOutputHelper.createOutput(fs, path, overwritable, false, replication,
-        blockSize, eventLoopGroup, channelClass, monitor);
+      blockSize, eventLoopGroup, channelClass, monitor);
     this.asyncOutputWrapper = new OutputStreamWrapper(output);
   }
 
-  private long write(Consumer<CompletableFuture<Long>> action) throws IOException {
+  @Override
+  protected void closeOutputIfNecessary() {
+    if (this.output != null) {
+      try {
+        this.output.close();
+      } catch (IOException e) {
+        LOG.warn("Close output failed", e);
+      }
+    }
+  }
+
+  private long writeWALMetadata(Consumer<CompletableFuture<Long>> action) throws IOException {
     CompletableFuture<Long> future = new CompletableFuture<>();
     action.accept(future);
     try {
-      return future.get().longValue();
+      return future.get(waitTimeout, TimeUnit.MILLISECONDS).longValue();
     } catch (InterruptedException e) {
       InterruptedIOException ioe = new InterruptedIOException();
       ioe.initCause(e);
       throw ioe;
-    } catch (ExecutionException e) {
+    } catch (ExecutionException | TimeoutException e) {
       Throwables.propagateIfPossible(e.getCause(), IOException.class);
       throw new RuntimeException(e.getCause());
     }
@@ -201,7 +222,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected long writeMagicAndWALHeader(byte[] magic, WALHeader header) throws IOException {
-    return write(future -> {
+    return writeWALMetadata(future -> {
       output.write(magic);
       try {
         header.writeDelimitedTo(asyncOutputWrapper);
@@ -221,7 +242,7 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   protected long writeWALTrailerAndMagic(WALTrailer trailer, byte[] magic) throws IOException {
-    return write(future -> {
+    return writeWALMetadata(future -> {
       try {
         trailer.writeTo(asyncOutputWrapper);
       } catch (IOException e) {
@@ -247,16 +268,16 @@ public class AsyncProtobufLogWriter extends AbstractProtobufLogWriter
 
   @Override
   public long getSyncedLength() {
-   /**
-    * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close}
-    * is a sync point, if output is null, then finalSyncedLength must set,
-    * so we can return finalSyncedLength, else we return output.getSyncedLength
-    */
+    /**
+     * The statement "this.output = null;" in {@link AsyncProtobufLogWriter#close} is a sync point,
+     * if output is null, then finalSyncedLength must set, so we can return finalSyncedLength, else
+     * we return output.getSyncedLength
+     */
     AsyncFSOutput outputToUse = this.output;
-    if(outputToUse == null) {
-        long finalSyncedLengthToUse = this.finalSyncedLength;
-        assert finalSyncedLengthToUse >= 0;
-        return finalSyncedLengthToUse;
+    if (outputToUse == null) {
+      long finalSyncedLengthToUse = this.finalSyncedLength;
+      assert finalSyncedLengthToUse >= 0;
+      return finalSyncedLengthToUse;
     }
     return outputToUse.getSyncedLength();
   }

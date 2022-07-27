@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,139 +62,124 @@ public class TableDescriptorBuilder {
   public static final String SPLIT_POLICY = "SPLIT_POLICY";
   private static final Bytes SPLIT_POLICY_KEY = new Bytes(Bytes.toBytes(SPLIT_POLICY));
   /**
-   * Used by HBase Shell interface to access this metadata
-   * attribute which denotes the maximum size of the store file after which a
-   * region split occurs.
+   * Used by HBase Shell interface to access this metadata attribute which denotes the maximum size
+   * of the store file after which a region split occurs.
    */
   @InterfaceAudience.Private
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
-  private static final Bytes MAX_FILESIZE_KEY
-          = new Bytes(Bytes.toBytes(MAX_FILESIZE));
+  private static final Bytes MAX_FILESIZE_KEY = new Bytes(Bytes.toBytes(MAX_FILESIZE));
 
   /**
-   * Used by rest interface to access this metadata attribute
-   * which denotes if the table is Read Only.
+   * Used by rest interface to access this metadata attribute which denotes if the table is Read
+   * Only.
    */
   @InterfaceAudience.Private
   public static final String READONLY = "READONLY";
-  private static final Bytes READONLY_KEY
-          = new Bytes(Bytes.toBytes(READONLY));
+  private static final Bytes READONLY_KEY = new Bytes(Bytes.toBytes(READONLY));
 
   /**
-   * Used by HBase Shell interface to access this metadata
-   * attribute which denotes if the table is compaction enabled.
+   * Used by HBase Shell interface to access this metadata attribute which denotes if the table is
+   * compaction enabled.
    */
   @InterfaceAudience.Private
   public static final String COMPACTION_ENABLED = "COMPACTION_ENABLED";
-  private static final Bytes COMPACTION_ENABLED_KEY
-          = new Bytes(Bytes.toBytes(COMPACTION_ENABLED));
+  private static final Bytes COMPACTION_ENABLED_KEY = new Bytes(Bytes.toBytes(COMPACTION_ENABLED));
 
   /**
-   * Used by HBase Shell interface to access this metadata
-   * attribute which denotes if the table is split enabled.
+   * Used by HBase Shell interface to access this metadata attribute which denotes if the table is
+   * split enabled.
    */
   @InterfaceAudience.Private
   public static final String SPLIT_ENABLED = "SPLIT_ENABLED";
   private static final Bytes SPLIT_ENABLED_KEY = new Bytes(Bytes.toBytes(SPLIT_ENABLED));
 
   /**
-   * Used by HBase Shell interface to access this metadata
-   * attribute which denotes if the table is merge enabled.
+   * Used by HBase Shell interface to access this metadata attribute which denotes if the table is
+   * merge enabled.
    */
   @InterfaceAudience.Private
   public static final String MERGE_ENABLED = "MERGE_ENABLED";
   private static final Bytes MERGE_ENABLED_KEY = new Bytes(Bytes.toBytes(MERGE_ENABLED));
 
   /**
-   * Used by HBase Shell interface to access this metadata
-   * attribute which represents the maximum size of the memstore after which its
-   * contents are flushed onto the disk.
+   * Used by HBase Shell interface to access this metadata attribute which represents the maximum
+   * size of the memstore after which its contents are flushed onto the disk.
    */
   @InterfaceAudience.Private
   public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
-  private static final Bytes MEMSTORE_FLUSHSIZE_KEY
-          = new Bytes(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
+  private static final Bytes MEMSTORE_FLUSHSIZE_KEY = new Bytes(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
 
   @InterfaceAudience.Private
   public static final String FLUSH_POLICY = "FLUSH_POLICY";
   private static final Bytes FLUSH_POLICY_KEY = new Bytes(Bytes.toBytes(FLUSH_POLICY));
   /**
-   * Used by rest interface to access this metadata attribute
-   * which denotes if it is a catalog table, either <code> hbase:meta </code>.
+   * Used by rest interface to access this metadata attribute which denotes if it is a catalog
+   * table, either <code> hbase:meta </code>.
    */
   @InterfaceAudience.Private
   public static final String IS_META = "IS_META";
-  private static final Bytes IS_META_KEY
-          = new Bytes(Bytes.toBytes(IS_META));
+  private static final Bytes IS_META_KEY = new Bytes(Bytes.toBytes(IS_META));
 
   /**
    * {@link Durability} setting for the table.
    */
   @InterfaceAudience.Private
   public static final String DURABILITY = "DURABILITY";
-  private static final Bytes DURABILITY_KEY
-          = new Bytes(Bytes.toBytes("DURABILITY"));
+  private static final Bytes DURABILITY_KEY = new Bytes(Bytes.toBytes("DURABILITY"));
 
   /**
    * The number of region replicas for the table.
    */
   @InterfaceAudience.Private
   public static final String REGION_REPLICATION = "REGION_REPLICATION";
-  private static final Bytes REGION_REPLICATION_KEY
-          = new Bytes(Bytes.toBytes(REGION_REPLICATION));
+  private static final Bytes REGION_REPLICATION_KEY = new Bytes(Bytes.toBytes(REGION_REPLICATION));
 
   /**
-   * The flag to indicate whether or not the memstore should be
-   * replicated for read-replicas (CONSISTENCY =&gt; TIMELINE).
+   * The flag to indicate whether or not the memstore should be replicated for read-replicas
+   * (CONSISTENCY =&gt; TIMELINE).
    */
   @InterfaceAudience.Private
   public static final String REGION_MEMSTORE_REPLICATION = "REGION_MEMSTORE_REPLICATION";
-  private static final Bytes REGION_MEMSTORE_REPLICATION_KEY
-          = new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
+  private static final Bytes REGION_MEMSTORE_REPLICATION_KEY =
+    new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
-  private static final Bytes REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY
-          = new Bytes(Bytes.toBytes(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY));
   /**
-   * Used by shell/rest interface to access this metadata
-   * attribute which denotes if the table should be treated by region
-   * normalizer.
+   * Used by shell/rest interface to access this metadata attribute which denotes if the table
+   * should be treated by region normalizer.
    */
   @InterfaceAudience.Private
   public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
-  private static final Bytes NORMALIZATION_ENABLED_KEY
-          = new Bytes(Bytes.toBytes(NORMALIZATION_ENABLED));
+  private static final Bytes NORMALIZATION_ENABLED_KEY =
+    new Bytes(Bytes.toBytes(NORMALIZATION_ENABLED));
 
   @InterfaceAudience.Private
-  public static final String NORMALIZER_TARGET_REGION_COUNT =
-      "NORMALIZER_TARGET_REGION_COUNT";
+  public static final String NORMALIZER_TARGET_REGION_COUNT = "NORMALIZER_TARGET_REGION_COUNT";
   private static final Bytes NORMALIZER_TARGET_REGION_COUNT_KEY =
-      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_COUNT));
+    new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_COUNT));
 
   @InterfaceAudience.Private
   public static final String NORMALIZER_TARGET_REGION_SIZE_MB = "NORMALIZER_TARGET_REGION_SIZE_MB";
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_MB_KEY =
-      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
+    new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE_MB));
   // TODO: Keeping backward compatability with HBASE-25651 change. Can be removed in later version
   @InterfaceAudience.Private
   @Deprecated
   public static final String NORMALIZER_TARGET_REGION_SIZE = "NORMALIZER_TARGET_REGION_SIZE";
   @Deprecated
   private static final Bytes NORMALIZER_TARGET_REGION_SIZE_KEY =
-      new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
+    new Bytes(Bytes.toBytes(NORMALIZER_TARGET_REGION_SIZE));
 
   /**
-   * Default durability for HTD is USE_DEFAULT, which defaults to HBase-global
-   * default value
+   * Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value
    */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
   @InterfaceAudience.Private
   public static final String PRIORITY = "PRIORITY";
-  private static final Bytes PRIORITY_KEY
-          = new Bytes(Bytes.toBytes(PRIORITY));
+  private static final Bytes PRIORITY_KEY = new Bytes(Bytes.toBytes(PRIORITY));
 
   private static final Bytes RSGROUP_KEY =
-      new Bytes(Bytes.toBytes(RSGroupInfo.TABLE_DESC_PROP_GROUP));
+    new Bytes(Bytes.toBytes(RSGroupInfo.TABLE_DESC_PROP_GROUP));
 
   /**
    * Relative priority of the table used for rpc scheduling
@@ -223,8 +207,8 @@ public class TableDescriptorBuilder {
   public static final boolean DEFAULT_MERGE_ENABLED = true;
 
   /**
-   * Constant that denotes the maximum default size of the memstore in bytes after which
-   * the contents are flushed to the store files.
+   * Constant that denotes the maximum default size of the memstore in bytes after which the
+   * contents are flushed to the store files.
    */
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024 * 1024 * 128L;
 
@@ -236,16 +220,14 @@ public class TableDescriptorBuilder {
   private final static Set<Bytes> RESERVED_KEYWORDS = new HashSet<>();
 
   static {
-    DEFAULT_VALUES.put(MAX_FILESIZE,
-            String.valueOf(HConstants.DEFAULT_MAX_FILE_SIZE));
+    DEFAULT_VALUES.put(MAX_FILESIZE, String.valueOf(HConstants.DEFAULT_MAX_FILE_SIZE));
     DEFAULT_VALUES.put(READONLY, String.valueOf(DEFAULT_READONLY));
-    DEFAULT_VALUES.put(MEMSTORE_FLUSHSIZE,
-            String.valueOf(DEFAULT_MEMSTORE_FLUSH_SIZE));
-    DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
+    DEFAULT_VALUES.put(MEMSTORE_FLUSHSIZE, String.valueOf(DEFAULT_MEMSTORE_FLUSH_SIZE));
+    DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); // use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
     DEFAULT_VALUES.put(PRIORITY, String.valueOf(DEFAULT_PRIORITY));
-    DEFAULT_VALUES.keySet().stream()
-            .map(s -> new Bytes(Bytes.toBytes(s))).forEach(RESERVED_KEYWORDS::add);
+    DEFAULT_VALUES.keySet().stream().map(s -> new Bytes(Bytes.toBytes(s)))
+      .forEach(RESERVED_KEYWORDS::add);
     RESERVED_KEYWORDS.add(IS_META_KEY);
   }
 
@@ -296,16 +278,15 @@ public class TableDescriptorBuilder {
 
   private static final String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = "[^=,]+";
   private static final String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = "[^,]+";
-  private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile(
-    "(" + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" +
-      CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
+  private static final Pattern CP_HTD_ATTR_VALUE_PARAM_PATTERN = Pattern.compile("("
+    + CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN + ")=(" + CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN + "),?");
   private static final Pattern CP_HTD_ATTR_KEY_PATTERN =
     Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
 
   /**
    * Table descriptor for namespace table
    * @deprecated since 3.0.0 and will be removed in 4.0.0. We have folded the data in namespace
-   *   table into meta table, so do not use it any more.
+   *             table into meta table, so do not use it any more.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-21154">HBASE-21154</a>
    */
   @Deprecated
@@ -319,10 +300,7 @@ public class TableDescriptorBuilder {
 
   private final ModifyableTableDescriptor desc;
 
-  /**
-   * @param desc The table descriptor to serialize
-   * @return This instance serialized with pb with pb magic prefix
-   */
+  /** Returns This instance serialized with pb with pb magic prefix */
   public static byte[] toByteArray(TableDescriptor desc) {
     if (desc instanceof ModifyableTableDescriptor) {
       return ((ModifyableTableDescriptor) desc).toByteArray();
@@ -334,7 +312,7 @@ public class TableDescriptorBuilder {
    * The input should be created by {@link #toByteArray}.
    * @param pbBytes A pb serialized TableDescriptor instance with pb magic prefix
    * @return This instance serialized with pb with pb magic prefix
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    */
   public static TableDescriptor parseFrom(byte[] pbBytes) throws DeserializationException {
     return ModifyableTableDescriptor.parseFrom(pbBytes);
@@ -395,8 +373,8 @@ public class TableDescriptorBuilder {
     return this;
   }
 
-  public TableDescriptorBuilder setColumnFamilies(
-    final Collection<ColumnFamilyDescriptor> families) {
+  public TableDescriptorBuilder
+    setColumnFamilies(final Collection<ColumnFamilyDescriptor> families) {
     families.forEach(desc::setColumnFamily);
     return this;
   }
@@ -555,12 +533,11 @@ public class TableDescriptorBuilder {
   public TableDescriptorBuilder setReplicationScope(int scope) {
     Map<byte[], ColumnFamilyDescriptor> newFamilies = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
     newFamilies.putAll(desc.families);
-    newFamilies
-        .forEach((cf, cfDesc) -> {
-          desc.removeColumnFamily(cf);
-          desc.setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope)
-              .build());
-        });
+    newFamilies.forEach((cf, cfDesc) -> {
+      desc.removeColumnFamily(cf);
+      desc
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(cfDesc).setScope(scope).build());
+    });
     return this;
   }
 
@@ -579,21 +556,19 @@ public class TableDescriptorBuilder {
     private final TableName name;
 
     /**
-     * A map which holds the metadata information of the table. This metadata
-     * includes values like IS_META, SPLIT_POLICY, MAX_FILE_SIZE,
-     * READONLY, MEMSTORE_FLUSHSIZE etc...
+     * A map which holds the metadata information of the table. This metadata includes values like
+     * IS_META, SPLIT_POLICY, MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
      */
     private final Map<Bytes, Bytes> values = new HashMap<>();
 
     /**
      * Maps column family name to the respective FamilyDescriptors
      */
-    private final Map<byte[], ColumnFamilyDescriptor> families
-            = new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+    private final Map<byte[], ColumnFamilyDescriptor> families =
+      new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
 
     /**
      * Construct a table descriptor specifying a TableName object
-     *
      * @param name Table name.
      */
     private ModifyableTableDescriptor(final TableName name) {
@@ -605,8 +580,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Construct a table descriptor by cloning the descriptor passed as a
-     * parameter.
+     * Construct a table descriptor by cloning the descriptor passed as a parameter.
      * <p>
      * Makes a deep copy of the supplied descriptor.
      * @param name The new name
@@ -616,8 +590,8 @@ public class TableDescriptorBuilder {
       this(name, Arrays.asList(desc.getColumnFamilies()), desc.getValues());
     }
 
-    private ModifyableTableDescriptor(final TableName name, final Collection<ColumnFamilyDescriptor> families,
-            Map<Bytes, Bytes> values) {
+    private ModifyableTableDescriptor(final TableName name,
+      final Collection<ColumnFamilyDescriptor> families, Map<Bytes, Bytes> values) {
       this.name = name;
       families.forEach(c -> this.families.put(c.getName(), ColumnFamilyDescriptorBuilder.copy(c)));
       this.values.putAll(values);
@@ -627,7 +601,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Checks if this table is <code> hbase:meta </code> region.
-     *
      * @return true if this table is <code> hbase:meta </code> region
      */
     @Override
@@ -637,7 +610,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Checks if the table is a <code>hbase:meta</code> table
-     *
      * @return true if table is <code> hbase:meta </code> region.
      */
     @Override
@@ -674,7 +646,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Getter for fetching an unmodifiable {@link #values} map.
-     *
      * @return unmodifiable map {@link #values}.
      * @see #values
      */
@@ -686,35 +657,30 @@ public class TableDescriptorBuilder {
 
     /**
      * Setter for storing metadata as a (key, value) pair in {@link #values} map
-     *
-     * @param key The key.
+     * @param key   The key.
      * @param value The value. If null, removes the setting.
      * @return the modifyable TD
      * @see #values
      */
     public ModifyableTableDescriptor setValue(byte[] key, byte[] value) {
-      return setValue(toBytesOrNull(key, v -> v),
-              toBytesOrNull(value, v -> v));
+      return setValue(toBytesOrNull(key, v -> v), toBytesOrNull(value, v -> v));
     }
 
     public ModifyableTableDescriptor setValue(String key, String value) {
-      return setValue(toBytesOrNull(key, Bytes::toBytes),
-              toBytesOrNull(value, Bytes::toBytes));
+      return setValue(toBytesOrNull(key, Bytes::toBytes), toBytesOrNull(value, Bytes::toBytes));
     }
 
     /**
-     * @param key The key.
+     * @param key   The key.
      * @param value The value. If null, removes the setting.
      */
-    private ModifyableTableDescriptor setValue(final Bytes key,
-            final String value) {
+    private ModifyableTableDescriptor setValue(final Bytes key, final String value) {
       return setValue(key, toBytesOrNull(value, Bytes::toBytes));
     }
 
     /**
      * Setter for storing metadata as a (key, value) pair in {@link #values} map
-     *
-     * @param key The key.
+     * @param key   The key.
      * @param value The value. If null, removes the setting.
      */
     public ModifyableTableDescriptor setValue(final Bytes key, final Bytes value) {
@@ -736,9 +702,7 @@ public class TableDescriptorBuilder {
 
     /**
      * Remove metadata represented by the key from the {@link #values} map
-     *
-     * @param key Key whose key and value we're to remove from TableDescriptor
-     * parameters.
+     * @param key Key whose key and value we're to remove from TableDescriptor parameters.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor removeValue(final String key) {
@@ -747,9 +711,7 @@ public class TableDescriptorBuilder {
 
     /**
      * Remove metadata represented by the key from the {@link #values} map
-     *
-     * @param key Key whose key and value we're to remove from TableDescriptor
-     * parameters.
+     * @param key Key whose key and value we're to remove from TableDescriptor parameters.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor removeValue(Bytes key) {
@@ -758,9 +720,7 @@ public class TableDescriptorBuilder {
 
     /**
      * Remove metadata represented by the key from the {@link #values} map
-     *
-     * @param key Key whose key and value we're to remove from TableDescriptor
-     * parameters.
+     * @param key Key whose key and value we're to remove from TableDescriptor parameters.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor removeValue(final byte[] key) {
@@ -768,10 +728,8 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Check if the readOnly flag of the table is set. If the readOnly flag is
-     * set then the contents of the table can only be read from but not
-     * modified.
-     *
+     * Check if the readOnly flag of the table is set. If the readOnly flag is set then the contents
+     * of the table can only be read from but not modified.
      * @return true if all columns in the table should be read only
      */
     @Override
@@ -780,13 +738,10 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Setting the table as read only sets all the columns in the table as read
-     * only. By default all tables are modifiable, but if the readOnly flag is
-     * set to true then the contents of the table can only be read but not
-     * modified.
-     *
-     * @param readOnly True if all of the columns in the table should be read
-     * only.
+     * Setting the table as read only sets all the columns in the table as read only. By default all
+     * tables are modifiable, but if the readOnly flag is set to true then the contents of the table
+     * can only be read but not modified.
+     * @param readOnly True if all of the columns in the table should be read only.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setReadOnly(final boolean readOnly) {
@@ -794,9 +749,8 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Check if the compaction enable flag of the table is true. If flag is
-     * false then no minor/major compactions will be done in real.
-     *
+     * Check if the compaction enable flag of the table is true. If flag is false then no
+     * minor/major compactions will be done in real.
      * @return true if table compaction enabled
      */
     @Override
@@ -806,7 +760,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Setting the table compaction enable flag.
-     *
      * @param isEnable True if enable compaction.
      * @return the modifyable TD
      */
@@ -817,7 +770,6 @@ public class TableDescriptorBuilder {
     /**
      * Check if the split enable flag of the table is true. If flag is false then no split will be
      * done.
-     *
      * @return true if table region split enabled
      */
     @Override
@@ -828,7 +780,6 @@ public class TableDescriptorBuilder {
     /**
      * Setting the table region split enable flag.
      * @param isEnable True if enable region split.
-     *
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setSplitEnabled(final boolean isEnable) {
@@ -838,7 +789,6 @@ public class TableDescriptorBuilder {
     /**
      * Check if the region merge enable flag of the table is true. If flag is false then no merge
      * will be done.
-     *
      * @return true if table region merge enabled
      */
     @Override
@@ -849,7 +799,6 @@ public class TableDescriptorBuilder {
     /**
      * Setting the table region merge enable flag.
      * @param isEnable True if enable region merge.
-     *
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setMergeEnabled(final boolean isEnable) {
@@ -857,8 +806,8 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Check if normalization enable flag of the table is true. If flag is false
-     * then no region normalizer won't attempt to normalize this table.
+     * Check if normalization enable flag of the table is true. If flag is false then no region
+     * normalizer won't attempt to normalize this table.
      * @return true if region normalization is enabled for this table
      **/
     @Override
@@ -886,13 +835,13 @@ public class TableDescriptorBuilder {
     public long getNormalizerTargetRegionSize() {
       long target_region_size =
         getOrDefault(NORMALIZER_TARGET_REGION_SIZE_MB_KEY, Long::valueOf, Long.valueOf(-1));
-      return target_region_size == Long.valueOf(-1) ? getOrDefault(
-        NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1)) : target_region_size;
+      return target_region_size == Long.valueOf(-1)
+        ? getOrDefault(NORMALIZER_TARGET_REGION_SIZE_KEY, Long::valueOf, Long.valueOf(-1))
+        : target_region_size;
     }
 
     /**
      * Setting the table normalization enable flag.
-     *
      * @param isEnable True if enable normalization.
      * @return the modifyable TD
      */
@@ -919,9 +868,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Sets the {@link Durability} setting for the table. This defaults to
-     * Durability.USE_DEFAULT.
-     *
+     * Sets the {@link Durability} setting for the table. This defaults to Durability.USE_DEFAULT.
      * @param durability enum value
      * @return the modifyable TD
      */
@@ -931,7 +878,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Returns the durability setting for the table.
-     *
      * @return durability setting for the table.
      */
     @Override
@@ -940,9 +886,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Get the name of the table
-     *
-     * @return TableName
+     * Get the name of the table n
      */
     @Override
     public TableName getTableName() {
@@ -950,10 +894,9 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * This sets the class associated with the region split policy which
-     * determines when a region split should occur. The class used by default is
-     * defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
-     *
+     * This sets the class associated with the region split policy which determines when a region
+     * split should occur. The class used by default is defined in
+     * org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
      * @param clazz the class name
      * @return the modifyable TD
      */
@@ -962,12 +905,11 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * This gets the class associated with the region split policy which
-     * determines when a region split should occur. The class used by default is
-     * defined in org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
-     *
-     * @return the class name of the region split policy for this table. If this
-     * returns null, the default split policy is used.
+     * This gets the class associated with the region split policy which determines when a region
+     * split should occur. The class used by default is defined in
+     * org.apache.hadoop.hbase.regionserver.RegionSplitPolicy
+     * @return the class name of the region split policy for this table. If this returns null, the
+     *         default split policy is used.
      */
     @Override
     public String getRegionSplitPolicyClassName() {
@@ -975,12 +917,10 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Returns the maximum size upto which a region can grow to after which a
-     * region split is triggered. The region size is represented by the size of
-     * the biggest store file in that region.
-     *
+     * Returns the maximum size upto which a region can grow to after which a region split is
+     * triggered. The region size is represented by the size of the biggest store file in that
+     * region.
      * @return max hregion size for table, -1 if not set.
-     *
      * @see #setMaxFileSize(long)
      */
     @Override
@@ -989,19 +929,17 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Sets the maximum size upto which a region can grow to after which a
-     * region split is triggered. The region size is represented by the size of
-     * the biggest store file in that region, i.e. If the biggest store file
-     * grows beyond the maxFileSize, then the region split is triggered. This
-     * defaults to a value of 256 MB.
+     * Sets the maximum size upto which a region can grow to after which a region split is
+     * triggered. The region size is represented by the size of the biggest store file in that
+     * region, i.e. If the biggest store file grows beyond the maxFileSize, then the region split is
+     * triggered. This defaults to a value of 256 MB.
      * <p>
-     * This is not an absolute value and might vary. Assume that a single row
-     * exceeds the maxFileSize then the storeFileSize will be greater than
-     * maxFileSize since a single row cannot be split across multiple regions
+     * This is not an absolute value and might vary. Assume that a single row exceeds the
+     * maxFileSize then the storeFileSize will be greater than maxFileSize since a single row cannot
+     * be split across multiple regions
      * </p>
-     *
-     * @param maxFileSize The maximum file size that a store file can grow to
-     * before a split is triggered.
+     * @param maxFileSize The maximum file size that a store file can grow to before a split is
+     *                    triggered.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setMaxFileSize(long maxFileSize) {
@@ -1009,16 +947,13 @@ public class TableDescriptorBuilder {
     }
 
     public ModifyableTableDescriptor setMaxFileSize(String maxFileSize) throws HBaseException {
-      return setMaxFileSize(Long.parseLong(PrettyPrinter.
-        valueOf(maxFileSize, PrettyPrinter.Unit.BYTE)));
+      return setMaxFileSize(
+        Long.parseLong(PrettyPrinter.valueOf(maxFileSize, PrettyPrinter.Unit.BYTE)));
     }
 
     /**
-     * Returns the size of the memstore after which a flush to filesystem is
-     * triggered.
-     *
+     * Returns the size of the memstore after which a flush to filesystem is triggered.
      * @return memory cache flush size for each hregion, -1 if not set.
-     *
      * @see #setMemStoreFlushSize(long)
      */
     @Override
@@ -1027,10 +962,8 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Represents the maximum size of the memstore after which the contents of
-     * the memstore are flushed to the filesystem. This defaults to a size of 64
-     * MB.
-     *
+     * Represents the maximum size of the memstore after which the contents of the memstore are
+     * flushed to the filesystem. This defaults to a size of 64 MB.
      * @param memstoreFlushSize memory cache flush size for each hregion
      * @return the modifyable TD
      */
@@ -1040,16 +973,14 @@ public class TableDescriptorBuilder {
 
     public ModifyableTableDescriptor setMemStoreFlushSize(String memStoreFlushSize)
       throws HBaseException {
-      return setMemStoreFlushSize(Long.parseLong(PrettyPrinter.valueOf(memStoreFlushSize,
-        PrettyPrinter.Unit.BYTE)));
+      return setMemStoreFlushSize(
+        Long.parseLong(PrettyPrinter.valueOf(memStoreFlushSize, PrettyPrinter.Unit.BYTE)));
     }
 
     /**
-     * This sets the class associated with the flush policy which determines
-     * determines the stores need to be flushed when flushing a region. The
-     * class used by default is defined in
+     * This sets the class associated with the flush policy which determines determines the stores
+     * need to be flushed when flushing a region. The class used by default is defined in
      * org.apache.hadoop.hbase.regionserver.FlushPolicy.
-     *
      * @param clazz the class name
      * @return the modifyable TD
      */
@@ -1058,12 +989,11 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * This gets the class associated with the flush policy which determines the
-     * stores need to be flushed when flushing a region. The class used by
-     * default is defined in org.apache.hadoop.hbase.regionserver.FlushPolicy.
-     *
-     * @return the class name of the flush policy for this table. If this
-     * returns null, the default flush policy is used.
+     * This gets the class associated with the flush policy which determines the stores need to be
+     * flushed when flushing a region. The class used by default is defined in
+     * org.apache.hadoop.hbase.regionserver.FlushPolicy.
+     * @return the class name of the flush policy for this table. If this returns null, the default
+     *         flush policy is used.
      */
     @Override
     public String getFlushPolicyClassName() {
@@ -1073,7 +1003,6 @@ public class TableDescriptorBuilder {
     /**
      * Adds a column family. For the updating purpose please use
      * {@link #modifyColumnFamily(ColumnFamilyDescriptor)} instead.
-     *
      * @param family to add.
      * @return the modifyable TD
      */
@@ -1083,18 +1012,18 @@ public class TableDescriptorBuilder {
       }
       int flength = family.getName() == null ? 0 : family.getName().length;
       if (flength > Byte.MAX_VALUE) {
-        throw new IllegalArgumentException("The length of family name is bigger than " + Byte.MAX_VALUE);
+        throw new IllegalArgumentException(
+          "The length of family name is bigger than " + Byte.MAX_VALUE);
       }
       if (hasColumnFamily(family.getName())) {
-        throw new IllegalArgumentException("Family '"
-                + family.getNameAsString() + "' already exists so cannot be added");
+        throw new IllegalArgumentException(
+          "Family '" + family.getNameAsString() + "' already exists so cannot be added");
       }
       return putColumnFamily(family);
     }
 
     /**
      * Modifies the existing column family.
-     *
      * @param family to update
      * @return this (for chained invocation)
      */
@@ -1103,8 +1032,8 @@ public class TableDescriptorBuilder {
         throw new IllegalArgumentException("Family name cannot be null or empty");
       }
       if (!hasColumnFamily(family.getName())) {
-        throw new IllegalArgumentException("Column family '" + family.getNameAsString()
-                + "' does not exist");
+        throw new IllegalArgumentException(
+          "Column family '" + family.getNameAsString() + "' does not exist");
       }
       return putColumnFamily(family);
     }
@@ -1116,7 +1045,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Checks to see if this table contains the given column family
-     *
      * @param familyName Family name or column name.
      * @return true if the table contains the specified family name
      */
@@ -1125,9 +1053,7 @@ public class TableDescriptorBuilder {
       return families.containsKey(familyName);
     }
 
-    /**
-     * @return Name of this table and then a map of all of the column family descriptors.
-     */
+    /** Returns Name of this table and then a map of all of the column family descriptors. */
     @Override
     public String toString() {
       StringBuilder s = new StringBuilder();
@@ -1138,8 +1064,8 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * @return Name of this table and then a map of all of the column family
-     * descriptors (with only the non-default column family attributes)
+     * @return Name of this table and then a map of all of the column family descriptors (with only
+     *         the non-default column family attributes)
      */
     @Override
     public String toStringCustomizedValues() {
@@ -1150,9 +1076,7 @@ public class TableDescriptorBuilder {
       return s.toString();
     }
 
-    /**
-     * @return map of all table attributes formatted into string.
-     */
+    /** Returns map of all table attributes formatted into string. */
     public String toStringTableAttributes() {
       return getValues(true).toString();
     }
@@ -1181,9 +1105,10 @@ public class TableDescriptorBuilder {
           }
         }
         // see if a reserved key is a default value. may not want to print it out
-        if (printDefaults
-                || !DEFAULT_VALUES.containsKey(key)
-                || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
+        if (
+          printDefaults || !DEFAULT_VALUES.containsKey(key)
+            || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)
+        ) {
           reservedKeys.add(entry.getKey());
         }
       }
@@ -1243,13 +1168,11 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Compare the contents of the descriptor with another one passed as a
-     * parameter. Checks if the obj passed is an instance of ModifyableTableDescriptor,
-     * if yes then the contents of the descriptors are compared.
-     *
+     * Compare the contents of the descriptor with another one passed as a parameter. Checks if the
+     * obj passed is an instance of ModifyableTableDescriptor, if yes then the contents of the
+     * descriptors are compared.
      * @param obj The object to compare
      * @return true if the contents of the the two descriptors exactly match
-     *
      * @see java.lang.Object#equals(java.lang.Object)
      */
     @Override
@@ -1263,9 +1186,7 @@ public class TableDescriptorBuilder {
       return false;
     }
 
-    /**
-     * @return hash code
-     */
+    /** Returns hash code */
     @Override
     public int hashCode() {
       int result = this.name.hashCode();
@@ -1280,13 +1201,11 @@ public class TableDescriptorBuilder {
 
     // Comparable
     /**
-     * Compares the descriptor with another descriptor which is passed as a
-     * parameter. This compares the content of the two descriptors and not the
-     * reference.
-     *
+     * Compares the descriptor with another descriptor which is passed as a parameter. This compares
+     * the content of the two descriptors and not the reference.
      * @param other The MTD to compare
-     * @return 0 if the contents of the descriptors are exactly matching, 1 if
-     * there is a mismatch in the contents
+     * @return 0 if the contents of the descriptors are exactly matching, 1 if there is a mismatch
+     *         in the contents
      */
     @Override
     public int compareTo(final ModifyableTableDescriptor other) {
@@ -1308,7 +1227,6 @@ public class TableDescriptorBuilder {
 
     /**
      * Sets the number of replicas per region.
-     *
      * @param regionReplication the replication factor per region
      * @return the modifyable TD
      */
@@ -1316,30 +1234,23 @@ public class TableDescriptorBuilder {
       return setValue(REGION_REPLICATION_KEY, Integer.toString(regionReplication));
     }
 
-    /**
-     * @return true if the read-replicas memstore replication is enabled.
-     */
+    /** Returns true if the read-replicas memstore replication is enabled. */
     @Override
     public boolean hasRegionMemStoreReplication() {
-      return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf, DEFAULT_REGION_MEMSTORE_REPLICATION);
+      return getOrDefault(REGION_MEMSTORE_REPLICATION_KEY, Boolean::valueOf,
+        DEFAULT_REGION_MEMSTORE_REPLICATION);
     }
 
     /**
-     * Enable or Disable the memstore replication from the primary region to the
-     * replicas. The replication will be used only for meta operations (e.g.
-     * flush, compaction, ...)
-     *
-     * @param memstoreReplication true if the new data written to the primary
-     * region should be replicated. false if the secondaries can tollerate to
-     * have new data only when the primary flushes the memstore.
+     * Enable or Disable the memstore replication from the primary region to the replicas. The
+     * replication will be used only for meta operations (e.g. flush, compaction, ...)
+     * @param memstoreReplication true if the new data written to the primary region should be
+     *                            replicated. false if the secondaries can tollerate to have new
+     *                            data only when the primary flushes the memstore.
      * @return the modifyable TD
      */
     public ModifyableTableDescriptor setRegionMemStoreReplication(boolean memstoreReplication) {
-      setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
-      // If the memstore replication is setup, we do not have to wait for observing a flush event
-      // from primary before starting to serve reads, because gaps from replication is not applicable
-      return setValue(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
-              Boolean.toString(memstoreReplication));
+      return setValue(REGION_MEMSTORE_REPLICATION_KEY, Boolean.toString(memstoreReplication));
     }
 
     public ModifyableTableDescriptor setPriority(int priority) {
@@ -1352,11 +1263,9 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Returns all the column family names of the current table. The map of
-     * TableDescriptor contains mapping of family name to ColumnFamilyDescriptor.
-     * This returns all the keys of the family map which represents the column
-     * family names of the table.
-     *
+     * Returns all the column family names of the current table. The map of TableDescriptor contains
+     * mapping of family name to ColumnFamilyDescriptor. This returns all the keys of the family map
+     * which represents the column family names of the table.
      * @return Immutable sorted set of the keys of the families.
      */
     @Override
@@ -1365,12 +1274,10 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Returns the ColumnFamilyDescriptor for a specific column family with name as
-     * specified by the parameter column.
-     *
+     * Returns the ColumnFamilyDescriptor for a specific column family with name as specified by the
+     * parameter column.
      * @param column Column family name
-     * @return Column descriptor for the passed family name or the family on
-     * passed in column.
+     * @return Column descriptor for the passed family name or the family on passed in column.
      */
     @Override
     public ColumnFamilyDescriptor getColumnFamily(final byte[] column) {
@@ -1378,12 +1285,10 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Removes the ColumnFamilyDescriptor with name specified by the parameter column
-     * from the table descriptor
-     *
+     * Removes the ColumnFamilyDescriptor with name specified by the parameter column from the table
+     * descriptor
      * @param column Name of the column family to be removed.
-     * @return Column descriptor for the passed family name or the family on
-     * passed in column.
+     * @return Column descriptor for the passed family name or the family on passed in column.
      */
     public ColumnFamilyDescriptor removeColumnFamily(final byte[] column) {
       return this.families.remove(column);
@@ -1391,35 +1296,29 @@ public class TableDescriptorBuilder {
 
     /**
      * Add a table coprocessor to this table. The coprocessor type must be
-     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't
-     * check if the class can be loaded or not. Whether a coprocessor is
-     * loadable or not will be determined when a region is opened.
-     *
-     * @param className Full class name.
-     * @throws IOException
-     * @return the modifyable TD
+     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
+     * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
+     * region is opened.
+     * @param className Full class name. n * @return the modifyable TD
      */
     public ModifyableTableDescriptor setCoprocessor(String className) throws IOException {
-      return setCoprocessor(
-        CoprocessorDescriptorBuilder.newBuilder(className).setPriority(Coprocessor.PRIORITY_USER)
-          .build());
+      return setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(className)
+        .setPriority(Coprocessor.PRIORITY_USER).build());
     }
 
     /**
      * Add a table coprocessor to this table. The coprocessor type must be
-     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't
-     * check if the class can be loaded or not. Whether a coprocessor is
-     * loadable or not will be determined when a region is opened.
-     *
+     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
+     * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
+     * region is opened.
      * @throws IOException any illegal parameter key/value
      * @return the modifyable TD
      */
-    public ModifyableTableDescriptor setCoprocessor(CoprocessorDescriptor cp)
-            throws IOException {
+    public ModifyableTableDescriptor setCoprocessor(CoprocessorDescriptor cp) throws IOException {
       checkHasCoprocessor(cp.getClassName());
       if (cp.getPriority() < 0) {
-        throw new IOException("Priority must be bigger than or equal with zero, current:"
-          + cp.getPriority());
+        throw new IOException(
+          "Priority must be bigger than or equal with zero, current:" + cp.getPriority());
       }
       // Validate parameter kvs and then add key/values to kvString.
       StringBuilder kvString = new StringBuilder();
@@ -1428,8 +1327,7 @@ public class TableDescriptorBuilder {
           throw new IOException("Illegal parameter key = " + e.getKey());
         }
         if (!e.getValue().matches(CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN)) {
-          throw new IOException("Illegal parameter (" + e.getKey()
-                  + ") value = " + e.getValue());
+          throw new IOException("Illegal parameter (" + e.getKey() + ") value = " + e.getValue());
         }
         if (kvString.length() != 0) {
           kvString.append(',');
@@ -1439,29 +1337,26 @@ public class TableDescriptorBuilder {
         kvString.append(e.getValue());
       }
 
-      String value = cp.getJarPath().orElse("")
-              + "|" + cp.getClassName() + "|" + Integer.toString(cp.getPriority()) + "|"
-              + kvString.toString();
+      String value = cp.getJarPath().orElse("") + "|" + cp.getClassName() + "|"
+        + Integer.toString(cp.getPriority()) + "|" + kvString.toString();
       return setCoprocessorToMap(value);
     }
 
     /**
      * Add a table coprocessor to this table. The coprocessor type must be
-     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't
-     * check if the class can be loaded or not. Whether a coprocessor is
-     * loadable or not will be determined when a region is opened.
-     *
-     * @param specStr The Coprocessor specification all in in one String
-     * @throws IOException
-     * @return the modifyable TD
-     * @deprecated used by HTableDescriptor and admin.rb.
-     *                       As of release 2.0.0, this will be removed in HBase 3.0.0.
+     * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
+     * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
+     * region is opened.
+     * @param specStr The Coprocessor specification all in in one String n * @return the modifyable
+     *                TD
+     * @deprecated used by HTableDescriptor and admin.rb. As of release 2.0.0, this will be removed
+     *             in HBase 3.0.0.
      */
     @Deprecated
     public ModifyableTableDescriptor setCoprocessorWithSpec(final String specStr)
       throws IOException {
-      CoprocessorDescriptor cpDesc = toCoprocessorDescriptor(specStr).orElseThrow(
-        () -> new IllegalArgumentException(
+      CoprocessorDescriptor cpDesc =
+        toCoprocessorDescriptor(specStr).orElseThrow(() -> new IllegalArgumentException(
           "Format does not match " + CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr));
       checkHasCoprocessor(cpDesc.getClassName());
       return setCoprocessorToMap(specStr);
@@ -1490,7 +1385,8 @@ public class TableDescriptorBuilder {
         if (!keyMatcher.matches()) {
           continue;
         }
-        maxCoprocessorNumber = Math.max(Integer.parseInt(keyMatcher.group(1)), maxCoprocessorNumber);
+        maxCoprocessorNumber =
+          Math.max(Integer.parseInt(keyMatcher.group(1)), maxCoprocessorNumber);
       }
       maxCoprocessorNumber++;
       String key = "coprocessor$" + Integer.toString(maxCoprocessorNumber);
@@ -1498,32 +1394,27 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Check if the table has an attached co-processor represented by the name
-     * className
-     *
+     * Check if the table has an attached co-processor represented by the name className
      * @param classNameToMatch - Class name of the co-processor
      * @return true of the table has a co-processor className
      */
     @Override
     public boolean hasCoprocessor(String classNameToMatch) {
-      return getCoprocessorDescriptors().stream().anyMatch(cp -> cp.getClassName()
-        .equals(classNameToMatch));
+      return getCoprocessorDescriptors().stream()
+        .anyMatch(cp -> cp.getClassName().equals(classNameToMatch));
     }
 
     /**
-     * Return the list of attached co-processor represented by their name
-     * className
-     *
+     * Return the list of attached co-processor represented by their name className
      * @return The list of co-processors classNames
      */
     @Override
     public List<CoprocessorDescriptor> getCoprocessorDescriptors() {
       List<CoprocessorDescriptor> result = new ArrayList<>();
-      for (Map.Entry<Bytes, Bytes> e: getValues().entrySet()) {
+      for (Map.Entry<Bytes, Bytes> e : getValues().entrySet()) {
         String key = Bytes.toString(e.getKey().get()).trim();
         if (CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
-          toCoprocessorDescriptor(Bytes.toString(e.getValue().get()).trim())
-            .ifPresent(result::add);
+          toCoprocessorDescriptor(Bytes.toString(e.getValue().get()).trim()).ifPresent(result::add);
         }
       }
       return result;
@@ -1531,22 +1422,18 @@ public class TableDescriptorBuilder {
 
     /**
      * Remove a coprocessor from those set on the table
-     *
      * @param className Class name of the co-processor
      */
     public void removeCoprocessor(String className) {
       Bytes match = null;
       Matcher keyMatcher;
       Matcher valueMatcher;
-      for (Map.Entry<Bytes, Bytes> e : this.values
-              .entrySet()) {
-        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
-                .getKey().get()));
+      for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
+        keyMatcher = CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
         if (!keyMatcher.matches()) {
           continue;
         }
-        valueMatcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
-                .toString(e.getValue().get()));
+        valueMatcher = CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes.toString(e.getValue().get()));
         if (!valueMatcher.matches()) {
           continue;
         }
@@ -1562,29 +1449,22 @@ public class TableDescriptorBuilder {
       if (match != null) {
         ModifyableTableDescriptor.this.removeValue(match);
       } else {
-        throw new IllegalArgumentException(String
-          .format("coprocessor with class name %s was not found in the table attribute",
-            className));
+        throw new IllegalArgumentException(String.format(
+          "coprocessor with class name %s was not found in the table attribute", className));
       }
     }
 
-    /**
-     * @return the bytes in pb format
-     */
+    /** Returns the bytes in pb format */
     private byte[] toByteArray() {
       return ProtobufUtil.prependPBMagic(ProtobufUtil.toTableSchema(this).toByteArray());
     }
 
     /**
-     * @param bytes A pb serialized {@link ModifyableTableDescriptor} instance
-     * with pb magic prefix
-     * @return An instance of {@link ModifyableTableDescriptor} made from
-     * <code>bytes</code>
-     * @throws DeserializationException
-     * @see #toByteArray()
+     * @param bytes A pb serialized {@link ModifyableTableDescriptor} instance with pb magic prefix
+     * @return An instance of {@link ModifyableTableDescriptor} made from <code>bytes</code> n
+     *         * @see #toByteArray()
      */
-    private static TableDescriptor parseFrom(final byte[] bytes)
-            throws DeserializationException {
+    private static TableDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
       if (!ProtobufUtil.isPBMagicPrefix(bytes)) {
         throw new DeserializationException("Expected PB encoded ModifyableTableDescriptor");
       }
@@ -1623,15 +1503,14 @@ public class TableDescriptorBuilder {
     if (matcher.matches()) {
       // jar file path can be empty if the cp class can be loaded
       // from class loader.
-      String path = matcher.group(1).trim().isEmpty() ?
-        null : matcher.group(1).trim();
+      String path = matcher.group(1).trim().isEmpty() ? null : matcher.group(1).trim();
       String className = matcher.group(2).trim();
       if (className.isEmpty()) {
         return Optional.empty();
       }
       String priorityStr = matcher.group(3).trim();
-      int priority = priorityStr.isEmpty() ?
-        Coprocessor.PRIORITY_USER : Integer.parseInt(priorityStr);
+      int priority =
+        priorityStr.isEmpty() ? Coprocessor.PRIORITY_USER : Integer.parseInt(priorityStr);
       String cfgSpec = null;
       try {
         cfgSpec = matcher.group(4);
@@ -1646,11 +1525,8 @@ public class TableDescriptorBuilder {
           ourConf.put(m.group(1), m.group(2));
         }
       }
-      return Optional.of(CoprocessorDescriptorBuilder.newBuilder(className)
-        .setJarPath(path)
-        .setPriority(priority)
-        .setProperties(ourConf)
-        .build());
+      return Optional.of(CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path)
+        .setPriority(priority).setProperties(ourConf).build());
     }
     return Optional.empty();
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCompressionTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompressionTest.class);
+    HBaseClassTestRule.forClass(TestCompressionTest.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompressionTest.class);
 
@@ -89,7 +89,7 @@ public class TestCompressionTest {
       // Hadoop nativelib is not available
       LOG.debug("Native code not loaded");
       // This check is useless as it fails with
-      //  ...DoNotRetryIOException: Compression algorithm 'lzo' previously failed test.
+      // ...DoNotRetryIOException: Compression algorithm 'lzo' previously failed test.
       // assertFalse("LZO", CompressionTest.testCompression("LZO"));
       // LZ4 requires that the native lib be present before 3.3.1. After 3.3.1, hadoop uses
       // lz4-java which will do java version of lz4 as last resort -- so the below fails before
@@ -122,21 +122,22 @@ public class TestCompressionTest {
         }
 
         try {
-            Configuration conf = new Configuration();
-            CompressionCodec codec = (CompressionCodec)
-              ReflectionUtils.newInstance(conf.getClassByName(codecClassName), conf);
+          Configuration conf = new Configuration();
+          CompressionCodec codec = (CompressionCodec) ReflectionUtils
+            .newInstance(conf.getClassByName(codecClassName), conf);
 
-            DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
-            CompressionOutputStream deflateFilter = codec.createOutputStream(compressedDataBuffer);
+          DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
+          CompressionOutputStream deflateFilter = codec.createOutputStream(compressedDataBuffer);
 
-            byte[] data = new byte[1024];
-            DataOutputStream deflateOut = new DataOutputStream(new BufferedOutputStream(deflateFilter));
-            deflateOut.write(data, 0, data.length);
-            deflateOut.flush();
-            deflateFilter.finish();
+          byte[] data = new byte[1024];
+          DataOutputStream deflateOut =
+            new DataOutputStream(new BufferedOutputStream(deflateFilter));
+          deflateOut.write(data, 0, data.length);
+          deflateOut.flush();
+          deflateFilter.finish();
 
-            // Codec class, codec nativelib and Hadoop nativelib with codec JNIs are present
-            assertTrue(CompressionTest.testCompression(codecName));
+          // Codec class, codec nativelib and Hadoop nativelib with codec JNIs are present
+          assertTrue(CompressionTest.testCompression(codecName));
         } catch (UnsatisfiedLinkError e) {
           // Hadoop nativelib does not have codec JNIs.
           // cannot assert the codec here because the current logic of
@@ -158,4 +159,3 @@ public class TestCompressionTest {
     }
   }
 }
-

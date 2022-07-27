@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,12 +47,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestResettingCounters {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestResettingCounters.class);
+    HBaseClassTestRule.forClass(TestResettingCounters.class);
 
   @Rule
   public TestName name = new TestName();
@@ -62,24 +62,21 @@ public class TestResettingCounters {
     HBaseTestingUtil htu = new HBaseTestingUtil();
     Configuration conf = htu.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    byte [] table = Bytes.toBytes(name.getMethodName());
-    byte [][] families = new byte [][] {
-        Bytes.toBytes("family1"),
-        Bytes.toBytes("family2"),
-        Bytes.toBytes("family3")
-    };
+    byte[] table = Bytes.toBytes(name.getMethodName());
+    byte[][] families =
+      new byte[][] { Bytes.toBytes("family1"), Bytes.toBytes("family2"), Bytes.toBytes("family3") };
     int numQualifiers = 10;
-    byte [][] qualifiers = new byte [numQualifiers][];
-    for (int i=0; i<numQualifiers; i++) qualifiers[i] = Bytes.toBytes("qf" + i);
+    byte[][] qualifiers = new byte[numQualifiers][];
+    for (int i = 0; i < numQualifiers; i++)
+      qualifiers[i] = Bytes.toBytes("qf" + i);
     int numRows = 10;
-    byte [][] rows = new byte [numRows][];
-    for (int i=0; i<numRows; i++) rows[i] = Bytes.toBytes("r" + i);
+    byte[][] rows = new byte[numRows][];
+    for (int i = 0; i < numRows; i++)
+      rows[i] = Bytes.toBytes("r" + i);
 
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(table));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(table));
     for (byte[] family : families) {
-      builder.setColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(family));
+      builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
     TableDescriptor tableDescriptor = builder.build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
@@ -98,24 +95,26 @@ public class TestResettingCounters {
       even.setDurability(Durability.SKIP_WAL);
       Increment all = new Increment(rows[0]);
       all.setDurability(Durability.SKIP_WAL);
-      for (int i=0;i<numQualifiers;i++) {
+      for (int i = 0; i < numQualifiers; i++) {
         if (i % 2 == 0) even.addColumn(families[0], qualifiers[i], 1);
         else odd.addColumn(families[0], qualifiers[i], 1);
         all.addColumn(families[0], qualifiers[i], 1);
       }
 
       // increment odd qualifiers 5 times and flush
-      for (int i=0;i<5;i++) region.increment(odd, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      for (int i = 0; i < 5; i++)
+        region.increment(odd, HConstants.NO_NONCE, HConstants.NO_NONCE);
       region.flush(true);
 
       // increment even qualifiers 5 times
-      for (int i=0;i<5;i++) region.increment(even, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      for (int i = 0; i < 5; i++)
+        region.increment(even, HConstants.NO_NONCE, HConstants.NO_NONCE);
 
       // increment all qualifiers, should have value=6 for all
       Result result = region.increment(all, HConstants.NO_NONCE, HConstants.NO_NONCE);
       assertEquals(numQualifiers, result.size());
       Cell[] kvs = result.rawCells();
-      for (int i=0;i<kvs.length;i++) {
+      for (int i = 0; i < kvs.length; i++) {
         System.out.println(kvs[i].toString());
         assertTrue(CellUtil.matchingQualifier(kvs[i], qualifiers[i]));
         assertEquals(6, Bytes.toLong(CellUtil.cloneValue(kvs[i])));
@@ -127,4 +126,3 @@ public class TestResettingCounters {
   }
 
 }
-

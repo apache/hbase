@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -42,11 +41,11 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
 
   /**
    * @param lowerBoundariesPolicies each window to storage policy map.
-   * @param needEmptyFile whether need to create an empty store file if we haven't written out
-   *          anything.
+   * @param needEmptyFile           whether need to create an empty store file if we haven't written
+   *                                out anything.
    */
   public DateTieredMultiFileWriter(List<Long> lowerBoundaries,
-      Map<Long, String> lowerBoundariesPolicies, boolean needEmptyFile) {
+    Map<Long, String> lowerBoundariesPolicies, boolean needEmptyFile) {
     for (Long lowerBoundary : lowerBoundaries) {
       lowerBoundary2Writer.put(lowerBoundary, null);
     }
@@ -71,7 +70,7 @@ public class DateTieredMultiFileWriter extends AbstractMultiFileWriter {
   }
 
   @Override
-  public Collection<StoreFileWriter> writers() {
+  protected Collection<StoreFileWriter> writers() {
     return lowerBoundary2Writer.values();
   }
 

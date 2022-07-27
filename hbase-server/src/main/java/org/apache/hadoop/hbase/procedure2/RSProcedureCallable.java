@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.concurrent.Callable;
-
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -32,7 +31,7 @@ public interface RSProcedureCallable extends Callable<Void> {
   /**
    * Initialize the callable
    * @param parameter the parameter passed from master.
-   * @param rs the regionserver instance
+   * @param rs        the regionserver instance
    */
   void init(byte[] parameter, HRegionServer rs);
 

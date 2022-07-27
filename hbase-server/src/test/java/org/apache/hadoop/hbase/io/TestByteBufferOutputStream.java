@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,18 +33,18 @@ public class TestByteBufferOutputStream {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestByteBufferOutputStream.class);
+    HBaseClassTestRule.forClass(TestByteBufferOutputStream.class);
 
   @Test
   public void testByteBufferReuse() throws IOException {
-    byte [] someBytes = Bytes.toBytes("some bytes");
+    byte[] someBytes = Bytes.toBytes("some bytes");
     ByteBuffer bb = ByteBuffer.allocate(someBytes.length);
     ByteBuffer bbToReuse = write(bb, someBytes);
     bbToReuse = write(bbToReuse, Bytes.toBytes("less"));
     assertTrue(bb == bbToReuse);
   }
 
-  private ByteBuffer write(final ByteBuffer bb, final byte [] bytes) throws IOException {
+  private ByteBuffer write(final ByteBuffer bb, final byte[] bytes) throws IOException {
     try (ByteBufferOutputStream bbos = new ByteBufferOutputStream(bb)) {
       bbos.write(bytes);
       assertTrue(Bytes.compareTo(bytes, bbos.toByteArray(0, bytes.length)) == 0);

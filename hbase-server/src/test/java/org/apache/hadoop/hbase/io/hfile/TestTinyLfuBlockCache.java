@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -38,12 +37,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the concurrent TinyLfuBlockCache.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestTinyLfuBlockCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTinyLfuBlockCache.class);
+    HBaseClassTestRule.forClass(TestTinyLfuBlockCache.class);
 
   @Test
   public void testCacheSimple() throws Exception {
@@ -53,7 +52,7 @@ public class TestTinyLfuBlockCache {
 
     TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
 
-    CachedItem [] blocks = generateRandomBlocks(100, blockSize);
+    CachedItem[] blocks = generateRandomBlocks(100, blockSize);
 
     long expectedCacheSize = cache.heapSize();
 
@@ -83,9 +82,8 @@ public class TestTinyLfuBlockCache {
     for (CachedItem block : blocks) {
       cache.cacheBlock(block.cacheKey, block);
     }
-    assertEquals(
-            "Cache should ignore cache requests for blocks already in cache",
-            expectedBlockCount, cache.getBlockCount());
+    assertEquals("Cache should ignore cache requests for blocks already in cache",
+      expectedBlockCount, cache.getBlockCount());
 
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());
@@ -109,7 +107,7 @@ public class TestTinyLfuBlockCache {
 
     TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
 
-    CachedItem [] blocks = generateFixedBlocks(11, blockSize, "block");
+    CachedItem[] blocks = generateFixedBlocks(11, blockSize, "block");
 
     // Add all the blocks
     for (CachedItem block : blocks) {
@@ -134,11 +132,11 @@ public class TestTinyLfuBlockCache {
 
     TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
 
-    CachedItem [] singleBlocks = generateFixedBlocks(20, blockSize, "single");
-    CachedItem [] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
+    CachedItem[] singleBlocks = generateFixedBlocks(20, blockSize, "single");
+    CachedItem[] multiBlocks = generateFixedBlocks(5, blockSize, "multi");
 
     // Add 5 blocks from each
-    for(int i=0; i<5; i++) {
+    for (int i = 0; i < 5; i++) {
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
       cache.cacheBlock(multiBlocks[i].cacheKey, multiBlocks[i]);
     }
@@ -151,10 +149,10 @@ public class TestTinyLfuBlockCache {
       }
     }
 
-    // Let's keep "scanning" by adding single blocks.  From here on we only
+    // Let's keep "scanning" by adding single blocks. From here on we only
     // expect evictions from the single bucket.
 
-    for(int i=5;i<18;i++) {
+    for (int i = 5; i < 18; i++) {
       cache.cacheBlock(singleBlocks[i].cacheKey, singleBlocks[i]);
     }
 
@@ -173,20 +171,20 @@ public class TestTinyLfuBlockCache {
     long blockSize = calculateBlockSize(maxSize, 10);
 
     TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
-    CachedItem [] tooLong = generateFixedBlocks(10, 2 * blockSize, "long");
-    CachedItem [] small = generateFixedBlocks(15, blockSize / 2, "small");
+    CachedItem[] tooLong = generateFixedBlocks(10, 2 * blockSize, "long");
+    CachedItem[] small = generateFixedBlocks(15, blockSize / 2, "small");
 
-    for (CachedItem i:tooLong) {
+    for (CachedItem i : tooLong) {
       cache.cacheBlock(i.cacheKey, i);
     }
-    for (CachedItem i:small) {
+    for (CachedItem i : small) {
       cache.cacheBlock(i.cacheKey, i);
     }
-    assertEquals(15,cache.getBlockCount());
-    for (CachedItem i:small) {
+    assertEquals(15, cache.getBlockCount());
+    for (CachedItem i : small) {
       assertNotNull(cache.getBlock(i.cacheKey, true, false, false));
     }
-    for (CachedItem i:tooLong) {
+    for (CachedItem i : tooLong) {
       assertNull(cache.getBlock(i.cacheKey, true, false, false));
     }
 
@@ -201,9 +199,9 @@ public class TestTinyLfuBlockCache {
 
     TinyLfuBlockCache cache = new TinyLfuBlockCache(maxSize, blockSize, blockSize, Runnable::run);
 
-    CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
+    CachedItem[] blocks = generateFixedBlocks(10, blockSize, "block");
 
-    for(CachedItem block : blocks) {
+    for (CachedItem block : blocks) {
       cache.cacheBlock(block.cacheKey, block);
     }
 
@@ -219,50 +217,48 @@ public class TestTinyLfuBlockCache {
     assertEquals(5, cache.getStats().getEvictedCount());
   }
 
-  private CachedItem [] generateFixedBlocks(int numBlocks, int size, String pfx) {
-    CachedItem [] blocks = new CachedItem[numBlocks];
-    for(int i=0;i<numBlocks;i++) {
+  private CachedItem[] generateFixedBlocks(int numBlocks, int size, String pfx) {
+    CachedItem[] blocks = new CachedItem[numBlocks];
+    for (int i = 0; i < numBlocks; i++) {
       blocks[i] = new CachedItem(pfx + i, size);
     }
     return blocks;
   }
 
-  private CachedItem [] generateFixedBlocks(int numBlocks, long size, String pfx) {
-    return generateFixedBlocks(numBlocks, (int)size, pfx);
+  private CachedItem[] generateFixedBlocks(int numBlocks, long size, String pfx) {
+    return generateFixedBlocks(numBlocks, (int) size, pfx);
   }
 
-  private CachedItem [] generateRandomBlocks(int numBlocks, long maxSize) {
-    CachedItem [] blocks = new CachedItem[numBlocks];
-    Random r = new Random();
-    for(int i=0;i<numBlocks;i++) {
-      blocks[i] = new CachedItem("block" + i, r.nextInt((int)maxSize)+1);
+  private CachedItem[] generateRandomBlocks(int numBlocks, long maxSize) {
+    CachedItem[] blocks = new CachedItem[numBlocks];
+    Random rand = ThreadLocalRandom.current();
+    for (int i = 0; i < numBlocks; i++) {
+      blocks[i] = new CachedItem("block" + i, rand.nextInt((int) maxSize) + 1);
     }
     return blocks;
   }
 
   private long calculateBlockSize(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
-    int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
-        ClassSize.CONCURRENT_HASHMAP +
-        (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-        (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
-    long negateBlockSize = totalOverhead/numEntries;
+    int numEntries = (int) Math.ceil((1.2) * maxSize / roughBlockSize);
+    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
+      + (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+      + (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+    long negateBlockSize = totalOverhead / numEntries;
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
-    return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*0.99f));
+    return ClassSize.align((long) Math.floor((roughBlockSize - negateBlockSize) * 0.99f));
   }
 
   private long calculateBlockSizeDefault(long maxSize, int numBlocks) {
     long roughBlockSize = maxSize / numBlocks;
-    int numEntries = (int)Math.ceil((1.2)*maxSize/roughBlockSize);
-    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD +
-        ClassSize.CONCURRENT_HASHMAP +
-        (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY) +
-        (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
+    int numEntries = (int) Math.ceil((1.2) * maxSize / roughBlockSize);
+    long totalOverhead = LruBlockCache.CACHE_FIXED_OVERHEAD + ClassSize.CONCURRENT_HASHMAP
+      + (numEntries * ClassSize.CONCURRENT_HASHMAP_ENTRY)
+      + (LruBlockCache.DEFAULT_CONCURRENCY_LEVEL * ClassSize.CONCURRENT_HASHMAP_SEGMENT);
     long negateBlockSize = totalOverhead / numEntries;
     negateBlockSize += LruCachedBlock.PER_BLOCK_OVERHEAD;
-    return ClassSize.align((long)Math.floor((roughBlockSize - negateBlockSize)*
-        LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
+    return ClassSize.align((long) Math
+      .floor((roughBlockSize - negateBlockSize) * LruBlockCache.DEFAULT_ACCEPTABLE_FACTOR));
   }
 
   private static class CachedItem implements Cacheable {
@@ -301,4 +297,3 @@ public class TestTinyLfuBlockCache {
   }
 
 }
-

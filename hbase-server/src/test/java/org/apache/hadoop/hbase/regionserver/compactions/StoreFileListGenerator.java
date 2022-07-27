@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +18,12 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 public abstract class StoreFileListGenerator extends MockStoreFileGenerator
-    implements Iterable<List<HStoreFile>> {
+  implements Iterable<List<HStoreFile>> {
 
   public static final int MAX_FILE_GEN_ITERS = 10;
   public static final int NUM_FILES_GEN = 1000;
 
-  StoreFileListGenerator(Class<?> klass) {
-    super(klass);
-  }
 }

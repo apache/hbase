@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,10 +31,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
- * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link com.google.protobuf.Service}s.
- * Note that clients should not use this class directly, except through
- * {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
+ * Base class which provides clients with an RPC connection to call coprocessor endpoint
+ * {@link com.google.protobuf.Service}s. Note that clients should not use this class directly,
+ * except through {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}.
  * @deprecated Please stop using this class again, as it is too low level, which is part of the rpc
  *             framework for HBase. Will be deleted in 4.0.0.
  */
@@ -71,6 +70,6 @@ abstract class SyncCoprocessorRpcChannel implements CoprocessorRpcChannel {
   }
 
   protected abstract Message callExecService(RpcController controller,
-      Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
-          throws IOException;
+    Descriptors.MethodDescriptor method, Message request, Message responsePrototype)
+    throws IOException;
 }

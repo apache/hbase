@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
@@ -72,7 +73,8 @@ public class TestReplicationStatus extends TestReplicationBase {
     // This test wants two RS's up. We only run one generally so add one.
     UTIL1.getMiniHBaseCluster().startRegionServer();
     Waiter.waitFor(UTIL1.getConfiguration(), 30000, new Waiter.Predicate<Exception>() {
-      @Override public boolean evaluate() throws Exception {
+      @Override
+      public boolean evaluate() throws Exception {
         return UTIL1.getMiniHBaseCluster().getLiveRegionServerThreads().size() > 1;
       }
     });
@@ -86,8 +88,8 @@ public class TestReplicationStatus extends TestReplicationBase {
     // HACK! To address flakeyness.
     Threads.sleep(10000);
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
-    for (JVMClusterUtil.RegionServerThread thread : UTIL1.getHBaseCluster().
-        getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread thread : UTIL1.getHBaseCluster()
+      .getRegionServerThreads()) {
       ServerName server = thread.getRegionServer().getServerName();
       assertTrue("" + server, metrics.getLiveServerMetrics().containsKey(server));
       ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
@@ -95,8 +97,8 @@ public class TestReplicationStatus extends TestReplicationBase {
       ReplicationLoadSink rLoadSink = sm.getReplicationLoadSink();
 
       // check SourceList only has one entry, because only has one peer
-      assertEquals("Failed to get ReplicationLoadSourceList " +
-        rLoadSourceList + ", " + server,1, rLoadSourceList.size());
+      assertEquals("Failed to get ReplicationLoadSourceList " + rLoadSourceList + ", " + server, 1,
+        rLoadSourceList.size());
       assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
 
       // check Sink exist only as it is difficult to verify the value on the fly
@@ -109,7 +111,7 @@ public class TestReplicationStatus extends TestReplicationBase {
     // Stop rs1, then the queue of rs1 will be transfered to rs0
     HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(1);
     hrs.stop("Stop RegionServer");
-    while(hrs.isAlive()) {
+    while (hrs.isAlive()) {
       Threads.sleep(100);
     }
     // To be sure it dead and references cleaned up. TODO: Change this to a barrier.
@@ -125,18 +127,17 @@ public class TestReplicationStatus extends TestReplicationBase {
   }
 
   /**
-   * Wait until Master shows metrics counts for ReplicationLoadSourceList that are
-   * greater than <code>greaterThan</code> for <code>serverName</code> before
-   * returning. We want to avoid case where RS hasn't yet updated Master before
-   * allowing test proceed.
+   * Wait until Master shows metrics counts for ReplicationLoadSourceList that are greater than
+   * <code>greaterThan</code> for <code>serverName</code> before returning. We want to avoid case
+   * where RS hasn't yet updated Master before allowing test proceed.
    * @param greaterThan size of replicationLoadSourceList must be greater before we proceed
    */
   private List<ReplicationLoadSource> waitOnMetricsReport(int greaterThan, ServerName serverName)
-      throws IOException {
+    throws IOException {
     ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
     List<ReplicationLoadSource> list =
       metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
-    while(list.size() <= greaterThan) {
+    while (list.size() <= greaterThan) {
       Threads.sleep(1000);
     }
     return list;

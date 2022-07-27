@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +18,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.concurrent.CountDownLatch;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -41,13 +38,11 @@ public class DeletionListener extends ZKListener {
 
   /**
    * Create a new instance of the deletion watcher.
-   * @param zkWatcher ZookeeperWatcher instance
-   * @param pathToWatch (Fully qualified) ZNode path that we are waiting to
-   *                    be deleted.
+   * @param zkWatcher    ZookeeperWatcher instance
+   * @param pathToWatch  (Fully qualified) ZNode path that we are waiting to be deleted.
    * @param deletedLatch Count down on this latch when deletion has occurred.
    */
-  public DeletionListener(ZKWatcher zkWatcher, String pathToWatch,
-                          CountDownLatch deletedLatch) {
+  public DeletionListener(ZKWatcher zkWatcher, String pathToWatch, CountDownLatch deletedLatch) {
     super(zkWatcher);
     this.pathToWatch = pathToWatch;
     this.deletedLatch = deletedLatch;
@@ -56,16 +51,15 @@ public class DeletionListener extends ZKListener {
 
   /**
    * Check if an exception has occurred when re-setting the watch.
-   * @return True if we were unable to re-set a watch on a ZNode due to
-   *         an exception.
+   * @return True if we were unable to re-set a watch on a ZNode due to an exception.
    */
   public boolean hasException() {
     return exception != null;
   }
 
   /**
-   * Get the last exception which has occurred when re-setting the watch.
-   * Use hasException() to check whether or not an exception has occurred.
+   * Get the last exception which has occurred when re-setting the watch. Use hasException() to
+   * check whether or not an exception has occurred.
    * @return The last exception observed when re-setting the watch.
    */
   public Throwable getException() {

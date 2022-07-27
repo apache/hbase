@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +28,8 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -50,12 +50,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the {@link org.apache.hadoop.hbase.regionserver.ChunkCreator.MemStoreChunkPool} class
  */
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestMemStoreChunkPool {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMemStoreChunkPool.class);
+    HBaseClassTestRule.forClass(TestMemStoreChunkPool.class);
 
   private final static Configuration conf = new Configuration();
   private static ChunkCreator chunkCreator;
@@ -67,11 +67,12 @@ public class TestMemStoreChunkPool {
     conf.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     chunkPoolDisabledBeforeTest = ChunkCreator.chunkPoolDisabled;
     ChunkCreator.chunkPoolDisabled = false;
-    long globalMemStoreLimit = (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()
-        .getMax() * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
+    long globalMemStoreLimit =
+      (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
+        * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
     chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false,
-      globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT,
-      null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+      globalMemStoreLimit, 0.2f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null,
+      MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     assertNotNull(chunkCreator);
   }
 
@@ -87,7 +88,6 @@ public class TestMemStoreChunkPool {
 
   @Test
   public void testReusingChunks() {
-    Random rand = new Random();
     MemStoreLAB mslab = new MemStoreLABImpl(conf);
     int expectedOff = 0;
     ByteBuffer lastBuffer = null;
@@ -95,6 +95,7 @@ public class TestMemStoreChunkPool {
     final byte[] cf = Bytes.toBytes("f");
     final byte[] q = Bytes.toBytes("q");
     // Randomly allocate some bytes
+    final Random rand = ThreadLocalRandom.current();
     for (int i = 0; i < 100; i++) {
       int valSize = rand.nextInt(1000);
       KeyValue kv = new KeyValue(rk, cf, q, new byte[valSize]);
@@ -106,7 +107,7 @@ public class TestMemStoreChunkPool {
       }
       assertEquals(expectedOff, newKv.getOffset());
       assertTrue("Allocation overruns buffer",
-          newKv.getOffset() + size <= newKv.getBuffer().capacity());
+        newKv.getOffset() + size <= newKv.getBuffer().capacity());
       expectedOff += size;
     }
     // chunks will be put back to pool after close
@@ -149,7 +150,7 @@ public class TestMemStoreChunkPool {
     memstore.add(new KeyValue(row, fam, qf5, val), null);
     assertEquals(2, memstore.getActive().getCellsCount());
     // close the scanner - this is how the snapshot will be used
-    for(KeyValueScanner scanner : snapshot.getScanners()) {
+    for (KeyValueScanner scanner : snapshot.getScanners()) {
       scanner.close();
     }
     memstore.clearSnapshot(snapshot.getId());
@@ -160,8 +161,7 @@ public class TestMemStoreChunkPool {
   }
 
   @Test
-  public void testPuttingBackChunksWithOpeningScanner()
-      throws IOException {
+  public void testPuttingBackChunksWithOpeningScanner() throws IOException {
     byte[] row = Bytes.toBytes("testrow");
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf1 = Bytes.toBytes("testqualifier1");
@@ -195,7 +195,7 @@ public class TestMemStoreChunkPool {
     // Shouldn't putting back the chunks to pool,since some scanners are opening
     // based on their data
     // close the snapshot scanner
-    for(KeyValueScanner scanner : snapshot.getScanners()) {
+    for (KeyValueScanner scanner : snapshot.getScanners()) {
       scanner.close();
     }
     memstore.clearSnapshot(snapshot.getId());
@@ -225,7 +225,7 @@ public class TestMemStoreChunkPool {
     // Since no opening scanner, the chunks of snapshot should be put back to
     // pool
     // close the snapshot scanners
-    for(KeyValueScanner scanner : snapshot.getScanners()) {
+    for (KeyValueScanner scanner : snapshot.getScanners()) {
       scanner.close();
     }
     memstore.clearSnapshot(snapshot.getId());
@@ -247,8 +247,8 @@ public class TestMemStoreChunkPool {
     // back the original
     ChunkCreator.instance = newCreator;
 
-    final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
-        new byte[valSize]);
+    final KeyValue kv =
+      new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), new byte[valSize]);
     final AtomicReference<Throwable> exceptionRef = new AtomicReference<Throwable>();
     try {
       Runnable r = new Runnable() {
@@ -303,8 +303,8 @@ public class TestMemStoreChunkPool {
       assertTrue(newCreator.getDataChunksPool() != null);
       assertTrue(newCreator.getIndexChunksPool() == null);
       ChunkCreator.instance = newCreator;
-      final KeyValue kv = new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"),
-          new byte[valSize]);
+      final KeyValue kv =
+        new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), new byte[valSize]);
 
       MemStoreLAB memStoreLAB = new MemStoreLABImpl(conf);
       memStoreLAB.copyCellInto(kv);
@@ -393,8 +393,7 @@ public class TestMemStoreChunkPool {
       assertEquals(0, newCreator.getPoolSize());
       assertEquals(initialCount, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
 
-      Chunk indexChunk =
-          newCreator.getChunk(ChunkType.INDEX_CHUNK);
+      Chunk indexChunk = newCreator.getChunk(ChunkType.INDEX_CHUNK);
       assertEquals(0, newCreator.getPoolSize());
       assertEquals(initialCount - 1, newCreator.getPoolSize(ChunkType.INDEX_CHUNK));
       assertTrue(indexChunk.isIndexChunk());
@@ -418,12 +417,11 @@ public class TestMemStoreChunkPool {
     Chunk dataChunk = ChunkCreator.getInstance().getChunk();
     assertTrue(dataChunk.isDataChunk());
     assertTrue(dataChunk.isFromPool());
-    Chunk indexChunk = ChunkCreator.getInstance().getChunk(
-      ChunkType.INDEX_CHUNK);
+    Chunk indexChunk = ChunkCreator.getInstance().getChunk(ChunkType.INDEX_CHUNK);
     assertTrue(indexChunk.isIndexChunk());
     assertTrue(indexChunk.isFromPool());
     Chunk jumboChunk =
-        ChunkCreator.getInstance().getJumboChunk(ChunkCreator.getInstance().getChunkSize() + 10);
+      ChunkCreator.getInstance().getJumboChunk(ChunkCreator.getInstance().getChunkSize() + 10);
     assertTrue(jumboChunk.isJumbo());
     assertTrue(!jumboChunk.isFromPool());
   }

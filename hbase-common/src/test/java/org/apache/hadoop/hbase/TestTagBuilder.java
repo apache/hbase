@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,7 +28,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestTagBuilder {
 
   @ClassRule
@@ -40,7 +37,7 @@ public class TestTagBuilder {
 
   @Test
   public void testArrayBackedTagBuilder() {
-    byte type = (byte)50;
+    byte type = (byte) 50;
     String value = "Array-Backed-Tag";
     TagBuilder builder = TagBuilderFactory.create();
     assertTrue(builder instanceof TagBuilderImpl);
@@ -60,18 +57,18 @@ public class TestTagBuilder {
       // Dont set type for the tag.
       builder.build();
       fail("Shouldn't have come here.");
-    } catch(IllegalArgumentException iae) {
+    } catch (IllegalArgumentException iae) {
       assertTrue(iae.getMessage().contains(TagBuilderImpl.TAG_TYPE_NOT_SET_EXCEPTION));
     }
 
-    byte type = (byte)50;
+    byte type = (byte) 50;
     builder = TagBuilderFactory.create();
     builder.setTagType(type);
     try {
       // Need to Call setTagValue(byte[]) to set the value.
       builder.build();
       fail("Shouldn't have come here.");
-    } catch(IllegalArgumentException iae) {
+    } catch (IllegalArgumentException iae) {
       assertTrue(iae.getMessage().contains(TagBuilderImpl.TAG_VALUE_NULL_EXCEPTION));
     }
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -85,9 +84,8 @@ public interface ProcedureStore {
     void reset();
 
     /**
-     * Returns true if the iterator has more elements.
-     * (In other words, returns true if next() would return a Procedure
-     * rather than throwing an exception.)
+     * Returns true if the iterator has more elements. (In other words, returns true if next() would
+     * return a Procedure rather than throwing an exception.)
      * @return true if the iterator has more procedures
      */
     boolean hasNext();
@@ -135,8 +133,8 @@ public interface ProcedureStore {
     void load(ProcedureIterator procIter) throws IOException;
 
     /**
-     * Called by the ProcedureStore.load() in case we have procedures not-ready to be added to
-     * the executor, which probably means they are corrupted since some information/link is missing.
+     * Called by the ProcedureStore.load() in case we have procedures not-ready to be added to the
+     * executor, which probably means they are corrupted since some information/link is missing.
      * @param procIter iterator over the procedures not ready to be added to the executor, corrupted
      */
     void handleCorrupted(ProcedureIterator procIter) throws IOException;
@@ -167,19 +165,15 @@ public interface ProcedureStore {
    */
   void stop(boolean abort);
 
-  /**
-   * @return true if the store is running, otherwise false.
-   */
+  /** Returns true if the store is running, otherwise false. */
   boolean isRunning();
 
-  /**
-   * @return the number of threads/slots passed to start()
-   */
+  /** Returns the number of threads/slots passed to start() */
   int getNumThreads();
 
   /**
-   * Set the number of procedure running.
-   * This can be used, for example, by the store to know how long to wait before a sync.
+   * Set the number of procedure running. This can be used, for example, by the store to know how
+   * long to wait before a sync.
    * @return how many procedures are running (may not be same as <code>count</code>).
    */
   int setRunningProcedureCount(int count);
@@ -201,57 +195,48 @@ public interface ProcedureStore {
   void load(ProcedureLoader loader) throws IOException;
 
   /**
-   * When a procedure is submitted to the executor insert(proc, null) will be called.
-   * 'proc' has a 'RUNNABLE' state and the initial information required to start up.
-   *
-   * When a procedure is executed and it returns children insert(proc, subprocs) will be called.
-   * 'proc' has a 'WAITING' state and an update state.
-   * 'subprocs' are the children in 'RUNNABLE' state with the initial information.
-   *
-   * @param proc the procedure to serialize and write to the store.
+   * When a procedure is submitted to the executor insert(proc, null) will be called. 'proc' has a
+   * 'RUNNABLE' state and the initial information required to start up. When a procedure is executed
+   * and it returns children insert(proc, subprocs) will be called. 'proc' has a 'WAITING' state and
+   * an update state. 'subprocs' are the children in 'RUNNABLE' state with the initial information.
+   * @param proc     the procedure to serialize and write to the store.
    * @param subprocs the newly created child of the proc.
    */
   void insert(Procedure<?> proc, Procedure<?>[] subprocs);
 
   /**
-   * Serialize a set of new procedures.
-   * These procedures are freshly submitted to the executor and each procedure
-   * has a 'RUNNABLE' state and the initial information required to start up.
-   *
+   * Serialize a set of new procedures. These procedures are freshly submitted to the executor and
+   * each procedure has a 'RUNNABLE' state and the initial information required to start up.
    * @param procs the procedures to serialize and write to the store.
    */
   void insert(Procedure<?>[] procs);
 
   /**
-   * The specified procedure was executed,
-   * and the new state should be written to the store.
+   * The specified procedure was executed, and the new state should be written to the store.
    * @param proc the procedure to serialize and write to the store.
    */
   void update(Procedure<?> proc);
 
   /**
-   * The specified procId was removed from the executor,
-   * due to completion, abort or failure.
-   * The store implementor should remove all the information about the specified procId.
+   * The specified procId was removed from the executor, due to completion, abort or failure. The
+   * store implementor should remove all the information about the specified procId.
    * @param procId the ID of the procedure to remove.
    */
   void delete(long procId);
 
   /**
-   * The parent procedure completed.
-   * Update the state and mark all the child deleted.
+   * The parent procedure completed. Update the state and mark all the child deleted.
    * @param parentProc the parent procedure to serialize and write to the store.
    * @param subProcIds the IDs of the sub-procedure to remove.
    */
   void delete(Procedure<?> parentProc, long[] subProcIds);
 
   /**
-   * The specified procIds were removed from the executor,
-   * due to completion, abort or failure.
-   * The store implementor should remove all the information about the specified procIds.
+   * The specified procIds were removed from the executor, due to completion, abort or failure. The
+   * store implementor should remove all the information about the specified procIds.
    * @param procIds the IDs of the procedures to remove.
-   * @param offset the array offset from where to start to delete
-   * @param count the number of IDs to delete
+   * @param offset  the array offset from where to start to delete
+   * @param count   the number of IDs to delete
    */
   void delete(long[] procIds, int offset, int count);
 

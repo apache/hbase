@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
+
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.consume;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeClose;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -37,6 +38,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.Bootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
@@ -48,15 +53,13 @@ import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.DatagramPacket;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioDatagramChannel;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A class that receives the cluster status, and provide it as a set of service to the client.
- * Today, manages only the dead server list.
- * The class is abstract to allow multiple implementations, from ZooKeeper to multicast based.
+ * Today, manages only the dead server list. The class is abstract to allow multiple
+ * implementations, from ZooKeeper to multicast based.
  */
 @InterfaceAudience.Private
 class ClusterStatusListener implements Closeable {
@@ -70,7 +73,7 @@ class ClusterStatusListener implements Closeable {
    */
   public static final String STATUS_LISTENER_CLASS = "hbase.status.listener.class";
   public static final Class<? extends Listener> DEFAULT_STATUS_LISTENER_CLASS =
-      MulticastListener.class;
+    MulticastListener.class;
 
   /**
    * Class to be extended to manage a new dead server.
@@ -80,12 +83,10 @@ class ClusterStatusListener implements Closeable {
     /**
      * Called when a server is identified as dead. Called only once even if we receive the
      * information multiple times.
-     *
      * @param sn - the server name
      */
     void newDead(ServerName sn);
   }
-
 
   /**
    * The interface to be implemented by a listener of a cluster status event.
@@ -99,7 +100,6 @@ class ClusterStatusListener implements Closeable {
 
     /**
      * Called to connect.
-     *
      * @param conf Configuration to use.
      * @throws IOException if failing to connect
      */
@@ -107,11 +107,11 @@ class ClusterStatusListener implements Closeable {
   }
 
   public ClusterStatusListener(DeadServerHandler dsh, Configuration conf,
-                               Class<? extends Listener> listenerClass) throws IOException {
+    Class<? extends Listener> listenerClass) throws IOException {
     this.deadServerHandler = dsh;
     try {
       Constructor<? extends Listener> ctor =
-          listenerClass.getConstructor(ClusterStatusListener.class);
+        listenerClass.getConstructor(ClusterStatusListener.class);
       this.listener = ctor.newInstance(this);
     } catch (InstantiationException e) {
       throw new IOException("Can't create listener " + listenerClass.getName(), e);
@@ -128,7 +128,6 @@ class ClusterStatusListener implements Closeable {
 
   /**
    * Acts upon the reception of a new cluster status.
-   *
    * @param ncs the cluster status
    */
   public void receive(ClusterMetrics ncs) {
@@ -152,7 +151,6 @@ class ClusterStatusListener implements Closeable {
 
   /**
    * Check if we know if a server is dead.
-   *
    * @param sn the server name to check.
    * @return true if we know for sure that the server is dead, false otherwise.
    */
@@ -162,16 +160,16 @@ class ClusterStatusListener implements Closeable {
     }
 
     for (ServerName dead : deadServers) {
-      if (dead.getStartcode() >= sn.getStartcode() &&
-          dead.getPort() == sn.getPort() &&
-          dead.getHostname().equals(sn.getHostname())) {
+      if (
+        dead.getStartcode() >= sn.getStartcode() && dead.getPort() == sn.getPort()
+          && dead.getHostname().equals(sn.getHostname())
+      ) {
         return true;
       }
     }
 
     return false;
   }
-
 
   /**
    * An implementation using a multicast message between the master & the client.
@@ -188,13 +186,12 @@ class ClusterStatusListener implements Closeable {
 
     @Override
     public void connect(Configuration conf) throws IOException {
-
-      String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
-          HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
+      String mcAddress =
+        conf.get(HConstants.STATUS_MULTICAST_ADDRESS, HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       String bindAddress = conf.get(HConstants.STATUS_MULTICAST_BIND_ADDRESS,
         HConstants.DEFAULT_STATUS_MULTICAST_BIND_ADDRESS);
-      int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
-          HConstants.DEFAULT_STATUS_MULTICAST_PORT);
+      int port =
+        conf.getInt(HConstants.STATUS_MULTICAST_PORT, HConstants.DEFAULT_STATUS_MULTICAST_PORT);
       String niName = conf.get(HConstants.STATUS_MULTICAST_NI_NAME);
 
       InetAddress ina;
@@ -207,11 +204,9 @@ class ClusterStatusListener implements Closeable {
 
       try {
         Bootstrap b = new Bootstrap();
-        b.group(group)
-          .channel(NioDatagramChannel.class)
-          .option(ChannelOption.SO_REUSEADDR, true)
+        b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_REUSEADDR, true)
           .handler(new ClusterStatusHandler());
-        channel = (DatagramChannel)b.bind(bindAddress, port).sync().channel();
+        channel = (DatagramChannel) b.bind(bindAddress, port).sync().channel();
       } catch (InterruptedException e) {
         close();
         throw ExceptionUtil.asInterrupt(e);
@@ -225,20 +220,22 @@ class ClusterStatusListener implements Closeable {
       }
 
       LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
-      channel.joinGroup(ina, ni, null, channel.newPromise());
+      try {
+        consume(channel.joinGroup(ina, ni, null).sync());
+      } catch (InterruptedException e) {
+        close();
+        throw ExceptionUtil.asInterrupt(e);
+      }
     }
-
 
     @Override
     public void close() {
       if (channel != null) {
-        channel.close();
+        safeClose(channel);
         channel = null;
       }
-      group.shutdownGracefully();
+      consume(group.shutdownGracefully());
     }
-
-
 
     /**
      * Class, conforming to the Netty framework, that manages the message received.
@@ -246,9 +243,7 @@ class ClusterStatusListener implements Closeable {
     private class ClusterStatusHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
       @Override
-      public void exceptionCaught(
-          ChannelHandlerContext ctx, Throwable cause)
-          throws Exception {
+      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LOG.error("Unexpected exception, continuing.", cause);
       }
 
@@ -256,7 +251,6 @@ class ClusterStatusListener implements Closeable {
       public boolean acceptInboundMessage(Object msg) throws Exception {
         return super.acceptInboundMessage(msg);
       }
-
 
       @Override
       protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket dp) throws Exception {

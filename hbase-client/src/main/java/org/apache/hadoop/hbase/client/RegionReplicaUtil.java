@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -33,16 +31,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RegionReplicaUtil {
 
   /**
-   * Whether or not the secondary region will wait for observing a flush / region open event
-   * from the primary region via async wal replication before enabling read requests. Since replayed
+   * Whether or not the secondary region will wait for observing a flush / region open event from
+   * the primary region via async wal replication before enabling read requests. Since replayed
    * edits from async wal replication from primary is not persisted in WAL, the memstore of the
    * secondary region might be non-empty at the time of close or crash. For ensuring seqId's not
    * "going back in time" in the secondary region replica, this should be enabled. However, in some
-   * cases the above semantics might be ok for some application classes.
-   * See HBASE-11580 for more context.
+   * cases the above semantics might be ok for some application classes. See HBASE-11580 for more
+   * context.
    */
-  public static final String REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY
-    = "hbase.region.replica.wait.for.primary.flush";
+  public static final String REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY =
+    "hbase.region.replica.wait.for.primary.flush";
   protected static final boolean DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH = true;
 
   /**
@@ -51,14 +49,11 @@ public class RegionReplicaUtil {
   static final int DEFAULT_REPLICA_ID = 0;
 
   /**
-   * Returns the RegionInfo for the given replicaId.
-   * RegionInfo's correspond to a range of a table, but more than one
-   * "instance" of the same range can be deployed which are differentiated by
-   * the replicaId.
-   * @param regionInfo
-   * @param replicaId the replicaId to use
-   * @return an RegionInfo object corresponding to the same range (table, start and
-   * end key), but for the given replicaId.
+   * Returns the RegionInfo for the given replicaId. RegionInfo's correspond to a range of a table,
+   * but more than one "instance" of the same range can be deployed which are differentiated by the
+   * replicaId.
+   * @return an RegionInfo object corresponding to the same range (table, start and end key), but
+   *         for the given replicaId.
    */
   public static RegionInfo getRegionInfoForReplica(RegionInfo regionInfo, int replicaId) {
     if (regionInfo.getReplicaId() == replicaId) {
@@ -68,29 +63,28 @@ public class RegionReplicaUtil {
   }
 
   /**
-   * Returns the RegionInfo for the default replicaId (0). RegionInfo's correspond to
-   * a range of a table, but more than one "instance" of the same range can be
-   * deployed which are differentiated by the replicaId.
-   * @return an RegionInfo object corresponding to the same range (table, start and
-   * end key), but for the default replicaId.
+   * Returns the RegionInfo for the default replicaId (0). RegionInfo's correspond to a range of a
+   * table, but more than one "instance" of the same range can be deployed which are differentiated
+   * by the replicaId.
+   * @return an RegionInfo object corresponding to the same range (table, start and end key), but
+   *         for the default replicaId.
    */
   public static RegionInfo getRegionInfoForDefaultReplica(RegionInfo regionInfo) {
     return getRegionInfoForReplica(regionInfo, DEFAULT_REPLICA_ID);
   }
 
-  /** @return true if this replicaId corresponds to default replica for the region */
+  /** Returns true if this replicaId corresponds to default replica for the region */
   public static boolean isDefaultReplica(int replicaId) {
     return DEFAULT_REPLICA_ID == replicaId;
   }
 
-  /** @return true if this region is a default replica for the region */
+  /** Returns true if this region is a default replica for the region */
   public static boolean isDefaultReplica(RegionInfo hri) {
-    return  hri.getReplicaId() == DEFAULT_REPLICA_ID;
+    return hri.getReplicaId() == DEFAULT_REPLICA_ID;
   }
 
   /**
-   * Removes the non-default replicas from the passed regions collection
-   * @param regions
+   * Removes the non-default replicas from the passed regions collection n
    */
   public static void removeNonDefaultRegions(Collection<RegionInfo> regions) {
     Iterator<RegionInfo> iterator = regions.iterator();
@@ -107,7 +101,7 @@ public class RegionReplicaUtil {
   }
 
   private static int compareRegionInfosWithoutReplicaId(RegionInfo regionInfoA,
-      RegionInfo regionInfoB) {
+    RegionInfo regionInfoB) {
     int result = regionInfoA.getTable().compareTo(regionInfoB.getTable());
     if (result != 0) {
       return result;
@@ -123,13 +117,11 @@ public class RegionReplicaUtil {
     result = Bytes.compareTo(regionInfoA.getEndKey(), regionInfoB.getEndKey());
 
     if (result != 0) {
-      if (regionInfoA.getStartKey().length != 0
-              && regionInfoA.getEndKey().length == 0) {
-          return 1; // this is last region
+      if (regionInfoA.getStartKey().length != 0 && regionInfoA.getEndKey().length == 0) {
+        return 1; // this is last region
       }
-      if (regionInfoB.getStartKey().length != 0
-              && regionInfoB.getEndKey().length == 0) {
-          return -1; // o is the last region
+      if (regionInfoB.getStartKey().length != 0 && regionInfoB.getEndKey().length == 0) {
+        return -1; // o is the last region
       }
       return result;
     }
@@ -147,7 +139,7 @@ public class RegionReplicaUtil {
   /**
    * Create any replicas for the regions (the default replicas that was already created is passed to
    * the method)
-   * @param regions existing regions
+   * @param regions         existing regions
    * @param oldReplicaCount existing replica count
    * @param newReplicaCount updated replica count due to modify table
    * @return the combined list of default and non-default replicas
@@ -157,11 +149,14 @@ public class RegionReplicaUtil {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }
-    List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
+    List<RegionInfo> hRegionInfos = new ArrayList<>(newReplicaCount * regions.size());
     for (RegionInfo ri : regions) {
-      if (RegionReplicaUtil.isDefaultReplica(ri) &&
-        (!ri.isOffline() || (!ri.isSplit() && !ri.isSplitParent()))) {
-        // region level replica index starts from 0. So if oldReplicaCount was 2 then the max replicaId for
+      if (
+        RegionReplicaUtil.isDefaultReplica(ri)
+          && (!ri.isOffline() || (!ri.isSplit() && !ri.isSplitParent()))
+      ) {
+        // region level replica index starts from 0. So if oldReplicaCount was 2 then the max
+        // replicaId for
         // the existing regions would be 1
         for (int j = oldReplicaCount; j < newReplicaCount; j++) {
           hRegionInfos.add(RegionReplicaUtil.getRegionInfoForReplica(ri, j));

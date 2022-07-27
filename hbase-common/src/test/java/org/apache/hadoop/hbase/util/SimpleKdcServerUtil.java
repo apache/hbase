@@ -32,24 +32,25 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Utility for running {@link SimpleKdcServer}. Kerby KDC server is favored over Hadoop
- * org.apache.hadoop.minikdc server which has support in the HBaseTestingUtility at
- * #setupMiniKdc. The Kerby KDC Server came in with HBASE-5291. Its preferred. Less baggage.
+ * org.apache.hadoop.minikdc server which has support in the HBaseTestingUtility at #setupMiniKdc.
+ * The Kerby KDC Server came in with HBASE-5291. Its preferred. Less baggage.
  * @see #getRunningSimpleKdcServer(File, Supplier)
  */
 public final class SimpleKdcServerUtil {
   protected static final Logger LOG = LoggerFactory.getLogger(SimpleKdcServerUtil.class);
 
-  private SimpleKdcServerUtil() {}
+  private SimpleKdcServerUtil() {
+  }
 
   /**
-   * Returns a running kdc server. Use this method rather than start the SimpleKdcServer
-   * yourself because it takes care of BindExceptions which can happen even though port-picking
-   * is random (between the choice of port number and bind, it could have been used elsewhere).
+   * Returns a running kdc server. Use this method rather than start the SimpleKdcServer yourself
+   * because it takes care of BindExceptions which can happen even though port-picking is random
+   * (between the choice of port number and bind, it could have been used elsewhere).
    * @return A SimpleKdcServer on which 'start' has been called; be sure to call stop on this
-   *   instance when done.
+   *         instance when done.
    */
   public static SimpleKdcServer getRunningSimpleKdcServer(File testDir,
-      Supplier<Integer> randomPortGenerator) throws KrbException, IOException {
+    Supplier<Integer> randomPortGenerator) throws KrbException, IOException {
     return getRunningSimpleKdcServer(testDir, randomPortGenerator, false);
   }
 
@@ -60,12 +61,12 @@ public final class SimpleKdcServerUtil {
    * @see #getRunningSimpleKdcServer(File, Supplier)
    */
   static SimpleKdcServer getRunningSimpleKdcServer(File testDir,
-      Supplier<Integer> randomPortGenerator, final boolean portClash)
-        throws KrbException, IOException {
+    Supplier<Integer> randomPortGenerator, final boolean portClash)
+    throws KrbException, IOException {
     File kdcDir = new File(testDir, SimpleKdcServer.class.getSimpleName());
     Preconditions.checkArgument(kdcDir.mkdirs(), "Failed create of " + kdcDir);
     String hostName = InetAddress.getLoopbackAddress().getHostName();
-    BoundSocketMaker bsm = portClash? new BoundSocketMaker(randomPortGenerator): null;
+    BoundSocketMaker bsm = portClash ? new BoundSocketMaker(randomPortGenerator) : null;
     final int retries = 10;
     for (int i = 0; i < retries; i++) {
       SimpleKdcServer kdc = new SimpleKdcServer();
@@ -73,7 +74,7 @@ public final class SimpleKdcServerUtil {
       kdc.setKdcHost(hostName);
       kdc.setAllowTcp(true);
       kdc.setAllowUdp(false);
-      int kdcPort = bsm != null? bsm.getPort(): randomPortGenerator.get();
+      int kdcPort = bsm != null ? bsm.getPort() : randomPortGenerator.get();
       try {
         kdc.setKdcTcpPort(kdcPort);
         LOG.info("Starting KDC server at {}:{}", hostName, kdcPort);

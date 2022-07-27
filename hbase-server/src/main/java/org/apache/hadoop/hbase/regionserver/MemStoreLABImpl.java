@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -104,7 +103,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
     this.chunkCreator = ChunkCreator.getInstance();
     // if we don't exclude allocations >CHUNK_SIZE, we'd infiniteloop on one!
     Preconditions.checkArgument(maxAlloc <= dataChunkSize,
-        MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
+      MAX_ALLOC_KEY + " must be less than " + CHUNK_SIZE_KEY);
 
     this.refCnt = RefCnt.create(() -> {
       recycleChunks();
@@ -115,17 +114,15 @@ public class MemStoreLABImpl implements MemStoreLAB {
   @Override
   public Cell copyCellInto(Cell cell) {
     // See head of copyBBECellInto for how it differs from copyCellInto
-    return (cell instanceof ByteBufferExtendedCell)?
-        copyBBECellInto((ByteBufferExtendedCell)cell, maxAlloc):
-        copyCellInto(cell, maxAlloc);
+    return (cell instanceof ByteBufferExtendedCell)
+      ? copyBBECellInto((ByteBufferExtendedCell) cell, maxAlloc)
+      : copyCellInto(cell, maxAlloc);
   }
 
   /**
-   * When a cell's size is too big (bigger than maxAlloc),
-   * copyCellInto does not allocate it on MSLAB.
-   * Since the process of flattening to CellChunkMap assumes that
-   * all cells are allocated on MSLAB, during this process,
-   * the big cells are copied into MSLAB using this method.
+   * When a cell's size is too big (bigger than maxAlloc), copyCellInto does not allocate it on
+   * MSLAB. Since the process of flattening to CellChunkMap assumes that all cells are allocated on
+   * MSLAB, during this process, the big cells are copied into MSLAB using this method.
    */
   @Override
   public Cell forceCopyOfBigCellInto(Cell cell) {
@@ -143,9 +140,9 @@ public class MemStoreLABImpl implements MemStoreLAB {
 
   /**
    * Mostly a duplicate of {@link #copyCellInto(Cell, int)}} done for perf sake. It presumes
-   * ByteBufferExtendedCell instead of Cell so we deal with a specific type rather than the
-   * super generic Cell. Removes instanceof checks. Shrinkage is enough to make this inline where
-   * before it was too big. Uses less CPU. See HBASE-20875 for evidence.
+   * ByteBufferExtendedCell instead of Cell so we deal with a specific type rather than the super
+   * generic Cell. Removes instanceof checks. Shrinkage is enough to make this inline where before
+   * it was too big. Uses less CPU. See HBASE-20875 for evidence.
    * @see #copyCellInto(Cell, int)
    */
   private Cell copyBBECellInto(ByteBufferExtendedCell cell, int maxAlloc) {
@@ -238,14 +235,14 @@ public class MemStoreLABImpl implements MemStoreLAB {
    * @see #copyToChunkCell(Cell, ByteBuffer, int, int)
    */
   private static Cell copyBBECToChunkCell(ByteBufferExtendedCell cell, ByteBuffer buf, int offset,
-      int len) {
+    int len) {
     int tagsLen = cell.getTagsLength();
     cell.write(buf, offset);
     return createChunkCell(buf, offset, len, tagsLen, cell.getSequenceId());
   }
 
   private static Cell createChunkCell(ByteBuffer buf, int offset, int len, int tagsLen,
-      long sequenceId) {
+    long sequenceId) {
     // TODO : write the seqid here. For writing seqId we should create a new cell type so
     // that seqId is not used as the state
     if (tagsLen == 0) {
@@ -260,8 +257,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   /**
-   * Close this instance since it won't be used any more, try to put the chunks
-   * back to pool
+   * Close this instance since it won't be used any more, try to put the chunks back to pool
    */
   @Override
   public void close() {
@@ -303,9 +299,8 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   /**
-   * Try to retire the current chunk if it is still
-   * <code>c</code>. Postcondition is that curChunk.get()
-   * != c
+   * Try to retire the current chunk if it is still <code>c</code>. Postcondition is that
+   * curChunk.get() != c
    * @param c the chunk to retire
    */
   private void tryRetireChunk(Chunk c) {
@@ -319,8 +314,7 @@ public class MemStoreLABImpl implements MemStoreLAB {
   }
 
   /**
-   * Get the current chunk, or, if there is no current chunk,
-   * allocate a new one from the JVM.
+   * Get the current chunk, or, if there is no current chunk, allocate a new one from the JVM.
    */
   private Chunk getOrMakeChunk() {
     // Try to get the chunk
@@ -352,11 +346,11 @@ public class MemStoreLABImpl implements MemStoreLAB {
     return null;
   }
 
-  /* Returning a new pool chunk, without replacing current chunk,
-  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-  ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers.
-  */
+  /*
+   * Returning a new pool chunk, without replacing current chunk, meaning MSLABImpl does not make
+   * the returned chunk as CurChunk. The space on this chunk will be allocated externally. The
+   * interface is only for external callers.
+   */
   @Override
   public Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType) {
     switch (chunkType) {
@@ -371,12 +365,12 @@ public class MemStoreLABImpl implements MemStoreLAB {
     }
   }
 
-  /* Returning a new chunk, without replacing current chunk,
-  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-  ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers.
-  ** Chunks from pools are not allocated from here, since they have fixed sizes
-  */
+  /*
+   * Returning a new chunk, without replacing current chunk, meaning MSLABImpl does not make the
+   * returned chunk as CurChunk. The space on this chunk will be allocated externally. The interface
+   * is only for external callers. Chunks from pools are not allocated from here, since they have
+   * fixed sizes
+   */
   @Override
   public Chunk getNewExternalChunk(int size) {
     int allocSize = size + ChunkCreator.SIZEOF_CHUNK_HEADER;

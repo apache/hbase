@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -166,6 +166,11 @@ public class TestRpcBasedRegistryHedgedReads {
       @Override
       protected CompletableFuture<Set<ServerName>> fetchEndpoints() {
         return CompletableFuture.completedFuture(BOOTSTRAP_NODES);
+      }
+
+      @Override
+      public String getConnectionString() {
+        return "unimplemented";
       }
     };
   }

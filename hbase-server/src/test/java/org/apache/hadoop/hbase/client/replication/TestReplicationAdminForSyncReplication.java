@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -44,18 +43,17 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestReplicationAdminForSyncReplication {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationAdminForSyncReplication.class);
+    HBaseClassTestRule.forClass(TestReplicationAdminForSyncReplication.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationAdminForSyncReplication.class);
+    LoggerFactory.getLogger(TestReplicationAdminForSyncReplication.class);
 
-  private final static HBaseTestingUtil TEST_UTIL =
-      new HBaseTestingUtil();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static Admin hbaseAdmin;
 
@@ -85,8 +83,8 @@ public class TestReplicationAdminForSyncReplication {
       int index = i;
       threads[i] = new Thread(() -> {
         try {
-          hbaseAdmin
-              .addReplicationPeer(peerId, buildSyncReplicationPeerConfig(clusterKey, tableName));
+          hbaseAdmin.addReplicationPeer(peerId,
+            buildSyncReplicationPeerConfig(clusterKey, tableName));
         } catch (IOException e) {
           LOG.error("Failed to add replication peer " + peerId);
           success[index] = false;
@@ -110,12 +108,12 @@ public class TestReplicationAdminForSyncReplication {
   }
 
   private ReplicationPeerConfig buildSyncReplicationPeerConfig(String clusterKey,
-      TableName tableName) throws IOException {
+    TableName tableName) throws IOException {
     Path rootDir = TEST_UTIL.getDataTestDirOnTestFS("remoteWAL");
     ReplicationPeerConfigBuilder builder = ReplicationPeerConfig.newBuilder();
     builder.setClusterKey(clusterKey);
     builder.setRemoteWALDir(rootDir.makeQualified(TEST_UTIL.getTestFileSystem().getUri(),
-        TEST_UTIL.getTestFileSystem().getWorkingDirectory()).toString());
+      TEST_UTIL.getTestFileSystem().getWorkingDirectory()).toString());
     builder.setReplicateAllUserTables(false);
     Map<TableName, List<String>> tableCfs = new HashMap<>();
     tableCfs.put(tableName, new ArrayList<>());

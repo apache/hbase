@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # Run a shell command on all backup master hosts.
 #
 # Environment Variables
@@ -45,7 +45,7 @@ bin=`cd "$bin">/dev/null; pwd`
 . "$bin"/hbase-config.sh
 
 # If the master backup file is specified in the command line,
-# then it takes precedence over the definition in 
+# then it takes precedence over the definition in
 # hbase-env.sh. Save it here.
 HOSTLIST=$HBASE_BACKUP_MASTERS
 
@@ -69,6 +69,6 @@ if [ -f $HOSTLIST ]; then
      sleep $HBASE_SLAVE_SLEEP
    fi
   done
-fi 
+fi
 
 wait

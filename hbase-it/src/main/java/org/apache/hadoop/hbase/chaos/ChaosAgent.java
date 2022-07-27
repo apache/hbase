@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Pair;
@@ -43,32 +40,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /***
- * An agent for executing destructive actions for ChaosMonkey.
- * Uses ZooKeeper Watchers and LocalShell, to do the killing
- * and getting status of service on targeted host without SSH.
- * uses given ZNode Structure:
- *  /perfChaosTest (root)
- *              |
- *              |
- *              /chaosAgents (Used for registration has
- *              hostname ephemeral nodes as children)
- *              |
- *              |
- *              /chaosAgentTaskStatus (Used for task
- *              Execution, has hostname persistent
- *              nodes as child with tasks as their children)
- *                          |
- *                          |
- *                          /hostname
- *                                |
- *                                |
- *                                /task0000001 (command as data)
- *                                (has two types of command :
- *                                     1: starts with "exec"
- *                                       for executing a destructive action.
- *                                     2: starts with "bool" for getting
- *                                       only status of service.
- *
+ * An agent for executing destructive actions for ChaosMonkey. Uses ZooKeeper Watchers and
+ * LocalShell, to do the killing and getting status of service on targeted host without SSH. uses
+ * given ZNode Structure: /perfChaosTest (root) | | /chaosAgents (Used for registration has hostname
+ * ephemeral nodes as children) | | /chaosAgentTaskStatus (Used for task Execution, has hostname
+ * persistent nodes as child with tasks as their children) | | /hostname | | /task0000001 (command
+ * as data) (has two types of command : 1: starts with "exec" for executing a destructive action. 2:
+ * starts with "bool" for getting only status of service.
  */
 @InterfaceAudience.Private
 public class ChaosAgent implements Watcher, Closeable, Runnable {
@@ -88,8 +66,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /***
    * sets global params and initiates connection with ZooKeeper then does registration.
-   * @param conf initial configuration to use
-   * @param quorum ZK Quorum
+   * @param conf      initial configuration to use
+   * @param quorum    ZK Quorum
    * @param agentName AgentName to use
    */
   private void initChaosAgent(Configuration conf, String quorum, String agentName) {
@@ -97,10 +75,10 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     this.quorum = quorum;
     this.agentName = agentName;
     this.retryCounterFactory = new RetryCounterFactory(new RetryCounter.RetryConfig()
-      .setMaxAttempts(conf.getInt(ChaosConstants.RETRY_ATTEMPTS_KEY,
-        ChaosConstants.DEFAULT_RETRY_ATTEMPTS)).setSleepInterval(
-          conf.getLong(ChaosConstants.RETRY_SLEEP_INTERVAL_KEY,
-            ChaosConstants.DEFAULT_RETRY_SLEEP_INTERVAL)));
+      .setMaxAttempts(
+        conf.getInt(ChaosConstants.RETRY_ATTEMPTS_KEY, ChaosConstants.DEFAULT_RETRY_ATTEMPTS))
+      .setSleepInterval(conf.getLong(ChaosConstants.RETRY_SLEEP_INTERVAL_KEY,
+        ChaosConstants.DEFAULT_RETRY_SLEEP_INTERVAL)));
     try {
       this.createZKConnection(null);
       this.register();
@@ -114,7 +92,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
    * @throws IOException if something goes wrong
    */
   private void createZKConnection(Watcher watcher) throws IOException {
-    if(watcher == null) {
+    if (watcher == null) {
       zk = new ZooKeeper(quorum, ChaosConstants.SESSION_TIMEOUT_ZK, this);
     } else {
       zk = new ZooKeeper(quorum, ChaosConstants.SESSION_TIMEOUT_ZK, watcher);
@@ -122,20 +100,22 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     LOG.info("ZooKeeper Connection created for ChaosAgent: " + agentName);
   }
 
-  //WATCHERS: Below are the Watches used by ChaosAgent
+  // WATCHERS: Below are the Watches used by ChaosAgent
 
   /***
-   * Watcher for notifying if any task is assigned to agent or not,
-   * by seeking if any Node is being added to agent as Child.
+   * Watcher for notifying if any task is assigned to agent or not, by seeking if any Node is being
+   * added to agent as Child.
    */
   Watcher newTaskCreatedWatcher = new Watcher() {
     @Override
     public void process(WatchedEvent watchedEvent) {
       if (watchedEvent.getType() == Event.EventType.NodeChildrenChanged) {
-        if (!(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
-          ChaosConstants.ZNODE_PATH_SEPARATOR + agentName).equals(watchedEvent.getPath())) {
-          throw new RuntimeException(KeeperException.create(
-            KeeperException.Code.DATAINCONSISTENCY));
+        if (
+          !(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE + ChaosConstants.ZNODE_PATH_SEPARATOR
+            + agentName).equals(watchedEvent.getPath())
+        ) {
+          throw new RuntimeException(
+            KeeperException.create(KeeperException.Code.DATAINCONSISTENCY));
         }
 
         LOG.info("Change in Tasks Node, checking for Tasks again.");
@@ -145,7 +125,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     }
   };
 
-  //CALLBACKS: Below are the Callbacks used by Chaos Agent
+  // CALLBACKS: Below are the Callbacks used by Chaos Agent
 
   /**
    * Callback used while setting status of a given task, Logs given status.
@@ -172,14 +152,14 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
         break;
 
       default:
-        LOG.error("Error while setting status of task ZNode: " +
-          path, KeeperException.create(KeeperException.Code.get(rc), path));
+        LOG.error("Error while setting status of task ZNode: " + path,
+          KeeperException.create(KeeperException.Code.get(rc), path));
     }
   };
 
   /**
-   * Callback used while creating a Persistent ZNode tries to create
-   * ZNode again if Connection was lost in previous try.
+   * Callback used while creating a Persistent ZNode tries to create ZNode again if Connection was
+   * lost in previous try.
    */
   AsyncCallback.StringCallback createZNodeCallback = (rc, path, ctx, name) -> {
     switch (KeeperException.Code.get(rc)) {
@@ -204,8 +184,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   };
 
   /**
-   * Callback used while creating a Ephemeral ZNode tries to create ZNode again
-   * if Connection was lost in previous try.
+   * Callback used while creating a Ephemeral ZNode tries to create ZNode again if Connection was
+   * lost in previous try.
    */
   AsyncCallback.StringCallback createEphemeralZNodeCallback = (rc, path, ctx, name) -> {
     switch (KeeperException.Code.get(rc)) {
@@ -230,33 +210,29 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   };
 
   /**
-   * Callback used by getTasksForAgentCallback while getting command,
-   * after getting command successfully, it executes command and
-   * set its status with respect to the command type.
+   * Callback used by getTasksForAgentCallback while getting command, after getting command
+   * successfully, it executes command and set its status with respect to the command type.
    */
   AsyncCallback.DataCallback getTaskForExecutionCallback = new AsyncCallback.DataCallback() {
     @Override
     public void processResult(int rc, String path, Object ctx, byte[] data, Stat stat) {
       switch (KeeperException.Code.get(rc)) {
         case CONNECTIONLOSS:
-          //Connection to the server has been lost while getting task, getting data again.
+          // Connection to the server has been lost while getting task, getting data again.
           try {
             recreateZKConnection();
           } catch (Exception e) {
             break;
           }
-          zk.getData(path,
-            false,
-            getTaskForExecutionCallback,
-            new String(data));
+          zk.getData(path, false, getTaskForExecutionCallback, new String(data));
           break;
         case OK:
           String cmd = new String(data);
           LOG.info("Executing command : " + cmd);
           String status = ChaosConstants.TASK_COMPLETION_STRING;
           try {
-            String user = conf.get(ChaosConstants.CHAOSAGENT_SHELL_USER,
-              ChaosConstants.DEFAULT_SHELL_USER);
+            String user =
+              conf.get(ChaosConstants.CHAOSAGENT_SHELL_USER, ChaosConstants.DEFAULT_SHELL_USER);
             switch (cmd.substring(0, 4)) {
               case "bool":
                 String ret = execWithRetries(user, cmd.substring(4)).getSecond();
@@ -272,8 +248,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
                 status = ChaosConstants.TASK_ERROR_STRING;
             }
           } catch (IOException e) {
-            LOG.error("Got error while executing command : " + cmd +
-              " On agent : " + agentName + " Error : " + e);
+            LOG.error("Got error while executing command : " + cmd + " On agent : " + agentName
+              + " Error : " + e);
             status = ChaosConstants.TASK_ERROR_STRING;
           }
 
@@ -292,8 +268,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
   };
 
   /***
-   * Callback used while getting Tasks for agent if call executed without Exception,
-   * It creates a separate thread for each children to execute given Tasks parallely.
+   * Callback used while getting Tasks for agent if call executed without Exception, It creates a
+   * separate thread for each children to execute given Tasks parallely.
    */
   AsyncCallback.ChildrenCallback getTasksForAgentCallback = new AsyncCallback.ChildrenCallback() {
     @Override
@@ -321,12 +297,11 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
                 Thread t = new Thread(() -> {
 
                   LOG.info("Executing task : " + task + " of agent : " + agentName);
-                  zk.getData(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
-                      ChaosConstants.ZNODE_PATH_SEPARATOR + agentName +
-                      ChaosConstants.ZNODE_PATH_SEPARATOR + task,
-                    false,
-                    getTaskForExecutionCallback,
-                    task);
+                  zk.getData(
+                    ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE
+                      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName
+                      + ChaosConstants.ZNODE_PATH_SEPARATOR + task,
+                    false, getTaskForExecutionCallback, task);
 
                 });
                 t.setName(threadName);
@@ -338,8 +313,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
                 }
               }
             } catch (InterruptedException e) {
-              LOG.error("Error scheduling next task : " +
-                " for agent : " + agentName + " Error : " + e);
+              LOG.error(
+                "Error scheduling next task : " + " for agent : " + agentName + " Error : " + e);
             }
           }
           break;
@@ -358,11 +333,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
    * @param data Data to put under ZNode
    */
   public void createZNode(String path, byte[] data) {
-    zk.create(path,
-      data,
-      ZooDefs.Ids.OPEN_ACL_UNSAFE,
-      CreateMode.PERSISTENT,
-      createZNodeCallback,
+    zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, createZNodeCallback,
       data);
   }
 
@@ -372,23 +343,17 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
    * @param data Data to put under ZNode
    */
   public void createEphemeralZNode(String path, byte[] data) {
-    zk.create(path,
-      data,
-      ZooDefs.Ids.OPEN_ACL_UNSAFE,
-      CreateMode.EPHEMERAL,
-      createEphemeralZNodeCallback,
-      data);
+    zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL,
+      createEphemeralZNodeCallback, data);
   }
 
   /**
    * Checks if given ZNode exists, if not creates a PERSISTENT ZNODE for same.
-   *
    * @param path Path to check for ZNode
    */
   private void createIfZNodeNotExists(String path) {
     try {
-      if (zk.exists(path,
-        false) == null) {
+      if (zk.exists(path, false) == null) {
         createZNode(path, new byte[0]);
       }
     } catch (KeeperException | InterruptedException e) {
@@ -398,17 +363,12 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
 
   /**
    * sets given Status for Task Znode
-   *
    * @param taskZNode ZNode to set status
-   * @param status Status value
+   * @param status    Status value
    */
   public void setStatusOfTaskZNode(String taskZNode, String status) {
     LOG.info("Setting status of Task ZNode: " + taskZNode + " status : " + status);
-    zk.setData(taskZNode,
-      status.getBytes(),
-      -1,
-      setStatusOfTaskZNodeCallback,
-      null);
+    zk.setData(taskZNode, status.getBytes(), -1, setStatusOfTaskZNodeCallback, null);
   }
 
   /**
@@ -418,33 +378,29 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     createIfZNodeNotExists(ChaosConstants.CHAOS_TEST_ROOT_ZNODE);
     createIfZNodeNotExists(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE);
     createIfZNodeNotExists(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE);
-    createIfZNodeNotExists(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
-      ChaosConstants.ZNODE_PATH_SEPARATOR + agentName);
+    createIfZNodeNotExists(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE
+      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName);
 
-    createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE +
-      ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
+    createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE
+      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
   }
 
   /***
-   * Gets tasks for execution, basically sets Watch on it's respective host's Znode and
-   * waits for tasks to be assigned, also has a getTasksForAgentCallback
-   * which handles execution of task.
+   * Gets tasks for execution, basically sets Watch on it's respective host's Znode and waits for
+   * tasks to be assigned, also has a getTasksForAgentCallback which handles execution of task.
    */
   private void getTasks() {
     LOG.info("Getting Tasks for Agent: " + agentName + "and setting watch for new Tasks");
-    zk.getChildren(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE +
-        ChaosConstants.ZNODE_PATH_SEPARATOR + agentName,
-      newTaskCreatedWatcher,
-      getTasksForAgentCallback,
-      null);
+    zk.getChildren(ChaosConstants.CHAOS_AGENT_STATUS_PERSISTENT_ZNODE
+      + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, newTaskCreatedWatcher,
+      getTasksForAgentCallback, null);
   }
 
   /**
-   * Below function executes command with retries with given user.
-   * Uses LocalShell to execute a command.
-   *
+   * Below function executes command with retries with given user. Uses LocalShell to execute a
+   * command.
    * @param user user name, default none
-   * @param cmd Command to execute
+   * @param cmd  Command to execute
    * @return A pair of Exit Code and Shell output
    * @throws IOException Exception while executing shell command
    */
@@ -472,20 +428,22 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
       shell.execute();
     } catch (Shell.ExitCodeException e) {
       String output = shell.getOutput();
-      throw new Shell.ExitCodeException(e.getExitCode(), "stderr: " + e.getMessage()
-        + ", stdout: " + output);
+      throw new Shell.ExitCodeException(e.getExitCode(),
+        "stderr: " + e.getMessage() + ", stdout: " + output);
     }
-    LOG.info("Executed Shell command, exit code: {}, output n{}", shell.getExitCode(), shell.getOutput());
+    LOG.info("Executed Shell command, exit code: {}, output n{}", shell.getExitCode(),
+      shell.getOutput());
 
     return new Pair<>(shell.getExitCode(), shell.getOutput());
   }
 
-  private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex,
-    String user, String cmd) throws E {
+  private <E extends Exception> void retryOrThrow(RetryCounter retryCounter, E ex, String user,
+    String cmd) throws E {
     if (retryCounter.shouldRetry()) {
-      LOG.warn("Local command: {}, user: {}, failed at attempt {}. Retrying until maxAttempts: {}."
-        + "Exception {}", cmd, user,retryCounter.getAttemptTimes(), retryCounter.getMaxAttempts(),
-        ex.getMessage());
+      LOG.warn(
+        "Local command: {}, user: {}, failed at attempt {}. Retrying until maxAttempts: {}."
+          + "Exception {}",
+        cmd, user, retryCounter.getAttemptTimes(), retryCounter.getMaxAttempts(), ex.getMessage());
       return;
     }
     throw ex;
@@ -548,17 +506,17 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     }
   }
 
-  private void recreateZKConnection() throws Exception{
+  private void recreateZKConnection() throws Exception {
     try {
       zk.close();
-        createZKConnection(newTaskCreatedWatcher);
-        createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE +
-          ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
-      } catch (IOException e) {
-        LOG.error("Error creating new ZK COnnection for agent: {}", agentName + e);
-        throw e;
-      }
+      createZKConnection(newTaskCreatedWatcher);
+      createEphemeralZNode(ChaosConstants.CHAOS_AGENT_REGISTRATION_EPIMERAL_ZNODE
+        + ChaosConstants.ZNODE_PATH_SEPARATOR + agentName, new byte[0]);
+    } catch (IOException e) {
+      LOG.error("Error creating new ZK COnnection for agent: {}", agentName + e);
+      throw e;
     }
+  }
 
   /**
    * Executes Command locally.
@@ -569,7 +527,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     private String execCommand;
 
     public LocalShell(String user, String execCommand) {
-      super(new String[]{execCommand});
+      super(new String[] { execCommand });
       this.user = user;
       this.execCommand = execCommand;
     }
@@ -577,10 +535,10 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
     @Override
     public String[] getExecString() {
       // TODO: Considering Agent is running with same user.
-      if(!user.equals(ChaosConstants.DEFAULT_SHELL_USER)){
+      if (!user.equals(ChaosConstants.DEFAULT_SHELL_USER)) {
         execCommand = String.format("su -u %1$s %2$s", user, execCommand);
       }
-      return new String[]{"/usr/bin/env", "bash", "-c", execCommand};
+      return new String[] { "/usr/bin/env", "bash", "-c", execCommand };
     }
 
     @Override

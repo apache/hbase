@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,10 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Sleeper for current thread.
- * Sleeps for passed period.  Also checks passed boolean and if interrupted,
- * will return if the flag is set (rather than go back to sleep until its
- * sleep time is up).
+ * Sleeper for current thread. Sleeps for passed period. Also checks passed boolean and if
+ * interrupted, will return if the flag is set (rather than go back to sleep until its sleep time is
+ * up).
  */
 @InterfaceAudience.Private
 public class Sleeper {
@@ -40,9 +38,9 @@ public class Sleeper {
   private boolean triggerWake = false;
 
   /**
-   * @param sleep sleep time in milliseconds
-   * @param stopper When {@link Stoppable#isStopped()} is true, this thread will
-   *    cleanup and exit cleanly.
+   * @param sleep   sleep time in milliseconds
+   * @param stopper When {@link Stoppable#isStopped()} is true, this thread will cleanup and exit
+   *                cleanly.
    */
   public Sleeper(final int sleep, final Stoppable stopper) {
     this.period = sleep;
@@ -50,8 +48,7 @@ public class Sleeper {
   }
 
   /**
-   * If currently asleep, stops sleeping; if not asleep, will skip the next
-   * sleep cycle.
+   * If currently asleep, stops sleeping; if not asleep, will skip the next sleep cycle.
    */
   public void skipSleepCycle() {
     synchronized (sleepLock) {
@@ -86,29 +83,29 @@ public class Sleeper {
         woke = EnvironmentEdgeManager.currentTime();
         long slept = woke - now;
         if (slept - this.period > MINIMAL_DELTA_FOR_LOGGING) {
-          LOG.warn("We slept {}ms instead of {}ms, this is likely due to a long " +
-              "garbage collecting pause and it's usually bad, see " +
-              "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired", slept, this.period);
+          LOG.warn(
+            "We slept {}ms instead of {}ms, this is likely due to a long "
+              + "garbage collecting pause and it's usually bad, see "
+              + "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired",
+            slept, this.period);
         }
-      } catch(InterruptedException iex) {
-        // We we interrupted because we're meant to stop?  If not, just
+      } catch (InterruptedException iex) {
+        // We we interrupted because we're meant to stop? If not, just
         // continue ignoring the interruption
         if (this.stopper.isStopped()) {
           return;
         }
       }
       // Recalculate waitTime.
-      woke = (woke == -1)? EnvironmentEdgeManager.currentTime() : woke;
+      woke = (woke == -1) ? EnvironmentEdgeManager.currentTime() : woke;
       currentSleepTime = this.period - (woke - now);
     }
-    synchronized(sleepLock) {
+    synchronized (sleepLock) {
       triggerWake = false;
     }
   }
 
-  /**
-   * @return the sleep period in milliseconds
-   */
+  /** Returns the sleep period in milliseconds */
   public final int getPeriod() {
     return period;
   }

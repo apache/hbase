@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.snapshot;
+
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,11 +38,11 @@ import org.slf4j.LoggerFactory;
  * Test Export Snapshot Tool; tests v2 snapshots.
  * @see TestExportSnapshotV1NoCluster
  */
-@Category({MapReduceTests.class, MediumTests.class})
+@Category({ MapReduceTests.class, MediumTests.class })
 public class TestExportSnapshotV2NoCluster {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestExportSnapshotV2NoCluster.class);
+    HBaseClassTestRule.forClass(TestExportSnapshotV2NoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExportSnapshotV2NoCluster.class);
 
@@ -61,8 +63,8 @@ public class TestExportSnapshotV2NoCluster {
   public void testSnapshotWithRefsExportFileSystemState() throws Exception {
     final SnapshotMock snapshotMock = new SnapshotMock(testUtil.getConfiguration(),
       testDir.getFileSystem(testUtil.getConfiguration()), testDir);
-    final SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV2",
-      "tableWithRefsV2");
+    final SnapshotMock.SnapshotBuilder builder =
+      snapshotMock.createSnapshotV2("tableWithRefsV2", "tableWithRefsV2");
     TestExportSnapshotV1NoCluster.testSnapshotWithRefsExportFileSystemState(this.fs, builder,
       this.testUtil, this.testDir);
   }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,56 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.IOException;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
  * Interface of all necessary to carry out a RPC method invocation on the server.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public interface RpcCall extends RpcCallContext {
 
-  /**
-   * @return The service of this call.
-   */
+  /** Returns The service of this call. */
   BlockingService getService();
 
-  /**
-   * @return The service method.
-   */
+  /** Returns The service method. */
   MethodDescriptor getMethod();
 
-  /**
-   * @return The call parameter message.
-   */
+  /** Returns The call parameter message. */
   Message getParam();
 
-  /**
-   * @return The CellScanner that can carry input and result payload.
-   */
+  /** Returns The CellScanner that can carry input and result payload. */
   CellScanner getCellScanner();
 
-  /**
-   * @return The timestamp when the call is constructed.
-   */
+  /** Returns The timestamp when the call is constructed. */
   long getReceiveTime();
 
-  /**
-   * @return The time when the call starts to be executed.
-   */
+  /** Returns The time when the call starts to be executed. */
   long getStartTime();
 
   /**
@@ -73,53 +59,44 @@ public interface RpcCall extends RpcCallContext {
    */
   void setStartTime(long startTime);
 
-  /**
-   * @return The timeout of this call.
-   */
+  /** Returns The timeout of this call. */
   int getTimeout();
 
-  /**
-   * @return The Priority of this call.
-   */
+  /** Returns The Priority of this call. */
   int getPriority();
 
   /**
-   * Return the deadline of this call. If we can not complete this call in time,
-   * we can throw a TimeoutIOException and RPCServer will drop it.
+   * Return the deadline of this call. If we can not complete this call in time, we can throw a
+   * TimeoutIOException and RPCServer will drop it.
    * @return The system timestamp of deadline.
    */
   long getDeadline();
 
   /**
-   * Used to calculate the request call queue size.
-   * If the total request call size exceeds a limit, the call will be rejected.
+   * Used to calculate the request call queue size. If the total request call size exceeds a limit,
+   * the call will be rejected.
    * @return The raw size of this call.
    */
   long getSize();
 
-  /**
-   * @return The request header of this call.
-   */
+  /** Returns The request header of this call. */
   RequestHeader getHeader();
 
-  /**
-   * @return Port of remote address in this call
-   */
+  /** Returns Port of remote address in this call */
   int getRemotePort();
 
   /**
    * Set the response resulting from this RPC call.
-   * @param param The result message as response.
-   * @param cells The CellScanner that possibly carries the payload.
+   * @param param          The result message as response.
+   * @param cells          The CellScanner that possibly carries the payload.
    * @param errorThrowable The error Throwable resulting from the call.
-   * @param error Extra error message.
+   * @param error          Extra error message.
    */
   void setResponse(Message param, CellScanner cells, Throwable errorThrowable, String error);
 
   /**
-   * Send the response of this RPC call.
-   * Implementation provides the underlying facility (connection, etc) to send.
-   * @throws IOException
+   * Send the response of this RPC call. Implementation provides the underlying facility
+   * (connection, etc) to send. n
    */
   void sendResponseIfReady() throws IOException;
 
@@ -128,8 +105,6 @@ public interface RpcCall extends RpcCallContext {
    */
   void cleanup();
 
-  /**
-   * @return A short string format of this call without possibly lengthy params
-   */
+  /** Returns A short string format of this call without possibly lengthy params */
   String toShortString();
 }

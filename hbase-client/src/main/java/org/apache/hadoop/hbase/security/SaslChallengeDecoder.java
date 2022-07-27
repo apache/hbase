@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import java.io.IOException;
+import java.util.List;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.ByteToMessageDecoder;
-
-import java.io.IOException;
-import java.util.List;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Decode the sasl challenge sent by RpcServer.
@@ -48,7 +47,7 @@ public class SaslChallengeDecoder extends ByteToMessageDecoder {
     }
     if (len > MAX_CHALLENGE_SIZE) {
       throw new IOException(
-          "Sasl challenge too large(" + len + "), max allowed is " + MAX_CHALLENGE_SIZE);
+        "Sasl challenge too large(" + len + "), max allowed is " + MAX_CHALLENGE_SIZE);
     }
     int totalLen = 4 + len;
     if (readableBytes < totalLen) {
@@ -69,7 +68,7 @@ public class SaslChallengeDecoder extends ByteToMessageDecoder {
     }
     if (classLen > MAX_CHALLENGE_SIZE) {
       throw new IOException("Exception class name length too large(" + classLen
-          + "), max allowed is " + MAX_CHALLENGE_SIZE);
+        + "), max allowed is " + MAX_CHALLENGE_SIZE);
     }
     if (readableBytes < 4 + classLen + 4) {
       return;
@@ -79,8 +78,8 @@ public class SaslChallengeDecoder extends ByteToMessageDecoder {
       throw new IOException("Invalid exception message length " + msgLen);
     }
     if (msgLen > MAX_CHALLENGE_SIZE) {
-      throw new IOException("Exception message length too large(" + msgLen + "), max allowed is "
-          + MAX_CHALLENGE_SIZE);
+      throw new IOException(
+        "Exception message length too large(" + msgLen + "), max allowed is " + MAX_CHALLENGE_SIZE);
     }
     int totalLen = classLen + msgLen + 8;
     if (readableBytes < totalLen) {

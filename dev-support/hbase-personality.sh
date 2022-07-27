@@ -119,6 +119,18 @@ function personality_parse_args
         delete_parameter "${i}"
         ASF_NIGHTLIES_GENERAL_CHECK_BASE=${i#*=}
       ;;
+      --build-thread=*)
+        delete_parameter "${i}"
+        BUILD_THREAD=${i#*=}
+      ;;
+      --surefire-first-part-fork-count=*)
+        delete_parameter "${i}"
+        SUREFIRE_FIRST_PART_FORK_COUNT=${i#*=}
+      ;;
+      --surefire-second-part-fork-count=*)
+        delete_parameter "${i}"
+        SUREFIRE_SECOND_PART_FORK_COUNT=${i#*=}
+      ;;
     esac
   done
 }
@@ -144,7 +156,23 @@ function personality_modules
   # At a few points, hbase modules can run build, test, etc. in parallel
   # Let it happen. Means we'll use more CPU but should be for short bursts.
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
-  extra="--threads=2 -DHBasePatchProcess"
+  if [[ "${testtype}" == mvnsite ]]; then
+    yetus_debug "Skip specifying --threads since maven-site-plugin does not support building in parallel."
+  else
+    if [[ -n "${BUILD_THREAD}" ]]; then
+      extra="--threads=${BUILD_THREAD}"
+    else
+      extra="--threads=2"
+    fi
+  fi
+
+  # Set java.io.tmpdir to avoid exhausting the /tmp space
+  # Just simply set to 'target', it is not very critical so we do not care
+  # whether it is placed in the root directory or a sub module's directory
+  # let's make it absolute
+  tmpdir=$(realpath target)
+  extra="${extra} -Djava.io.tmpdir=${tmpdir} -DHBasePatchProcess"
+
   if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
     extra="${extra} -Dhttps.protocols=TLSv1.2"
   fi
@@ -230,6 +258,15 @@ function personality_modules
     # Used by zombie detection stuff, even though we're not including that yet.
     if [ -n "${BUILD_ID}" ]; then
       extra="${extra} -Dbuild.id=${BUILD_ID}"
+    fi
+
+    # set forkCount
+    if [[ -n "${SUREFIRE_FIRST_PART_FORK_COUNT}" ]]; then
+      extra="${extra} -Dsurefire.firstPartForkCount=${SUREFIRE_FIRST_PART_FORK_COUNT}"
+    fi
+
+    if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
+      extra="${extra} -Dsurefire.secondPartForkCount=${SUREFIRE_SECOND_PART_FORK_COUNT}"
     fi
 
     # If the set of changed files includes CommonFSUtils then add the hbase-server
@@ -356,10 +393,13 @@ function refguide_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ src/main/asciidoc ]] ||
-     [[ ${filename} =~ src/main/xslt ]] ||
-     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
-    add_test refguide
+  # we only generate ref guide on master branch now
+  if [[ "${PATCH_BRANCH}" = master ]]; then
+    if [[ ${filename} =~ src/main/asciidoc ]] ||
+       [[ ${filename} =~ src/main/xslt ]] ||
+       [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
+      add_test refguide
+    fi
   fi
 }
 
@@ -467,7 +507,7 @@ function shadedjars_rebuild
 
   local -a maven_args=('clean' 'verify' '-fae' '--batch-mode'
     '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
-    '-Dtest=NoUnitTests' '-DHBasePatchProcess' '-Prelease'
+    '-DskipTests' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
@@ -831,6 +871,55 @@ function hbaseanti_patchfile
   add_vote_table +1 hbaseanti "" "Patch does not have any anti-patterns."
   return 0
 }
+
+######################################
+
+add_test_type spotless
+
+## @description  spotless file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
+function spotless_filefilter
+{
+  # always add spotless check as it can format almost all types of files
+  add_test spotless
+}
+## @description run spotless:check to check format issues
+## @audience private
+## @stability evolving
+## @param repostatus
+function spotless_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-spotless.txt"
+
+  if ! verify_needed_test spotless; then
+    return 0
+  fi
+
+  big_console_header "Checking spotless on ${repostatus}"
+
+  start_clock
+
+  local -a maven_args=('spotless:check')
+
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
+  echo_and_redirect "${logfile}" $(maven_executor) "${maven_args[@]}"
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 spotless "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
+    add_footer_table spotless "@@BASE@@/${repostatus}-spotless.txt"
+    return 1
+  fi
+
+  add_vote_table +1 spotless "${repostatus} has no errors when running spotless:check."
+  return 0
+}
+
+######################################
 
 ## @description  process the javac output for generating WARNING/ERROR
 ## @audience     private

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
+
 /**
- * A binary comparator which lexicographically compares against the specified
- * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
+ * A binary comparator which lexicographically compares against the specified byte array using
+ * {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  * @since 2.0.0
  */
 @InterfaceAudience.Public
@@ -47,7 +45,7 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   }
 
   @Override
-  public int compareTo(byte [] value, int offset, int length) {
+  public int compareTo(byte[] value, int offset, int length) {
     return Bytes.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
@@ -56,11 +54,9 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
     return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     ComparatorProtos.BinaryComparator.Builder builder =
       ComparatorProtos.BinaryComparator.newBuilder();
     builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
@@ -68,13 +64,13 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   }
 
   /**
+   * Parse a serialized representation of {@link BinaryComparator}
    * @param pbBytes A pb serialized {@link BinaryComparator} instance
    * @return An instance of {@link BinaryComparator} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
-  public static BinaryComparator parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static BinaryComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
     ComparatorProtos.BinaryComparator proto;
     try {
       proto = ComparatorProtos.BinaryComparator.parseFrom(pbBytes);
@@ -85,15 +81,17 @@ public class BinaryComparator extends org.apache.hadoop.hbase.filter.ByteArrayCo
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the comparator that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof BinaryComparator)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof BinaryComparator)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(other);
   }
 }

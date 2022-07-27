@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,22 +48,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Used internally for reading meta and constructing datastructures that are
- * then queried, for things like regions to regionservers, table to regions, etc.
- * It also records the favored nodes mapping for regions.
- *
+ * Used internally for reading meta and constructing datastructures that are then queried, for
+ * things like regions to regionservers, table to regions, etc. It also records the favored nodes
+ * mapping for regions.
  */
 @InterfaceAudience.Private
 public class SnapshotOfRegionAssignmentFromMeta {
-  private static final Logger LOG = LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class
-      .getName());
+  private static final Logger LOG =
+    LoggerFactory.getLogger(SnapshotOfRegionAssignmentFromMeta.class.getName());
 
   private final Connection connection;
 
   /** the table name to region map */
   private final Map<TableName, List<RegionInfo>> tableToRegionMap;
   /** the region to region server map */
-  //private final Map<RegionInfo, ServerName> regionToRegionServerMap;
+  // private final Map<RegionInfo, ServerName> regionToRegionServerMap;
   private Map<RegionInfo, ServerName> regionToRegionServerMap;
   /** the region name to region info map */
   private final Map<String, RegionInfo> regionNameToRegionInfoMap;
@@ -84,7 +82,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
   }
 
   public SnapshotOfRegionAssignmentFromMeta(Connection connection, Set<TableName> disabledTables,
-      boolean excludeOfflinedSplitParents) {
+    boolean excludeOfflinedSplitParents) {
     this.connection = connection;
     tableToRegionMap = new HashMap<>();
     regionToRegionServerMap = new HashMap<>();
@@ -152,8 +150,8 @@ public class SnapshotOfRegionAssignmentFromMeta {
      * less than FAVORED_NODES_NUM, lets use as much as we can but log a warning.
      */
     if (favoredServerList.length != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
-      LOG.warn("Insufficient favored nodes for region " + hri + " fn: " +
-        Arrays.toString(favoredServerList));
+      LOG.warn("Insufficient favored nodes for region " + hri + " fn: "
+        + Arrays.toString(favoredServerList));
     }
     for (int i = 0; i < favoredServerList.length; i++) {
       if (i == PRIMARY.ordinal()) {
@@ -167,6 +165,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
       }
     }
   }
+
   /**
    * Initialize the region assignment snapshot by scanning the hbase:meta table
    */

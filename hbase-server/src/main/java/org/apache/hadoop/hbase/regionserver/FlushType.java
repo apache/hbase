@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,10 +27,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 enum FlushType {
   NORMAL,
-  ABOVE_ONHEAP_LOWER_MARK, /* happens due to lower mark breach of onheap memstore settings
-                              An offheap memstore can even breach the onheap_lower_mark*/
-  ABOVE_ONHEAP_HIGHER_MARK,/* happens due to higher mark breach of onheap memstore settings
-                              An offheap memstore can even breach the onheap_higher_mark*/
-  ABOVE_OFFHEAP_LOWER_MARK,/* happens due to lower mark breach of offheap memstore settings*/
-  ABOVE_OFFHEAP_HIGHER_MARK /* happens due to higer mark breach of offheap memstore settings*/
+  ABOVE_ONHEAP_LOWER_MARK, /*
+                            * happens due to lower mark breach of onheap memstore settings An
+                            * offheap memstore can even breach the onheap_lower_mark
+                            */
+  ABOVE_ONHEAP_HIGHER_MARK, /*
+                             * happens due to higher mark breach of onheap memstore settings An
+                             * offheap memstore can even breach the onheap_higher_mark
+                             */
+  ABOVE_OFFHEAP_LOWER_MARK, /* happens due to lower mark breach of offheap memstore settings */
+  ABOVE_OFFHEAP_HIGHER_MARK /* happens due to higer mark breach of offheap memstore settings */
 }

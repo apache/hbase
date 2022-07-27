@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The help screen.
@@ -68,8 +67,8 @@ public class HelpScreenView extends AbstractScreenView {
   private void showScreenDescription(long refreshDelay) {
     TerminalPrinter printer = getTerminalPrinter(SCREEN_DESCRIPTION_START_ROW);
     printer.startBold().print("Help for Interactive Commands").stopBold().endOfLine();
-    printer.print("Refresh delay: ").startBold()
-      .print((double) refreshDelay / 1000).stopBold().endOfLine();
+    printer.print("Refresh delay: ").startBold().print((double) refreshDelay / 1000).stopBold()
+      .endOfLine();
   }
 
   private void showCommandDescription(TerminalPrinter terminalPrinter,

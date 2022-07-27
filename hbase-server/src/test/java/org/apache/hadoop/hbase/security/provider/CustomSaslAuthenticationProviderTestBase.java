@@ -554,8 +554,8 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
           assertTrue(re.getMessage(), re.getMessage().contains("SaslException"));
         } catch (Exception e) {
           // Any other exception is unexpected.
-          fail("Unexpected exception caught, was expecting a authentication error: " +
-            Throwables.getStackTraceAsString(e));
+          fail("Unexpected exception caught, was expecting a authentication error: "
+            + Throwables.getStackTraceAsString(e));
         }
         return null;
       }

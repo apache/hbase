@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,16 +41,13 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestLogRoller {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLogRoller.class);
+    HBaseClassTestRule.forClass(TestLogRoller.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -84,8 +84,8 @@ public class TestLogRoller {
   public void testRemoveClosedWAL() throws Exception {
     assertEquals(0, ROLLER.getWalNeedsRoll().size());
     for (int i = 1; i <= 3; i++) {
-      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
-        true, WAL_PREFIX, getWALSuffix(i));
+      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null, true, WAL_PREFIX,
+        getWALSuffix(i));
       ROLLER.addWAL(wal);
     }
 
@@ -117,8 +117,8 @@ public class TestLogRoller {
     // add multiple wal
     Map<FSHLog, Path> wals = new HashMap<>();
     for (int i = 1; i <= 3; i++) {
-      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null,
-        true, WAL_PREFIX, getWALSuffix(i));
+      FSHLog wal = new FSHLog(FS, ROOT_DIR, LOG_DIR, ARCHIVE_DIR, CONF, null, true, WAL_PREFIX,
+        getWALSuffix(i));
       wal.init();
       wals.put(wal, wal.getCurrentFileName());
       ROLLER.addWAL(wal);

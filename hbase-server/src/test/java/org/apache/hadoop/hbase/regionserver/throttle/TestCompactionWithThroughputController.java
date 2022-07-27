@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.throttle;
 
+import static org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND;
+import static org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND;
+import static org.apache.hadoop.hbase.regionserver.throttle.PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -60,10 +62,10 @@ public class TestCompactionWithThroughputController {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompactionWithThroughputController.class);
+    HBaseClassTestRule.forClass(TestCompactionWithThroughputController.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
+    LoggerFactory.getLogger(TestCompactionWithThroughputController.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -97,7 +99,7 @@ public class TestCompactionWithThroughputController {
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
-        ThreadLocalRandom.current().nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
@@ -112,14 +114,8 @@ public class TestCompactionWithThroughputController {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 200);
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
-      throughputLimit);
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
-      throughputLimit);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND, throughputLimit);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND, throughputLimit);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       PressureAwareCompactionThroughputController.class.getName());
     TEST_UTIL.startMiniCluster(1);
@@ -171,7 +167,7 @@ public class TestCompactionWithThroughputController {
     long limitTime = testCompactionWithThroughputLimit();
     long noLimitTime = testCompactionWithoutThroughputLimit();
     LOG.info("With 1M/s limit, compaction use " + limitTime + "ms; without limit, compaction use "
-        + noLimitTime + "ms");
+      + noLimitTime + "ms");
     // usually the throughput of a compaction without limitation is about 40MB/sec at least, so this
     // is a very weak assumption.
     assertTrue(limitTime > noLimitTime * 2);
@@ -184,33 +180,25 @@ public class TestCompactionWithThroughputController {
   public void testThroughputTuning() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DefaultStoreEngine.class.getName());
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND,
-      20L * 1024 * 1024);
-    conf.setLong(
-      PressureAwareCompactionThroughputController
-        .HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND,
-      10L * 1024 * 1024);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_HIGHER_BOUND, 20L * 1024 * 1024);
+    conf.setLong(HBASE_HSTORE_COMPACTION_MAX_THROUGHPUT_LOWER_BOUND, 10L * 1024 * 1024);
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 4);
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 6);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       PressureAwareCompactionThroughputController.class.getName());
-    conf.setInt(
-      PressureAwareCompactionThroughputController.HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD,
-      1000);
+    conf.setInt(HBASE_HSTORE_COMPACTION_THROUGHPUT_TUNE_PERIOD, 1000);
     TEST_UTIL.startMiniCluster(1);
     Connection conn = ConnectionFactory.createConnection(conf);
     try {
       TEST_UTIL.getAdmin()
-          .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
-              .build());
+        .createTable(TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+          .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       PressureAwareCompactionThroughputController throughputController =
-          (PressureAwareCompactionThroughputController) regionServer.getCompactSplitThread()
-              .getCompactionThroughputController();
+        (PressureAwareCompactionThroughputController) regionServer.getCompactSplitThread()
+          .getCompactionThroughputController();
       assertEquals(10L * 1024 * 1024, throughputController.getMaxThroughput(), EPSILON);
       Table table = conn.getTable(tableName);
       for (int i = 0; i < 5; i++) {
@@ -237,8 +225,8 @@ public class TestCompactionWithThroughputController {
         NoLimitThroughputController.class.getName());
       regionServer.getCompactSplitThread().onConfigurationChange(conf);
       assertTrue(throughputController.isStopped());
-      assertTrue(regionServer.getCompactSplitThread().getCompactionThroughputController()
-        instanceof NoLimitThroughputController);
+      assertTrue(regionServer.getCompactSplitThread()
+        .getCompactionThroughputController() instanceof NoLimitThroughputController);
     } finally {
       conn.close();
       TEST_UTIL.shutdownMiniCluster();
@@ -260,9 +248,9 @@ public class TestCompactionWithThroughputController {
     Connection conn = ConnectionFactory.createConnection(conf);
     try {
       TEST_UTIL.getAdmin()
-          .createTable(TableDescriptorBuilder.newBuilder(tableName)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
-              .build());
+        .createTable(TableDescriptorBuilder.newBuilder(tableName)
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+          .build());
       TEST_UTIL.waitTableAvailable(tableName);
       HStore store = getStoreWithName(tableName);
       assertEquals(0, store.getStorefilesCount());

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellComparator;
@@ -41,8 +40,8 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface Store {
 
   /**
-   * The default priority for user-specified compaction requests.
-   * The user gets top priority unless we have blocking compactions. (Pri <= 0)
+   * The default priority for user-specified compaction requests. The user gets top priority unless
+   * we have blocking compactions. (Pri <= 0)
    */
   int PRIORITY_USER = 1;
   int NO_PRIORITY = Integer.MIN_VALUE;
@@ -82,99 +81,67 @@ public interface Store {
    */
   boolean canSplit();
 
-  /**
-   * @return <code>true</code> if the store has any underlying reference files to older HFiles
-   */
+  /** Returns <code>true</code> if the store has any underlying reference files to older HFiles */
   boolean hasReferences();
 
-  /**
-   * @return The size of this store's memstore.
-   */
+  /** Returns The size of this store's memstore. */
   MemStoreSize getMemStoreSize();
 
   /**
    * @return The amount of memory we could flush from this memstore; usually this is equal to
-   * {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the size of
-   * outstanding snapshots.
+   *         {@link #getMemStoreSize()} unless we are carrying snapshots and then it will be the
+   *         size of outstanding snapshots.
    */
   MemStoreSize getFlushableSize();
 
-  /**
-   * @return size of the memstore snapshot
-   */
+  /** Returns size of the memstore snapshot */
   MemStoreSize getSnapshotSize();
 
   ColumnFamilyDescriptor getColumnFamilyDescriptor();
 
-  /**
-   * @return The maximum sequence id in all store files.
-   */
+  /** Returns The maximum sequence id in all store files. */
   OptionalLong getMaxSequenceId();
 
-  /**
-   * @return The maximum memstoreTS in all store files.
-   */
+  /** Returns The maximum memstoreTS in all store files. */
   OptionalLong getMaxMemStoreTS();
 
-  /** @return aggregate size of all HStores used in the last compaction */
+  /** Returns aggregate size of all HStores used in the last compaction */
   long getLastCompactSize();
 
-  /** @return aggregate size of HStore */
+  /** Returns aggregate size of HStore */
   long getSize();
 
-  /**
-   * @return Count of store files
-   */
+  /** Returns Count of store files */
   int getStorefilesCount();
 
-  /**
-   * @return Count of compacted store files
-   */
+  /** Returns Count of compacted store files */
   int getCompactedFilesCount();
 
-  /**
-   * @return Max age of store files in this store
-   */
+  /** Returns Max age of store files in this store */
   OptionalLong getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files in this store
-   */
+  /** Returns Min age of store files in this store */
   OptionalLong getMinStoreFileAge();
 
-  /**
-   *  @return Average age of store files in this store
-   */
+  /** Returns Average age of store files in this store */
   OptionalDouble getAvgStoreFileAge();
 
-  /**
-   *  @return Number of reference files in this store
-   */
+  /** Returns Number of reference files in this store */
   long getNumReferenceFiles();
 
-  /**
-   *  @return Number of HFiles in this store
-   */
+  /** Returns Number of HFiles in this store */
   long getNumHFiles();
 
-  /**
-   * @return The size of the store files, in bytes, uncompressed.
-   */
+  /** Returns The size of the store files, in bytes, uncompressed. */
   long getStoreSizeUncompressed();
 
-  /**
-   * @return The size of the store files, in bytes.
-   */
+  /** Returns The size of the store files, in bytes. */
   long getStorefilesSize();
 
-  /**
-   * @return The size of only the store files which are HFiles, in bytes.
-   */
+  /** Returns The size of only the store files which are HFiles, in bytes. */
   long getHFilesSize();
 
-  /**
-   * @return The size of the store file root-level indexes, in bytes.
-   */
+  /** Returns The size of the store file root-level indexes, in bytes. */
   long getStorefilesRootLevelIndexSize();
 
   /**
@@ -192,17 +159,14 @@ public interface Store {
    */
   long getTotalStaticBloomSize();
 
-  /**
-   * @return the parent region info hosting this store
-   */
+  /** Returns the parent region info hosting this store */
   RegionInfo getRegionInfo();
 
   boolean areWritesEnabled();
 
   /**
-   * @return The smallest mvcc readPoint across all the scanners in this
-   * region. Writes older than this readPoint, are included  in every
-   * read operation.
+   * @return The smallest mvcc readPoint across all the scanners in this region. Writes older than
+   *         this readPoint, are included in every read operation.
    */
   long getSmallestReadPoint();
 
@@ -210,51 +174,34 @@ public interface Store {
 
   TableName getTableName();
 
-  /**
-   * @return The number of cells flushed to disk
-   */
+  /** Returns The number of cells flushed to disk */
   long getFlushedCellsCount();
 
-  /**
-   * @return The total size of data flushed to disk, in bytes
-   */
+  /** Returns The total size of data flushed to disk, in bytes */
   long getFlushedCellsSize();
 
-  /**
-   * @return The total size of out output files on disk, in bytes
-   */
+  /** Returns The total size of out output files on disk, in bytes */
   long getFlushedOutputFileSize();
 
-  /**
-   * @return The number of cells processed during minor compactions
-   */
+  /** Returns The number of cells processed during minor compactions */
   long getCompactedCellsCount();
 
-  /**
-   * @return The total amount of data processed during minor compactions, in bytes
-   */
+  /** Returns The total amount of data processed during minor compactions, in bytes */
   long getCompactedCellsSize();
 
-  /**
-   * @return The number of cells processed during major compactions
-   */
+  /** Returns The number of cells processed during major compactions */
   long getMajorCompactedCellsCount();
 
-  /**
-   * @return The total amount of data processed during major compactions, in bytes
-   */
+  /** Returns The total amount of data processed during major compactions, in bytes */
   long getMajorCompactedCellsSize();
 
-  /**
-   * @return Whether this store has too many store files.
-   */
+  /** Returns Whether this store has too many store files. */
   boolean hasTooManyStoreFiles();
 
   /**
    * Checks the underlying store files, and opens the files that have not been opened, and removes
    * the store file readers for store files no longer available. Mainly used by secondary region
-   * replicas to keep up to date with the primary region files.
-   * @throws IOException
+   * replicas to keep up to date with the primary region files. n
    */
   void refreshStoreFiles() throws IOException;
 
@@ -277,21 +224,15 @@ public interface Store {
 
   boolean isPrimaryReplicaStore();
 
-  /**
-   * @return true if the memstore may need some extra memory space
-   */
+  /** Returns true if the memstore may need some extra memory space */
   boolean isSloppyMemStore();
 
   int getCurrentParallelPutCount();
 
-  /**
-   * @return the number of read requests purely from the memstore.
-   */
+  /** Returns the number of read requests purely from the memstore. */
   long getMemstoreOnlyRowReadsCount();
 
-  /**
-   * @return the number of read requests from the files under this store.
-   */
+  /** Returns the number of read requests from the files under this store. */
   long getMixedRowReadsCount();
 
   /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Iterator;
 import java.util.SortedSet;
-import junit.framework.TestCase;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -28,27 +31,33 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
-@Category({RegionServerTests.class, SmallTests.class})
-public class TestCellSkipListSet extends TestCase {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestCellSkipListSet {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellSkipListSet.class);
+    HBaseClassTestRule.forClass(TestCellSkipListSet.class);
 
-  private final CellSet csls =
-    new CellSet(CellComparatorImpl.COMPARATOR);
+  private final CellSet csls = new CellSet(CellComparatorImpl.COMPARATOR);
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Rule
+  public TestName name = new TestName();
+
+  @Before
+  public void setUp() throws Exception {
     this.csls.clear();
   }
 
+  @Test
   public void testAdd() throws Exception {
-    byte[] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes(name.getMethodName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.csls.add(kv);
     assertTrue(this.csls.contains(kv));
@@ -69,17 +78,18 @@ public class TestCellSkipListSet extends TestCase {
     assertFalse(Bytes.equals(CellUtil.cloneValue(overwrite), CellUtil.cloneValue(kv)));
   }
 
+  @Test
   public void testIterator() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
       this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
     }
     // Assert that we added 'total' values and that they are in order
     int count = 0;
-    for (Cell kv: this.csls) {
+    for (Cell kv : this.csls) {
       assertEquals("" + count,
         Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
       assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value1,
@@ -104,10 +114,11 @@ public class TestCellSkipListSet extends TestCase {
     assertEquals(total, count);
   }
 
+  @Test
   public void testDescendingIterator() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
       this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
@@ -141,10 +152,11 @@ public class TestCellSkipListSet extends TestCase {
     assertEquals(total, count);
   }
 
+  @Test
   public void testHeadTail() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
-    byte [] value1 = Bytes.toBytes("1");
-    byte [] value2 = Bytes.toBytes("2");
+    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] value1 = Bytes.toBytes("1");
+    byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
     KeyValue splitter = null;
     for (int i = 0; i < total; i++) {

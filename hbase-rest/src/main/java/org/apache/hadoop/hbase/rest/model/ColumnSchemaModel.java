@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
@@ -34,7 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Representation of a column family schema.
- * 
+ *
  * <pre>
  * &lt;complexType name="ColumnSchema"&gt;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
@@ -42,7 +40,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="ColumnSchema")
+@XmlRootElement(name = "ColumnSchema")
 @InterfaceAudience.Private
 public class ColumnSchemaModel implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -55,16 +53,17 @@ public class ColumnSchemaModel implements Serializable {
   private static QName VERSIONS = new QName(HConstants.VERSIONS);
 
   private String name;
-  private Map<QName,Object> attrs = new LinkedHashMap<>();
+  private Map<QName, Object> attrs = new LinkedHashMap<>();
 
   /**
    * Default constructor
    */
-  public ColumnSchemaModel() {}
+  public ColumnSchemaModel() {
+  }
 
   /**
    * Add an attribute to the column family schema
-   * @param name the attribute name
+   * @param name  the attribute name
    * @param value the attribute value
    */
   @JsonAnySetter
@@ -78,23 +77,19 @@ public class ColumnSchemaModel implements Serializable {
    */
   public String getAttribute(String name) {
     Object o = attrs.get(new QName(name));
-    return o != null ? o.toString(): null;
+    return o != null ? o.toString() : null;
   }
 
-  /**
-   * @return the column name
-   */
+  /** Returns the column name */
   @XmlAttribute
   public String getName() {
     return name;
   }
 
-  /**
-   * @return the map for holding unspecified (user) attributes
-   */
+  /** Returns the map for holding unspecified (user) attributes */
   @XmlAnyAttribute
   @JsonAnyGetter
-  public Map<QName,Object> getAny() {
+  public Map<QName, Object> getAny() {
     return attrs;
   }
 
@@ -105,7 +100,8 @@ public class ColumnSchemaModel implements Serializable {
     this.name = name;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override
@@ -114,7 +110,7 @@ public class ColumnSchemaModel implements Serializable {
     sb.append("{ NAME => '");
     sb.append(name);
     sb.append('\'');
-    for (Map.Entry<QName,Object> e: attrs.entrySet()) {
+    for (Map.Entry<QName, Object> e : attrs.entrySet()) {
       sb.append(", ");
       sb.append(e.getKey().getLocalPart());
       sb.append(" => '");
@@ -130,64 +126,54 @@ public class ColumnSchemaModel implements Serializable {
   // cannot be standard bean type getters and setters, otherwise this would
   // confuse JAXB
 
-  /**
-   * @return true if the BLOCKCACHE attribute is present and true
-   */
+  /** Returns true if the BLOCKCACHE attribute is present and true */
   public boolean __getBlockcache() {
     Object o = attrs.get(BLOCKCACHE);
-    return o != null ? Boolean.parseBoolean(o.toString()) :
-      ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
+    return o != null
+      ? Boolean.parseBoolean(o.toString())
+      : ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKCACHE;
   }
 
-  /**
-   * @return the value of the BLOCKSIZE attribute or its default if it is unset
-   */
+  /** Returns the value of the BLOCKSIZE attribute or its default if it is unset */
   public int __getBlocksize() {
     Object o = attrs.get(BLOCKSIZE);
-    return o != null ? Integer.parseInt(o.toString()) :
-      ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
+    return o != null
+      ? Integer.parseInt(o.toString())
+      : ColumnFamilyDescriptorBuilder.DEFAULT_BLOCKSIZE;
   }
 
-  /**
-   * @return the value of the BLOOMFILTER attribute or its default if unset
-   */
+  /** Returns the value of the BLOOMFILTER attribute or its default if unset */
   public String __getBloomfilter() {
     Object o = attrs.get(BLOOMFILTER);
     return o != null ? o.toString() : ColumnFamilyDescriptorBuilder.DEFAULT_BLOOMFILTER.name();
   }
 
-  /**
-   * @return the value of the COMPRESSION attribute or its default if unset
-   */
+  /** Returns the value of the COMPRESSION attribute or its default if unset */
   public String __getCompression() {
     Object o = attrs.get(COMPRESSION);
     return o != null ? o.toString() : ColumnFamilyDescriptorBuilder.DEFAULT_COMPRESSION.name();
   }
 
-  /**
-   * @return true if the IN_MEMORY attribute is present and true
-   */
+  /** Returns true if the IN_MEMORY attribute is present and true */
   public boolean __getInMemory() {
     Object o = attrs.get(IN_MEMORY);
-    return o != null ? 
-      Boolean.parseBoolean(o.toString()) : ColumnFamilyDescriptorBuilder.DEFAULT_IN_MEMORY;
+    return o != null
+      ? Boolean.parseBoolean(o.toString())
+      : ColumnFamilyDescriptorBuilder.DEFAULT_IN_MEMORY;
   }
 
-  /**
-   * @return the value of the TTL attribute or its default if it is unset
-   */
+  /** Returns the value of the TTL attribute or its default if it is unset */
   public int __getTTL() {
     Object o = attrs.get(TTL);
     return o != null ? Integer.parseInt(o.toString()) : ColumnFamilyDescriptorBuilder.DEFAULT_TTL;
   }
 
-  /**
-   * @return the value of the VERSIONS attribute or its default if it is unset
-   */
+  /** Returns the value of the VERSIONS attribute or its default if it is unset */
   public int __getVersions() {
     Object o = attrs.get(VERSIONS);
-    return o != null ? Integer.parseInt(o.toString()) :
-      ColumnFamilyDescriptorBuilder.DEFAULT_MAX_VERSIONS;
+    return o != null
+      ? Integer.parseInt(o.toString())
+      : ColumnFamilyDescriptorBuilder.DEFAULT_MAX_VERSIONS;
   }
 
   /**
@@ -212,7 +198,7 @@ public class ColumnSchemaModel implements Serializable {
    * @param value the desired value of the COMPRESSION attribute
    */
   public void __setCompression(String value) {
-    attrs.put(COMPRESSION, value); 
+    attrs.put(COMPRESSION, value);
   }
 
   /**

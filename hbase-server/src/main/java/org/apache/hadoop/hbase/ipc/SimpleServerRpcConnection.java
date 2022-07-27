@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -34,7 +36,11 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -48,6 +54,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /** Reads calls from a connection and queues them for handling. */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
+@Deprecated
 @InterfaceAudience.Private
 class SimpleServerRpcConnection extends ServerRpcConnection {
 
@@ -62,13 +69,18 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   // If initial preamble with version and magic has been read or not.
   private boolean connectionPreambleRead = false;
+  private boolean saslContextEstablished;
+  private ByteBuffer unwrappedData;
+  // When is this set? FindBugs wants to know! Says NP
+  private ByteBuffer unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
+  boolean useWrap = false;
 
   final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
   final Lock responseWriteLock = new ReentrantLock();
   long lastSentTime = -1L;
 
   public SimpleServerRpcConnection(SimpleRpcServer rpcServer, SocketChannel channel,
-      long lastContact) {
+    long lastContact) {
     super(rpcServer);
     this.channel = channel;
     this.lastContact = lastContact;
@@ -141,12 +153,114 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     }
   }
 
+  private void processUnwrappedData(byte[] inBuf) throws IOException, InterruptedException {
+    ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(inBuf));
+    // Read all RPCs contained in the inBuf, even partial ones
+    while (true) {
+      int count;
+      if (unwrappedDataLengthBuffer.remaining() > 0) {
+        count = this.rpcServer.channelRead(ch, unwrappedDataLengthBuffer);
+        if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0) {
+          return;
+        }
+      }
+
+      if (unwrappedData == null) {
+        unwrappedDataLengthBuffer.flip();
+        int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
+
+        if (unwrappedDataLength == RpcClient.PING_CALL_ID) {
+          if (RpcServer.LOG.isDebugEnabled()) RpcServer.LOG.debug("Received ping message");
+          unwrappedDataLengthBuffer.clear();
+          continue; // ping message
+        }
+        unwrappedData = ByteBuffer.allocate(unwrappedDataLength);
+      }
+
+      count = this.rpcServer.channelRead(ch, unwrappedData);
+      if (count <= 0 || unwrappedData.remaining() > 0) {
+        return;
+      }
+
+      if (unwrappedData.remaining() == 0) {
+        unwrappedDataLengthBuffer.clear();
+        unwrappedData.flip();
+        processOneRpc(new SingleByteBuff(unwrappedData));
+        unwrappedData = null;
+      }
+    }
+  }
+
+  private void saslReadAndProcess(ByteBuff saslToken) throws IOException, InterruptedException {
+    if (saslContextEstablished) {
+      RpcServer.LOG.trace("Read input token of size={} for processing by saslServer.unwrap()",
+        saslToken.limit());
+      if (!useWrap) {
+        processOneRpc(saslToken);
+      } else {
+        byte[] b = saslToken.hasArray() ? saslToken.array() : saslToken.toBytes();
+        byte[] plaintextData = saslServer.unwrap(b, 0, b.length);
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
+        processUnwrappedData(plaintextData);
+      }
+    } else {
+      byte[] replyToken;
+      try {
+        try {
+          getOrCreateSaslServer();
+        } catch (Exception e) {
+          RpcServer.LOG.error("Error when trying to create instance of HBaseSaslRpcServer "
+            + "with sasl provider: " + provider, e);
+          throw e;
+        }
+        RpcServer.LOG.debug("Created SASL server with mechanism={}",
+          provider.getSaslAuthMethod().getAuthMethod());
+        RpcServer.LOG.debug(
+          "Read input token of size={} for processing by saslServer." + "evaluateResponse()",
+          saslToken.limit());
+        replyToken = saslServer
+          .evaluateResponse(saslToken.hasArray() ? saslToken.array() : saslToken.toBytes());
+      } catch (IOException e) {
+        RpcServer.LOG.debug("Failed to execute SASL handshake", e);
+        Throwable sendToClient = HBaseSaslRpcServer.unwrap(e);
+        doRawSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(),
+          sendToClient.getLocalizedMessage());
+        this.rpcServer.metrics.authenticationFailure();
+        String clientIP = this.toString();
+        // attempting user could be null
+        RpcServer.AUDITLOG.warn("{}{}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
+          saslServer.getAttemptingUser());
+        throw e;
+      } finally {
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
+      }
+      if (replyToken != null) {
+        if (RpcServer.LOG.isDebugEnabled()) {
+          RpcServer.LOG.debug("Will send token of size " + replyToken.length + " from saslServer.");
+        }
+        doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
+      }
+      if (saslServer.isComplete()) {
+        String qop = saslServer.getNegotiatedQop();
+        useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+        ugi =
+          provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
+        RpcServer.LOG.debug(
+          "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+          qop);
+        this.rpcServer.metrics.authenticationSuccess();
+        RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
+        saslContextEstablished = true;
+      }
+    }
+  }
+
   /**
    * Read off the wire. If there is not enough data to read, update the connection state with what
    * we have and returns.
-   * @return Returns -1 if failure (and caller will close connection), else zero or more.
-   * @throws IOException
-   * @throws InterruptedException
+   * @return Returns -1 if failure (and caller will close connection), else zero or more. nn
    */
   public int readAndProcess() throws IOException, InterruptedException {
     // If we have not read the connection setup preamble, look to see if that is on the wire.
@@ -177,14 +291,14 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       }
       if (dataLength < 0) { // A data length of zero is legal.
         throw new DoNotRetryIOException(
-            "Unexpected data length " + dataLength + "!! from " + getHostAddress());
+          "Unexpected data length " + dataLength + "!! from " + getHostAddress());
       }
 
       if (dataLength > this.rpcServer.maxRequestSize) {
-        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress() +
-            " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \"" +
-            SimpleRpcServer.MAX_REQUEST_SIZE +
-            "\" on server to override this limit (not recommended)";
+        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress()
+          + " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \""
+          + SimpleRpcServer.MAX_REQUEST_SIZE
+          + "\" on server to override this limit (not recommended)";
         SimpleRpcServer.LOG.warn(msg);
 
         if (connectionHeaderRead && connectionPreambleRead) {
@@ -211,14 +325,16 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
           // Notify the client about the offending request
           SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
-              null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
-              this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
+            null, null, null, this, 0, this.addr, EnvironmentEdgeManager.currentTime(), 0,
+            this.rpcServer.bbAllocator, this.rpcServer.cellBlockBuilder, null, responder);
           RequestTooBigException reqTooBigEx = new RequestTooBigException(msg);
           this.rpcServer.metrics.exception(reqTooBigEx);
           // Make sure the client recognizes the underlying exception
           // Otherwise, throw a DoNotRetryIOException.
-          if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
-            RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
+          if (
+            VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
+              RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)
+          ) {
             reqTooBig.setResponse(null, null, reqTooBigEx, msg);
           } else {
             reqTooBig.setResponse(null, null, new DoNotRetryIOException(msg), msg);
@@ -284,7 +400,9 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       } else {
         processOneRpc(data);
       }
-
+    } catch (Exception e) {
+      callCleanupIfNeeded();
+      throw e;
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
       data = null; // For the GC
@@ -296,8 +414,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     disposeSasl();
     data = null;
-    callCleanup = null;
-    if (!channel.isOpen()) return;
+    callCleanupIfNeeded();
+    if (!channel.isOpen()) {
+      return;
+    }
     try {
       socket.shutdownOutput();
     } catch (Exception ignored) {
@@ -327,11 +447,11 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
-      RequestHeader header, Message param, CellScanner cellScanner, long size,
-      InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
+    RequestHeader header, Message param, CellScanner cellScanner, long size,
+    InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
-        remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
-        this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
+      remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
+      this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
   }
 
   @Override

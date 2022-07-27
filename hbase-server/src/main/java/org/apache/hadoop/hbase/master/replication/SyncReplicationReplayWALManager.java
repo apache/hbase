@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -139,7 +139,7 @@ public class SyncReplicationReplayWALManager {
     new ConcurrentHashMap<>();
 
   public SyncReplicationReplayWALManager(MasterServices services)
-      throws IOException, ReplicationException {
+    throws IOException, ReplicationException {
     this.serverManager = services.getServerManager();
     this.fs = services.getMasterFileSystem().getWALFileSystem();
     this.walRootDir = services.getMasterFileSystem().getWALRootDir();
@@ -174,7 +174,7 @@ public class SyncReplicationReplayWALManager {
    * either by others release a worker, or there is a new region server joins the cluster.
    */
   public ServerName acquirePeerWorker(String peerId, Procedure<?> proc)
-      throws ProcedureSuspendedException {
+    throws ProcedureSuspendedException {
     UsedReplayWorkersForPeer usedWorkers = usedWorkersByPeer.get(peerId);
     synchronized (usedWorkers) {
       Optional<ServerName> worker = usedWorkers.acquire(serverManager);
@@ -188,7 +188,7 @@ public class SyncReplicationReplayWALManager {
   }
 
   public void releasePeerWorker(String peerId, ServerName worker,
-      MasterProcedureScheduler scheduler) {
+    MasterProcedureScheduler scheduler) {
     UsedReplayWorkersForPeer usedWorkers = usedWorkersByPeer.get(peerId);
     synchronized (usedWorkers) {
       usedWorkers.release(worker);

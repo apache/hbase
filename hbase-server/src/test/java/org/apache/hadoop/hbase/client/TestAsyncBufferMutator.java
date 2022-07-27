@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -80,7 +79,7 @@ public class TestAsyncBufferMutator {
     TEST_UTIL.createTable(TABLE_NAME, CF);
     TEST_UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, CF);
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
-    ThreadLocalRandom.current().nextBytes(VALUE);
+    Bytes.random(VALUE);
   }
 
   @AfterClass
@@ -205,7 +204,7 @@ public class TestAsyncBufferMutator {
 
   @Test
   public void testCancelPeriodicFlushByManuallyFlush()
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     try (AsyncBufferedMutatorImpl mutator =
       (AsyncBufferedMutatorImpl) CONN.getBufferedMutatorBuilder(TABLE_NAME)
         .setWriteBufferPeriodicFlush(1, TimeUnit.SECONDS).build()) {
@@ -245,7 +244,7 @@ public class TestAsyncBufferMutator {
     private int flushCount;
 
     AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
-        long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
+      long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize) {
       super(periodicalFlushTimer, table, writeBufferSize, periodicFlushTimeoutNs, maxKeyValueSize);
     }
 
@@ -258,7 +257,7 @@ public class TestAsyncBufferMutator {
 
   @Test
   public void testRaceBetweenNormalFlushAndPeriodicFlush()
-      throws InterruptedException, ExecutionException {
+    throws InterruptedException, ExecutionException {
     Put put = new Put(Bytes.toBytes(0)).addColumn(CF, CQ, VALUE);
     try (AsyncBufferMutatorForTest mutator =
       new AsyncBufferMutatorForTest(AsyncConnectionImpl.RETRY_TIMER, CONN.getTable(TABLE_NAME),

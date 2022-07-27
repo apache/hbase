@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.provider.example;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -32,13 +31,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ShadeClientTokenUtil {
 
-  private ShadeClientTokenUtil() {}
+  private ShadeClientTokenUtil() {
+  }
 
-  public static Token<? extends TokenIdentifier> obtainToken(
-      Connection conn, String username, char[] password) throws IOException {
+  public static Token<? extends TokenIdentifier> obtainToken(Connection conn, String username,
+    char[] password) throws IOException {
     ShadeTokenIdentifier identifier = new ShadeTokenIdentifier(username);
     return new Token<>(identifier.getBytes(), Bytes.toBytes(new String(password)),
-        new Text(ShadeSaslAuthenticationProvider.TOKEN_KIND),
-        new Text(conn.getAdmin().getClusterMetrics().getClusterId()));
+      new Text(ShadeSaslAuthenticationProvider.TOKEN_KIND),
+      new Text(conn.getAdmin().getClusterMetrics().getClusterId()));
   }
 }

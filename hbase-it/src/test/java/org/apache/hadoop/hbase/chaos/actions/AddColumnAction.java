@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -42,7 +40,8 @@ public class AddColumnAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -57,8 +56,10 @@ public class AddColumnAction extends Action {
     TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
     ColumnFamilyDescriptor columnDescriptor = null;
 
-    while (columnDescriptor == null
-        || tableDescriptor.getColumnFamily(columnDescriptor.getName()) != null) {
+    while (
+      columnDescriptor == null
+        || tableDescriptor.getColumnFamily(columnDescriptor.getName()) != null
+    ) {
       columnDescriptor = ColumnFamilyDescriptorBuilder.of(RandomStringUtils.randomAlphabetic(5));
     }
 
@@ -69,8 +70,8 @@ public class AddColumnAction extends Action {
 
     getLogger().debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
-    TableDescriptor modifiedTable = TableDescriptorBuilder.newBuilder(tableDescriptor)
-        .setColumnFamily(columnDescriptor).build();
+    TableDescriptor modifiedTable =
+      TableDescriptorBuilder.newBuilder(tableDescriptor).setColumnFamily(columnDescriptor).build();
     admin.modifyTable(modifiedTable);
   }
 }

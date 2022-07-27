@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,39 +27,36 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Driver for hbase mapreduce jobs. Select which to run by passing
- * name of job to this main.
+ * Driver for hbase mapreduce jobs. Select which to run by passing name of job to this main.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Stable
 public class Driver {
-  private Driver() {}
+  private Driver() {
+  }
 
   public static void main(String[] args) throws Throwable {
     ProgramDriver pgd = new ProgramDriver();
 
-    pgd.addClass(RowCounter.NAME, RowCounter.class,
-      "Count rows in HBase table.");
-    pgd.addClass(CellCounter.NAME, CellCounter.class,
-      "Count cells in HBase table.");
+    pgd.addClass(RowCounter.NAME, RowCounter.class, "Count rows in HBase table.");
+    pgd.addClass(CellCounter.NAME, CellCounter.class, "Count cells in HBase table.");
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
     pgd.addClass(ImportTsv.NAME, ImportTsv.class, "Import data in TSV format.");
-    pgd.addClass(BulkLoadHFilesTool.NAME, BulkLoadHFilesTool.class,
-                 "Complete a bulk data load.");
+    pgd.addClass(BulkLoadHFilesTool.NAME, BulkLoadHFilesTool.class, "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
-        "Export a table from local cluster to peer cluster.");
-    pgd.addClass(VerifyReplication.NAME, VerifyReplication.class, "Compare" +
-        " data from tables in two different clusters. It" +
-        " doesn't work for incrementColumnValues'd cells since" +
-        " timestamp is changed after appending to WAL.");
+      "Export a table from local cluster to peer cluster.");
+    pgd.addClass(VerifyReplication.NAME, VerifyReplication.class,
+      "Compare" + " data from tables in two different clusters. It"
+        + " doesn't work for incrementColumnValues'd cells since"
+        + " timestamp is changed after appending to WAL.");
     pgd.addClass(WALPlayer.NAME, WALPlayer.class, "Replay WAL files.");
-    pgd.addClass(ExportSnapshot.NAME, ExportSnapshot.class, "Export" +
-        " the specific snapshot to a given FileSystem.");
-    pgd.addClass(MobRefReporter.NAME, MobRefReporter.class, "Check the mob cells in a particular " +
-        "table and cf and confirm that the files they point to are correct.");
+    pgd.addClass(ExportSnapshot.NAME, ExportSnapshot.class,
+      "Export" + " the specific snapshot to a given FileSystem.");
+    pgd.addClass(MobRefReporter.NAME, MobRefReporter.class, "Check the mob cells in a particular "
+      + "table and cf and confirm that the files they point to are correct.");
 
-    ProgramDriver.class.getMethod("driver", new Class [] {String[].class}).
-      invoke(pgd, new Object[]{args});
+    ProgramDriver.class.getMethod("driver", new Class[] { String[].class }).invoke(pgd,
+      new Object[] { args });
   }
 }

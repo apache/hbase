@@ -198,23 +198,21 @@ echo "Writing out configuration for HBase."
 rm -rf "${working_dir}/hbase-conf"
 mkdir "${working_dir}/hbase-conf"
 
-if [ -f "${component_install}/conf/log4j2.xml" ]; then
-  cp "${component_install}/conf/log4j2.xml" "${working_dir}/hbase-conf/log4j2.xml"
+if [ -f "${component_install}/conf/log4j2.properties" ]; then
+  cp "${component_install}/conf/log4j2.properties" "${working_dir}/hbase-conf/log4j2.properties"
 else
-  cat >"${working_dir}/hbase-conf/log4j2.xml" <<EOF
-<Configuration>
-  <Appenders>
-    <!-- Console appender -->
-    <Console name="console" target="SYSTEM_ERR">
-      <PatternLayout pattern="%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n" />
-    </Console>
-  </Appenders>
-  <Loggers>
-    <Root level="${sys:hbase.root.logger.level:-info}">
-      <AppenderRef ref="${sys:hbase.root.logger.appender:-console}" />
-    </Root>
-  </Loggers>
-</Configuration>
+  cat >"${working_dir}/hbase-conf/log4j2.properties" <<EOF
+status = debug
+dest = err
+name = PropertiesConfig
+
+appender.console.type = Console
+appender.console.target = SYSTEM_ERR
+appender.console.name = Console
+appender.console.layout.type = PatternLayout
+appender.console.layout.pattern = %d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+
+rootLogger = ${sys:hbase.root.logger:-INFO,console}
 EOF
 fi
 
@@ -346,53 +344,53 @@ EOF
 
 echo "writing out example TSV to example.tsv"
 cat >"${working_dir}/example.tsv" <<EOF
-row1	value8	value8	
+row1	value8	value8
 row3			value2
-row2	value9		
-row10		value1	
+row2	value9
+row10		value1
 pow1	value8		value8
-pow3		value2	
+pow3		value2
 pow2			value9
-pow10	value1		
+pow10	value1
 paw1		value8	value8
-paw3	value2		
-paw2		value9	
+paw3	value2
+paw2		value9
 paw10			value1
-raw1	value8	value8	
+raw1	value8	value8
 raw3			value2
-raw2	value9		
-raw10		value1	
+raw2	value9
+raw10		value1
 aow1	value8		value8
-aow3		value2	
+aow3		value2
 aow2			value9
-aow10	value1		
+aow10	value1
 aaw1		value8	value8
-aaw3	value2		
-aaw2		value9	
+aaw3	value2
+aaw2		value9
 aaw10			value1
-how1	value8	value8	
+how1	value8	value8
 how3			value2
-how2	value9		
-how10		value1	
+how2	value9
+how10		value1
 zow1	value8		value8
-zow3		value2	
+zow3		value2
 zow2			value9
-zow10	value1		
+zow10	value1
 zaw1		value8	value8
-zaw3	value2		
-zaw2		value9	
+zaw3	value2
+zaw2		value9
 zaw10			value1
-haw1	value8	value8	
+haw1	value8	value8
 haw3			value2
-haw2	value9		
-haw10		value1	
+haw2	value9
+haw10		value1
 low1	value8		value8
-low3		value2	
+low3		value2
 low2			value9
-low10	value1		
+low10	value1
 law1		value8	value8
-law3	value2		
-law2		value9	
+law3	value2
+law2		value9
 law10			value1
 EOF
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 
 import java.security.Key;
 import java.security.KeyException;
-import java.security.SecureRandom;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,7 +37,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestEncryptionUtil {
 
   private static final String INVALID_HASH_ALG = "this-hash-algorithm-not-exists hopefully... :)";
@@ -46,11 +45,11 @@ public class TestEncryptionUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEncryptionUtil.class);
+    HBaseClassTestRule.forClass(TestEncryptionUtil.class);
 
   // There does not seem to be a ready way to test either getKeyFromBytesOrMasterKey
   // or createEncryptionContext, and the existing code under MobUtils appeared to be
-  // untested.  Not ideal!
+  // untested. Not ideal!
 
   @Test
   public void testKeyWrappingUsingHashAlgDefault() throws Exception {
@@ -110,7 +109,7 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -146,15 +145,14 @@ public class TestEncryptionUtil {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
-    if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
+    if (!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
       conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
-    String algorithm =
-      conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Bytes.secureRandom(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
     // wrap the test key
@@ -168,7 +166,7 @@ public class TestEncryptionUtil {
     assertTrue(unwrappedKey instanceof SecretKeySpec);
     // did we get back what we wrapped?
     assertTrue("Unwrapped key bytes do not match original",
-               Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
 
     // unwrap with an incorrect key
     try {
@@ -183,13 +181,13 @@ public class TestEncryptionUtil {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
-    if(!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
+    if (!hashAlgorithm.equals(DEFAULT_HASH_ALGORITHM)) {
       conf.set(Encryption.CRYPTO_KEY_HASH_ALGORITHM_CONF_KEY, hashAlgorithm);
     }
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
+    Bytes.secureRandom(keyBytes);
     String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
@@ -204,7 +202,7 @@ public class TestEncryptionUtil {
     assertTrue(unwrappedKey instanceof SecretKeySpec);
     // did we get back what we wrapped?
     assertTrue("Unwrapped key bytes do not match original",
-               Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
   }
 
   private void testKeyWrappingWithMismatchingAlgorithms(Configuration conf) throws Exception {
@@ -214,9 +212,8 @@ public class TestEncryptionUtil {
 
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    new SecureRandom().nextBytes(keyBytes);
-    String algorithm =
-      conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Bytes.secureRandom(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Key key = new SecretKeySpec(keyBytes, algorithm);
 
     // wrap the test key

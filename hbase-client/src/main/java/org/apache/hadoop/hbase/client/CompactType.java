@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.client;
+
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Currently, there are only two compact types:
- * {@code NORMAL} means do store files compaction;
+ * Currently, there are only two compact types: {@code NORMAL} means do store files compaction;
  * {@code MOB} means do mob files compaction.
- * */
+ */
 @InterfaceAudience.Public
 public enum CompactType {
 
-  NORMAL    (0),
-  MOB       (1);
+  NORMAL,
+  MOB
 
-  CompactType(int value) {}
 }

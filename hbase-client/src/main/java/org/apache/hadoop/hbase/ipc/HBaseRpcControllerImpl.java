@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 
 /**
  * Get instances via {@link RpcControllerFactory} on client-side.
@@ -102,9 +101,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     return this.regionInfo;
   }
 
-  /**
-   * @return One-shot cell scanner (you cannot back it up and restart)
-   */
+  /** Returns One-shot cell scanner (you cannot back it up and restart) */
   @Override
   public CellScanner cellScanner() {
     return cellScanner;
@@ -156,7 +153,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public int getCallTimeout() {
-    return callTimeout != null? callTimeout: 0;
+    return callTimeout != null ? callTimeout : 0;
   }
 
   @Override
@@ -254,7 +251,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   @Override
   public synchronized void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action)
-      throws IOException {
+    throws IOException {
     if (cancelled) {
       action.run(true);
     } else {

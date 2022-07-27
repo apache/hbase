@@ -112,6 +112,9 @@
               <exclude>org.slf4j:*</exclude>
               <exclude>org.apache.logging.log4j:*</exclude>
               <exclude>io.opentelemetry.javaagent:*</exclude>
+              <exclude>junit:junit</exclude>
+              <exclude>org.hamcrest:hamcrest-core</exclude>
+              <exclude>org.mockito:mockito-core</exclude>
             </excludes>
           </dependencySet>
         </dependencySets>
@@ -259,6 +262,16 @@
       <outputDirectory>lib/trace</outputDirectory>
       <includes>
         <include>io.opentelemetry.javaagent:*</include>
+      </includes>
+    </dependencySet>
+
+    <!-- Adds junit libs to lib/test -->
+    <dependencySet>
+      <outputDirectory>lib/test</outputDirectory>
+      <includes>
+        <include>junit:junit</include>
+        <include>org.hamcrest:hamcrest-core</include>
+        <include>org.mockito:mockito-core</include>
       </includes>
     </dependencySet>
   </dependencySets>

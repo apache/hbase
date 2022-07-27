@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,39 +22,36 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * A size-bounded repository of alerts, which are kept
- * in a linked list. Alerts can be added, and they will
- * automatically be removed one by one when the specified heap
- * usage is exhausted.
+ * A size-bounded repository of alerts, which are kept in a linked list. Alerts can be added, and
+ * they will automatically be removed one by one when the specified heap usage is exhausted.
  */
 @InterfaceAudience.Private
 public class MemoryBoundedLogMessageBuffer {
   private final long maxSizeBytes;
   private long usage = 0;
   private LinkedList<LogMessage> messages;
-  
+
   public MemoryBoundedLogMessageBuffer(long maxSizeBytes) {
-    Preconditions.checkArgument(
-        maxSizeBytes > 0);
+    Preconditions.checkArgument(maxSizeBytes > 0);
     this.maxSizeBytes = maxSizeBytes;
     this.messages = Lists.newLinkedList();
   }
-  
+
   /**
-   * Append the given message to this buffer, automatically evicting
-   * older messages until the desired memory limit is achieved.
+   * Append the given message to this buffer, automatically evicting older messages until the
+   * desired memory limit is achieved.
    */
   public synchronized void add(String messageText) {
     LogMessage message = new LogMessage(messageText, EnvironmentEdgeManager.currentTime());
-    
+
     usage += message.estimateHeapUsage();
     messages.add(message);
     while (usage > maxSizeBytes) {
@@ -64,7 +60,7 @@ public class MemoryBoundedLogMessageBuffer {
       assert usage >= 0;
     }
   }
-  
+
   /**
    * Dump the contents of the buffer to the given stream.
    */
@@ -77,37 +73,36 @@ public class MemoryBoundedLogMessageBuffer {
       out.println(new String(msg.message, Charsets.UTF_8));
     }
   }
-  
+
   synchronized List<LogMessage> getMessages() {
     // defensive copy
     return Lists.newArrayList(messages);
   }
- 
+
   /**
-   * Estimate the number of bytes this buffer is currently
-   * using.
+   * Estimate the number of bytes this buffer is currently using.
    */
   synchronized long estimateHeapUsage() {
     return usage;
   }
-  
+
   private static class LogMessage {
     /** the error text, encoded in bytes to save memory */
     public final byte[] message;
     public final long timestamp;
-    
+
     /**
-     * Completely non-scientific estimate of how much one of these
-     * objects takes, along with the LinkedList overhead. This doesn't
-     * need to be exact, since we don't expect a ton of these alerts.
+     * Completely non-scientific estimate of how much one of these objects takes, along with the
+     * LinkedList overhead. This doesn't need to be exact, since we don't expect a ton of these
+     * alerts.
      */
-    private static final long BASE_USAGE=100;
-    
+    private static final long BASE_USAGE = 100;
+
     public LogMessage(String message, long timestamp) {
       this.message = message.getBytes(Charsets.UTF_8);
       this.timestamp = timestamp;
     }
-    
+
     public long estimateHeapUsage() {
       return message.length + BASE_USAGE;
     }

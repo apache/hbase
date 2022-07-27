@@ -37,20 +37,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package org.apache.hadoop.hbase.test.util.warc;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
 import org.apache.hadoop.io.Writable;
 
 /**
- * A mutable wrapper around a {@link WARCRecord} implementing the Hadoop Writable interface.
- * This allows WARC records to be used throughout Hadoop (e.g. written to sequence files
- * when shuffling data between mappers and reducers). The record is encoded as a single
- * record in standard WARC/1.0 format.
+ * A mutable wrapper around a {@link WARCRecord} implementing the Hadoop Writable interface. This
+ * allows WARC records to be used throughout Hadoop (e.g. written to sequence files when shuffling
+ * data between mappers and reducers). The record is encoded as a single record in standard WARC/1.0
+ * format.
  */
 public class WARCWritable implements Writable {
 
@@ -85,8 +83,8 @@ public class WARCWritable implements Writable {
   }
 
   /**
-   * Parses a {@link WARCRecord} out of a {@link DataInput} stream, and makes it the
-   * writable's current record.
+   * Parses a {@link WARCRecord} out of a {@link DataInput} stream, and makes it the writable's
+   * current record.
    */
   @Override
   public void readFields(DataInput in) throws IOException {

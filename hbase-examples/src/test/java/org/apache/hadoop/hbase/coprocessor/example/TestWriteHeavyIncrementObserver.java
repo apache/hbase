@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,15 +40,15 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserver.class);
+    HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserver.class);
 
   @BeforeClass
   public static void setUp() throws Exception {
     WriteHeavyIncrementObserverTestBase.setUp();
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     TABLE = UTIL.getConnection().getTable(NAME);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,12 +38,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 /**
  * Test class for {@link SpaceLimitSettings}.
  */
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestSpaceLimitSettings {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSpaceLimitSettings.class);
+    HBaseClassTestRule.forClass(TestSpaceLimitSettings.class);
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidTableQuotaSizeLimit() {
@@ -130,14 +130,14 @@ public class TestSpaceLimitSettings {
   @Test
   public void testQuotaMerging() throws IOException {
     TableName tn = TableName.valueOf("foo");
-    QuotaSettings originalSettings = QuotaSettingsFactory.limitTableSpace(
-        tn, 1024L * 1024L, SpaceViolationPolicy.DISABLE);
-    QuotaSettings largerSizeLimit = QuotaSettingsFactory.limitTableSpace(
-        tn, 5L * 1024L * 1024L, SpaceViolationPolicy.DISABLE);
-    QuotaSettings differentPolicy = QuotaSettingsFactory.limitTableSpace(
-        tn, 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
-    QuotaSettings incompatibleSettings = QuotaSettingsFactory.limitNamespaceSpace(
-        "ns1", 5L * 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
+    QuotaSettings originalSettings =
+      QuotaSettingsFactory.limitTableSpace(tn, 1024L * 1024L, SpaceViolationPolicy.DISABLE);
+    QuotaSettings largerSizeLimit =
+      QuotaSettingsFactory.limitTableSpace(tn, 5L * 1024L * 1024L, SpaceViolationPolicy.DISABLE);
+    QuotaSettings differentPolicy =
+      QuotaSettingsFactory.limitTableSpace(tn, 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
+    QuotaSettings incompatibleSettings = QuotaSettingsFactory.limitNamespaceSpace("ns1",
+      5L * 1024L * 1024L, SpaceViolationPolicy.NO_WRITES);
 
     assertEquals(originalSettings.merge(largerSizeLimit), largerSizeLimit);
     assertEquals(originalSettings.merge(differentPolicy), differentPolicy);
@@ -145,7 +145,7 @@ public class TestSpaceLimitSettings {
       originalSettings.merge(incompatibleSettings);
       fail("Should not be able to merge a Table space quota with a namespace space quota.");
     } catch (IllegalArgumentException e) {
-      //pass
+      // pass
     }
   }
 }

@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +19,6 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 
 /**
- * An observer to automatically delete quotas when a table/namespace
- * is deleted.
+ * An observer to automatically delete quotas when a table/namespace is deleted.
  */
 @CoreCoprocessor
 @InterfaceAudience.Private
@@ -73,8 +73,8 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   }
 
   @Override
-  public void postDeleteTable(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName) throws IOException {
+  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    TableName tableName) throws IOException {
     // Do nothing if quotas aren't enabled
     if (!quotasEnabled) {
       return;
@@ -103,8 +103,8 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   }
 
   @Override
-  public void postDeleteNamespace(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace) throws IOException {
+  public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String namespace) throws IOException {
     // Do nothing if quotas aren't enabled
     if (!quotasEnabled) {
       return;

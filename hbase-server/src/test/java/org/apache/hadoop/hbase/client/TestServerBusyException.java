@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,16 +46,15 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * This class is for testing HBaseConnectionManager ServerBusyException.
- * Be careful adding to this class. It sets a low
- * HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD
+ * This class is for testing HBaseConnectionManager ServerBusyException. Be careful adding to this
+ * class. It sets a low HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD
  */
-@Category({LargeTests.class})
+@Category({ LargeTests.class })
 public class TestServerBusyException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerBusyException.class);
+    HBaseClassTestRule.forClass(TestServerBusyException.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
@@ -67,33 +66,34 @@ public class TestServerBusyException {
 
   public static class SleepCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 5000;
+
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+      final List<Cell> results) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Put put, final WALEdit edit, final Durability durability) throws IOException {
+    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
+      final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
     @Override
     public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
-                               final Increment increment) throws IOException {
+      final Increment increment) throws IOException {
       Threads.sleep(SLEEP_TIME);
       return null;
     }
 
     @Override
-    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, final Delete delete,
-        final WALEdit edit, final Durability durability) throws IOException {
+    public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
       Threads.sleep(SLEEP_TIME);
     }
 
@@ -109,8 +109,8 @@ public class TestServerBusyException {
     }
 
     @Override
-    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<Cell> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e, final Get get,
+      final List<Cell> results) throws IOException {
       // After first sleep, all requests are timeout except the last retry. If we handle
       // all the following requests, finally the last request is also timeout. If we drop all
       // timeout requests, we can handle the last request immediately and it will not timeout.
@@ -135,7 +135,8 @@ public class TestServerBusyException {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass public static void tearDownAfterClass() throws Exception {
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -143,7 +144,7 @@ public class TestServerBusyException {
     Table table;
     int getServerBusyException = 0;
 
-    TestPutThread(Table table){
+    TestPutThread(Table table) {
       this.table = table;
     }
 
@@ -164,7 +165,7 @@ public class TestServerBusyException {
     Table table;
     int getServerBusyException = 0;
 
-    TestGetThread(Table table){
+    TestGetThread(Table table) {
       this.table = table;
     }
 
@@ -188,16 +189,11 @@ public class TestServerBusyException {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c);
 
-    TestGetThread tg1 =
-        new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestGetThread tg2 =
-        new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestGetThread tg3 =
-        new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestGetThread tg4 =
-        new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestGetThread tg5 =
-        new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestGetThread tg1 = new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestGetThread tg2 = new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestGetThread tg3 = new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestGetThread tg4 = new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestGetThread tg5 = new TestGetThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
     tg1.start();
     tg2.start();
     tg3.start();
@@ -208,23 +204,17 @@ public class TestServerBusyException {
     tg3.join();
     tg4.join();
     tg5.join();
-    assertEquals(2,
-        tg1.getServerBusyException + tg2.getServerBusyException + tg3.getServerBusyException
-            + tg4.getServerBusyException + tg5.getServerBusyException);
+    assertEquals(2, tg1.getServerBusyException + tg2.getServerBusyException
+      + tg3.getServerBusyException + tg4.getServerBusyException + tg5.getServerBusyException);
 
     // Put has its own logic in HTable, test Put alone. We use AsyncProcess for Put (use multi at
     // RPC level) and it wrap exceptions to RetriesExhaustedWithDetailsException.
 
-    TestPutThread tp1 =
-        new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestPutThread tp2 =
-        new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestPutThread tp3 =
-        new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestPutThread tp4 =
-        new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
-    TestPutThread tp5 =
-        new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestPutThread tp1 = new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestPutThread tp2 = new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestPutThread tp3 = new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestPutThread tp4 = new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
+    TestPutThread tp5 = new TestPutThread(TEST_UTIL.getConnection().getTable(hdt.getTableName()));
     tp1.start();
     tp2.start();
     tp3.start();
@@ -235,8 +225,7 @@ public class TestServerBusyException {
     tp3.join();
     tp4.join();
     tp5.join();
-    assertEquals(2,
-        tp1.getServerBusyException + tp2.getServerBusyException + tp3.getServerBusyException
-            + tp4.getServerBusyException + tp5.getServerBusyException);
+    assertEquals(2, tp1.getServerBusyException + tp2.getServerBusyException
+      + tp3.getServerBusyException + tp4.getServerBusyException + tp5.getServerBusyException);
   }
 }

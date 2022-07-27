@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * */
+ */
 package org.apache.hadoop.hbase.util;
 
 import java.beans.IntrospectionException;
@@ -67,8 +67,8 @@ public final class JSONMetricUtil {
   }
 
   public static MBeanAttributeInfo[] getMBeanAttributeInfo(ObjectName bean)
-      throws IntrospectionException, InstanceNotFoundException, ReflectionException,
-      IntrospectionException, javax.management.IntrospectionException {
+    throws IntrospectionException, InstanceNotFoundException, ReflectionException,
+    IntrospectionException, javax.management.IntrospectionException {
     MBeanInfo mbinfo = mbServer.getMBeanInfo(bean);
     return mbinfo.getAttributes();
   }
@@ -78,8 +78,8 @@ public final class JSONMetricUtil {
     try {
       value = mbServer.getAttribute(bean, attribute);
     } catch (Exception e) {
-      LOG.error("Unable to get value from MBean= " + bean.toString() + "for attribute=" +
-        attribute + " " + e.getMessage());
+      LOG.error("Unable to get value from MBean= " + bean.toString() + "for attribute=" + attribute
+        + " " + e.getMessage());
     }
     return value;
   }
@@ -88,11 +88,11 @@ public final class JSONMetricUtil {
    * Returns a subset of mbeans defined by qry. Modeled after DumpRegionServerMetrics#dumpMetrics.
    * Example: String qry= "java.lang:type=Memory"
    * @throws MalformedObjectNameException if json have bad format
-   * @throws IOException /
+   * @throws IOException                  /
    * @return String representation of json array.
    */
   public static String dumpBeanToString(String qry)
-      throws MalformedObjectNameException, IOException {
+    throws MalformedObjectNameException, IOException {
     StringWriter sw = new StringWriter(1024 * 100); // Guess this size
     try (PrintWriter writer = new PrintWriter(sw)) {
       JSONBean dumper = new JSONBean();
@@ -107,7 +107,7 @@ public final class JSONMetricUtil {
 
   /**
    * Method for building map used for constructing ObjectName. Mapping is done with arrays indices
-   * @param keys Map keys
+   * @param keys   Map keys
    * @param values Map values
    * @return Map or null if arrays are empty * or have different number of elements
    */
@@ -132,7 +132,7 @@ public final class JSONMetricUtil {
   }
 
   public static ObjectName buildObjectName(String domain, Hashtable<String, String> keyValueTable)
-      throws MalformedObjectNameException {
+    throws MalformedObjectNameException {
     return new ObjectName(domain, keyValueTable);
   }
 

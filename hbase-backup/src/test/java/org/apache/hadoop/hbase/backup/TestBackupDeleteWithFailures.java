@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,11 +57,11 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * tests should have their own classes and extend this one
  */
 @Category(LargeTests.class)
-public class TestBackupDeleteWithFailures extends TestBackupBase{
+public class TestBackupDeleteWithFailures extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupDeleteWithFailures.class);
+    HBaseClassTestRule.forClass(TestBackupDeleteWithFailures.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupDeleteWithFailures.class);
 
@@ -75,7 +75,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
   public static class MasterSnapshotObserver implements MasterCoprocessor, MasterObserver {
     List<Failure> failures = new ArrayList<>();
 
-    public void setFailures(Failure ... f) {
+    public void setFailures(Failure... f) {
       failures.clear();
       for (int i = 0; i < f.length; i++) {
         failures.add(f[i]);
@@ -89,8 +89,8 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
     @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
-        throws IOException {
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
+      throws IOException {
       if (failures.contains(Failure.PRE_SNAPSHOT_FAILURE)) {
         throw new IOException("preSnapshot");
       }
@@ -98,7 +98,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
     @Override
     public void preDeleteSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        SnapshotDescription snapshot) throws IOException {
+      SnapshotDescription snapshot) throws IOException {
       if (failures.contains(Failure.PRE_DELETE_SNAPSHOT_FAILURE)) {
         throw new IOException("preDeleteSnapshot");
       }
@@ -106,7 +106,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
     @Override
     public void postDeleteSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        SnapshotDescription snapshot) throws IOException {
+      SnapshotDescription snapshot) throws IOException {
       if (failures.contains(Failure.POST_DELETE_SNAPSHOT_FAILURE)) {
         throw new IOException("postDeleteSnapshot");
       }
@@ -115,22 +115,20 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
 
   /**
    * Setup Cluster with appropriate configurations before running tests.
-   *
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
-    conf1.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-      MasterSnapshotObserver.class.getName());
+    conf1.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MasterSnapshotObserver.class.getName());
     conf1.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     setUpHelper();
   }
 
   private MasterSnapshotObserver getMasterSnapshotObserver() {
     return TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost()
-        .findCoprocessor(MasterSnapshotObserver.class);
+      .findCoprocessor(MasterSnapshotObserver.class);
   }
 
   @Test
@@ -140,9 +138,9 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
     testBackupDeleteWithFailuresAfter(1, Failure.PRE_SNAPSHOT_FAILURE);
   }
 
-  private void testBackupDeleteWithFailuresAfter(int expected, Failure ...failures)
-          throws Exception {
-    LOG.info("test repair backup delete on a single table with data and failures "+ failures[0]);
+  private void testBackupDeleteWithFailuresAfter(int expected, Failure... failures)
+    throws Exception {
+    LOG.info("test repair backup delete on a single table with data and failures " + failures[0]);
     List<TableName> tableList = Lists.newArrayList(table1);
     String backupId = fullTableBackup(tableList);
     assertTrue(checkSucceeded(backupId));
@@ -161,8 +159,8 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
     observer.setFailures(failures);
     try {
       getBackupAdmin().deleteBackups(backupIds);
-    } catch(IOException e) {
-      if(expected != 1) {
+    } catch (IOException e) {
+      if (expected != 1) {
         assertTrue(false);
       }
     }
@@ -173,7 +171,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
     String[] ids = table.getListOfBackupIdsFromDeleteOperation();
 
     // Verify that we still have delete record in backup system table
-    if(expected == 1) {
+    if (expected == 1) {
       assertTrue(ids.length == 1);
       assertTrue(ids[0].equals(backupId));
     } else {
@@ -181,7 +179,7 @@ public class TestBackupDeleteWithFailures extends TestBackupBase{
     }
 
     // Now run repair command to repair "failed" delete operation
-    String[] args = new String[] {"repair"};
+    String[] args = new String[] { "repair" };
 
     observer.setFailures(Failure.NO_FAILURES);
 

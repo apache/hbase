@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -30,12 +29,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestLossyCounting {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLossyCounting.class);
+    HBaseClassTestRule.forClass(TestLossyCounting.class);
 
   private final Configuration conf = HBaseConfiguration.create();
 
@@ -64,20 +63,20 @@ public class TestLossyCounting {
   @Test
   public void testSweep1() throws Exception {
     LossyCounting<String> lossyCounting = new LossyCounting<>("testSweep1", 0.01);
-    for(int i = 0; i < 400; i++){
+    for (int i = 0; i < 400; i++) {
       String key = "" + i;
       lossyCounting.add(key);
     }
     assertEquals(4L, lossyCounting.getCurrentTerm());
     waitForSweep(lossyCounting);
 
-    //Do last one sweep as some sweep will be skipped when first one was running
+    // Do last one sweep as some sweep will be skipped when first one was running
     lossyCounting.sweep();
     assertEquals(lossyCounting.getBucketSize() - 1, lossyCounting.getDataSize());
   }
 
   private void waitForSweep(LossyCounting<?> lossyCounting) throws InterruptedException {
-    //wait for sweep thread to complete
+    // wait for sweep thread to complete
     int retry = 0;
     while (!lossyCounting.getSweepFuture().isDone() && retry < 10) {
       Thread.sleep(100);
@@ -94,7 +93,7 @@ public class TestLossyCounting {
     }
     waitForSweep(lossyCounting);
     assertEquals(10L, lossyCounting.getDataSize());
-    for(int i = 0; i < 10; i++){
+    for (int i = 0; i < 10; i++) {
       String key = "1";
       lossyCounting.add(key);
     }

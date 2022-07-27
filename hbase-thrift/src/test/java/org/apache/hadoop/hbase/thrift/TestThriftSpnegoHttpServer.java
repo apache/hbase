@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.thrift;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -72,17 +73,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Start the HBase Thrift HTTP server on a random port through the command-line
- * interface and talk to it from client side with SPNEGO security enabled.
+ * Start the HBase Thrift HTTP server on a random port through the command-line interface and talk
+ * to it from client side with SPNEGO security enabled.
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestThriftSpnegoHttpServer.class);
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestThriftSpnegoHttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestThriftSpnegoHttpServer.class);
 
   private static SimpleKdcServer kdc;
   private static File serverKeytab;
@@ -113,9 +113,8 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    kdc = SimpleKdcServerUtil.
-      getRunningSimpleKdcServer(new File(TEST_UTIL.getDataTestDir().toString()),
-        HBaseTestingUtil::randomFreePort);
+    kdc = SimpleKdcServerUtil.getRunningSimpleKdcServer(
+      new File(TEST_UTIL.getDataTestDir().toString()), HBaseTestingUtil::randomFreePort);
     File keytabDir = Paths.get(TEST_UTIL.getRandomDir().toString()).toAbsolutePath().toFile();
     Assert.assertTrue(keytabDir.mkdirs());
 
@@ -139,7 +138,8 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     TestThriftHttpServer.setUpBeforeClass();
   }
 
-  @Override protected Supplier<ThriftServer> getThriftServerSupplier() {
+  @Override
+  protected Supplier<ThriftServer> getThriftServerSupplier() {
     return () -> new ThriftServer(TEST_UTIL.getConfiguration());
   }
 
@@ -158,24 +158,23 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
   }
 
   /**
-   * Block call through to this method. It is a messy test that fails because of bad config
-   * and then succeeds only the first attempt adds a table which the second attempt doesn't
-   * want to be in place to succeed. Let the super impl of this test be responsible for
-   * verifying we fail if bad header size.
+   * Block call through to this method. It is a messy test that fails because of bad config and then
+   * succeeds only the first attempt adds a table which the second attempt doesn't want to be in
+   * place to succeed. Let the super impl of this test be responsible for verifying we fail if bad
+   * header size.
    */
   @org.junit.Ignore
   @Test
-  @Override public void testRunThriftServerWithHeaderBufferLength() throws Exception {
+  @Override
+  public void testRunThriftServerWithHeaderBufferLength() throws Exception {
     super.testRunThriftServerWithHeaderBufferLength();
   }
 
   @Override
   protected void talkToThriftServer(String url, int customHeaderSize) throws Exception {
     // Close httpClient and THttpClient automatically on any failures
-    try (
-        CloseableHttpClient httpClient = createHttpClient();
-        THttpClient tHttpClient = new THttpClient(url, httpClient)
-    ) {
+    try (CloseableHttpClient httpClient = createHttpClient();
+      THttpClient tHttpClient = new THttpClient(url, httpClient)) {
       tHttpClient.open();
       if (customHeaderSize > 0) {
         StringBuilder sb = new StringBuilder();
@@ -188,10 +187,10 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
       TProtocol prot = new TBinaryProtocol(tHttpClient);
       Hbase.Client client = new Hbase.Client(prot);
       List<ByteBuffer> bbs = client.getTableNames();
-      LOG.info("PRE-EXISTING {}", bbs.stream().
-        map(b -> Bytes.toString(b.array())).collect(Collectors.joining(",")));
+      LOG.info("PRE-EXISTING {}",
+        bbs.stream().map(b -> Bytes.toString(b.array())).collect(Collectors.joining(",")));
       if (!bbs.isEmpty()) {
-        for (ByteBuffer bb: bbs) {
+        for (ByteBuffer bb : bbs) {
           client.disableTable(bb);
           client.deleteTable(bb);
         }
@@ -206,15 +205,13 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(clientPrincipal, clientKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
     // Make sure the subject has a principal
-    assertFalse("Found no client principals in the clientSubject.",
-      clientPrincipals.isEmpty());
+    assertFalse("Found no client principals in the clientSubject.", clientPrincipals.isEmpty());
 
     // Get a TGT for the subject (might have many, different encryption types). The first should
     // be the default encryption type.
     Set<KerberosTicket> privateCredentials =
-        clientSubject.getPrivateCredentials(KerberosTicket.class);
-    assertFalse("Found no private credentials in the clientSubject.",
-      privateCredentials.isEmpty());
+      clientSubject.getPrivateCredentials(KerberosTicket.class);
+    assertFalse("Found no private credentials in the clientSubject.", privateCredentials.isEmpty());
     KerberosTicket tgt = privateCredentials.iterator().next();
     assertNotNull("No kerberos ticket found.", tgt);
 
@@ -228,19 +225,16 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServer {
       Oid oid = new Oid("1.2.840.113554.1.2.2");
       GSSName gssClient = gssManager.createName(clientPrincipalName, GSSName.NT_USER_NAME);
       GSSCredential credential = gssManager.createCredential(gssClient,
-          GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
+        GSSCredential.DEFAULT_LIFETIME, oid, GSSCredential.INITIATE_ONLY);
 
-      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider>create()
-          .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true))
-          .build();
+      Lookup<AuthSchemeProvider> authRegistry = RegistryBuilder.<AuthSchemeProvider> create()
+        .register(AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true, true)).build();
 
       BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
       credentialsProvider.setCredentials(AuthScope.ANY, new KerberosCredentials(credential));
 
-      return HttpClients.custom()
-          .setDefaultAuthSchemeRegistry(authRegistry)
-          .setDefaultCredentialsProvider(credentialsProvider)
-          .build();
+      return HttpClients.custom().setDefaultAuthSchemeRegistry(authRegistry)
+        .setDefaultCredentialsProvider(credentialsProvider).build();
     });
   }
 }

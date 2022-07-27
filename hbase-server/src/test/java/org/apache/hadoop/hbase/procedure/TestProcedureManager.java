@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,12 +34,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestProcedureManager {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureManager.class);
+    HBaseClassTestRule.forClass(TestProcedureManager.class);
 
   private static final int NUM_RS = 2;
   private static HBaseTestingUtil util = new HBaseTestingUtil();
@@ -50,9 +50,9 @@ public class TestProcedureManager {
     Configuration conf = util.getConfiguration();
 
     conf.set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY,
-        SimpleMasterProcedureManager.class.getName());
+      SimpleMasterProcedureManager.class.getName());
     conf.set(ProcedureManagerHost.REGIONSERVER_PROCEDURE_CONF_KEY,
-        SimpleRSProcedureManager.class.getName());
+      SimpleRSProcedureManager.class.getName());
 
     util.startMiniCluster(NUM_RS);
   }
@@ -67,8 +67,8 @@ public class TestProcedureManager {
     Admin admin = util.getAdmin();
 
     byte[] result = admin.execProcedureWithReturn(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
-        "mytest", new HashMap<>());
+      "mytest", new HashMap<>());
     assertArrayEquals("Incorrect return data from execProcedure",
-        Bytes.toBytes(SimpleMasterProcedureManager.SIMPLE_DATA), result);
+      Bytes.toBytes(SimpleMasterProcedureManager.SIMPLE_DATA), result);
   }
 }

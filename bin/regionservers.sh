@@ -17,7 +17,7 @@
 # * See the License for the specific language governing permissions and
 # * limitations under the License.
 # */
-# 
+#
 # Run a shell command on all regionserver hosts.
 #
 # Environment Variables
@@ -45,7 +45,7 @@ bin=`cd "$bin">/dev/null; pwd`
 . "$bin"/hbase-config.sh
 
 # If the regionservers file is specified in the command line,
-# then it takes precedence over the definition in 
+# then it takes precedence over the definition in
 # hbase-env.sh. Save it here.
 HOSTLIST=$HBASE_REGIONSERVERS
 

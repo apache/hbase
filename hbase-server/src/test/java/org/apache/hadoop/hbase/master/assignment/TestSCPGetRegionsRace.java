@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
@@ -70,8 +71,8 @@ public class TestSCPGetRegionsRace {
 
   private static final class ServerManagerForTest extends ServerManager {
 
-    public ServerManagerForTest(MasterServices master) {
-      super(master);
+    public ServerManagerForTest(MasterServices master, RegionServerList storage) {
+      super(master, storage);
     }
 
     @Override
@@ -96,7 +97,7 @@ public class TestSCPGetRegionsRace {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       if (req.getTransition(0).getTransitionCode() == TransitionCode.CLOSED) {
         if (ARRIVE_REPORT != null) {
           ARRIVE_REPORT.countDown();
@@ -141,9 +142,10 @@ public class TestSCPGetRegionsRace {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master) throws IOException {
+    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+      throws IOException {
       setupClusterConnection();
-      return new ServerManagerForTest(master);
+      return new ServerManagerForTest(master, storage);
     }
   }
 
@@ -208,8 +210,8 @@ public class TestSCPGetRegionsRace {
     EXCLUDE_SERVERS.add(dest);
     RESUME_GET.countDown();
     // wait until there are no SCPs and TRSPs
-    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished() ||
-      (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
+    UTIL.waitFor(60000, () -> master.getProcedures().stream().allMatch(p -> p.isFinished()
+      || (!(p instanceof ServerCrashProcedure) && !(p instanceof TransitRegionStateProcedure))));
 
     // assert the region is only on the dest server.
     HRegionServer rs = UTIL.getMiniHBaseCluster().getRegionServer(dest);

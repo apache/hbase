@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,19 +26,17 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({ RegionServerTests.class, LargeTests.class })
 public class TestWALSplitValueCompression extends TestWALSplit {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestWALSplitValueCompression.class);
+    HBaseClassTestRule.forClass(TestWALSplitValueCompression.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration()
-      .setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TEST_UTIL.getConfiguration()
-      .setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    TEST_UTIL.getConfiguration().setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
     TestWALSplit.setUpBeforeClass();
   }
 }

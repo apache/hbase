@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,15 +33,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestRawString {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRawString.class);
+    HBaseClassTestRule.forClass(TestRawString.class);
 
-  private static final String[] VALUES = new String[] {
-    "", "1", "22", "333", "4444", "55555", "666666", "7777777", "88888888", "999999999",
-  };
+  private static final String[] VALUES = new String[] { "", "1", "22", "333", "4444", "55555",
+    "666666", "7777777", "88888888", "999999999", };
 
   @Test
   public void testIsOrderPreservingIsTrue() {
@@ -82,10 +81,10 @@ public class TestRawString {
   public void testReadWrite() {
     for (final Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       final RawString type =
-          Order.ASCENDING == ord ? new RawString(Order.ASCENDING) : new RawString(Order.DESCENDING);
+        Order.ASCENDING == ord ? new RawString(Order.ASCENDING) : new RawString(Order.DESCENDING);
       for (final String val : VALUES) {
         final PositionedByteRange buff =
-            new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
+          new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
         assertEquals(buff.getLength(), type.encode(buff, val));
         final byte[] expected = Bytes.toBytes(val);
         ord.apply(expected);

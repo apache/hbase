@@ -18,17 +18,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.COMPACTION_AFTER_BULKLOAD_ENABLE;
-
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -61,9 +60,13 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
   private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
   public static AtomicInteger called = new AtomicInteger(0);
 
+  public TestCompactionAfterBulkLoad(boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
+
   @Override
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
@@ -92,18 +95,18 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
       when(regionServerServices.getConfiguration()).thenReturn(conf);
       when(regionServerServices.getCompactionRequestor()).thenReturn(compactSplit);
       when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
-          .thenAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocation) {
-              WALKeyImpl walKey = invocation.getArgument(1);
-              MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
-              if (mvcc != null) {
-                MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
-                walKey.setWriteEntry(we);
-              }
-              return 01L;
+        .thenAnswer(new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) {
+            WALKeyImpl walKey = invocation.getArgument(1);
+            MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+            if (mvcc != null) {
+              MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+              walKey.setWriteEntry(we);
             }
-          });
+            return 01L;
+          }
+        });
 
       HRegion region = testRegionWithFamilies(family1, family2, family3);
       region.bulkLoadHFiles(familyPaths, false, null);

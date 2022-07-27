@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -38,10 +37,10 @@ public class HBaseIOException extends IOException {
   }
 
   public HBaseIOException(String message, Throwable cause) {
-      super(message, cause);
+    super(message, cause);
   }
 
   public HBaseIOException(Throwable cause) {
-      super(cause);
+    super(cause);
   }
 }

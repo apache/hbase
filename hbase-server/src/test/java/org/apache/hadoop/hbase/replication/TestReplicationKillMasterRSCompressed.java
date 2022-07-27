@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,15 +26,15 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled
- * Do not add other tests in this class.
+ * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled Do not add
+ * other tests in this class.
  */
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMasterRS {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressed.class);
+    HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressed.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -27,6 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
   private static final long serialVersionUID = 6439786157874827523L;
+
   /**
    * default constructor
    */
@@ -35,7 +34,7 @@ public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
   }
 
   /**
-   * @param message
+   * n
    */
   public NotAllMetaRegionsOnlineException(String message) {
     super(message);

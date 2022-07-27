@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -44,23 +43,21 @@ public interface MetricsIOSource extends BaseSource {
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
-
   String FS_READ_TIME_HISTO_KEY = "fsReadTime";
   String FS_PREAD_TIME_HISTO_KEY = "fsPReadTime";
   String FS_WRITE_HISTO_KEY = "fsWriteTime";
 
   String CHECKSUM_FAILURES_KEY = "fsChecksumFailureCount";
 
-  String FS_READ_TIME_HISTO_DESC
-    = "Latency of HFile's sequential reads on this region server in milliseconds";
-  String FS_PREAD_TIME_HISTO_DESC
-    = "Latency of HFile's positional reads on this region server in milliseconds";
-  String FS_WRITE_TIME_HISTO_DESC
-    = "Latency of HFile's writes on this region server in milliseconds";
+  String FS_READ_TIME_HISTO_DESC =
+    "Latency of HFile's sequential reads on this region server in milliseconds";
+  String FS_PREAD_TIME_HISTO_DESC =
+    "Latency of HFile's positional reads on this region server in milliseconds";
+  String FS_WRITE_TIME_HISTO_DESC =
+    "Latency of HFile's writes on this region server in milliseconds";
 
   String CHECKSUM_FAILURES_DESC = "Number of checksum failures for the HBase HFile checksums at the"
-      + " HBase level (separate from HDFS checksums)";
-
+    + " HBase level (separate from HDFS checksums)";
 
   /**
    * Update the fs sequential read time histogram

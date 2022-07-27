@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -105,7 +105,7 @@ public class CatalogFamilyFormat {
   /**
    * Returns the RegionInfo object from the column {@link HConstants#CATALOG_FAMILY} and
    * <code>qualifier</code> of the catalog table result.
-   * @param r a Result object from the catalog table scan
+   * @param r         a Result object from the catalog table scan
    * @param qualifier Column family qualifier
    * @return An RegionInfo instance or null.
    */
@@ -132,9 +132,9 @@ public class CatalogFamilyFormat {
   /**
    * Returns the HRegionLocation parsed from the given meta row Result for the given regionInfo and
    * replicaId. The regionInfo can be the default region info for the replica.
-   * @param r the meta row result
+   * @param r          the meta row result
    * @param regionInfo RegionInfo for default replica
-   * @param replicaId the replicaId for the HRegionLocation
+   * @param replicaId  the replicaId for the HRegionLocation
    * @return HRegionLocation parsed from the given meta row Result for the given replicaId
    */
   public static HRegionLocation getRegionLocation(final Result r, final RegionInfo regionInfo,
@@ -232,9 +232,10 @@ public class CatalogFamilyFormat {
    * @return a byte[] for server column qualifier
    */
   public static byte[] getServerColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SERVER_QUALIFIER :
-      Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0
+      ? HConstants.SERVER_QUALIFIER
+      : Bytes.toBytes(HConstants.SERVER_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+        + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -243,9 +244,10 @@ public class CatalogFamilyFormat {
    * @return a byte[] for server start code column qualifier
    */
   public static byte[] getStartCodeColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.STARTCODE_QUALIFIER :
-      Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0
+      ? HConstants.STARTCODE_QUALIFIER
+      : Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+        + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -268,9 +270,10 @@ public class CatalogFamilyFormat {
    * @return a byte[] for seqNum column qualifier
    */
   public static byte[] getSeqNumColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SEQNUM_QUALIFIER :
-      Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0
+      ? HConstants.SEQNUM_QUALIFIER
+      : Bytes.toBytes(HConstants.SEQNUM_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+        + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /** The delimiter for meta columns for replicaIds &gt; 0 */
@@ -308,9 +311,10 @@ public class CatalogFamilyFormat {
    * @return a byte[] for state qualifier
    */
   public static byte[] getRegionStateColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.STATE_QUALIFIER :
-      Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0
+      ? HConstants.STATE_QUALIFIER
+      : Bytes.toBytes(HConstants.STATE_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+        + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -319,9 +323,10 @@ public class CatalogFamilyFormat {
    * @return a byte[] for sn column qualifier
    */
   public static byte[] getServerNameColumn(int replicaId) {
-    return replicaId == 0 ? HConstants.SERVERNAME_QUALIFIER :
-      Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER +
-        String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
+    return replicaId == 0
+      ? HConstants.SERVERNAME_QUALIFIER
+      : Bytes.toBytes(HConstants.SERVERNAME_QUALIFIER_STR + META_REPLICA_ID_DELIMITER
+        + String.format(RegionInfo.REPLICA_ID_FORMAT, replicaId));
   }
 
   /**
@@ -344,8 +349,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
-   *         match the regex 'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized values of &lt;qualifier,regioninfo&gt; pairs taken from column values that
+   * match the regex 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static Map<String, RegionInfo> getMergeRegionsWithName(Cell[] cells) {
@@ -371,8 +376,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return Deserialized regioninfo values taken from column values that match the regex
-   *         'info:merge.*' in array of <code>cells</code>.
+   * Returns Deserialized regioninfo values taken from column values that match the regex
+   * 'info:merge.*' in array of <code>cells</code>.
    */
   @Nullable
   public static List<RegionInfo> getMergeRegions(Cell[] cells) {
@@ -381,8 +386,8 @@ public class CatalogFamilyFormat {
   }
 
   /**
-   * @return True if any merge regions present in <code>cells</code>; i.e. the column in
-   *         <code>cell</code> matches the regex 'info:merge.*'.
+   * Returns True if any merge regions present in <code>cells</code>; i.e. the column in
+   * <code>cell</code> matches the regex 'info:merge.*'.
    */
   public static boolean hasMergeRegions(Cell[] cells) {
     for (Cell cell : cells) {
@@ -393,12 +398,10 @@ public class CatalogFamilyFormat {
     return false;
   }
 
-  /**
-   * @return True if the column in <code>cell</code> matches the regex 'info:merge.*'.
-   */
+  /** Returns True if the column in <code>cell</code> matches the regex 'info:merge.*'. */
   public static boolean isMergeQualifierPrefix(Cell cell) {
     // Check to see if has family and that qualifier starts with the merge qualifier 'merge'
-    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY) &&
-      PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
+    return CellUtil.matchingFamily(cell, HConstants.CATALOG_FAMILY)
+      && PrivateCellUtil.qualifierStartsWith(cell, HConstants.MERGE_QUALIFIER_PREFIX);
   }
 }

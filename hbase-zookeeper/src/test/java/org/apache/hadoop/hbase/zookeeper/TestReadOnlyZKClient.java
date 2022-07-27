@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -68,7 +68,7 @@ public class TestReadOnlyZKClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReadOnlyZKClient.class);
+    HBaseClassTestRule.forClass(TestReadOnlyZKClient.class);
 
   private static HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
 
@@ -87,7 +87,7 @@ public class TestReadOnlyZKClient {
 
     ZooKeeper zk = ZooKeeperHelper.getConnectedZooKeeper(hostPort, 10000);
     DATA = new byte[10];
-    ThreadLocalRandom.current().nextBytes(DATA);
+    Bytes.random(DATA);
     zk.create(PATH, DATA, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     for (int i = 0; i < CHILDREN; i++) {
       zk.create(PATH + "/c" + i, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -187,8 +187,8 @@ public class TestReadOnlyZKClient {
     doAnswer(i -> {
       exchanger.exchange(i.getArgument(2));
       return null;
-    }).when(mockedZK).getData(anyString(), anyBoolean(),
-      any(AsyncCallback.DataCallback.class), any());
+    }).when(mockedZK).getData(anyString(), anyBoolean(), any(AsyncCallback.DataCallback.class),
+      any());
     doAnswer(i -> null).when(mockedZK).close();
     when(mockedZK.getState()).thenReturn(ZooKeeper.States.CONNECTED);
     RO_ZK.zookeeper = mockedZK;

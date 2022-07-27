@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,14 +49,13 @@ class MasterCoprocessorRpcChannelImpl implements RpcChannel {
   }
 
   private CompletableFuture<Message> rpcCall(MethodDescriptor method, Message request,
-      Message responsePrototype, HBaseRpcController controller, MasterService.Interface stub) {
+    Message responsePrototype, HBaseRpcController controller, MasterService.Interface stub) {
     CompletableFuture<Message> future = new CompletableFuture<>();
     CoprocessorServiceRequest csr =
-        CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
-    stub.execMasterService(
-      controller,
-      csr,
-      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<CoprocessorServiceResponse>() {
+      CoprocessorRpcUtils.getCoprocessorServiceRequest(method, request);
+    stub.execMasterService(controller, csr,
+      new org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback<
+        CoprocessorServiceResponse>() {
 
         @Override
         public void run(CoprocessorServiceResponse resp) {
@@ -76,14 +75,14 @@ class MasterCoprocessorRpcChannelImpl implements RpcChannel {
 
   @Override
   public void callMethod(MethodDescriptor method, RpcController controller, Message request,
-      Message responsePrototype, RpcCallback<Message> done) {
+    Message responsePrototype, RpcCallback<Message> done) {
     addListener(
       callerBuilder.action((c, s) -> rpcCall(method, request, responsePrototype, c, s)).call(),
-      ((r, e) -> {
+      (r, e) -> {
         if (e != null) {
           ((ClientCoprocessorRpcController) controller).setFailed(e);
         }
         done.run(r);
-      }));
+      });
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,11 +37,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ExclusiveMemHFileBlock extends HFileBlock {
 
   ExclusiveMemHFileBlock(BlockType blockType, int onDiskSizeWithoutHeader,
-      int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuff buf, boolean fillHeader,
-      long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader,
-      HFileContext fileContext, ByteBuffAllocator alloc) {
+    int uncompressedSizeWithoutHeader, long prevBlockOffset, ByteBuff buf, boolean fillHeader,
+    long offset, int nextBlockOnDiskSize, int onDiskDataSizeWithHeader, HFileContext fileContext,
+    ByteBuffAllocator alloc) {
     super(blockType, onDiskSizeWithoutHeader, uncompressedSizeWithoutHeader, prevBlockOffset, buf,
-        fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, alloc);
+      fillHeader, offset, nextBlockOnDiskSize, onDiskDataSizeWithHeader, fileContext, alloc);
   }
 
   @Override

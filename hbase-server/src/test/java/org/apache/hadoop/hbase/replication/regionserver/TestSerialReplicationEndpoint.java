@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
@@ -23,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -62,7 +61,7 @@ public class TestSerialReplicationEndpoint {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
+    HBaseClassTestRule.forClass(TestSerialReplicationEndpoint.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration CONF;
@@ -88,7 +87,7 @@ public class TestSerialReplicationEndpoint {
   }
 
   private void testHBaseReplicationEndpoint(String tableNameStr, String peerId, boolean isSerial)
-      throws IOException {
+    throws IOException {
     TestEndpoint.reset();
     int cellNum = 10000;
 
@@ -96,15 +95,15 @@ public class TestSerialReplicationEndpoint {
     byte[] family = Bytes.toBytes("f");
     byte[] qualifier = Bytes.toBytes("q");
     TableDescriptor td =
-        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
-            .newBuilder(family).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(family).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
     UTIL.createTable(td, null);
 
     try (Admin admin = CONN.getAdmin()) {
       ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-          .setClusterKey(getZKClusterKey()).setReplicationEndpointImpl(TestEndpoint.class.getName())
-          .setReplicateAllUserTables(false).setSerial(isSerial)
-          .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of())).build();
+        .setClusterKey(getZKClusterKey()).setReplicationEndpointImpl(TestEndpoint.class.getName())
+        .setReplicateAllUserTables(false).setSerial(isSerial)
+        .setTableCFsMap(ImmutableMap.of(tableName, ImmutableList.of())).build();
       admin.addReplicationPeer(peerId, peerConfig);
     }
 
@@ -166,11 +165,10 @@ public class TestSerialReplicationEndpoint {
     }
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
-      return () -> {
-        entryQueue.addAll(entries);
-        return ordinal;
-      };
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
+      int timeout) {
+      entryQueue.addAll(entries);
+      return CompletableFuture.completedFuture(ordinal);
     }
 
     @Override

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * CSLMImmutableSegment is an abstract class that extends the API supported by a {@link Segment},
@@ -29,12 +28,12 @@ import org.apache.hadoop.hbase.util.ClassSize;
 @InterfaceAudience.Private
 public class CSLMImmutableSegment extends ImmutableSegment {
   public static final long DEEP_OVERHEAD_CSLM =
-      ImmutableSegment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
+    ImmutableSegment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP;
 
-  /**------------------------------------------------------------------------
-   * Copy C-tor to be used when new CSLMImmutableSegment is being built from a Mutable one.
-   * This C-tor should be used when active MutableSegment is pushed into the compaction
-   * pipeline and becomes an ImmutableSegment.
+  /**
+   * ------------------------------------------------------------------------ Copy C-tor to be used
+   * when new CSLMImmutableSegment is being built from a Mutable one. This C-tor should be used when
+   * active MutableSegment is pushed into the compaction pipeline and becomes an ImmutableSegment.
    */
   protected CSLMImmutableSegment(Segment segment, MemStoreSizing memstoreSizing) {
     super(segment);
@@ -51,7 +50,8 @@ public class CSLMImmutableSegment extends ImmutableSegment {
     return ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY;
   }
 
-  @Override protected boolean canBeFlattened() {
+  @Override
+  protected boolean canBeFlattened() {
     return true;
   }
 }

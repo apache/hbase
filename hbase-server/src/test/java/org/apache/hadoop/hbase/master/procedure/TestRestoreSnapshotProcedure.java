@@ -55,12 +55,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRestoreSnapshotProcedure.class);
+    HBaseClassTestRule.forClass(TestRestoreSnapshotProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRestoreSnapshotProcedure.class);
 
@@ -121,10 +121,8 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     snapshot = ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotList.get(0));
 
     // modify the table
-    ColumnFamilyDescriptor columnFamilyDescriptor3 =
-      ColumnFamilyDescriptorBuilder.of(CF3);
-    ColumnFamilyDescriptor columnFamilyDescriptor4 =
-      ColumnFamilyDescriptorBuilder.of(CF4);
+    ColumnFamilyDescriptor columnFamilyDescriptor3 = ColumnFamilyDescriptorBuilder.of(CF3);
+    ColumnFamilyDescriptor columnFamilyDescriptor4 = ColumnFamilyDescriptorBuilder.of(CF4);
     admin.addColumnFamily(snapshotTableName, columnFamilyDescriptor3);
     admin.addColumnFamily(snapshotTableName, columnFamilyDescriptor4);
     admin.deleteColumnFamily(snapshotTableName, CF2);
@@ -159,8 +157,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
   public void testRestoreSnapshot() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-      procExec,
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot));
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
 
@@ -173,14 +170,12 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     final TableName restoredTableName = TableName.valueOf(name.getMethodName());
     final TableDescriptor tableDescriptor = createHTableDescriptor(restoredTableName, CF1, CF2);
 
-    long procId = ProcedureTestingUtility.submitAndWait(
-      procExec, new RestoreSnapshotProcedure(procExec.getEnvironment(), tableDescriptor,
-        snapshot));
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new RestoreSnapshotProcedure(procExec.getEnvironment(), tableDescriptor, snapshot));
     Procedure<?> result = procExec.getResult(procId);
     assertTrue(result.isFailed());
     LOG.debug("Restore snapshot failed with exception: " + result.getException());
-    assertTrue(
-      ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotFoundException);
   }
 
   @Test
@@ -190,8 +185,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
     try {
       UTIL.getAdmin().enableTable(snapshotTableName);
 
-      long procId = ProcedureTestingUtility.submitAndWait(
-        procExec,
+      long procId = ProcedureTestingUtility.submitAndWait(procExec,
         new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot));
       Procedure<?> result = procExec.getResult(procId);
       assertTrue(result.isFailed());
@@ -234,7 +228,7 @@ public class TestRestoreSnapshotProcedure extends TestTableDDLProcedureBase {
       new RestoreSnapshotProcedure(procExec.getEnvironment(), snapshotHTD, snapshot, true));
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
-    RestoreSnapshotProcedure result = (RestoreSnapshotProcedure)procExec.getResult(procId);
+    RestoreSnapshotProcedure result = (RestoreSnapshotProcedure) procExec.getResult(procId);
     // check whether the restoreAcl flag is true after deserialization from Pb.
     assertEquals(true, result.getRestoreAcl());
   }

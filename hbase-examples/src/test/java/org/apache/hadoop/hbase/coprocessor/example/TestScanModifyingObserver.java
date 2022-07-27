@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,13 +50,13 @@ public class TestScanModifyingObserver {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanModifyingObserver.class);
+    HBaseClassTestRule.forClass(TestScanModifyingObserver.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName NAME = TableName.valueOf("TestScanModifications");
   private static final byte[] FAMILY = Bytes.toBytes("f");
-  private static final ColumnFamilyDescriptor CFD = ColumnFamilyDescriptorBuilder
-      .newBuilder(FAMILY).build();
+  private static final ColumnFamilyDescriptor CFD =
+    ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final byte[] EXPLICIT_QUAL = Bytes.toBytes("our_qualifier");
   private static final byte[] IMPLICIT_QUAL = Bytes.toBytes("their_qualifier");
@@ -67,11 +67,11 @@ public class TestScanModifyingObserver {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME)
-            .setCoprocessor(ScanModifyingObserver.class.getName())
-            .setValue(ScanModifyingObserver.FAMILY_TO_ADD_KEY, Bytes.toString(FAMILY))
-            .setValue(ScanModifyingObserver.QUALIFIER_TO_ADD_KEY, Bytes.toString(IMPLICIT_QUAL))
-            .setColumnFamily(CFD).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME)
+        .setCoprocessor(ScanModifyingObserver.class.getName())
+        .setValue(ScanModifyingObserver.FAMILY_TO_ADD_KEY, Bytes.toString(FAMILY))
+        .setValue(ScanModifyingObserver.QUALIFIER_TO_ADD_KEY, Bytes.toString(IMPLICIT_QUAL))
+        .setColumnFamily(CFD).build());
   }
 
   @AfterClass

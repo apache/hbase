@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -27,6 +26,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -60,7 +60,6 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private TableName tableName = TableName.valueOf(TABLE_NAME_DEFAULT);
   private byte[] familyName = Bytes.toBytes(COLUMN_FAMILY_DEFAULT);
   private IntegrationTestingUtility util;
-  private Random random = new Random();
   private Admin admin;
 
   public static void main(String[] args) throws Exception {
@@ -151,19 +150,18 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           }
         }
       };
-      service.submit(runnable);
+      service.execute(runnable);
     }
   }
 
   private void doGets(ExecutorService service, final LinkedBlockingQueue<Long> rowKeys)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < 100; i++) {
       Runnable runnable = new Runnable() {
         private final LinkedBlockingQueue<Long> rowKeyQueue = rowKeys;
 
         @Override
         public void run() {
-
 
           Table ht = null;
           try {
@@ -187,7 +185,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
               }
               span.addEvent("Accum = " + accum);
 
-            } catch (IOException|InterruptedException ie) {
+            } catch (IOException | InterruptedException ie) {
               // IGNORED
             } finally {
               span.end();
@@ -196,7 +194,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
         }
       };
-      service.submit(runnable);
+      service.execute(runnable);
     }
   }
 
@@ -223,17 +221,18 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<>(25000);
     BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
+    Random rand = ThreadLocalRandom.current();
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       Span span = TraceUtil.getGlobalTracer().spanBuilder("insertData").startSpan();
       try (Scope scope = span.makeCurrent()) {
         for (int i = 0; i < 5; i++) {
-          long rk = random.nextLong();
+          long rk = rand.nextLong();
           rowKeys.add(rk);
           Put p = new Put(Bytes.toBytes(rk));
           for (int y = 0; y < 10; y++) {
-            random.nextBytes(value);
-            p.addColumn(familyName, Bytes.toBytes(random.nextLong()), value);
+            Bytes.random(value);
+            p.addColumn(familyName, Bytes.toBytes(rand.nextLong()), value);
           }
           ht.mutate(p);
         }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.net.BindException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -33,23 +34,22 @@ import org.slf4j.LoggerFactory;
 public class TestClusterPortAssignment {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClusterPortAssignment.class);
+    HBaseClassTestRule.forClass(TestClusterPortAssignment.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestClusterPortAssignment.class);
 
   /**
-   * Check that we can start an HBase cluster specifying a custom set of
-   * RPC and infoserver ports.
+   * Check that we can start an HBase cluster specifying a custom set of RPC and infoserver ports.
    */
   @Test(timeout = 300000)
   public void testClusterPortAssignment() throws Exception {
     boolean retry = false;
     do {
-      int masterPort =  HBaseTestingUtil.randomFreePort();
-      int masterInfoPort =  HBaseTestingUtil.randomFreePort();
-      int rsPort =  HBaseTestingUtil.randomFreePort();
-      int rsInfoPort =  HBaseTestingUtil.randomFreePort();
+      int masterPort = HBaseTestingUtil.randomFreePort();
+      int masterInfoPort = HBaseTestingUtil.randomFreePort();
+      int rsPort = HBaseTestingUtil.randomFreePort();
+      int rsInfoPort = HBaseTestingUtil.randomFreePort();
       TEST_UTIL.getConfiguration().setBoolean(LocalHBaseCluster.ASSIGN_RANDOM_PORTS, false);
       TEST_UTIL.getConfiguration().setBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO, false);
       TEST_UTIL.getConfiguration().setBoolean("fs.hdfs.impl.disable.cache", true);

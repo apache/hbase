@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.test;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.util.Tool;
@@ -39,14 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-
 
 /**
  * This is an integration test for replication. It is derived off
@@ -76,27 +73,27 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
   private final String NO_REPLICATION_SETUP_OPT = "noReplicationSetup";
 
   /**
-   * The gap (in seconds) from when data is finished being generated at the source
-   * to when it can be verified. This is the replication lag we are willing to tolerate
+   * The gap (in seconds) from when data is finished being generated at the source to when it can be
+   * verified. This is the replication lag we are willing to tolerate
    */
   private final String GENERATE_VERIFY_GAP_OPT = "generateVerifyGap";
 
   /**
-   * The width of the linked list.
-   * See {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
+   * The width of the linked list. See
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
    */
   private final String WIDTH_OPT = "width";
 
   /**
-   * The number of rows after which the linked list points to the first row.
-   * See {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
+   * The number of rows after which the linked list points to the first row. See
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
    */
   private final String WRAP_MULTIPLIER_OPT = "wrapMultiplier";
 
   /**
-   * The number of nodes in the test setup. This has to be a multiple of WRAP_MULTIPLIER * WIDTH
-   * in order to ensure that the linked list can is complete.
-   * See {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
+   * The number of nodes in the test setup. This has to be a multiple of WRAP_MULTIPLIER * WIDTH in
+   * order to ensure that the linked list can is complete. See
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for more details
    */
   private final String NUM_NODES_OPT = "numNodes";
 
@@ -109,8 +106,8 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
   private final int DEFAULT_NUM_NODES = DEFAULT_WIDTH * DEFAULT_WRAP_MULTIPLIER;
 
   /**
-   * Wrapper around an HBase ClusterID allowing us
-   * to get admin connections and configurations for it
+   * Wrapper around an HBase ClusterID allowing us to get admin connections and configurations for
+   * it
    */
   protected class ClusterID {
     private final Configuration configuration;
@@ -119,12 +116,10 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     /**
      * This creates a new ClusterID wrapper that will automatically build connections and
      * configurations to be able to talk to the specified cluster
-     *
      * @param base the base configuration that this class will add to
-     * @param key the cluster key in the form of zk_quorum:zk_port:zk_parent_node
+     * @param key  the cluster key in the form of zk_quorum:zk_port:zk_parent_node
      */
-    public ClusterID(Configuration base,
-                     String key) {
+    public ClusterID(Configuration base, String key) {
       configuration = new Configuration(base);
       String[] parts = key.split(":");
       configuration.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
@@ -135,8 +130,8 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     @Override
     public String toString() {
       return Joiner.on(":").join(configuration.get(HConstants.ZOOKEEPER_QUORUM),
-                                 configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT),
-                                 configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+        configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT),
+        configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     }
 
     public Configuration getConfiguration() {
@@ -162,8 +157,8 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
   /**
    * The main runner loop for the test. It uses
-   * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList}
-   * for the generation and verification of the linked list. It is heavily based on
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList} for the generation and
+   * verification of the linked list. It is heavily based on
    * {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Loop}
    */
   protected class VerifyReplicationLoop extends Configured implements Tool {
@@ -176,14 +171,12 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     /**
      * This tears down any tables that existed from before and rebuilds the tables and schemas on
      * the source cluster. It then sets up replication from the source to the sink cluster by using
-     * the {@link org.apache.hadoop.hbase.client.Admin} connection.
-     *
-     * @throws Exception
+     * the {@link org.apache.hadoop.hbase.client.Admin} connection. n
      */
     protected void setupTablesAndReplication() throws Exception {
       TableName tableName = getTableName(source.getConfiguration());
 
-      ClusterID[] clusters = {source, sink};
+      ClusterID[] clusters = { source, sink };
 
       // delete any old tables in the source and sink
       for (ClusterID cluster : clusters) {
@@ -195,16 +188,14 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
           }
 
           /**
-           * TODO: This is a work around on a replication bug (HBASE-13416)
-           * When we recreate a table against that has recently been
-           * deleted, the contents of the logs are replayed even though
-           * they should not. This ensures that we flush the logs
-           * before the table gets deleted. Eventually the bug should be
-           * fixed and this should be removed.
+           * TODO: This is a work around on a replication bug (HBASE-13416) When we recreate a table
+           * against that has recently been deleted, the contents of the logs are replayed even
+           * though they should not. This ensures that we flush the logs before the table gets
+           * deleted. Eventually the bug should be fixed and this should be removed.
            */
           Set<ServerName> regionServers = new TreeSet<>();
-          for (HRegionLocation rl :
-               cluster.getConnection().getRegionLocator(tableName).getAllRegionLocations()) {
+          for (HRegionLocation rl : cluster.getConnection().getRegionLocator(tableName)
+            .getAllRegionLocations()) {
             regionServers.add(rl.getServerName());
           }
 
@@ -234,10 +225,9 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
           toReplicate.put(tableName, Collections.emptyList());
 
           // set the sink to be the target
-          final ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
-              .setClusterKey(sink.toString())
-              .setReplicateAllUserTables(false)
-              .setTableCFsMap(toReplicate).build();
+          final ReplicationPeerConfig peerConfig =
+            ReplicationPeerConfig.newBuilder().setClusterKey(sink.toString())
+              .setReplicateAllUserTables(false).setTableCFsMap(toReplicate).build();
 
           admin.addReplicationPeer("TestPeer", peerConfig);
           admin.enableTableReplication(tableName);
@@ -257,13 +247,11 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
     /**
      * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Generator} in the
-     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication.
-     *
-     * @throws Exception
+     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication. n
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = util.getRandomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); // create a random UUID.
       Path generatorOutput = new Path(outputPath, uuid.toString());
 
       Generator generator = new Generator();
@@ -276,18 +264,15 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       }
     }
 
-
     /**
-     * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Verify}
-     * in the sink cluster. If replication is working properly the data written at the source
-     * cluster should be available in the sink cluster after a reasonable gap
-     *
-     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster
-     * @throws Exception
+     * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Verify} in the sink
+     * cluster. If replication is working properly the data written at the source cluster should be
+     * available in the sink cluster after a reasonable gap
+     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster n
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
-      UUID uuid = util.getRandomUUID(); //create a random UUID.
+      UUID uuid = util.getRandomUUID(); // create a random UUID.
       Path iterationOutput = new Path(outputPath, uuid.toString());
 
       Verify verify = new Verify();
@@ -306,14 +291,9 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     }
 
     /**
-     * The main test runner
-     *
-     * This test has 4 steps:
-     *  1: setupTablesAndReplication
-     *  2: generate the data into the source cluster
-     *  3: wait for replication to propagate
-     *  4: verify that the data is available in the sink cluster
-     *
+     * The main test runner This test has 4 steps: 1: setupTablesAndReplication 2: generate the data
+     * into the source cluster 3: wait for replication to propagate 4: verify that the data is
+     * available in the sink cluster
      * @param args should be empty
      * @return 0 on success
      * @throws Exception on an error
@@ -338,8 +318,8 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       }
 
       /**
-       * we are always returning 0 because exceptions are thrown when there is an error
-       * in the verification step.
+       * we are always returning 0 because exceptions are thrown when there is an error in the
+       * verification step.
        */
       return 0;
     }
@@ -349,30 +329,30 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
   protected void addOptions() {
     super.addOptions();
     addRequiredOptWithArg("s", SOURCE_CLUSTER_OPT,
-                          "Cluster ID of the source cluster (e.g. localhost:2181:/hbase)");
+      "Cluster ID of the source cluster (e.g. localhost:2181:/hbase)");
     addRequiredOptWithArg("r", DEST_CLUSTER_OPT,
-                          "Cluster ID of the sink cluster (e.g. localhost:2182:/hbase)");
+      "Cluster ID of the sink cluster (e.g. localhost:2182:/hbase)");
     addRequiredOptWithArg("d", OUTPUT_DIR_OPT,
-                          "Temporary directory where to write keys for the test");
+      "Temporary directory where to write keys for the test");
 
     addOptWithArg("nm", NUM_MAPPERS_OPT,
-                  "Number of mappers (default: " + DEFAULT_NUM_MAPPERS + ")");
+      "Number of mappers (default: " + DEFAULT_NUM_MAPPERS + ")");
     addOptWithArg("nr", NUM_REDUCERS_OPT,
-                  "Number of reducers (default: " + DEFAULT_NUM_MAPPERS + ")");
+      "Number of reducers (default: " + DEFAULT_NUM_MAPPERS + ")");
     addOptNoArg("nrs", NO_REPLICATION_SETUP_OPT,
-                  "Don't setup tables or configure replication before starting test");
+      "Don't setup tables or configure replication before starting test");
     addOptWithArg("n", NUM_NODES_OPT,
-                  "Number of nodes. This should be a multiple of width * wrapMultiplier."  +
-                  " (default: " + DEFAULT_NUM_NODES + ")");
-    addOptWithArg("i", ITERATIONS_OPT, "Number of iterations to run (default: " +
-                  DEFAULT_NUM_ITERATIONS +  ")");
+      "Number of nodes. This should be a multiple of width * wrapMultiplier." + " (default: "
+        + DEFAULT_NUM_NODES + ")");
+    addOptWithArg("i", ITERATIONS_OPT,
+      "Number of iterations to run (default: " + DEFAULT_NUM_ITERATIONS + ")");
     addOptWithArg("t", GENERATE_VERIFY_GAP_OPT,
-                  "Gap between generate and verify steps in seconds (default: " +
-                  DEFAULT_GENERATE_VERIFY_GAP + ")");
+      "Gap between generate and verify steps in seconds (default: " + DEFAULT_GENERATE_VERIFY_GAP
+        + ")");
     addOptWithArg("w", WIDTH_OPT,
-                  "Width of the linked list chain (default: " + DEFAULT_WIDTH + ")");
-    addOptWithArg("wm", WRAP_MULTIPLIER_OPT, "How many times to wrap around (default: " +
-                  DEFAULT_WRAP_MULTIPLIER + ")");
+      "Width of the linked list chain (default: " + DEFAULT_WIDTH + ")");
+    addOptWithArg("wm", WRAP_MULTIPLIER_OPT,
+      "How many times to wrap around (default: " + DEFAULT_WRAP_MULTIPLIER + ")");
   }
 
   @Override
@@ -384,25 +364,25 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     outputDir = cmd.getOptionValue(OUTPUT_DIR_OPT);
 
     /** This uses parseInt from {@link org.apache.hadoop.hbase.util.AbstractHBaseTool} */
-    numMappers = parseInt(cmd.getOptionValue(NUM_MAPPERS_OPT,
-                                             Integer.toString(DEFAULT_NUM_MAPPERS)),
-                          1, Integer.MAX_VALUE);
-    numReducers = parseInt(cmd.getOptionValue(NUM_REDUCERS_OPT,
-                                              Integer.toString(DEFAULT_NUM_REDUCERS)),
-                           1, Integer.MAX_VALUE);
-    numNodes = parseInt(cmd.getOptionValue(NUM_NODES_OPT, Integer.toString(DEFAULT_NUM_NODES)),
-                        1, Integer.MAX_VALUE);
-    generateVerifyGap = parseInt(cmd.getOptionValue(GENERATE_VERIFY_GAP_OPT,
-                                                    Integer.toString(DEFAULT_GENERATE_VERIFY_GAP)),
-                                 1, Integer.MAX_VALUE);
-    numIterations = parseInt(cmd.getOptionValue(ITERATIONS_OPT,
-                                                Integer.toString(DEFAULT_NUM_ITERATIONS)),
-                             1, Integer.MAX_VALUE);
-    width = parseInt(cmd.getOptionValue(WIDTH_OPT, Integer.toString(DEFAULT_WIDTH)),
-                                        1, Integer.MAX_VALUE);
-    wrapMultiplier = parseInt(cmd.getOptionValue(WRAP_MULTIPLIER_OPT,
-                                                 Integer.toString(DEFAULT_WRAP_MULTIPLIER)),
-                              1, Integer.MAX_VALUE);
+    numMappers =
+      parseInt(cmd.getOptionValue(NUM_MAPPERS_OPT, Integer.toString(DEFAULT_NUM_MAPPERS)), 1,
+        Integer.MAX_VALUE);
+    numReducers =
+      parseInt(cmd.getOptionValue(NUM_REDUCERS_OPT, Integer.toString(DEFAULT_NUM_REDUCERS)), 1,
+        Integer.MAX_VALUE);
+    numNodes = parseInt(cmd.getOptionValue(NUM_NODES_OPT, Integer.toString(DEFAULT_NUM_NODES)), 1,
+      Integer.MAX_VALUE);
+    generateVerifyGap = parseInt(
+      cmd.getOptionValue(GENERATE_VERIFY_GAP_OPT, Integer.toString(DEFAULT_GENERATE_VERIFY_GAP)), 1,
+      Integer.MAX_VALUE);
+    numIterations =
+      parseInt(cmd.getOptionValue(ITERATIONS_OPT, Integer.toString(DEFAULT_NUM_ITERATIONS)), 1,
+        Integer.MAX_VALUE);
+    width = parseInt(cmd.getOptionValue(WIDTH_OPT, Integer.toString(DEFAULT_WIDTH)), 1,
+      Integer.MAX_VALUE);
+    wrapMultiplier =
+      parseInt(cmd.getOptionValue(WRAP_MULTIPLIER_OPT, Integer.toString(DEFAULT_WRAP_MULTIPLIER)),
+        1, Integer.MAX_VALUE);
 
     if (cmd.hasOption(NO_REPLICATION_SETUP_OPT)) {
       noReplicationSetup = true;
@@ -415,7 +395,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
   @Override
   public int runTestFromCommandLine() throws Exception {
-    VerifyReplicationLoop tool = new  VerifyReplicationLoop();
+    VerifyReplicationLoop tool = new VerifyReplicationLoop();
     tool.integrationTestBigLinkedList = this;
     return ToolRunner.run(getConf(), tool, null);
   }

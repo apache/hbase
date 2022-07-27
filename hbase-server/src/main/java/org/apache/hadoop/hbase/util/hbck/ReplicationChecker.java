@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class ReplicationChecker {
 
   public boolean hasUnDeletedQueues() {
     return errorReporter.getErrorList()
-        .contains(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE);
+      .contains(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE);
   }
 
   private Map<ServerName, List<String>> getUnDeletedQueues() throws ReplicationException {
@@ -73,8 +73,8 @@ public class ReplicationChecker {
         if (!peerIds.contains(queueInfo.getPeerId())) {
           undeletedQueues.computeIfAbsent(replicator, key -> new ArrayList<>()).add(queueId);
           LOG.debug(
-            "Undeleted replication queue for removed peer found: " +
-              "[removedPeerId={}, replicator={}, queueId={}]",
+            "Undeleted replication queue for removed peer found: "
+              + "[removedPeerId={}, replicator={}, queueId={}]",
             queueInfo.getPeerId(), replicator, queueId);
         }
       }
@@ -100,17 +100,17 @@ public class ReplicationChecker {
     undeletedQueueIds.forEach((replicator, queueIds) -> {
       queueIds.forEach(queueId -> {
         ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        String msg = "Undeleted replication queue for removed peer found: " +
-          String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
+        String msg = "Undeleted replication queue for removed peer found: "
+          + String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
             replicator, queueId);
         errorReporter.reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg);
       });
     });
     undeletedHFileRefsPeerIds = getUndeletedHFileRefsPeers();
-    undeletedHFileRefsPeerIds.stream().map(
-        peerId -> "Undeleted replication hfile-refs queue for removed peer " + peerId + " found")
-        .forEach(msg -> errorReporter
-            .reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg));
+    undeletedHFileRefsPeerIds.stream()
+      .map(peerId -> "Undeleted replication hfile-refs queue for removed peer " + peerId + " found")
+      .forEach(msg -> errorReporter
+        .reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg));
   }
 
   public void fixUnDeletedQueues() throws ReplicationException {

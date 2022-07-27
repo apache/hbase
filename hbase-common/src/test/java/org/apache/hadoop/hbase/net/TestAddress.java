@@ -30,19 +30,17 @@ import org.junit.experimental.categories.Category;
 public class TestAddress {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAddress.class);
+    HBaseClassTestRule.forClass(TestAddress.class);
 
   @Test
   public void testGetHostWithoutDomain() {
-    assertEquals("a:123",
-        Address.fromParts("a.b.c", 123).toStringWithoutDomain());
-    assertEquals("1:123",
-        Address.fromParts("1.b.c", 123).toStringWithoutDomain());
+    assertEquals("a:123", Address.fromParts("a.b.c", 123).toStringWithoutDomain());
+    assertEquals("1:123", Address.fromParts("1.b.c", 123).toStringWithoutDomain());
     assertEquals("123.456.789.1:123",
-        Address.fromParts("123.456.789.1", 123).toStringWithoutDomain());
+      Address.fromParts("123.456.789.1", 123).toStringWithoutDomain());
     assertEquals("[2001:db8::1]:80",
-        Address.fromParts("[2001:db8::1]:", 80).toStringWithoutDomain());
+      Address.fromParts("[2001:db8::1]:", 80).toStringWithoutDomain());
     assertEquals("[2001:db8::1]:80",
-        Address.fromParts("[2001:db8::1]:", 80).toStringWithoutDomain());
+      Address.fromParts("[2001:db8::1]:", 80).toStringWithoutDomain());
   }
 }

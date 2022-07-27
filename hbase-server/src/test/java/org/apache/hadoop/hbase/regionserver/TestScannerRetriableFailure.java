@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,12 +54,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestScannerRetriableFailure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerRetriableFailure.class);
+    HBaseClassTestRule.forClass(TestScannerRetriableFailure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerRetriableFailure.class);
 
@@ -68,7 +68,8 @@ public class TestScannerRetriableFailure {
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
-  @Rule public TableNameTestRule testTable = new TableNameTestRule();
+  @Rule
+  public TableNameTestRule testTable = new TableNameTestRule();
 
   public static class FaultyScannerObserver implements RegionCoprocessor, RegionObserver {
     private int faults = 0;
@@ -80,8 +81,8 @@ public class TestScannerRetriableFailure {
 
     @Override
     public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final InternalScanner s, final List<Result> results,
-        final int limit, final boolean hasMore) throws IOException {
+      final InternalScanner s, final List<Result> results, final int limit, final boolean hasMore)
+      throws IOException {
       final TableName tableName = e.getEnvironment().getRegionInfo().getTable();
       if (!tableName.isSystemTable() && (faults++ % 2) == 0) {
         LOG.debug(" Injecting fault in table=" + tableName + " scanner");
@@ -128,7 +129,7 @@ public class TestScannerRetriableFailure {
   }
 
   // ==========================================================================
-  //  Helpers
+  // Helpers
   // ==========================================================================
   private FileSystem getFileSystem() {
     return UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();

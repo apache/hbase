@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,19 +20,18 @@ package org.apache.hadoop.hbase.client;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * NonceGenerator interface.
- * In general, nonce group is an ID (one per client, or region+client, or whatever) that
- * could be used to reduce collision potential, or be used by compatible server nonce manager
- * to optimize nonce storage and removal. See HBASE-3787.
+ * NonceGenerator interface. In general, nonce group is an ID (one per client, or region+client, or
+ * whatever) that could be used to reduce collision potential, or be used by compatible server nonce
+ * manager to optimize nonce storage and removal. See HBASE-3787.
  */
 @InterfaceAudience.Private
 public interface NonceGenerator {
 
   static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
-  /** @return the nonce group (client ID) of this client manager. */
+  /** Returns the nonce group (client ID) of this client manager. */
   long getNonceGroup();
 
-  /** @return New nonce. */
+  /** Returns New nonce. */
   long newNonce();
 }

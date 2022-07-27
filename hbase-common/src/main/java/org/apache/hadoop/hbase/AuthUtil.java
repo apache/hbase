@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -32,20 +30,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utility methods for helping with security tasks. Downstream users
- * may rely on this class to handle authenticating via keytab where
- * long running services need access to a secure HBase cluster.
- *
- * Callers must ensure:
- *
+ * Utility methods for helping with security tasks. Downstream users may rely on this class to
+ * handle authenticating via keytab where long running services need access to a secure HBase
+ * cluster. Callers must ensure:
  * <ul>
- *   <li>HBase configuration files are in the Classpath
- *   <li>hbase.client.keytab.file points to a valid keytab on the local filesystem
- *   <li>hbase.client.kerberos.principal gives the Kerberos principal to use
+ * <li>HBase configuration files are in the Classpath
+ * <li>hbase.client.keytab.file points to a valid keytab on the local filesystem
+ * <li>hbase.client.kerberos.principal gives the Kerberos principal to use
  * </ul>
  *
  * <pre>
- * {@code
+ * {
+ *   &#64;code
  *   ChoreService choreService = null;
  *   // Presumes HBase configuration files are on the classpath
  *   final Configuration conf = HBaseConfiguration.create();
@@ -66,14 +62,16 @@ import org.slf4j.LoggerFactory;
  *
  * See the "Running Canary in a Kerberos-enabled Cluster" section of the HBase Reference Guide for
  * an example of configuring a user of this Auth Chore to run on a secure cluster.
+ *
  * <pre>
  * </pre>
- * This class will be internal used only from 2.2.0 version, and will transparently work
- * for kerberized applications. For more, please refer
- * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration for Secure Operation</a>
  *
+ * This class will be internal used only from 2.2.0 version, and will transparently work for
+ * kerberized applications. For more, please refer
+ * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration
+ * for Secure Operation</a>
  * @deprecated since 2.2.0, to be marked as
- *  {@link org.apache.yetus.audience.InterfaceAudience.Private} in 4.0.0.
+ *             {@link org.apache.yetus.audience.InterfaceAudience.Private} in 4.0.0.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-20886">HBASE-20886</a>
  */
 @Deprecated
@@ -91,7 +89,8 @@ public final class AuthUtil {
   public static final String HBASE_CLIENT_KERBEROS_PRINCIPAL = "hbase.client.keytab.principal";
 
   /** Configuration to automatically try to renew keytab-based logins */
-  public static final String HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_KEY = "hbase.client.keytab.automatic.renewal";
+  public static final String HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_KEY =
+    "hbase.client.keytab.automatic.renewal";
   public static final boolean HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_DEFAULT = true;
 
   private AuthUtil() {
@@ -99,11 +98,9 @@ public final class AuthUtil {
   }
 
   /**
-   * For kerberized cluster, return login user (from kinit or from keytab if specified).
-   * For non-kerberized cluster, return system user.
-   * @param conf configuartion file
-   * @return user
-   * @throws IOException login exception
+   * For kerberized cluster, return login user (from kinit or from keytab if specified). For
+   * non-kerberized cluster, return system user.
+   * @param conf configuartion file n * @throws IOException login exception
    */
   @InterfaceAudience.Private
   public static User loginClient(Configuration conf) throws IOException {
@@ -118,12 +115,13 @@ public final class AuthUtil {
         // But we should avoid misuse credentials which is a dangerous security issue,
         // so here check whether user specified a keytab and a principal:
         // 1. Yes, check if user principal match.
-        //    a. match, just return.
-        //    b. mismatch, login using keytab.
+        // a. match, just return.
+        // b. mismatch, login using keytab.
         // 2. No, user may login through kinit, this is the old way, also just return.
         if (fromKeytab) {
-          return checkPrincipalMatch(conf, user.getUGI().getUserName()) ? user :
-            loginFromKeytabAndReturnUser(provider);
+          return checkPrincipalMatch(conf, user.getUGI().getUserName())
+            ? user
+            : loginFromKeytabAndReturnUser(provider);
         }
         return user;
       } else if (fromKeytab) {
@@ -138,8 +136,8 @@ public final class AuthUtil {
     String configuredUserName = conf.get(HBASE_CLIENT_KERBEROS_PRINCIPAL);
     boolean match = configuredUserName.equals(loginUserName);
     if (!match) {
-      LOG.warn("Trying to login with a different user: {}, existed user is {}.",
-        configuredUserName, loginUserName);
+      LOG.warn("Trying to login with a different user: {}, existed user is {}.", configuredUserName,
+        loginUserName);
     }
     return match;
   }
@@ -149,32 +147,29 @@ public final class AuthUtil {
       provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL);
     } catch (IOException ioe) {
       LOG.error("Error while trying to login as user {} through {}, with message: {}.",
-        HBASE_CLIENT_KERBEROS_PRINCIPAL, HBASE_CLIENT_KEYTAB_FILE,
-        ioe.getMessage());
+        HBASE_CLIENT_KERBEROS_PRINCIPAL, HBASE_CLIENT_KEYTAB_FILE, ioe.getMessage());
       throw ioe;
     }
     return provider.getCurrent();
   }
 
   /**
-   * For kerberized cluster, return login user (from kinit or from keytab).
-   * Principal should be the following format: name/fully.qualified.domain.name@REALM.
-   * For non-kerberized cluster, return system user.
+   * For kerberized cluster, return login user (from kinit or from keytab). Principal should be the
+   * following format: name/fully.qualified.domain.name@REALM. For non-kerberized cluster, return
+   * system user.
    * <p>
    * NOT recommend to use to method unless you're sure what you're doing, it is for canary only.
    * Please use User#loginClient.
-   * @param conf configuration file
-   * @return user
-   * @throws IOException login exception
+   * @param conf configuration file n * @throws IOException login exception
    */
   private static User loginClientAsService(Configuration conf) throws IOException {
     UserProvider provider = UserProvider.instantiate(conf);
     if (provider.isHBaseSecurityEnabled() && provider.isHadoopSecurityEnabled()) {
       try {
         if (provider.shouldLoginFromKeytab()) {
-          String host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-            conf.get("hbase.client.dns.interface", "default"),
-            conf.get("hbase.client.dns.nameserver", "default")));
+          String host = Strings.domainNamePointerToHostName(
+            DNS.getDefaultHost(conf.get("hbase.client.dns.interface", "default"),
+              conf.get("hbase.client.dns.nameserver", "default")));
           provider.login(HBASE_CLIENT_KEYTAB_FILE, HBASE_CLIENT_KERBEROS_PRINCIPAL, host);
         }
       } catch (UnknownHostException e) {
@@ -193,7 +188,8 @@ public final class AuthUtil {
    * @return a ScheduledChore for renewals.
    */
   @InterfaceAudience.Private
-  public static ScheduledChore getAuthRenewalChore(final UserGroupInformation user, Configuration conf) {
+  public static ScheduledChore getAuthRenewalChore(final UserGroupInformation user,
+    Configuration conf) {
     if (!user.hasKerberosCredentials() || !isAuthRenewalChoreEnabled(conf)) {
       return null;
     }
@@ -220,7 +216,7 @@ public final class AuthUtil {
    * @param conf the hbase service configuration
    * @return a ScheduledChore for renewals, if needed, and null otherwise.
    * @deprecated Deprecated since 2.2.0, this method will be
-   *   {@link org.apache.yetus.audience.InterfaceAudience.Private} use only after 4.0.0.
+   *             {@link org.apache.yetus.audience.InterfaceAudience.Private} use only after 4.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-20886">HBASE-20886</a>
    */
   @Deprecated
@@ -249,9 +245,8 @@ public final class AuthUtil {
   }
 
   /**
-   * Returns whether or not the given name should be interpreted as a group
-   * principal.  Currently this simply checks if the name starts with the
-   * special group prefix character ("@").
+   * Returns whether or not the given name should be interpreted as a group principal. Currently
+   * this simply checks if the name starts with the special group prefix character ("@").
    */
   @InterfaceAudience.Private
   public static boolean isGroupPrincipal(String name) {
@@ -259,8 +254,7 @@ public final class AuthUtil {
   }
 
   /**
-   * Returns the actual name for a group principal (stripped of the
-   * group prefix).
+   * Returns the actual name for a group principal (stripped of the group prefix).
    */
   @InterfaceAudience.Private
   public static String getGroupName(String aclKey) {
@@ -280,11 +274,11 @@ public final class AuthUtil {
   }
 
   /**
-   * Returns true if the chore to automatically renew Kerberos tickets (from
-   * keytabs) should be started. The default is true.
+   * Returns true if the chore to automatically renew Kerberos tickets (from keytabs) should be
+   * started. The default is true.
    */
   static boolean isAuthRenewalChoreEnabled(Configuration conf) {
     return conf.getBoolean(HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_KEY,
-        HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_DEFAULT);
+      HBASE_CLIENT_AUTOMATIC_KEYTAB_RENEWAL_DEFAULT);
   }
 }

@@ -277,9 +277,4 @@
     <value>3</value>
     <description>Default is unbounded</description>
   </property>
-  <property>
-    <name>hbase.netty.eventloop.rpcserver.thread.count</name>
-    <value>3</value>
-    <description>Default is unbounded</description>
-  </property>
 </configuration>

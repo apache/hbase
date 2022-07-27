@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,8 +57,7 @@ import org.slf4j.LoggerFactory;
  * Impl for exposing HRegionServer Information through Hadoop's metrics 2 system.
  */
 @InterfaceAudience.Private
-class MetricsRegionServerWrapperImpl
-    implements MetricsRegionServerWrapper {
+class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetricsRegionServerWrapperImpl.class);
 
@@ -67,6 +66,8 @@ class MetricsRegionServerWrapperImpl
   private final ByteBuffAllocator allocator;
 
   private BlockCache blockCache;
+  private BlockCache l1Cache = null;
+  private BlockCache l2Cache = null;
   private MobFileCache mobFileCache;
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
@@ -77,8 +78,11 @@ class MetricsRegionServerWrapperImpl
   private volatile long walFileSize = 0;
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
+  private volatile long onHeapMemstoreSize = 0;
+  private volatile long offHeapMemstoreSize = 0;
   private volatile long storeFileSize = 0;
   private volatile double storeFileSizeGrowthRate = 0;
+  private volatile long maxStoreFileCount = 0;
   private volatile long maxStoreFileAge = 0;
   private volatile long minStoreFileAge = 0;
   private volatile long avgStoreFileAge = 0;
@@ -121,8 +125,8 @@ class MetricsRegionServerWrapperImpl
   private volatile long mobFileCacheCount = 0;
   private volatile long blockedRequestsCount = 0L;
   private volatile long averageRegionSize = 0L;
-  protected final Map<String, ArrayList<Long>> requestsCountCache = new
-      ConcurrentHashMap<String, ArrayList<Long>>();
+  protected final Map<String, ArrayList<Long>> requestsCountCache =
+    new ConcurrentHashMap<String, ArrayList<Long>>();
 
   private ScheduledExecutorService executor;
   private Runnable runnable;
@@ -166,12 +170,18 @@ class MetricsRegionServerWrapperImpl
     this.cacheStats = this.blockCache != null ? this.blockCache.getStats() : null;
     if (this.cacheStats != null) {
       if (this.cacheStats instanceof CombinedBlockCache.CombinedCacheStats) {
-        l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getLruCacheStats();
-        l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats)
-          .getBucketCacheStats();
+        l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getLruCacheStats();
+        l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getBucketCacheStats();
       } else {
         l1Stats = this.cacheStats;
+      }
+    }
+    if (this.blockCache != null) {
+      if (this.blockCache instanceof CombinedBlockCache) {
+        l1Cache = ((CombinedBlockCache) this.blockCache).getFirstLevelCache();
+        l2Cache = ((CombinedBlockCache) this.blockCache).getSecondLevelCache();
+      } else {
+        l1Cache = this.blockCache;
       }
     }
   }
@@ -265,7 +275,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public int getFlushQueueSize() {
-    //If there is no flusher there should be no queue.
+    // If there is no flusher there should be no queue.
     if (this.regionServer.getMemStoreFlusher() == null) {
       return 0;
     }
@@ -278,8 +288,23 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getBlockCacheDataBlockCount() {
+    return this.blockCache != null ? this.blockCache.getDataBlockCount() : 0L;
+  }
+
+  @Override
   public long getMemStoreLimit() {
     return this.regionServer.getRegionServerAccounting().getGlobalMemStoreLimit();
+  }
+
+  @Override
+  public long getOnHeapMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalOnHeapMemStoreLimit();
+  }
+
+  @Override
+  public long getOffHeapMemStoreLimit() {
+    return this.regionServer.getRegionServerAccounting().getGlobalOffHeapMemStoreLimit();
   }
 
   @Override
@@ -345,6 +370,38 @@ class MetricsRegionServerWrapperImpl
     return this.cacheStats != null ? this.cacheStats.getFailedInserts() : 0L;
   }
 
+  public long getL1CacheSize() {
+    return this.l1Cache != null ? this.l1Cache.getCurrentSize() : 0L;
+  }
+
+  public long getL1CacheFreeSize() {
+    return this.l1Cache != null ? this.l1Cache.getFreeSize() : 0L;
+  }
+
+  public long getL1CacheCount() {
+    return this.l1Cache != null ? this.l1Cache.getBlockCount() : 0L;
+  }
+
+  public long getL1CacheEvictedCount() {
+    return this.l1Stats != null ? this.l1Stats.getEvictedCount() : 0L;
+  }
+
+  public long getL2CacheSize() {
+    return this.l2Cache != null ? this.l2Cache.getCurrentSize() : 0L;
+  }
+
+  public long getL2CacheFreeSize() {
+    return this.l2Cache != null ? this.l2Cache.getFreeSize() : 0L;
+  }
+
+  public long getL2CacheCount() {
+    return this.l2Cache != null ? this.l2Cache.getBlockCount() : 0L;
+  }
+
+  public long getL2CacheEvictedCount() {
+    return this.l2Stats != null ? this.l2Stats.getEvictedCount() : 0L;
+  }
+
   @Override
   public long getL1CacheHitCount() {
     return this.l1Stats != null ? this.l1Stats.getHitCount() : 0L;
@@ -385,7 +442,8 @@ class MetricsRegionServerWrapperImpl
     return this.l2Stats != null ? this.l2Stats.getMissRatio() : 0.0;
   }
 
-  @Override public void forceRecompute() {
+  @Override
+  public void forceRecompute() {
     this.runnable.run();
   }
 
@@ -409,10 +467,8 @@ class MetricsRegionServerWrapperImpl
     if (excludeDatanodeManager == null) {
       return Collections.emptyList();
     }
-    return excludeDatanodeManager.getExcludeDNs().entrySet()
-      .stream()
-      .map(e -> e.getKey().toString() + ", " + e.getValue())
-      .collect(Collectors.toList());
+    return excludeDatanodeManager.getExcludeDNs().entrySet().stream()
+      .map(e -> e.getKey().toString() + ", " + e.getValue()).collect(Collectors.toList());
   }
 
   @Override
@@ -423,6 +479,11 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getNumStoreFiles() {
     return numStoreFiles;
+  }
+
+  @Override
+  public long getMaxStoreFiles() {
+    return maxStoreFileCount;
   }
 
   @Override
@@ -451,6 +512,16 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getOnHeapMemStoreSize() {
+    return onHeapMemstoreSize;
+  }
+
+  @Override
+  public long getOffHeapMemStoreSize() {
+    return offHeapMemstoreSize;
+  }
+
+  @Override
   public long getStoreFileSize() {
     return storeFileSize;
   }
@@ -460,7 +531,8 @@ class MetricsRegionServerWrapperImpl
     return storeFileSizeGrowthRate;
   }
 
-  @Override public double getRequestsPerSecond() {
+  @Override
+  public double getRequestsPerSecond() {
     return requestsPerSecond;
   }
 
@@ -672,10 +744,15 @@ class MetricsRegionServerWrapperImpl
     return mobFileCacheHitRatio * 100;
   }
 
+  @Override
+  public int getActiveScanners() {
+    return regionServer.getRpcServices().getScannersCount();
+  }
+
   /**
-   * This is the runnable that will be executed on the executor every PERIOD number of seconds
-   * It will take metrics/numbers from all of the regions and use them to compute point in
-   * time metrics.
+   * This is the runnable that will be executed on the executor every PERIOD number of seconds It
+   * will take metrics/numbers from all of the regions and use them to compute point in time
+   * metrics.
    */
   public class RegionServerMetricsWrapperRunnable implements Runnable {
 
@@ -685,13 +762,14 @@ class MetricsRegionServerWrapperImpl
     @Override
     synchronized public void run() {
       try {
-        HDFSBlocksDistribution hdfsBlocksDistribution =
-            new HDFSBlocksDistribution();
+        HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
         HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
-            new HDFSBlocksDistribution();
+          new HDFSBlocksDistribution();
 
-        long tempNumStores = 0, tempNumStoreFiles = 0, tempMemstoreSize = 0, tempStoreFileSize = 0;
+        long tempNumStores = 0, tempNumStoreFiles = 0, tempStoreFileSize = 0;
+        long tempMemstoreSize = 0, tempOnHeapMemstoreSize = 0, tempOffHeapMemstoreSize = 0;
         long tempMaxStoreFileAge = 0, tempNumReferenceFiles = 0;
+        long tempMaxStoreFileCount = 0;
         long avgAgeNumerator = 0, numHFiles = 0;
         long tempMinStoreFileAge = Long.MAX_VALUE;
         long tempFilteredReadRequestsCount = 0, tempCpRequestsCount = 0;
@@ -744,9 +822,9 @@ class MetricsRegionServerWrapperImpl
             writeRequestsDelta = currentWriteRequestsCount - lastWriteRequestsCount;
             totalReadRequestsDelta += readRequestsDelta;
             totalWriteRequestsDelta += writeRequestsDelta;
-            //Update cache for our next comparision
-            requestsCountCache.get(encodedRegionName).set(0,currentReadRequestsCount);
-            requestsCountCache.get(encodedRegionName).set(1,currentWriteRequestsCount);
+            // Update cache for our next comparision
+            requestsCountCache.get(encodedRegionName).set(0, currentReadRequestsCount);
+            requestsCountCache.get(encodedRegionName).set(1, currentWriteRequestsCount);
           } else {
             // List[0] -> readRequestCount
             // List[1] -> writeRequestCount
@@ -771,17 +849,25 @@ class MetricsRegionServerWrapperImpl
           for (Store store : storeList) {
             tempNumStoreFiles += store.getStorefilesCount();
             tempMemstoreSize += store.getMemStoreSize().getDataSize();
+            tempOnHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
+            tempOffHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
             tempStoreFileSize += store.getStorefilesSize();
 
+            tempMaxStoreFileCount = Math.max(tempMaxStoreFileCount, store.getStorefilesCount());
+
             OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
-            if (storeMaxStoreFileAge.isPresent() &&
-                storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge) {
+            if (
+              storeMaxStoreFileAge.isPresent()
+                && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
+            ) {
               tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
             }
 
             OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
-            if (storeMinStoreFileAge.isPresent() &&
-                storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge) {
+            if (
+              storeMinStoreFileAge.isPresent()
+                && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
+            ) {
               tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
             }
 
@@ -792,7 +878,7 @@ class MetricsRegionServerWrapperImpl
             OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
             if (storeAvgStoreFileAge.isPresent()) {
               avgAgeNumerator =
-                  (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
+                (long) (avgAgeNumerator + storeAvgStoreFileAge.getAsDouble() * storeHFiles);
             }
 
             tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
@@ -826,14 +912,14 @@ class MetricsRegionServerWrapperImpl
           regionCount++;
         }
 
-        float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
-            regionServer.getServerName().getHostname());
+        float localityIndex =
+          hdfsBlocksDistribution.getBlockLocalityIndex(regionServer.getServerName().getHostname());
         tempPercentFileLocal = Double.isNaN(tempBlockedRequestsCount) ? 0 : (localityIndex * 100);
 
         float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
-            .getBlockLocalityIndex(regionServer.getServerName().getHostname());
-        tempPercentFileLocalSecondaryRegions = Double.
-            isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
+          .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+        tempPercentFileLocalSecondaryRegions =
+          Double.isNaN(localityIndexSecondaryRegions) ? 0 : (localityIndexSecondaryRegions * 100);
 
         // Compute the number of requests per second
         long currentTime = EnvironmentEdgeManager.currentTime();
@@ -845,17 +931,17 @@ class MetricsRegionServerWrapperImpl
         }
         // If we've time traveled keep the last requests per second.
         if ((currentTime - lastRan) > 0) {
-          requestsPerSecond = (totalReadRequestsDelta + totalWriteRequestsDelta) /
-              ((currentTime - lastRan) / 1000.0);
+          requestsPerSecond =
+            (totalReadRequestsDelta + totalWriteRequestsDelta) / ((currentTime - lastRan) / 1000.0);
 
-          double readRequestsRatePerMilliSecond = (double)totalReadRequestsDelta / period;
-          double writeRequestsRatePerMilliSecond = (double)totalWriteRequestsDelta / period;
+          double readRequestsRatePerMilliSecond = (double) totalReadRequestsDelta / period;
+          double writeRequestsRatePerMilliSecond = (double) totalWriteRequestsDelta / period;
 
           readRequestsRatePerSecond = readRequestsRatePerMilliSecond * 1000.0;
           writeRequestsRatePerSecond = writeRequestsRatePerMilliSecond * 1000.0;
 
           long intervalStoreFileSize = tempStoreFileSize - lastStoreFileSize;
-          storeFileSizeGrowthRate = (double)intervalStoreFileSize * 1000.0 / period;
+          storeFileSizeGrowthRate = (double) intervalStoreFileSize * 1000.0 / period;
 
           lastStoreFileSize = tempStoreFileSize;
         }
@@ -864,15 +950,18 @@ class MetricsRegionServerWrapperImpl
 
         final WALProvider provider = regionServer.getWalFactory().getWALProvider();
         final WALProvider metaProvider = regionServer.getWalFactory().getMetaWALProvider();
-        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles()) +
-            (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
-        walFileSize = (provider == null ? 0 : provider.getLogFileSize()) +
-          (metaProvider == null ? 0 : metaProvider.getLogFileSize());
+        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles())
+          + (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
+        walFileSize = (provider == null ? 0 : provider.getLogFileSize())
+          + (metaProvider == null ? 0 : metaProvider.getLogFileSize());
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
         memstoreSize = tempMemstoreSize;
+        onHeapMemstoreSize = tempOnHeapMemstoreSize;
+        offHeapMemstoreSize = tempOffHeapMemstoreSize;
         storeFileSize = tempStoreFileSize;
+        maxStoreFileCount = tempMaxStoreFileCount;
         maxStoreFileAge = tempMaxStoreFileAge;
         if (regionCount > 0) {
           averageRegionSize = (memstoreSize + storeFileSize) / regionCount;
@@ -885,7 +974,7 @@ class MetricsRegionServerWrapperImpl
           avgStoreFileAge = avgAgeNumerator / numHFiles;
         }
 
-        numReferenceFiles= tempNumReferenceFiles;
+        numReferenceFiles = tempNumReferenceFiles;
         readRequestsCount = tempReadRequestsCount;
         cpRequestsCount = tempCpRequestsCount;
         filteredReadRequestsCount = tempFilteredReadRequestsCount;
@@ -931,17 +1020,19 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getHedgedReadOps() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadOps();
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOps();
   }
 
   @Override
   public long getHedgedReadWins() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadWins();
   }
 
   @Override
   public long getHedgedReadOpsInCurThread() {
-    return this.dfsHedgedReadMetrics == null ? 0 : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
+    return this.dfsHedgedReadMetrics == null
+      ? 0
+      : this.dfsHedgedReadMetrics.getHedgedReadOpsInCurThread();
   }
 
   @Override

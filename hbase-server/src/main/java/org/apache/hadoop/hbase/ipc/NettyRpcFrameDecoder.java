@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,34 +33,28 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.CorruptedFrameExceptio
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
-
 /**
  * Decoder for extracting frame
- *
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
+class NettyRpcFrameDecoder extends ByteToMessageDecoder {
 
   private static int FRAME_LENGTH_FIELD_LENGTH = 4;
 
   private final int maxFrameLength;
+  final NettyServerRpcConnection connection;
+
   private boolean requestTooBig;
   private String requestTooBigMessage;
 
-  public NettyRpcFrameDecoder(int maxFrameLength) {
+  public NettyRpcFrameDecoder(int maxFrameLength, NettyServerRpcConnection connection) {
     this.maxFrameLength = maxFrameLength;
-  }
-
-  private NettyServerRpcConnection connection;
-
-  void setConnection(NettyServerRpcConnection connection) {
     this.connection = connection;
   }
 
   @Override
-  protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
-    throws Exception {
+  protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
     if (requestTooBig) {
       handleTooBigRequest(in);
       return;
@@ -81,8 +75,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
       requestTooBigMessage =
         "RPC data length of " + frameLength + " received from " + connection.getHostAddress()
           + " is greater than max allowed " + connection.rpcServer.maxRequestSize + ". Set \""
-          + SimpleRpcServer.MAX_REQUEST_SIZE
-          + "\" on server to override this limit (not recommended)";
+          + RpcServer.MAX_REQUEST_SIZE + "\" on server to override this limit (not recommended)";
 
       NettyRpcServer.LOG.warn(requestTooBigMessage);
 
@@ -135,8 +128,10 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
 
     // Make sure the client recognizes the underlying exception
     // Otherwise, throw a DoNotRetryIOException.
-    if (VersionInfoUtil.hasMinimumVersion(connection.connectionHeader.getVersionInfo(),
-      RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
+    if (
+      VersionInfoUtil.hasMinimumVersion(connection.getVersionInfo(),
+        RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)
+    ) {
       reqTooBig.setResponse(null, null, reqTooBigEx, requestTooBigMessage);
     } else {
       reqTooBig.setResponse(null, null, new DoNotRetryIOException(requestTooBigMessage),
@@ -174,10 +169,8 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
   }
 
   /**
-   * Reads variable length 32bit int from buffer
-   * This method is from ProtobufVarint32FrameDecoder in Netty and modified a little bit
-   * to pass the cyeckstyle rule.
-   *
+   * Reads variable length 32bit int from buffer This method is from ProtobufVarint32FrameDecoder in
+   * Netty and modified a little bit to pass the cyeckstyle rule.
    * @return decoded int if buffers readerIndex has been forwarded else nonsense value
    */
   private static int readRawVarint32(ByteBuf buffer) {

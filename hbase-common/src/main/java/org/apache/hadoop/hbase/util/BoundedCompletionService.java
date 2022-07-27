@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,14 +26,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A completion service, close to the one available in the JDK 1.7
- * However, this ones keeps the list of the future, and allows to cancel them all.
- * This means as well that it can be used for a small set of tasks only.
- * <br>Implementation is not Thread safe.
+ * A completion service, close to the one available in the JDK 1.7 However, this ones keeps the list
+ * of the future, and allows to cancel them all. This means as well that it can be used for a small
+ * set of tasks only. <br>
+ * Implementation is not Thread safe.
  */
 @InterfaceAudience.Private
 public class BoundedCompletionService<V> {
@@ -62,7 +58,6 @@ public class BoundedCompletionService<V> {
     this.completed = new ArrayBlockingQueue<>(maxTasks);
   }
 
-
   public Future<V> submit(Callable<V> task) {
     QueueingFuture newFuture = new QueueingFuture(task);
     executor.execute(newFuture);
@@ -70,11 +65,11 @@ public class BoundedCompletionService<V> {
     return newFuture;
   }
 
-  public  Future<V> take() throws InterruptedException{
+  public Future<V> take() throws InterruptedException {
     return completed.take();
   }
 
-  public Future<V> poll(long timeout, TimeUnit unit) throws InterruptedException{
+  public Future<V> poll(long timeout, TimeUnit unit) throws InterruptedException {
     return completed.poll(timeout, unit);
   }
 

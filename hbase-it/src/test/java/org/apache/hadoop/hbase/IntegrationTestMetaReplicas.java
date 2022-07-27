@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,11 +33,10 @@ import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
- * An integration test that starts the cluster with three replicas for the meta
- * It then creates a table, flushes the meta, kills the server holding the primary.
- * After that a client issues put/get requests on the created table - the other
- * replicas of the meta would be used to get the location of the region of the created
- * table.
+ * An integration test that starts the cluster with three replicas for the meta It then creates a
+ * table, flushes the meta, kills the server holding the primary. After that a client issues put/get
+ * requests on the created table - the other replicas of the meta would be used to get the location
+ * of the region of the created table.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestMetaReplicas {
@@ -53,17 +52,17 @@ public class IntegrationTestMetaReplicas {
     if (util == null) {
       util = new IntegrationTestingUtility();
     }
-    util.getConfiguration().setInt(
-        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
+    util.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
+      1000);
     // Make sure there are three servers.
     util.initializeCluster(3);
     HBaseTestingUtil.setReplicas(util.getAdmin(), TableName.META_TABLE_NAME, 3);
     ZKWatcher zkw = util.getZooKeeperWatcher();
     Configuration conf = util.getConfiguration();
-    String baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
-        HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    String primaryMetaZnode = ZNodePaths.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.metaserver", "meta-region-server"));
+    String baseZNode =
+      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    String primaryMetaZnode =
+      ZNodePaths.joinZNode(baseZNode, conf.get("zookeeper.znode.metaserver", "meta-region-server"));
     // check that the data in the znode is parseable (this would also mean the znode exists)
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ProtobufUtil.toServerName(data);
@@ -73,7 +72,7 @@ public class IntegrationTestMetaReplicas {
 
   @AfterClass
   public static void teardown() throws Exception {
-    //Clean everything up.
+    // Clean everything up.
     util.restoreCluster();
     util = null;
   }

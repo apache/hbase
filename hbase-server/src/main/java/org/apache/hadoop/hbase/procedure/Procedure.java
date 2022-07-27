@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,46 +24,45 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 /**
- * A globally-barriered distributed procedure.  This class encapsulates state and methods for
- * tracking and managing a distributed procedure, as well as aborting if any member encounters
- * a problem or if a cancellation is requested.
+ * A globally-barriered distributed procedure. This class encapsulates state and methods for
+ * tracking and managing a distributed procedure, as well as aborting if any member encounters a
+ * problem or if a cancellation is requested.
  * <p>
  * All procedures first attempt to reach a barrier point with the {@link #sendGlobalBarrierStart()}
- * method.  The procedure contacts all members and waits for all subprocedures to execute
+ * method. The procedure contacts all members and waits for all subprocedures to execute
  * {@link Subprocedure#acquireBarrier} to acquire its local piece of the global barrier and then
- * send acquisition info back to the coordinator.  If all acquisitions at subprocedures succeed,
- * the coordinator then will call {@link #sendGlobalBarrierReached()}.  This notifies members to
- * execute the {@link Subprocedure#insideBarrier()} method.  The procedure is blocked until all
- * {@link Subprocedure#insideBarrier} executions complete at the members.  When
- * {@link Subprocedure#insideBarrier} completes at each member, the member sends notification to
- * the coordinator.  Once all members complete, the coordinator calls
+ * send acquisition info back to the coordinator. If all acquisitions at subprocedures succeed, the
+ * coordinator then will call {@link #sendGlobalBarrierReached()}. This notifies members to execute
+ * the {@link Subprocedure#insideBarrier()} method. The procedure is blocked until all
+ * {@link Subprocedure#insideBarrier} executions complete at the members. When
+ * {@link Subprocedure#insideBarrier} completes at each member, the member sends notification to the
+ * coordinator. Once all members complete, the coordinator calls
  * {@link #sendGlobalBarrierComplete()}.
  * <p>
  * If errors are encountered remotely, they are forwarded to the coordinator, and
  * {@link Subprocedure#cleanup(Exception)} is called.
  * <p>
  * Each Procedure and each Subprocedure enforces a time limit on the execution time. If the time
- * limit expires before the procedure completes the {@link TimeoutExceptionInjector} will trigger
- * an {@link ForeignException} to abort the procedure.  This is particularly useful for situations
- * when running a distributed {@link Subprocedure} so participants can avoid blocking for extreme
- * amounts of time if one of the participants fails or takes a really long time (e.g. GC pause).
+ * limit expires before the procedure completes the {@link TimeoutExceptionInjector} will trigger an
+ * {@link ForeignException} to abort the procedure. This is particularly useful for situations when
+ * running a distributed {@link Subprocedure} so participants can avoid blocking for extreme amounts
+ * of time if one of the participants fails or takes a really long time (e.g. GC pause).
  * <p>
- * Users should generally not directly create or subclass instances of this.  They are created
- * for them implicitly via {@link ProcedureCoordinator#startProcedure(ForeignExceptionDispatcher,
- * String, byte[], List)}}
+ * Users should generally not directly create or subclass instances of this. They are created for
+ * them implicitly via
+ * {@link ProcedureCoordinator#startProcedure(ForeignExceptionDispatcher, String, byte[], List)}}
  */
 @InterfaceAudience.Private
 public class Procedure implements Callable<Void>, ForeignExceptionListener {
@@ -110,20 +109,19 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   private ProcedureCoordinator coord;
 
   /**
-   * Creates a procedure. (FOR TESTING)
-   *
-   * {@link Procedure} state to be run by a {@link ProcedureCoordinator}.
-   * @param coord coordinator to call back to for general errors (e.g.
-   *          {@link ProcedureCoordinator#rpcConnectionFailure(String, IOException)}).
-   * @param monitor error monitor to check for external errors
-   * @param wakeFreq frequency to check for errors while waiting
-   * @param timeout amount of time to allow the procedure to run before cancelling
-   * @param procName name of the procedure instance
-   * @param args argument data associated with the procedure instance
+   * Creates a procedure. (FOR TESTING) {@link Procedure} state to be run by a
+   * {@link ProcedureCoordinator}.
+   * @param coord           coordinator to call back to for general errors (e.g.
+   *                        {@link ProcedureCoordinator#rpcConnectionFailure(String, IOException)}).
+   * @param monitor         error monitor to check for external errors
+   * @param wakeFreq        frequency to check for errors while waiting
+   * @param timeout         amount of time to allow the procedure to run before cancelling
+   * @param procName        name of the procedure instance
+   * @param args            argument data associated with the procedure instance
    * @param expectedMembers names of the expected members
    */
   public Procedure(ProcedureCoordinator coord, ForeignExceptionDispatcher monitor, long wakeFreq,
-      long timeout, String procName, byte[] args, List<String> expectedMembers) {
+    long timeout, String procName, byte[] args, List<String> expectedMembers) {
     this.coord = coord;
     this.acquiringMembers = new ArrayList<>(expectedMembers);
     this.inBarrierMembers = new ArrayList<>(acquiringMembers.size());
@@ -141,24 +139,21 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Create a procedure.
-   *
-   * Users should generally not directly create instances of this.  They are created them
-   * implicitly via {@link ProcedureCoordinator#createProcedure(ForeignExceptionDispatcher,
-   * String, byte[], List)}}
-   *
-   * @param coord coordinator to call back to for general errors (e.g.
-   *          {@link ProcedureCoordinator#rpcConnectionFailure(String, IOException)}).
-   * @param wakeFreq frequency to check for errors while waiting
-   * @param timeout amount of time to allow the procedure to run before cancelling
-   * @param procName name of the procedure instance
-   * @param args argument data associated with the procedure instance
+   * Create a procedure. Users should generally not directly create instances of this. They are
+   * created them implicitly via
+   * {@link ProcedureCoordinator#createProcedure(ForeignExceptionDispatcher, String, byte[], List)}}
+   * @param coord           coordinator to call back to for general errors (e.g.
+   *                        {@link ProcedureCoordinator#rpcConnectionFailure(String, IOException)}).
+   * @param wakeFreq        frequency to check for errors while waiting
+   * @param timeout         amount of time to allow the procedure to run before cancelling
+   * @param procName        name of the procedure instance
+   * @param args            argument data associated with the procedure instance
    * @param expectedMembers names of the expected members
    */
-  public Procedure(ProcedureCoordinator coord, long wakeFreq, long timeout,
-      String procName, byte[] args, List<String> expectedMembers) {
+  public Procedure(ProcedureCoordinator coord, long wakeFreq, long timeout, String procName,
+    byte[] args, List<String> expectedMembers) {
     this(coord, new ForeignExceptionDispatcher(), wakeFreq, timeout, procName, args,
-        expectedMembers);
+      expectedMembers);
   }
 
   public String getName() {
@@ -166,7 +161,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * @return String of the procedure members both trying to enter the barrier and already in barrier
+   * Returns String of the procedure members both trying to enter the barrier and already in barrier
    */
   public String getStatus() {
     String waiting, done;
@@ -174,7 +169,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       waiting = acquiringMembers.toString();
       done = inBarrierMembers.toString();
     }
-    return "Procedure " + procName + " { waiting=" + waiting + " done="+ done + " }";
+    return "Procedure " + procName + " { waiting=" + waiting + " done=" + done + " }";
   }
 
   /**
@@ -186,7 +181,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * This call is the main execution thread of the barriered procedure.  It sends messages and
+   * This call is the main execution thread of the barriered procedure. It sends messages and
    * essentially blocks until all procedure members acquire or later complete but periodically
    * checks for foreign exceptions.
    */
@@ -223,7 +218,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
-      String msg = "Procedure '" + procName +"' execution failed!";
+      String msg = "Procedure '" + procName + "' execution failed!";
       LOG.error(msg, e);
       receive(new ForeignException(getName(), e));
     } finally {
@@ -239,8 +234,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
 
   /**
    * Sends a message to Members to create a new {@link Subprocedure} for this Procedure and execute
-   * the {@link Subprocedure#acquireBarrier} step.
-   * @throws ForeignException
+   * the {@link Subprocedure#acquireBarrier} step. n
    */
   public void sendGlobalBarrierStart() throws ForeignException {
     // start the procedure
@@ -248,7 +242,8 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
     try {
       // send procedure barrier start to specified list of members. cloning the list to avoid
       // concurrent modification from the controller setting the prepared nodes
-      coord.getRpcs().sendGlobalBarrierAcquire(this, args, Lists.newArrayList(this.acquiringMembers));
+      coord.getRpcs().sendGlobalBarrierAcquire(this, args,
+        Lists.newArrayList(this.acquiringMembers));
     } catch (IOException e) {
       coord.rpcConnectionFailure("Can't reach controller.", e);
     } catch (IllegalArgumentException e) {
@@ -257,11 +252,10 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Sends a message to all members that the global barrier condition has been satisfied.  This
+   * Sends a message to all members that the global barrier condition has been satisfied. This
    * should only be executed after all members have completed its
-   * {@link Subprocedure#acquireBarrier()} call successfully.  This triggers the member
-   * {@link Subprocedure#insideBarrier} method.
-   * @throws ForeignException
+   * {@link Subprocedure#acquireBarrier()} call successfully. This triggers the member
+   * {@link Subprocedure#insideBarrier} method. n
    */
   public void sendGlobalBarrierReached() throws ForeignException {
     try {
@@ -291,12 +285,11 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   //
 
   /**
-   * Call back triggered by an individual member upon successful local barrier acquisition
-   * @param member
+   * Call back triggered by an individual member upon successful local barrier acquisition n
    */
   public void barrierAcquiredByMember(String member) {
     LOG.debug("member: '" + member + "' joining acquired barrier for procedure '" + procName
-        + "' on coordinator");
+      + "' on coordinator");
     if (this.acquiringMembers.contains(member)) {
       synchronized (joinBarrierLock) {
         if (this.acquiringMembers.remove(member)) {
@@ -304,18 +297,17 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
           acquiredBarrierLatch.countDown();
         }
       }
-      LOG.debug("Waiting on: " + acquiredBarrierLatch + " remaining members to acquire global barrier");
+      LOG.debug(
+        "Waiting on: " + acquiredBarrierLatch + " remaining members to acquire global barrier");
     } else {
-      LOG.warn("Member " + member + " joined barrier, but we weren't waiting on it to join." +
-          " Continuing on.");
+      LOG.warn("Member " + member + " joined barrier, but we weren't waiting on it to join."
+        + " Continuing on.");
     }
   }
 
   /**
    * Call back triggered by a individual member upon successful local in-barrier execution and
-   * release
-   * @param member
-   * @param dataFromMember
+   * release nn
    */
   public void barrierReleasedByMember(String member, byte[] dataFromMember) {
     boolean removed = false;
@@ -327,42 +319,35 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
     }
     if (removed) {
       LOG.debug("Member: '" + member + "' released barrier for procedure'" + procName
-          + "', counting down latch.  Waiting for " + releasedBarrierLatch.getCount()
-          + " more");
+        + "', counting down latch.  Waiting for " + releasedBarrierLatch.getCount() + " more");
     } else {
       LOG.warn("Member: '" + member + "' released barrier for procedure'" + procName
-          + "', but we weren't waiting on it to release!");
+        + "', but we weren't waiting on it to release!");
     }
     dataFromFinishedMembers.put(member, dataFromMember);
   }
 
   /**
-   * Waits until the entire procedure has globally completed, or has been aborted.  If an
-   * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
-   * yet.
-   * @throws ForeignException
-   * @throws InterruptedException
+   * Waits until the entire procedure has globally completed, or has been aborted. If an exception
+   * is thrown the procedure may or not have run cleanup to trigger the completion latch yet. nn
    */
   public void waitForCompleted() throws ForeignException, InterruptedException {
     waitForLatch(completedLatch, monitor, wakeFrequency, procName + " completed");
   }
 
   /**
-   * Waits until the entire procedure has globally completed, or has been aborted.  If an
-   * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
-   * yet.
-   * @return data returned from procedure members upon successfully completing subprocedure.
-   * @throws ForeignException
-   * @throws InterruptedException
+   * Waits until the entire procedure has globally completed, or has been aborted. If an exception
+   * is thrown the procedure may or not have run cleanup to trigger the completion latch yet.
+   * @return data returned from procedure members upon successfully completing subprocedure. nn
    */
-  public HashMap<String, byte[]> waitForCompletedWithRet() throws ForeignException, InterruptedException {
+  public HashMap<String, byte[]> waitForCompletedWithRet()
+    throws ForeignException, InterruptedException {
     waitForCompleted();
     return dataFromFinishedMembers;
   }
 
   /**
-   * Check if the entire procedure has globally completed, or has been aborted.
-   * @throws ForeignException
+   * Check if the entire procedure has globally completed, or has been aborted. n
    */
   public boolean isCompleted() throws ForeignException {
     // Rethrow exception if any
@@ -381,25 +366,25 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   /**
    * Wait for latch to count to zero, ignoring any spurious wake-ups, but waking periodically to
    * check for errors
-   * @param latch latch to wait on
-   * @param monitor monitor to check for errors while waiting
-   * @param wakeFrequency frequency to wake up and check for errors (in
-   *          {@link TimeUnit#MILLISECONDS})
+   * @param latch            latch to wait on
+   * @param monitor          monitor to check for errors while waiting
+   * @param wakeFrequency    frequency to wake up and check for errors (in
+   *                         {@link TimeUnit#MILLISECONDS})
    * @param latchDescription description of the latch, for logging
-   * @throws ForeignException type of error the monitor can throw, if the task fails
+   * @throws ForeignException     type of error the monitor can throw, if the task fails
    * @throws InterruptedException if we are interrupted while waiting on latch
    */
   public static void waitForLatch(CountDownLatch latch, ForeignExceptionSnare monitor,
-      long wakeFrequency, String latchDescription) throws ForeignException,
-      InterruptedException {
+    long wakeFrequency, String latchDescription) throws ForeignException, InterruptedException {
     boolean released = false;
     while (!released) {
       if (monitor != null) {
         monitor.rethrowException();
       }
       /*
-      ForeignExceptionDispatcher.LOG.debug("Waiting for '" + latchDescription + "' latch. (sleep:"
-          + wakeFrequency + " ms)"); */
+       * ForeignExceptionDispatcher.LOG.debug("Waiting for '" + latchDescription +
+       * "' latch. (sleep:" + wakeFrequency + " ms)");
+       */
       released = latch.await(wakeFrequency, TimeUnit.MILLISECONDS);
     }
     // check error again in case an error raised during last wait

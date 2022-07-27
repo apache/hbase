@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -49,18 +48,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Replication with dropped table will stuck as the default REPLICATION_DROP_ON_DELETED_TABLE_KEY
- * is false.
+ * Replication with dropped table will stuck as the default REPLICATION_DROP_ON_DELETED_TABLE_KEY is
+ * false.
  */
 @Category({ LargeTests.class })
 public class TestReplicationStuckWithDeletedTableCFs {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationStuckWithDeletedTableCFs.class);
+    HBaseClassTestRule.forClass(TestReplicationStuckWithDeletedTableCFs.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationStuckWithDeletedTableCFs.class);
+    LoggerFactory.getLogger(TestReplicationStuckWithDeletedTableCFs.class);
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2 = HBaseConfiguration.create();
@@ -121,7 +120,7 @@ public class TestReplicationStuckWithDeletedTableCFs {
   public void testEditsStuckBehindDeletedCFs() throws Exception {
     // add peer
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
+      .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
     admin1.addReplicationPeer(PEER_ID, rpc);
 
     // create table
@@ -163,8 +162,8 @@ public class TestReplicationStuckWithDeletedTableCFs {
       for (int i = 0; i < NB_RETRIES; i++) {
         Result result = normalTable.get(new Get(ROW).addColumn(NORMAL_FAMILY, QUALIFIER));
         if (result != null && !result.isEmpty()) {
-          fail("Edit should have been stuck behind dropped tables, but value is " + Bytes
-              .toString(result.getValue(NORMAL_FAMILY, QUALIFIER)));
+          fail("Edit should have been stuck behind dropped tables, but value is "
+            + Bytes.toString(result.getValue(NORMAL_FAMILY, QUALIFIER)));
         } else {
           LOG.info("Row not replicated, let's wait a bit more...");
           Thread.sleep(SLEEP_TIME);
@@ -174,10 +173,8 @@ public class TestReplicationStuckWithDeletedTableCFs {
   }
 
   private TableDescriptor createTableDescriptor(byte[]... cfs) {
-    return TableDescriptorBuilder.newBuilder(TABLE)
-        .setColumnFamilies(Arrays.stream(cfs).map(cf ->
-            ColumnFamilyDescriptorBuilder.newBuilder(cf).setScope(REPLICATION_SCOPE_GLOBAL).build())
-            .collect(Collectors.toList())
-        ).build();
+    return TableDescriptorBuilder.newBuilder(TABLE).setColumnFamilies(Arrays.stream(cfs).map(
+      cf -> ColumnFamilyDescriptorBuilder.newBuilder(cf).setScope(REPLICATION_SCOPE_GLOBAL).build())
+      .collect(Collectors.toList())).build();
   }
 }

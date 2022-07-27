@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,10 +42,10 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRoundRobinAssignmentOnRestart.class);
+    HBaseClassTestRule.forClass(TestRoundRobinAssignmentOnRestart.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestRoundRobinAssignmentOnRestart.class);
+    LoggerFactory.getLogger(TestRoundRobinAssignmentOnRestart.class);
 
   @Override
   protected boolean splitWALCoordinatedByZk() {
@@ -81,7 +80,7 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
     ServerName testServer = threads.get(0).getRegionServer().getServerName();
     int port = testServer.getPort();
     List<RegionInfo> regionInfos =
-        cluster.getMaster().getAssignmentManager().getRegionsOnServer(testServer);
+      cluster.getMaster().getAssignmentManager().getRegionsOnServer(testServer);
     LOG.debug("RegionServer {} has {} regions", testServer, regionInfos.size());
     assertTrue(regionInfos.size() >= (TABLES.length * regionNum / rsNum));
 
@@ -109,9 +108,9 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
     UTIL.waitUntilNoRegionsInTransition(60000);
 
     List<RegionInfo> newRegionInfos =
-        cluster.getMaster().getAssignmentManager().getRegionsOnServer(newTestServer);
+      cluster.getMaster().getAssignmentManager().getRegionsOnServer(newTestServer);
     LOG.debug("RegionServer {} has {} regions", newTestServer, newRegionInfos.size());
     assertTrue("Should not retain all regions when restart",
-        newRegionInfos.size() < regionInfos.size());
+      newRegionInfos.size() < regionInfos.size());
   }
 }

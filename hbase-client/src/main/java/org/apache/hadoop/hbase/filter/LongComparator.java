@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Bytes;
-
 
 /**
  * A long comparator which numerical compares against the specified byte array
@@ -55,41 +53,42 @@ public class LongComparator extends ByteArrayComparable {
     return Long.compare(longValue, that);
   }
 
-    /**
-     * @return The comparator serialized using pb
-     */
-    @Override
-    public byte [] toByteArray() {
-        ComparatorProtos.LongComparator.Builder builder =
-                ComparatorProtos.LongComparator.newBuilder();
-        builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
-        return builder.build().toByteArray();
-    }
+  /** Returns The comparator serialized using pb */
+  @Override
+  public byte[] toByteArray() {
+    ComparatorProtos.LongComparator.Builder builder = ComparatorProtos.LongComparator.newBuilder();
+    builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
+    return builder.build().toByteArray();
+  }
 
-    /**
-     * @param pbBytes A pb serialized {@link LongComparator} instance
-     * @return An instance of {@link LongComparator} made from <code>bytes</code>
-     * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
-     * @see #toByteArray
-     */
-    public static LongComparator parseFrom(final byte [] pbBytes)
-            throws DeserializationException {
-        ComparatorProtos.LongComparator proto;
-        try {
-            proto = ComparatorProtos.LongComparator.parseFrom(pbBytes);
-        } catch (InvalidProtocolBufferException e) {
-            throw new DeserializationException(e);
-        }
-        return new LongComparator(Bytes.toLong(proto.getComparable().getValue().toByteArray()));
+  /**
+   * Parses a serialized representation of {@link LongComparator}
+   * @param pbBytes A pb serialized {@link LongComparator} instance
+   * @return An instance of {@link LongComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
+   */
+  public static LongComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
+    ComparatorProtos.LongComparator proto;
+    try {
+      proto = ComparatorProtos.LongComparator.parseFrom(pbBytes);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
     }
+    return new LongComparator(Bytes.toLong(proto.getComparable().getValue().toByteArray()));
+  }
 
-    /**
-     * @param other
-     * @return true if and only if the fields of the comparator that are serialized
-     * are equal to the corresponding fields in other.  Used for testing.
-     */
-    boolean areSerializedFieldsEqual(LongComparator other) {
-        if (other == this) return true;
-        return super.areSerializedFieldsEqual(other);
+  /**
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
+   */
+  boolean areSerializedFieldsEqual(LongComparator other) {
+    if (other == this) {
+      return true;
     }
+    if (other == null) {
+      return false;
+    }
+    return super.areSerializedFieldsEqual(other);
+  }
 }

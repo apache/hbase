@@ -17,18 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
 
 @InterfaceAudience.Private
 public abstract class OffPeakHours {
   private static final Logger LOG = LoggerFactory.getLogger(OffPeakHours.class);
 
   public static final OffPeakHours DISABLED = new OffPeakHours() {
-    @Override public boolean isOffPeakHour() { return false; }
-    @Override public boolean isOffPeakHour(int targetHour) { return false; }
+    @Override
+    public boolean isOffPeakHour() {
+      return false;
+    }
+
+    @Override
+    public boolean isOffPeakHour(int targetHour) {
+      return false;
+    }
   };
 
   public static OffPeakHours getInstance(Configuration conf) {
@@ -39,18 +46,17 @@ public abstract class OffPeakHours {
 
   /**
    * @param startHour inclusive
-   * @param endHour exclusive
+   * @param endHour   exclusive
    */
   public static OffPeakHours getInstance(int startHour, int endHour) {
     if (startHour == -1 && endHour == -1) {
       return DISABLED;
     }
 
-    if (! isValidHour(startHour) || ! isValidHour(endHour)) {
+    if (!isValidHour(startHour) || !isValidHour(endHour)) {
       if (LOG.isWarnEnabled()) {
-        LOG.warn("Ignoring invalid start/end hour for peak hour : start = " +
-            startHour + " end = " + endHour +
-            ". Valid numbers are [0-23]");
+        LOG.warn("Ignoring invalid start/end hour for peak hour : start = " + startHour + " end = "
+          + endHour + ". Valid numbers are [0-23]");
       }
       return DISABLED;
     }
@@ -66,14 +72,10 @@ public abstract class OffPeakHours {
     return 0 <= hour && hour <= 23;
   }
 
-  /**
-   * @return whether {@code targetHour} is off-peak hour
-   */
+  /** Returns whether {@code targetHour} is off-peak hour */
   public abstract boolean isOffPeakHour(int targetHour);
 
-  /**
-   * @return whether it is off-peak hour
-   */
+  /** Returns whether it is off-peak hour */
   public abstract boolean isOffPeakHour();
 
   private static class OffPeakHoursImpl extends OffPeakHours {
@@ -82,7 +84,7 @@ public abstract class OffPeakHours {
 
     /**
      * @param startHour inclusive
-     * @param endHour exclusive
+     * @param endHour   exclusive
      */
     OffPeakHoursImpl(int startHour, int endHour) {
       this.startHour = startHour;

@@ -1,28 +1,28 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.SecureRandom;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
@@ -36,14 +36,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * A default implementation of {@link HFileBlockEncodingContext}. It will
- * compress the data section as one continuous buffer.
- *
+ * A default implementation of {@link HFileBlockEncodingContext}. It will compress the data section
+ * as one continuous buffer.
  * @see HFileBlockDefaultDecodingContext for the decompression part
- *
  */
 @InterfaceAudience.Private
 public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingContext {
@@ -74,17 +73,17 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
   private EncodingState encoderState;
 
   /**
-   * @param conf configuraton
-   * @param encoding encoding used
+   * @param conf        configuraton
+   * @param encoding    encoding used
    * @param headerBytes dummy header bytes
    * @param fileContext HFile meta data
    */
   public HFileBlockDefaultEncodingContext(Configuration conf, DataBlockEncoding encoding,
-      byte[] headerBytes, HFileContext fileContext) {
+    byte[] headerBytes, HFileContext fileContext) {
     this.encodingAlgo = encoding;
     this.fileContext = fileContext;
     Compression.Algorithm compressionAlgorithm =
-        fileContext.getCompression() == null ? NONE : fileContext.getCompression();
+      fileContext.getCompression() == null ? NONE : fileContext.getCompression();
     if (compressionAlgorithm != NONE) {
       if (compressor == null) {
         compressor = compressionAlgorithm.getCompressor();
@@ -97,12 +96,10 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
       compressedByteStream = new ByteArrayOutputStream();
       try {
         compressionStream =
-            compressionAlgorithm.createPlainCompressionStream(
-                compressedByteStream, compressor);
+          compressionAlgorithm.createPlainCompressionStream(compressedByteStream, compressor);
       } catch (IOException e) {
         throw new RuntimeException(
-            "Could not create compression stream for algorithm "
-                + compressionAlgorithm, e);
+          "Could not create compression stream for algorithm " + compressionAlgorithm, e);
       }
     }
 
@@ -110,7 +107,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
     if (cryptoContext != Encryption.Context.NONE) {
       cryptoByteStream = new ByteArrayOutputStream();
       iv = new byte[cryptoContext.getCipher().getIvLength()];
-      new SecureRandom().nextBytes(iv);
+      Bytes.secureRandom(iv);
     }
 
     dummyHeader = Preconditions.checkNotNull(headerBytes,
@@ -127,8 +124,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
   }
 
   @Override
-  public void postEncoding(BlockType blockType)
-      throws IOException {
+  public void postEncoding(BlockType blockType) throws IOException {
     this.blockType = blockType;
   }
 
@@ -138,17 +134,16 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
   }
 
   private Bytes compressAfterEncoding(byte[] uncompressedBytesWithHeaderBuffer,
-        int uncompressedBytesWithHeaderOffset, int uncompressedBytesWithHeaderLength,
-        byte[] headerBytes)
-      throws IOException {
+    int uncompressedBytesWithHeaderOffset, int uncompressedBytesWithHeaderLength,
+    byte[] headerBytes) throws IOException {
     Encryption.Context cryptoContext = fileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
 
       // Encrypted block format:
       // +--------------------------+
-      // | byte iv length           |
+      // | byte iv length |
       // +--------------------------+
-      // | iv data ...              |
+      // | iv data ... |
       // +--------------------------+
       // | encrypted block data ... |
       // +--------------------------+
@@ -212,8 +207,8 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
         compressedByteStream.write(headerBytes);
         compressionStream.resetState();
         compressionStream.write(uncompressedBytesWithHeaderBuffer,
-          headerBytes.length + uncompressedBytesWithHeaderOffset, uncompressedBytesWithHeaderLength
-              - headerBytes.length);
+          headerBytes.length + uncompressedBytesWithHeaderOffset,
+          uncompressedBytesWithHeaderLength - headerBytes.length);
         compressionStream.flush();
         compressionStream.finish();
         return new Bytes(compressedByteStream.getBuffer(), 0, compressedByteStream.size());
@@ -229,8 +224,7 @@ public class HFileBlockDefaultEncodingContext implements HFileBlockEncodingConte
   }
 
   /**
-   * Releases the compressor this writer uses to compress blocks into the
-   * compressor pool.
+   * Releases the compressor this writer uses to compress blocks into the compressor pool.
    */
   @Override
   public void close() {

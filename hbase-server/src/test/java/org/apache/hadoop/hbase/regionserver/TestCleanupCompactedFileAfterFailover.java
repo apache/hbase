@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,15 +47,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({LargeTests.class})
+@Category({ LargeTests.class })
 public class TestCleanupCompactedFileAfterFailover {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestCleanupCompactedFileAfterFailover.class);
+    LoggerFactory.getLogger(TestCleanupCompactedFileAfterFailover.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCleanupCompactedFileAfterFailover.class);
+    HBaseClassTestRule.forClass(TestCleanupCompactedFileAfterFailover.class);
 
   private static HBaseTestingUtil TEST_UTIL;
   private static Admin admin;
@@ -74,8 +73,8 @@ public class TestCleanupCompactedFileAfterFailover {
     TEST_UTIL = new HBaseTestingUtil();
     // Set the scanner lease to 20min, so the scanner can't be closed by RegionServer
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 1200000);
-    TEST_UTIL.getConfiguration()
-        .setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
+    TEST_UTIL.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,
+      100);
     TEST_UTIL.getConfiguration().set("dfs.blocksize", "64000");
     TEST_UTIL.getConfiguration().set("dfs.namenode.fs-limits.min-block-size", "1024");
     TEST_UTIL.getConfiguration().set(TimeToLiveHFileCleaner.TTL_CONF_KEY, "0");
@@ -122,7 +121,7 @@ public class TestCleanupCompactedFileAfterFailover {
     HRegionServer rsServedTable = null;
     List<HRegion> regions = new ArrayList<>();
     for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
-        .getLiveRegionServerThreads()) {
+      .getLiveRegionServerThreads()) {
       HRegionServer rs = rsThread.getRegionServer();
       if (rs.getOnlineTables().contains(TABLE_NAME)) {
         regions.addAll(rs.getRegions(TABLE_NAME));
@@ -169,7 +168,7 @@ public class TestCleanupCompactedFileAfterFailover {
 
     regions.clear();
     for (JVMClusterUtil.RegionServerThread rsThread : TEST_UTIL.getHBaseCluster()
-        .getLiveRegionServerThreads()) {
+      .getLiveRegionServerThreads()) {
       HRegionServer rs = rsThread.getRegionServer();
       if (rs != rsServedTable && rs.getOnlineTables().contains(TABLE_NAME)) {
         regions.addAll(rs.getRegions(TABLE_NAME));

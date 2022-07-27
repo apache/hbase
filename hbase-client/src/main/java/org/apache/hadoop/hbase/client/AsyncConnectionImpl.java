@@ -40,7 +40,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -105,7 +104,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   private final ConcurrentMap<String, ClientService.Interface> rsStubs = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, AdminService.Interface> adminStubs =
-      new ConcurrentHashMap<>();
+    new ConcurrentHashMap<>();
 
   private final AtomicReference<MasterService.Interface> masterStub = new AtomicReference<>();
 
@@ -136,7 +135,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      this.metrics = Optional.of(new MetricsConnection(this.toString(), () -> null, () -> null));
+      String scope = MetricsConnection.getScope(conf, clusterId, this);
+      this.metrics = Optional.of(new MetricsConnection(scope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }
@@ -185,8 +185,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   /**
-   * If choreService has not been created yet, create the ChoreService.
-   * @return ChoreService
+   * If choreService has not been created yet, create the ChoreService. n
    */
   synchronized ChoreService getChoreService() {
     if (isClosed()) {
@@ -362,7 +361,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
       public AsyncTable<ScanResultConsumer> build() {
         RawAsyncTableImpl rawTable =
           new RawAsyncTableImpl(AsyncConnectionImpl.this, RETRY_TIMER, this);
-        return new AsyncTableImpl(AsyncConnectionImpl.this, rawTable, pool);
+        return new AsyncTableImpl(rawTable, pool);
       }
     };
   }
@@ -444,13 +443,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   @Override
   public Hbck getHbck(ServerName masterServer) {
-    return TraceUtil.trace(new Supplier<Hbck>() {
-
-      @Override
-      public Hbck get() {
-        return getHbckInternal(masterServer);
-      }
-    }, "AsyncConnection.getHbck");
+    return TraceUtil.trace(() -> getHbckInternal(masterServer), "AsyncConnection.getHbck");
   }
 
   Optional<MetricsConnection> getConnectionMetrics() {

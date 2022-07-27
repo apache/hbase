@@ -39,8 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.EnableTableState;
 
 @InterfaceAudience.Private
-public class EnableTableProcedure
-    extends AbstractStateMachineTableProcedure<EnableTableState> {
+public class EnableTableProcedure extends AbstractStateMachineTableProcedure<EnableTableState> {
   private static final Logger LOG = LoggerFactory.getLogger(EnableTableProcedure.class);
 
   private TableName tableName;
@@ -50,7 +49,7 @@ public class EnableTableProcedure
 
   /**
    * Constructor
-   * @param env MasterProcedureEnv
+   * @param env       MasterProcedureEnv
    * @param tableName the table to operate on
    */
   public EnableTableProcedure(MasterProcedureEnv env, TableName tableName) {
@@ -59,18 +58,18 @@ public class EnableTableProcedure
 
   /**
    * Constructor
-   * @param env MasterProcedureEnv
+   * @param env       MasterProcedureEnv
    * @param tableName the table to operate on
    */
   public EnableTableProcedure(MasterProcedureEnv env, TableName tableName,
-      ProcedurePrepareLatch syncLatch) {
+    ProcedurePrepareLatch syncLatch) {
     super(env, syncLatch);
     this.tableName = tableName;
   }
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env, final EnableTableState state)
-      throws InterruptedException {
+    throws InterruptedException {
     LOG.trace("{} execute state={}", this, state);
 
     try {
@@ -95,24 +94,25 @@ public class EnableTableProcedure
           // Get the region replica count. If changed since disable, need to do
           // more work assigning.
           TableDescriptor tableDescriptor =
-              env.getMasterServices().getTableDescriptors().get(tableName);
+            env.getMasterServices().getTableDescriptors().get(tableName);
           int configuredReplicaCount = tableDescriptor.getRegionReplication();
           // Get regions for the table from memory
           List<RegionInfo> regionsOfTable =
-              env.getAssignmentManager().getRegionStates().getRegionsOfTableForEnabling(tableName);
+            env.getAssignmentManager().getRegionStates().getRegionsOfTableForEnabling(tableName);
 
           // How many replicas do we currently have? Check regions returned from
           // in-memory state.
           int currentMaxReplica = getMaxReplicaId(regionsOfTable);
           if (currentMaxReplica == configuredReplicaCount - 1) {
-            LOG.debug("No change in number of region replicas (configuredReplicaCount={});"
-              + " assigning.", configuredReplicaCount);
+            LOG.debug(
+              "No change in number of region replicas (configuredReplicaCount={});" + " assigning.",
+              configuredReplicaCount);
           } else if (currentMaxReplica > (configuredReplicaCount - 1)) {
             // We have additional regions as the replica count has been decreased. Delete
             // those regions because already the table is in the unassigned state
             LOG.warn(
-              "The number of replicas {} is more than the region replica count {}" +
-                ", usually this should not happen as we will delete them in ModifyTableProcedure",
+              "The number of replicas {} is more than the region replica count {}"
+                + ", usually this should not happen as we will delete them in ModifyTableProcedure",
               currentMaxReplica + 1, configuredReplicaCount);
             List<RegionInfo> copyOfRegions = new ArrayList<RegionInfo>(regionsOfTable);
             for (RegionInfo regionInfo : copyOfRegions) {
@@ -126,11 +126,12 @@ public class EnableTableProcedure
             }
           } else if (currentMaxReplica < configuredReplicaCount - 1) {
             // the replicasFound is less than the regionReplication
-            LOG.info("Number of replicas has increased for {}. Assigning new region replicas." +
-                "The previous replica count was {}. The current replica count is {}.",
+            LOG.info(
+              "Number of replicas has increased for {}. Assigning new region replicas."
+                + "The previous replica count was {}. The current replica count is {}.",
               this.tableName, currentMaxReplica + 1, configuredReplicaCount);
-            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable,
-              currentMaxReplica + 1, configuredReplicaCount);
+            regionsOfTable = RegionReplicaUtil.addReplicas(regionsOfTable, currentMaxReplica + 1,
+              configuredReplicaCount);
           }
           // Assign all the table regions. (including region replicas if added).
           // createAssignProcedure will try to retain old assignments if possible.
@@ -160,7 +161,7 @@ public class EnableTableProcedure
 
   @Override
   protected void rollbackState(final MasterProcedureEnv env, final EnableTableState state)
-      throws IOException {
+    throws IOException {
     // nothing to rollback, prepare-disable is just table-state checks.
     // We can fail if the table does not exist or is not disabled.
     switch (state) {
@@ -237,13 +238,11 @@ public class EnableTableProcedure
     return TableOperationType.ENABLE;
   }
 
-
   /**
-   * Action before any real action of enabling table. Set the exception in the procedure instead
-   * of throwing it.  This approach is to deal with backward compatible with 1.0.
+   * Action before any real action of enabling table. Set the exception in the procedure instead of
+   * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
-   * @return whether the table passes the necessary checks
-   * @throws IOException
+   * @return whether the table passes the necessary checks n
    */
   private boolean prepareEnable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeEnabled = true;
@@ -263,7 +262,7 @@ public class EnableTableProcedure
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getTableStateManager();
       TableState ts = tsm.getTableState(tableName);
-      if(!ts.isDisabled()){
+      if (!ts.isDisabled()) {
         LOG.info("Not DISABLED tableState={}; skipping enable; {}", ts.getState(), this);
         setFailure("master-enable-table", new TableNotDisabledException(ts.toString()));
         canTableBeEnabled = false;
@@ -278,68 +277,56 @@ public class EnableTableProcedure
 
   /**
    * Action before enabling table.
-   * @param env MasterProcedureEnv
-   * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
+   * @param env   MasterProcedureEnv
+   * @param state the procedure state nn
    */
   private void preEnable(final MasterProcedureEnv env, final EnableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
   }
 
   /**
    * Mark table state to Enabling
-   * @param env MasterProcedureEnv
-   * @param tableName the target table
-   * @throws IOException
+   * @param env       MasterProcedureEnv
+   * @param tableName the target table n
    */
-  protected static void setTableStateToEnabling(
-      final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+  protected static void setTableStateToEnabling(final MasterProcedureEnv env,
+    final TableName tableName) throws IOException {
     // Set table disabling flag up in zk.
     LOG.info("Attempting to enable the table " + tableName);
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.ENABLING);
   }
 
   /**
    * Mark table state to Enabled
-   * @param env MasterProcedureEnv
-   * @throws IOException
+   * @param env MasterProcedureEnv n
    */
-  protected static void setTableStateToEnabled(
-      final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
+  protected static void setTableStateToEnabled(final MasterProcedureEnv env,
+    final TableName tableName) throws IOException {
     // Flip the table to Enabled
-    env.getMasterServices().getTableStateManager().setTableState(
-      tableName,
+    env.getMasterServices().getTableStateManager().setTableState(tableName,
       TableState.State.ENABLED);
     LOG.info("Table '" + tableName + "' was successfully enabled.");
   }
 
   /**
    * Action after enabling table.
-   * @param env MasterProcedureEnv
-   * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
+   * @param env   MasterProcedureEnv
+   * @param state the procedure state nn
    */
   private void postEnable(final MasterProcedureEnv env, final EnableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     runCoprocessorAction(env, state);
   }
 
   /**
    * Coprocessor Action.
-   * @param env MasterProcedureEnv
-   * @param state the procedure state
-   * @throws IOException
-   * @throws InterruptedException
+   * @param env   MasterProcedureEnv
+   * @param state the procedure state nn
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final EnableTableState state)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       switch (state) {
@@ -355,12 +342,10 @@ public class EnableTableProcedure
     }
   }
 
-  /**
-   * @return Maximum region replica id found in passed list of regions.
-   */
+  /** Returns Maximum region replica id found in passed list of regions. */
   private static int getMaxReplicaId(List<RegionInfo> regions) {
     int max = 0;
-    for (RegionInfo regionInfo: regions) {
+    for (RegionInfo regionInfo : regions) {
       if (regionInfo.getReplicaId() > max) {
         // Iterating through all the list to identify the highest replicaID region.
         // We can stop after checking with the first set of regions??

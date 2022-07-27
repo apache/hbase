@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +36,7 @@ public class TestInvalidMutationDurabilityException {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestInvalidMutationDurabilityException.class);
+    HBaseClassTestRule.forClass(TestInvalidMutationDurabilityException.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -57,10 +56,12 @@ public class TestInvalidMutationDurabilityException {
   public static void setUp() throws Exception {
     UTIL.startMiniCluster();
     UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NOT_REPLICATE)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
-    UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NEED_REPLICATE)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF).build()).build());
+    UTIL.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(TABLE_NEED_REPLICATE)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());
+          .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .build());
     tableNotReplicate = UTIL.getConnection().getTable(TABLE_NOT_REPLICATE);
     tableNeedReplicate = UTIL.getConnection().getTable(TABLE_NEED_REPLICATE);
   }
@@ -145,12 +146,12 @@ public class TestInvalidMutationDurabilityException {
   @Test
   public void testCheckWithMutateToTableNotReplicate() throws Exception {
     tableNotReplicate.checkAndMutate(Bytes.toBytes("row"), CF).qualifier(CQ).ifNotExists()
-        .thenPut(newPutWithSkipWAL());
+      .thenPut(newPutWithSkipWAL());
   }
 
   @Test(expected = InvalidMutationDurabilityException.class)
   public void testCheckWithMutateToTableNeedReplicate() throws Exception {
     tableNeedReplicate.checkAndMutate(Bytes.toBytes("row"), CF).qualifier(CQ).ifNotExists()
-        .thenPut(newPutWithSkipWAL());
+      .thenPut(newPutWithSkipWAL());
   }
 }

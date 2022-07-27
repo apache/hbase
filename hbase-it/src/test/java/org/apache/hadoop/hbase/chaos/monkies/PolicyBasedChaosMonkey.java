@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.monkies;
 
 import java.util.Arrays;
@@ -26,13 +25,12 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -40,7 +38,6 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PolicyBasedChaosMonkey.class);
   private static final long ONE_SEC = 1000;
   private static final long ONE_MIN = 60 * ONE_SEC;
 
@@ -54,7 +51,7 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /**
    * Construct a new ChaosMonkey
-   * @param util the HBaseIntegrationTestingUtility already configured
+   * @param util     the HBaseIntegrationTestingUtility already configured
    * @param policies custom policies to use
    */
   public PolicyBasedChaosMonkey(IntegrationTestingUtility util, Policy... policies) {
@@ -82,35 +79,32 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
   }
 
   private static ExecutorService buildMonkeyThreadPool(final int size) {
-    return Executors.newFixedThreadPool(size, new ThreadFactoryBuilder()
-      .setDaemon(false)
-      .setNameFormat("ChaosMonkey-%d")
-      .setUncaughtExceptionHandler((t, e) -> {
+    return Executors.newFixedThreadPool(size, new ThreadFactoryBuilder().setDaemon(false)
+      .setNameFormat("ChaosMonkey-%d").setUncaughtExceptionHandler((t, e) -> {
         throw new RuntimeException(e);
-      })
-      .build());
+      }).build());
   }
 
   /** Selects a random item from the given items */
   public static <T> T selectRandomItem(T[] items) {
-    return items[RandomUtils.nextInt(0, items.length)];
+    return items[ThreadLocalRandom.current().nextInt(items.length)];
   }
 
-  /** Selects a random item from the given items with weights*/
+  /** Selects a random item from the given items with weights */
   public static <T> T selectWeightedRandomItem(List<Pair<T, Integer>> items) {
     int totalWeight = 0;
     for (Pair<T, Integer> pair : items) {
       totalWeight += pair.getSecond();
     }
 
-    int cutoff = RandomUtils.nextInt(0, totalWeight);
+    int cutoff = ThreadLocalRandom.current().nextInt(totalWeight);
     int cummulative = 0;
     T item = null;
 
-    //warn: O(n)
-    for (int i=0; i<items.size(); i++) {
+    // warn: O(n)
+    for (int i = 0; i < items.size(); i++) {
       int curWeight = items.get(i).getSecond();
-      if ( cutoff < cummulative + curWeight) {
+      if (cutoff < cummulative + curWeight) {
         item = items.get(i).getFirst();
         break;
       }
@@ -122,12 +116,12 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /** Selects and returns ceil(ratio * items.length) random items from the given array */
   public static <T> List<T> selectRandomItems(T[] items, float ratio) {
-    int selectedNumber = (int)Math.ceil(items.length * ratio);
+    int selectedNumber = (int) Math.ceil(items.length * ratio);
 
     List<T> originalItems = Arrays.asList(items);
     Collections.shuffle(originalItems);
 
-    int startIndex = RandomUtils.nextInt(0, items.length - selectedNumber);
+    int startIndex = ThreadLocalRandom.current().nextInt(items.length - selectedNumber);
     return originalItems.subList(startIndex, startIndex + selectedNumber);
   }
 

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,32 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataInput;
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A Bloom filter implementation built on top of 
- * {@link org.apache.hadoop.hbase.util.BloomFilterChunk}, encapsulating
- * a set of fixed-size Bloom filters written out at the time of
- * {@link org.apache.hadoop.hbase.io.hfile.HFile} generation into the data
- * block stream, and loaded on demand at query time. This class only provides
- * reading capabilities.
+ * A Bloom filter implementation built on top of
+ * {@link org.apache.hadoop.hbase.util.BloomFilterChunk}, encapsulating a set of fixed-size Bloom
+ * filters written out at the time of {@link org.apache.hadoop.hbase.io.hfile.HFile} generation into
+ * the data block stream, and loaded on demand at query time. This class only provides reading
+ * capabilities.
  */
 @InterfaceAudience.Private
-public class CompoundBloomFilter extends CompoundBloomFilterBase
-    implements BloomFilter {
+public class CompoundBloomFilter extends CompoundBloomFilterBase implements BloomFilter {
 
   /** Used to load chunks on demand */
   private HFile.Reader reader;
@@ -55,14 +50,11 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   private long[] numPositivesPerChunk;
 
   /**
-   * De-serialization for compound Bloom filter metadata. Must be consistent
-   * with what {@link CompoundBloomFilterWriter} does.
-   *
-   * @param meta serialized Bloom filter metadata without any magic blocks
-   * @throws IOException
+   * De-serialization for compound Bloom filter metadata. Must be consistent with what
+   * {@link CompoundBloomFilterWriter} does.
+   * @param meta serialized Bloom filter metadata without any magic blocks n
    */
-  public CompoundBloomFilter(DataInput meta, HFile.Reader reader)
-      throws IOException {
+  public CompoundBloomFilter(DataInput meta, HFile.Reader reader) throws IOException {
     this.reader = reader;
 
     totalByteSize = meta.readLong();
@@ -72,8 +64,8 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     totalMaxKeys = meta.readLong();
     numChunks = meta.readInt();
     byte[] comparatorClassName = Bytes.readByteArray(meta);
-    // The writer would have return 0 as the vint length for the case of 
-    // Bytes.BYTES_RAWCOMPARATOR.  In such cases do not initialize comparator, it can be
+    // The writer would have return 0 as the vint length for the case of
+    // Bytes.BYTES_RAWCOMPARATOR. In such cases do not initialize comparator, it can be
     // null
     if (comparatorClassName.length != 0) {
       comparator = FixedFileTrailer.createComparator(Bytes.toString(comparatorClassName));
@@ -84,7 +76,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
       throw new IllegalArgumentException("Invalid hash type: " + hashType);
     }
     // We will pass null for ROW block
-    if(comparator == null) {
+    if (comparator == null) {
       index = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
     } else {
       index = new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator, 1);
@@ -103,7 +95,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     try {
       ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
       result = BloomFilterUtil.contains(key, keyOffset, keyLength, bloomBuf,
-          bloomBlock.headerSize(), bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
+        bloomBlock.headerSize(), bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
     } finally {
       // After the use, should release the block to deallocate byte buffers.
       bloomBlock.release();
@@ -120,7 +112,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     try {
       // We cache the block and use a positional read.
       bloomBlock = reader.readBlock(index.getRootBlockOffset(block),
-          index.getRootBlockDataSize(block), true, true, false, true, BlockType.BLOOM_CHUNK, null);
+        index.getRootBlockDataSize(block), true, true, false, true, BlockType.BLOOM_CHUNK, null);
     } catch (IOException ex) {
       // The Bloom filter is broken, turn it off.
       throw new IllegalArgumentException("Failed to load Bloom block", ex);
@@ -198,12 +190,10 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append(BloomFilterUtil.formatStats(this));
-    sb.append(BloomFilterUtil.STATS_RECORD_SEP + 
-        "Number of chunks: " + numChunks);
-    sb.append(BloomFilterUtil.STATS_RECORD_SEP + 
-        ((comparator != null) ? "Comparator: "
-        + comparator.getClass().getSimpleName() : "Comparator: "
-        + Bytes.BYTES_RAWCOMPARATOR.getClass().getSimpleName()));
+    sb.append(BloomFilterUtil.STATS_RECORD_SEP + "Number of chunks: " + numChunks);
+    sb.append(BloomFilterUtil.STATS_RECORD_SEP + ((comparator != null)
+      ? "Comparator: " + comparator.getClass().getSimpleName()
+      : "Comparator: " + Bytes.BYTES_RAWCOMPARATOR.getClass().getSimpleName()));
     return sb.toString();
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -59,10 +58,10 @@ public class TestReplicationEditsDroppedWithDeletedTableCFs {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationEditsDroppedWithDeletedTableCFs.class);
+    HBaseClassTestRule.forClass(TestReplicationEditsDroppedWithDeletedTableCFs.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestReplicationEditsDroppedWithDeletedTableCFs.class);
+    LoggerFactory.getLogger(TestReplicationEditsDroppedWithDeletedTableCFs.class);
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2 = HBaseConfiguration.create();
@@ -118,13 +117,12 @@ public class TestReplicationEditsDroppedWithDeletedTableCFs {
   public void setup() throws Exception {
     // Roll log
     for (JVMClusterUtil.RegionServerThread r : utility1.getHBaseCluster()
-        .getRegionServerThreads()) {
+      .getRegionServerThreads()) {
       utility1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     // add peer
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
-        .setClusterKey(utility2.getClusterKey())
-        .setReplicateAllUserTables(true).build();
+      .setClusterKey(utility2.getClusterKey()).setReplicateAllUserTables(true).build();
     admin1.addReplicationPeer(PEER_ID, rpc);
     // create table
     createTable();
@@ -200,7 +198,7 @@ public class TestReplicationEditsDroppedWithDeletedTableCFs {
       try (Table peerTable = utility2.getConnection().getTable(TABLE)) {
         Result result = peerTable.get(new Get(ROW).addColumn(NORMAL_CF, QUALIFIER));
         return result != null && !result.isEmpty()
-            && Bytes.equals(VALUE, result.getValue(NORMAL_CF, QUALIFIER));
+          && Bytes.equals(VALUE, result.getValue(NORMAL_CF, QUALIFIER));
       }
     });
   }
@@ -215,8 +213,8 @@ public class TestReplicationEditsDroppedWithDeletedTableCFs {
       for (int i = 0; i < NB_RETRIES; i++) {
         Result result = peerTable.get(new Get(ROW).addColumn(NORMAL_CF, QUALIFIER));
         if (result != null && !result.isEmpty()) {
-          fail("Edit should have been stuck behind dropped tables, but value is " + Bytes
-              .toString(result.getValue(NORMAL_CF, QUALIFIER)));
+          fail("Edit should have been stuck behind dropped tables, but value is "
+            + Bytes.toString(result.getValue(NORMAL_CF, QUALIFIER)));
         } else {
           LOG.info("Row not replicated, let's wait a bit more...");
           Thread.sleep(SLEEP_TIME);
@@ -226,11 +224,9 @@ public class TestReplicationEditsDroppedWithDeletedTableCFs {
   }
 
   private TableDescriptor createTableDescriptor(byte[]... cfs) {
-    return TableDescriptorBuilder.newBuilder(TABLE)
-        .setColumnFamilies(Arrays.stream(cfs).map(cf ->
-            ColumnFamilyDescriptorBuilder.newBuilder(cf).setScope(REPLICATION_SCOPE_GLOBAL).build())
-            .collect(Collectors.toList())
-        ).build();
+    return TableDescriptorBuilder.newBuilder(TABLE).setColumnFamilies(Arrays.stream(cfs).map(
+      cf -> ColumnFamilyDescriptorBuilder.newBuilder(cf).setScope(REPLICATION_SCOPE_GLOBAL).build())
+      .collect(Collectors.toList())).build();
   }
 
   private void deleteCf(Admin admin) throws IOException {

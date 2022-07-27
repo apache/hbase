@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.consume;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,7 +35,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -72,13 +73,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     HBaseClassTestRule.forClass(TestFanOutOneBlockAsyncDFSOutput.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFanOutOneBlockAsyncDFSOutput.class);
-
   private static DistributedFileSystem FS;
-
   private static EventLoopGroup EVENT_LOOP_GROUP;
-
   private static Class<? extends Channel> CHANNEL_CLASS;
-
   private static int READ_TIMEOUT_MS = 2000;
 
   private static StreamSlowMonitor MONITOR;
@@ -97,21 +94,23 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException, InterruptedException {
+  public static void tearDown() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
-      EVENT_LOOP_GROUP.shutdownGracefully().sync();
+      EVENT_LOOP_GROUP.shutdownGracefully().get();
     }
     shutdownMiniDFSCluster();
   }
+
+  private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
   static void writeAndVerify(FileSystem fs, Path f, AsyncFSOutput out)
     throws IOException, InterruptedException, ExecutionException {
     List<CompletableFuture<Long>> futures = new ArrayList<>();
     byte[] b = new byte[10];
-    Random rand = new Random(12345);
     // test pipelined flush
+    RNG.setSeed(12345);
     for (int i = 0; i < 10; i++) {
-      rand.nextBytes(b);
+      RNG.nextBytes(b);
       out.write(b);
       futures.add(out.flush(false));
       futures.add(out.flush(false));
@@ -123,11 +122,11 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     out.close();
     assertEquals(b.length * 10, fs.getFileStatus(f).getLen());
     byte[] actual = new byte[b.length];
-    rand.setSeed(12345);
+    RNG.setSeed(12345);
     try (FSDataInputStream in = fs.open(f)) {
       for (int i = 0; i < 10; i++) {
         in.readFully(actual);
-        rand.nextBytes(b);
+        RNG.nextBytes(b);
         assertArrayEquals(b, actual);
       }
       assertEquals(-1, in.read());
@@ -150,7 +149,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
       false, (short) 3, FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, MONITOR);
     byte[] b = new byte[10];
-    ThreadLocalRandom.current().nextBytes(b);
+    Bytes.random(b);
     out.write(b, 0, b.length);
     out.flush(false).get();
     // restart one datanode which causes one connection broken
@@ -220,6 +219,7 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
       assertEquals(2, output.getPipeline().length);
     } finally {
       CLUSTER.restartDataNode(dnProp);
+      CLUSTER.triggerBlockReports();
     }
   }
 
@@ -242,14 +242,15 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     StreamSlowMonitor streamSlowDNsMonitor =
       excludeDatanodeManager.getStreamSlowMonitor("testMonitor");
     assertEquals(0, excludeDatanodeManager.getExcludeDNs().size());
-    try (FanOutOneBlockAsyncDFSOutput output = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS,
-      f, true, false, (short) 3, FS.getDefaultBlockSize(), eventLoop,
-      CHANNEL_CLASS, streamSlowDNsMonitor)) {
+    try (FanOutOneBlockAsyncDFSOutput output =
+      FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true, false, (short) 3,
+        FS.getDefaultBlockSize(), eventLoop, CHANNEL_CLASS, streamSlowDNsMonitor)) {
       // should exclude the dead dn when retry so here we only have 2 DNs in pipeline
       assertEquals(2, output.getPipeline().length);
       assertEquals(1, excludeDatanodeManager.getExcludeDNs().size());
     } finally {
       CLUSTER.restartDataNode(dnProp);
+      CLUSTER.triggerBlockReports();
     }
   }
 
@@ -260,9 +261,9 @@ public class TestFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     FanOutOneBlockAsyncDFSOutput out = FanOutOneBlockAsyncDFSOutputHelper.createOutput(FS, f, true,
       false, (short) 3, 1024 * 1024 * 1024, eventLoop, CHANNEL_CLASS, MONITOR);
     byte[] b = new byte[50 * 1024 * 1024];
-    ThreadLocalRandom.current().nextBytes(b);
+    Bytes.random(b);
     out.write(b);
-    out.flush(false);
+    consume(out.flush(false));
     assertEquals(b.length, out.flush(false).get().longValue());
     out.close();
     assertEquals(b.length, FS.getFileStatus(f).getLen());

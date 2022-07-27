@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -39,10 +37,11 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellMessage.Cell;
+
 /**
- * Representation of a cell. A cell is a single value associated a column and
- * optional qualifier, and either the timestamp when it was stored or the user-
- * provided timestamp if one was explicitly supplied.
+ * Representation of a cell. A cell is a single value associated a column and optional qualifier,
+ * and either the timestamp when it was stored or the user- provided timestamp if one was explicitly
+ * supplied.
  *
  * <pre>
  * &lt;complexType name="Cell"&gt;
@@ -58,7 +57,7 @@ import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.CellMessage.Cell;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="Cell")
+@XmlRootElement(name = "Cell")
 @XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class CellModel implements ProtobufMessageHandler, Serializable {
@@ -79,41 +78,33 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   /**
    * Default constructor
    */
-  public CellModel() {}
+  public CellModel() {
+  }
 
   /**
-   * Constructor
-   * @param column
-   * @param value
+   * Constructor nn
    */
   public CellModel(byte[] column, byte[] value) {
     this(column, HConstants.LATEST_TIMESTAMP, value);
   }
 
   /**
-   * Constructor
-   * @param column
-   * @param qualifier
-   * @param value
+   * Constructor nnn
    */
   public CellModel(byte[] column, byte[] qualifier, byte[] value) {
     this(column, qualifier, HConstants.LATEST_TIMESTAMP, value);
   }
 
   /**
-   * Constructor from KeyValue
-   * @param cell
+   * Constructor from KeyValue n
    */
   public CellModel(org.apache.hadoop.hbase.Cell cell) {
-    this(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell), cell.getTimestamp(), CellUtil
-        .cloneValue(cell));
+    this(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell), cell.getTimestamp(),
+      CellUtil.cloneValue(cell));
   }
 
   /**
-   * Constructor
-   * @param column
-   * @param timestamp
-   * @param value
+   * Constructor nnn
    */
   public CellModel(byte[] column, long timestamp, byte[] value) {
     this.column = column;
@@ -122,22 +113,15 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor
-   * @param column
-   * @param qualifier
-   * @param timestamp
-   * @param value
+   * Constructor nnnn
    */
-  public CellModel(byte[] column, byte[] qualifier, long timestamp,
-      byte[] value) {
+  public CellModel(byte[] column, byte[] qualifier, long timestamp, byte[] value) {
     this.column = CellUtil.makeColumn(column, qualifier);
     this.timestamp = timestamp;
     this.value = value;
   }
 
-  /**
-   * @return the column
-   */
+  /** Returns the column */
   public byte[] getColumn() {
     return column;
   }
@@ -149,17 +133,12 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.column = column;
   }
 
-  /**
-   * @return true if the timestamp property has been specified by the
-   * user
-   */
+  /** Returns true if the timestamp property has been specified by the user */
   public boolean hasUserTimestamp() {
     return timestamp != HConstants.LATEST_TIMESTAMP;
   }
 
-  /**
-   * @return the timestamp
-   */
+  /** Returns the timestamp */
   public long getTimestamp() {
     return timestamp;
   }
@@ -171,9 +150,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
     this.timestamp = timestamp;
   }
 
-  /**
-   * @return the value
-   */
+  /** Returns the value */
   public byte[] getValue() {
     return value;
   }
@@ -197,8 +174,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     Cell.Builder builder = Cell.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     setColumn(builder.getColumn().toByteArray());
@@ -221,28 +197,18 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
       return false;
     }
     CellModel cellModel = (CellModel) obj;
-    return new EqualsBuilder().
-        append(column, cellModel.column).
-        append(timestamp, cellModel.timestamp).
-        append(value, cellModel.value).
-        isEquals();
+    return new EqualsBuilder().append(column, cellModel.column)
+      .append(timestamp, cellModel.timestamp).append(value, cellModel.value).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().
-        append(column).
-        append(timestamp).
-        append(value).
-        toHashCode();
+    return new HashCodeBuilder().append(column).append(timestamp).append(value).toHashCode();
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this).
-        append("column", column).
-        append("timestamp", timestamp).
-        append("value", value).
-        toString();
+    return new ToStringBuilder(this).append("column", column).append("timestamp", timestamp)
+      .append("value", value).toString();
   }
 }

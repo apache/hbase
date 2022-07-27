@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,8 +101,10 @@ public class TestMigrationStoreFileTracker {
     List<Object[]> params = new ArrayList<>();
     for (StoreFileTrackerFactory.Trackers src : StoreFileTrackerFactory.Trackers.values()) {
       for (StoreFileTrackerFactory.Trackers dst : StoreFileTrackerFactory.Trackers.values()) {
-        if (src == StoreFileTrackerFactory.Trackers.MIGRATION
-          || dst == StoreFileTrackerFactory.Trackers.MIGRATION) {
+        if (
+          src == StoreFileTrackerFactory.Trackers.MIGRATION
+            || dst == StoreFileTrackerFactory.Trackers.MIGRATION
+        ) {
           continue;
         }
         if (src.equals(dst)) {

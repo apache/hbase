@@ -49,6 +49,8 @@ table#userTables td:nth-child(-n+11) {
     overflow-wrap: normal;
 }
 
+.top_header { margin-top: 1.5em; }
+
 /* Region Server page styling */
 
 /* striped tables styling */

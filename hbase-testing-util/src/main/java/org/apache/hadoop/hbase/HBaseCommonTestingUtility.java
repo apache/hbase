@@ -23,7 +23,6 @@ import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -51,26 +50,19 @@ public class HBaseCommonTestingUtility {
    * Compression algorithms to use in parameterized JUnit 4 tests
    */
   public static final List<Object[]> COMPRESSION_ALGORITHMS_PARAMETERIZED =
-    Arrays.asList(new Object[][] {
-      { Compression.Algorithm.NONE },
-      { Compression.Algorithm.GZ }
-    });
+    Arrays.asList(new Object[][] { { Compression.Algorithm.NONE }, { Compression.Algorithm.GZ } });
 
   /**
    * This is for unit tests parameterized with a two booleans.
    */
   public static final List<Object[]> BOOLEAN_PARAMETERIZED =
-      Arrays.asList(new Object[][] {
-          {false},
-          {true}
-      });
+    Arrays.asList(new Object[][] { { false }, { true } });
 
   /**
    * Compression algorithms to use in testing
    */
-  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
-    Compression.Algorithm.NONE, Compression.Algorithm.GZ
-  };
+  public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS =
+    { Compression.Algorithm.NONE, Compression.Algorithm.GZ };
 
   protected final Configuration conf;
 
@@ -84,7 +76,6 @@ public class HBaseCommonTestingUtility {
 
   /**
    * Returns this classes's instance of {@link Configuration}.
-   *
    * @return Instance of Configuration.
    */
   public Configuration getConfiguration() {
@@ -94,8 +85,7 @@ public class HBaseCommonTestingUtility {
   /**
    * System property key to get base test directory value
    */
-  public static final String BASE_TEST_DIRECTORY_KEY =
-      "test.build.data.basedirectory";
+  public static final String BASE_TEST_DIRECTORY_KEY = "test.build.data.basedirectory";
 
   /**
    * Default base directory for test output.
@@ -109,7 +99,7 @@ public class HBaseCommonTestingUtility {
 
   /**
    * @return Where to write test data on local filesystem, specific to the test. Useful for tests
-   *    that do not use a cluster. Creates it if it does not exist already.
+   *         that do not use a cluster. Creates it if it does not exist already.
    */
   public Path getDataTestDir() {
     if (this.dataTestDir == null) {
@@ -120,8 +110,8 @@ public class HBaseCommonTestingUtility {
 
   /**
    * @param name the name of a subdirectory or file in the test data directory
-   * @return Path to a subdirectory or file named {code subdirName} under
-   *  {@link #getDataTestDir()}. Does *NOT* create the directory or file if it does not exist.
+   * @return Path to a subdirectory or file named {code subdirName} under {@link #getDataTestDir()}.
+   *         Does *NOT* create the directory or file if it does not exist.
    */
   public Path getDataTestDir(final String name) {
     return new Path(getDataTestDir(), name);
@@ -129,13 +119,11 @@ public class HBaseCommonTestingUtility {
 
   /**
    * Sets up a directory for a test to use.
-   *
    * @return New directory path, if created.
    */
   protected Path setupDataTestDir() {
     if (this.dataTestDir != null) {
-      LOG.warn("Data test dir already setup in " +
-          dataTestDir.getAbsolutePath());
+      LOG.warn("Data test dir already setup in " + dataTestDir.getAbsolutePath());
       return null;
     }
     Path testPath = getRandomDir();
@@ -161,8 +149,7 @@ public class HBaseCommonTestingUtility {
   }
 
   public static UUID getRandomUUID() {
-    return new UUID(ThreadLocalRandom.current().nextLong(),
-                    ThreadLocalRandom.current().nextLong());
+    return new UUID(ThreadLocalRandom.current().nextLong(), ThreadLocalRandom.current().nextLong());
   }
 
   protected void createSubDir(String propertyName, Path parent, String subDirName) {
@@ -176,18 +163,14 @@ public class HBaseCommonTestingUtility {
     conf.set(propertyName, newDir.getAbsolutePath());
   }
 
-  /**
-   * @return True if we should delete testing dirs on exit.
-   */
+  /** Returns True if we should delete testing dirs on exit. */
   boolean deleteOnExit() {
     String v = System.getProperty("hbase.testing.preserve.testdir");
     // Let default be true, to delete on exit.
     return v == null ? true : !Boolean.parseBoolean(v);
   }
 
-  /**
-   * @return True if we removed the test dirs
-   */
+  /** Returns True if we removed the test dirs */
   public boolean cleanupTestDir() {
     if (deleteDir(this.dataTestDir)) {
       this.dataTestDir = null;
@@ -209,14 +192,12 @@ public class HBaseCommonTestingUtility {
 
   /**
    * @return Where to write test data on local filesystem; usually
-   *    {@link #DEFAULT_BASE_TEST_DIRECTORY}
-   *    Should not be used by the unit tests, hence its's private.
-   *    Unit test will use a subdirectory of this directory.
+   *         {@link #DEFAULT_BASE_TEST_DIRECTORY} Should not be used by the unit tests, hence its's
+   *         private. Unit test will use a subdirectory of this directory.
    * @see #setupDataTestDir()
    */
   private Path getBaseTestDir() {
-    String PathName = System.getProperty(
-        BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
+    String PathName = System.getProperty(BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
 
     return new Path(PathName);
   }
@@ -251,8 +232,7 @@ public class HBaseCommonTestingUtility {
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, Predicate)}.
    */
-  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate)
-      throws E {
+  public <E extends Exception> long waitFor(long timeout, Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, predicate);
   }
 
@@ -260,22 +240,19 @@ public class HBaseCommonTestingUtility {
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, Predicate)}.
    */
   public <E extends Exception> long waitFor(long timeout, long interval, Predicate<E> predicate)
-      throws E {
+    throws E {
     return Waiter.waitFor(this.conf, timeout, interval, predicate);
   }
 
   /**
    * Wrapper method for {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate)}.
    */
-  public <E extends Exception> long waitFor(long timeout, long interval,
-      boolean failIfTimeout, Predicate<E> predicate) throws E {
+  public <E extends Exception> long waitFor(long timeout, long interval, boolean failIfTimeout,
+    Predicate<E> predicate) throws E {
     return Waiter.waitFor(this.conf, timeout, interval, failIfTimeout, predicate);
   }
 
-  // Support for Random Port Generation.
-  static Random random = new Random();
-
-  private static final PortAllocator portAllocator = new PortAllocator(random);
+  private static final PortAllocator portAllocator = new PortAllocator();
 
   public static int randomFreePort() {
     return portAllocator.randomFreePort();
@@ -288,11 +265,9 @@ public class HBaseCommonTestingUtility {
     /** A set of ports that have been claimed using {@link #randomFreePort()}. */
     private final Set<Integer> takenRandomPorts = new HashSet<>();
 
-    private final Random random;
     private final AvailablePortChecker portChecker;
 
-    public PortAllocator(Random random) {
-      this.random = random;
+    public PortAllocator() {
       this.portChecker = new AvailablePortChecker() {
         @Override
         public boolean available(int port) {
@@ -307,8 +282,7 @@ public class HBaseCommonTestingUtility {
       };
     }
 
-    public PortAllocator(Random random, AvailablePortChecker portChecker) {
-      this.random = random;
+    public PortAllocator(AvailablePortChecker portChecker) {
       this.portChecker = portChecker;
     }
 
@@ -334,12 +308,12 @@ public class HBaseCommonTestingUtility {
     }
 
     /**
-     * Returns a random port. These ports cannot be registered with IANA and are
-     * intended for dynamic allocation (see http://bit.ly/dynports).
+     * Returns a random port. These ports cannot be registered with IANA and are intended for
+     * dynamic allocation (see http://bit.ly/dynports).
      */
     private int randomPort() {
       return MIN_RANDOM_PORT
-        + random.nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
+        + ThreadLocalRandom.current().nextInt(MAX_RANDOM_PORT - MIN_RANDOM_PORT);
     }
 
     interface AvailablePortChecker {

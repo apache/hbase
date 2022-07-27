@@ -46,17 +46,16 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   private final boolean shutdownGroupWhenClose;
 
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
-      MetricsConnection metrics) {
+    MetricsConnection metrics) {
     super(configuration, clusterId, localAddress, metrics);
     Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass =
       NettyRpcClientConfigHelper.getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
-      int threadCount = conf.getInt(
-        NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
+      int threadCount =
+        conf.getInt(NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
       this.group = new NioEventLoopGroup(threadCount,
-          new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true,
-            Thread.NORM_PRIORITY));
+        new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true, Thread.NORM_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {

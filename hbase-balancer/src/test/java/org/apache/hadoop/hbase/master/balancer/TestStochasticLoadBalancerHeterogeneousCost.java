@@ -214,9 +214,9 @@ public class TestStochasticLoadBalancerHeterogeneousCost extends StochasticBalan
 
           // as the balancer is stochastic, we cannot check exactly the result of the balancing,
           // hence the allowedWindow parameter
-          assertTrue("Host " + sn.getHostname() + " should be below " +
-            cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage + ", " +
-            numberRegions + ", " + limit, usage <= cf.overallUsage * ALLOWED_WINDOW);
+          assertTrue("Host " + sn.getHostname() + " should be below "
+            + cf.overallUsage * ALLOWED_WINDOW * 100 + "%; " + cf.overallUsage + ", " + usage + ", "
+            + numberRegions + ", " + limit, usage <= cf.overallUsage * ALLOWED_WINDOW);
         }
       }
 

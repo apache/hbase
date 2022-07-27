@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Container for holding a list of {@link HRegionLocation}'s that correspond to the
- * same range. The list is indexed by the replicaId. This is an immutable list,
- * however mutation operations are provided which returns a new List via copy-on-write
- * (assuming small number of locations)
+ * Container for holding a list of {@link HRegionLocation}'s that correspond to the same range. The
+ * list is indexed by the replicaId. This is an immutable list, however mutation operations are
+ * provided which returns a new List via copy-on-write (assuming small number of locations)
  */
 @InterfaceAudience.Private
 public class RegionLocations implements Iterable<HRegionLocation> {
@@ -45,10 +42,9 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   private final HRegionLocation[] locations; // replicaId -> HRegionLocation.
 
   /**
-   * Constructs the region location list. The locations array should
-   * contain all the locations for known replicas for the region, and should be
-   * sorted in replicaId ascending order, although it can contain nulls indicating replicaIds
-   * that the locations of which are not known.
+   * Constructs the region location list. The locations array should contain all the locations for
+   * known replicas for the region, and should be sorted in replicaId ascending order, although it
+   * can contain nulls indicating replicaIds that the locations of which are not known.
    * @param locations an array of HRegionLocations for the same region range
    */
   public RegionLocations(HRegionLocation... locations) {
@@ -66,7 +62,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
       index++;
     }
     // account for the null elements in the array after maxReplicaIdIndex
-    maxReplicaId = maxReplicaId + (locations.length - (maxReplicaIdIndex + 1) );
+    maxReplicaId = maxReplicaId + (locations.length - (maxReplicaIdIndex + 1));
 
     if (maxReplicaId + 1 == locations.length) {
       this.locations = locations;
@@ -79,7 +75,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
       }
     }
     for (HRegionLocation loc : this.locations) {
-      if (loc != null && loc.getServerName() != null){
+      if (loc != null && loc.getServerName() != null) {
         numNonNullElements++;
       }
     }
@@ -91,8 +87,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   /**
-   * Returns the size of the list even if some of the elements
-   * might be null.
+   * Returns the size of the list even if some of the elements might be null.
    * @return the size of the list (corresponding to the max replicaId)
    */
   public int size() {
@@ -116,18 +111,18 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   /**
-   * Returns a new RegionLocations with the locations removed (set to null)
-   * which have the destination server as given.
+   * Returns a new RegionLocations with the locations removed (set to null) which have the
+   * destination server as given.
    * @param serverName the serverName to remove locations of
-   * @return an RegionLocations object with removed locations or the same object
-   * if nothing is removed
+   * @return an RegionLocations object with removed locations or the same object if nothing is
+   *         removed
    */
   public RegionLocations removeByServer(ServerName serverName) {
     HRegionLocation[] newLocations = null;
     for (int i = 0; i < locations.length; i++) {
       // check whether something to remove
       if (locations[i] != null && serverName.equals(locations[i].getServerName())) {
-        if (newLocations == null) { //first time
+        if (newLocations == null) { // first time
           newLocations = new HRegionLocation[locations.length];
           System.arraycopy(locations, 0, newLocations, 0, i);
         }
@@ -142,8 +137,8 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   /**
    * Removes the given location from the list
    * @param location the location to remove
-   * @return an RegionLocations object with removed locations or the same object
-   * if nothing is removed
+   * @return an RegionLocations object with removed locations or the same object if nothing is
+   *         removed
    */
   public RegionLocations remove(HRegionLocation location) {
     if (location == null) return this;
@@ -153,9 +148,12 @@ public class RegionLocations implements Iterable<HRegionLocation> {
 
     // check whether something to remove. HRL.compareTo() compares ONLY the
     // serverName. We want to compare the HRI's as well.
-    if (locations[replicaId] == null
-        || RegionInfo.COMPARATOR.compare(location.getRegion(), locations[replicaId].getRegion()) != 0
-        || !location.equals(locations[replicaId])) {
+    if (
+      locations[replicaId] == null
+        || RegionInfo.COMPARATOR.compare(location.getRegion(), locations[replicaId].getRegion())
+            != 0
+        || !location.equals(locations[replicaId])
+    ) {
       return this;
     }
 
@@ -169,8 +167,8 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   /**
    * Removes location of the given replicaId from the list
    * @param replicaId the replicaId of the location to remove
-   * @return an RegionLocations object with removed locations or the same object
-   * if nothing is removed
+   * @return an RegionLocations object with removed locations or the same object if nothing is
+   *         removed
    */
   public RegionLocations remove(int replicaId) {
     if (getRegionLocation(replicaId) == null) {
@@ -204,14 +202,13 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   /**
-   * Merges this RegionLocations list with the given list assuming
-   * same range, and keeping the most up to date version of the
-   * HRegionLocation entries from either list according to seqNum. If seqNums
-   * are equal, the location from the argument (other) is taken.
+   * Merges this RegionLocations list with the given list assuming same range, and keeping the most
+   * up to date version of the HRegionLocation entries from either list according to seqNum. If
+   * seqNums are equal, the location from the argument (other) is taken.
    * @param other the locations to merge with
-   * @return an RegionLocations object with merged locations or the same object
-   * if nothing is merged
+   * @return an RegionLocations object with merged locations or the same object if nothing is merged
    */
+  @SuppressWarnings("ReferenceEquality")
   public RegionLocations mergeLocations(RegionLocations other) {
     assert other != null;
 
@@ -231,8 +228,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
         regionInfo = otherLoc.getRegion();
       }
 
-      HRegionLocation selectedLoc = selectRegionLocation(thisLoc,
-        otherLoc, true, false);
+      HRegionLocation selectedLoc = selectRegionLocation(thisLoc, otherLoc, true, false);
 
       if (selectedLoc != thisLoc) {
         if (newLocations == null) {
@@ -247,10 +243,9 @@ public class RegionLocations implements Iterable<HRegionLocation> {
 
     // ensure that all replicas share the same start code. Otherwise delete them
     if (newLocations != null && regionInfo != null) {
-      for (int i=0; i < newLocations.length; i++) {
+      for (int i = 0; i < newLocations.length; i++) {
         if (newLocations[i] != null) {
-          if (!RegionReplicaUtil.isReplicasForSameRegion(regionInfo,
-            newLocations[i].getRegion())) {
+          if (!RegionReplicaUtil.isReplicasForSameRegion(regionInfo, newLocations[i].getRegion())) {
             newLocations[i] = null;
           }
         }
@@ -261,7 +256,7 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   private HRegionLocation selectRegionLocation(HRegionLocation oldLocation,
-      HRegionLocation location, boolean checkForEquals, boolean force) {
+    HRegionLocation location, boolean checkForEquals, boolean force) {
     if (location == null) {
       return oldLocation == null ? null : oldLocation;
     }
@@ -270,44 +265,45 @@ public class RegionLocations implements Iterable<HRegionLocation> {
       return location;
     }
 
-    if (force
-        || isGreaterThan(location.getSeqNum(), oldLocation.getSeqNum(), checkForEquals)) {
+    if (force || isGreaterThan(location.getSeqNum(), oldLocation.getSeqNum(), checkForEquals)) {
       return location;
     }
     return oldLocation;
   }
 
   /**
-   * Updates the location with new only if the new location has a higher
-   * seqNum than the old one or force is true.
-   * @param location the location to add or update
-   * @param checkForEquals whether to update the location if seqNums for the
-   * HRegionLocations for the old and new location are the same
-   * @param force whether to force update
-   * @return an RegionLocations object with updated locations or the same object
-   * if nothing is updated
+   * Updates the location with new only if the new location has a higher seqNum than the old one or
+   * force is true.
+   * @param location       the location to add or update
+   * @param checkForEquals whether to update the location if seqNums for the HRegionLocations for
+   *                       the old and new location are the same
+   * @param force          whether to force update
+   * @return an RegionLocations object with updated locations or the same object if nothing is
+   *         updated
    */
-  public RegionLocations updateLocation(HRegionLocation location,
-      boolean checkForEquals, boolean force) {
+  @SuppressWarnings("ReferenceEquality")
+  public RegionLocations updateLocation(HRegionLocation location, boolean checkForEquals,
+    boolean force) {
     assert location != null;
 
     int replicaId = location.getRegion().getReplicaId();
 
     HRegionLocation oldLoc = getRegionLocation(location.getRegion().getReplicaId());
-    HRegionLocation selectedLoc = selectRegionLocation(oldLoc, location,
-      checkForEquals, force);
+    HRegionLocation selectedLoc = selectRegionLocation(oldLoc, location, checkForEquals, force);
 
     if (selectedLoc == oldLoc) {
       return this;
     }
-    HRegionLocation[] newLocations = new HRegionLocation[Math.max(locations.length, replicaId +1)];
+    HRegionLocation[] newLocations = new HRegionLocation[Math.max(locations.length, replicaId + 1)];
     System.arraycopy(locations, 0, newLocations, 0, locations.length);
     newLocations[replicaId] = location;
     // ensure that all replicas share the same start code. Otherwise delete them
-    for (int i=0; i < newLocations.length; i++) {
+    for (int i = 0; i < newLocations.length; i++) {
       if (newLocations[i] != null) {
-        if (!RegionReplicaUtil.isReplicasForSameRegion(location.getRegion(),
-          newLocations[i].getRegion())) {
+        if (
+          !RegionReplicaUtil.isReplicasForSameRegion(location.getRegion(),
+            newLocations[i].getRegion())
+        ) {
           newLocations[i] = null;
         }
       }
@@ -327,16 +323,18 @@ public class RegionLocations implements Iterable<HRegionLocation> {
   }
 
   /**
-   * Returns the region location from the list for matching regionName, which can
-   * be regionName or encodedRegionName
+   * Returns the region location from the list for matching regionName, which can be regionName or
+   * encodedRegionName
    * @param regionName regionName or encodedRegionName
    * @return HRegionLocation found or null
    */
   public HRegionLocation getRegionLocationByRegionName(byte[] regionName) {
     for (HRegionLocation loc : locations) {
       if (loc != null) {
-        if (Bytes.equals(loc.getRegion().getRegionName(), regionName)
-            || Bytes.equals(loc.getRegion().getEncodedNameAsBytes(), regionName)) {
+        if (
+          Bytes.equals(loc.getRegion().getRegionName(), regionName)
+            || Bytes.equals(loc.getRegion().getEncodedNameAsBytes(), regionName)
+        ) {
           return loc;
         }
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,22 +51,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
- * on our tables is simple - take every row in the table, reverse the value of
- * a particular cell, and write it back to the table.
+ * Test Map/Reduce job over HBase tables. The map/reduce process we're testing on our tables is
+ * simple - take every row in the table, reverse the value of a particular cell, and write it back
+ * to the table.
  */
 
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestTableMapReduce extends TestTableMapReduceBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableMapReduce.class);
+    HBaseClassTestRule.forClass(TestTableMapReduce.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableMapReduce.class);
 
   @Override
-  protected Logger getLog() { return LOG; }
+  protected Logger getLog() {
+    return LOG;
+  }
 
   /**
    * Pass the given key and processed record reduce
@@ -74,25 +76,18 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
   static class ProcessContentsMapper extends TableMapper<ImmutableBytesWritable, Put> {
 
     /**
-     * Pass the key, and reversed value to reduce
-     *
-     * @param key
-     * @param value
-     * @param context
-     * @throws IOException
+     * Pass the key, and reversed value to reduce nnnn
      */
     @Override
-    public void map(ImmutableBytesWritable key, Result value,
-      Context context)
-    throws IOException, InterruptedException {
+    public void map(ImmutableBytesWritable key, Result value, Context context)
+      throws IOException, InterruptedException {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
-      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-        cf = value.getMap();
-      if(!cf.containsKey(INPUT_FAMILY)) {
-        throw new IOException("Wrong input columns. Missing: '" +
-          Bytes.toString(INPUT_FAMILY) + "'.");
+      Map<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> cf = value.getMap();
+      if (!cf.containsKey(INPUT_FAMILY)) {
+        throw new IOException(
+          "Wrong input columns. Missing: '" + Bytes.toString(INPUT_FAMILY) + "'.");
       }
 
       // Get the original value and reverse it
@@ -115,12 +110,9 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       job.setNumReduceTasks(1);
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
-      TableMapReduceUtil.initTableMapperJob(
-        table.getName().getNameAsString(), scan,
-        ProcessContentsMapper.class, ImmutableBytesWritable.class,
-        Put.class, job);
-      TableMapReduceUtil.initTableReducerJob(
-          table.getName().getNameAsString(),
+      TableMapReduceUtil.initTableMapperJob(table.getName().getNameAsString(), scan,
+        ProcessContentsMapper.class, ImmutableBytesWritable.class, Put.class, job);
+      TableMapReduceUtil.initTableReducerJob(table.getName().getNameAsString(),
         IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
       LOG.info("Started " + table.getName().getNameAsString());
@@ -138,21 +130,18 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
     } finally {
       table.close();
       if (job != null) {
-        FileUtil.fullyDelete(
-          new File(job.getConfiguration().get("hadoop.tmp.dir")));
+        FileUtil.fullyDelete(new File(job.getConfiguration().get("hadoop.tmp.dir")));
       }
     }
   }
 
   /**
-   * Verify scan counters are emitted from the job
-   * @param job
-   * @throws IOException
+   * Verify scan counters are emitted from the job nn
    */
   private void verifyJobCountersAreEmitted(Job job) throws IOException {
     Counters counters = job.getCounters();
-    Counter counter
-      = counters.findCounter(TableRecordReaderImpl.HBASE_COUNTER_GROUP_NAME, "RPC_CALLS");
+    Counter counter =
+      counters.findCounter(TableRecordReaderImpl.HBASE_COUNTER_GROUP_NAME, "RPC_CALLS");
     assertNotNull("Unable to find Job counter for HBase scan metrics, RPC_CALLS", counter);
     assertTrue("Counter value for RPC_CALLS should be larger than 0", counter.getValue() > 0);
   }

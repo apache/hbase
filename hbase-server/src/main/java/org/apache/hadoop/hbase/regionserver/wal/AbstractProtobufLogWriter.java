@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,7 @@ import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRA
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -48,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
@@ -72,7 +71,7 @@ public abstract class AbstractProtobufLogWriter {
   protected AtomicLong length = new AtomicLong();
 
   private WALCellCodec getCodec(Configuration conf, CompressionContext compressionContext)
-      throws IOException {
+    throws IOException {
     return WALCellCodec.create(conf, null, compressionContext);
   }
 
@@ -81,14 +80,13 @@ public abstract class AbstractProtobufLogWriter {
       builder.setWriterClsName(getWriterClassName());
     }
     if (!builder.hasCellCodecClsName()) {
-      builder.setCellCodecClsName(
-          WALCellCodec.getWALCellCodecClass(conf).getName());
+      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf).getName());
     }
     return builder.build();
   }
 
   protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
-      throws IOException {
+    throws IOException {
     return buildWALHeader0(conf, builder);
   }
 
@@ -96,7 +94,7 @@ public abstract class AbstractProtobufLogWriter {
   // environment. Do not forget to override the setEncryptor method as it will be called in this
   // method to init your encryptor.
   protected final WALHeader buildSecureWALHeader(Configuration conf, WALHeader.Builder builder)
-      throws IOException {
+    throws IOException {
     builder.setWriterClsName(getWriterClassName());
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
       EncryptionTest.testKeyProvider(conf);
@@ -104,22 +102,18 @@ public abstract class AbstractProtobufLogWriter {
 
       // Get an instance of our cipher
       final String cipherName =
-          conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+        conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
       Cipher cipher = Encryption.getCipher(conf, cipherName);
       if (cipher == null) {
         throw new RuntimeException("Cipher '" + cipherName + "' is not available");
       }
 
-      // Generate an encryption key for this WAL
-      SecureRandom rng = new SecureRandom();
-      byte[] keyBytes = new byte[cipher.getKeyLength()];
-      rng.nextBytes(keyBytes);
-      Key key = new SecretKeySpec(keyBytes, cipher.getName());
+      // Generate a random encryption key for this WAL
+      Key key = cipher.getRandomKey();
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(EncryptionUtil.wrapKey(conf,
-          conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
-              conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
-                  User.getCurrent().getShortName())),
-          key)));
+        conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
+          conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName())),
+        key)));
 
       // Set up the encryptor
       Encryptor encryptor = cipher.getEncryptor();
@@ -149,13 +143,14 @@ public abstract class AbstractProtobufLogWriter {
           conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
         final boolean useValueCompression =
           conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
-        final Compression.Algorithm valueCompressionType =
-          useValueCompression ? CompressionContext.getValueCompressionAlgorithm(conf) :
-            Compression.Algorithm.NONE;
+        final Compression.Algorithm valueCompressionType = useValueCompression
+          ? CompressionContext.getValueCompressionAlgorithm(conf)
+          : Compression.Algorithm.NONE;
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Initializing compression context for {}: isRecoveredEdits={}" +
-            ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}", path,
-            CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
+          LOG.trace(
+            "Initializing compression context for {}: isRecoveredEdits={}"
+              + ", hasTagCompression={}, hasValueCompression={}, valueCompressionType={}",
+            path, CommonFSUtils.isRecoveredEdits(path), useTagCompression, useValueCompression,
             valueCompressionType);
         }
         this.compressionContext =
@@ -169,40 +164,43 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   public void init(FileSystem fs, Path path, Configuration conf, boolean overwritable,
-      long blocksize, StreamSlowMonitor monitor) throws IOException,
-      StreamLacksCapabilityException {
-    this.conf = conf;
-    boolean doCompress = initializeCompressionContext(conf, path);
-    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
-    int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
-    short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
-      CommonFSUtils.getDefaultReplication(fs, path));
+    long blocksize, StreamSlowMonitor monitor) throws IOException, StreamLacksCapabilityException {
+    try {
+      this.conf = conf;
+      boolean doCompress = initializeCompressionContext(conf, path);
+      this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
+      int bufferSize = CommonFSUtils.getDefaultBufferSize(fs);
+      short replication = (short) conf.getInt("hbase.regionserver.hlog.replication",
+        CommonFSUtils.getDefaultReplication(fs, path));
 
-    initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
+      initOutput(fs, path, overwritable, bufferSize, replication, blocksize, monitor);
 
-    boolean doTagCompress = doCompress &&
-      conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    boolean doValueCompress = doCompress &&
-      conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
-    WALHeader.Builder headerBuilder = WALHeader.newBuilder()
-      .setHasCompression(doCompress)
-      .setHasTagCompression(doTagCompress)
-      .setHasValueCompression(doValueCompress);
-    if (doValueCompress) {
-      headerBuilder.setValueCompressionAlgorithm(
-        CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
-    }
-    length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
-      buildWALHeader(conf, headerBuilder)));
+      boolean doTagCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
+      boolean doValueCompress =
+        doCompress && conf.getBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, false);
+      WALHeader.Builder headerBuilder = WALHeader.newBuilder().setHasCompression(doCompress)
+        .setHasTagCompression(doTagCompress).setHasValueCompression(doValueCompress);
+      if (doValueCompress) {
+        headerBuilder.setValueCompressionAlgorithm(
+          CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
+      }
+      length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
+        buildWALHeader(conf, headerBuilder)));
 
-    initAfterHeader(doCompress);
+      initAfterHeader(doCompress);
 
-    // instantiate trailer to default value.
-    trailer = WALTrailer.newBuilder().build();
+      // instantiate trailer to default value.
+      trailer = WALTrailer.newBuilder().build();
 
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}" +
-        ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Initialized protobuf WAL={}, compression={}, tagCompression={}"
+          + ", valueCompression={}", path, doCompress, doTagCompress, doValueCompress);
+      }
+    } catch (Exception e) {
+      LOG.warn("Init output failed, path={}", path, e);
+      closeOutputIfNecessary();
+      throw e;
     }
   }
 
@@ -222,7 +220,7 @@ public abstract class AbstractProtobufLogWriter {
 
   // should be called in sub classes's initAfterHeader method to init SecureWALCellCodec.
   protected final void secureInitAfterHeader(boolean doCompress, Encryptor encryptor)
-      throws IOException {
+    throws IOException {
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false) && encryptor != null) {
       WALCellCodec codec = SecureWALCellCodec.getCodec(this.conf, encryptor);
       this.cellEncoder = codec.getEncoder(getOutputStreamForCellEncoder());
@@ -257,7 +255,7 @@ public abstract class AbstractProtobufLogWriter {
       } else if ((trailerSize = this.trailer.getSerializedSize()) > this.trailerWarnSize) {
         // continue writing after warning the user.
         LOG.warn("Please investigate WALTrailer usage. Trailer size > maximum size : " + trailerSize
-            + " > " + this.trailerWarnSize);
+          + " > " + this.trailerWarnSize);
       }
       length.set(writeWALTrailerAndMagic(trailer, ProtobufLogReader.PB_WAL_COMPLETE_MAGIC));
       this.trailerWritten = true;
@@ -267,8 +265,14 @@ public abstract class AbstractProtobufLogWriter {
   }
 
   protected abstract void initOutput(FileSystem fs, Path path, boolean overwritable, int bufferSize,
-      short replication, long blockSize, StreamSlowMonitor monitor)
-      throws IOException, StreamLacksCapabilityException;
+    short replication, long blockSize, StreamSlowMonitor monitor)
+    throws IOException, StreamLacksCapabilityException;
+
+  /**
+   * It is straight forward to close the output, do not need to write trailer like the Writer.close
+   */
+  protected void closeOutputIfNecessary() {
+  }
 
   /**
    * return the file length after written.
@@ -276,7 +280,7 @@ public abstract class AbstractProtobufLogWriter {
   protected abstract long writeMagicAndWALHeader(byte[] magic, WALHeader header) throws IOException;
 
   protected abstract long writeWALTrailerAndMagic(WALTrailer trailer, byte[] magic)
-      throws IOException;
+    throws IOException;
 
   protected abstract OutputStream getOutputStreamForCellEncoder();
 }

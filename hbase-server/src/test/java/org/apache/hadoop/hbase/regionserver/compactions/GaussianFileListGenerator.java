@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,22 +20,16 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.math3.random.GaussianRandomGenerator;
 import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 class GaussianFileListGenerator extends StoreFileListGenerator {
 
-  GaussianFileListGenerator() {
-    super(GaussianFileListGenerator.class);
-  }
-
   @Override
   public Iterator<List<HStoreFile>> iterator() {
     return new Iterator<List<HStoreFile>>() {
-      private GaussianRandomGenerator gen =
-          new GaussianRandomGenerator(new MersenneTwister(random.nextInt()));
+      private GaussianRandomGenerator gen = new GaussianRandomGenerator(new MersenneTwister());
       private int count = 0;
 
       @Override
@@ -49,8 +43,7 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
         ArrayList<HStoreFile> files = new ArrayList<>(NUM_FILES_GEN);
         for (int i = 0; i < NUM_FILES_GEN; i++) {
           files.add(createMockStoreFile(
-              (int) Math.ceil(Math.max(0, gen.nextNormalizedDouble() * 32 + 32)))
-          );
+            (int) Math.ceil(Math.max(0, gen.nextNormalizedDouble() * 32 + 32))));
         }
 
         return files;
@@ -61,4 +54,5 @@ class GaussianFileListGenerator extends StoreFileListGenerator {
       }
     };
   }
+
 }

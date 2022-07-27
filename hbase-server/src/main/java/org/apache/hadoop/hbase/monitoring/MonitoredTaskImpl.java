@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,16 +18,17 @@
 package org.apache.hadoop.hbase.monitoring;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
 @InterfaceAudience.Private
@@ -40,24 +40,27 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   private volatile String status;
   private volatile String description;
-  
-  protected volatile State state = State.RUNNING;
 
-  private boolean journalEnabled = false;
-  private List<StatusJournalEntry> journal;
+  protected volatile State state = State.RUNNING;
+  private final ConcurrentLinkedQueue<StatusJournalEntry> journal;
 
   private static final Gson GSON = GsonUtil.createGson().create();
 
-  public MonitoredTaskImpl() {
+  public MonitoredTaskImpl(boolean enableJournal) {
     startTime = EnvironmentEdgeManager.currentTime();
     statusTime = startTime;
     stateTime = startTime;
     warnTime = startTime;
+    if (enableJournal) {
+      journal = new ConcurrentLinkedQueue<>();
+    } else {
+      journal = null;
+    }
   }
 
-  private static class StatusJournalEntryImpl implements StatusJournalEntry {
-    private long statusTime;
-    private String status;
+  private static final class StatusJournalEntryImpl implements StatusJournalEntry {
+    private final long statusTime;
+    private final String status;
 
     public StatusJournalEntryImpl(String status, long statusTime) {
       this.status = status;
@@ -76,11 +79,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
     @Override
     public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append(status);
-      sb.append(" at ");
-      sb.append(statusTime);
-      return sb.toString();
+      return status + " at " + statusTime;
     }
   }
 
@@ -97,7 +96,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStartTime() {
     return startTime;
   }
-  
+
   @Override
   public String getDescription() {
     return description;
@@ -112,12 +111,12 @@ class MonitoredTaskImpl implements MonitoredTask {
   public long getStatusTime() {
     return statusTime;
   }
-  
+
   @Override
   public State getState() {
     return state;
   }
-  
+
   @Override
   public long getStateTime() {
     return stateTime;
@@ -159,12 +158,12 @@ class MonitoredTaskImpl implements MonitoredTask {
     setStatus(msg);
     setState(State.ABORTED);
   }
-  
+
   @Override
   public void setStatus(String status) {
     this.status = status;
     statusTime = EnvironmentEdgeManager.currentTime();
-    if (journalEnabled) {
+    if (journal != null) {
       journal.add(new StatusJournalEntryImpl(this.status, statusTime));
     }
   }
@@ -192,8 +191,7 @@ class MonitoredTaskImpl implements MonitoredTask {
   }
 
   /**
-   * Force the completion timestamp backwards so that
-   * it expires now.
+   * Force the completion timestamp backwards so that it expires now.
    */
   @Override
   public void expireNow() {
@@ -243,52 +241,29 @@ class MonitoredTaskImpl implements MonitoredTask {
     if (journal == null) {
       return Collections.emptyList();
     } else {
-      return Collections.unmodifiableList(journal);
+      return ImmutableList.copyOf(journal);
     }
-  }
-
-  /**
-   * Enables journaling of this monitored task, the first invocation will lazily initialize the
-   * journal. The journal implementation itself and this method are not thread safe
-   */
-  @Override
-  public void enableStatusJournal(boolean includeCurrentStatus) {
-    if (journalEnabled && journal != null) {
-      return;
-    }
-    journalEnabled = true;
-    if (journal == null) {
-      journal = new ArrayList<StatusJournalEntry>();
-    }
-    if (includeCurrentStatus && status != null) {
-      journal.add(new StatusJournalEntryImpl(status, statusTime));
-    }
-  }
-
-  @Override
-  public void disableStatusJournal() {
-    journalEnabled = false;
   }
 
   @Override
   public String prettyPrintJournal() {
-    if (!journalEnabled) {
+    if (journal == null) {
       return "";
     }
     StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < journal.size(); i++) {
-      StatusJournalEntry je = journal.get(i);
-      sb.append(je.toString());
-      if (i != 0) {
-        StatusJournalEntry jep = journal.get(i-1);
-        long delta = je.getTimeStamp() - jep.getTimeStamp();
+    Iterator<StatusJournalEntry> iter = journal.iterator();
+    StatusJournalEntry previousEntry = null;
+    while (iter.hasNext()) {
+      StatusJournalEntry entry = iter.next();
+      sb.append(entry);
+      if (previousEntry != null) {
+        long delta = entry.getTimeStamp() - previousEntry.getTimeStamp();
         if (delta != 0) {
           sb.append(" (+" + delta + " ms)");
         }
       }
-      sb.append("\n");
+      previousEntry = entry;
     }
     return sb.toString();
   }
-
 }

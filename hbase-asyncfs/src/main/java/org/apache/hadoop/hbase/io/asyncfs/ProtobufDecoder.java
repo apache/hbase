@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.io.asyncfs;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufUtil;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToMessageDecoder;
 import org.apache.hbase.thirdparty.io.netty.util.internal.ObjectUtil;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.List;
 
 /**
- * Modified based on io.netty.handler.codec.protobuf.ProtobufDecoder.
- * The Netty's ProtobufDecode supports unshaded protobuf messages (com.google.protobuf).
- *
- * Hadoop 3.3.0 and above relocates protobuf classes to a shaded jar (hadoop-thirdparty), and
- * so we must use reflection to detect which one (relocated or not) to use.
- *
- * Do not use this to process HBase's shaded protobuf messages. This is meant to process the
- * protobuf messages in HDFS for the asyncfs use case.
- * */
+ * Modified based on io.netty.handler.codec.protobuf.ProtobufDecoder. The Netty's ProtobufDecode
+ * supports unshaded protobuf messages (com.google.protobuf). Hadoop 3.3.0 and above relocates
+ * protobuf classes to a shaded jar (hadoop-thirdparty), and so we must use reflection to detect
+ * which one (relocated or not) to use. Do not use this to process HBase's shaded protobuf messages.
+ * This is meant to process the protobuf messages in HDFS for the asyncfs use case.
+ */
 @InterfaceAudience.Private
 public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(ProtobufDecoder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufDecoder.class);
 
   private static Class<?> protobufMessageLiteClass = null;
   private static Class<?> protobufMessageLiteBuilderClass = null;
@@ -60,23 +56,22 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
   private Object parser;
   private Object builder;
 
-
   public ProtobufDecoder(Object prototype) {
     try {
-      Method getDefaultInstanceForTypeMethod = protobufMessageLiteClass.getMethod(
-        "getDefaultInstanceForType");
-      Object prototype1 = getDefaultInstanceForTypeMethod
-        .invoke(ObjectUtil.checkNotNull(prototype, "prototype"));
+      Method getDefaultInstanceForTypeMethod =
+        protobufMessageLiteClass.getMethod("getDefaultInstanceForType");
+      Object prototype1 =
+        getDefaultInstanceForTypeMethod.invoke(ObjectUtil.checkNotNull(prototype, "prototype"));
 
       // parser = prototype.getParserForType()
       parser = getParserForTypeMethod.invoke(prototype1);
-      parseFromMethod = parser.getClass().getMethod(
-        "parseFrom", byte[].class, int.class, int.class);
+      parseFromMethod =
+        parser.getClass().getMethod("parseFrom", byte[].class, int.class, int.class);
 
       // builder = prototype.newBuilderForType();
       builder = newBuilderForTypeMethod.invoke(prototype1);
-      mergeFromMethod = builder.getClass().getMethod(
-        "mergeFrom", byte[].class, int.class, int.class);
+      mergeFromMethod =
+        builder.getClass().getMethod("mergeFrom", byte[].class, int.class, int.class);
 
       // All protobuf message builders inherits from MessageLite.Builder
       buildMethod = protobufMessageLiteBuilderClass.getDeclaredMethod("build");
@@ -88,8 +83,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
   }
 
-  protected void decode(
-    ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+  protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
     int length = msg.readableBytes();
     byte[] array;
     int offset;
@@ -122,8 +116,8 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     try {
       protobufMessageLiteClass = Class.forName("org.apache.hadoop.thirdparty.protobuf.MessageLite");
-      protobufMessageLiteBuilderClass = Class.forName(
-        "org.apache.hadoop.thirdparty.protobuf.MessageLite$Builder");
+      protobufMessageLiteBuilderClass =
+        Class.forName("org.apache.hadoop.thirdparty.protobuf.MessageLite$Builder");
       LOG.debug("Hadoop 3.3 and above shades protobuf.");
     } catch (ClassNotFoundException e) {
       LOG.debug("Hadoop 3.2 and below use unshaded protobuf.", e);
@@ -132,15 +126,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     try {
       getParserForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("getParserForType");
       newBuilderForTypeMethod = protobufMessageLiteClass.getDeclaredMethod("newBuilderForType");
+      // TODO: If this is false then the class will fail to load? Can refactor it out?
+      hasParser = true;
     } catch (NoSuchMethodException e) {
       // If the method is not found, we are in trouble. Abort.
       throw new RuntimeException(e);
-    }
-
-    try {
-      protobufMessageLiteClass.getDeclaredMethod("getParserForType");
-      hasParser = true;
-    } catch (Throwable var2) {
     }
 
     HAS_PARSER = hasParser;

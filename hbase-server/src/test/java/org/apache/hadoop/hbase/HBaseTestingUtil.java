@@ -49,6 +49,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -60,6 +62,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
@@ -140,6 +143,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -199,6 +204,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   public static final boolean PRESPLIT_TEST_TABLE = true;
 
   private MiniDFSCluster dfsCluster = null;
+  private FsDatasetAsyncDiskServiceFixer dfsClusterFixer = null;
 
   private volatile HBaseClusterInterface hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
@@ -413,13 +419,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     if (sysValue != null) {
       // There is already a value set. So we do nothing but hope
       // that there will be no conflicts
-      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue +
-        " so I do NOT create it in " + parent);
+      LOG.info("System.getProperty(\"" + propertyName + "\") already set to: " + sysValue
+        + " so I do NOT create it in " + parent);
       String confValue = conf.get(propertyName);
       if (confValue != null && !confValue.endsWith(sysValue)) {
-        LOG.warn(propertyName + " property value differs in configuration and system: " +
-          "Configuration=" + confValue + " while System=" + sysValue +
-          " Erasing configuration value by system value.");
+        LOG.warn(propertyName + " property value differs in configuration and system: "
+          + "Configuration=" + confValue + " while System=" + sysValue
+          + " Erasing configuration value by system value.");
       }
       conf.set(propertyName, sysValue);
     } else {
@@ -535,9 +541,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Start a minidfscluster. This is useful if you want to run datanode on distinct hosts for things
    * like HDFS block location verification. If you start MiniDFSCluster without host names, all
    * instances of the datanodes will have the same host name.
-   * @param hosts hostnames DNs to run on.
-   * @throws Exception
-   * @see #shutdownMiniDFSCluster()
+   * @param hosts hostnames DNs to run on. n * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(final String[] hosts) throws Exception {
@@ -551,9 +555,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Start a minidfscluster. Can only create one.
    * @param servers How many DNs to start.
-   * @param hosts hostnames DNs to run on.
-   * @throws Exception
-   * @see #shutdownMiniDFSCluster()
+   * @param hosts   hostnames DNs to run on. n * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final String[] hosts) throws Exception {
@@ -572,6 +574,56 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     conf.unset(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE);
   }
 
+  // Workaround to avoid IllegalThreadStateException
+  // See HBASE-27148 for more details
+  private static final class FsDatasetAsyncDiskServiceFixer extends Thread {
+
+    private volatile boolean stopped = false;
+
+    private final MiniDFSCluster cluster;
+
+    FsDatasetAsyncDiskServiceFixer(MiniDFSCluster cluster) {
+      super("FsDatasetAsyncDiskServiceFixer");
+      setDaemon(true);
+      this.cluster = cluster;
+    }
+
+    @Override
+    public void run() {
+      while (!stopped) {
+        try {
+          Thread.sleep(30000);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          continue;
+        }
+        // we could add new datanodes during tests, so here we will check every 30 seconds, as the
+        // timeout of the thread pool executor is 60 seconds by default.
+        try {
+          for (DataNode dn : cluster.getDataNodes()) {
+            FsDatasetSpi<?> dataset = dn.getFSDataset();
+            Field service = dataset.getClass().getDeclaredField("asyncDiskService");
+            service.setAccessible(true);
+            Object asyncDiskService = service.get(dataset);
+            Field group = asyncDiskService.getClass().getDeclaredField("threadGroup");
+            group.setAccessible(true);
+            ThreadGroup threadGroup = (ThreadGroup) group.get(asyncDiskService);
+            if (threadGroup.isDaemon()) {
+              threadGroup.setDaemon(false);
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn("failed to reset thread pool timeout for FsDatasetAsyncDiskService", e);
+        }
+      }
+    }
+
+    void shutdown() {
+      stopped = true;
+      interrupt();
+    }
+  }
+
   public MiniDFSCluster startMiniDFSCluster(int servers, final String[] racks, String[] hosts)
     throws Exception {
     createDirsAndSetProperties();
@@ -581,9 +633,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
       "ERROR");
-    this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
-      true, null, racks, hosts, null);
-
+    this.dfsCluster =
+      new MiniDFSCluster(0, this.conf, servers, true, true, true, null, racks, hosts, null);
+    this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
+    this.dfsClusterFixer.start();
     // Set this just-started cluster as our filesystem.
     setFs();
 
@@ -605,8 +658,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
       "ERROR");
-    dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
-      null, null, null);
+    dfsCluster =
+      new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
+    this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
+    this.dfsClusterFixer.start();
     return dfsCluster;
   }
 
@@ -729,6 +784,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
       dfsCluster = null;
+      // It is possible that the dfs cluster is set through setDFSCluster method, where we will not
+      // have a fixer
+      if (dfsClusterFixer != null) {
+        this.dfsClusterFixer.shutdown();
+        dfsClusterFixer = null;
+      }
       dataTestDirOnTestFS = null;
       CommonFSUtils.setFsDefault(this.conf, new Path("file:///"));
     }
@@ -861,7 +922,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
    * {@link #startMiniCluster()}. All other options will use default values, defined in
    * {@link StartTestingClusterOption.Builder}.
-   * @param numMasters Master node number.
+   * @param numMasters       Master node number.
    * @param numRegionServers Number of region servers.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
@@ -882,9 +943,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
    * {@link #startMiniCluster()}. All other options will use default values, defined in
    * {@link StartTestingClusterOption.Builder}.
-   * @param numMasters Master node number.
+   * @param numMasters       Master node number.
    * @param numRegionServers Number of region servers.
-   * @param rsPorts Ports that RegionServer should use.
+   * @param rsPorts          Ports that RegionServer should use.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
@@ -904,13 +965,13 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Starts up mini hbase cluster. Usually you won't want this. You'll usually want
    * {@link #startMiniCluster()}. All other options will use default values, defined in
    * {@link StartTestingClusterOption.Builder}.
-   * @param numMasters Master node number.
+   * @param numMasters       Master node number.
    * @param numRegionServers Number of region servers.
-   * @param rsPorts Ports that RegionServer should use.
-   * @param masterClass The class to use as HMaster, or null for default.
-   * @param rsClass The class to use as HRegionServer, or null for default.
-   * @param createRootDir Whether to create a new root or data directory path.
-   * @param createWALDir Whether to create a new WAL directory.
+   * @param rsPorts          Ports that RegionServer should use.
+   * @param masterClass      The class to use as HMaster, or null for default.
+   * @param rsClass          The class to use as HRegionServer, or null for default.
+   * @param createRootDir    Whether to create a new root or data directory path.
+   * @param createWALDir     Whether to create a new WAL directory.
    * @return The mini HBase cluster created.
    * @see #shutdownMiniHBaseCluster()
    * @deprecated since 2.2.0 and will be removed in 4.0.0. Use
@@ -1039,8 +1100,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Returns the path to the default root dir the minicluster uses. If <code>create</code> is true,
    * a new root directory path is fetched irrespective of whether it has been fetched before or not.
    * If false, previous path is used. Note: this does not cause the root dir to be created.
-   * @return Fully qualified path for the default hbase root dir
-   * @throws IOException
+   * @return Fully qualified path for the default hbase root dir n
    */
   public Path getDefaultRootDirPath(boolean create) throws IOException {
     if (!create) {
@@ -1053,8 +1113,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Same as {{@link HBaseTestingUtil#getDefaultRootDirPath(boolean create)} except that
    * <code>create</code> flag is false. Note: this does not cause the root dir to be created.
-   * @return Fully qualified path for the default hbase root dir
-   * @throws IOException
+   * @return Fully qualified path for the default hbase root dir n
    */
   public Path getDefaultRootDirPath() throws IOException {
     return getDefaultRootDirPath(false);
@@ -1065,10 +1124,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * won't make use of this method. Root hbasedir is created for you as part of mini cluster
    * startup. You'd only use this method if you were doing manual operation.
    * @param create This flag decides whether to get a new root or data directory path or not, if it
-   *          has been fetched already. Note : Directory will be made irrespective of whether path
-   *          has been fetched or not. If directory already exists, it will be overwritten
-   * @return Fully qualified path to hbase root dir
-   * @throws IOException
+   *               has been fetched already. Note : Directory will be made irrespective of whether
+   *               path has been fetched or not. If directory already exists, it will be overwritten
+   * @return Fully qualified path to hbase root dir n
    */
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
@@ -1082,8 +1140,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Same as {@link HBaseTestingUtil#createRootDir(boolean create)} except that <code>create</code>
    * flag is false.
-   * @return Fully qualified path to hbase root dir
-   * @throws IOException
+   * @return Fully qualified path to hbase root dir n
    */
   public Path createRootDir() throws IOException {
     return createRootDir(false);
@@ -1093,8 +1150,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Creates a hbase walDir in the user's home directory. Normally you won't make use of this
    * method. Root hbaseWALDir is created for you as part of mini cluster startup. You'd only use
    * this method if you were doing manual operation.
-   * @return Fully qualified path to hbase root dir
-   * @throws IOException
+   * @return Fully qualified path to hbase root dir n
    */
   public Path createWALRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
@@ -1115,54 +1171,42 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Flushes all caches in the mini hbase cluster
-   * @throws IOException
+   * Flushes all caches in the mini hbase cluster n
    */
   public void flush() throws IOException {
     getMiniHBaseCluster().flushcache();
   }
 
   /**
-   * Flushes all caches in the mini hbase cluster
-   * @throws IOException
+   * Flushes all caches in the mini hbase cluster n
    */
   public void flush(TableName tableName) throws IOException {
     getMiniHBaseCluster().flushcache(tableName);
   }
 
   /**
-   * Compact all regions in the mini hbase cluster
-   * @throws IOException
+   * Compact all regions in the mini hbase cluster n
    */
   public void compact(boolean major) throws IOException {
     getMiniHBaseCluster().compact(major);
   }
 
   /**
-   * Compact all of a table's reagion in the mini hbase cluster
-   * @throws IOException
+   * Compact all of a table's reagion in the mini hbase cluster n
    */
   public void compact(TableName tableName, boolean major) throws IOException {
     getMiniHBaseCluster().compact(tableName, major);
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param family
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table. nn * @return A Table instance for the created table. n
    */
   public Table createTable(TableName tableName, String family) throws IOException {
     return createTable(tableName, new String[] { family });
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table. nn * @return A Table instance for the created table. n
    */
   public Table createTable(TableName tableName, String[] families) throws IOException {
     List<byte[]> fams = new ArrayList<>(families.length);
@@ -1173,23 +1217,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param family
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table. nn * @return A Table instance for the created table. n
    */
   public Table createTable(TableName tableName, byte[] family) throws IOException {
     return createTable(tableName, new byte[][] { family });
   }
 
   /**
-   * Create a table with multiple regions.
-   * @param tableName
-   * @param family
-   * @param numRegions
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table with multiple regions. nnn * @return A Table instance for the created table. n
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
     throws IOException {
@@ -1202,34 +1237,22 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table. nn * @return A Table instance for the created table. n
    */
   public Table createTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, (byte[][]) null);
   }
 
   /**
-   * Create a table with multiple regions.
-   * @param tableName
-   * @param families
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table with multiple regions. nn * @return A Table instance for the created table. n
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE);
   }
 
   /**
-   * Create a table with multiple regions.
-   * @param tableName
-   * @param replicaCount replica count.
-   * @param families
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table with multiple regions. n * @param replicaCount replica count. n * @return A
+   * Table instance for the created table. n
    */
   public Table createMultiRegionTable(TableName tableName, int replicaCount, byte[][] families)
     throws IOException {
@@ -1237,12 +1260,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitKeys
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * Create a table. nnn * @return A Table instance for the created table. n
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
     throws IOException {
@@ -1251,9 +1269,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
-   * @param tableName the table name
-   * @param families the families
-   * @param splitKeys the splitkeys
+   * @param tableName    the table name
+   * @param families     the families
+   * @param splitKeys    the splitkeys
    * @param replicaCount the region replica count
    * @return A Table instance for the created table.
    * @throws IOException throws IOException
@@ -1287,10 +1305,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
-   * @param htd table descriptor
-   * @param families array of column families
+   * @param htd       table descriptor
+   * @param families  array of column families
    * @param splitKeys array of split keys
-   * @param c Configuration to use
+   * @param c         Configuration to use
    * @return A Table instance for the created table.
    * @throws IOException if getAdmin or createTable fails
    */
@@ -1304,12 +1322,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
-   * @param htd table descriptor
-   * @param families array of column families
+   * @param htd       table descriptor
+   * @param families  array of column families
    * @param splitKeys array of split keys
-   * @param type Bloom type
+   * @param type      Bloom type
    * @param blockSize block size
-   * @param c Configuration to use
+   * @param c         Configuration to use
    * @return A Table instance for the created table.
    * @throws IOException if getAdmin or createTable fails
    */
@@ -1339,10 +1357,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
-   * @param htd table descriptor
+   * @param htd       table descriptor
    * @param splitRows array of split keys
-   * @return A Table instance for the created table.
-   * @throws IOException
+   * @return A Table instance for the created table. n
    */
   public Table createTable(TableDescriptor htd, byte[][] splitRows) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
@@ -1365,11 +1382,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create a table.
-   * @param tableName the table name
-   * @param families the families
-   * @param splitKeys the split keys
+   * @param tableName    the table name
+   * @param families     the families
+   * @param splitKeys    the split keys
    * @param replicaCount the replica count
-   * @param c Configuration to use
+   * @param c            Configuration to use
    * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
@@ -1536,6 +1553,16 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Set the number of Region replicas.
+   */
+  public static void setReplicas(AsyncAdmin admin, TableName table, int replicaCount)
+    throws ExecutionException, IOException, InterruptedException {
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(admin.getDescriptor(table).get())
+      .setRegionReplication(replicaCount).build();
+    admin.modifyTable(desc).get();
+  }
+
+  /**
    * Drop an existing table
    * @param tableName existing table
    */
@@ -1640,9 +1667,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Create an HRegion that writes to the local tmp dirs
-   * @param desc a table descriptor indicating which table the region belongs to
+   * @param desc     a table descriptor indicating which table the region belongs to
    * @param startKey the start boundary of the region
-   * @param endKey the end boundary of the region
+   * @param endKey   the end boundary of the region
    * @return a region that writes to local dir for testing
    */
   public HRegion createLocalHRegion(TableDescriptor desc, byte[] startKey, byte[] endKey)
@@ -1665,9 +1692,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * @param info regioninfo
    * @param conf configuration
    * @param desc table descriptor
-   * @param wal wal for this region.
-   * @return created hregion
-   * @throws IOException
+   * @param wal  wal for this region.
+   * @return created hregion n
    */
   public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
     WAL wal) throws IOException {
@@ -1675,14 +1701,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * @param tableName
-   * @param startKey
-   * @param stopKey
-   * @param isReadOnly
-   * @param families
-   * @return A region on which you must call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
-   *         when done.
-   * @throws IOException
+   * nnnnn * @return A region on which you must call
+   * {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)} when done. n
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
     Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
@@ -1723,8 +1743,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Provide an existing table name to truncate. Scans the table and issues a delete for each row
    * read.
    * @param tableName existing table
-   * @return HTable to that new table
-   * @throws IOException
+   * @return HTable to that new table n
    */
   public Table deleteTableData(TableName tableName) throws IOException {
     Table table = getConnection().getTable(tableName);
@@ -1742,7 +1761,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * Truncate a table using the admin command. Effectively disables, deletes, and recreates the
    * table.
-   * @param tableName table which must exist.
+   * @param tableName       table which must exist.
    * @param preserveRegions keep the existing split points
    * @return HTable for the new table
    */
@@ -1771,8 +1790,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Load table with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Family
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadTable(final Table t, final byte[] f) throws IOException {
     return loadTable(t, new byte[][] { f });
@@ -1782,8 +1800,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Load table with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Family
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadTable(final Table t, final byte[] f, boolean writeToWAL) throws IOException {
     return loadTable(t, new byte[][] { f }, null, writeToWAL);
@@ -1793,8 +1810,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Load table of multiple column families with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Array of Families to load
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadTable(final Table t, final byte[][] f) throws IOException {
     return loadTable(t, f, null);
@@ -1802,11 +1818,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Load table of multiple column families with rows from 'aaa' to 'zzz'.
-   * @param t Table
-   * @param f Array of Families to load
+   * @param t     Table
+   * @param f     Array of Families to load
    * @param value the values of the cells. If null is passed, the row key is used as value
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value) throws IOException {
     return loadTable(t, f, value, true);
@@ -1814,11 +1829,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Load table of multiple column families with rows from 'aaa' to 'zzz'.
-   * @param t Table
-   * @param f Array of Families to load
+   * @param t     Table
+   * @param f     Array of Families to load
    * @param value the values of the cells. If null is passed, the row key is used as value
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value, boolean writeToWAL)
     throws IOException {
@@ -1875,14 +1889,16 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           for (byte b3 = 'a'; b3 <= 'z'; b3++) {
             int count = seenRows[i(b1)][i(b2)][i(b3)];
             int expectedCount = 0;
-            if (Bytes.compareTo(new byte[] { b1, b2, b3 }, startRow) >= 0 &&
-              Bytes.compareTo(new byte[] { b1, b2, b3 }, stopRow) < 0) {
+            if (
+              Bytes.compareTo(new byte[] { b1, b2, b3 }, startRow) >= 0
+                && Bytes.compareTo(new byte[] { b1, b2, b3 }, stopRow) < 0
+            ) {
               expectedCount = 1;
             }
             if (count != expectedCount) {
               String row = new String(new byte[] { b1, b2, b3 }, StandardCharsets.UTF_8);
-              throw new RuntimeException("Row:" + row + " has a seen count of " + count + " " +
-                "instead of " + expectedCount);
+              throw new RuntimeException("Row:" + row + " has a seen count of " + count + " "
+                + "instead of " + expectedCount);
             }
           }
         }
@@ -1900,11 +1916,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Load region with rows from 'aaa' to 'zzz'.
-   * @param r Region
-   * @param f Family
+   * @param r     Region
+   * @param f     Family
    * @param flush flush the cache if true
-   * @return Count of rows loaded.
-   * @throws IOException
+   * @return Count of rows loaded. n
    */
   public int loadRegion(final HRegion r, final byte[] f, final boolean flush) throws IOException {
     byte[] k = new byte[3];
@@ -1954,10 +1969,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   public void loadRandomRows(final Table t, final byte[] f, int rowSize, int totalRows)
     throws IOException {
-    Random r = new Random();
-    byte[] row = new byte[rowSize];
     for (int i = 0; i < totalRows; i++) {
-      r.nextBytes(row);
+      byte[] row = new byte[rowSize];
+      Bytes.random(row);
       Put put = new Put(row);
       put.addColumn(f, new byte[] { 0 }, new byte[] { 0 });
       t.put(put);
@@ -2465,7 +2479,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * <li>http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html</li>
    * <li>https://issues.apache.org/jira/browse/ZOOKEEPER-1105</li>
    * </ol>
-   * @param nodeZK - the ZK watcher to expire
+   * @param nodeZK      - the ZK watcher to expire
    * @param checkStatus - true to check if we can create a Table with the current configuration.
    */
   public void expireSession(ZKWatcher nodeZK, boolean checkStatus) throws Exception {
@@ -2496,8 +2510,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     // ensure that we have connection to the server before closing down, otherwise
     // the close session event will be eaten out before we start CONNECTING state
     long start = EnvironmentEdgeManager.currentTime();
-    while (newZK.getState() != States.CONNECTED &&
-      EnvironmentEdgeManager.currentTime() - start < 1000) {
+    while (
+      newZK.getState() != States.CONNECTED && EnvironmentEdgeManager.currentTime() - start < 1000
+    ) {
       Thread.sleep(1);
     }
     newZK.close();
@@ -2653,7 +2668,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Closes the region containing the given row.
-   * @param row The row to find the containing region.
+   * @param row   The row to find the containing region.
    * @param table The table to find the region.
    */
   public void unassignRegionByRow(String row, RegionLocator table) throws IOException {
@@ -2662,9 +2677,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Closes the region containing the given row.
-   * @param row The row to find the containing region.
-   * @param table The table to find the region.
-   * @throws IOException
+   * @param row   The row to find the containing region.
+   * @param table The table to find the region. n
    */
   public void unassignRegionByRow(byte[] row, RegionLocator table) throws IOException {
     HRegionLocation hrl = table.getRegionLocation(row);
@@ -2673,7 +2687,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Retrieves a splittable region randomly from tableName
-   * @param tableName name of table
+   * @param tableName   name of table
    * @param maxAttempts maximum number of attempts, unlimited for value of -1
    * @return the HRegion chosen, null if none was found within limit of maxAttempts
    */
@@ -2693,7 +2707,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       // There are chances that before we get the region for the table from an RS the region may
       // be going for CLOSE. This may be because online schema change is enabled
       if (regCount > 0) {
-        idx = random.nextInt(regCount);
+        idx = ThreadLocalRandom.current().nextInt(regCount);
         // if we have just tried this region, there is no need to try again
         if (attempted.contains(idx)) {
           continue;
@@ -2719,11 +2733,11 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Set the MiniDFSCluster
-   * @param cluster cluster to use
+   * @param cluster     cluster to use
    * @param requireDown require the that cluster not be "up" (MiniDFSCluster#isClusterUp) before it
-   *          is set.
+   *                    is set.
    * @throws IllegalStateException if the passed cluster is up when it is required to be down
-   * @throws IOException if the FileSystem could not be set from the passed dfs cluster
+   * @throws IOException           if the FileSystem could not be set from the passed dfs cluster
    */
   public void setDFSCluster(MiniDFSCluster cluster, boolean requireDown)
     throws IllegalStateException, IOException {
@@ -2754,7 +2768,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Wait until all regions in a table have been assigned
-   * @param table Table to wait on.
+   * @param table         Table to wait on.
    * @param timeoutMillis Timeout.
    */
   public void waitTableAvailable(byte[] table, long timeoutMillis)
@@ -2792,8 +2806,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     throws IOException {
     TableState tableState = MetaTableAccessor.getTableState(getConnection(), table);
     if (tableState == null) {
-      return "TableState in META: No table state in META for table " + table +
-        " last state in meta (including deleted is " + findLastTableState(table) + ")";
+      return "TableState in META: No table state in META for table " + table
+        + " last state in meta (including deleted is " + findLastTableState(table) + ")";
     } else if (!tableState.inStates(state)) {
       return "TableState in META: Not " + state + " state, but " + tableState;
     } else {
@@ -2828,7 +2842,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * table.
    * @param table the table to wait on.
    * @throws InterruptedException if interrupted while waiting
-   * @throws IOException if an IO problem is encountered
+   * @throws IOException          if an IO problem is encountered
    */
   public void waitTableEnabled(TableName table) throws InterruptedException, IOException {
     waitTableEnabled(table, 30000);
@@ -2838,7 +2852,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * Waits for a table to be 'enabled'. Enabled means that table is set as 'enabled' and the regions
    * have been all assigned.
    * @see #waitTableEnabled(TableName, long)
-   * @param table Table to wait on.
+   * @param table         Table to wait on.
    * @param timeoutMillis Time to wait on it being marked enabled.
    */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
@@ -2866,7 +2880,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
 
   /**
    * Waits for a table to be 'disabled'. Disabled means that table is set as 'disabled'
-   * @param table Table to wait on.
+   * @param table         Table to wait on.
    * @param timeoutMillis Time to wait on it being marked disabled.
    */
   public void waitTableDisabled(byte[] table, long timeoutMillis)
@@ -2919,7 +2933,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   /**
    * This method clones the passed <code>c</code> configuration setting a new user into the clone.
    * Use it getting new instances of FileSystem. Only works for DistributedFileSystem w/o Kerberos.
-   * @param c Initial configuration
+   * @param c                     Initial configuration
    * @param differentiatingSuffix Suffix to differentiate this user from others.
    * @return A new configuration instance with a different user set into it.
    */
@@ -3041,14 +3055,14 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
    * timeout. This means all regions have been deployed, master has been informed and updated
    * hbase:meta with the regions deployed server.
    * @param tableName the table name
-   * @param timeout timeout, in milliseconds
+   * @param timeout   timeout, in milliseconds
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
     throws IOException {
     if (!TableName.isMetaTableName(tableName)) {
       try (final Table meta = getConnection().getTable(TableName.META_TABLE_NAME)) {
-        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = " +
-          timeout + "ms");
+        LOG.debug("Waiting until all regions of table " + tableName + " get assigned. Timeout = "
+          + timeout + "ms");
         waitFor(timeout, 200, true, new ExplainingPredicate<IOException>() {
           @Override
           public String explainFailure() throws IOException {
@@ -3077,10 +3091,12 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
                     byte[] startCode =
                       r.getValue(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
                     ServerName serverName =
-                      ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + "," +
-                        Bytes.toLong(startCode));
-                    if (!getHBaseClusterInterface().isDistributedCluster() &&
-                      getHBaseCluster().isKilledRS(serverName)) {
+                      ServerName.valueOf(Bytes.toString(server).replaceFirst(":", ",") + ","
+                        + Bytes.toLong(startCode));
+                    if (
+                      !getHBaseClusterInterface().isDistributedCluster()
+                        && getHBaseCluster().isKilledRS(serverName)
+                    ) {
                       return false;
                     }
                   }
@@ -3181,8 +3197,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     final int minLen = Math.min(eLen, aLen);
 
     int i = 0;
-    while (i < minLen &&
-      CellComparator.getInstance().compare(expected.get(i), actual.get(i)) == 0) {
+    while (
+      i < minLen && CellComparator.getInstance().compare(expected.get(i), actual.get(i)) == 0
+    ) {
       i++;
     }
 
@@ -3194,9 +3211,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     }
 
     if (eLen != aLen || i != minLen) {
-      throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": " +
-        safeGetAsStr(expected, i) + " (length " + eLen + ") vs. " + safeGetAsStr(actual, i) +
-        " (length " + aLen + ")" + additionalMsg);
+      throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": "
+        + safeGetAsStr(expected, i) + " (length " + eLen + ") vs. " + safeGetAsStr(actual, i)
+        + " (length " + aLen + ")" + additionalMsg);
     }
   }
 
@@ -3209,9 +3226,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public String getClusterKey() {
-    return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
-      conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":" +
-      conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
+    return conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT)
+      + ":"
+      + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
   }
 
   /**
@@ -3220,9 +3237,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   public Table createRandomTable(TableName tableName, final Collection<String> families,
     final int maxVersions, final int numColsPerRow, final int numFlushes, final int numRegions,
     final int numRowsPerFlush) throws IOException, InterruptedException {
-    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions + " regions, " +
-      numFlushes + " storefiles per region, " + numRowsPerFlush + " rows per flush, maxVersions=" +
-      maxVersions + "\n");
+    LOG.info("\n\nCreating random table " + tableName + " with " + numRegions + " regions, "
+      + numFlushes + " storefiles per region, " + numRowsPerFlush + " rows per flush, maxVersions="
+      + maxVersions + "\n");
 
     final Random rand = new Random(tableName.hashCode() * 17L + 12938197137L);
     final int numCF = families.size();
@@ -3263,8 +3280,8 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           final byte[] qual = Bytes.toBytes("col" + iCol);
           if (rand.nextBoolean()) {
             final byte[] value =
-              Bytes.toBytes("value_for_row_" + iRow + "_cf_" + Bytes.toStringBinary(cf) + "_col_" +
-                iCol + "_ts_" + ts + "_random_" + rand.nextLong());
+              Bytes.toBytes("value_for_row_" + iRow + "_cf_" + Bytes.toStringBinary(cf) + "_col_"
+                + iCol + "_ts_" + ts + "_random_" + rand.nextLong());
             put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
             del.addColumn(cf, qual, ts);
@@ -3297,7 +3314,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   public static String randomMultiCastAddress() {
-    return "226.1.1." + random.nextInt(254);
+    return "226.1.1." + ThreadLocalRandom.current().nextInt(254);
   }
 
   public static void waitForHostPort(String host, int port) throws IOException {
@@ -3439,9 +3456,9 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
       }
 
       totalNumberOfRegions = numberOfServers * numRegionsPerServer;
-      LOG.info(
-        "Number of live regionservers: " + numberOfServers + ", " + "pre-splitting table into " +
-          totalNumberOfRegions + " regions " + "(regions per server: " + numRegionsPerServer + ")");
+      LOG.info("Number of live regionservers: " + numberOfServers + ", "
+        + "pre-splitting table into " + totalNumberOfRegions + " regions " + "(regions per server: "
+        + numRegionsPerServer + ")");
 
       byte[][] splits = splitter.split(totalNumberOfRegions);
 
@@ -3632,8 +3649,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
-   * Wait until no regions in transition. (time limit 15min)
-   * @throws IOException
+   * Wait until no regions in transition. (time limit 15min) n
    */
   public void waitUntilNoRegionsInTransition() throws IOException {
     waitUntilNoRegionsInTransition(15 * 60000);
@@ -3806,7 +3822,7 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
     Collection<ColumnFamilyDescriptor> rtdFamilies = Arrays.asList(rtd.getColumnFamilies());
     assertEquals(ltdFamilies.size(), rtdFamilies.size());
     for (Iterator<ColumnFamilyDescriptor> it = ltdFamilies.iterator(),
-      it2 = rtdFamilies.iterator(); it.hasNext();) {
+        it2 = rtdFamilies.iterator(); it.hasNext();) {
       assertEquals(0, ColumnFamilyDescriptor.COMPARATOR.compare(it.next(), it2.next()));
     }
   }

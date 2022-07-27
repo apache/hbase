@@ -147,6 +147,16 @@ YETUS_ARGS+=("--github-use-emoji-vote")
 if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
   YETUS_ARGS+=("--asf-nightlies-general-check-base=${ASF_NIGHTLIES_GENERAL_CHECK_BASE}")
 fi
+# pass build parallelism in
+if [[ -n "${BUILD_THREAD}" ]]; then
+  YETUS_ARGS+=("--build-thread=${BUILD_THREAD}")
+fi
+if [[ -n "${SUREFIRE_FIRST_PART_FORK_COUNT}" ]]; then
+  YETUS_ARGS+=("--surefire-first-part-fork-count=${SUREFIRE_FIRST_PART_FORK_COUNT}")
+fi
+if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
+  YETUS_ARGS+=("--surefire-second-part-fork-count=${SUREFIRE_SECOND_PART_FORK_COUNT}")
+fi
 
 echo "Launching yetus with command line:"
 echo "${TESTPATCHBIN} ${YETUS_ARGS[*]}"

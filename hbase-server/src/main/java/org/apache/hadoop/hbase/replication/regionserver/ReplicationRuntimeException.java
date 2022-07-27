@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +21,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This exception is thrown when a replication source is terminated and source threads got
- * interrupted.
- *
- * It is inherited from RuntimeException so that it can skip all the following processing logic
- * and be propagated to the most top level and handled there.
+ * interrupted. It is inherited from RuntimeException so that it can skip all the following
+ * processing logic and be propagated to the most top level and handled there.
  */
 @InterfaceAudience.Private
 public class ReplicationRuntimeException extends RuntimeException {

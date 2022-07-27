@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.FileNotFoundException;
@@ -37,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -66,11 +66,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 /**
- * Utility class to help read/write the Snapshot Manifest.
- *
- * The snapshot format is transparent for the users of this class,
- * once the snapshot is written, it will never be modified.
- * On open() the snapshot will be loaded to the current in-memory format.
+ * Utility class to help read/write the Snapshot Manifest. The snapshot format is transparent for
+ * the users of this class, once the snapshot is written, it will never be modified. On open() the
+ * snapshot will be loaded to the current in-memory format.
  */
 @InterfaceAudience.Private
 public final class SnapshotManifest {
@@ -93,18 +91,17 @@ public final class SnapshotManifest {
   private final MonitoredTask statusTask;
 
   /**
-   *
-   * @param conf configuration file for HBase setup
-   * @param rootFs root filesystem containing HFiles
+   * @param conf       configuration file for HBase setup
+   * @param rootFs     root filesystem containing HFiles
    * @param workingDir file path of where the manifest should be located
-   * @param desc description of snapshot being taken
-   * @param monitor monitor of foreign exceptions
-   * @throws IOException if the working directory file system cannot be
-   *                     determined from the config file
+   * @param desc       description of snapshot being taken
+   * @param monitor    monitor of foreign exceptions
+   * @throws IOException if the working directory file system cannot be determined from the config
+   *                     file
    */
-  private SnapshotManifest(final Configuration conf, final FileSystem rootFs,
-      final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor, final MonitoredTask statusTask) throws IOException {
+  private SnapshotManifest(final Configuration conf, final FileSystem rootFs, final Path workingDir,
+    final SnapshotDescription desc, final ForeignExceptionSnare monitor,
+    final MonitoredTask statusTask) throws IOException {
     this.monitor = monitor;
     this.desc = desc;
     this.workingDir = workingDir;
@@ -116,48 +113,39 @@ public final class SnapshotManifest {
   }
 
   /**
-   * Return a SnapshotManifest instance, used for writing a snapshot.
-   *
-   * There are two usage pattern:
-   *  - The Master will create a manifest, add the descriptor, offline regions
-   *    and consolidate the snapshot by writing all the pending stuff on-disk.
-   *      manifest = SnapshotManifest.create(...)
-   *      manifest.addRegion(tableDir, hri)
-   *      manifest.consolidate()
-   *  - The RegionServer will create a single region manifest
-   *      manifest = SnapshotManifest.create(...)
-   *      manifest.addRegion(region)
+   * Return a SnapshotManifest instance, used for writing a snapshot. There are two usage pattern: -
+   * The Master will create a manifest, add the descriptor, offline regions and consolidate the
+   * snapshot by writing all the pending stuff on-disk. manifest = SnapshotManifest.create(...)
+   * manifest.addRegion(tableDir, hri) manifest.consolidate() - The RegionServer will create a
+   * single region manifest manifest = SnapshotManifest.create(...) manifest.addRegion(region)
    */
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
-      final Path workingDir, final SnapshotDescription desc,
-      final ForeignExceptionSnare monitor) throws IOException {
+    final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor)
+    throws IOException {
     return create(conf, fs, workingDir, desc, monitor, null);
 
   }
 
   public static SnapshotManifest create(final Configuration conf, final FileSystem fs,
-      final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor,
-      final MonitoredTask statusTask) throws IOException {
+    final Path workingDir, final SnapshotDescription desc, final ForeignExceptionSnare monitor,
+    final MonitoredTask statusTask) throws IOException {
     return new SnapshotManifest(conf, fs, workingDir, desc, monitor, statusTask);
 
   }
 
   /**
    * Return a SnapshotManifest instance with the information already loaded in-memory.
-   *    SnapshotManifest manifest = SnapshotManifest.open(...)
-   *    TableDescriptor htd = manifest.getDescriptor()
-   *    for (SnapshotRegionManifest regionManifest: manifest.getRegionManifests())
-   *      hri = regionManifest.getRegionInfo()
-   *      for (regionManifest.getFamilyFiles())
-   *        ...
+   * SnapshotManifest manifest = SnapshotManifest.open(...) TableDescriptor htd =
+   * manifest.getDescriptor() for (SnapshotRegionManifest regionManifest:
+   * manifest.getRegionManifests()) hri = regionManifest.getRegionInfo() for
+   * (regionManifest.getFamilyFiles()) ...
    */
   public static SnapshotManifest open(final Configuration conf, final FileSystem fs,
-      final Path workingDir, final SnapshotDescription desc) throws IOException {
+    final Path workingDir, final SnapshotDescription desc) throws IOException {
     SnapshotManifest manifest = new SnapshotManifest(conf, fs, workingDir, desc, null, null);
     manifest.load();
     return manifest;
   }
-
 
   /**
    * Add the table descriptor to the snapshot manifest
@@ -168,9 +156,11 @@ public final class SnapshotManifest {
 
   interface RegionVisitor<TRegion, TFamily> {
     TRegion regionOpen(final RegionInfo regionInfo) throws IOException;
+
     void regionClose(final TRegion region) throws IOException;
 
     TFamily familyOpen(final TRegion region, final byte[] familyName) throws IOException;
+
     void familyClose(final TRegion region, final TFamily family) throws IOException;
 
     void storeFile(final TRegion region, final TFamily family, final StoreFileInfo storeFile)
@@ -184,8 +174,8 @@ public final class SnapshotManifest {
       case SnapshotManifestV2.DESCRIPTOR_VERSION:
         return new SnapshotManifestV2.ManifestBuilder(conf, rootFs, workingDir);
       default:
-      throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
-        ProtobufUtil.createSnapshotDesc(desc));
+        throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
+          ProtobufUtil.createSnapshotDesc(desc));
     }
   }
 
@@ -256,13 +246,13 @@ public final class SnapshotManifest {
 
     for (HStore store : region.getStores()) {
       // 2.1. build the snapshot reference for the store
-      Object familyData = visitor.familyOpen(regionData,
-          store.getColumnFamilyDescriptor().getName());
+      Object familyData =
+        visitor.familyOpen(regionData, store.getColumnFamilyDescriptor().getName());
       monitor.rethrowException();
 
       List<HStoreFile> storeFiles = new ArrayList<>(store.getStorefiles());
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+        LOG.debug("Adding snapshot references for " + storeFiles + " hfiles");
       }
 
       // 2.2. iterate through all the store's files and create "references".
@@ -271,8 +261,8 @@ public final class SnapshotManifest {
         monitor.rethrowException();
 
         // create "reference" to this store file.
-        LOG.debug("Adding reference for file (" + (i+1) + "/" + sz + "): " + storeFile.getPath() +
-                " for snapshot=" + snapshotName);
+        LOG.debug("Adding reference for file (" + (i + 1) + "/" + sz + "): " + storeFile.getPath()
+          + " for snapshot=" + snapshotName);
         visitor.storeFile(regionData, familyData, storeFile.getFileInfo());
       }
       visitor.familyClose(regionData, familyData);
@@ -281,8 +271,8 @@ public final class SnapshotManifest {
   }
 
   /**
-   * Creates a 'manifest' for the specified region, by reading directly from the disk.
-   * This is used by the "offline snapshot" when the table is disabled.
+   * Creates a 'manifest' for the specified region, by reading directly from the disk. This is used
+   * by the "offline snapshot" when the table is disabled.
    */
   public void addRegion(final Path tableDir, final RegionInfo regionInfo) throws IOException {
     // Get the ManifestBuilder/RegionVisitor
@@ -321,7 +311,17 @@ public final class SnapshotManifest {
       for (ColumnFamilyDescriptor cfd : htd.getColumnFamilies()) {
         Object familyData = visitor.familyOpen(regionData, cfd.getName());
         monitor.rethrowException();
-        StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
+        StoreFileTracker tracker = null;
+        if (isMobRegion) {
+          // MOB regions are always using the default SFT implementation
+          ColumnFamilyDescriptor defaultSFTCfd = ColumnFamilyDescriptorBuilder.newBuilder(cfd)
+            .setValue(StoreFileTrackerFactory.TRACKER_IMPL,
+              StoreFileTrackerFactory.Trackers.DEFAULT.name())
+            .build();
+          tracker = StoreFileTrackerFactory.create(conf, htd, defaultSFTCfd, regionFs);
+        } else {
+          tracker = StoreFileTrackerFactory.create(conf, htd, cfd, regionFs);
+        }
         List<StoreFileInfo> storeFiles = tracker.load();
         if (storeFiles.isEmpty()) {
           LOG.debug("No files under family: {}", cfd.getNameAsString());
@@ -353,7 +353,7 @@ public final class SnapshotManifest {
   }
 
   private void addReferenceFiles(RegionVisitor visitor, Object regionData, Object familyData,
-      Collection<StoreFileInfo> storeFiles, boolean isMob) throws IOException {
+    Collection<StoreFileInfo> storeFiles, boolean isMob) throws IOException {
     final String fileType = isMob ? "mob file" : "hfile";
 
     if (LOG.isDebugEnabled()) {
@@ -362,11 +362,11 @@ public final class SnapshotManifest {
 
     int i = 0;
     int sz = storeFiles.size();
-    for (StoreFileInfo storeFile: storeFiles) {
+    for (StoreFileInfo storeFile : storeFiles) {
       monitor.rethrowException();
 
-      LOG.debug(String.format("Adding reference for %s (%d/%d): %s",
-          fileType, ++i, sz, storeFile.getPath()));
+      LOG.debug(String.format("Adding reference for %s (%d/%d): %s", fileType, ++i, sz,
+        storeFile.getPath()));
 
       // create "reference" to this store file.
       visitor.storeFile(regionData, familyData, storeFile);
@@ -374,11 +374,9 @@ public final class SnapshotManifest {
   }
 
   /**
-   * Load the information in the SnapshotManifest. Called by SnapshotManifest.open()
-   *
-   * If the format is v2 and there is no data-manifest, means that we are loading an
-   * in-progress snapshot. Since we support rolling-upgrades, we loook for v1 and v2
-   * regions format.
+   * Load the information in the SnapshotManifest. Called by SnapshotManifest.open() If the format
+   * is v2 and there is no data-manifest, means that we are loading an in-progress snapshot. Since
+   * we support rolling-upgrades, we loook for v1 and v2 regions format.
    */
   private void load() throws IOException {
     switch (getSnapshotFormat(desc)) {
@@ -404,13 +402,13 @@ public final class SnapshotManifest {
           List<SnapshotRegionManifest> v1Regions, v2Regions;
           ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
           try {
-            v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs,
-                workingDir, desc);
-            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, rootFs,
-                workingDir, desc, manifestSizeLimit);
+            v1Regions =
+              SnapshotManifestV1.loadRegionManifests(conf, tpool, rootFs, workingDir, desc);
+            v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, rootFs, workingDir,
+              desc, manifestSizeLimit);
           } catch (InvalidProtocolBufferException e) {
-            throw new CorruptedSnapshotException("unable to parse region manifest " +
-                e.getMessage(), e);
+            throw new CorruptedSnapshotException(
+              "unable to parse region manifest " + e.getMessage(), e);
           } finally {
             tpool.shutdown();
           }
@@ -427,8 +425,8 @@ public final class SnapshotManifest {
         break;
       }
       default:
-      throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
-        ProtobufUtil.createSnapshotDesc(desc));
+        throw new CorruptedSnapshotException("Invalid Snapshot version: " + desc.getVersion(),
+          ProtobufUtil.createSnapshotDesc(desc));
     }
   }
 
@@ -467,14 +465,14 @@ public final class SnapshotManifest {
   }
 
   /**
-   * Get all the Region Manifest from the snapshot.
-   * This is an helper to get a map with the region encoded name
+   * Get all the Region Manifest from the snapshot. This is an helper to get a map with the region
+   * encoded name
    */
   public Map<String, SnapshotRegionManifest> getRegionManifestsMap() {
     if (regionManifests == null || regionManifests.isEmpty()) return null;
 
     HashMap<String, SnapshotRegionManifest> regionsMap = new HashMap<>(regionManifests.size());
-    for (SnapshotRegionManifest manifest: regionManifests) {
+    for (SnapshotRegionManifest manifest : regionManifests) {
       String regionName = getRegionNameFromManifest(manifest);
       regionsMap.put(regionName, manifest);
     }
@@ -486,7 +484,7 @@ public final class SnapshotManifest {
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
       FSTableDescriptors.createTableDescriptorForTableDirectory(workingDirFs, workingDir, htd,
-          false);
+        false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest for {}", this.desc.getName());
       convertToV2SingleManifest();
@@ -494,8 +492,8 @@ public final class SnapshotManifest {
   }
 
   /*
-   * In case of rolling-upgrade, we try to read all the formats and build
-   * the snapshot with the latest format.
+   * In case of rolling-upgrade, we try to read all the formats and build the snapshot with the
+   * latest format.
    */
   private void convertToV2SingleManifest() throws IOException {
     // Try to load v1 and v2 regions
@@ -503,10 +501,10 @@ public final class SnapshotManifest {
     ThreadPoolExecutor tpool = createExecutor("SnapshotManifestLoader");
     setStatusMsg("Loading Region manifests for " + this.desc.getName());
     try {
-      v1Regions = SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs,
-          workingDir, desc);
-      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs,
-          workingDir, desc, manifestSizeLimit);
+      v1Regions =
+        SnapshotManifestV1.loadRegionManifests(conf, tpool, workingDirFs, workingDir, desc);
+      v2Regions = SnapshotManifestV2.loadRegionManifests(conf, tpool, workingDirFs, workingDir,
+        desc, manifestSizeLimit);
 
       SnapshotDataManifest.Builder dataManifestBuilder = SnapshotDataManifest.newBuilder();
       dataManifestBuilder.setTableSchema(ProtobufUtil.toTableSchema(htd));
@@ -535,7 +533,7 @@ public final class SnapshotManifest {
       int totalDeletes = 0;
       ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<>(tpool);
       if (v1Regions != null) {
-        for (SnapshotRegionManifest regionManifest: v1Regions) {
+        for (SnapshotRegionManifest regionManifest : v1Regions) {
           ++totalDeletes;
           completionService.submit(() -> {
             SnapshotManifestV1.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
@@ -544,7 +542,7 @@ public final class SnapshotManifest {
         }
       }
       if (v2Regions != null) {
-        for (SnapshotRegionManifest regionManifest: v2Regions) {
+        for (SnapshotRegionManifest regionManifest : v2Regions) {
           ++totalDeletes;
           completionService.submit(() -> {
             SnapshotManifestV2.deleteRegionManifest(workingDirFs, workingDir, regionManifest);
@@ -570,9 +568,9 @@ public final class SnapshotManifest {
   /*
    * Write the SnapshotDataManifest file
    */
-  private void writeDataManifest(final SnapshotDataManifest manifest)
-      throws IOException {
-    try (FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME))) {
+  private void writeDataManifest(final SnapshotDataManifest manifest) throws IOException {
+    try (
+      FSDataOutputStream stream = workingDirFs.create(new Path(workingDir, DATA_MANIFEST_NAME))) {
       manifest.writeTo(stream);
     }
   }
@@ -607,10 +605,10 @@ public final class SnapshotManifest {
    * Extract the region encoded name from the region manifest
    */
   static String getRegionNameFromManifest(final SnapshotRegionManifest manifest) {
-    byte[] regionName = RegionInfo.createRegionName(
-            ProtobufUtil.toTableName(manifest.getRegionInfo().getTableName()),
-            manifest.getRegionInfo().getStartKey().toByteArray(),
-            manifest.getRegionInfo().getRegionId(), true);
+    byte[] regionName =
+      RegionInfo.createRegionName(ProtobufUtil.toTableName(manifest.getRegionInfo().getTableName()),
+        manifest.getRegionInfo().getStartKey().toByteArray(),
+        manifest.getRegionInfo().getRegionId(), true);
     return RegionInfo.encodeRegionName(regionName);
   }
 

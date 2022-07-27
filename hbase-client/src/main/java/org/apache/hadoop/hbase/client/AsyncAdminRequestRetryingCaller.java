@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,9 +29,6 @@ import org.apache.hbase.thirdparty.io.netty.util.Timer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 
-/**
- * @since 2.0.0
- */
 @InterfaceAudience.Private
 public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
 
@@ -44,10 +41,10 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
   private ServerName serverName;
 
   public AsyncAdminRequestRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
-      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
-      long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
-    super(retryTimer, conn, priority, pauseNs, pauseForCQTBENs, maxAttempts, operationTimeoutNs,
-      rpcTimeoutNs, startLogErrorsCnt);
+    long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
+    long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
+    super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxAttempts,
+      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
     this.serverName = serverName;
     this.callable = callable;
   }

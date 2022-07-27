@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -51,7 +51,7 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncProcedureAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncProcedureAdminApi.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -116,8 +116,7 @@ public class TestAsyncProcedureAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void abortProcedure() throws Exception {
-    Random randomGenerator = new Random();
-    long procId = randomGenerator.nextLong();
+    long procId = ThreadLocalRandom.current().nextLong();
     boolean abortResult = admin.abortProcedure(procId, true).get();
     assertFalse(abortResult);
   }

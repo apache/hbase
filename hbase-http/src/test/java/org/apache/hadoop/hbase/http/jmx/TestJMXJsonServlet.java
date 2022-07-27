@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,18 +36,19 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestJMXJsonServlet extends HttpServerFunctionalTest {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestJMXJsonServlet.class);
+    HBaseClassTestRule.forClass(TestJMXJsonServlet.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXJsonServlet.class);
   private static HttpServer server;
   private static URL baseUrl;
 
-  @BeforeClass public static void setup() throws Exception {
+  @BeforeClass
+  public static void setup() throws Exception {
     // Eclipse doesn't pick this up correctly from the plugin
     // configuration in the pom.
     System.setProperty(HttpServerFunctionalTest.TEST_BUILD_WEBAPPS, "target/test-classes/webapps");
@@ -56,93 +57,92 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     baseUrl = getServerURL(server);
   }
 
-  @AfterClass public static void cleanup() throws Exception {
+  @AfterClass
+  public static void cleanup() throws Exception {
     server.stop();
   }
 
   public static void assertReFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertTrue("'"+p+"' does not match "+value, m.find());
+    assertTrue("'" + p + "' does not match " + value, m.find());
   }
 
   public static void assertNotFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertFalse("'"+p+"' should not match "+value, m.find());
+    assertFalse("'" + p + "' should not match " + value, m.find());
   }
 
-  @Test public void testQuery() throws Exception {
+  @Test
+  public void testQuery() throws Exception {
     String result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Runtime"));
-    LOG.info("/jmx?qry=java.lang:type=Runtime RESULT: "+result);
+    LOG.info("/jmx?qry=java.lang:type=Runtime RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Runtime\"", result);
     assertReFind("\"modelerType\"", result);
 
     result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Memory"));
-    LOG.info("/jmx?qry=java.lang:type=Memory RESULT: "+result);
+    LOG.info("/jmx?qry=java.lang:type=Memory RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"modelerType\"", result);
 
     result = readOutput(new URL(baseUrl, "/jmx"));
-    LOG.info("/jmx RESULT: "+result);
+    LOG.info("/jmx RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
 
     // test to get an attribute of a mbean
-    result = readOutput(new URL(baseUrl,
-        "/jmx?get=java.lang:type=Memory::HeapMemoryUsage"));
-    LOG.info("/jmx RESULT: "+result);
+    result = readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::HeapMemoryUsage"));
+    LOG.info("/jmx RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
 
     // negative test to get an attribute of a mbean
-    result = readOutput(new URL(baseUrl,
-        "/jmx?get=java.lang:type=Memory::"));
-    LOG.info("/jmx RESULT: "+result);
+    result = readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::"));
+    LOG.info("/jmx RESULT: " + result);
     assertReFind("\"ERROR\"", result);
 
     // test to get JSONP result
     result = readOutput(new URL(baseUrl, "/jmx?qry=java.lang:type=Memory&callback=mycallback1"));
-    LOG.info("/jmx?qry=java.lang:type=Memory&callback=mycallback RESULT: "+result);
+    LOG.info("/jmx?qry=java.lang:type=Memory&callback=mycallback RESULT: " + result);
     assertReFind("^mycallback1\\(\\{", result);
     assertReFind("\\}\\);$", result);
 
     // negative test to get an attribute of a mbean as JSONP
-    result = readOutput(new URL(baseUrl,
-        "/jmx?get=java.lang:type=Memory::&callback=mycallback2"));
-    LOG.info("/jmx RESULT: "+result);
+    result = readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::&callback=mycallback2"));
+    LOG.info("/jmx RESULT: " + result);
     assertReFind("^mycallback2\\(\\{", result);
     assertReFind("\"ERROR\"", result);
     assertReFind("\\}\\);$", result);
 
     // test to get an attribute of a mbean as JSONP
-    result = readOutput(new URL(baseUrl,
-        "/jmx?get=java.lang:type=Memory::HeapMemoryUsage&callback=mycallback3"));
-    LOG.info("/jmx RESULT: "+result);
+    result = readOutput(
+      new URL(baseUrl, "/jmx?get=java.lang:type=Memory::HeapMemoryUsage&callback=mycallback3"));
+    LOG.info("/jmx RESULT: " + result);
     assertReFind("^mycallback3\\(\\{", result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\\}\\);$", result);
 
     // test exclude the specific mbean
-    result = readOutput(new URL(baseUrl,
-        "/jmx?excl=Hadoop:service=HBase,name=RegionServer,sub=Regions"));
+    result =
+      readOutput(new URL(baseUrl, "/jmx?excl=Hadoop:service=HBase,name=RegionServer,sub=Regions"));
     LOG.info("/jmx RESULT: " + result);
-    assertNotFind("\"name\"\\s*:\\s*\"Hadoop:service=HBase,name=RegionServer,sub=Regions\"",result);
+    assertNotFind("\"name\"\\s*:\\s*\"Hadoop:service=HBase,name=RegionServer,sub=Regions\"",
+      result);
   }
 
   @Test
   public void testGetPattern() throws Exception {
     // test to get an attribute of a mbean as JSONP
-    String result = readOutput(
-      new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[a-zA-z_]*NonHeapMemoryUsage"));
+    String result =
+      readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[a-zA-z_]*NonHeapMemoryUsage"));
     LOG.info("/jmx RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
     assertReFind("\"NonHeapMemoryUsage\"\\s*:", result);
     assertNotFind("\"HeapMemoryUsage\"\\s*:", result);
 
-    result =
-        readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[^Non]*HeapMemoryUsage"));
+    result = readOutput(new URL(baseUrl, "/jmx?get=java.lang:type=Memory::[^Non]*HeapMemoryUsage"));
     LOG.info("/jmx RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
@@ -150,7 +150,7 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     assertNotFind("\"NonHeapHeapMemoryUsage\"\\s*:", result);
 
     result = readOutput(new URL(baseUrl,
-        "/jmx?get=java.lang:type=Memory::[a-zA-z_]*HeapMemoryUsage,[a-zA-z_]*NonHeapMemoryUsage"));
+      "/jmx?get=java.lang:type=Memory::[a-zA-z_]*HeapMemoryUsage,[a-zA-z_]*NonHeapMemoryUsage"));
     LOG.info("/jmx RESULT: " + result);
     assertReFind("\"name\"\\s*:\\s*\"java.lang:type=Memory\"", result);
     assertReFind("\"committed\"\\s*:", result);
@@ -166,8 +166,8 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   @Test
   public void testDisallowedJSONPCallback() throws Exception {
     String callback = "function(){alert('bigproblems!')};foo";
-    URL url = new URL(
-        baseUrl, "/jmx?qry=java.lang:type=Memory&callback="+URLEncoder.encode(callback, "UTF-8"));
+    URL url = new URL(baseUrl,
+      "/jmx?qry=java.lang:type=Memory&callback=" + URLEncoder.encode(callback, "UTF-8"));
     HttpURLConnection cnxn = (HttpURLConnection) url.openConnection();
     assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, cnxn.getResponseCode());
   }
@@ -175,8 +175,8 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   @Test
   public void testUnderscoresInJSONPCallback() throws Exception {
     String callback = "my_function";
-    URL url = new URL(
-        baseUrl, "/jmx?qry=java.lang:type=Memory&callback="+URLEncoder.encode(callback, "UTF-8"));
+    URL url = new URL(baseUrl,
+      "/jmx?qry=java.lang:type=Memory&callback=" + URLEncoder.encode(callback, "UTF-8"));
     HttpURLConnection cnxn = (HttpURLConnection) url.openConnection();
     assertEquals(HttpServletResponse.SC_OK, cnxn.getResponseCode());
   }

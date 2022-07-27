@@ -155,9 +155,8 @@ public class TestTableDescriptorBuilder {
   @Test(expected = IllegalArgumentException.class)
   public void testRemoveNonExistingCoprocessor() throws Exception {
     String className = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver";
-    TableDescriptor desc = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName()))
-      .build();
+    TableDescriptor desc =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
     assertFalse(desc.hasCoprocessor(className));
     TableDescriptorBuilder.newBuilder(desc).removeCoprocessor(className).build();
   }
@@ -354,23 +353,18 @@ public class TestTableDescriptorBuilder {
     byte[] familyName = Bytes.toBytes("cf");
     ColumnFamilyDescriptor hcd =
       ColumnFamilyDescriptorBuilder.newBuilder(familyName).setBlocksize(131072).build();
-    TableDescriptor htd = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .setColumnFamily(hcd).setDurability(Durability.ASYNC_WAL).build();
 
     assertEquals(
-      "'testStringCustomizedValues', " +
-        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, "
+      "'testStringCustomizedValues', " + "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL'}}, "
         + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
       htd.toStringCustomizedValues());
 
-    htd = TableDescriptorBuilder.newBuilder(htd)
-      .setMaxFileSize("10737942528")
-      .setMemStoreFlushSize("256MB")
-      .build();
+    htd = TableDescriptorBuilder.newBuilder(htd).setMaxFileSize("10737942528")
+      .setMemStoreFlushSize("256MB").build();
     assertEquals(
-      "'testStringCustomizedValues', " +
-        "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
+      "'testStringCustomizedValues', " + "{TABLE_ATTRIBUTES => {DURABILITY => 'ASYNC_WAL', "
         + "MAX_FILESIZE => '10737942528 B (10GB 512KB)', "
         + "MEMSTORE_FLUSHSIZE => '268435456 B (256MB)'}}, "
         + "{NAME => 'cf', BLOCKSIZE => '131072 B (128KB)'}",
@@ -381,7 +375,7 @@ public class TestTableDescriptorBuilder {
   public void testGetSetRegionServerGroup() {
     String groupName = name.getMethodName();
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setRegionServerGroup(groupName).build();
+      .setRegionServerGroup(groupName).build();
     assertEquals(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP), groupName);
     htd = TableDescriptorBuilder.newBuilder(htd).setRegionServerGroup(null).build();
     assertNull(htd.getValue(RSGroupInfo.TABLE_DESC_PROP_GROUP));

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,11 +36,11 @@ import org.mockito.Mockito;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestClientExponentialBackoff {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestClientExponentialBackoff.class);
+    HBaseClassTestRule.forClass(TestClientExponentialBackoff.class);
 
   ServerName server = Mockito.mock(ServerName.class);
   byte[] regionname = Bytes.toBytes("region");
@@ -67,8 +67,8 @@ public class TestClientExponentialBackoff {
 
     ServerStatistics stats = new ServerStatistics();
     update(stats, 100);
-    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoff.getBackoffTime(server,
-        regionname, stats));
+    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF,
+      backoff.getBackoffTime(server, regionname, stats));
 
     // another policy with a different max timeout
     long max = 100;
@@ -78,20 +78,20 @@ public class TestClientExponentialBackoff {
 
     // test beyond 100 still doesn't exceed the max
     update(stats, 101);
-    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF, backoff.getBackoffTime(server,
-        regionname, stats));
+    assertEquals(ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF,
+      backoff.getBackoffTime(server, regionname, stats));
     assertEquals(max, backoffShortTimeout.getBackoffTime(server, regionname, stats));
 
     // and that when we are below 100, its less than the max timeout
     update(stats, 99);
-    assertTrue(backoff.getBackoffTime(server,
-        regionname, stats) < ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF);
+    assertTrue(backoff.getBackoffTime(server, regionname, stats)
+        < ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF);
     assertTrue(backoffShortTimeout.getBackoffTime(server, regionname, stats) < max);
   }
 
   /**
-   * Make sure that we get results in the order that we expect - backoff for a load of 1 should
-   * less than backoff for 10, which should be less than that for 50.
+   * Make sure that we get results in the order that we expect - backoff for a load of 1 should less
+   * than backoff for 10, which should be less than that for 50.
    */
   @Test
   public void testResultOrdering() {
@@ -105,9 +105,8 @@ public class TestClientExponentialBackoff {
     for (int i = 1; i <= 100; i++) {
       update(stats, i);
       long next = backoff.getBackoffTime(server, regionname, stats);
-      assertTrue(
-          "Previous backoff time" + previous + " >= " + next + ", the next backoff time for " +
-              "load " + i, previous < next);
+      assertTrue("Previous backoff time" + previous + " >= " + next + ", the next backoff time for "
+        + "load " + i, previous < next);
       previous = next;
     }
   }
@@ -151,8 +150,7 @@ public class TestClientExponentialBackoff {
     long previous = backoffTime;
     update(stats, 0, 0, 50);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
-    assertTrue("Compaction pressure should be bigger",
-            backoffTime > previous);
+    assertTrue("Compaction pressure should be bigger", backoffTime > previous);
 
     update(stats, 0, 0, 100);
     backoffTime = backoff.getBackoffTime(server, regionname, stats);
@@ -161,18 +159,16 @@ public class TestClientExponentialBackoff {
   }
 
   private void update(ServerStatistics stats, int load) {
-    ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemStoreLoad(load).build();
+    ClientProtos.RegionLoadStats stat =
+      ClientProtos.RegionLoadStats.newBuilder().setMemStoreLoad(load).build();
     stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
 
   private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy,
-                      int compactionPressure) {
-    ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
-        .setMemStoreLoad(memstoreLoad)
-        .setHeapOccupancy(heapOccupancy)
-        .setCompactionPressure(compactionPressure)
-            .build();
+    int compactionPressure) {
+    ClientProtos.RegionLoadStats stat =
+      ClientProtos.RegionLoadStats.newBuilder().setMemStoreLoad(memstoreLoad)
+        .setHeapOccupancy(heapOccupancy).setCompactionPressure(compactionPressure).build();
     stats.update(regionname, ProtobufUtil.createRegionLoadStats(stat));
   }
 }

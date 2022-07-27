@@ -140,7 +140,8 @@ public class TestMultiLogThreshold {
   }
 
   private enum ActionType {
-    REGION_ACTIONS, ACTIONS
+    REGION_ACTIONS,
+    ACTIONS
   }
 
   /**
@@ -180,8 +181,10 @@ public class TestMultiLogThreshold {
   private void assertLogBatchWarnings(boolean expected) {
     boolean actual = false;
     for (LevelAndMessage event : logs) {
-      if (event.level == org.apache.logging.log4j.Level.WARN &&
-        event.msg.contains("Large batch operation detected")) {
+      if (
+        event.level == org.apache.logging.log4j.Level.WARN
+          && event.msg.contains("Large batch operation detected")
+      ) {
         actual = true;
         break;
       }

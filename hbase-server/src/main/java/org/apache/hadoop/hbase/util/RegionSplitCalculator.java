@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,30 +24,23 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
+import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.TreeMultimap;
 
 /**
- * This is a generic region split calculator. It requires Ranges that provide
- * start, end, and a comparator. It works in two phases -- the first adds ranges
- * and rejects backwards ranges. Then one calls calcRegions to generate the
- * multimap that has a start split key as a key and possibly multiple Ranges as
- * members.
- * 
- * To traverse, one normally would get the split set, and iterate through the
- * calcRegions. Normal regions would have only one entry, holes would have zero,
- * and any overlaps would have multiple entries.
- * 
- * The interface is a bit cumbersome currently but is exposed this way so that
- * clients can choose how to iterate through the region splits.
- * 
+ * This is a generic region split calculator. It requires Ranges that provide start, end, and a
+ * comparator. It works in two phases -- the first adds ranges and rejects backwards ranges. Then
+ * one calls calcRegions to generate the multimap that has a start split key as a key and possibly
+ * multiple Ranges as members. To traverse, one normally would get the split set, and iterate
+ * through the calcRegions. Normal regions would have only one entry, holes would have zero, and any
+ * overlaps would have multiple entries. The interface is a bit cumbersome currently but is exposed
+ * this way so that clients can choose how to iterate through the region splits.
  * @param <R>
  */
 @InterfaceAudience.Private
@@ -57,17 +49,14 @@ public class RegionSplitCalculator<R extends KeyRange> {
 
   private final Comparator<R> rangeCmp;
   /**
-   * This contains a sorted set of all the possible split points
-   * 
-   * Invariant: once populated this has 0 entries if empty or at most n+1 values
-   * where n == number of added ranges.
+   * This contains a sorted set of all the possible split points Invariant: once populated this has
+   * 0 entries if empty or at most n+1 values where n == number of added ranges.
    */
   private final TreeSet<byte[]> splits = new TreeSet<>(BYTES_COMPARATOR);
 
   /**
-   * This is a map from start key to regions with the same start key.
-   * 
-   * Invariant: This always have n values in total
+   * This is a map from start key to regions with the same start key. Invariant: This always have n
+   * values in total
    */
   private final Multimap<byte[], R> starts = ArrayListMultimap.create();
 
@@ -83,19 +72,15 @@ public class RegionSplitCalculator<R extends KeyRange> {
   public final static Comparator<byte[]> BYTES_COMPARATOR = new ByteArrayComparator() {
     @Override
     public int compare(byte[] l, byte[] r) {
-      if (l == null && r == null)
-        return 0;
-      if (l == null)
-        return 1;
-      if (r == null)
-        return -1;
+      if (l == null && r == null) return 0;
+      if (l == null) return 1;
+      if (r == null) return -1;
       return super.compare(l, r);
     }
   };
 
   /**
    * SPECIAL CASE wrapper for empty end key
-   * 
    * @return ENDKEY if end key is empty, else normal endkey.
    */
   private static <R extends KeyRange> byte[] specialEndKey(R range) {
@@ -108,7 +93,6 @@ public class RegionSplitCalculator<R extends KeyRange> {
 
   /**
    * Adds an edge to the split calculator
-   * 
    * @return true if is included, false if backwards/invalid
    */
   public boolean add(R range) {
@@ -118,8 +102,8 @@ public class RegionSplitCalculator<R extends KeyRange> {
     // No need to use Arrays.equals because ENDKEY is null
     if (end != ENDKEY && Bytes.compareTo(start, end) > 0) {
       // don't allow backwards edges
-      LOG.debug("attempted to add backwards edge: " + Bytes.toString(start)
-          + " " + Bytes.toString(end));
+      LOG.debug(
+        "attempted to add backwards edge: " + Bytes.toString(start) + " " + Bytes.toString(end));
       return false;
     }
 
@@ -130,16 +114,13 @@ public class RegionSplitCalculator<R extends KeyRange> {
   }
 
   /**
-   * Generates a coverage multimap from split key to Regions that start with the
-   * split key.
-   * 
+   * Generates a coverage multimap from split key to Regions that start with the split key.
    * @return coverage multimap
    */
   public Multimap<byte[], R> calcCoverage() {
     // This needs to be sorted to force the use of the comparator on the values,
     // otherwise byte array comparison isn't used
-    Multimap<byte[], R> regions = TreeMultimap.create(BYTES_COMPARATOR,
-        rangeCmp);
+    Multimap<byte[], R> regions = TreeMultimap.create(BYTES_COMPARATOR, rangeCmp);
 
     // march through all splits from the start points
     for (Entry<byte[], Collection<R>> start : starts.asMap().entrySet()) {
@@ -147,8 +128,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
       for (R r : start.getValue()) {
         regions.put(key, r);
 
-        for (byte[] coveredSplit : splits.subSet(r.getStartKey(),
-            specialEndKey(r))) {
+        for (byte[] coveredSplit : splits.subSet(r.getStartKey(), specialEndKey(r))) {
           regions.put(coveredSplit, r);
         }
       }
@@ -165,36 +145,34 @@ public class RegionSplitCalculator<R extends KeyRange> {
   }
 
   /**
-   * Find specified number of top ranges in a big overlap group.
-   * It could return less if there are not that many top ranges.
-   * Once these top ranges are excluded, the big overlap group will
-   * be broken into ranges with no overlapping, or smaller overlapped
-   * groups, and most likely some holes.
-   *
+   * Find specified number of top ranges in a big overlap group. It could return less if there are
+   * not that many top ranges. Once these top ranges are excluded, the big overlap group will be
+   * broken into ranges with no overlapping, or smaller overlapped groups, and most likely some
+   * holes.
    * @param bigOverlap a list of ranges that overlap with each other
-   * @param count the max number of ranges to find
+   * @param count      the max number of ranges to find
    * @return a list of ranges that overlap with most others
    */
-  public static <R extends KeyRange> List<R>
-      findBigRanges(Collection<R> bigOverlap, int count) {
+  public static <R extends KeyRange> List<R> findBigRanges(Collection<R> bigOverlap, int count) {
     List<R> bigRanges = new ArrayList<>();
 
     // The key is the count of overlaps,
     // The value is a list of ranges that have that many overlaps
     TreeMap<Integer, List<R>> overlapRangeMap = new TreeMap<>();
-    for (R r: bigOverlap) {
+    for (R r : bigOverlap) {
       // Calculates the # of overlaps for each region
       // and populates rangeOverlapMap
       byte[] startKey = r.getStartKey();
       byte[] endKey = specialEndKey(r);
 
       int overlappedRegions = 0;
-      for (R rr: bigOverlap) {
+      for (R rr : bigOverlap) {
         byte[] start = rr.getStartKey();
         byte[] end = specialEndKey(rr);
 
-        if (BYTES_COMPARATOR.compare(startKey, end) < 0
-            && BYTES_COMPARATOR.compare(endKey, start) > 0) {
+        if (
+          BYTES_COMPARATOR.compare(startKey, end) < 0 && BYTES_COMPARATOR.compare(endKey, start) > 0
+        ) {
           overlappedRegions++;
         }
       }
@@ -213,7 +191,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
       }
     }
     int toBeAdded = count;
-    for (Integer key: overlapRangeMap.descendingKeySet()) {
+    for (Integer key : overlapRangeMap.descendingKeySet()) {
       List<R> chunk = overlapRangeMap.get(key);
       int chunkSize = chunk.size();
       if (chunkSize <= toBeAdded) {
@@ -225,7 +203,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
         // chained, for example: [a, c), [b, e), [d, g), [f h)...
         // In such a case, sideline the middle chunk will break
         // the group efficiently.
-        int start = (chunkSize - toBeAdded)/2;
+        int start = (chunkSize - toBeAdded) / 2;
         int end = start + toBeAdded;
         for (int i = start; i < end; i++) {
           bigRanges.add(chunk.get(i));

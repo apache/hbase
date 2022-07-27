@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +72,7 @@ public class TestConnectionRegistryLeak {
   @BeforeClass
   public static void setUp() {
     CONF.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
-        ConnectionRegistryForTest.class, ConnectionRegistry.class);
+      ConnectionRegistryForTest.class, ConnectionRegistry.class);
   }
 
   @Test

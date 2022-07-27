@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A memstore-local allocation buffer.
@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * as well. See {@link ChunkCreator}.
  * <p>
  * The purpose of this is to combat heap fragmentation in the regionserver. By ensuring that all
- * Cells in a given memstore refer only to large chunks of contiguous memory, we ensure that
- * large blocks get freed up when the memstore is flushed.
+ * Cells in a given memstore refer only to large chunks of contiguous memory, we ensure that large
+ * blocks get freed up when the memstore is flushed.
  * <p>
  * Without the MSLAB, the byte array allocated during insertion end up interleaved throughout the
  * heap, and the old generation gets progressively more fragmented until a stop-the-world compacting
@@ -56,7 +56,7 @@ public interface MemStoreLAB {
   float INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT = 0.1f;
   String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
   int MAX_ALLOC_DEFAULT = 256 * 1024; // allocs bigger than this don't go through
-                                                   // allocator
+                                      // allocator
 
   // MSLAB pool related configs
   String CHUNK_POOL_MAXSIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
@@ -72,12 +72,11 @@ public interface MemStoreLAB {
 
   /**
    * Allocates slice in this LAB and copy the passed Cell into this area. Returns new Cell instance
-   * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null.
-   *
-   * Since the process of flattening to CellChunkMap assumes all cells are allocated on MSLAB,
-   * and since copyCellInto does not copy big cells (for whom size > maxAlloc) into MSLAB,
-   * this method is called while the process of flattening to CellChunkMap is running,
-   * for forcing the allocation of big cells on this MSLAB.
+   * over the copied the data. When this MemStoreLAB can not copy this Cell, it returns null. Since
+   * the process of flattening to CellChunkMap assumes all cells are allocated on MSLAB, and since
+   * copyCellInto does not copy big cells (for whom size > maxAlloc) into MSLAB, this method is
+   * called while the process of flattening to CellChunkMap is running, for forcing the allocation
+   * of big cells on this MSLAB.
    */
   Cell forceCopyOfBigCellInto(Cell cell);
 
@@ -96,18 +95,18 @@ public interface MemStoreLAB {
    */
   void decScannerCount();
 
-  /* Returning a new pool chunk, without replacing current chunk,
-  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-  ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers.
-  */
+  /*
+   * Returning a new pool chunk, without replacing current chunk, meaning MSLABImpl does not make
+   * the returned chunk as CurChunk. The space on this chunk will be allocated externally. The
+   * interface is only for external callers.
+   */
   Chunk getNewExternalChunk(ChunkCreator.ChunkType chunkType);
 
-  /* Returning a new chunk, without replacing current chunk,
-  ** meaning MSLABImpl does not make the returned chunk as CurChunk.
-  ** The space on this chunk will be allocated externally.
-  ** The interface is only for external callers.
-  */
+  /*
+   * Returning a new chunk, without replacing current chunk, meaning MSLABImpl does not make the
+   * returned chunk as CurChunk. The space on this chunk will be allocated externally. The interface
+   * is only for external callers.
+   */
   Chunk getNewExternalChunk(int size);
 
   static MemStoreLAB newInstance(Configuration conf) {
@@ -115,7 +114,7 @@ public interface MemStoreLAB {
     if (isEnabled(conf)) {
       String className = conf.get(MSLAB_CLASS_NAME, MemStoreLABImpl.class.getName());
       memStoreLAB = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class }, new Object[] { conf });
+        new Class[] { Configuration.class }, new Object[] { conf });
     }
     return memStoreLAB;
   }

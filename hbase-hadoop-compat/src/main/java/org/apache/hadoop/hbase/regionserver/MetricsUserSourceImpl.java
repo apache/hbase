@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
@@ -23,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -59,7 +57,6 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   private final int hashCode;
 
   private AtomicBoolean closed = new AtomicBoolean(false);
-  private final MetricsUserAggregateSourceImpl agg;
   private final DynamicMetricsRegistry registry;
 
   private ConcurrentHashMap<String, ClientMetrics> clientMetricsMap;
@@ -74,32 +71,39 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
       this.hostName = hostName;
     }
 
-    @Override public void incrementReadRequest() {
+    @Override
+    public void incrementReadRequest() {
       readRequestsCount.increment();
     }
 
-    @Override public void incrementWriteRequest() {
+    @Override
+    public void incrementWriteRequest() {
       writeRequestsCount.increment();
     }
 
-    @Override public String getHostName() {
+    @Override
+    public String getHostName() {
       return hostName;
     }
 
-    @Override public long getReadRequestsCount() {
+    @Override
+    public long getReadRequestsCount() {
       return readRequestsCount.sum();
     }
 
-    @Override public long getWriteRequestsCount() {
+    @Override
+    public long getWriteRequestsCount() {
       return writeRequestsCount.sum();
     }
 
-    @Override public void incrementFilteredReadRequests() {
+    @Override
+    public void incrementFilteredReadRequests() {
       filteredRequestsCount.increment();
 
     }
 
-    @Override public long getFilteredReadRequests() {
+    @Override
+    public long getFilteredReadRequests() {
       return filteredRequestsCount.sum();
     }
   }
@@ -110,7 +114,6 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     }
 
     this.user = user;
-    this.agg = agg;
     this.registry = agg.getMetricsRegistry();
 
     this.userNamePrefix = "user_" + user + "_metric_";
@@ -191,8 +194,8 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
 
   @Override
   public boolean equals(Object obj) {
-    return obj == this ||
-        (obj instanceof MetricsUserSourceImpl && compareTo((MetricsUserSourceImpl) obj) == 0);
+    return obj == this
+      || (obj instanceof MetricsUserSourceImpl && compareTo((MetricsUserSourceImpl) obj) == 0);
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
@@ -252,16 +255,19 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     scanTimeHisto.add(t);
   }
 
-  @Override public void getMetrics(MetricsCollector metricsCollector, boolean all) {
+  @Override
+  public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(this.userNamePrefix);
     registry.snapshot(mrb, all);
   }
 
-  @Override public Map<String, ClientMetrics> getClientMetrics() {
+  @Override
+  public Map<String, ClientMetrics> getClientMetrics() {
     return Collections.unmodifiableMap(clientMetricsMap);
   }
 
-  @Override public ClientMetrics getOrCreateMetricsClient(String client) {
+  @Override
+  public ClientMetrics getOrCreateMetricsClient(String client) {
     ClientMetrics source = clientMetricsMap.get(client);
     if (source != null) {
       return source;

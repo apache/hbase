@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,12 +40,12 @@ import org.junit.experimental.categories.Category;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingInputStream;
 import org.apache.hbase.thirdparty.com.google.common.io.CountingOutputStream;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestCellCodec {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellCodec.class);
+    HBaseClassTestRule.forClass(TestCellCodec.class);
 
   @Test
   public void testEmptyWorks() throws IOException {
@@ -58,8 +58,7 @@ public class TestCellCodec {
     dos.close();
     long offset = cos.getCount();
     assertEquals(0, offset);
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertFalse(decoder.advance());
@@ -81,8 +80,7 @@ public class TestCellCodec {
     encoder.flush();
     dos.close();
     long offset = cos.getCount();
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance()); // First read should pull in the KV
@@ -111,8 +109,7 @@ public class TestCellCodec {
     encoder.flush();
     dos.close();
     long offset = cos.getCount();
-    CountingInputStream cis =
-      new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    CountingInputStream cis = new CountingInputStream(new ByteArrayInputStream(baos.toByteArray()));
     DataInputStream dis = new DataInputStream(cis);
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());

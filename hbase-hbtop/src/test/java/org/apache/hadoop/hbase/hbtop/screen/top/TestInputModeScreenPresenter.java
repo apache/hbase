@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestInputModeScreenPresenter {
@@ -68,8 +67,8 @@ public class TestInputModeScreenPresenter {
     histories.add("history1");
     histories.add("history2");
 
-    inputModeScreenPresenter = new InputModeScreenPresenter(inputModeScreenView,
-      TEST_INPUT_MESSAGE, histories, resultListener);
+    inputModeScreenPresenter = new InputModeScreenPresenter(inputModeScreenView, TEST_INPUT_MESSAGE,
+      histories, resultListener);
   }
 
   @Test

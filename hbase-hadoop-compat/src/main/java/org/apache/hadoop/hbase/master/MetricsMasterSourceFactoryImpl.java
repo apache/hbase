@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Factory to create MetricsMasterSource when given a  MetricsMasterWrapper
+ * Factory to create MetricsMasterSource when given a MetricsMasterWrapper
  */
 @InterfaceAudience.Private
 public class MetricsMasterSourceFactoryImpl implements MetricsMasterSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   private static enum FactoryStorage {
     INSTANCE;
-    MetricsMasterSource masterSource;
+
+    private MetricsMasterSource masterSource;
   }
 
   @Override

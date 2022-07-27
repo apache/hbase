@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,31 +20,31 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+
 /**
  * ZooKeeper based controller for a procedure member.
  * <p>
- * There can only be one {@link ZKProcedureMemberRpcs} per procedure type per member,
- * since each procedure type is bound to a single set of znodes. You can have multiple
- * {@link ZKProcedureMemberRpcs} on the same server, each serving a different member
- * name, but each individual rpcs is still bound to a single member name (and since they are
- * used to determine global progress, its important to not get this wrong).
+ * There can only be one {@link ZKProcedureMemberRpcs} per procedure type per member, since each
+ * procedure type is bound to a single set of znodes. You can have multiple
+ * {@link ZKProcedureMemberRpcs} on the same server, each serving a different member name, but each
+ * individual rpcs is still bound to a single member name (and since they are used to determine
+ * global progress, its important to not get this wrong).
  * <p>
  * To make this slightly more confusing, you can run multiple, concurrent procedures at the same
  * time (as long as they have different types), from the same controller, but the same node name
- * must be used for each procedure (though there is no conflict between the two procedure as long
- * as they have distinct names).
+ * must be used for each procedure (though there is no conflict between the two procedure as long as
+ * they have distinct names).
  * <p>
  * There is no real error recovery with this mechanism currently -- if any the coordinator fails,
  * its re-initialization will delete the znodes and require all in progress subprocedures to start
@@ -61,13 +61,12 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
 
   /**
    * Must call {@link #start(String, ProcedureMember)} before this can be used.
-   * @param watcher {@link ZKWatcher} to be owned by <tt>this</tt>. Closed via
-   *          {@link #close()}.
+   * @param watcher  {@link ZKWatcher} to be owned by <tt>this</tt>. Closed via {@link #close()}.
    * @param procType name of the znode describing the procedure type
    * @throws KeeperException if we can't reach zookeeper
    */
   public ZKProcedureMemberRpcs(final ZKWatcher watcher, final String procType)
-      throws KeeperException {
+    throws KeeperException {
     this.zkController = new ZKProcedureUtil(watcher, procType) {
       @Override
       public void nodeCreated(String path) {
@@ -136,7 +135,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     try {
       // this is the list of the currently aborted procedues
       List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkController.getWatcher(),
-                   zkController.getAbortZnode());
+        zkController.getAbortZnode());
       if (children == null || children.isEmpty()) {
         return;
       }
@@ -145,8 +144,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         abort(abortNode);
       }
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to list children for abort node:"
-          + zkController.getAbortZnode(), e, null);
+      member.controllerConnectionFailure(
+        "Failed to list children for abort node:" + zkController.getAbortZnode(), e, null);
     }
   }
 
@@ -162,8 +161,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         return;
       }
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("General failure when watching for new procedures",
-        e, null);
+      member.controllerConnectionFailure("General failure when watching for new procedures", e,
+        null);
     }
     if (runningProcedures == null) {
       LOG.debug("No running procedures.");
@@ -194,8 +193,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         return;
       }
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to get the abort znode (" + abortZNode
-          + ") for procedure :" + opName, e, opName);
+      member.controllerConnectionFailure(
+        "Failed to get the abort znode (" + abortZNode + ") for procedure :" + opName, e, opName);
       return;
     }
 
@@ -204,9 +203,9 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     try {
       byte[] data = ZKUtil.getData(zkController.getWatcher(), path);
       if (!ProtobufUtil.isPBMagicPrefix(data)) {
-        String msg = "Data in for starting procedure " + opName +
-          " is illegally formatted (no pb magic). " +
-          "Killing the procedure: " + Bytes.toString(data);
+        String msg =
+          "Data in for starting procedure " + opName + " is illegally formatted (no pb magic). "
+            + "Killing the procedure: " + Bytes.toString(data);
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
@@ -215,36 +214,35 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       LOG.debug("Found data for znode:" + path);
       subproc = member.createSubprocedure(opName, data);
       member.submitSubprocedure(subproc);
-    } catch (IllegalArgumentException iae ) {
+    } catch (IllegalArgumentException iae) {
       LOG.error("Illegal argument exception", iae);
       sendMemberAborted(subproc, new ForeignException(getMemberName(), iae));
     } catch (IllegalStateException ise) {
       LOG.error("Illegal state exception ", ise);
       sendMemberAborted(subproc, new ForeignException(getMemberName(), ise));
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to get data for new procedure:" + opName,
-        e, opName);
+      member.controllerConnectionFailure("Failed to get data for new procedure:" + opName, e,
+        opName);
     } catch (InterruptedException e) {
-      member.controllerConnectionFailure("Failed to get data for new procedure:" + opName,
-        e, opName);
+      member.controllerConnectionFailure("Failed to get data for new procedure:" + opName, e,
+        opName);
       Thread.currentThread().interrupt();
     }
   }
 
   /**
-   * This attempts to create an acquired state znode for the procedure (snapshot name).
-   *
-   * It then looks for the reached znode to trigger in-barrier execution.  If not present we
-   * have a watcher, if present then trigger the in-barrier action.
+   * This attempts to create an acquired state znode for the procedure (snapshot name). It then
+   * looks for the reached znode to trigger in-barrier execution. If not present we have a watcher,
+   * if present then trigger the in-barrier action.
    */
   @Override
   public void sendMemberAcquired(Subprocedure sub) throws IOException {
     String procName = sub.getName();
     try {
       LOG.debug("Member: '" + memberName + "' joining acquired barrier for procedure (" + procName
-          + ") in zk");
-      String acquiredZNode = ZNodePaths.joinZNode(ZKProcedureUtil.getAcquireBarrierNode(
-        zkController, procName), memberName);
+        + ") in zk");
+      String acquiredZNode = ZNodePaths
+        .joinZNode(ZKProcedureUtil.getAcquireBarrierNode(zkController, procName), memberName);
       ZKUtil.createAndFailSilent(zkController.getWatcher(), acquiredZNode);
 
       // watch for the complete node for this snapshot
@@ -254,8 +252,9 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         receivedReachedGlobalBarrier(reachedBarrier);
       }
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to acquire barrier for procedure: "
-          + procName + " and member: " + memberName, e, procName);
+      member.controllerConnectionFailure(
+        "Failed to acquire barrier for procedure: " + procName + " and member: " + memberName, e,
+        procName);
     }
   }
 
@@ -265,8 +264,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   @Override
   public void sendMemberCompleted(Subprocedure sub, byte[] data) throws IOException {
     String procName = sub.getName();
-    LOG.debug("Marking procedure  '" + procName + "' completed for member '" + memberName
-        + "' in zk");
+    LOG.debug(
+      "Marking procedure  '" + procName + "' completed for member '" + memberName + "' in zk");
     String joinPath =
       ZNodePaths.joinZNode(zkController.getReachedBarrierNode(procName), memberName);
     // ProtobufUtil.prependPBMagic does not take care of null
@@ -277,14 +276,14 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       ZKUtil.createAndFailSilent(zkController.getWatcher(), joinPath,
         ProtobufUtil.prependPBMagic(data));
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to post zk node:" + joinPath
-          + " to join procedure barrier.", e, procName);
+      member.controllerConnectionFailure(
+        "Failed to post zk node:" + joinPath + " to join procedure barrier.", e, procName);
     }
   }
 
   /**
-   * This should be called by the member and should write a serialized root cause exception as
-   * to the abort znode.
+   * This should be called by the member and should write a serialized root cause exception as to
+   * the abort znode.
    */
   @Override
   public void sendMemberAborted(Subprocedure sub, ForeignException ee) {
@@ -296,7 +295,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     LOG.debug("Aborting procedure (" + procName + ") in zk");
     String procAbortZNode = zkController.getAbortZNode(procName);
     try {
-      String source = (ee.getSource() == null) ? memberName: ee.getSource();
+      String source = (ee.getSource() == null) ? memberName : ee.getSource();
       byte[] errorInfo = ProtobufUtil.prependPBMagic(ForeignException.serialize(source, ee));
       ZKUtil.createAndFailSilent(zkController.getWatcher(), procAbortZNode, errorInfo);
       LOG.debug("Finished creating abort znode:" + procAbortZNode);
@@ -304,8 +303,8 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       // possible that we get this error for the procedure if we already reset the zk state, but in
       // that case we should still get an error for that procedure anyways
       zkController.logZKTree(zkController.getBaseZnode());
-      member.controllerConnectionFailure("Failed to post zk node:" + procAbortZNode
-          + " to abort procedure", e, procName);
+      member.controllerConnectionFailure(
+        "Failed to post zk node:" + procAbortZNode + " to abort procedure", e, procName);
     }
   }
 
@@ -327,7 +326,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
           return;
         } else if (!ProtobufUtil.isPBMagicPrefix(data)) {
           String msg = "Illegally formatted data in abort node for proc " + opName
-              + ".  Killing the procedure.";
+            + ".  Killing the procedure.";
           LOG.error(msg);
           // we got a remote exception, but we can't describe it so just return exn from here
           ee = new ForeignException(getMemberName(), new IllegalArgumentException(msg));
@@ -337,15 +336,16 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         }
       } catch (IOException e) {
         LOG.warn("Got an error notification for op:" + opName
-            + " but we can't read the information. Killing the procedure.");
+          + " but we can't read the information. Killing the procedure.");
         // we got a remote exception, but we can't describe it so just return exn from here
         ee = new ForeignException(getMemberName(), e);
       }
 
       this.member.receiveAbortProcedure(opName, ee);
     } catch (KeeperException e) {
-      member.controllerConnectionFailure("Failed to get data for abort znode:" + abortZNode
-          + zkController.getAbortZnode(), e, opName);
+      member.controllerConnectionFailure(
+        "Failed to get data for abort znode:" + abortZNode + zkController.getAbortZnode(), e,
+        opName);
     } catch (InterruptedException e) {
       LOG.warn("abort already in progress", e);
       Thread.currentThread().interrupt();

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.InterruptedIOException;
@@ -63,59 +61,54 @@ public interface RequestController {
 
     /**
      * Reset the state of the scheduler when completing the iteration of rows.
-     * @throws InterruptedIOException some controller may wait
-     * for some busy region or RS to complete the undealt request.
+     * @throws InterruptedIOException some controller may wait for some busy region or RS to
+     *                                complete the undealt request.
      */
-    void reset() throws InterruptedIOException ;
+    void reset() throws InterruptedIOException;
   }
 
-  /**
-   * @return A new checker for evaluating a batch rows.
-   */
+  /** Returns A new checker for evaluating a batch rows. */
   Checker newChecker();
 
   /**
    * Increment the counter if we build a valid task.
    * @param regions The destination of task
-   * @param sn The target server
+   * @param sn      The target server
    */
   void incTaskCounters(Collection<byte[]> regions, ServerName sn);
 
   /**
    * Decrement the counter if a task is accomplished.
    * @param regions The destination of task
-   * @param sn The target server
+   * @param sn      The target server
    */
   void decTaskCounters(Collection<byte[]> regions, ServerName sn);
 
-  /**
-   * @return The number of running task.
-   */
+  /** Returns The number of running task. */
   long getNumberOfTasksInProgress();
 
   /**
-   * Waits for the running tasks to complete.
-   * If there are specified threshold and trigger, the implementation should
-   * wake up once in a while for checking the threshold and calling trigger.
-   * @param max This method will return if the number of running tasks is
-   * less than or equal to max.
-   * @param id the caller's id
-   * @param periodToTrigger The period to invoke the trigger. This value is a
-   * hint. The real period depends on the implementation.
-   * @param trigger The object to call periodically.
+   * Waits for the running tasks to complete. If there are specified threshold and trigger, the
+   * implementation should wake up once in a while for checking the threshold and calling trigger.
+   * @param max             This method will return if the number of running tasks is less than or
+   *                        equal to max.
+   * @param id              the caller's id
+   * @param periodToTrigger The period to invoke the trigger. This value is a hint. The real period
+   *                        depends on the implementation.
+   * @param trigger         The object to call periodically.
    * @throws java.io.InterruptedIOException If the waiting is interrupted
    */
-  void waitForMaximumCurrentTasks(long max, long id,
-    int periodToTrigger, Consumer<Long> trigger) throws InterruptedIOException;
+  void waitForMaximumCurrentTasks(long max, long id, int periodToTrigger, Consumer<Long> trigger)
+    throws InterruptedIOException;
 
   /**
    * Wait until there is at least one slot for a new task.
-   * @param id the caller's id
-   * @param periodToTrigger The period to invoke the trigger. This value is a
-   * hint. The real period depends on the implementation.
-   * @param trigger The object to call periodically.
+   * @param id              the caller's id
+   * @param periodToTrigger The period to invoke the trigger. This value is a hint. The real period
+   *                        depends on the implementation.
+   * @param trigger         The object to call periodically.
    * @throws java.io.InterruptedIOException If the waiting is interrupted
    */
-  void waitForFreeSlot(long id, int periodToTrigger,
-          Consumer<Long> trigger) throws InterruptedIOException;
+  void waitForFreeSlot(long id, int periodToTrigger, Consumer<Long> trigger)
+    throws InterruptedIOException;
 }

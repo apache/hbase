@@ -222,9 +222,10 @@ under the License.
 
 ## Special cases, for e.g. ASL2.0 licensed works that bundle additional third party works
 #set($bundled-jquery = ${bundled-jquery.equalsIgnoreCase("true")})
+#set($bundled-vega = ${bundled-vega.equalsIgnoreCase("true")})
 #set($bundled-logo = ${bundled-logo.equalsIgnoreCase("true")})
 #set($bundled-dependencies = ${bundled-dependencies.equalsIgnoreCase("true")})
-#if($bundled-jquery || $bundled-logo || $bundled-dependencies)
+#if($bundled-jquery || $bundled-vega || $bundled-logo || $bundled-dependencies)
 ====
 ${project.name} contained works
 
@@ -260,6 +261,40 @@ This project bundles a copy of the JQuery minified javascript library version
     OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#end
+#macro(vega_license)
+This project bundles a copy of the Vega minified javascript library version
+5.19.1, the Vega-Lite minified javascript library version 5.0.0, and the
+Vega-Embed minified javascript library version 6.15.1. All three are
+available under the following '3-clause BSD' license.
+
+Copyright (c) 2015-2018, University of Washington Interactive Data Lab
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #end
 #macro(orca_logo_license)
 ----
@@ -1309,6 +1344,9 @@ You can redistribute it and/or modify it under either the terms of the
 #if(${bundled-jquery})
 #jquery_license()
 #end
+#if(${bundled-vega})
+#vega_license()
+#end
 #if(${bundled-logo})
 #orca_logo_license()
 #end
@@ -1343,7 +1381,7 @@ You can redistribute it and/or modify it under either the terms of the
 ## See this FAQ link for justifications: https://www.apache.org/legal/resolved.html
 ##
 ## NB: This list is later compared as lower-case. New entries must also be all lower-case
-#set($non_aggregate_fine = [ 'public domain', 'new bsd license', 'bsd license', 'bsd', 'bsd 2-clause license', 'mozilla public license version 1.1', 'mozilla public license version 2.0', 'creative commons attribution license, version 2.5', 'apache-2.0' ])
+#set($non_aggregate_fine = [ 'public domain', 'new bsd license', 'bsd license', 'bsd', 'bsd 2-clause license', 'mozilla public license version 1.1', 'mozilla public license version 2.0', 'creative commons attribution license, version 2.5' ])
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
 ## if there are no licenses we'll fail the build later, so

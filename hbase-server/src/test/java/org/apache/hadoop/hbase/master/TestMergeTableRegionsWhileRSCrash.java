@@ -45,17 +45,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMergeTableRegionsWhileRSCrash {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMergeTableRegionsWhileRSCrash.class);
+    HBaseClassTestRule.forClass(TestMergeTableRegionsWhileRSCrash.class);
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestMergeTableRegionsWhileRSCrash.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestMergeTableRegionsWhileRSCrash.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("test");
@@ -64,7 +62,6 @@ public class TestMergeTableRegionsWhileRSCrash {
   private static byte[] SPLITKEY = Bytes.toBytes("row5");
   private static CountDownLatch mergeCommitArrive = new CountDownLatch(1);
   private static Table TABLE;
-
 
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -87,27 +84,27 @@ public class TestMergeTableRegionsWhileRSCrash {
 
   @Test
   public void test() throws Exception {
-    //write some rows to the table
+    // write some rows to the table
     for (int i = 0; i < 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
       put.addColumn(CF, CF, CF);
       TABLE.put(put);
     }
-    MasterProcedureEnv env = UTIL.getMiniHBaseCluster().getMaster()
-        .getMasterProcedureExecutor().getEnvironment();
-    final ProcedureExecutor<MasterProcedureEnv> executor = UTIL.getMiniHBaseCluster()
-        .getMaster().getMasterProcedureExecutor();
+    MasterProcedureEnv env =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getEnvironment();
+    final ProcedureExecutor<MasterProcedureEnv> executor =
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     List<RegionInfo> regionInfos = admin.getRegions(TABLE_NAME);
-    MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(
-        env, new RegionInfo [] {regionInfos.get(0), regionInfos.get(1)}, false);
+    MergeTableRegionsProcedure mergeTableRegionsProcedure = new MergeTableRegionsProcedure(env,
+      new RegionInfo[] { regionInfos.get(0), regionInfos.get(1) }, false);
     executor.submitProcedure(mergeTableRegionsProcedure);
     UTIL.waitFor(30000,
       () -> executor.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
         .map(p -> (TransitRegionStateProcedure) p)
         .anyMatch(p -> TABLE_NAME.equals(p.getTableName())));
-    UTIL.getMiniHBaseCluster().killRegionServer(
-        UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName());
+    UTIL.getMiniHBaseCluster()
+      .killRegionServer(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName());
     UTIL.getMiniHBaseCluster().startRegionServer();
     UTIL.waitUntilNoRegionsInTransition();
     Scan scan = new Scan();

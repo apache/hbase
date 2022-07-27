@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.concurrent.BlockingQueue;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -37,28 +37,37 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
   private final QueueBalancer balancer;
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
-      final Abortable abortable) {
+    final int maxQueueLength, final PriorityFunction priority, final Configuration conf,
+    final Abortable abortable) {
     this(name, handlerCount, conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_CONF_DEFAULT),
-        maxQueueLength, priority, conf, abortable);
+      maxQueueLength, priority, conf, abortable);
   }
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount,
-      final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
-      final Configuration conf, final Abortable abortable) {
+    final String callQueueType, final int maxQueueLength, final PriorityFunction priority,
+    final Configuration conf, final Abortable abortable) {
     super(name, handlerCount, callQueueType, maxQueueLength, priority, conf, abortable);
-    this.balancer = getBalancer(this.numCallQueues);
     initializeQueues(this.numCallQueues);
+    this.balancer = getBalancer(name, conf, getQueues());
   }
 
   @Override
-  public boolean dispatch(final CallRunner callTask) throws InterruptedException {
-    int queueIndex = balancer.getNextQueue();
+  public boolean dispatch(final CallRunner callTask) {
+    int queueIndex = balancer.getNextQueue(callTask);
     BlockingQueue<CallRunner> queue = queues.get(queueIndex);
     // that means we can overflow by at most <num reader> size (5), that's ok
     if (queue.size() >= currentQueueLimit) {
       return false;
     }
     return queue.offer(callTask);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    super.onConfigurationChange(conf);
+
+    if (balancer instanceof ConfigurationObserver) {
+      ((ConfigurationObserver) balancer).onConfigurationChange(conf);
+    }
   }
 }

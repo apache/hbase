@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
@@ -40,12 +37,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
- * Different from {@link SingleColumnValueFilter} which returns an <b>entire</b> row
- * when specified condition is matched, {@link ColumnValueFilter} return the matched cell only.
+ * Different from {@link SingleColumnValueFilter} which returns an <b>entire</b> row when specified
+ * condition is matched, {@link ColumnValueFilter} return the matched cell only.
  * <p>
- * This filter is used to filter cells based on column and value.
- * It takes a {@link org.apache.hadoop.hbase.CompareOperator} operator (<, <=, =, !=, >, >=), and
- * and a {@link ByteArrayComparable} comparator.
+ * This filter is used to filter cells based on column and value. It takes a
+ * {@link org.apache.hadoop.hbase.CompareOperator} operator (<, <=, =, !=, >, >=), and and a
+ * {@link ByteArrayComparable} comparator.
  */
 @InterfaceAudience.Public
 public class ColumnValueFilter extends FilterBase {
@@ -58,14 +55,13 @@ public class ColumnValueFilter extends FilterBase {
   // columns in the same row can be skipped faster by NEXT_ROW instead of NEXT_COL.
   private boolean columnFound = false;
 
-  public ColumnValueFilter(final byte[] family, final byte[] qualifier,
-                           final CompareOperator op, final byte[] value) {
+  public ColumnValueFilter(final byte[] family, final byte[] qualifier, final CompareOperator op,
+    final byte[] value) {
     this(family, qualifier, op, new BinaryComparator(value));
   }
 
-  public ColumnValueFilter(final byte[] family, final byte[] qualifier,
-                           final CompareOperator op,
-                           final ByteArrayComparable comparator) {
+  public ColumnValueFilter(final byte[] family, final byte[] qualifier, final CompareOperator op,
+    final ByteArrayComparable comparator) {
     this.family = Preconditions.checkNotNull(family, "family should not be null.");
     this.qualifier = qualifier == null ? new byte[0] : qualifier;
     this.op = Preconditions.checkNotNull(op, "CompareOperator should not be null");
@@ -73,29 +69,23 @@ public class ColumnValueFilter extends FilterBase {
   }
 
   /**
-   * @return operator
+   * n
    */
   public CompareOperator getCompareOperator() {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the column family
-   */
+  /** Returns the column family */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Returns the qualifier */
   public byte[] getQualifier() {
     return qualifier;
   }
@@ -120,15 +110,16 @@ public class ColumnValueFilter extends FilterBase {
     columnFound = true;
     // 2. Check value match:
     // True means filter out, just skip this cell, else include it.
-    return compareValue(getCompareOperator(), getComparator(), c) ?
-      ReturnCode.SKIP : ReturnCode.INCLUDE;
+    return compareValue(getCompareOperator(), getComparator(), c)
+      ? ReturnCode.SKIP
+      : ReturnCode.INCLUDE;
   }
 
   /**
    * This method is used to determine a cell should be included or filtered out.
-   * @param op one of operators {@link CompareOperator}
+   * @param op         one of operators {@link CompareOperator}
    * @param comparator comparator used to compare cells.
-   * @param cell cell to be compared.
+   * @param cell       cell to be compared.
    * @return true means cell should be filtered out, included otherwise.
    */
   private boolean compareValue(final CompareOperator op, final ByteArrayComparable comparator,
@@ -146,32 +137,27 @@ public class ColumnValueFilter extends FilterBase {
    * @return a ColumnValueFilter
    */
   public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 4,
-      "Expect 4 arguments: %s", filterArguments.size());
+    Preconditions.checkArgument(filterArguments.size() == 4, "Expect 4 arguments: %s",
+      filterArguments.size());
     byte[] family = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     byte[] qualifier = ParseFilter.removeQuotesFromByteArray(filterArguments.get(1));
     CompareOperator operator = ParseFilter.createCompareOperator(filterArguments.get(2));
     ByteArrayComparable comparator =
       ParseFilter.createComparator(ParseFilter.removeQuotesFromByteArray(filterArguments.get(3)));
 
-    if (comparator instanceof RegexStringComparator ||
-        comparator instanceof SubstringComparator) {
-      if (operator != CompareOperator.EQUAL &&
-          operator != CompareOperator.NOT_EQUAL) {
-        throw new IllegalArgumentException("A regexstring comparator and substring comparator " +
-            "can only be used with EQUAL and NOT_EQUAL");
+    if (comparator instanceof RegexStringComparator || comparator instanceof SubstringComparator) {
+      if (operator != CompareOperator.EQUAL && operator != CompareOperator.NOT_EQUAL) {
+        throw new IllegalArgumentException("A regexstring comparator and substring comparator "
+          + "can only be used with EQUAL and NOT_EQUAL");
       }
     }
 
     return new ColumnValueFilter(family, qualifier, operator, comparator);
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.ColumnValueFilter convert() {
-    FilterProtos.ColumnValueFilter.Builder builder =
-      FilterProtos.ColumnValueFilter.newBuilder();
+    FilterProtos.ColumnValueFilter.Builder builder = FilterProtos.ColumnValueFilter.newBuilder();
 
     builder.setFamily(UnsafeByteOperations.unsafeWrap(this.family));
     builder.setQualifier(UnsafeByteOperations.unsafeWrap(this.qualifier));
@@ -182,10 +168,11 @@ public class ColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Parse protobuf bytes to a ColumnValueFilter
-   * @param pbBytes pbBytes
-   * @return a ColumnValueFilter
-   * @throws DeserializationException deserialization exception
+   * Parse a serialized representation of {@link ColumnValueFilter}
+   * @param pbBytes A pb serialized {@link ColumnValueFilter} instance
+   * @return An instance of {@link ColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static ColumnValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnValueFilter proto;
@@ -212,6 +199,10 @@ public class ColumnValueFilter extends FilterBase {
     return convert().toByteArray();
   }
 
+  /**
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
+   */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) {
@@ -219,12 +210,11 @@ public class ColumnValueFilter extends FilterBase {
     } else if (!(o instanceof ColumnValueFilter)) {
       return false;
     }
-
     ColumnValueFilter other = (ColumnValueFilter) o;
-    return Bytes.equals(this.getFamily(), other.getFamily()) &&
-      Bytes.equals(this.getQualifier(), other.getQualifier()) &&
-      this.getCompareOperator().equals(other.getCompareOperator()) &&
-      this.getComparator().areSerializedFieldsEqual(other.getComparator());
+    return Bytes.equals(this.getFamily(), other.getFamily())
+      && Bytes.equals(this.getQualifier(), other.getQualifier())
+      && this.getCompareOperator().equals(other.getCompareOperator())
+      && this.getComparator().areSerializedFieldsEqual(other.getComparator());
   }
 
   @Override
@@ -234,9 +224,8 @@ public class ColumnValueFilter extends FilterBase {
 
   @Override
   public String toString() {
-    return String.format("%s (%s, %s, %s, %s)",
-      getClass().getSimpleName(), Bytes.toStringBinary(this.family),
-      Bytes.toStringBinary(this.qualifier), this.op.name(),
+    return String.format("%s (%s, %s, %s, %s)", getClass().getSimpleName(),
+      Bytes.toStringBinary(this.family), Bytes.toStringBinary(this.qualifier), this.op.name(),
       Bytes.toStringBinary(this.comparator.getValue()));
   }
 

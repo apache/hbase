@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,7 +51,7 @@ public class TestReplicator extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicator.class);
+    HBaseClassTestRule.forClass(TestReplicator.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
@@ -72,7 +72,7 @@ public class TestReplicator extends TestReplicationBase {
     // Replace the peer set up for us by the base class with a wrapper for this test
     hbaseAdmin.addReplicationPeer("testReplicatorBatching",
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
-          .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()).build());
+        .setReplicationEndpointImpl(ReplicationEndpointForTest.class.getName()).build());
 
     ReplicationEndpointForTest.setBatchCount(0);
     ReplicationEndpointForTest.setEntriesCount(0);
@@ -228,37 +228,40 @@ public class TestReplicator extends TestReplicationBase {
     }
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
-      return () -> {
-        int batchIndex = replicateEntries(entries, ordinal, timeout);
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
+      int timeout) {
+      return replicateEntries(entries, ordinal, timeout).whenComplete((response, exception) -> {
         entriesCount += entries.size();
         int count = batchCount.incrementAndGet();
         LOG.info(
           "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
-        return batchIndex;
-      };
+      });
+
     }
   }
 
   public static class FailureInjectingReplicationEndpointForTest
-      extends ReplicationEndpointForTest {
+    extends ReplicationEndpointForTest {
     private final AtomicBoolean failNext = new AtomicBoolean(false);
 
     @Override
-    protected Callable<Integer> createReplicator(List<Entry> entries, int ordinal, int timeout) {
-      return () -> {
-        if (failNext.compareAndSet(false, true)) {
-          int batchIndex = replicateEntries(entries, ordinal, timeout);
+    protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int ordinal,
+      int timeout) {
+
+      if (failNext.compareAndSet(false, true)) {
+        return replicateEntries(entries, ordinal, timeout).whenComplete((response, exception) -> {
           entriesCount += entries.size();
           int count = batchCount.incrementAndGet();
           LOG.info(
             "Completed replicating batch " + System.identityHashCode(entries) + " count=" + count);
-          return batchIndex;
-        } else if (failNext.compareAndSet(true, false)) {
-          throw new ServiceException("Injected failure");
-        }
-        return ordinal;
-      };
+        });
+      } else if (failNext.compareAndSet(true, false)) {
+        CompletableFuture<Integer> future = new CompletableFuture<Integer>();
+        future.completeExceptionally(new ServiceException("Injected failure"));
+        return future;
+      }
+      return CompletableFuture.completedFuture(ordinal);
+
     }
   }
 }

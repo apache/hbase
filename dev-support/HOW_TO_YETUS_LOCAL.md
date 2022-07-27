@@ -87,7 +87,7 @@ these personalities; a pre-packaged personality can be selected via the
 `--project` parameter. There is a provided HBase personality in Yetus, however
 the HBase project maintains its own within the HBase source repository. Specify
 the path to the personality file using `--personality`. The HBase repository
-places this file under `dev-support/hbase-personality.sh`. 
+places this file under `dev-support/hbase-personality.sh`.
 
 ## Docker mode
 

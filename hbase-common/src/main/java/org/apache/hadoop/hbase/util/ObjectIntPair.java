@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *  A generic class for pair of an Object and and a primitive int value.
+ * A generic class for pair of an Object and and a primitive int value.
  */
 @InterfaceAudience.Private
 public class ObjectIntPair<T> {
@@ -57,7 +55,7 @@ public class ObjectIntPair<T> {
   @Override
   public boolean equals(Object other) {
     return other instanceof ObjectIntPair && equals(first, ((ObjectIntPair<?>) other).first)
-        && (this.second == ((ObjectIntPair<?>) other).second);
+      && (this.second == ((ObjectIntPair<?>) other).second);
   }
 
   private static boolean equals(Object x, Object y) {

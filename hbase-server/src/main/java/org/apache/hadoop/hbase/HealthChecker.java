@@ -19,17 +19,15 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.ArrayList;
-
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A utility for executing an external script that checks the health of
- * the node. An example script can be found at
- * <tt>src/main/sh/healthcheck/healthcheck.sh</tt> in the
- * <tt>hbase-examples</tt> module.
+ * A utility for executing an external script that checks the health of the node. An example script
+ * can be found at <tt>src/main/sh/healthcheck/healthcheck.sh</tt> in the <tt>hbase-examples</tt>
+ * module.
  */
 class HealthChecker {
 
@@ -53,9 +51,8 @@ class HealthChecker {
 
   /**
    * Initialize.
-   *
    * @param location the location of the health script
-   * @param timeout the timeout to be used for the health script
+   * @param timeout  the timeout to be used for the health script
    */
   public void init(String location, long timeout) {
     this.healthCheckScript = location;
@@ -63,9 +60,9 @@ class HealthChecker {
     ArrayList<String> execScript = new ArrayList<>();
     execScript.add(healthCheckScript);
     this.shexec = new ShellCommandExecutor(execScript.toArray(new String[execScript.size()]), null,
-        null, scriptTimeout);
-    LOG.info("HealthChecker initialized with script at " + this.healthCheckScript +
-      ", timeout=" + timeout);
+      null, scriptTimeout);
+    LOG.info("HealthChecker initialized with script at " + this.healthCheckScript + ", timeout="
+      + timeout);
   }
 
   public HealthReport checkHealth() {
@@ -104,24 +101,24 @@ class HealthChecker {
     return false;
   }
 
-  private String getHealthReport(HealthCheckerExitStatus status){
+  private String getHealthReport(HealthCheckerExitStatus status) {
     String healthReport = null;
     switch (status) {
-    case SUCCESS:
-      healthReport = "Server is healthy.";
-      break;
-    case TIMED_OUT:
-      healthReport = "Health script timed out";
-      break;
-    case FAILED_WITH_EXCEPTION:
-      healthReport = exceptionStackTrace;
-      break;
-    case FAILED_WITH_EXIT_CODE:
-      healthReport = "Health script failed with exit code.";
-      break;
-    case FAILED:
-      healthReport = shexec.getOutput();
-      break;
+      case SUCCESS:
+        healthReport = "Server is healthy.";
+        break;
+      case TIMED_OUT:
+        healthReport = "Health script timed out";
+        break;
+      case FAILED_WITH_EXCEPTION:
+        healthReport = exceptionStackTrace;
+        break;
+      case FAILED_WITH_EXIT_CODE:
+        healthReport = "Health script failed with exit code.";
+        break;
+      case FAILED:
+        healthReport = shexec.getOutput();
+        break;
     }
     return healthReport;
   }

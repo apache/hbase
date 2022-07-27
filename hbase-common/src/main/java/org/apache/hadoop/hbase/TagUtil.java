@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,11 +30,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class TagUtil {
 
-  private TagUtil(){}
+  private TagUtil() {
+  }
 
   /**
    * Creates list of tags from given byte array, expected that it is in the expected tag format.
-   * @param b The byte array
+   * @param b      The byte array
    * @param offset The offset in array where tag bytes begin
    * @param length Total length of all tags bytes
    * @return List of tags
@@ -53,7 +53,7 @@ public final class TagUtil {
 
   /**
    * Reads an int value stored as a VInt at tag's given offset.
-   * @param tag The Tag
+   * @param tag    The Tag
    * @param offset The offset where VInt bytes begin
    * @return A pair of the int value and number of bytes taken to store VInt
    * @throws IOException When varint is malformed and not able to be read correctly
@@ -65,9 +65,7 @@ public final class TagUtil {
     return StreamUtils.readRawVarint32(tag.getValueByteBuffer(), offset);
   }
 
-  /**
-   * @return A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null.
-   */
+  /** Returns A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null. */
   public static List<Tag> carryForwardTags(final Cell cell) {
     return carryForwardTags(null, cell);
   }
@@ -101,16 +99,14 @@ public final class TagUtil {
     int pos = Bytes.putBytes(b, 0, tags, 0, tags.length);
     if (cell instanceof ByteBufferExtendedCell) {
       ByteBufferUtils.copyFromBufferToArray(b, ((ByteBufferExtendedCell) cell).getTagsByteBuffer(),
-          ((ByteBufferExtendedCell) cell).getTagsPosition(), pos, cellTagsLen);
+        ((ByteBufferExtendedCell) cell).getTagsPosition(), pos, cellTagsLen);
     } else {
       Bytes.putBytes(b, pos, cell.getTagsArray(), cell.getTagsOffset(), cellTagsLen);
     }
     return b;
   }
 
-  /**
-   * @return Carry forward the TTL tag.
-   */
+  /** Returns Carry forward the TTL tag. */
   public static List<Tag> carryForwardTTLTag(final List<Tag> tagsOrNull, final long ttl) {
     if (ttl == Long.MAX_VALUE) {
       return tagsOrNull;
@@ -137,8 +133,7 @@ public final class TagUtil {
   }
 
   /**
-   * Write a list of tags into a byte array
-   * Note : these are all purely internal APIs. It helps in
+   * Write a list of tags into a byte array Note : these are all purely internal APIs. It helps in
    * cases where we have set of tags and we would want to create a cell out of it. Say in Mobs we
    * create a reference tags to indicate the presence of mob data. Also note that these are not
    * exposed to CPs also
@@ -181,8 +176,8 @@ public final class TagUtil {
     }
 
     @Override
-    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IT_NO_SUCH_ELEMENT",
-      justification="Intentional")
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IT_NO_SUCH_ELEMENT",
+        justification = "Intentional")
     public Tag next() {
       return null;
     }

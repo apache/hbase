@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +18,8 @@
 package org.apache.hadoop.hbase.hbtop.terminal.impl;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
-
 
 public final class TestKeyPress {
 

@@ -1,7 +1,6 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-<!--
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
   /**
    * Licensed to the Apache Software Foundation (ASF) under one
    * or more contributor license agreements.  See the NOTICE file
@@ -23,9 +22,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <artifactId>hbase-shaded</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <artifactId>hbase-shaded</artifactId>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -39,36 +38,6 @@
       <version>${hadoop.version}</version>
       <type>test-jar</type>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet.jsp</groupId>
-          <artifactId>jsp-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-jaxrs</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-xc</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.ws.rs</groupId>
-          <artifactId>jsr311-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -122,12 +91,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
       <type>test-jar</type>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-jaxrs</artifactId>
-      <version>1.9.13</version>
       <scope>compile</scope>
     </dependency>
     <dependency>

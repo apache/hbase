@@ -1,18 +1,19 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.encoding;
 
@@ -31,25 +32,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Compress key by storing size of common prefix with previous KeyValue
- * and storing raw size of rest.
- *
- * Format:
- * 1-5 bytes: compressed key length minus prefix (7-bit encoding)
- * 1-5 bytes: compressed value length (7-bit encoding)
- * 1-3 bytes: compressed length of common key prefix
- * ... bytes: rest of key (including timestamp)
- * ... bytes: value
- *
- * In a worst case compressed KeyValue will be three bytes longer than original.
- *
+ * Compress key by storing size of common prefix with previous KeyValue and storing raw size of
+ * rest. Format: 1-5 bytes: compressed key length minus prefix (7-bit encoding) 1-5 bytes:
+ * compressed value length (7-bit encoding) 1-3 bytes: compressed length of common key prefix ...
+ * bytes: rest of key (including timestamp) ... bytes: value In a worst case compressed KeyValue
+ * will be three bytes longer than original.
  */
 @InterfaceAudience.Private
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
-      DataOutputStream out) throws IOException {
+    DataOutputStream out) throws IOException {
     int klength = KeyValueUtil.keyLength(cell);
     int vlength = cell.getValueLength();
     EncodingState state = encodingContext.getEncodingState();
@@ -58,7 +52,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, klength);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      PrivateCellUtil.writeFlatKey(cell, (DataOutput)out);
+      PrivateCellUtil.writeFlatKey(cell, (DataOutput) out);
     } else {
       // find a common prefix and skip it
       int common = PrivateCellUtil.findCommonPrefixInFlatKey(cell, state.prevCell, true, true);
@@ -76,7 +70,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   private void writeKeyExcludingCommon(Cell cell, int commonPrefix, DataOutputStream out)
-      throws IOException {
+    throws IOException {
     short rLen = cell.getRowLength();
     if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
       // Previous and current rows are different. Need to write the differing part followed by
@@ -92,7 +86,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       // The full row key part is common. CF part will be common for sure as we deal with Cells in
       // same family. Just need write the differing part in q, ts and type
       commonPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
-          - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+        - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
       int qLen = cell.getQualifierLength();
       int commonQualPrefix = Math.min(commonPrefix, qLen);
       int qualPartLenToWrite = qLen - commonQualPrefix;
@@ -105,8 +99,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
         int commonTimestampPrefix = Math.min(commonPrefix, KeyValue.TIMESTAMP_SIZE);
         if (commonTimestampPrefix < KeyValue.TIMESTAMP_SIZE) {
           byte[] curTsBuf = Bytes.toBytes(cell.getTimestamp());
-          out.write(curTsBuf, commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE
-              - commonTimestampPrefix);
+          out.write(curTsBuf, commonTimestampPrefix,
+            KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
         }
         commonPrefix -= commonTimestampPrefix;
         if (commonPrefix == 0) {
@@ -121,10 +115,9 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
   protected ByteBuffer internalDecodeKeyValues(DataInputStream source, int allocateHeaderLength,
-      int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
+    int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     int decompressedSize = source.readInt();
-    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize +
-        allocateHeaderLength);
+    ByteBuffer buffer = ByteBuffer.allocate(decompressedSize + allocateHeaderLength);
     buffer.position(allocateHeaderLength);
     int prevKeyOffset = 0;
 
@@ -141,9 +134,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     return buffer;
   }
 
-  private int decodeKeyValue(DataInputStream source, ByteBuffer buffer,
-      int prevKeyOffset)
-          throws IOException, EncoderBufferTooSmallException {
+  private int decodeKeyValue(DataInputStream source, ByteBuffer buffer, int prevKeyOffset)
+    throws IOException, EncoderBufferTooSmallException {
     int keyLength = ByteBufferUtils.readCompressedInt(source);
     int valueLength = ByteBufferUtils.readCompressedInt(source);
     int commonLength = ByteBufferUtils.readCompressedInt(source);
@@ -158,8 +150,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     // copy the prefix
     if (commonLength > 0) {
       keyOffset = buffer.position();
-      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, prevKeyOffset,
-          commonLength);
+      ByteBufferUtils.copyFromBufferToBuffer(buffer, buffer, prevKeyOffset, commonLength);
     } else {
       keyOffset = buffer.position();
     }
@@ -179,8 +170,8 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuff.readCompressedInt(block);
     int commonLength = ByteBuff.readCompressedInt(block);
     if (commonLength != 0) {
-      throw new AssertionError("Nonzero common length in the first key in "
-          + "block: " + commonLength);
+      throw new AssertionError(
+        "Nonzero common length in the first key in " + "block: " + commonLength);
     }
     ByteBuffer key = block.asSubByteBuffer(keyLength).duplicate();
     block.reset();
@@ -197,8 +188,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     return new SeekerStateBufferedEncodedSeeker(decodingCtx);
   }
 
-  private static class SeekerStateBufferedEncodedSeeker
-      extends BufferedEncodedSeeker<SeekerState> {
+  private static class SeekerStateBufferedEncodedSeeker extends BufferedEncodedSeeker<SeekerState> {
 
     private SeekerStateBufferedEncodedSeeker(HFileBlockDecodingContext decodingCtx) {
       super(decodingCtx);
@@ -212,7 +202,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
       current.keyLength += current.lastCommonPrefix;
       current.ensureSpaceForKey();
       currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
-          current.keyLength - current.lastCommonPrefix);
+        current.keyLength - current.lastCommonPrefix);
       current.valueOffset = currentBuffer.position();
       currentBuffer.skip(current.valueLength);
       if (includesTags()) {

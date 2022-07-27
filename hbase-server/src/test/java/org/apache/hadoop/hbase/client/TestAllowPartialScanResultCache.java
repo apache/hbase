@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,7 @@ public class TestAllowPartialScanResultCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAllowPartialScanResultCache.class);
+    HBaseClassTestRule.forClass(TestAllowPartialScanResultCache.class);
 
   private static byte[] CF = Bytes.toBytes("cf");
 
@@ -85,7 +85,7 @@ public class TestAllowPartialScanResultCache {
     }
 
     Result[] results3 =
-        resultCache.addAndGet(new Result[] { Result.create(cells1), Result.create(cells2) }, false);
+      resultCache.addAndGet(new Result[] { Result.create(cells1), Result.create(cells2) }, false);
     assertEquals(1, results3.length);
     assertEquals(2, Bytes.toInt(results3[0].getRow()));
     assertEquals(10, results3[0].rawCells().length);

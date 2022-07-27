@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +27,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
- * Tracker on cluster settings up in zookeeper.
- * This is not related to {@link org.apache.hadoop.hbase.ClusterMetrics}. That class
- * is a data structure that holds snapshot of current view on cluster. This class
- * is about tracking cluster attributes up in zookeeper.
- *
+ * Tracker on cluster settings up in zookeeper. This is not related to
+ * {@link org.apache.hadoop.hbase.ClusterMetrics}. That class is a data structure that holds
+ * snapshot of current view on cluster. This class is about tracking cluster attributes up in
+ * zookeeper.
  */
 @InterfaceAudience.Private
 public class ClusterStatusTracker extends ZKNodeTracker {
@@ -40,11 +38,10 @@ public class ClusterStatusTracker extends ZKNodeTracker {
 
   /**
    * Creates a cluster status tracker.
-   *
-   * <p>After construction, use {@link #start} to kick off tracking.
-   *
-   * @param watcher reference to the {@link ZKWatcher} which also contains configuration and
-   *                constants
+   * <p>
+   * After construction, use {@link #start} to kick off tracking.
+   * @param watcher   reference to the {@link ZKWatcher} which also contains configuration and
+   *                  constants
    * @param abortable used to abort if a fatal error occurs
    */
   public ClusterStatusTracker(ZKWatcher watcher, Abortable abortable) {
@@ -53,8 +50,8 @@ public class ClusterStatusTracker extends ZKNodeTracker {
 
   /**
    * Checks if cluster is up.
-   * @return true if the cluster up ('shutdown' is its name up in zk) znode
-   *         exists with data, false if not
+   * @return true if the cluster up ('shutdown' is its name up in zk) znode exists with data, false
+   *         if not
    */
   public boolean isClusterUp() {
     return super.getData(false) != null;
@@ -64,12 +61,11 @@ public class ClusterStatusTracker extends ZKNodeTracker {
    * Sets the cluster as up.
    * @throws KeeperException unexpected zk exception
    */
-  public void setClusterUp()
-    throws KeeperException {
-    byte [] upData = toByteArray();
+  public void setClusterUp() throws KeeperException {
+    byte[] upData = toByteArray();
     try {
       ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().clusterStateZNode, upData);
-    } catch(KeeperException.NodeExistsException nee) {
+    } catch (KeeperException.NodeExistsException nee) {
       ZKUtil.setData(watcher, watcher.getZNodePaths().clusterStateZNode, upData);
     }
   }
@@ -78,23 +74,18 @@ public class ClusterStatusTracker extends ZKNodeTracker {
    * Sets the cluster as down by deleting the znode.
    * @throws KeeperException unexpected zk exception
    */
-  public void setClusterDown()
-    throws KeeperException {
+  public void setClusterDown() throws KeeperException {
     try {
       ZKUtil.deleteNode(watcher, watcher.getZNodePaths().clusterStateZNode);
-    } catch(KeeperException.NoNodeException nne) {
-      LOG.warn("Attempted to set cluster as down but already down, cluster " +
-          "state node (" + watcher.getZNodePaths().clusterStateZNode + ") not found");
+    } catch (KeeperException.NoNodeException nne) {
+      LOG.warn("Attempted to set cluster as down but already down, cluster " + "state node ("
+        + watcher.getZNodePaths().clusterStateZNode + ") not found");
     }
   }
 
-  /**
-   * @return Content of the clusterup znode as a serialized pb with the pb
-   *         magic as prefix.
-   */
-  static byte [] toByteArray() {
-    ZooKeeperProtos.ClusterUp.Builder builder =
-      ZooKeeperProtos.ClusterUp.newBuilder();
+  /** Returns Content of the clusterup znode as a serialized pb with the pb magic as prefix. */
+  static byte[] toByteArray() {
+    ZooKeeperProtos.ClusterUp.Builder builder = ZooKeeperProtos.ClusterUp.newBuilder();
     builder.setStartDate(new java.util.Date().toString());
     return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }

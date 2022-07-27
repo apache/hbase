@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
-
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its way out it
@@ -39,8 +38,8 @@ import org.apache.yetus.audience.InterfaceStability;
  * RegionInfo we're making the call against if relevant (useful adding info to exceptions and logs).
  * Used by client and server ipc'ing.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
-  HBaseInterfaceAudience.REPLICATION})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
+  HBaseInterfaceAudience.REPLICATION })
 @InterfaceStability.Evolving
 public interface HBaseRpcController extends RpcController, CellScannable {
 
@@ -51,19 +50,19 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   void setCellScanner(CellScanner cellScanner);
 
   /**
+   * Set the priority for this operation.
    * @param priority Priority for this request; should fall roughly in the range
-   *          {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
+   *                 {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
    */
   void setPriority(int priority);
 
   /**
+   * Set the priority for this operation.
    * @param tn Set priority based off the table we are going against.
    */
   void setPriority(final TableName tn);
 
-  /**
-   * @return The priority of this request
-   */
+  /** Returns The priority of this request */
   int getPriority();
 
   int getCallTimeout();
@@ -111,16 +110,12 @@ public interface HBaseRpcController extends RpcController, CellScannable {
    */
   void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action) throws IOException;
 
-  /**
-   * @return True if this Controller is carrying the RPC target Region's RegionInfo.
-   */
+  /** Returns True if this Controller is carrying the RPC target Region's RegionInfo. */
   default boolean hasRegionInfo() {
     return false;
   }
 
-  /**
-   * @return Target Region's RegionInfo or null if not available or pertinent.
-   */
+  /** Returns Target Region's RegionInfo or null if not available or pertinent. */
   default RegionInfo getRegionInfo() {
     return null;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.client.Admin;
@@ -78,7 +77,7 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
   private FastLongHistogram histogram = new FastLongHistogram();
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   FastLongHistogram getHistogram() {
     return histogram;
   }
@@ -113,15 +112,14 @@ public class RegionReplicationLagEvaluation extends Configured implements Tool {
   }
 
   private void checkLag(Table table, int rlen, int vlen, int rows) throws IOException {
-    ThreadLocalRandom rand = ThreadLocalRandom.current();
     byte[] family = Bytes.toBytes(FAMILY_NAME);
     byte[] qualifier = Bytes.toBytes(QUALIFIER_NAME);
-    byte[] row = new byte[rlen];
-    byte[] value = new byte[vlen];
     LOG.info("Test replication lag on table {} with {} rows", table.getName(), rows);
     for (int i = 0; i < rows; i++) {
-      rand.nextBytes(row);
-      rand.nextBytes(value);
+      byte[] row = new byte[rlen];
+      Bytes.random(row);
+      byte[] value = new byte[vlen];
+      Bytes.random(value);
       table.put(new Put(row).addColumn(family, qualifier, value));
       // get from secondary replica
       Get get = new Get(row).setConsistency(Consistency.TIMELINE).setReplicaId(1);

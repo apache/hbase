@@ -34,18 +34,19 @@ import org.apache.hadoop.util.Shell;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 /**
- * Receives shell commands from the client and executes them blindly. Intended only for use
- * by {@link ChaosMonkey} via {@link CoprocClusterManager}
+ * Receives shell commands from the client and executes them blindly. Intended only for use by
+ * {@link ChaosMonkey} via {@link CoprocClusterManager}
  */
 @InterfaceAudience.Private
-public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecService implements
-  MasterCoprocessor, RegionServerCoprocessor {
+public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecService
+  implements MasterCoprocessor, RegionServerCoprocessor {
   private static final Logger LOG = LoggerFactory.getLogger(ShellExecEndpointCoprocessor.class);
 
   public static final String BACKGROUND_DELAY_MS_KEY = "hbase.it.shellexeccoproc.async.delay.ms";
@@ -55,12 +56,9 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
   private Configuration conf;
 
   public ShellExecEndpointCoprocessor() {
-    backgroundExecutor = Executors.newSingleThreadExecutor(
-      new ThreadFactoryBuilder()
-        .setNameFormat(ShellExecEndpointCoprocessor.class.getSimpleName() + "-{}")
-        .setDaemon(true)
-        .setUncaughtExceptionHandler((t, e) -> LOG.warn("Thread {} threw", t, e))
-        .build());
+    backgroundExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
+      .setNameFormat(ShellExecEndpointCoprocessor.class.getSimpleName() + "-{}").setDaemon(true)
+      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Thread {} threw", t, e)).build());
   }
 
   @Override
@@ -74,11 +72,8 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
   }
 
   @Override
-  public void shellExec(
-    final RpcController controller,
-    final ShellExecRequest request,
-    final RpcCallback<ShellExecResponse> done
-  ) {
+  public void shellExec(final RpcController controller, final ShellExecRequest request,
+    final RpcCallback<ShellExecResponse> done) {
     final String command = request.getCommand();
     if (StringUtils.isBlank(command)) {
       throw new RuntimeException("Request contained an empty command.");
@@ -87,8 +82,8 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
     final String[] subShellCmd = new String[] { "/usr/bin/env", "bash", "-c", command };
     final Shell.ShellCommandExecutor shell = new Shell.ShellCommandExecutor(subShellCmd);
 
-    final String msgFmt = "Executing command"
-      + (!awaitResponse ? " on a background thread" : "") + ": {}";
+    final String msgFmt =
+      "Executing command" + (!awaitResponse ? " on a background thread" : "") + ": {}";
     LOG.info(msgFmt, command);
 
     if (awaitResponse) {
@@ -98,11 +93,8 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
     }
   }
 
-  private void runForegroundTask(
-    final Shell.ShellCommandExecutor shell,
-    final RpcController controller,
-    final RpcCallback<ShellExecResponse> done
-  ) {
+  private void runForegroundTask(final Shell.ShellCommandExecutor shell,
+    final RpcController controller, final RpcCallback<ShellExecResponse> done) {
     ShellExecResponse.Builder builder = ShellExecResponse.newBuilder();
     try {
       doExec(shell, builder);
@@ -113,12 +105,10 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
     done.run(builder.build());
   }
 
-  private void runBackgroundTask(
-    final Shell.ShellCommandExecutor shell,
-    final RpcCallback<ShellExecResponse> done
-  ) {
+  private void runBackgroundTask(final Shell.ShellCommandExecutor shell,
+    final RpcCallback<ShellExecResponse> done) {
     final long sleepDuration = conf.getLong(BACKGROUND_DELAY_MS_KEY, DEFAULT_BACKGROUND_DELAY_MS);
-    backgroundExecutor.submit(() -> {
+    backgroundExecutor.execute(() -> {
       try {
         // sleep first so that the RPC can ACK. race condition here as we have no means of blocking
         // until the IPC response has been acknowledged by the client.
@@ -136,21 +126,14 @@ public class ShellExecEndpointCoprocessor extends ShellExecEndpoint.ShellExecSer
   /**
    * Execute {@code shell} and collect results into {@code builder} as side-effects.
    */
-  private void doExec(
-    final Shell.ShellCommandExecutor shell,
-    final ShellExecResponse.Builder builder
-  ) throws IOException {
+  private void doExec(final Shell.ShellCommandExecutor shell,
+    final ShellExecResponse.Builder builder) throws IOException {
     try {
       shell.execute();
-      builder
-        .setExitCode(shell.getExitCode())
-        .setStdout(shell.getOutput());
+      builder.setExitCode(shell.getExitCode()).setStdout(shell.getOutput());
     } catch (Shell.ExitCodeException e) {
       LOG.warn("Launched process failed", e);
-      builder
-        .setExitCode(e.getExitCode())
-        .setStdout(shell.getOutput())
-        .setStderr(e.getMessage());
+      builder.setExitCode(e.getExitCode()).setStdout(shell.getOutput()).setStderr(e.getMessage());
     }
   }
 }

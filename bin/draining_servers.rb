@@ -61,6 +61,7 @@ end
 def getServerNames(hostOrServers, config)
   ret = []
   connection = ConnectionFactory.createConnection(config)
+  admin = nil
 
   hostOrServers.each do |host_or_server|
     # check whether it is already serverName. No need to connect to cluster

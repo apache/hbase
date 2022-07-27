@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.OptionalLong;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -60,44 +59,28 @@ public interface StoreFile {
    */
   long getMaxMemStoreTS();
 
-  /**
-   * @return Path or null if this StoreFile was made with a Stream.
-   */
+  /** Returns Path or null if this StoreFile was made with a Stream. */
   Path getPath();
 
-  /**
-   * @return Encoded Path if this StoreFile was made with a Stream.
-   */
+  /** Returns Encoded Path if this StoreFile was made with a Stream. */
   Path getEncodedPath();
 
-  /**
-   * @return Returns the qualified path of this StoreFile
-   */
+  /** Returns Returns the qualified path of this StoreFile */
   Path getQualifiedPath();
 
-  /**
-   * @return True if this is a StoreFile Reference.
-   */
+  /** Returns True if this is a StoreFile Reference. */
   boolean isReference();
 
-  /**
-   * @return True if this is HFile.
-   */
+  /** Returns True if this is HFile. */
   boolean isHFile();
 
-  /**
-   * @return True if this file was made by a major compaction.
-   */
+  /** Returns True if this file was made by a major compaction. */
   boolean isMajorCompactionResult();
 
-  /**
-   * @return True if this file should not be part of a minor compaction.
-   */
+  /** Returns True if this file should not be part of a minor compaction. */
   boolean excludeFromMinorCompaction();
 
-  /**
-   * @return This files maximum edit sequence id.
-   */
+  /** Returns This files maximum edit sequence id. */
   long getMaxSequenceId();
 
   /**
@@ -121,9 +104,7 @@ public interface StoreFile {
    */
   OptionalLong getBulkLoadTimestamp();
 
-  /**
-   * @return a length description of this StoreFile, suitable for debug output
-   */
+  /** Returns a length description of this StoreFile, suitable for debug output */
   String toStringDetailed();
 
   /**

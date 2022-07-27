@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static java.util.stream.Collectors.toList;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,12 +47,11 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 @InterfaceAudience.Private
 class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
-  private final AsyncTable<AdvancedScanResultConsumer> rawTable;
+  private final RawAsyncTableImpl rawTable;
 
   private final ExecutorService pool;
 
-  AsyncTableImpl(AsyncConnectionImpl conn, AsyncTable<AdvancedScanResultConsumer> rawTable,
-      ExecutorService pool) {
+  AsyncTableImpl(RawAsyncTableImpl rawTable, ExecutorService pool) {
     this.rawTable = rawTable;
     this.pool = pool;
   }
@@ -179,8 +181,7 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   public CheckAndMutateWithFilterBuilder checkAndMutate(byte[] row, Filter filter) {
     return new CheckAndMutateWithFilterBuilder() {
 
-      private final CheckAndMutateWithFilterBuilder builder =
-        rawTable.checkAndMutate(row, filter);
+      private final CheckAndMutateWithFilterBuilder builder = rawTable.checkAndMutate(row, filter);
 
       @Override
       public CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange) {
@@ -211,10 +212,9 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   @Override
-  public List<CompletableFuture<CheckAndMutateResult>> checkAndMutate(
-    List<CheckAndMutate> checkAndMutates) {
-    return rawTable.checkAndMutate(checkAndMutates).stream()
-      .map(this::wrap).collect(toList());
+  public List<CompletableFuture<CheckAndMutateResult>>
+    checkAndMutate(List<CheckAndMutate> checkAndMutates) {
+    return rawTable.checkAndMutate(checkAndMutates).stream().map(this::wrap).collect(toList());
   }
 
   @Override
@@ -233,22 +233,29 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   }
 
   private void scan0(Scan scan, ScanResultConsumer consumer) {
-    try (ResultScanner scanner = getScanner(scan)) {
-      consumer.onScanMetricsCreated(scanner.getScanMetrics());
-      for (Result result; (result = scanner.next()) != null;) {
-        if (!consumer.onNext(result)) {
-          break;
+    Span span = null;
+    try (AsyncTableResultScanner scanner = rawTable.getScanner(scan)) {
+      span = scanner.getSpan();
+      try (Scope ignored = span.makeCurrent()) {
+        consumer.onScanMetricsCreated(scanner.getScanMetrics());
+        for (Result result; (result = scanner.next()) != null;) {
+          if (!consumer.onNext(result)) {
+            break;
+          }
         }
+        consumer.onComplete();
       }
-      consumer.onComplete();
     } catch (IOException e) {
-      consumer.onError(e);
+      try (Scope ignored = span.makeCurrent()) {
+        consumer.onError(e);
+      }
     }
   }
 
   @Override
   public void scan(Scan scan, ScanResultConsumer consumer) {
-    pool.execute(() -> scan0(scan, consumer));
+    final Context context = Context.current();
+    pool.execute(context.wrap(() -> scan0(scan, consumer)));
   }
 
   @Override
@@ -273,34 +280,35 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
 
   @Override
   public <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
-      ServiceCaller<S, R> callable, byte[] row) {
+    ServiceCaller<S, R> callable, byte[] row) {
     return wrap(rawTable.coprocessorService(stubMaker, callable, row));
   }
 
   @Override
   public <S, R> CoprocessorServiceBuilder<S, R> coprocessorService(
-      Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
-      CoprocessorCallback<R> callback) {
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable,
+    CoprocessorCallback<R> callback) {
+    final Context context = Context.current();
     CoprocessorCallback<R> wrappedCallback = new CoprocessorCallback<R>() {
 
       @Override
       public void onRegionComplete(RegionInfo region, R resp) {
-        pool.execute(() -> callback.onRegionComplete(region, resp));
+        pool.execute(context.wrap(() -> callback.onRegionComplete(region, resp)));
       }
 
       @Override
       public void onRegionError(RegionInfo region, Throwable error) {
-        pool.execute(() -> callback.onRegionError(region, error));
+        pool.execute(context.wrap(() -> callback.onRegionError(region, error)));
       }
 
       @Override
       public void onComplete() {
-        pool.execute(() -> callback.onComplete());
+        pool.execute(context.wrap(callback::onComplete));
       }
 
       @Override
       public void onError(Throwable error) {
-        pool.execute(() -> callback.onError(error));
+        pool.execute(context.wrap(() -> callback.onError(error)));
       }
     };
     CoprocessorServiceBuilder<S, R> builder =

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -67,25 +66,25 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitRequest;
 
 /**
- * minicluster tests that validate that quota  entries are properly set in the quota table
+ * minicluster tests that validate that quota entries are properly set in the quota table
  */
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestQuotaAdmin {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaAdmin.class);
+    HBaseClassTestRule.forClass(TestQuotaAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestQuotaAdmin.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private final static TableName[] TABLE_NAMES =
-      new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
-          TableName.valueOf("TestQuotaAdmin2") };
+    new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
+      TableName.valueOf("TestQuotaAdmin2") };
 
   private final static String[] NAMESPACES =
-      new String[] { "NAMESPACE01", "NAMESPACE02", "NAMESPACE03" };
+    new String[] { "NAMESPACE01", "NAMESPACE02", "NAMESPACE03" };
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -119,18 +118,18 @@ public class TestQuotaAdmin {
     String userName = User.getCurrent().getShortName();
 
     admin.setQuota(
-        QuotaSettingsFactory.throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
-    admin.setQuota(QuotaSettingsFactory
-        .throttleUser(userName, ThrottleType.WRITE_NUMBER, 12, TimeUnit.MINUTES));
+      QuotaSettingsFactory.throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(
+      QuotaSettingsFactory.throttleUser(userName, ThrottleType.WRITE_NUMBER, 12, TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
 
     try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
       int countThrottle = 0;
       int countGlobalBypass = 0;
-      for (QuotaSettings settings: scanner) {
+      for (QuotaSettings settings : scanner) {
         switch (settings.getQuotaType()) {
           case THROTTLE:
-            ThrottleSettings throttle = (ThrottleSettings)settings;
+            ThrottleSettings throttle = (ThrottleSettings) settings;
             if (throttle.getSoftLimit() == 6) {
               assertEquals(ThrottleType.READ_NUMBER, throttle.getThrottleType());
             } else if (throttle.getSoftLimit() == 12) {
@@ -166,18 +165,18 @@ public class TestQuotaAdmin {
     Admin admin = TEST_UTIL.getAdmin();
     String userName = User.getCurrent().getShortName();
 
-    admin.setQuota(QuotaSettingsFactory
-      .throttleUser(userName, ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.throttleUser(userName, ThrottleType.REQUEST_NUMBER, 6,
+      TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
 
     try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
       int countThrottle = 0;
       int countGlobalBypass = 0;
-      for (QuotaSettings settings: scanner) {
+      for (QuotaSettings settings : scanner) {
         LOG.debug(Objects.toString(settings));
         switch (settings.getQuotaType()) {
           case THROTTLE:
-            ThrottleSettings throttle = (ThrottleSettings)settings;
+            ThrottleSettings throttle = (ThrottleSettings) settings;
             assertEquals(userName, throttle.getUserName());
             assertEquals(null, throttle.getTableName());
             assertEquals(null, throttle.getNamespace());
@@ -213,19 +212,19 @@ public class TestQuotaAdmin {
     Admin admin = TEST_UTIL.getAdmin();
     TableName tableName = TableName.valueOf("testMultiQuotaThrottling");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
     admin.createTable(desc);
 
     // Set up the quota.
     admin.setQuota(QuotaSettingsFactory.throttleTable(tableName, ThrottleType.WRITE_NUMBER, 6,
-        TimeUnit.SECONDS));
+      TimeUnit.SECONDS));
 
     Thread.sleep(1000);
-    TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegionServerRpcQuotaManager().
-        getQuotaCache().triggerCacheRefresh();
+    TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegionServerRpcQuotaManager().getQuotaCache()
+      .triggerCacheRefresh();
     Thread.sleep(1000);
 
-    Table t =  TEST_UTIL.getConnection().getTable(tableName);
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
     try {
       int size = 5;
       List actions = new ArrayList();
@@ -245,41 +244,39 @@ public class TestQuotaAdmin {
     }
   }
 
-
   @Test
   public void testQuotaRetrieverFilter() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
-    TableName[] tables = new TableName[] {
-      TableName.valueOf("T0"), TableName.valueOf("T01"), TableName.valueOf("NS0:T2"),
-    };
+    TableName[] tables = new TableName[] { TableName.valueOf("T0"), TableName.valueOf("T01"),
+      TableName.valueOf("NS0:T2"), };
     String[] namespaces = new String[] { "NS0", "NS01", "NS2" };
     String[] users = new String[] { "User0", "User01", "User2" };
 
-    for (String user: users) {
-      admin.setQuota(QuotaSettingsFactory
-        .throttleUser(user, ThrottleType.REQUEST_NUMBER, 1, TimeUnit.MINUTES));
+    for (String user : users) {
+      admin.setQuota(
+        QuotaSettingsFactory.throttleUser(user, ThrottleType.REQUEST_NUMBER, 1, TimeUnit.MINUTES));
 
-      for (TableName table: tables) {
-        admin.setQuota(QuotaSettingsFactory
-          .throttleUser(user, table, ThrottleType.REQUEST_NUMBER, 2, TimeUnit.MINUTES));
+      for (TableName table : tables) {
+        admin.setQuota(QuotaSettingsFactory.throttleUser(user, table, ThrottleType.REQUEST_NUMBER,
+          2, TimeUnit.MINUTES));
       }
 
-      for (String ns: namespaces) {
-        admin.setQuota(QuotaSettingsFactory
-          .throttleUser(user, ns, ThrottleType.REQUEST_NUMBER, 3, TimeUnit.MINUTES));
+      for (String ns : namespaces) {
+        admin.setQuota(QuotaSettingsFactory.throttleUser(user, ns, ThrottleType.REQUEST_NUMBER, 3,
+          TimeUnit.MINUTES));
       }
     }
     assertNumResults(21, null);
 
-    for (TableName table: tables) {
-      admin.setQuota(QuotaSettingsFactory
-        .throttleTable(table, ThrottleType.REQUEST_NUMBER, 4, TimeUnit.MINUTES));
+    for (TableName table : tables) {
+      admin.setQuota(QuotaSettingsFactory.throttleTable(table, ThrottleType.REQUEST_NUMBER, 4,
+        TimeUnit.MINUTES));
     }
     assertNumResults(24, null);
 
-    for (String ns: namespaces) {
-      admin.setQuota(QuotaSettingsFactory
-        .throttleNamespace(ns, ThrottleType.REQUEST_NUMBER, 5, TimeUnit.MINUTES));
+    for (String ns : namespaces) {
+      admin.setQuota(QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_NUMBER, 5,
+        TimeUnit.MINUTES));
     }
     assertNumResults(27, null);
 
@@ -293,8 +290,8 @@ public class TestQuotaAdmin {
     assertNumResults(3, new QuotaFilter().setUserFilter("User.*").setNamespaceFilter("NS0"));
     assertNumResults(0, new QuotaFilter().setUserFilter("User.*").setNamespaceFilter("NS"));
     assertNumResults(9, new QuotaFilter().setUserFilter("User.*").setNamespaceFilter("NS.*"));
-    assertNumResults(6, new QuotaFilter().setUserFilter("User.*")
-                                            .setTableFilter("T0").setNamespaceFilter("NS0"));
+    assertNumResults(6,
+      new QuotaFilter().setUserFilter("User.*").setTableFilter("T0").setNamespaceFilter("NS0"));
     assertNumResults(1, new QuotaFilter().setTableFilter("T0"));
     assertNumResults(0, new QuotaFilter().setTableFilter("T"));
     assertNumResults(2, new QuotaFilter().setTableFilter("T.*"));
@@ -303,23 +300,23 @@ public class TestQuotaAdmin {
     assertNumResults(0, new QuotaFilter().setNamespaceFilter("NS"));
     assertNumResults(3, new QuotaFilter().setNamespaceFilter("NS.*"));
 
-    for (String user: users) {
+    for (String user : users) {
       admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
-      for (TableName table: tables) {
+      for (TableName table : tables) {
         admin.setQuota(QuotaSettingsFactory.unthrottleUser(user, table));
       }
-      for (String ns: namespaces) {
+      for (String ns : namespaces) {
         admin.setQuota(QuotaSettingsFactory.unthrottleUser(user, ns));
       }
     }
     assertNumResults(6, null);
 
-    for (TableName table: tables) {
+    for (TableName table : tables) {
       admin.setQuota(QuotaSettingsFactory.unthrottleTable(table));
     }
     assertNumResults(3, null);
 
-    for (String ns: namespaces) {
+    for (String ns : namespaces) {
       admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(ns));
     }
     assertNumResults(0, null);
@@ -384,8 +381,8 @@ public class TestQuotaAdmin {
     final TableName tn = TableName.valueOf("sq_table2");
     final long originalSizeLimit = 1024L * 1024L * 1024L * 1024L * 5L; // 5TB
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_WRITES;
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(tn, originalSizeLimit,
-        violationPolicy);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, originalSizeLimit, violationPolicy);
     admin.setQuota(settings);
 
     // Verify the Quotas in the table
@@ -412,8 +409,8 @@ public class TestQuotaAdmin {
     // Setting a new size and policy should be reflected
     final long newSizeLimit = 1024L * 1024L * 1024L * 1024L; // 1TB
     final SpaceViolationPolicy newViolationPolicy = SpaceViolationPolicy.NO_WRITES_COMPACTIONS;
-    QuotaSettings newSettings = QuotaSettingsFactory.limitTableSpace(tn, newSizeLimit,
-        newViolationPolicy);
+    QuotaSettings newSettings =
+      QuotaSettingsFactory.limitTableSpace(tn, newSizeLimit, newViolationPolicy);
     admin.setQuota(newSettings);
 
     // Verify the new Quotas in the table
@@ -474,7 +471,7 @@ public class TestQuotaAdmin {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("sq_table1");
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleTable(tn, throttleType, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleTable(tn, throttleType, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     // Verify the Quota in the table
@@ -499,7 +496,7 @@ public class TestQuotaAdmin {
     Admin admin = TEST_UTIL.getAdmin();
     final TableName tn = TableName.valueOf("sq_table1");
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     // Verify the Quota in the table
@@ -510,7 +507,7 @@ public class TestQuotaAdmin {
 
     // Setting a limit and time unit should be reflected
     QuotaSettings newSettings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 3L, TimeUnit.DAYS);
+      QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 3L, TimeUnit.DAYS);
     admin.setQuota(newSettings);
 
     // Verify the new Quota in the table
@@ -585,9 +582,9 @@ public class TestQuotaAdmin {
     TEST_UTIL.startMiniHBaseCluster();
     assertFalse(TEST_UTIL.getAdmin().isRpcThrottleEnabled());
     for (JVMClusterUtil.RegionServerThread rs : TEST_UTIL.getHBaseCluster()
-        .getRegionServerThreads()) {
+      .getRegionServerThreads()) {
       RegionServerRpcQuotaManager quotaManager =
-          rs.getRegionServer().getRegionServerRpcQuotaManager();
+        rs.getRegionServer().getRegionServerRpcQuotaManager();
       assertFalse(quotaManager.isRpcThrottleEnabled());
     }
     // enable rpc throttle
@@ -612,7 +609,7 @@ public class TestQuotaAdmin {
     try {
       admin.exceedThrottleQuotaSwitch(true);
       fail("should not come here, because can't enable exceed throttle quota "
-          + "if there is no region server quota");
+        + "if there is no region server quota");
     } catch (IOException e) {
       LOG.warn("Expected exception", e);
     }
@@ -622,7 +619,7 @@ public class TestQuotaAdmin {
     try {
       admin.exceedThrottleQuotaSwitch(true);
       fail("should not come here, because can't enable exceed throttle quota "
-          + "if there is no read region server quota");
+        + "if there is no read region server quota");
     } catch (IOException e) {
       LOG.warn("Expected exception", e);
     }
@@ -632,7 +629,7 @@ public class TestQuotaAdmin {
     try {
       admin.exceedThrottleQuotaSwitch(true);
       fail("should not come here, because can't enable exceed throttle quota "
-          + "because not all region server quota are in seconds time unit");
+        + "because not all region server quota are in seconds time unit");
     } catch (IOException e) {
       LOG.warn("Expected exception", e);
     }
@@ -683,14 +680,14 @@ public class TestQuotaAdmin {
       QuotaScope.CLUSTER);
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
 
-      // set CLUSTER quota scope for user and table
+    // set CLUSTER quota scope for user and table
     admin.setQuota(QuotaSettingsFactory.throttleUser(user, tableName, ThrottleType.REQUEST_NUMBER,
       10, TimeUnit.MINUTES, QuotaScope.CLUSTER));
     verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
       QuotaScope.CLUSTER);
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(user));
 
-      // set CLUSTER quota scope for user and namespace
+    // set CLUSTER quota scope for user and namespace
     admin.setQuota(QuotaSettingsFactory.throttleUser(user, namespace, ThrottleType.REQUEST_NUMBER,
       10, TimeUnit.MINUTES, QuotaScope.CLUSTER));
     verifyRecordPresentInQuotaTable(ThrottleType.REQUEST_NUMBER, 10, TimeUnit.MINUTES,
@@ -699,25 +696,25 @@ public class TestQuotaAdmin {
   }
 
   private void testSwitchRpcThrottle(Admin admin, boolean oldRpcThrottle, boolean newRpcThrottle)
-      throws IOException {
+    throws IOException {
     boolean state = admin.switchRpcThrottle(newRpcThrottle);
     Assert.assertEquals(oldRpcThrottle, state);
     Assert.assertEquals(newRpcThrottle, admin.isRpcThrottleEnabled());
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-        .forEach(rs -> Assert.assertEquals(newRpcThrottle,
-          rs.getRegionServer().getRegionServerRpcQuotaManager().isRpcThrottleEnabled()));
+      .forEach(rs -> Assert.assertEquals(newRpcThrottle,
+        rs.getRegionServer().getRegionServerRpcQuotaManager().isRpcThrottleEnabled()));
   }
 
   private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu)
-      throws Exception {
+    throws Exception {
     verifyRecordPresentInQuotaTable(type, limit, tu, QuotaScope.MACHINE);
   }
 
   private void verifyRecordPresentInQuotaTable(ThrottleType type, long limit, TimeUnit tu,
-      QuotaScope scope) throws Exception {
+    QuotaScope scope) throws Exception {
     // Verify the RPC Quotas in the table
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
-        ResultScanner scanner = quotaTable.getScanner(new Scan())) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan())) {
       Result r = Iterables.getOnlyElement(scanner);
       CellScanner cells = r.cellScanner();
       assertTrue("Expected to find a cell", cells.advance());
@@ -728,13 +725,13 @@ public class TestQuotaAdmin {
   private void verifyRecordNotPresentInQuotaTable() throws Exception {
     // Verify that the record doesn't exist in the QuotaTableUtil.QUOTA_TABLE_NAME
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
-        ResultScanner scanner = quotaTable.getScanner(new Scan())) {
+      ResultScanner scanner = quotaTable.getScanner(new Scan())) {
       assertNull("Did not expect to find a quota entry", scanner.next());
     }
   }
 
   private void verifyFetchableViaAPI(Admin admin, ThrottleType type, long limit, TimeUnit tu)
-      throws Exception {
+    throws Exception {
     // Verify we can retrieve the new quota via the QuotaRetriever API
     try (QuotaRetriever quotaScanner = QuotaRetriever.open(admin.getConfiguration())) {
       assertRPCQuota(type, limit, tu, Iterables.getOnlyElement(quotaScanner));
@@ -749,9 +746,9 @@ public class TestQuotaAdmin {
   }
 
   private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu, QuotaScope scope,
-      Cell cell) throws Exception {
-    Quotas q = QuotaTableUtil
-        .quotasFromData(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+    Cell cell) throws Exception {
+    Quotas q = QuotaTableUtil.quotasFromData(cell.getValueArray(), cell.getValueOffset(),
+      cell.getValueLength());
     assertTrue("Quota should have rpc quota defined", q.hasThrottle());
 
     QuotaProtos.Throttle rpcQuota = q.getThrottle();
@@ -803,41 +800,40 @@ public class TestQuotaAdmin {
   }
 
   private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu,
-      QuotaSettings actualSettings) throws Exception {
-    assertTrue(
-        "The actual QuotaSettings was not an instance of " + ThrottleSettings.class + " but of "
-            + actualSettings.getClass(), actualSettings instanceof ThrottleSettings);
+    QuotaSettings actualSettings) throws Exception {
+    assertTrue("The actual QuotaSettings was not an instance of " + ThrottleSettings.class
+      + " but of " + actualSettings.getClass(), actualSettings instanceof ThrottleSettings);
     QuotaProtos.ThrottleRequest throttleRequest = ((ThrottleSettings) actualSettings).getProto();
     assertEquals(limit, throttleRequest.getTimedQuota().getSoftLimit());
     assertEquals(ProtobufUtil.toProtoTimeUnit(tu), throttleRequest.getTimedQuota().getTimeUnit());
     assertEquals(ProtobufUtil.toProtoThrottleType(type), throttleRequest.getType());
   }
 
-  private void assertSpaceQuota(
-      long sizeLimit, SpaceViolationPolicy violationPolicy, Cell cell) throws Exception {
-    Quotas q = QuotaTableUtil.quotasFromData(
-        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+  private void assertSpaceQuota(long sizeLimit, SpaceViolationPolicy violationPolicy, Cell cell)
+    throws Exception {
+    Quotas q = QuotaTableUtil.quotasFromData(cell.getValueArray(), cell.getValueOffset(),
+      cell.getValueLength());
     assertTrue("Quota should have space quota defined", q.hasSpace());
     QuotaProtos.SpaceQuota spaceQuota = q.getSpace();
     assertEquals(sizeLimit, spaceQuota.getSoftLimit());
     assertEquals(violationPolicy, ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
   }
 
-  private void assertSpaceQuota(
-      long sizeLimit, SpaceViolationPolicy violationPolicy, QuotaSettings actualSettings) {
+  private void assertSpaceQuota(long sizeLimit, SpaceViolationPolicy violationPolicy,
+    QuotaSettings actualSettings) {
     assertTrue("The actual QuotaSettings was not an instance of " + SpaceLimitSettings.class
-        + " but of " + actualSettings.getClass(), actualSettings instanceof SpaceLimitSettings);
+      + " but of " + actualSettings.getClass(), actualSettings instanceof SpaceLimitSettings);
     SpaceLimitRequest spaceLimitRequest = ((SpaceLimitSettings) actualSettings).getProto();
     assertEquals(sizeLimit, spaceLimitRequest.getQuota().getSoftLimit());
     assertEquals(violationPolicy,
-        ProtobufUtil.toViolationPolicy(spaceLimitRequest.getQuota().getViolationPolicy()));
+      ProtobufUtil.toViolationPolicy(spaceLimitRequest.getQuota().getViolationPolicy()));
   }
 
   private int countResults(final QuotaFilter filter) throws Exception {
     QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration(), filter);
     try {
       int count = 0;
-      for (QuotaSettings settings: scanner) {
+      for (QuotaSettings settings : scanner) {
         LOG.debug(Objects.toString(settings));
         count++;
       }

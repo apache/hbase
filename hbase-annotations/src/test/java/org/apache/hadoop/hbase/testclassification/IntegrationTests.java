@@ -15,23 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.testclassification;
 
 /**
  * Tag a test as 'integration/system' test, meaning that the test class has the following
  * characteristics:
  * <ul>
- *  <li> Possibly takes hours to complete</li>
- *  <li> Can be run on a mini cluster or an actual cluster</li>
- *  <li> Can make changes to the given cluster (starting stopping daemons, etc)</li>
- *  <li> Should not be run in parallel of other integration tests</li>
+ * <li>Possibly takes hours to complete</li>
+ * <li>Can be run on a mini cluster or an actual cluster</li>
+ * <li>Can make changes to the given cluster (starting stopping daemons, etc)</li>
+ * <li>Should not be run in parallel of other integration tests</li>
  * </ul>
- *
- * Integration / System tests should have a class name starting with "IntegrationTest", and
- * should be annotated with @Category(IntegrationTests.class). Integration tests can be run
- * using the IntegrationTestsDriver class or from mvn verify.
- *
+ * Integration / System tests should have a class name starting with "IntegrationTest", and should
+ * be annotated with @Category(IntegrationTests.class). Integration tests can be run using the
+ * IntegrationTestsDriver class or from mvn verify.
  * @see SmallTests
  * @see MediumTests
  * @see LargeTests

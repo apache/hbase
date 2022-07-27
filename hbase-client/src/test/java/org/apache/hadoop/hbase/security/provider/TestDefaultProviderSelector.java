@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -32,14 +31,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestDefaultProviderSelector {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultProviderSelector.class);
+    HBaseClassTestRule.forClass(TestDefaultProviderSelector.class);
 
   BuiltInProviderSelector selector;
+
   @Before
   public void setup() {
     selector = new BuiltInProviderSelector();
@@ -70,9 +70,9 @@ public class TestDefaultProviderSelector {
 
   @Test
   public void testExpectedProviders() {
-    HashSet<SaslClientAuthenticationProvider> providers = new HashSet<>(Arrays.asList(
-        new SimpleSaslClientAuthenticationProvider(), new GssSaslClientAuthenticationProvider(),
-        new DigestSaslClientAuthenticationProvider()));
+    HashSet<SaslClientAuthenticationProvider> providers =
+      new HashSet<>(Arrays.asList(new SimpleSaslClientAuthenticationProvider(),
+        new GssSaslClientAuthenticationProvider(), new DigestSaslClientAuthenticationProvider()));
 
     selector.configure(new Configuration(false), providers);
 

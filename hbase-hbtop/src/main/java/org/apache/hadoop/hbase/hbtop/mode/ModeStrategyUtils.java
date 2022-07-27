@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.hbtop.mode;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.hadoop.hbase.hbtop.Record;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
@@ -36,28 +35,26 @@ public final class ModeStrategyUtils {
    * @param filters List of filters
    * @return filtered records
    */
-  public static List<Record> applyFilterAndGet(List<Record> records,
-      List<RecordFilter> filters) {
+  public static List<Record> applyFilterAndGet(List<Record> records, List<RecordFilter> filters) {
     if (filters != null && !filters.isEmpty()) {
       return records.stream().filter(r -> filters.stream().allMatch(f -> f.execute(r)))
-          .collect(Collectors.toList());
+        .collect(Collectors.toList());
     }
     return records;
   }
 
-
   /**
-   * Group by records on the basis of supplied groupBy field and
-   * Aggregate records using {@link Record#combine(Record)}
-   *
+   * Group by records on the basis of supplied groupBy field and Aggregate records using
+   * {@link Record#combine(Record)}
    * @param records records needs to be processed
    * @param groupBy Field to be used for group by
    * @return aggregated records
    */
   public static List<Record> aggregateRecords(List<Record> records, Field groupBy) {
     return records.stream().collect(Collectors.groupingBy(r -> r.get(groupBy))).entrySet().stream()
-        .flatMap(e -> e.getValue().stream().reduce(Record::combine).map(Stream::of)
-            .orElse(Stream.empty())).collect(Collectors.toList());
+      .flatMap(
+        e -> e.getValue().stream().reduce(Record::combine).map(Stream::of).orElse(Stream.empty()))
+      .collect(Collectors.toList());
   }
 
 }

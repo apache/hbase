@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,6 @@ class WALEntryBatch {
     this.lastWalPath = lastWalPath;
   }
 
-
   static WALEntryBatch endOfFile(Path lastWalPath) {
     WALEntryBatch batch = new WALEntryBatch(0, lastWalPath);
     batch.setLastWalPosition(-1L);
@@ -73,23 +72,17 @@ class WALEntryBatch {
     walEntriesWithSize.add(new Pair<>(entry, entrySize));
   }
 
-  /**
-   * @return the WAL Entries.
-   */
+  /** Returns the WAL Entries. */
   public List<Entry> getWalEntries() {
     return walEntriesWithSize.stream().map(Pair::getFirst).collect(Collectors.toList());
   }
 
-  /**
-   * @return the WAL Entries.
-   */
+  /** Returns the WAL Entries. */
   public List<Pair<Entry, Long>> getWalEntriesWithSize() {
     return walEntriesWithSize;
   }
 
-  /**
-   * @return the path of the last WAL that was read.
-   */
+  /** Returns the path of the last WAL that was read. */
   public Path getLastWalPath() {
     return lastWalPath;
   }
@@ -98,9 +91,7 @@ class WALEntryBatch {
     this.lastWalPath = lastWalPath;
   }
 
-  /**
-   * @return the position in the last WAL that was read.
-   */
+  /** Returns the position in the last WAL that was read. */
   public long getLastWalPosition() {
     return lastWalPosition;
   }
@@ -113,37 +104,27 @@ class WALEntryBatch {
     return walEntriesWithSize.size();
   }
 
-  /**
-   * @return the number of distinct row keys in this batch
-   */
+  /** Returns the number of distinct row keys in this batch */
   public int getNbRowKeys() {
     return nbRowKeys;
   }
 
-  /**
-   * @return the number of HFiles in this batch
-   */
+  /** Returns the number of HFiles in this batch */
   public int getNbHFiles() {
     return nbHFiles;
   }
 
-  /**
-   * @return total number of operations in this batch
-   */
+  /** Returns total number of operations in this batch */
   public int getNbOperations() {
     return getNbRowKeys() + getNbHFiles();
   }
 
-  /**
-   * @return the heap size of this batch
-   */
+  /** Returns the heap size of this batch */
   public long getHeapSize() {
     return heapSize;
   }
 
-  /**
-   * @return the last sequenceid for each region if the table has serial-replication scope
-   */
+  /** Returns the last sequenceid for each region if the table has serial-replication scope */
   public Map<String, Long> getLastSeqIds() {
     return lastSeqIds;
   }
@@ -174,9 +155,9 @@ class WALEntryBatch {
 
   @Override
   public String toString() {
-    return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath +
-      ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles=" +
-      nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile=" +
-      endOfFile + "]";
+    return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath
+      + ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles="
+      + nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile="
+      + endOfFile + "]";
   }
 }

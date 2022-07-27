@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,16 +34,15 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestSecurityHeadersFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecurityHeadersFilter.class);
+    HBaseClassTestRule.forClass(TestSecurityHeadersFilter.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
-      new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = new HBaseRESTTestingUtility();
   private static Client client;
 
   @After
@@ -56,56 +55,53 @@ public class TestSecurityHeadersFilter {
   public void testDefaultValues() throws Exception {
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost",
-        REST_TEST_UTIL.getServletPort()));
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
 
     String path = "/version/cluster";
     Response response = client.get(path);
     assertThat(response.getCode(), equalTo(200));
 
     assertThat("Header 'X-Content-Type-Options' is missing from Rest response",
-        response.getHeader("X-Content-Type-Options"), is(not((String)null)));
+      response.getHeader("X-Content-Type-Options"), is(not((String) null)));
     assertThat("Header 'X-Content-Type-Options' has invalid default value",
-        response.getHeader("X-Content-Type-Options"), equalTo("nosniff"));
+      response.getHeader("X-Content-Type-Options"), equalTo("nosniff"));
 
     assertThat("Header 'X-XSS-Protection' is missing from Rest response",
-        response.getHeader("X-XSS-Protection"), is(not((String)null)));
+      response.getHeader("X-XSS-Protection"), is(not((String) null)));
     assertThat("Header 'X-XSS-Protection' has invalid default value",
-        response.getHeader("X-XSS-Protection"), equalTo("1; mode=block"));
+      response.getHeader("X-XSS-Protection"), equalTo("1; mode=block"));
 
-    assertThat("Header 'Strict-Transport-Security' should be missing from Rest response," +
-            "but it's present",
-        response.getHeader("Strict-Transport-Security"), is((String)null));
-    assertThat("Header 'Content-Security-Policy' should be missing from Rest response," +
-            "but it's present",
-        response.getHeader("Content-Security-Policy"), is((String)null));
+    assertThat("Header 'Strict-Transport-Security' should be missing from Rest response,"
+      + "but it's present", response.getHeader("Strict-Transport-Security"), is((String) null));
+    assertThat(
+      "Header 'Content-Security-Policy' should be missing from Rest response," + "but it's present",
+      response.getHeader("Content-Security-Policy"), is((String) null));
   }
 
   @Test
   public void testHstsAndCspSettings() throws Exception {
     TEST_UTIL.getConfiguration().set("hbase.http.filter.hsts.value",
-        "max-age=63072000;includeSubDomains;preload");
+      "max-age=63072000;includeSubDomains;preload");
     TEST_UTIL.getConfiguration().set("hbase.http.filter.csp.value",
-        "default-src https: data: 'unsafe-inline' 'unsafe-eval'");
+      "default-src https: data: 'unsafe-inline' 'unsafe-eval'");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost",
-        REST_TEST_UTIL.getServletPort()));
+    client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
 
     String path = "/version/cluster";
     Response response = client.get(path);
     assertThat(response.getCode(), equalTo(200));
 
     assertThat("Header 'Strict-Transport-Security' is missing from Rest response",
-        response.getHeader("Strict-Transport-Security"), is(not((String)null)));
+      response.getHeader("Strict-Transport-Security"), is(not((String) null)));
     assertThat("Header 'Strict-Transport-Security' has invalid value",
-        response.getHeader("Strict-Transport-Security"),
-        equalTo("max-age=63072000;includeSubDomains;preload"));
+      response.getHeader("Strict-Transport-Security"),
+      equalTo("max-age=63072000;includeSubDomains;preload"));
 
     assertThat("Header 'Content-Security-Policy' is missing from Rest response",
-        response.getHeader("Content-Security-Policy"), is(not((String)null)));
+      response.getHeader("Content-Security-Policy"), is(not((String) null)));
     assertThat("Header 'Content-Security-Policy' has invalid value",
-        response.getHeader("Content-Security-Policy"),
-        equalTo("default-src https: data: 'unsafe-inline' 'unsafe-eval'"));
+      response.getHeader("Content-Security-Policy"),
+      equalTo("default-src https: data: 'unsafe-inline' 'unsafe-eval'"));
   }
 }

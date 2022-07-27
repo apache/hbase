@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,39 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *  Factory for classes supplied by hadoop compatibility modules.  Only one of each class will be
- *  created.
+ * Factory for classes supplied by hadoop compatibility modules. Only one of each class will be
+ * created.
  */
 @InterfaceAudience.Private
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   public static enum SingletonStorage {
     INSTANCE;
+
     private final Object lock = new Object();
     private final Map<Class, Object> instances = new HashMap<>();
   }
+
   private static final Logger LOG = LoggerFactory.getLogger(CompatibilitySingletonFactory.class);
 
   /**
    * This is a static only class don't let anyone create an instance.
    */
-  protected CompatibilitySingletonFactory() {  }
+  protected CompatibilitySingletonFactory() {
+  }
 
   /**
    * Get the singleton instance of Any classes defined by compatibiliy jar's
-   *
    * @return the singleton
    */
   @SuppressWarnings("unchecked")
@@ -62,9 +64,8 @@ public class CompatibilitySingletonFactory extends CompatibilityFactory {
           if (it.hasNext()) {
             StringBuilder msg = new StringBuilder();
             msg.append("ServiceLoader provided more than one implementation for class: ")
-                .append(klass)
-                .append(", using implementation: ").append(instance.getClass())
-                .append(", other implementations: {");
+              .append(klass).append(", using implementation: ").append(instance.getClass())
+              .append(", other implementations: {");
             while (it.hasNext()) {
               msg.append(it.next()).append(" ");
             }

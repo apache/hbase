@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -278,7 +278,7 @@ public class TestRSGroupsKillRS extends TestRSGroupsBase {
     LOG.debug("wait for META assigned...");
     // SCP finished, which means all regions assigned too.
     TEST_UTIL.waitFor(60000, () -> !TEST_UTIL.getHBaseCluster().getMaster().getProcedures().stream()
-        .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
+      .filter(p -> (p instanceof ServerCrashProcedure)).findAny().isPresent());
   }
 
   private static void setFinalStatic(Field field, Object newValue) throws Exception {

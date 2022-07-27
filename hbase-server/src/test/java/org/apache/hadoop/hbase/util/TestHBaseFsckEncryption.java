@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.security.Key;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
@@ -59,12 +58,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckEncryption {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
+    HBaseClassTestRule.forClass(TestHBaseFsckEncryption.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -80,12 +79,10 @@ public class TestHBaseFsckEncryption {
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 
     // Create the test encryption key
-    SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
-    rng.nextBytes(keyBytes);
-    String algorithm =
-        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
-    cfKey = new SecretKeySpec(keyBytes,algorithm);
+    Bytes.secureRandom(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    cfKey = new SecretKeySpec(keyBytes, algorithm);
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(3);
@@ -94,12 +91,11 @@ public class TestHBaseFsckEncryption {
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf("default", "TestHBaseFsckEncryption"));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes("cf"))
-        .setEncryptionType(algorithm)
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).setEncryptionType(algorithm)
         .setEncryptionKey(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
-          cfKey)).build();
+          cfKey))
+        .build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     tableDescriptor = tableDescriptorBuilder.build();
     TEST_UTIL.getAdmin().createTable(tableDescriptor);
@@ -120,8 +116,7 @@ public class TestHBaseFsckEncryption {
       for (int i = 0; i < values.length; i++) {
         for (int j = 0; j < values.length; j++) {
           Put put = new Put(new byte[] { values[i], values[j] });
-          put.addColumn(Bytes.toBytes("cf"), new byte[]{}, new byte[]{values[i],
-                  values[j]});
+          put.addColumn(Bytes.toBytes("cf"), new byte[] {}, new byte[] { values[i], values[j] });
           table.put(put);
         }
       }
@@ -134,7 +129,7 @@ public class TestHBaseFsckEncryption {
     // Verify we have encrypted store files on disk
     final List<Path> paths = findStorefilePaths(tableDescriptor.getTableName());
     assertTrue(paths.size() > 0);
-    for (Path path: paths) {
+    for (Path path : paths) {
       assertTrue("Store file " + path + " has incorrect key",
         Bytes.equals(cfKey.getEncoded(), extractHFileKey(path)));
     }
@@ -152,7 +147,7 @@ public class TestHBaseFsckEncryption {
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<>();
     for (Region region : TEST_UTIL.getRSForFirstRegionInTable(tableName)
-        .getRegions(tableDescriptor.getTableName())) {
+      .getRegions(tableDescriptor.getTableName())) {
       for (HStore store : ((HRegion) region).getStores()) {
         for (HStoreFile storefile : store.getStorefiles()) {
           paths.add(storefile.getPath());
@@ -163,8 +158,8 @@ public class TestHBaseFsckEncryption {
   }
 
   private byte[] extractHFileKey(Path path) throws Exception {
-    HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(), path,
-      new CacheConfig(conf), true, conf);
+    HFile.Reader reader =
+      HFile.createReader(TEST_UTIL.getTestFileSystem(), path, new CacheConfig(conf), true, conf);
     try {
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
       assertNotNull("Reader has a null crypto context", cryptoContext);

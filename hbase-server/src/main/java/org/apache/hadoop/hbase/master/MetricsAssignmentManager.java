@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.MetricsMaster.convertToProcedureMetrics;
@@ -38,8 +37,8 @@ public class MetricsAssignmentManager {
   private final ProcedureMetrics mergeProcMetrics;
 
   public MetricsAssignmentManager() {
-    assignmentManagerSource = CompatibilitySingletonFactory.getInstance(
-        MetricsAssignmentManagerSource.class);
+    assignmentManagerSource =
+      CompatibilitySingletonFactory.getInstance(MetricsAssignmentManagerSource.class);
 
     assignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getAssignMetrics());
     unassignProcMetrics = convertToProcedureMetrics(assignmentManagerSource.getUnassignMetrics());
@@ -56,33 +55,29 @@ public class MetricsAssignmentManager {
   }
 
   /**
-   * set new value for number of regions in transition.
-   * @param ritCount
+   * set new value for number of regions in transition. n
    */
   public void updateRITCount(final int ritCount) {
     assignmentManagerSource.setRIT(ritCount);
   }
 
   /**
-   * update RIT count that are in this state for more than the threshold
-   * as defined by the property rit.metrics.threshold.time.
-   * @param ritCountOverThreshold
+   * update RIT count that are in this state for more than the threshold as defined by the property
+   * rit.metrics.threshold.time. n
    */
   public void updateRITCountOverThreshold(final int ritCountOverThreshold) {
     assignmentManagerSource.setRITCountOverThreshold(ritCountOverThreshold);
   }
 
   /**
-   * update the timestamp for oldest region in transition metrics.
-   * @param timestamp
+   * update the timestamp for oldest region in transition metrics. n
    */
   public void updateRITOldestAge(final long timestamp) {
     assignmentManagerSource.setRITOldestAge(timestamp);
   }
 
   /**
-   * update the duration metrics of region is transition
-   * @param duration
+   * update the duration metrics of region is transition n
    */
   public void updateRitDuration(long duration) {
     assignmentManagerSource.updateRitDuration(duration);
@@ -132,58 +127,42 @@ public class MetricsAssignmentManager {
     assignmentManagerSource.setEmptyRegionInfoRegions(emptyRegionInfoRegions);
   }
 
-  /**
-   * @return Set of common metrics for assign procedure
-   */
+  /** Returns Set of common metrics for assign procedure */
   public ProcedureMetrics getAssignProcMetrics() {
     return assignProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for unassign procedure
-   */
+  /** Returns Set of common metrics for unassign procedure */
   public ProcedureMetrics getUnassignProcMetrics() {
     return unassignProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for move procedure
-   */
+  /** Returns Set of common metrics for move procedure */
   public ProcedureMetrics getMoveProcMetrics() {
     return moveProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for reopen procedure
-   */
+  /** Returns Set of common metrics for reopen procedure */
   public ProcedureMetrics getReopenProcMetrics() {
     return reopenProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for OpenRegionProcedure
-   */
+  /** Returns Set of common metrics for OpenRegionProcedure */
   public ProcedureMetrics getOpenProcMetrics() {
     return openProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for CloseRegionProcedure
-   */
+  /** Returns Set of common metrics for CloseRegionProcedure */
   public ProcedureMetrics getCloseProcMetrics() {
     return closeProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for split procedure
-   */
+  /** Returns Set of common metrics for split procedure */
   public ProcedureMetrics getSplitProcMetrics() {
     return splitProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for merge procedure
-   */
+  /** Returns Set of common metrics for merge procedure */
   public ProcedureMetrics getMergeProcMetrics() {
     return mergeProcMetrics;
   }

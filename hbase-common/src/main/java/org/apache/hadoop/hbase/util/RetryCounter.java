@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,18 +26,18 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Operation retry accounting.
- * Use to calculate wait period, {@link #getBackoffTimeAndIncrementAttempts()}}, or for performing
- * wait, {@link #sleepUntilNextRetry()}, in accordance with a {@link RetryConfig}, initial
- * settings, and a Retry Policy, (See org.apache.hadoop.io.retry.RetryPolicy).
- * Like <a href=https://github.com/rholder/guava-retrying>guava-retrying</a>.
+ * Operation retry accounting. Use to calculate wait period,
+ * {@link #getBackoffTimeAndIncrementAttempts()}}, or for performing wait,
+ * {@link #sleepUntilNextRetry()}, in accordance with a {@link RetryConfig}, initial settings, and a
+ * Retry Policy, (See org.apache.hadoop.io.retry.RetryPolicy). Like <a
+ * href=https://github.com/rholder/guava-retrying>guava-retrying</a>.
  * @since 0.92.0
  * @see RetryCounterFactory
  */
 @InterfaceAudience.Private
 public class RetryCounter {
   /**
-   *  Configuration for a retry counter
+   * Configuration for a retry counter
    */
   public static class RetryConfig {
     private int maxAttempts;
@@ -52,16 +50,16 @@ public class RetryCounter {
     private static final BackoffPolicy DEFAULT_BACKOFF_POLICY = new ExponentialBackoffPolicy();
 
     public RetryConfig() {
-      maxAttempts    = 1;
+      maxAttempts = 1;
       sleepInterval = 1000;
-      maxSleepTime  = -1;
+      maxSleepTime = -1;
       timeUnit = TimeUnit.MILLISECONDS;
       backoffPolicy = DEFAULT_BACKOFF_POLICY;
       jitter = 0.0f;
     }
 
-    public RetryConfig(int maxAttempts, long sleepInterval, long maxSleepTime,
-        TimeUnit timeUnit, BackoffPolicy backoffPolicy) {
+    public RetryConfig(int maxAttempts, long sleepInterval, long maxSleepTime, TimeUnit timeUnit,
+      BackoffPolicy backoffPolicy) {
       this.maxAttempts = maxAttempts;
       this.sleepInterval = sleepInterval;
       this.maxSleepTime = maxSleepTime;
@@ -152,7 +150,9 @@ public class RetryCounter {
     @Override
     public long getBackoffTime(RetryConfig config, int attempts) {
       long backoffTime = super.getBackoffTime(config, attempts);
-      return config.getMaxSleepTime() > 0 ? Math.min(backoffTime, config.getMaxSleepTime()) : backoffTime;
+      return config.getMaxSleepTime() > 0
+        ? Math.min(backoffTime, config.getMaxSleepTime())
+        : backoffTime;
     }
   }
 

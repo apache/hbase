@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,7 +69,7 @@ public class SharedAsyncConnection implements AsyncConnection {
 
   @Override
   public AsyncTableBuilder<ScanResultConsumer> getTableBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return conn.getTableBuilder(tableName, pool);
   }
 
@@ -90,7 +90,7 @@ public class SharedAsyncConnection implements AsyncConnection {
 
   @Override
   public AsyncBufferedMutatorBuilder getBufferedMutatorBuilder(TableName tableName,
-      ExecutorService pool) {
+    ExecutorService pool) {
     return conn.getBufferedMutatorBuilder(tableName, pool);
   }
 

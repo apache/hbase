@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockType;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestEntityLocks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEntityLocks.class);
+    HBaseClassTestRule.forClass(TestEntityLocks.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEntityLocks.class);
 
@@ -76,19 +76,17 @@ public class TestEntityLocks {
   private ArgumentCaptor<LockRequest> lockReqArgCaptor;
   private ArgumentCaptor<LockHeartbeatRequest> lockHeartbeatReqArgCaptor;
 
-  private static final LockHeartbeatResponse UNLOCKED_RESPONSE =
-      LockHeartbeatResponse.newBuilder().setLockStatus(
-          LockHeartbeatResponse.LockStatus.UNLOCKED).build();
+  private static final LockHeartbeatResponse UNLOCKED_RESPONSE = LockHeartbeatResponse.newBuilder()
+    .setLockStatus(LockHeartbeatResponse.LockStatus.UNLOCKED).build();
   // timeout such that worker thread waits for 500ms for each heartbeat.
-  private static final LockHeartbeatResponse LOCKED_RESPONSE =
-      LockHeartbeatResponse.newBuilder().setLockStatus(
-          LockHeartbeatResponse.LockStatus.LOCKED).setTimeoutMs(10000).build();
+  private static final LockHeartbeatResponse LOCKED_RESPONSE = LockHeartbeatResponse.newBuilder()
+    .setLockStatus(LockHeartbeatResponse.LockStatus.LOCKED).setTimeoutMs(10000).build();
   private long procId;
 
   // Setup mock admin.
   LockServiceClient getAdmin() throws Exception {
     conf.setInt("hbase.client.retries.number", 3);
-    conf.setInt("hbase.client.pause", 1);  // 1ms. Immediately retry rpc on failure.
+    conf.setInt("hbase.client.pause", 1); // 1ms. Immediately retry rpc on failure.
     return new LockServiceClient(conf, master, PerClientRandomNonceGenerator.get());
   }
 
@@ -97,7 +95,7 @@ public class TestEntityLocks {
     admin = getAdmin();
     lockReqArgCaptor = ArgumentCaptor.forClass(LockRequest.class);
     lockHeartbeatReqArgCaptor = ArgumentCaptor.forClass(LockHeartbeatRequest.class);
-    procId = new Random().nextLong();
+    procId = ThreadLocalRandom.current().nextLong();
   }
 
   private boolean waitLockTimeOut(EntityLock lock, long maxWaitTimeMillis) {
@@ -117,20 +115,19 @@ public class TestEntityLocks {
   }
 
   /**
-   * Test basic lock function - requestLock, await, unlock.
-   * @throws Exception
+   * Test basic lock function - requestLock, await, unlock. n
    */
   @Test
   public void testEntityLock() throws Exception {
     final long procId = 100;
-    final long workerSleepTime = 200;  // in ms
+    final long workerSleepTime = 200; // in ms
     EntityLock lock = admin.namespaceLock("namespace", "description", null);
     lock.setTestingSleepTime(workerSleepTime);
 
-    when(master.requestLock(any(), any())).thenReturn(
-        LockResponse.newBuilder().setProcId(procId).build());
-    when(master.lockHeartbeat(any(), any())).thenReturn(
-        UNLOCKED_RESPONSE, UNLOCKED_RESPONSE, UNLOCKED_RESPONSE, LOCKED_RESPONSE);
+    when(master.requestLock(any(), any()))
+      .thenReturn(LockResponse.newBuilder().setProcId(procId).build());
+    when(master.lockHeartbeat(any(), any())).thenReturn(UNLOCKED_RESPONSE, UNLOCKED_RESPONSE,
+      UNLOCKED_RESPONSE, LOCKED_RESPONSE);
 
     lock.requestLock();
     // we return unlock response 3 times, so actual wait time should be around 2 * workerSleepTime
@@ -160,16 +157,15 @@ public class TestEntityLocks {
    */
   @Test
   public void testEntityLockTimeout() throws Exception {
-    final long workerSleepTime = 200;  // in ms
+    final long workerSleepTime = 200; // in ms
     Abortable abortable = Mockito.mock(Abortable.class);
     EntityLock lock = admin.namespaceLock("namespace", "description", abortable);
     lock.setTestingSleepTime(workerSleepTime);
 
     when(master.requestLock(any(), any()))
-        .thenReturn(LockResponse.newBuilder().setProcId(procId).build());
+      .thenReturn(LockResponse.newBuilder().setProcId(procId).build());
     // Acquires the lock, but then it times out (since we don't call unlock() on it).
-    when(master.lockHeartbeat(any(), any()))
-      .thenReturn(LOCKED_RESPONSE, UNLOCKED_RESPONSE);
+    when(master.lockHeartbeat(any(), any())).thenReturn(LOCKED_RESPONSE, UNLOCKED_RESPONSE);
 
     lock.requestLock();
     lock.await();
@@ -188,16 +184,15 @@ public class TestEntityLocks {
    */
   @Test
   public void testHeartbeatException() throws Exception {
-    final long workerSleepTime = 100;  // in ms
+    final long workerSleepTime = 100; // in ms
     Abortable abortable = Mockito.mock(Abortable.class);
     EntityLock lock = admin.namespaceLock("namespace", "description", abortable);
     lock.setTestingSleepTime(workerSleepTime);
 
     when(master.requestLock(any(), any()))
-        .thenReturn(LockResponse.newBuilder().setProcId(procId).build());
-    when(master.lockHeartbeat(any(), any()))
-        .thenReturn(LOCKED_RESPONSE)
-        .thenThrow(new ServiceException("Failed heartbeat!"));
+      .thenReturn(LockResponse.newBuilder().setProcId(procId).build());
+    when(master.lockHeartbeat(any(), any())).thenReturn(LOCKED_RESPONSE)
+      .thenThrow(new ServiceException("Failed heartbeat!"));
 
     lock.requestLock();
     lock.await();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
@@ -72,19 +70,19 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final int hashCode;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
-                                 MetricsRegionAggregateSourceImpl aggregate) {
+    MetricsRegionAggregateSourceImpl aggregate) {
     this.regionWrapper = regionWrapper;
     agg = aggregate;
     hashCode = regionWrapper.getRegionHashCode();
     agg.register(this);
 
-    LOG.debug("Creating new MetricsRegionSourceImpl for table " +
-        regionWrapper.getTableName() + " " + regionWrapper.getRegionName());
+    LOG.debug("Creating new MetricsRegionSourceImpl for table " + regionWrapper.getTableName() + " "
+      + regionWrapper.getRegionName());
 
     registry = agg.getMetricsRegistry();
 
     regionNamePrefix1 = "Namespace_" + regionWrapper.getNamespace() + "_table_"
-        + regionWrapper.getTableName() + "_region_" + regionWrapper.getRegionName();
+      + regionWrapper.getTableName() + "_region_" + regionWrapper.getRegionName();
     regionNamePrefix2 = "_metric_";
     regionNamePrefix = regionNamePrefix1 + regionNamePrefix2;
 
@@ -204,115 +202,91 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         return;
       }
 
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
+        MetricsRegionServerSource.STORE_COUNT_DESC), this.regionWrapper.getNumStores());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
+        MetricsRegionServerSource.STOREFILE_COUNT_DESC), this.regionWrapper.getNumStoreFiles());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STORE_REF_COUNT,
+        MetricsRegionServerSource.STORE_REF_COUNT), this.regionWrapper.getStoreRefCount());
       mrb.addGauge(
-          Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
-              MetricsRegionServerSource.STORE_COUNT_DESC),
-          this.regionWrapper.getNumStores());
-      mrb.addGauge(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
-              MetricsRegionServerSource.STOREFILE_COUNT_DESC),
-          this.regionWrapper.getNumStoreFiles());
-      mrb.addGauge(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.STORE_REF_COUNT,
-              MetricsRegionServerSource.STORE_REF_COUNT),
-          this.regionWrapper.getStoreRefCount());
-      mrb.addGauge(Interns.info(
-        regionNamePrefix + MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT,
-        MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT),
-        this.regionWrapper.getMaxCompactedStoreFileRefCount()
-      );
-      mrb.addGauge(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
-              MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
-          this.regionWrapper.getMemStoreSize());
-      mrb.addGauge(Interns.info(
-        regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
-        MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
+        Interns.info(
+          regionNamePrefix + MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT,
+          MetricsRegionServerSource.MAX_COMPACTED_STORE_FILE_REF_COUNT),
+        this.regionWrapper.getMaxCompactedStoreFileRefCount());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
+        MetricsRegionServerSource.MEMSTORE_SIZE_DESC), this.regionWrapper.getMemStoreSize());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
+          MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
         this.regionWrapper.getMaxStoreFileAge());
-      mrb.addGauge(Interns.info(
-        regionNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
-        MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC),
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
+          MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC),
         this.regionWrapper.getMinStoreFileAge());
-      mrb.addGauge(Interns.info(
-        regionNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
-        MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
+          MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
         this.regionWrapper.getAvgStoreFileAge());
-      mrb.addGauge(Interns.info(
-        regionNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
-        MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
+          MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
         this.regionWrapper.getNumReferenceFiles());
-      mrb.addGauge(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
-              MetricsRegionServerSource.STOREFILE_SIZE_DESC),
-          this.regionWrapper.getStoreFileSize());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
-              MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
-          this.regionWrapper.getNumCompactionsCompleted());
-      mrb.addCounter(Interns.info(
-          regionNamePrefix + MetricsRegionSource.COMPACTIONS_FAILED_COUNT,
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
+        MetricsRegionServerSource.STOREFILE_SIZE_DESC), this.regionWrapper.getStoreFileSize());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
+          MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
+        this.regionWrapper.getNumCompactionsCompleted());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_FAILED_COUNT,
           MetricsRegionSource.COMPACTIONS_FAILED_DESC),
-          this.regionWrapper.getNumCompactionsFailed());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.LAST_MAJOR_COMPACTION_AGE,
-              MetricsRegionSource.LAST_MAJOR_COMPACTION_DESC),
-          this.regionWrapper.getLastMajorCompactionAge());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
-              MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
-          this.regionWrapper.getNumBytesCompacted());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
-              MetricsRegionSource.NUM_FILES_COMPACTED_DESC),
-          this.regionWrapper.getNumFilesCompacted());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
-              MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
-          this.regionWrapper.getReadRequestCount());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
-              MetricsRegionServerSource.CP_REQUEST_COUNT_DESC),
-          this.regionWrapper.getCpRequestCount());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
-              MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
-          this.regionWrapper.getFilteredReadRequestCount());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
-              MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
-          this.regionWrapper.getWriteRequestCount());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.REPLICA_ID,
-              MetricsRegionSource.REPLICA_ID_DESC),
-          this.regionWrapper.getReplicaId());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.COMPACTIONS_QUEUED_COUNT,
-              MetricsRegionSource.COMPACTIONS_QUEUED_DESC),
-          this.regionWrapper.getNumCompactionsQueued());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.FLUSHES_QUEUED_COUNT,
-              MetricsRegionSource.FLUSHES_QUEUED_DESC),
-          this.regionWrapper.getNumFlushesQueued());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.MAX_COMPACTION_QUEUE_SIZE,
-              MetricsRegionSource.MAX_COMPACTION_QUEUE_DESC),
-          this.regionWrapper.getMaxCompactionQueueSize());
-      mrb.addCounter(Interns.info(
-              regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
-              MetricsRegionSource.MAX_FLUSH_QUEUE_DESC),
-          this.regionWrapper.getMaxFlushQueueSize());
+        this.regionWrapper.getNumCompactionsFailed());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionSource.LAST_MAJOR_COMPACTION_AGE,
+          MetricsRegionSource.LAST_MAJOR_COMPACTION_DESC),
+        this.regionWrapper.getLastMajorCompactionAge());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_BYTES_COMPACTED_DESC), this.regionWrapper.getNumBytesCompacted());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
+        MetricsRegionSource.NUM_FILES_COMPACTED_DESC), this.regionWrapper.getNumFilesCompacted());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
+          MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
+        this.regionWrapper.getReadRequestCount());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
+        MetricsRegionServerSource.CP_REQUEST_COUNT_DESC), this.regionWrapper.getCpRequestCount());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
+          MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
+        this.regionWrapper.getFilteredReadRequestCount());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
+          MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
+        this.regionWrapper.getWriteRequestCount());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.REPLICA_ID,
+        MetricsRegionSource.REPLICA_ID_DESC), this.regionWrapper.getReplicaId());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_QUEUED_COUNT,
+          MetricsRegionSource.COMPACTIONS_QUEUED_DESC),
+        this.regionWrapper.getNumCompactionsQueued());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.FLUSHES_QUEUED_COUNT,
+        MetricsRegionSource.FLUSHES_QUEUED_DESC), this.regionWrapper.getNumFlushesQueued());
+      mrb.addCounter(
+        Interns.info(regionNamePrefix + MetricsRegionSource.MAX_COMPACTION_QUEUE_SIZE,
+          MetricsRegionSource.MAX_COMPACTION_QUEUE_DESC),
+        this.regionWrapper.getMaxCompactionQueueSize());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.MAX_FLUSH_QUEUE_SIZE,
+        MetricsRegionSource.MAX_FLUSH_QUEUE_DESC), this.regionWrapper.getMaxFlushQueueSize());
       addCounter(mrb, this.regionWrapper.getMemstoreOnlyRowReadsCount(),
         MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
         MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
       addCounter(mrb, this.regionWrapper.getMixedRowReadsCount(),
-        MetricsRegionSource.MIXED_ROW_READS,
-        MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+        MetricsRegionSource.MIXED_ROW_READS, MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
     }
   }
 
   private void addCounter(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
-      String metricDesc) {
+    String metricDesc) {
     if (metricMap != null) {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
@@ -330,7 +304,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public boolean equals(Object obj) {
-    return obj == this ||
-        (obj instanceof MetricsRegionSourceImpl && compareTo((MetricsRegionSourceImpl) obj) == 0);
+    return obj == this
+      || (obj instanceof MetricsRegionSourceImpl && compareTo((MetricsRegionSourceImpl) obj) == 0);
   }
 }

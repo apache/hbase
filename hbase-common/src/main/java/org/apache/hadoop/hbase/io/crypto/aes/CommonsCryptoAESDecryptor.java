@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.security.Key;
 import java.util.Properties;
 import javax.crypto.spec.IvParameterSpec;
-
 import org.apache.commons.crypto.stream.CryptoInputStream;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,8 +69,7 @@ public class CommonsCryptoAESDecryptor implements Decryptor {
   @Override
   public InputStream createDecryptionStream(InputStream in) {
     try {
-      return new CryptoInputStream(cipherMode, properties, in, key, new
-          IvParameterSpec(iv));
+      return new CryptoInputStream(cipherMode, properties, in, key, new IvParameterSpec(iv));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

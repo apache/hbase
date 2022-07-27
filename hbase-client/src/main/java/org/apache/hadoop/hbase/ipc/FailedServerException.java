@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,10 +21,9 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Indicates that we're trying to connect to a already known as dead server. We will want to
- *  retry: we're getting this because the region location was wrong, or because
- *  the server just died, in which case the retry loop will help us to wait for the
- *  regions to recover.
+ * Indicates that we're trying to connect to a already known as dead server. We will want to retry:
+ * we're getting this because the region location was wrong, or because the server just died, in
+ * which case the retry loop will help us to wait for the regions to recover.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public

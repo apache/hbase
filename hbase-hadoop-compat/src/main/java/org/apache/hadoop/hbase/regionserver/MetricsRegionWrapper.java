@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,36 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Interface of class that will wrap an HRegion and export numbers so they can be
- * used in MetricsRegionSource
+ * Interface of class that will wrap an HRegion and export numbers so they can be used in
+ * MetricsRegionSource
  */
 @InterfaceAudience.Private
 public interface MetricsRegionWrapper {
 
   /**
    * Get the name of the table the region belongs to.
-   *
    * @return The string version of the table name.
    */
   String getTableName();
 
   /**
    * Get the name of the namespace this table is in.
-   * @return String version of the namespace.  Can't be empty.
+   * @return String version of the namespace. Can't be empty.
    */
   String getNamespace();
 
   /**
    * Get the name of the region.
-   *
    * @return The encoded name of the region.
    */
   String getRegionName();
@@ -84,24 +80,16 @@ public interface MetricsRegionWrapper {
    */
   long getFilteredReadRequestCount();
 
-  /**
-   * @return Max age of store files under this region
-   */
+  /** Returns Max age of store files under this region */
   long getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files under this region
-   */
+  /** Returns Min age of store files under this region */
   long getMinStoreFileAge();
 
-  /**
-   *  @return Average age of store files under this region
-   */
+  /** Returns Average age of store files under this region */
   long getAvgStoreFileAge();
 
-  /**
-   *  @return Number of reference files under this region
-   */
+  /** Returns Number of reference files under this region */
   long getNumReferenceFiles();
 
   /**
@@ -117,40 +105,36 @@ public interface MetricsRegionWrapper {
 
   long getNumCompactionsCompleted();
 
-  /**
-   *  @return Age of the last major compaction
-   */
+  /** Returns Age of the last major compaction */
   long getLastMajorCompactionAge();
 
   /**
-   * Returns the total number of compactions that have been reported as failed on this region.
-   * Note that a given compaction can be reported as both completed and failed if an exception
-   * is thrown in the processing after {@code HRegion.compact()}.
+   * Returns the total number of compactions that have been reported as failed on this region. Note
+   * that a given compaction can be reported as both completed and failed if an exception is thrown
+   * in the processing after {@code HRegion.compact()}.
    */
   long getNumCompactionsFailed();
 
   /**
-   * @return the total number of compactions that are currently queued(or being executed) at point
-   *         in time
+   * Returns the total number of compactions that are currently queued(or being executed) at point
+   * in time
    */
   long getNumCompactionsQueued();
 
   /**
-   * @return the total number of flushes currently queued(being executed) for this region at point
-   *         in time
+   * Returns the total number of flushes currently queued(being executed) for this region at point
+   * in time
    */
   long getNumFlushesQueued();
 
   /**
    * Note that this metric is updated periodically and hence might miss some data points.
-   *
    * @return the max number of compactions queued for this region
    */
   long getMaxCompactionQueueSize();
 
   /**
    * Note that this metric is updated periodically and hence might miss some data points.
-   *
    * @return the max number of flushes queued for this region
    */
   long getMaxFlushQueueSize();
@@ -162,25 +146,19 @@ public interface MetricsRegionWrapper {
    */
   int getReplicaId();
 
-  /**
-   * @return the number of references active on the store
-   */
+  /** Returns the number of references active on the store */
   long getStoreRefCount();
 
   /**
-   * @return the max number of references active on any store file among
-   *   all compacted store files that belong to this region
+   * Returns the max number of references active on any store file among all compacted store files
+   * that belong to this region
    */
   long getMaxCompactedStoreFileRefCount();
 
-  /**
-   * @return the number of row reads completely on memstore per store
-   */
+  /** Returns the number of row reads completely on memstore per store */
   Map<String, Long> getMemstoreOnlyRowReadsCount();
 
-  /**
-   * @return the number of row reads on memstore and file per store
-   */
+  /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
 
 }

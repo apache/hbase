@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor.example;
 
 import java.io.IOException;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.shaded.coprocessor.example.generated.RowCountProt
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
- *
  * <p>
  * For the protocol buffer definition of the RowCountService, see the source file located under
  * hbase-examples/src/main/protobuf/Examples.proto.
@@ -71,7 +69,7 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
    */
   @Override
   public void getRowCount(RpcController controller, CountRequest request,
-                          RpcCallback<CountResponse> done) {
+    RpcCallback<CountResponse> done) {
     Scan scan = new Scan();
     scan.setFilter(new FirstKeyOnlyFilter());
     CountResponse response = null;
@@ -94,15 +92,15 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
         results.clear();
       } while (hasMore);
 
-      response = CountResponse.newBuilder()
-          .setCount(count).build();
+      response = CountResponse.newBuilder().setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     done.run(response);
@@ -113,7 +111,7 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
    */
   @Override
   public void getKeyValueCount(RpcController controller, CountRequest request,
-                               RpcCallback<CountResponse> done) {
+    RpcCallback<CountResponse> done) {
     CountResponse response = null;
     InternalScanner scanner = null;
     try {
@@ -129,15 +127,15 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
         results.clear();
       } while (hasMore);
 
-      response = CountResponse.newBuilder()
-          .setCount(count).build();
+      response = CountResponse.newBuilder().setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
         try {
           scanner.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
       }
     }
     done.run(response);
@@ -146,17 +144,17 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
   /**
    * Stores a reference to the coprocessor environment provided by the
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost} from the region where this
-   * coprocessor is loaded.  Since this is a coprocessor endpoint, it always expects to be loaded
-   * on a table region, so always expects this to be an instance of
+   * coprocessor is loaded. Since this is a coprocessor endpoint, it always expects to be loaded on
+   * a table region, so always expects this to be an instance of
    * {@link RegionCoprocessorEnvironment}.
    * @param env the environment provided by the coprocessor host
    * @throws IOException if the provided environment is not an instance of
-   * {@code RegionCoprocessorEnvironment}
+   *                     {@code RegionCoprocessorEnvironment}
    */
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     if (env instanceof RegionCoprocessorEnvironment) {
-      this.env = (RegionCoprocessorEnvironment)env;
+      this.env = (RegionCoprocessorEnvironment) env;
     } else {
       throw new CoprocessorException("Must be loaded on a table region!");
     }

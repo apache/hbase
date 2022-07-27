@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,13 +23,16 @@ import org.apache.hadoop.hbase.io.MetricsIOWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
+ * Factory to create MetricsRegionServerSource when given a MetricsRegionServerWrapper
  */
 @InterfaceAudience.Private
 public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServerSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   public static enum FactoryStorage {
     INSTANCE;
-    private Object aggLock = new Object();
+
+    private final Object aggLock = new Object();
     private MetricsRegionAggregateSourceImpl regionAggImpl;
     private MetricsUserAggregateSourceImpl userAggImpl;
     private MetricsTableAggregateSourceImpl tblAggImpl;
@@ -45,6 +48,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     }
   }
 
+  @Override
   public synchronized MetricsUserAggregateSourceImpl getUserAggregate() {
     synchronized (FactoryStorage.INSTANCE.aggLock) {
       if (FactoryStorage.INSTANCE.userAggImpl == null) {
@@ -75,8 +79,8 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   }
 
   @Override
-  public synchronized MetricsRegionServerSource createServer(
-      MetricsRegionServerWrapper regionServerWrapper) {
+  public synchronized MetricsRegionServerSource
+    createServer(MetricsRegionServerWrapper regionServerWrapper) {
     return new MetricsRegionServerSourceImpl(regionServerWrapper);
   }
 
@@ -90,6 +94,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
     return new MetricsTableSourceImpl(table, getTableAggregate(), wrapper);
   }
 
+  @Override
   public MetricsIOSource createIO(MetricsIOWrapper wrapper) {
     return new MetricsIOSourceImpl(wrapper);
   }
@@ -97,6 +102,6 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   @Override
   public org.apache.hadoop.hbase.regionserver.MetricsUserSource createUser(String shortUserName) {
     return new org.apache.hadoop.hbase.regionserver.MetricsUserSourceImpl(shortUserName,
-        getUserAggregate());
+      getUserAggregate());
   }
 }

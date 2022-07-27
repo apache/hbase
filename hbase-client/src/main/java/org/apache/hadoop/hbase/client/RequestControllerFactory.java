@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A factory class that constructs an {@link org.apache.hadoop.hbase.client.RequestController}.
  */
 @InterfaceAudience.Public
 public final class RequestControllerFactory {
-  public static final String REQUEST_CONTROLLER_IMPL_CONF_KEY = "hbase.client.request.controller.impl";
+  public static final String REQUEST_CONTROLLER_IMPL_CONF_KEY =
+    "hbase.client.request.controller.impl";
+
   /**
    * Constructs a {@link org.apache.hadoop.hbase.client.RequestController}.
    * @param conf The {@link Configuration} to use.
    * @return A RequestController which is built according to the configuration.
    */
   public static RequestController create(Configuration conf) {
-    Class<? extends RequestController> clazz= conf.getClass(REQUEST_CONTROLLER_IMPL_CONF_KEY,
+    Class<? extends RequestController> clazz = conf.getClass(REQUEST_CONTROLLER_IMPL_CONF_KEY,
       SimpleRequestController.class, RequestController.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }

@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -49,18 +48,19 @@ abstract class StoreFlusher {
 
   /**
    * Turns a snapshot of memstore into a set of store files.
-   * @param snapshot Memstore snapshot.
-   * @param cacheFlushSeqNum Log cache flush sequence number.
-   * @param status Task that represents the flush operation and may be updated with status.
+   * @param snapshot             Memstore snapshot.
+   * @param cacheFlushSeqNum     Log cache flush sequence number.
+   * @param status               Task that represents the flush operation and may be updated with
+   *                             status.
    * @param throughputController A controller to avoid flush too fast
    * @return List of files written. Can be empty; must not be null.
    */
   public abstract List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
-      MonitoredTask status, ThroughputController throughputController,
-      FlushLifeCycleTracker tracker) throws IOException;
+    MonitoredTask status, ThroughputController throughputController, FlushLifeCycleTracker tracker,
+    Consumer<Path> writerCreationTracker) throws IOException;
 
-  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum,
-      MonitoredTask status) throws IOException {
+  protected void finalizeWriter(StoreFileWriter writer, long cacheFlushSeqNum, MonitoredTask status)
+    throws IOException {
     // Write out the log sequence number that corresponds to this output
     // hfile. Also write current time in metadata as minFlushTime.
     // The hfile is current up to and including cacheFlushSeqNum.
@@ -70,13 +70,13 @@ abstract class StoreFlusher {
     writer.close();
   }
 
-  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag)
-    throws IOException {
+  protected final StoreFileWriter createWriter(MemStoreSnapshot snapshot, boolean alwaysIncludesTag,
+    Consumer<Path> writerCreationTracker) throws IOException {
     return store.getStoreEngine()
       .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(snapshot.getCellsCount())
         .compression(store.getColumnFamilyDescriptor().getCompressionType()).isCompaction(false)
         .includeMVCCReadpoint(true).includesTag(alwaysIncludesTag || snapshot.isTagsPresent())
-        .shouldDropBehind(false));
+        .shouldDropBehind(false).writerCreationTracker(writerCreationTracker));
   }
 
   /**
@@ -93,7 +93,7 @@ abstract class StoreFlusher {
     }
     final long smallestReadPoint = store.getSmallestReadPoint();
     InternalScanner scanner = new StoreScanner(store, scanInfo, snapshotScanners,
-        ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, PrivateConstants.OLDEST_TIMESTAMP);
+      ScanType.COMPACT_RETAIN_DELETES, smallestReadPoint, PrivateConstants.OLDEST_TIMESTAMP);
 
     if (store.getCoprocessorHost() != null) {
       try {
@@ -108,24 +108,24 @@ abstract class StoreFlusher {
 
   /**
    * Performs memstore flush, writing data from scanner into sink.
-   * @param scanner Scanner to get data from.
-   * @param sink Sink to write data to. Could be StoreFile.Writer.
+   * @param scanner              Scanner to get data from.
+   * @param sink                 Sink to write data to. Could be StoreFile.Writer.
    * @param throughputController A controller to avoid flush too fast
    */
   protected void performFlush(InternalScanner scanner, CellSink sink,
-      ThroughputController throughputController) throws IOException {
+    ThroughputController throughputController) throws IOException {
     int compactionKVMax =
-        conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
+      conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
 
     ScannerContext scannerContext =
-        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+      ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
     List<Cell> kvs = new ArrayList<>();
     boolean hasMore;
     String flushName = ThroughputControlUtil.getNameForThrottling(store, "flush");
     // no control on system table (such as meta, namespace, etc) flush
     boolean control =
-        throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
+      throughputController != null && !store.getRegionInfo().getTable().isSystemTable();
     if (control) {
       throughputController.start(flushName);
     }
@@ -144,7 +144,7 @@ abstract class StoreFlusher {
       } while (hasMore);
     } catch (InterruptedException e) {
       throw new InterruptedIOException(
-          "Interrupted while control throughput of flushing " + flushName);
+        "Interrupted while control throughput of flushing " + flushName);
     } finally {
       if (control) {
         throughputController.finish(flushName);

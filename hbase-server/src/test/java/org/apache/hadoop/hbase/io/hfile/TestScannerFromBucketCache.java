@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,7 @@ public class TestScannerFromBucketCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerFromBucketCache.class);
+    HBaseClassTestRule.forClass(TestScannerFromBucketCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerFromBucketCache.class);
   @Rule
@@ -229,7 +230,7 @@ public class TestScannerFromBucketCache {
   }
 
   private List<Cell> insertData(byte[] row1, byte[] qf1, byte[] qf2, byte[] fam1, long ts1,
-      long ts2, long ts3, boolean withVal) throws IOException {
+    long ts2, long ts3, boolean withVal) throws IOException {
     // Putting data in Region
     Put put = null;
     KeyValue kv13 = null;
@@ -294,24 +295,22 @@ public class TestScannerFromBucketCache {
   }
 
   private static HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
-      HBaseTestingUtil test_util, byte[]... families) throws IOException {
+    HBaseTestingUtil test_util, byte[]... families) throws IOException {
     return initHRegion(tableName, null, null, callingMethod, conf, test_util, false, families);
   }
 
   private static HRegion initHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, HBaseTestingUtil testUtil, boolean isReadOnly,
-      byte[]... families) throws IOException {
+    String callingMethod, Configuration conf, HBaseTestingUtil testUtil, boolean isReadOnly,
+    byte[]... families) throws IOException {
     RegionInfo regionInfo =
-        RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(stopKey).build();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     builder.setReadOnly(isReadOnly).setDurability(Durability.SYNC_WAL);
     for (byte[] family : families) {
       builder.setColumnFamily(
-          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE)
-              .build());
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE).build());
     }
-    return HBaseTestingUtil
-        .createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod), conf,
-            builder.build(), BlockCacheFactory.createBlockCache(conf));
+    return HBaseTestingUtil.createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod),
+      conf, builder.build(), BlockCacheFactory.createBlockCache(conf));
   }
 }

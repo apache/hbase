@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,22 +20,18 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Thread that walks over the filesystem, and computes the mappings
- * Region -> BestHost and Region -> {@code Map<HostName, fractional-locality-of-region>}
- *
+ * Thread that walks over the filesystem, and computes the mappings Region -> BestHost and Region ->
+ * {@code Map<HostName, fractional-locality-of-region>}
  */
 @InterfaceAudience.Private
 class FSRegionScanner implements Runnable {
@@ -52,17 +47,16 @@ class FSRegionScanner implements Runnable {
   /**
    * Maps each region to the RS with highest locality for that region.
    */
-  private final Map<String,String> regionToBestLocalityRSMapping;
+  private final Map<String, String> regionToBestLocalityRSMapping;
 
   /**
-   * Maps region encoded names to maps of hostnames to fractional locality of
-   * that region on that host.
+   * Maps region encoded names to maps of hostnames to fractional locality of that region on that
+   * host.
    */
   private Map<String, Map<String, Float>> regionDegreeLocalityMapping;
 
-  FSRegionScanner(FileSystem fs, Path regionPath,
-                  Map<String, String> regionToBestLocalityRSMapping,
-                  Map<String, Map<String, Float>> regionDegreeLocalityMapping) {
+  FSRegionScanner(FileSystem fs, Path regionPath, Map<String, String> regionToBestLocalityRSMapping,
+    Map<String, Map<String, Float>> regionDegreeLocalityMapping) {
     this.fs = fs;
     this.regionPath = regionPath;
     this.regionToBestLocalityRSMapping = regionToBestLocalityRSMapping;
@@ -75,7 +69,7 @@ class FSRegionScanner implements Runnable {
       // empty the map for each region
       Map<String, AtomicInteger> blockCountMap = new HashMap<>();
 
-      //get table name
+      // get table name
       String tableName = regionPath.getParent().getName();
       int totalBlkCount = 0;
 
@@ -98,15 +92,14 @@ class FSRegionScanner implements Runnable {
         }
 
         for (FileStatus storeFile : storeFileLists) {
-          BlockLocation[] blkLocations =
-            fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
+          BlockLocation[] blkLocations = fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
           if (null == blkLocations) {
             continue;
           }
 
           totalBlkCount += blkLocations.length;
-          for(BlockLocation blk: blkLocations) {
-            for (String host: blk.getHosts()) {
+          for (BlockLocation blk : blkLocations) {
+            for (String host : blk.getHosts()) {
               AtomicInteger count = blockCountMap.get(host);
               if (count == null) {
                 count = new AtomicInteger(0);
@@ -137,11 +130,11 @@ class FSRegionScanner implements Runnable {
         }
 
         if (hostToRun.endsWith(".")) {
-          hostToRun = hostToRun.substring(0, hostToRun.length()-1);
+          hostToRun = hostToRun.substring(0, hostToRun.length() - 1);
         }
         String name = tableName + ":" + regionPath.getName();
         synchronized (regionToBestLocalityRSMapping) {
-          regionToBestLocalityRSMapping.put(name,  hostToRun);
+          regionToBestLocalityRSMapping.put(name, hostToRun);
         }
       }
 
@@ -153,7 +146,7 @@ class FSRegionScanner implements Runnable {
             host = host.substring(0, host.length() - 1);
           }
           // Locality is fraction of blocks local to this host.
-          float locality = ((float)entry.getValue().get()) / totalBlkCount;
+          float locality = ((float) entry.getValue().get()) / totalBlkCount;
           hostLocalityMap.put(host, locality);
         }
         // Put the locality map into the result map, keyed by the encoded name

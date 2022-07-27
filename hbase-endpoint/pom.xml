@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
     /**
@@ -21,9 +21,9 @@
     -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <artifactId>hbase-build-configuration</artifactId>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-endpoint</artifactId>
@@ -33,33 +33,6 @@
   <properties>
     <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
-  <build>
-    <plugins>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <configuration>
-            <failOnViolation>true</failOnViolation>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
@@ -108,6 +81,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-client</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
     </dependency>
     <!--Some of the CPEPs use hbase server-side internals; they shouldn't!-->
     <dependency>
@@ -213,7 +192,51 @@
       <artifactId>log4j-1.2-api</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- when depending on a test jar, maven does not pull in the transitive dependencies. require
+    them manually. -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-trace</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+  <build>
+    <plugins>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
@@ -235,7 +258,9 @@
     <profile>
       <id>hadoop-3.0</id>
       <activation>
-        <property><name>!hadoop.profile</name></property>
+        <property>
+          <name>!hadoop.profile</name>
+        </property>
       </activation>
       <dependencies>
         <dependency>

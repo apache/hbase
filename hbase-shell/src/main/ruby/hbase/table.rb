@@ -189,10 +189,18 @@ EOF
       if column != ""
         if column && all_version
           family, qualifier = parse_column_name(column)
-          d.addColumns(family, qualifier, timestamp)
+          if qualifier
+            d.addColumns(family, qualifier, timestamp)
+          else
+            d.addFamily(family, timestamp)
+          end
         elsif column && !all_version
           family, qualifier = parse_column_name(column)
-          d.addColumn(family, qualifier, timestamp)
+          if qualifier
+            d.addColumn(family, qualifier, timestamp)
+          else
+            d.addFamilyVersion(family, timestamp)
+          end
         end
       end
       d
@@ -208,7 +216,7 @@ EOF
 
       # create scan to get table names using prefix
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.setRowPrefixFilter(prefix.to_java_bytes)
+      scan.setStartStopRowForPrefixScan(prefix.to_java_bytes)
       # Run the scanner to get all rowkeys
       scanner = @table.getScanner(scan)
       # Create a list to store all deletes
@@ -244,7 +252,11 @@ EOF
       # delete operation doesn't need read permission. Retaining the read check for
       # meta table as a part of HBASE-5837.
       if is_meta_table?
-        raise ArgumentError, 'Row Not Found' if _get_internal(row).nil?
+        if row.is_a?(Hash) and row.key?('ROWPREFIXFILTER')
+          raise ArgumentError, 'deleteall with ROWPREFIXFILTER in hbase:meta is not allowed.'
+        else
+          raise ArgumentError, 'Row Not Found' if _get_internal(row).nil?
+        end
       end
       if row.is_a?(Hash)
         _deleterows_internal(row, column, timestamp, args, all_version)
@@ -536,7 +548,7 @@ EOF
                end
 
         # This will overwrite any startrow/stoprow settings
-        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
+        scan.setStartStopRowForPrefixScan(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         # Clear converters from last scan.
         @converters.clear

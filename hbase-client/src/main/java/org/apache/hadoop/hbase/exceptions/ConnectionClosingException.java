@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,16 +37,13 @@ package org.apache.hadoop.hbase.exceptions;
 */
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
-* Thrown when the client believes that we are trying to communicate to has
-* been repeatedly unresponsive for a while.
-*
-* On receiving such an exception. The ConnectionManager will skip all
-* retries and fast fail the operation.
-*/
+ * Thrown when the client believes that we are trying to communicate to has been repeatedly
+ * unresponsive for a while. On receiving such an exception. The ConnectionManager will skip all
+ * retries and fast fail the operation.
+ */
 @InterfaceAudience.Public
 public class ConnectionClosingException extends IOException {
   public ConnectionClosingException(String string) {
@@ -55,9 +52,8 @@ public class ConnectionClosingException extends IOException {
 
   /**
    * ConnectionClosingException with cause
-   *
    * @param message the message for this exception
-   * @param cause the cause for this exception
+   * @param cause   the cause for this exception
    */
   public ConnectionClosingException(String message, Throwable cause) {
     super(message, cause);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,12 @@ import org.junit.rules.TestName;
  * Do some ops and prove that client and server can work w/o codecs; that we can pb all the time.
  * Good for third-party clients or simple scripts that want to talk direct to hbase.
  */
-@Category({MediumTests.class, ClientTests.class})
+@Category({ MediumTests.class, ClientTests.class })
 public class TestFromClientSideNoCodec {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFromClientSideNoCodec.class);
+    HBaseClassTestRule.forClass(TestFromClientSideNoCodec.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -75,13 +75,13 @@ public class TestFromClientSideNoCodec {
   @Test
   public void testBasics() throws IOException {
     final TableName tableName = TableName.valueOf(name.getMethodName());
-    final byte [][] fs = new byte[][] {Bytes.toBytes("cf1"), Bytes.toBytes("cf2"),
-      Bytes.toBytes("cf3") };
+    final byte[][] fs =
+      new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
     Table ht = TEST_UTIL.createTable(tableName, fs);
     // Check put and get.
-    final byte [] row = Bytes.toBytes("row");
+    final byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
-    for (byte [] f: fs) {
+    for (byte[] f : fs) {
       p.addColumn(f, f, f);
     }
     ht.put(p);
@@ -89,10 +89,9 @@ public class TestFromClientSideNoCodec {
     int i = 0;
     for (CellScanner cellScanner = r.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      byte [] f = fs[i++];
-      assertTrue(Bytes.toString(f),
-        Bytes.equals(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
-          f, 0, f.length));
+      byte[] f = fs[i++];
+      assertTrue(Bytes.toString(f), Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength(), f, 0, f.length));
     }
     // Check getRowOrBefore
     byte[] f = fs[0];

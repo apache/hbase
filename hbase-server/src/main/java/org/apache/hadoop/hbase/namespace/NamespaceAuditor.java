@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -32,9 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The Class NamespaceAuditor performs checks to ensure operations like table creation
- * and region splitting preserve namespace quota. The namespace quota can be specified
- * while namespace creation.
+ * The Class NamespaceAuditor performs checks to ensure operations like table creation and region
+ * splitting preserve namespace quota. The namespace quota can be specified while namespace
+ * creation.
  */
 @InterfaceAudience.Private
 public class NamespaceAuditor {
@@ -52,14 +50,11 @@ public class NamespaceAuditor {
     LOG.info("NamespaceAuditor started.");
   }
 
-
   /**
-   * Check quota to create table.
-   * We add the table information to namespace state cache, assuming the operation will
-   * pass. If the operation fails, then the next time namespace state chore runs
+   * Check quota to create table. We add the table information to namespace state cache, assuming
+   * the operation will pass. If the operation fails, then the next time namespace state chore runs
    * namespace state cache will be corrected.
-   *
-   * @param tName - The table name to check quota.
+   * @param tName   - The table name to check quota.
    * @param regions - Number of regions that will be added.
    * @throws IOException Signals that an I/O exception has occurred.
    */
@@ -77,7 +72,7 @@ public class NamespaceAuditor {
 
   /**
    * Check and update region count quota for an existing table.
-   * @param tName - table name for which region count to be updated.
+   * @param tName   - table name for which region count to be updated.
    * @param regions - Number of regions that will be added.
    * @throws IOException Signals that an I/O exception has occurred.
    */
@@ -116,22 +111,25 @@ public class NamespaceAuditor {
   public void checkQuotaToSplitRegion(RegionInfo hri) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
-          "Split operation is being performed even before namespace auditor is initialized.");
-    } else if (!stateManager
-        .checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName(), 1)) {
+        "Split operation is being performed even before namespace auditor is initialized.");
+    } else if (
+      !stateManager.checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName(), 1)
+    ) {
       throw new QuotaExceededException("Region split not possible for :" + hri.getEncodedName()
-          + " as quota limits are exceeded ");
+        + " as quota limits are exceeded ");
     }
   }
 
   public void updateQuotaForRegionMerge(RegionInfo mergedRegion) throws IOException {
     if (!stateManager.isInitialized()) {
       throw new IOException(
-          "Merge operation is being performed even before namespace auditor is initialized.");
-    } else if (!stateManager.checkAndUpdateNamespaceRegionCount(mergedRegion.getTable(),
-        mergedRegion.getRegionName(), -1)) {
-      throw new QuotaExceededException("Region merge not possible for :" +
-        mergedRegion.getEncodedName() + " as quota limits are exceeded ");
+        "Merge operation is being performed even before namespace auditor is initialized.");
+    } else if (
+      !stateManager.checkAndUpdateNamespaceRegionCount(mergedRegion.getTable(),
+        mergedRegion.getRegionName(), -1)
+    ) {
+      throw new QuotaExceededException("Region merge not possible for :"
+        + mergedRegion.getEncodedName() + " as quota limits are exceeded ");
     }
   }
 
@@ -143,8 +141,7 @@ public class NamespaceAuditor {
     stateManager.deleteNamespace(namespace);
   }
 
-  public void removeFromNamespaceUsage(TableName tableName)
-      throws IOException {
+  public void removeFromNamespaceUsage(TableName tableName) throws IOException {
     stateManager.removeTable(tableName);
   }
 
@@ -165,7 +162,6 @@ public class NamespaceAuditor {
 
   /**
    * Checks if namespace auditor is initialized. Used only for testing.
-   *
    * @return true, if is initialized
    */
   public boolean isInitialized() {

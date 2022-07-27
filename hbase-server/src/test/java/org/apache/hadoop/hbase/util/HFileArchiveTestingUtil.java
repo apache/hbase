@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class HFileArchiveTestingUtil {
   }
 
   public static boolean compareArchiveToOriginal(FileStatus[] previous, FileStatus[] archived,
-      FileSystem fs, boolean hasTimedBackup) {
+    FileSystem fs, boolean hasTimedBackup) {
 
     List<List<String>> lists = getFileLists(previous, archived);
     List<String> original = lists.get(0);
@@ -84,26 +84,24 @@ public class HFileArchiveTestingUtil {
   /**
    * Compare the archived files to the files in the original directory
    * @param expected original files that should have been archived
-   * @param actual files that were archived
-   * @param fs filessystem on which the archiving took place
-   * @throws IOException
+   * @param actual   files that were archived
+   * @param fs       filessystem on which the archiving took place n
    */
   public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
-      FileSystem fs) throws IOException {
+    FileSystem fs) throws IOException {
     assertArchiveEqualToOriginal(expected, actual, fs, false);
   }
 
   /**
    * Compare the archived files to the files in the original directory
-   * @param expected original files that should have been archived
-   * @param actual files that were archived
-   * @param fs {@link FileSystem} on which the archiving took place
+   * @param expected       original files that should have been archived
+   * @param actual         files that were archived
+   * @param fs             {@link FileSystem} on which the archiving took place
    * @param hasTimedBackup <tt>true</tt> if we expect to find an archive backup directory with a
-   *          copy of the files in the archive directory (and the original files).
-   * @throws IOException
+   *                       copy of the files in the archive directory (and the original files). n
    */
   public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
-      FileSystem fs, boolean hasTimedBackup) throws IOException {
+    FileSystem fs, boolean hasTimedBackup) throws IOException {
 
     List<List<String>> lists = getFileLists(expected, actual);
     List<String> original = lists.get(0);
@@ -132,15 +130,13 @@ public class HFileArchiveTestingUtil {
 
   private static String assertArchiveEquality(List<String> expected, List<String> archived) {
     String compare = compareFileLists(expected, archived);
-    if (!(expected.size() == archived.size())) return "Not the same number of current files\n"
-        + compare;
+    if (!(expected.size() == archived.size()))
+      return "Not the same number of current files\n" + compare;
     if (!expected.equals(archived)) return "Different backup files, but same amount\n" + compare;
     return null;
   }
 
-  /**
-   * @return &lt;expected, gotten, backup&gt;, where each is sorted
-   */
+  /** Returns &lt;expected, gotten, backup&gt;, where each is sorted */
   private static List<List<String>> getFileLists(FileStatus[] previous, FileStatus[] archived) {
     List<List<String>> files = new ArrayList<>(3);
 
@@ -158,7 +154,7 @@ public class HFileArchiveTestingUtil {
         String shortName = name.split("[.]")[0];
         Path modPath = new Path(parent, shortName);
         FileStatus file = new FileStatus(f.getLen(), f.isDirectory(), f.getReplication(),
-            f.getBlockSize(), f.getModificationTime(), modPath);
+          f.getBlockSize(), f.getModificationTime(), modPath);
         backedupFiles.add(file);
       } else {
         // otherwise, add it to the list to compare to the original store files
@@ -185,8 +181,8 @@ public class HFileArchiveTestingUtil {
 
   /* Get a pretty representation of the differences */
   private static String compareFileLists(List<String> expected, List<String> gotten) {
-    StringBuilder sb = new StringBuilder("Expected (" + expected.size() + "): \t\t Gotten ("
-        + gotten.size() + "):\n");
+    StringBuilder sb = new StringBuilder(
+      "Expected (" + expected.size() + "): \t\t Gotten (" + gotten.size() + "):\n");
     List<String> notFound = new ArrayList<>();
     for (String s : expected) {
       if (gotten.contains(s)) sb.append(s + "\t\t" + s + "\n");
@@ -205,7 +201,7 @@ public class HFileArchiveTestingUtil {
 
   /**
    * Helper method to get the archive directory for the specified region
-   * @param conf {@link Configuration} to check for the name of the archive directory
+   * @param conf   {@link Configuration} to check for the name of the archive directory
    * @param region region that is being archived
    * @return {@link Path} to the archive directory for the given region
    */
@@ -216,19 +212,19 @@ public class HFileArchiveTestingUtil {
 
   /**
    * Helper method to get the store archive directory for the specified region
-   * @param conf {@link Configuration} to check for the name of the archive directory
+   * @param conf   {@link Configuration} to check for the name of the archive directory
    * @param region region that is being archived
-   * @param store store that is archiving files
+   * @param store  store that is archiving files
    * @return {@link Path} to the store archive directory for the given region
    */
   public static Path getStoreArchivePath(Configuration conf, HRegion region, Store store)
-      throws IOException {
+    throws IOException {
     return HFileArchiveUtil.getStoreArchivePath(conf, region.getRegionInfo(),
-        region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
+      region.getRegionFileSystem().getTableDir(), store.getColumnFamilyDescriptor().getName());
   }
 
-  public static Path getStoreArchivePath(HBaseTestingUtil util, String tableName,
-      byte[] storeName) throws IOException {
+  public static Path getStoreArchivePath(HBaseTestingUtil util, String tableName, byte[] storeName)
+    throws IOException {
     byte[] table = Bytes.toBytes(tableName);
     // get the RS and region serving our table
     List<HRegion> servingRegions = util.getHBaseCluster().getRegions(table);

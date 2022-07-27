@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,59 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
-
-import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 
-final class SimpleScanResultConsumer implements ScanResultConsumer {
+/**
+ * A simplistic {@link ScanResultConsumer} for use in tests.
+ */
+public interface SimpleScanResultConsumer extends ScanResultConsumer {
 
-  private ScanMetrics scanMetrics;
+  List<Result> getAll() throws Exception;
 
-  private final List<Result> results = new ArrayList<>();
-
-  private Throwable error;
-
-  private boolean finished = false;
-
-  @Override
-  public void onScanMetricsCreated(ScanMetrics scanMetrics) {
-    this.scanMetrics = scanMetrics;
-  }
-
-  @Override
-  public synchronized boolean onNext(Result result) {
-    results.add(result);
-    return true;
-  }
-
-  @Override
-  public synchronized void onError(Throwable error) {
-    this.error = error;
-    finished = true;
-    notifyAll();
-  }
-
-  @Override
-  public synchronized void onComplete() {
-    finished = true;
-    notifyAll();
-  }
-
-  public synchronized List<Result> getAll() throws Exception {
-    while (!finished) {
-      wait();
-    }
-    if (error != null) {
-      Throwables.propagateIfPossible(error, Exception.class);
-      throw new Exception(error);
-    }
-    return results;
-  }
-
-  public ScanMetrics getScanMetrics() {
-    return scanMetrics;
-  }
+  ScanMetrics getScanMetrics();
 }

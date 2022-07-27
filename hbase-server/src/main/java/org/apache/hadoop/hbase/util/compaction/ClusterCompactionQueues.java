@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -126,9 +126,9 @@ class ClusterCompactionQueues {
     lock.readLock().lock();
     try {
       return compactionQueues.entrySet().stream()
-          .filter(entry -> !compactingServers.contains(entry.getKey()))
-          .max(Map.Entry.comparingByValue(
-            (o1, o2) -> Integer.compare(o1.size(), o2.size()))).map(Map.Entry::getKey);
+        .filter(entry -> !compactingServers.contains(entry.getKey()))
+        .max(Map.Entry.comparingByValue((o1, o2) -> Integer.compare(o1.size(), o2.size())))
+        .map(Map.Entry::getKey);
     } finally {
       lock.readLock().unlock();
     }

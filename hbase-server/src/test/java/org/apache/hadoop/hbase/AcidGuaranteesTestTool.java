@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,11 +47,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -89,7 +90,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
 
     long keepAliveTime = 60;
     BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>(
-        maxThreads * HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
+      maxThreads * HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
 
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
@@ -137,7 +138,6 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
    * Thread that does random full-row writes into a table.
    */
   public static class AtomicityWriter extends RepeatingTestThread {
-    Random rand = new Random();
     byte data[] = new byte[10];
     byte[][] targetRows;
     byte[][] targetFamilies;
@@ -146,7 +146,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     AtomicLong numWritten = new AtomicLong();
 
     public AtomicityWriter(TestContext ctx, byte[][] targetRows, byte[][] targetFamilies,
-        ExecutorService pool) throws IOException {
+      ExecutorService pool) throws IOException {
       super(ctx);
       this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
@@ -157,10 +157,9 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     @Override
     public void doAnAction() throws Exception {
       // Pick a random row to write into
-      byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
+      byte[] targetRow = targetRows[ThreadLocalRandom.current().nextInt(targetRows.length)];
       Put p = new Put(targetRow);
-      rand.nextBytes(data);
-
+      Bytes.random(data);
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
@@ -193,7 +192,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     AtomicLong numRead = new AtomicLong();
 
     public AtomicGetReader(TestContext ctx, byte[] targetRow, byte[][] targetFamilies,
-        ExecutorService pool) throws IOException {
+      ExecutorService pool) throws IOException {
       super(ctx);
       this.targetRow = targetRow;
       this.targetFamilies = targetFamilies;
@@ -262,7 +261,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     AtomicLong numRowsScanned = new AtomicLong();
 
     public AtomicScanReader(TestContext ctx, byte[][] targetFamilies, ExecutorService pool)
-        throws IOException {
+      throws IOException {
       super(ctx);
       this.targetFamilies = targetFamilies;
       connection = ConnectionFactory.createConnection(ctx.getConf(), pool);
@@ -323,13 +322,13 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     if (!admin.tableExists(TABLE_NAME)) {
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TABLE_NAME);
       Stream.of(FAMILIES).map(ColumnFamilyDescriptorBuilder::of)
-          .forEachOrdered(builder::setColumnFamily);
+        .forEachOrdered(builder::setColumnFamily);
       admin.createTable(builder.build());
     }
     ColumnFamilyDescriptor cfd = admin.getDescriptor(TABLE_NAME).getColumnFamilies()[0];
     if (cfd.isMobEnabled() != useMob) {
       admin.modifyColumnFamily(TABLE_NAME, ColumnFamilyDescriptorBuilder.newBuilder(cfd)
-          .setMobEnabled(useMob).setMobThreshold(4).build());
+        .setMobEnabled(useMob).setMobThreshold(4).build());
     }
   }
 
@@ -374,7 +373,7 @@ public class AcidGuaranteesTestTool extends AbstractHBaseTool {
     List<AtomicGetReader> getters = Lists.newArrayList();
     for (int i = 0; i < numGetters; i++) {
       AtomicGetReader getter =
-          new AtomicGetReader(ctx, rows[i % numUniqueRows], FAMILIES, sharedPool);
+        new AtomicGetReader(ctx, rows[i % numUniqueRows], FAMILIES, sharedPool);
       getters.add(getter);
       ctx.addThread(getter);
     }

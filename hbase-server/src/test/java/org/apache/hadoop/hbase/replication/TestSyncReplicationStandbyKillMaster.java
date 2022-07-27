@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBase {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestSyncReplicationStandbyKillMaster.class);
+    LoggerFactory.getLogger(TestSyncReplicationStandbyKillMaster.class);
 
   private final long SLEEP_TIME = 2000;
 
@@ -43,7 +43,7 @@ public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBas
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSyncReplicationStandbyKillMaster.class);
+    HBaseClassTestRule.forClass(TestSyncReplicationStandbyKillMaster.class);
 
   @Test
   public void testStandbyKillMaster() throws Exception {
@@ -51,10 +51,10 @@ public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBas
     Path remoteWALDir = getRemoteWALDir(mfs, PEER_ID);
     assertFalse(mfs.getWALFileSystem().exists(remoteWALDir));
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-        SyncReplicationState.STANDBY);
+      SyncReplicationState.STANDBY);
     assertTrue(mfs.getWALFileSystem().exists(remoteWALDir));
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-        SyncReplicationState.ACTIVE);
+      SyncReplicationState.ACTIVE);
 
     // Disable async replication and write data, then shutdown
     UTIL1.getAdmin().disableReplicationPeer(PEER_ID);
@@ -74,13 +74,15 @@ public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBas
     // Transit standby to DA to replay logs
     try {
       UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
-          SyncReplicationState.DOWNGRADE_ACTIVE);
+        SyncReplicationState.DOWNGRADE_ACTIVE);
     } catch (Exception e) {
       LOG.error("Failed to transit standby cluster to " + SyncReplicationState.DOWNGRADE_ACTIVE);
     }
 
-    while (UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)
-        != SyncReplicationState.DOWNGRADE_ACTIVE) {
+    while (
+      UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)
+          != SyncReplicationState.DOWNGRADE_ACTIVE
+    ) {
       Thread.sleep(SLEEP_TIME);
     }
     verify(UTIL2, 0, COUNT);

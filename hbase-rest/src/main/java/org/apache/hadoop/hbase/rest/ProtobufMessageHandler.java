@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,31 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Common interface for models capable of supporting protobuf marshalling
- * and unmarshalling. Hooks up to the ProtobufMessageBodyConsumer and
- * ProtobufMessageBodyProducer adapters. 
+ * Common interface for models capable of supporting protobuf marshalling and unmarshalling. Hooks
+ * up to the ProtobufMessageBodyConsumer and ProtobufMessageBodyProducer adapters.
  */
 @InterfaceAudience.Private
 public interface ProtobufMessageHandler {
-  /**
-   * @return the protobuf represention of the model
-   */
+  /** Returns the protobuf represention of the model */
   byte[] createProtobufOutput();
 
   /**
    * Initialize the model from a protobuf representation.
    * @param message the raw bytes of the protobuf message
-   * @return reference to self for convenience
-   * @throws IOException
+   * @return reference to self for convenience n
    */
-  ProtobufMessageHandler getObjectFromMessage(byte[] message)
-    throws IOException;
+  ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException;
 }

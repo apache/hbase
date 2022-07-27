@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MultipleIOException;
@@ -36,14 +35,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class that manages the output streams from the log splitting process.
- * Every region may have many recovered edits file. But the opening writers is bounded.
- * Bounded means the output streams will be no more than the size of threadpool.
+ * Class that manages the output streams from the log splitting process. Every region may have many
+ * recovered edits file. But the opening writers is bounded. Bounded means the output streams will
+ * be no more than the size of threadpool.
  */
 @InterfaceAudience.Private
 class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(BoundedRecoveredEditsOutputSink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BoundedRecoveredEditsOutputSink.class);
 
   // Since the splitting process may create multiple output files, we need a map
   // to track the output count of each region.
@@ -52,22 +50,20 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
   private final AtomicInteger openingWritersNum = new AtomicInteger(0);
 
   public BoundedRecoveredEditsOutputSink(WALSplitter walSplitter,
-      WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
+    WALSplitter.PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
     super(walSplitter, controller, entryBuffers, numWriters);
   }
 
   @Override
-  public void append(EntryBuffers.RegionEntryBuffer buffer)
-      throws IOException {
+  public void append(EntryBuffers.RegionEntryBuffer buffer) throws IOException {
     List<WAL.Entry> entries = buffer.entryBuffer;
     if (entries.isEmpty()) {
       LOG.warn("got an empty buffer, skipping");
       return;
     }
     // The key point is create a new writer, write edits then close writer.
-    RecoveredEditsWriter writer =
-      createRecoveredEditsWriter(buffer.tableName, buffer.encodedRegionName,
-        entries.get(0).getKey().getSequenceId());
+    RecoveredEditsWriter writer = createRecoveredEditsWriter(buffer.tableName,
+      buffer.encodedRegionName, entries.get(0).getKey().getSequenceId());
     if (writer != null) {
       openingWritersNum.incrementAndGet();
       writer.writeRegionEntries(entries);
@@ -96,7 +92,6 @@ class BoundedRecoveredEditsOutputSink extends AbstractRecoveredEditsOutputSink {
 
   /**
    * Write out the remaining RegionEntryBuffers and close the writers.
-   *
    * @return true when there is no error.
    */
   private boolean writeRemainingEntryBuffers() throws IOException {

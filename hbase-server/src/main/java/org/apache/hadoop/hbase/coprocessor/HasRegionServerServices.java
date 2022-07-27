@@ -21,17 +21,15 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Mark a class that it has a RegionServiceServices accessor.
- * Temporary hack until core Coprocesssors are integrated.
+ * Mark a class that it has a RegionServiceServices accessor. Temporary hack until core
+ * Coprocesssors are integrated.
  * @see CoreCoprocessor
  * @deprecated Since 2.0.0 to be removed in 3.0.0. The hope is that by 3.0.0 we will not need this
- * facility as CoreCoprocessors are integated into core.
+ *             facility as CoreCoprocessors are integated into core.
  */
 @Deprecated
 @InterfaceAudience.Private
 public interface HasRegionServerServices {
-  /**
-   * @return An instance of RegionServerServices, an object NOT for Coprocessor consumption.
-   */
+  /** Returns An instance of RegionServerServices, an object NOT for Coprocessor consumption. */
   RegionServerServices getRegionServerServices();
 }

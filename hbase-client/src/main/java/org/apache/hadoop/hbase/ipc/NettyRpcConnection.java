@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -223,9 +223,6 @@ class NettyRpcConnection extends RpcConnection {
       public void operationComplete(Future<Boolean> future) throws Exception {
         if (future.isSuccess()) {
           ChannelPipeline p = ch.pipeline();
-          p.remove(SaslChallengeDecoder.class);
-          p.remove(NettyHBaseSaslRpcClientHandler.class);
-
           // check if negotiate with server for connection header is necessary
           if (saslHandler.isNeedProcessConnectionHeader()) {
             Promise<Boolean> connectionHeaderPromise = ch.eventLoop().newPromise();

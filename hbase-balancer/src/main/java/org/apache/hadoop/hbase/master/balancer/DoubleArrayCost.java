@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -81,8 +81,7 @@ final class DoubleArrayCost {
     }
     // No need to compute standard deviation with division by cluster size when scaling.
     totalCost = Math.sqrt(totalCost);
-    return CostFunction.scale(getMinSkew(total, count),
-      getMaxSkew(total, count), totalCost);
+    return CostFunction.scale(getMinSkew(total, count), getMaxSkew(total, count), totalCost);
   }
 
   private static double getSum(double[] stats) {
@@ -105,21 +104,20 @@ final class DoubleArrayCost {
     // It's possible that there aren't enough regions to go around
     double min;
     if (numServers > total) {
-      min = ((numServers - total) * mean * mean + (1 - mean) * (1 - mean) * total) ;
+      min = ((numServers - total) * mean * mean + (1 - mean) * (1 - mean) * total);
     } else {
       // Some will have 1 more than everything else.
       int numHigh = (int) (total - (Math.floor(mean) * numServers));
       int numLow = (int) (numServers - numHigh);
-      min = numHigh * (Math.ceil(mean) - mean) * (Math.ceil(mean) - mean) +
-        numLow * (mean - Math.floor(mean)) * (mean - Math.floor(mean));
+      min = numHigh * (Math.ceil(mean) - mean) * (Math.ceil(mean) - mean)
+        + numLow * (mean - Math.floor(mean)) * (mean - Math.floor(mean));
     }
     return Math.sqrt(min);
   }
 
   /**
-   * Return the max deviation of distribution
-   * Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
-   * a zero sum cost for this to make sense.
+   * Return the max deviation of distribution Compute max as if all region servers had 0 and one had
+   * the sum of all costs. This must be a zero sum cost for this to make sense.
    */
   public static double getMaxSkew(double total, double numServers) {
     if (numServers == 0) {

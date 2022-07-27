@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -101,10 +101,9 @@ public class TestMalformedCellFromClient {
   }
 
   /**
-   * The purpose of this ut is to check the consistency between the exception and results.
-   * If the RetriesExhaustedWithDetailsException contains the whole batch,
-   * each result should be of IOE. Otherwise, the row operation which is not in the exception
-   * should have a true result.
+   * The purpose of this ut is to check the consistency between the exception and results. If the
+   * RetriesExhaustedWithDetailsException contains the whole batch, each result should be of IOE.
+   * Otherwise, the row operation which is not in the exception should have a true result.
    */
   @Test
   public void testRegionException() throws InterruptedException, IOException {
@@ -158,8 +157,8 @@ public class TestMalformedCellFromClient {
     RowMutations rm = new RowMutations(Bytes.toBytes("fail"));
     rm.add(new Put(rm.getRow()).addColumn(FAMILY, null, new byte[CELL_SIZE]));
     batches.add(rm);
-    try (AsyncConnection asyncConnection = ConnectionFactory
-      .createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
+    try (AsyncConnection asyncConnection =
+      ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get()) {
       AsyncTable<AdvancedScanResultConsumer> table = asyncConnection.getTable(TABLE_NAME);
       List<CompletableFuture<AdvancedScanResultConsumer>> results = table.batch(batches);
       assertEquals(2, results.size());
@@ -192,10 +191,11 @@ public class TestMalformedCellFromClient {
     HRegion r = TEST_UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0);
     ClientProtos.MultiRequest request =
       ClientProtos.MultiRequest.newBuilder(createRequest(rm, r.getRegionInfo().getRegionName()))
-        .addRegionAction(ClientProtos.RegionAction.newBuilder().setRegion(RequestConverter
-          .buildRegionSpecifier(HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME,
-            r.getRegionInfo().getRegionName())).addAction(ClientProtos.Action.newBuilder()
-          .setMutation(
+        .addRegionAction(ClientProtos.RegionAction.newBuilder()
+          .setRegion(RequestConverter.buildRegionSpecifier(
+            HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME,
+            r.getRegionInfo().getRegionName()))
+          .addAction(ClientProtos.Action.newBuilder().setMutation(
             ProtobufUtil.toMutationNoData(ClientProtos.MutationProto.MutationType.PUT, put))))
         .build();
 
@@ -207,9 +207,8 @@ public class TestMalformedCellFromClient {
     assertEquals(3, cells.size());
     HBaseRpcController controller = Mockito.mock(HBaseRpcController.class);
     Mockito.when(controller.cellScanner()).thenReturn(CellUtil.createCellScanner(cells));
-    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(
-      TEST_UTIL.getMiniHBaseCluster()
-        .getServerHoldingRegion(TABLE_NAME, r.getRegionInfo().getRegionName()));
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(TEST_UTIL
+      .getMiniHBaseCluster().getServerHoldingRegion(TABLE_NAME, r.getRegionInfo().getRegionName()));
 
     ClientProtos.MultiResponse response = rs.getRSRpcServices().multi(controller, request);
     assertEquals(2, response.getRegionActionResultCount());
@@ -253,16 +252,14 @@ public class TestMalformedCellFromClient {
       builder.addAction(actionBuilder.build());
     }
     ClientProtos.MultiRequest request = ClientProtos.MultiRequest.newBuilder()
-        .addRegionAction(builder.setCondition(condition).build()).build();
+      .addRegionAction(builder.setCondition(condition).build()).build();
     return request;
   }
 
   /**
-   * This test depends on how regionserver process the batch ops.
-   * 1) group the put/delete until meeting the increment
-   * 2) process the batch of put/delete
-   * 3) process the increment
-   * see RSRpcServices#doNonAtomicRegionMutation
+   * This test depends on how regionserver process the batch ops. 1) group the put/delete until
+   * meeting the increment 2) process the batch of put/delete 3) process the increment see
+   * RSRpcServices#doNonAtomicRegionMutation
    */
   @Test
   public void testNonAtomicOperations() throws InterruptedException, IOException {

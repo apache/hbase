@@ -34,9 +34,8 @@ import org.slf4j.LoggerFactory;
  * We can specify a split restriction, "KeyPrefix" or "DelimitedKeyPrefix", to a table with the
  * "hbase.regionserver.region.split_restriction.type" property. The "KeyPrefix" split restriction
  * groups rows by a prefix of the row-key. And the "DelimitedKeyPrefix" split restriction groups
- * rows by a prefix of the row-key with a delimiter.
+ * rows by a prefix of the row-key with a delimiter. For example:
  *
- * For example:
  * <pre>
  * <code>
  * # Create a table with a "KeyPrefix" split restriction, where the prefix length is 2 bytes
@@ -51,12 +50,11 @@ import org.slf4j.LoggerFactory;
  * </code>
  * </pre>
  *
- * Instead of specifying a split restriction to a table directly, we can also set the properties
- * in hbase-site.xml. In this case, the specified split restriction is applied for all the tables.
+ * Instead of specifying a split restriction to a table directly, we can also set the properties in
+ * hbase-site.xml. In this case, the specified split restriction is applied for all the tables.
  * <p>
  * Note that the split restriction is also applied to a user-specified split point so that we don't
  * allow users to break the restriction.
- *
  * @see NoRegionSplitRestriction
  * @see KeyPrefixRegionSplitRestriction
  * @see DelimitedKeyPrefixRegionSplitRestriction
@@ -74,14 +72,13 @@ public abstract class RegionSplitRestriction {
 
   /**
    * Create the RegionSplitRestriction configured for the given table.
-   *
    * @param tableDescriptor the table descriptor
-   * @param conf the configuration
+   * @param conf            the configuration
    * @return a RegionSplitRestriction instance
    * @throws IOException if an error occurs
    */
-  public static RegionSplitRestriction create(TableDescriptor tableDescriptor,
-    Configuration conf) throws IOException {
+  public static RegionSplitRestriction create(TableDescriptor tableDescriptor, Configuration conf)
+    throws IOException {
     String type = tableDescriptor.getValue(RESTRICTION_TYPE_KEY);
     if (type == null) {
       type = conf.get(RESTRICTION_TYPE_KEY, RESTRICTION_TYPE_NONE);
@@ -110,9 +107,8 @@ public abstract class RegionSplitRestriction {
 
   /**
    * Initialize the RegionSplitRestriction instance
-   *
    * @param tableDescriptor the table descriptor
-   * @param conf the configuration
+   * @param conf            the configuration
    * @throws IOException if an error occurs
    */
   public abstract void initialize(TableDescriptor tableDescriptor, Configuration conf)
@@ -120,9 +116,8 @@ public abstract class RegionSplitRestriction {
 
   /**
    * Returns a restricted split point.
-   *
    * @param splitPoint the split point determined by {@link RegionSplitPolicy} or specified by a
-   *   user manually
+   *                   user manually
    * @return the restricted split point
    */
   public abstract byte[] getRestrictedSplitPoint(byte[] splitPoint);

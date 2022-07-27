@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,9 +26,8 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Class that transitions metrics from MetricsWAL into the metrics subsystem.
- *
- * Implements BaseSource through BaseSourceImpl, following the pattern.
+ * Class that transitions metrics from MetricsWAL into the metrics subsystem. Implements BaseSource
+ * through BaseSourceImpl, following the pattern.
  * @see org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource
  */
 @InterfaceAudience.Private
@@ -55,32 +53,30 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-  public MetricsWALSourceImpl(String metricsName,
-                              String metricsDescription,
-                              String metricsContext,
-                              String metricsJmxContext) {
+  public MetricsWALSourceImpl(String metricsName, String metricsDescription, String metricsContext,
+    String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
-    //Create and store the metrics that will be used.
+    // Create and store the metrics that will be used.
     appendTimeHisto = this.getMetricsRegistry().newTimeHistogram(APPEND_TIME, APPEND_TIME_DESC);
     appendSizeHisto = this.getMetricsRegistry().newSizeHistogram(APPEND_SIZE, APPEND_SIZE_DESC);
     appendCount = this.getMetricsRegistry().newCounter(APPEND_COUNT, APPEND_COUNT_DESC, 0L);
     slowAppendCount =
-        this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0L);
+      this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0L);
     syncTimeHisto = this.getMetricsRegistry().newTimeHistogram(SYNC_TIME, SYNC_TIME_DESC);
     logRollRequested =
-        this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
-    errorRollRequested = this.getMetricsRegistry()
-        .newCounter(ERROR_ROLL_REQUESTED, ERROR_ROLL_REQUESTED_DESC, 0L);
-    lowReplicationRollRequested = this.getMetricsRegistry()
-        .newCounter(LOW_REPLICA_ROLL_REQUESTED, LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
-    slowSyncRollRequested = this.getMetricsRegistry()
-        .newCounter(SLOW_SYNC_ROLL_REQUESTED, SLOW_SYNC_ROLL_REQUESTED_DESC, 0L);
-    sizeRollRequested = this.getMetricsRegistry()
-        .newCounter(SIZE_ROLL_REQUESTED, SIZE_ROLL_REQUESTED_DESC, 0L);
+      this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
+    errorRollRequested =
+      this.getMetricsRegistry().newCounter(ERROR_ROLL_REQUESTED, ERROR_ROLL_REQUESTED_DESC, 0L);
+    lowReplicationRollRequested = this.getMetricsRegistry().newCounter(LOW_REPLICA_ROLL_REQUESTED,
+      LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
+    slowSyncRollRequested = this.getMetricsRegistry().newCounter(SLOW_SYNC_ROLL_REQUESTED,
+      SLOW_SYNC_ROLL_REQUESTED_DESC, 0L);
+    sizeRollRequested =
+      this.getMetricsRegistry().newCounter(SIZE_ROLL_REQUESTED, SIZE_ROLL_REQUESTED_DESC, 0L);
     writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0L);
-    successfulLogRolls = this.getMetricsRegistry()
-      .newCounter(SUCCESSFUL_LOG_ROLLS, SUCCESSFUL_LOG_ROLLS_DESC, 0L);
+    successfulLogRolls =
+      this.getMetricsRegistry().newCounter(SUCCESSFUL_LOG_ROLLS, SUCCESSFUL_LOG_ROLLS_DESC, 0L);
     perTableAppendCount = new ConcurrentHashMap<>();
     perTableAppendSize = new ConcurrentHashMap<>();
   }
@@ -93,8 +89,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
       // Ideally putIfAbsent is atomic and we don't need a branch check but we still do it to avoid
       // expensive string construction for every append.
       String metricsKey = String.format("%s.%s", tableName, APPEND_SIZE);
-      perTableAppendSize.putIfAbsent(
-          tableName, getMetricsRegistry().newCounter(metricsKey, APPEND_SIZE_DESC, 0L));
+      perTableAppendSize.putIfAbsent(tableName,
+        getMetricsRegistry().newCounter(metricsKey, APPEND_SIZE_DESC, 0L));
       tableAppendSizeCounter = perTableAppendSize.get(tableName);
     }
     tableAppendSizeCounter.incr(size);
@@ -111,8 +107,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     MutableFastCounter tableAppendCounter = perTableAppendCount.get(tableName);
     if (tableAppendCounter == null) {
       String metricsKey = String.format("%s.%s", tableName, APPEND_COUNT);
-      perTableAppendCount.putIfAbsent(
-          tableName, getMetricsRegistry().newCounter(metricsKey, APPEND_COUNT_DESC, 0L));
+      perTableAppendCount.putIfAbsent(tableName,
+        getMetricsRegistry().newCounter(metricsKey, APPEND_COUNT_DESC, 0L));
       tableAppendCounter = perTableAppendCount.get(tableName);
     }
     tableAppendCounter.incr();

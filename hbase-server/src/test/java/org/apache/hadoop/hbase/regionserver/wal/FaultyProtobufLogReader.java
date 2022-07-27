@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,14 +20,16 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
-
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 public class FaultyProtobufLogReader extends ProtobufLogReader {
 
   // public until class relocates to o.a.h.h.wal
   public enum FailureType {
-    BEGINNING, MIDDLE, END, NONE
+    BEGINNING,
+    MIDDLE,
+    END,
+    NONE
   }
 
   Queue<Entry> nextQueue = new LinkedList<>();
@@ -51,8 +53,9 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
 
     if (nextQueue.size() == this.numberOfFileEntries && getFailureType() == FailureType.BEGINNING) {
       throw new IOException("fake Exception");
-    } else if (nextQueue.size() == this.numberOfFileEntries / 2
-        && getFailureType() == FailureType.MIDDLE) {
+    } else if (
+      nextQueue.size() == this.numberOfFileEntries / 2 && getFailureType() == FailureType.MIDDLE
+    ) {
       throw new IOException("fake Exception");
     } else if (nextQueue.size() == 1 && getFailureType() == FailureType.END) {
       throw new IOException("fake Exception");

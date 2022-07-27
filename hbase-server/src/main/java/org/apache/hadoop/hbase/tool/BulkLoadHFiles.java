@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -77,38 +77,34 @@ public interface BulkLoadHFiles {
 
   /**
    * Perform a bulk load of the given directory into the given pre-existing table.
-   * @param tableName the table to load into
+   * @param tableName    the table to load into
    * @param family2Files map of family to List of hfiles
    * @throws TableNotFoundException if table does not yet exist
    */
   Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Map<byte[], List<Path>> family2Files)
-      throws TableNotFoundException, IOException;
+    throws TableNotFoundException, IOException;
 
   /**
-   * Disables replication for all bulkloads done via this instance,
-   * when bulkload replication is configured.
+   * Disables replication for all bulkloads done via this instance, when bulkload replication is
+   * configured.
    */
   void disableReplication();
 
-  /**
-   *
-   * @return true if replication has been disabled.
-   */
+  /** Returns true if replication has been disabled. */
   boolean isReplicationDisabled();
 
   /**
    * Perform a bulk load of the given directory into the given pre-existing table.
    * @param tableName the table to load into
-   * @param dir the directory that was provided as the output path of a job using
-   *          {@code HFileOutputFormat}
+   * @param dir       the directory that was provided as the output path of a job using
+   *                  {@code HFileOutputFormat}
    * @throws TableNotFoundException if table does not yet exist
    */
   Map<LoadQueueItem, ByteBuffer> bulkLoad(TableName tableName, Path dir)
-      throws TableNotFoundException, IOException;
+    throws TableNotFoundException, IOException;
 
   static BulkLoadHFiles create(Configuration conf) {
     return new BulkLoadHFilesTool(conf);
   }
-
 
 }

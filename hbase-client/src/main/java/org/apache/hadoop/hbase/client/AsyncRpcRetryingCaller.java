@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
@@ -31,8 +29,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -60,7 +58,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   private final long pauseNs;
 
-  private final long pauseForCQTBENs;
+  private final long pauseNsForServerOverloaded;
 
   private int tries = 1;
 
@@ -81,13 +79,13 @@ public abstract class AsyncRpcRetryingCaller<T> {
   protected final HBaseRpcController controller;
 
   public AsyncRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
-      long pauseNs, long pauseForCQTBENs, int maxAttempts, long operationTimeoutNs,
-      long rpcTimeoutNs, int startLogErrorsCnt) {
+    long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
+    long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.priority = priority;
     this.pauseNs = pauseNs;
-    this.pauseForCQTBENs = pauseForCQTBENs;
+    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -127,7 +125,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    long pauseNsToUse = error instanceof CallQueueTooBigException ? pauseForCQTBENs : pauseNs;
+    long pauseNsToUse =
+      HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
@@ -158,7 +157,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   protected final void onError(Throwable t, Supplier<String> errMsg,
-      Consumer<Throwable> updateCachedLocation) {
+    Consumer<Throwable> updateCachedLocation) {
     if (future.isDone()) {
       // Give up if the future is already done, this is possible if user has already canceled the
       // future. And for timeline consistent read, we will also cancel some requests if we have
@@ -178,9 +177,9 @@ public abstract class AsyncRpcRetryingCaller<T> {
       return;
     }
     if (tries > startLogErrorsCnt) {
-      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts +
-        ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs) +
-        " ms, time elapsed = " + elapsedMs() + " ms", error);
+      LOG.warn(errMsg.get() + ", tries = " + tries + ", maxAttempts = " + maxAttempts
+        + ", timeout = " + TimeUnit.NANOSECONDS.toMillis(operationTimeoutNs)
+        + " ms, time elapsed = " + elapsedMs() + " ms", error);
     }
     updateCachedLocation.accept(error);
     RetriesExhaustedException.ThrowableWithExtraContext qt =

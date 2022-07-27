@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.thrift.Constants.SERVER_TYPE_CONF_KEY;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
@@ -47,23 +46,20 @@ public enum ImplType {
   private static final Logger LOG = LoggerFactory.getLogger(ImplType.class);
   public static final ImplType DEFAULT = THREAD_POOL;
 
-
   final String option;
   final boolean isAlwaysFramed;
   final Class<? extends TServer> serverClass;
   final boolean canSpecifyBindIP;
 
-  private ImplType(String option, boolean isAlwaysFramed,
-      Class<? extends TServer> serverClass, boolean canSpecifyBindIP) {
+  private ImplType(String option, boolean isAlwaysFramed, Class<? extends TServer> serverClass,
+    boolean canSpecifyBindIP) {
     this.option = option;
     this.isAlwaysFramed = isAlwaysFramed;
     this.serverClass = serverClass;
     this.canSpecifyBindIP = canSpecifyBindIP;
   }
 
-  /**
-   * @return <code>-option</code>
-   */
+  /** Returns <code>-option</code> */
   @Override
   public String toString() {
     return "-" + option;
@@ -78,8 +74,7 @@ public enum ImplType {
   }
 
   public String getDescription() {
-    StringBuilder sb = new StringBuilder("Use the " +
-        serverClass.getSimpleName());
+    StringBuilder sb = new StringBuilder("Use the " + serverClass.getSimpleName());
     if (isAlwaysFramed) {
       sb.append(" This implies the framed transport.");
     }
@@ -120,8 +115,8 @@ public enum ImplType {
       LOG.info("Using default thrift server type");
       chosenType = DEFAULT;
     } else if (numChosen > 1) {
-      throw new AssertionError("Exactly one option out of " +
-          Arrays.toString(values()) + " has to be specified");
+      throw new AssertionError(
+        "Exactly one option out of " + Arrays.toString(values()) + " has to be specified");
     }
     LOG.info("Using thrift server type " + chosenType.option);
     conf.set(SERVER_TYPE_CONF_KEY, chosenType.option);

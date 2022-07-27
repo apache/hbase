@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.channel.Channel;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
@@ -48,6 +49,17 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   NettyServerRpcConnection(NettyRpcServer rpcServer, Channel channel) {
     super(rpcServer);
     this.channel = channel;
+    rpcServer.allChannels.add(channel);
+    NettyRpcServer.LOG.trace("Connection {}; # active connections={}", channel.remoteAddress(),
+      rpcServer.allChannels.size() - 1);
+    // register close hook to release resources
+    NettyFutureUtils.addListener(channel.closeFuture(), f -> {
+      disposeSasl();
+      callCleanupIfNeeded();
+      NettyRpcServer.LOG.trace("Disconnection {}; # active connections={}", channel.remoteAddress(),
+        rpcServer.allChannels.size() - 1);
+      rpcServer.allChannels.remove(channel);
+    });
     InetSocketAddress inetSocketAddress = ((InetSocketAddress) channel.remoteAddress());
     this.addr = inetSocketAddress.getAddress();
     if (addr == null) {
@@ -58,41 +70,24 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     this.remotePort = inetSocketAddress.getPort();
   }
 
-  void process(final ByteBuf buf) throws IOException, InterruptedException {
-    if (connectionHeaderRead) {
-      this.callCleanup = buf::release;
-      process(new SingleByteBuff(buf.nioBuffer()));
-    } else {
-      ByteBuffer connectionHeader = ByteBuffer.allocate(buf.readableBytes());
-      buf.readBytes(connectionHeader);
+  void setupDecoder() {
+    ChannelPipeline p = channel.pipeline();
+    p.addLast("frameDecoder", new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this));
+    p.addLast("decoder", new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
+  }
+
+  void process(ByteBuf buf) throws IOException, InterruptedException {
+    if (skipInitialSaslHandshake) {
+      skipInitialSaslHandshake = false;
       buf.release();
-      process(connectionHeader);
+      return;
     }
-  }
-
-  void process(ByteBuffer buf) throws IOException, InterruptedException {
-    process(new SingleByteBuff(buf));
-  }
-
-  void process(ByteBuff buf) throws IOException, InterruptedException {
+    this.callCleanup = () -> buf.release();
+    ByteBuff byteBuff = new SingleByteBuff(buf.nioBuffer());
     try {
-      if (skipInitialSaslHandshake) {
-        skipInitialSaslHandshake = false;
-        if (callCleanup != null) {
-          callCleanup.run();
-        }
-        return;
-      }
-
-      if (useSasl) {
-        saslReadAndProcess(buf);
-      } else {
-        processOneRpc(buf);
-      }
+      processOneRpc(byteBuff);
     } catch (Exception e) {
-      if (callCleanup != null) {
-        callCleanup.run();
-      }
+      callCleanupIfNeeded();
       throw e;
     } finally {
       this.callCleanup = null;
@@ -101,9 +96,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public synchronized void close() {
-    disposeSasl();
     channel.close();
-    callCleanup = null;
   }
 
   @Override
@@ -113,12 +106,11 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public NettyServerCall createCall(int id, final BlockingService service,
-      final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
-      long size, final InetAddress remoteAddress, int timeout,
-      CallCleanup reqCleanup) {
+    final MethodDescriptor md, RequestHeader header, Message param, CellScanner cellScanner,
+    long size, final InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
     return new NettyServerCall(id, service, md, header, param, cellScanner, this, size,
-        remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
-        this.rpcServer.cellBlockBuilder, reqCleanup);
+      remoteAddress, EnvironmentEdgeManager.currentTime(), timeout, this.rpcServer.bbAllocator,
+      this.rpcServer.cellBlockBuilder, reqCleanup);
   }
 
   @Override

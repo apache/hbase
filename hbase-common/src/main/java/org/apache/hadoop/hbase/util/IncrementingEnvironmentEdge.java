@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,8 +45,8 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
   /**
    * {@inheritDoc}
    * <p>
-   * This method increments a known value for the current time each time this
-   * method is called. The first value is 1.
+   * This method increments a known value for the current time each time this method is called. The
+   * first value is 1.
    * </p>
    */
   @Override

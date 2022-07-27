@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,6 +66,9 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
@@ -169,9 +172,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
-   * @param writer
-   * @throws IOException
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {
@@ -433,12 +434,16 @@ public class TestHStoreFile {
       boolean first = true;
       ByteBuffer key = null;
       HFileScanner topScanner = top.getScanner(false, false);
-      while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
-        (topScanner.isSeeked() && topScanner.next())) {
+      while (
+        (!topScanner.isSeeked() && topScanner.seekTo())
+          || (topScanner.isSeeked() && topScanner.next())
+      ) {
         key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
-        if ((PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
-          key.arrayOffset(), key.limit())) > 0) {
+        if (
+          (PrivateCellUtil.compare(topScanner.getReader().getComparator(), midKV, key.array(),
+            key.arrayOffset(), key.limit())) > 0
+        ) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" + midkey);
         }
         if (first) {
@@ -535,8 +540,9 @@ public class TestHStoreFile {
       keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength())
-          .charAt(i) == 'z');
+        assertTrue(
+          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i)
+              == 'z');
       }
     } finally {
       if (top != null) {
@@ -605,8 +611,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos + ")", falsePos <= maxFalsePos);
   }
 
   private static final int BLOCKSIZE_SMALL = 8192;
@@ -681,8 +687,8 @@ public class TestHStoreFile {
     fs.delete(f, true);
     assertEquals("False negatives: " + falseNeg, 0, falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err +
-      ", expected no more than " + maxFalsePos, falsePos <= maxFalsePos);
+    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
+      + maxFalsePos, falsePos <= maxFalsePos);
   }
 
   /**
@@ -849,8 +855,8 @@ public class TestHStoreFile {
     Mockito.doReturn(OptionalLong.of(bulkTimestamp)).when(mock).getBulkLoadTimestamp();
     Mockito.doReturn(seqId).when(mock).getMaxSequenceId();
     Mockito.doReturn(new Path(path)).when(mock).getPath();
-    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp +
-      " seqId=" + seqId + " path=" + path;
+    String name = "mock storefile, bulkLoad=" + bulkLoad + " bulkTimestamp=" + bulkTimestamp
+      + " seqId=" + seqId + " path=" + path;
     Mockito.doReturn(name).when(mock).toString();
     return mock;
   }
@@ -1138,4 +1144,53 @@ public class TestHStoreFile {
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
     assertArrayEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
   }
+
+  @Test
+  public void testDataBlockSizeEncoded() throws Exception {
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path path = new Path(dir, "1234567890");
+
+    DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
+
+    conf.setDouble("hbase.writer.unified.encoded.blocksize.ratio", 1);
+
+    cacheConf = new CacheConfig(conf);
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo).build();
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
+    writeStoreFile(writer);
+
+    HStoreFile storeFile =
+      new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    StoreFileReader reader = storeFile.getReader();
+
+    Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+    byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
+    assertEquals(dataBlockEncoderAlgo.name(), Bytes.toString(value));
+
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
+
+    FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
+    long fileSize = fs.getFileStatus(writer.getPath()).getLen();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
+    HFileBlock block;
+    while (offset <= max) {
+      block = fReader.readBlock(offset, -1, /* cacheBlock */
+        false, /* pread */ false, /* isCompaction */ false, /* updateCacheMetrics */
+        false, null, null);
+      offset += block.getOnDiskSizeWithHeader();
+      double diff = block.getOnDiskSizeWithHeader() - BLOCKSIZE_SMALL;
+      if (offset <= max) {
+        assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
+      }
+    }
+  }
+
 }

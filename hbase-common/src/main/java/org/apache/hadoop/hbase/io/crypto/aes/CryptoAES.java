@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.crypto.aes;
 
 import java.io.IOException;
@@ -31,7 +30,6 @@ import javax.crypto.ShortBufferException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.sasl.SaslException;
-
 import org.apache.commons.crypto.cipher.CryptoCipher;
 import org.apache.commons.crypto.utils.Utils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,8 +47,8 @@ public class CryptoAES {
 
   private final Integrity integrity;
 
-  public CryptoAES(String transformation, Properties properties,
-                   byte[] inKey, byte[] outKey, byte[] inIv, byte[] outIv) throws IOException {
+  public CryptoAES(String transformation, Properties properties, byte[] inKey, byte[] outKey,
+    byte[] inIv, byte[] outIv) throws IOException {
     checkTransformation(transformation);
     // encryptor
     encryptor = Utils.getCipherInstance(transformation, properties);
@@ -77,9 +75,9 @@ public class CryptoAES {
 
   /**
    * Encrypts input data. The result composes of (msg, padding if needed, mac) and sequence num.
-   * @param data the input byte array
+   * @param data   the input byte array
    * @param offset the offset in input where the input starts
-   * @param len the input length
+   * @param len    the input length
    * @return the new encrypted byte array.
    * @throws SaslException if error happens
    */
@@ -107,11 +105,11 @@ public class CryptoAES {
   }
 
   /**
-   * Decrypts input data. The input composes of (msg, padding if needed, mac) and sequence num.
-   * The result is msg.
-   * @param data the input byte array
+   * Decrypts input data. The input composes of (msg, padding if needed, mac) and sequence num. The
+   * result is msg.
+   * @param data   the input byte array
    * @param offset the offset in input where the input starts
-   * @param len the input length
+   * @param len    the input length
    * @return the new decrypted byte array.
    * @throws SaslException if error happens
    */
@@ -138,8 +136,8 @@ public class CryptoAES {
       throw new SaslException("Unmatched MAC");
     }
     if (!integrity.comparePeerSeqNum(peerSeqNum)) {
-      throw new SaslException("Out of order sequencing of messages. Got: " + integrity.byteToInt
-          (peerSeqNum) + " Expected: " + integrity.peerSeqNum);
+      throw new SaslException("Out of order sequencing of messages. Got: "
+        + integrity.byteToInt(peerSeqNum) + " Expected: " + integrity.peerSeqNum);
     }
     integrity.incPeerSeqNum();
 
@@ -175,8 +173,8 @@ public class CryptoAES {
       return calculateHMAC(myKey, seqNum, msg, start, len);
     }
 
-    boolean compareHMAC(byte[] expectedHMAC, byte[] peerSeqNum, byte[] msg, int start,
-        int len) throws SaslException {
+    boolean compareHMAC(byte[] expectedHMAC, byte[] peerSeqNum, byte[] msg, int start, int len)
+      throws SaslException {
       byte[] mac = calculateHMAC(peerKey, peerSeqNum, msg, start, len);
       return Arrays.equals(mac, expectedHMAC);
     }
@@ -190,16 +188,16 @@ public class CryptoAES {
     }
 
     void incMySeqNum() {
-      mySeqNum ++;
+      mySeqNum++;
     }
 
     void incPeerSeqNum() {
-      peerSeqNum ++;
+      peerSeqNum++;
     }
 
-    private byte[] calculateHMAC(byte[] key, byte[] seqNum, byte[] msg, int start,
-        int len) throws SaslException {
-      byte[] seqAndMsg = new byte[4+len];
+    private byte[] calculateHMAC(byte[] key, byte[] seqNum, byte[] msg, int start, int len)
+      throws SaslException {
+      byte[] seqAndMsg = new byte[4 + len];
       System.arraycopy(seqNum, 0, seqAndMsg, 0, 4);
       System.arraycopy(msg, start, seqAndMsg, 4, len);
 
@@ -223,17 +221,17 @@ public class CryptoAES {
     }
 
     private void intToByte(int num) {
-      for(int i = 3; i >= 0; i --) {
-        seqNum[i] = (byte)(num & 0xff);
+      for (int i = 3; i >= 0; i--) {
+        seqNum[i] = (byte) (num & 0xff);
         num >>>= 8;
       }
     }
 
     private int byteToInt(byte[] seqNum) {
       int answer = 0;
-      for (int i = 0; i < 4; i ++) {
+      for (int i = 0; i < 4; i++) {
         answer <<= 8;
-        answer |= ((int)seqNum[i] & 0xff);
+        answer |= ((int) seqNum[i] & 0xff);
       }
       return answer;
     }

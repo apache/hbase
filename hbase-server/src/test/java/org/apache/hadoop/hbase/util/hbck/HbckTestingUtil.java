@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,30 +25,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HbckErrorReporter.ERROR_CODE;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
 public class HbckTestingUtil {
   private static ExecutorService exec = new ScheduledThreadPoolExecutor(10);
-  public static HBaseFsck doFsck(
-      Configuration conf, boolean fix) throws Exception {
+
+  public static HBaseFsck doFsck(Configuration conf, boolean fix) throws Exception {
     return doFsck(conf, fix, null);
   }
 
-  public static HBaseFsck doFsck(
-      Configuration conf, boolean fix, TableName table) throws Exception {
+  public static HBaseFsck doFsck(Configuration conf, boolean fix, TableName table)
+    throws Exception {
     return doFsck(conf, fix, fix, fix, fix, fix, fix, fix, fix, fix, fix, fix, fix, fix, table);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments, boolean fixMeta,
-      boolean fixHdfsHoles, boolean fixHdfsOverlaps, boolean fixHdfsOrphans,
-      boolean fixTableOrphans, boolean fixVersionFile, boolean fixReferenceFiles,
-      boolean fixHFileLinks, boolean fixEmptyMetaRegionInfo, boolean fixTableLocks,
-      boolean fixReplication, boolean cleanReplicationBarrier, TableName table) throws Exception {
+    boolean fixHdfsHoles, boolean fixHdfsOverlaps, boolean fixHdfsOrphans, boolean fixTableOrphans,
+    boolean fixVersionFile, boolean fixReferenceFiles, boolean fixHFileLinks,
+    boolean fixEmptyMetaRegionInfo, boolean fixTableLocks, boolean fixReplication,
+    boolean cleanReplicationBarrier, TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     try {
       HBaseFsck.setDisplayFullReport(); // i.e. -details
@@ -80,18 +80,18 @@ public class HbckTestingUtil {
 
   /**
    * Runs hbck with the -sidelineCorruptHFiles option
-   * @param table table constraint
-   * @return hbckInstance
+   * @param table table constraint n
    */
   public static HBaseFsck doHFileQuarantine(Configuration conf, TableName table) throws Exception {
-    String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table.getNameAsString()};
+    String[] args =
+      { "-sidelineCorruptHFiles", "-ignorePreCheckPermission", table.getNameAsString() };
     HBaseFsck hbck = new HBaseFsck(conf, exec);
     hbck.exec(exec, args);
     return hbck;
   }
 
   public static boolean cleanReplicationBarrier(Configuration conf, TableName table)
-      throws IOException, ClassNotFoundException {
+    throws IOException, ClassNotFoundException {
     HBaseFsck hbck = new HBaseFsck(conf, null);
     hbck.setCleanReplicationBarrierTable(table.getNameAsString());
     hbck.setCleanReplicationBarrier(true);

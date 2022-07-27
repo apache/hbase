@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.assignment;
+
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.DummyRegionServerList;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -78,8 +80,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ResultOrException;
 
 /**
- * A mocked master services.
- * Tries to fake it. May not always work.
+ * A mocked master services. Tries to fake it. May not always work.
  */
 public class MockMasterServices extends MockNoopMasterServices {
   private final MasterFileSystem fileSystemManager;
@@ -99,31 +100,31 @@ public class MockMasterServices extends MockNoopMasterServices {
   private final ProcedureEvent<?> initialized = new ProcedureEvent<>("master initialized");
   public static final String DEFAULT_COLUMN_FAMILY_NAME = "cf";
   public static final ServerName MOCK_MASTER_SERVERNAME =
-      ServerName.valueOf("mockmaster.example.org", 1234, -1L);
+    ServerName.valueOf("mockmaster.example.org", 1234, -1L);
 
   public MockMasterServices(Configuration conf,
-      NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers) throws IOException {
+    NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers) throws IOException {
     super(conf);
     Superusers.initialize(conf);
     this.fileSystemManager = new MasterFileSystem(conf);
     this.walManager = new MasterWalManager(this);
     this.splitWALManager =
-      conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)?
-        null: new SplitWALManager(this);
+      conf.getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK, DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+        ? null
+        : new SplitWALManager(this);
     this.masterRegion = MasterRegionFactory.create(this);
     // Mock an AM.
     this.assignmentManager =
       new AssignmentManager(this, masterRegion, new MockRegionStateStore(this, masterRegion));
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
-    this.serverManager = new ServerManager(this);
+    this.serverManager = new ServerManager(this, new DummyRegionServerList());
     this.tableStateManager = Mockito.mock(TableStateManager.class);
-    Mockito.when(this.tableStateManager.getTableState(Mockito.any())).
-        thenReturn(new TableState(TableName.valueOf("AnyTableNameSetInMockMasterServcies"),
-            TableState.State.ENABLED));
+    Mockito.when(this.tableStateManager.getTableState(Mockito.any())).thenReturn(new TableState(
+      TableName.valueOf("AnyTableNameSetInMockMasterServcies"), TableState.State.ENABLED));
 
     // Mock up a Client Interface
     ClientProtos.ClientService.BlockingInterface ri =
-        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     MutateResponse.Builder builder = MutateResponse.newBuilder();
     builder.setProcessed(true);
     try {
@@ -133,11 +134,11 @@ public class MockMasterServices extends MockNoopMasterServices {
     }
     try {
       Mockito.when(ri.multi(any(), any())).thenAnswer(new Answer<MultiResponse>() {
-          @Override
-          public MultiResponse answer(InvocationOnMock invocation) throws Throwable {
-            return buildMultiResponse(invocation.getArgument(1));
-          }
-        });
+        @Override
+        public MultiResponse answer(InvocationOnMock invocation) throws Throwable {
+          return buildMultiResponse(invocation.getArgument(1));
+        }
+      });
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }
@@ -148,7 +149,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   public void start(final int numServes, final RSProcedureDispatcher remoteDispatcher)
-      throws IOException, KeeperException {
+    throws IOException, KeeperException {
     startProcedureExecutor(remoteDispatcher);
     this.assignmentManager.start();
     for (int i = 0; i < numServes; ++i) {
@@ -160,11 +161,9 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   /**
-   * Call this restart method only after running MockMasterServices#start()
-   * The RSs can be differentiated by the port number, see
-   * ServerName in MockMasterServices#start() method above.
+   * Call this restart method only after running MockMasterServices#start() The RSs can be
+   * differentiated by the port number, see ServerName in MockMasterServices#start() method above.
    * Restart of region server will have new startcode in server name
-   *
    * @param serverName Server name to be restarted
    */
   public void restartRegionServer(ServerName serverName) throws IOException {
@@ -191,7 +190,7 @@ public class MockMasterServices extends MockNoopMasterServices {
   }
 
   private void startProcedureExecutor(final RSProcedureDispatcher remoteDispatcher)
-      throws IOException {
+    throws IOException {
     final Configuration conf = getConfiguration();
     this.procedureStore = new NoopProcedureStore();
     this.procedureStore.registerListener(new ProcedureStoreListener() {
@@ -203,16 +202,16 @@ public class MockMasterServices extends MockNoopMasterServices {
     });
 
     this.procedureEnv = new MasterProcedureEnv(this,
-       remoteDispatcher != null ? remoteDispatcher : new RSProcedureDispatcher(this));
+      remoteDispatcher != null ? remoteDispatcher : new RSProcedureDispatcher(this));
 
     this.procedureExecutor = new ProcedureExecutor<>(conf, procedureEnv, procedureStore,
       procedureEnv.getProcedureScheduler());
 
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
-        Math.max(Runtime.getRuntime().availableProcessors(),
-          MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
-    final boolean abortOnCorruption = conf.getBoolean(
-        MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
+      Math.max(Runtime.getRuntime().availableProcessors(),
+        MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    final boolean abortOnCorruption =
+      conf.getBoolean(MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     this.procedureStore.start(numThreads);
     ProcedureTestingUtility.initAndStartWorkers(procedureExecutor, numThreads, abortOnCorruption);
@@ -339,12 +338,11 @@ public class MockMasterServices extends MockNoopMasterServices {
 
   private static MultiResponse buildMultiResponse(MultiRequest req) {
     MultiResponse.Builder builder = MultiResponse.newBuilder();
-    RegionActionResult.Builder regionActionResultBuilder =
-        RegionActionResult.newBuilder();
+    RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
     ResultOrException.Builder roeBuilder = ResultOrException.newBuilder();
-    for (RegionAction regionAction: req.getRegionActionList()) {
+    for (RegionAction regionAction : req.getRegionActionList()) {
       regionActionResultBuilder.clear();
-      for (ClientProtos.Action action: regionAction.getActionList()) {
+      for (ClientProtos.Action action : regionAction.getActionList()) {
         roeBuilder.clear();
         roeBuilder.setResult(ClientProtos.Result.getDefaultInstance());
         roeBuilder.setIndex(action.getIndex());
@@ -355,7 +353,8 @@ public class MockMasterServices extends MockNoopMasterServices {
     return builder.build();
   }
 
-  @Override public SplitWALManager getSplitWALManager() {
+  @Override
+  public SplitWALManager getSplitWALManager() {
     return splitWALManager;
   }
 }
