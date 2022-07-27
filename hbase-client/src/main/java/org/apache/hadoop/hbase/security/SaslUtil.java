@@ -29,6 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+
 @InterfaceAudience.Private
 public class SaslUtil {
   private static final Logger LOG = LoggerFactory.getLogger(SaslUtil.class);
@@ -62,7 +64,7 @@ public class SaslUtil {
 
   /** Splitting fully qualified Kerberos name into parts */
   public static String[] splitKerberosName(String fullName) {
-    return fullName.split("[/@]");
+    return Splitter.onPattern("[/@]").splitToStream(fullName).toArray(String[]::new);
   }
 
   public static String encodeIdentifier(byte[] identifier) {
@@ -93,6 +95,7 @@ public class SaslUtil {
   }
 
   /**
+   * Initialize SASL properties for a given RPC protection level.
    * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
    * @return Map with values for SASL properties.
    */
@@ -101,10 +104,9 @@ public class SaslUtil {
     if (rpcProtection.isEmpty()) {
       saslQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
     } else {
-      String[] qops = rpcProtection.split(",");
       StringBuilder saslQopBuilder = new StringBuilder();
-      for (int i = 0; i < qops.length; ++i) {
-        QualityOfProtection qop = getQop(qops[i]);
+      for (String s : Splitter.on(',').split(rpcProtection)) {
+        QualityOfProtection qop = getQop(s);
         saslQopBuilder.append(",").append(qop.getSaslQop());
       }
       saslQop = saslQopBuilder.substring(1); // remove first ','

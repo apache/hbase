@@ -152,7 +152,7 @@ public abstract class Mutation extends OperationWithAttributes
     return list;
   }
 
-  /*
+  /**
    * Create a KeyValue with this objects row key and the Put identifier.
    * @return a KeyValue with this objects row key and the Put identifier.
    */
@@ -161,8 +161,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Create a KeyValue with this objects row key and the Put identifier. nnnn * @param tags -
-   * Specify the Tags as an Array
+   * Create a KeyValue with this objects row key and the Put identifier.
    * @return a KeyValue with this objects row key and the Put identifier.
    */
   KeyValue createPutKeyValue(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tags) {
@@ -170,7 +169,7 @@ public abstract class Mutation extends OperationWithAttributes
     return kvWithTag;
   }
 
-  /*
+  /**
    * Create a KeyValue with this objects row key and the Put identifier.
    * @return a KeyValue with this objects row key and the Put identifier.
    */
@@ -183,7 +182,7 @@ public abstract class Mutation extends OperationWithAttributes
 
   /**
    * Compile the column family (i.e. schema) information into a Map. Useful for parsing and
-   * aggregation by debugging, logging, and administration tools. n
+   * aggregation by debugging, logging, and administration tools.
    */
   @Override
   public Map<String, Object> getFingerprint() {
@@ -257,7 +256,7 @@ public abstract class Mutation extends OperationWithAttributes
     if (tags != null) {
       List<String> tagsString = new ArrayList<>(tags.size());
       for (Tag t : tags) {
-        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(Tag.cloneValue(t)));
+        tagsString.add(t.getType() + ":" + Bytes.toStringBinary(Tag.cloneValue(t)));
       }
       stringMap.put("tag", tagsString);
     }
@@ -473,6 +472,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
+   * Set the ACL for this operation.
    * @param user  User short name
    * @param perms Permissions for the user
    */
@@ -483,6 +483,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
+   * Set the ACL for this operation.
    * @param perms A map of permissions for a user or users
    */
   public Mutation setACL(Map<String, Permission> perms) {
@@ -624,11 +625,9 @@ public abstract class Mutation extends OperationWithAttributes
     return filteredList;
   }
 
-  /*
+  /**
    * Private method to determine if this object's familyMap contains the given value assigned to the
-   * given family, qualifier and timestamp respecting the 2 boolean arguments nnnnnn * @return
-   * returns true if the given family, qualifier timestamp and value already has an existing
-   * KeyValue object in the family map.
+   * given family, qualifier and timestamp, respecting the 2 boolean arguments.
    */
   protected boolean has(byte[] family, byte[] qualifier, long ts, byte[] value, boolean ignoreTS,
     boolean ignoreValue) {

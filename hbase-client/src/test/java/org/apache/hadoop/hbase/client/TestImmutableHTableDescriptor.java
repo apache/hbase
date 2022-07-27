@@ -97,6 +97,7 @@ public class TestImmutableHTableDescriptor {
       hcd.setBlocksize(10);
       fail("ImmutableHColumnDescriptor can't be modified!!!");
     } catch (UnsupportedOperationException e) {
+      // Expected
     }
   }
 

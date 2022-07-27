@@ -50,8 +50,8 @@ public interface UserMetrics {
   long getWriteRequestCount();
 
   /**
-   * @return the number of write requests and read requests and coprocessor service requests made by
-   *         the user
+   * Returns the number of write requests and read requests and coprocessor service requests made by
+   * the user
    */
   default long getRequestCount() {
     return getReadRequestCount() + getWriteRequestCount();

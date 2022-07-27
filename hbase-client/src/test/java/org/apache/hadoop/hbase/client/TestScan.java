@@ -165,22 +165,17 @@ public class TestScan {
   @Test
   public void testSetAuthorizations() {
     Scan scan = new Scan();
-    try {
-      scan.setAuthorizations(new Authorizations("\u002b|\u0029"));
-      scan.setAuthorizations(new Authorizations("A", "B", "0123", "A0", "1A1", "_a"));
-      scan.setAuthorizations(new Authorizations("A|B"));
-      scan.setAuthorizations(new Authorizations("A&B"));
-      scan.setAuthorizations(new Authorizations("!B"));
-      scan.setAuthorizations(new Authorizations("A", "(A)"));
-      scan.setAuthorizations(new Authorizations("A", "{A"));
-      scan.setAuthorizations(new Authorizations(" "));
-      scan.setAuthorizations(new Authorizations(":B"));
-      scan.setAuthorizations(new Authorizations("-B"));
-      scan.setAuthorizations(new Authorizations(".B"));
-      scan.setAuthorizations(new Authorizations("/B"));
-    } catch (IllegalArgumentException e) {
-      fail("should not throw exception");
-    }
+    scan.setAuthorizations(new Authorizations("A", "B", "0123", "A0", "1A1", "_a"));
+    scan.setAuthorizations(new Authorizations("A|B"));
+    scan.setAuthorizations(new Authorizations("A&B"));
+    scan.setAuthorizations(new Authorizations("!B"));
+    scan.setAuthorizations(new Authorizations("A", "(A)"));
+    scan.setAuthorizations(new Authorizations("A", "{A"));
+    scan.setAuthorizations(new Authorizations(" "));
+    scan.setAuthorizations(new Authorizations(":B"));
+    scan.setAuthorizations(new Authorizations("-B"));
+    scan.setAuthorizations(new Authorizations(".B"));
+    scan.setAuthorizations(new Authorizations("/B"));
   }
 
   @Test
@@ -193,8 +188,7 @@ public class TestScan {
       scan.setStartRow(new byte[HConstants.MAX_ROW_LENGTH + 1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
-    } catch (Exception e) {
-      fail("expected IllegalArgumentException to be thrown");
+      // Expected
     }
 
     scan.setStopRow(null);
@@ -204,8 +198,7 @@ public class TestScan {
       scan.setStopRow(new byte[HConstants.MAX_ROW_LENGTH + 1]);
       fail("should've thrown exception");
     } catch (IllegalArgumentException iae) {
-    } catch (Exception e) {
-      fail("expected IllegalArgumentException to be thrown");
+      // Expected
     }
   }
 

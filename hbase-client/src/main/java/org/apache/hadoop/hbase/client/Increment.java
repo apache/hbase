@@ -94,6 +94,7 @@ public class Increment extends Mutation {
    * Add the specified KeyValue to this operation.
    * @param cell individual Cell n * @throws java.io.IOException e
    */
+  @Override
   public Increment add(Cell cell) throws IOException {
     super.add(cell);
     return this;
@@ -274,7 +275,7 @@ public class Increment extends Mutation {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Increment)) {
       return false;
     }
     Row other = (Row) obj;

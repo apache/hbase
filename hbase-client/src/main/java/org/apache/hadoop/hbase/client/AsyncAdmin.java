@@ -61,6 +61,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 public interface AsyncAdmin {
 
   /**
+   * Check if a table exists.
    * @param tableName Table to check.
    * @return True if table exists already. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -210,6 +211,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> disableTable(TableName tableName);
 
   /**
+   * Check if a table is enabled.
    * @param tableName name of table to check
    * @return true if table is on-line. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -217,6 +219,7 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> isTableEnabled(TableName tableName);
 
   /**
+   * Check if a table is disabled.
    * @param tableName name of table to check
    * @return true if table is off-line. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -224,6 +227,7 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> isTableDisabled(TableName tableName);
 
   /**
+   * Check if a table is available.
    * @param tableName name of table to check
    * @return true if all regions of the table are available. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -598,11 +602,15 @@ public interface AsyncAdmin {
   CompletableFuture<Void> splitRegion(byte[] regionName, byte[] splitPoint);
 
   /**
+   * Assign an individual region.
    * @param regionName Encoded or full name of region to assign.
    */
   CompletableFuture<Void> assign(byte[] regionName);
 
   /**
+   * Unassign a region from current hosting regionserver. Region will then be assigned to a
+   * regionserver chosen at random. Region could be reassigned back to the same server. Use
+   * {@link #move(byte[], ServerName)} if you want to control the region movement.
    * @param regionName Encoded or full name of region to unassign.
    */
   CompletableFuture<Void> unassign(byte[] regionName);
@@ -1154,19 +1162,21 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
-   * Clear compacting queues on a region server. n * @param queues the set of queue name
+   * Clear compacting queues on a region server.
+   * @param serverName The servername of the region server.
+   * @param queues     the set of queue name
    */
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver. n * @return a
-   * list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region server.
+   * @return list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table. nn
-   * * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region server for a table.
+   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
     TableName tableName);
@@ -1227,8 +1237,8 @@ public interface AsyncAdmin {
   CompletableFuture<Optional<Long>> getLastMajorCompactionTimestampForRegion(byte[] regionName);
 
   /**
-   * @return the list of supported security capabilities. The return value will be wrapped by a
-   *         {@link CompletableFuture}.
+   * Returns the list of supported security capabilities. The return value will be wrapped by a
+   * {@link CompletableFuture}.
    */
   CompletableFuture<List<SecurityCapability>> getSecurityCapabilities();
 
@@ -1372,9 +1382,7 @@ public interface AsyncAdmin {
    * one line lambda expression, like:
    *
    * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
+   * channel -&gt; xxxService.newStub(channel)
    * </pre>
    *
    * @param stubMaker a delegation to the actual {@code newStub} call.
@@ -1395,9 +1403,7 @@ public interface AsyncAdmin {
    * one line lambda expression, like:
    *
    * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
+   * channel -&gt; xxxService.newStub(channel)
    * </pre>
    *
    * @param stubMaker  a delegation to the actual {@code newStub} call.
@@ -1613,7 +1619,6 @@ public interface AsyncAdmin {
    * @param serverType   enum for server type: HMaster or RegionServer
    * @param limit        put a limit to list of records that server should send in response
    * @param filterParams additional filter params
-   * @return Log entries representing online records from servers
    */
   CompletableFuture<List<LogEntry>> getLogEntries(Set<ServerName> serverNames, String logType,
     ServerType serverType, int limit, Map<String, Object> filterParams);

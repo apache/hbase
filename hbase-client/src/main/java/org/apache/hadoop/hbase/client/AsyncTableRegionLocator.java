@@ -89,7 +89,6 @@ public interface AsyncTableRegionLocator {
    * Find all the replicas for the region on which the given row is being served.
    * @param row Row to find.
    * @return Locations for all the replicas of the row.
-   * @throws IOException if a remote or network exception occurs
    */
   default CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] row) {
     return getRegionLocations(row, false);
@@ -100,7 +99,6 @@ public interface AsyncTableRegionLocator {
    * @param row    Row to find.
    * @param reload true to reload information or false to use cached information
    * @return Locations for all the replicas of the row.
-   * @throws IOException if a remote or network exception occurs
    */
   CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] row, boolean reload);
 

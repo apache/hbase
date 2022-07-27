@@ -389,8 +389,8 @@ public class TestAsyncTableTracing {
   @Test
   public void testCheckAndMutateBuilderThenMutations() throws IOException {
     RowMutations mutations = new RowMutations(Bytes.toBytes(0))
-      .add((Mutation) (new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
-        Bytes.toBytes("v"))))
+      .add((Mutation) new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("f"), Bytes.toBytes("cq"),
+        Bytes.toBytes("v")))
       .add((Mutation) new Delete(Bytes.toBytes(0)));
     testCheckAndMutateBuilder(mutations);
   }

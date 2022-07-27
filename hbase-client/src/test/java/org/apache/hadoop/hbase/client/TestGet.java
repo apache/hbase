@@ -250,8 +250,7 @@ public class TestGet {
   public void testGetRowConstructor() {
     byte[] row1 = Bytes.toBytes("testRow");
     byte[] row2 = Bytes.toBytes("testtestRow");
-    ByteBuffer rowBuffer = ByteBuffer.allocate(16);
-    rowBuffer = ByteBuffer.wrap(row1);
+    ByteBuffer rowBuffer = ByteBuffer.wrap(row1);
     Get get1 = new Get(rowBuffer);
     Get get2 = new Get(row2, 4, 7);
     Assert.assertArrayEquals(get1.getRow(), get2.getRow());

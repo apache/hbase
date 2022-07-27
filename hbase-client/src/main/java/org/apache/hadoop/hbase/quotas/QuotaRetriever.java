@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.quotas;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private static final Logger LOG = LoggerFactory.getLogger(QuotaRetriever.class);
 
-  private final Queue<QuotaSettings> cache = new LinkedList<>();
+  private final Queue<QuotaSettings> cache = new ArrayDeque<>();
   private ResultScanner scanner;
   /**
    * Connection to use. Could pass one in and have this class use it but this class wants to be

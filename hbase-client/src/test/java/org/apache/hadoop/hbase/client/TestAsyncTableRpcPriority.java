@@ -45,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -135,10 +134,11 @@ public class TestAsyncTableRpcPriority {
           case INCREMENT:
             ColumnValue value = req.getColumnValue(0);
             QualifierValue qvalue = value.getQualifierValue(0);
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
-              .setQualifier(qvalue.getQualifier().toByteArray())
-              .setValue(qvalue.getValue().toByteArray()).build();
+            Cell cell =
+              CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+                .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
+                .setQualifier(qvalue.getQualifier().toByteArray())
+                .setValue(qvalue.getValue().toByteArray()).build();
             resp = MutateResponse.newBuilder()
               .setResult(ProtobufUtil.toResult(Result.create(Arrays.asList(cell)))).build();
             break;
@@ -496,8 +496,8 @@ public class TestAsyncTableRpcPriority {
             assertFalse("close scanner should not come in with scan priority " + scanPriority,
               req.hasCloseScanner() && req.getCloseScanner());
 
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+              .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
               .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
               .setValue(Bytes.toBytes("v")).build();
             Result result = Result.create(Arrays.asList(cell));

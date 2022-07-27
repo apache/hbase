@@ -148,8 +148,6 @@ public class TableDescriptorBuilder {
   private static final Bytes REGION_MEMSTORE_REPLICATION_KEY =
     new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
-  private static final Bytes REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY =
-    new Bytes(Bytes.toBytes(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY));
   /**
    * Used by shell/rest interface to access this metadata attribute which denotes if the table
    * should be treated by region normalizer.
@@ -294,10 +292,7 @@ public class TableDescriptorBuilder {
 
   private final ModifyableTableDescriptor desc;
 
-  /**
-   * @param desc The table descriptor to serialize
-   * @return This instance serialized with pb with pb magic prefix
-   */
+  /** Returns This instance serialized with pb with pb magic prefix */
   public static byte[] toByteArray(TableDescriptor desc) {
     if (desc instanceof ModifyableTableDescriptor) {
       return ((ModifyableTableDescriptor) desc).toByteArray();
@@ -309,7 +304,7 @@ public class TableDescriptorBuilder {
    * The input should be created by {@link #toByteArray}.
    * @param pbBytes A pb serialized TableDescriptor instance with pb magic prefix
    * @return This instance serialized with pb with pb magic prefix
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException if an error occurred
    */
   public static TableDescriptor parseFrom(byte[] pbBytes) throws DeserializationException {
     return ModifyableTableDescriptor.parseFrom(pbBytes);
@@ -506,6 +501,7 @@ public class TableDescriptorBuilder {
   }
 
   /**
+   * Set the table owner
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
    */
@@ -516,6 +512,7 @@ public class TableDescriptorBuilder {
   }
 
   /**
+   * Set the table owner
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
    */
@@ -1511,6 +1508,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1520,6 +1518,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner.
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1530,6 +1529,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Set the table owner.
      * @deprecated since 2.0.0 and will be removed in 3.0.0.
      * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
      */
@@ -1548,6 +1548,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
+     * Parse the serialized representation of a {@link ModifyableTableDescriptor}
      * @param bytes A pb serialized {@link ModifyableTableDescriptor} instance with pb magic prefix
      * @return An instance of {@link ModifyableTableDescriptor} made from <code>bytes</code> n
      *         * @see #toByteArray()

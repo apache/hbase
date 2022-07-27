@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -304,25 +303,18 @@ public final class ProtobufUtil {
     return Bytes.add(PB_MAGIC, bytes);
   }
 
-  /**
-   * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
-   */
+  /** Returns True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix. */
   public static boolean isPBMagicPrefix(final byte[] bytes) {
     return ProtobufMagic.isPBMagicPrefix(bytes);
   }
 
-  /**
-   * @param bytes  Bytes to check.
-   * @param offset offset to start at
-   * @param len    length to use
-   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
-   */
+  /** Returns True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix. */
   public static boolean isPBMagicPrefix(final byte[] bytes, int offset, int len) {
     return ProtobufMagic.isPBMagicPrefix(bytes, offset, len);
   }
 
   /**
+   * Expect the {@link ProtobufMagic#PB_MAGIC} or throw an exception.
    * @param bytes bytes to check
    * @throws DeserializationException if we are missing the pb magic prefix
    */
@@ -683,7 +675,7 @@ public final class ProtobufUtil {
             } else {
               put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
                 .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                .setTimestamp(ts).setType(Type.Put)
+                .setTimestamp(ts).setType(Cell.Type.Put)
                 .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null).build());
             }
           }
@@ -840,9 +832,9 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Mutate to an Append n * @param proto the protocol buffer Mutate to
-   * convert
-   * @return the converted client Append n
+   * Convert a protocol buffer Mutate to an Append
+   * @param proto the protocol buffer Mutate to convert
+   * @return the converted client Append
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -860,7 +852,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Mutate to an Increment
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Increment n
+   * @return the converted client Increment
    */
   public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -1803,9 +1795,6 @@ public final class ProtobufUtil {
     return rl.getReadRequestsCount() + rl.getWriteRequestsCount();
   }
 
-  /**
-   * @param m Message to get delimited pb serialization of (with pb magic prefix)
-   */
   public static byte[] toDelimitedByteArray(final Message m) throws IOException {
     // Allocate arbitrary big size so we avoid resizing.
     ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);

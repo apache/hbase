@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ScannerCallable.MoreResults;
@@ -139,8 +138,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoResultsHint() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1, Type.Maximum);
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+      KeyValue.Type.Maximum);
     results[0] = Result.create(new Cell[] { kv1 });
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
@@ -200,8 +199,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testSizeLimit() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1, Type.Maximum);
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+      KeyValue.Type.Maximum);
     results[0] = Result.create(new Cell[] { kv1 });
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
@@ -259,11 +258,11 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testCacheLimit() throws IOException {
     KeyValue kv1 = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
-      Type.Maximum);
+      KeyValue.Type.Maximum);
     KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
-      Type.Maximum);
+      KeyValue.Type.Maximum);
     KeyValue kv3 = new KeyValue(Bytes.toBytes("row3"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
-      Type.Maximum);
+      KeyValue.Type.Maximum);
     final Result[] results = new Result[] { Result.create(new Cell[] { kv1 }),
       Result.create(new Cell[] { kv2 }), Result.create(new Cell[] { kv3 }) };
 
@@ -336,8 +335,8 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testNoMoreResults() throws IOException {
     final Result[] results = new Result[1];
-    KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1, Type.Maximum);
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+      KeyValue.Type.Maximum);
     results[0] = Result.create(new Cell[] { kv1 });
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);
@@ -395,13 +394,13 @@ public class TestClientScanner {
   @SuppressWarnings("unchecked")
   public void testMoreResults() throws IOException {
     final Result[] results1 = new Result[1];
-    KeyValue kv1 =
-      new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1, Type.Maximum);
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
+      KeyValue.Type.Maximum);
     results1[0] = Result.create(new Cell[] { kv1 });
 
     final Result[] results2 = new Result[1];
     KeyValue kv2 = new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1,
-      Type.Maximum);
+      KeyValue.Type.Maximum);
     results2[0] = Result.create(new Cell[] { kv2 });
 
     RpcRetryingCaller<Result[]> caller = Mockito.mock(RpcRetryingCaller.class);

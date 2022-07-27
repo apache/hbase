@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -129,7 +130,7 @@ class NettyRpcConnection extends RpcConnection {
   private void shutdown0() {
     assert eventLoop.inEventLoop();
     if (channel != null) {
-      channel.close();
+      NettyFutureUtils.consume(channel.close());
       channel = null;
     }
   }
@@ -167,6 +168,7 @@ class NettyRpcConnection extends RpcConnection {
 
   private boolean reloginInProgress;
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void scheduleRelogin(Throwable error) {
     assert eventLoop.inEventLoop();
     if (error instanceof FallbackDisallowedException) {
@@ -217,7 +219,7 @@ class NettyRpcConnection extends RpcConnection {
       return;
     }
     ch.pipeline().addFirst(new SaslChallengeDecoder(), saslHandler);
-    saslPromise.addListener(new FutureListener<Boolean>() {
+    NettyFutureUtils.consume(saslPromise.addListener(new FutureListener<Boolean>() {
 
       @Override
       public void operationComplete(Future<Boolean> future) throws Exception {
@@ -238,26 +240,27 @@ class NettyRpcConnection extends RpcConnection {
             p.addFirst(
               new ReadTimeoutHandler(RpcClient.DEFAULT_SOCKET_TIMEOUT_READ, TimeUnit.MILLISECONDS));
             p.addLast(chHandler);
-            connectionHeaderPromise.addListener(new FutureListener<Boolean>() {
-              @Override
-              public void operationComplete(Future<Boolean> future) throws Exception {
-                if (future.isSuccess()) {
-                  ChannelPipeline p = ch.pipeline();
-                  p.remove(ReadTimeoutHandler.class);
-                  p.remove(NettyHBaseRpcConnectionHeaderHandler.class);
-                  // don't send connection header, NettyHbaseRpcConnectionHeaderHandler
-                  // sent it already
-                  established(ch);
-                } else {
-                  final Throwable error = future.cause();
-                  scheduleRelogin(error);
-                  failInit(ch, toIOE(error));
+            NettyFutureUtils
+              .consume(connectionHeaderPromise.addListener(new FutureListener<Boolean>() {
+                @Override
+                public void operationComplete(Future<Boolean> future) throws Exception {
+                  if (future.isSuccess()) {
+                    ChannelPipeline p = ch.pipeline();
+                    p.remove(ReadTimeoutHandler.class);
+                    p.remove(NettyHBaseRpcConnectionHeaderHandler.class);
+                    // don't send connection header, NettyHbaseRpcConnectionHeaderHandler
+                    // sent it already
+                    established(ch);
+                  } else {
+                    final Throwable error = future.cause();
+                    scheduleRelogin(error);
+                    failInit(ch, toIOE(error));
+                  }
                 }
-              }
-            });
+              }));
           } else {
             // send the connection header to server
-            ch.write(connectionHeaderWithLength.retainedDuplicate());
+            NettyFutureUtils.safeWrite(ch, connectionHeaderWithLength.retainedDuplicate());
             established(ch);
           }
         } else {
@@ -266,7 +269,7 @@ class NettyRpcConnection extends RpcConnection {
           failInit(ch, toIOE(error));
         }
       }
-    });
+    }));
   }
 
   private void connect() throws UnknownHostException {
@@ -288,12 +291,12 @@ class NettyRpcConnection extends RpcConnection {
             rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
             return;
           }
-          ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
+          NettyFutureUtils.safeWriteAndFlush(ch, connectionHeaderPreamble.retainedDuplicate());
           if (useSasl) {
             saslNegotiate(ch);
           } else {
             // send the connection header to server
-            ch.write(connectionHeaderWithLength.retainedDuplicate());
+            NettyFutureUtils.safeWrite(ch, connectionHeaderWithLength.retainedDuplicate());
             established(ch);
           }
         }
@@ -325,8 +328,7 @@ class NettyRpcConnection extends RpcConnection {
             connect();
           }
           scheduleTimeoutTask(call);
-          channel.writeAndFlush(call).addListener(new ChannelFutureListener() {
-
+          NettyFutureUtils.addListener(channel.writeAndFlush(call), new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
               // Fail the call if we failed to write it out. This usually because the channel is

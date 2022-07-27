@@ -154,7 +154,7 @@ public class TestCellBlockBuilder {
     StopWatch timer = new StopWatch();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(builder, timer, count, size, codec, compressor, false);
+      timerTest(builder, count, size, codec, compressor, false);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + false + ", count="
@@ -162,16 +162,15 @@ public class TestCellBlockBuilder {
     timer.reset();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(builder, timer, count, size, codec, compressor, true);
+      timerTest(builder, count, size, codec, compressor, true);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + true + ", count="
       + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
   }
 
-  private static void timerTest(final CellBlockBuilder builder, final StopWatch timer,
-    final int count, final int size, final Codec codec, final CompressionCodec compressor,
-    final boolean sized) throws IOException {
+  private static void timerTest(final CellBlockBuilder builder, final int count, final int size,
+    final Codec codec, final CompressionCodec compressor, final boolean sized) throws IOException {
     doBuildCellBlockUndoCellBlock(builder, codec, compressor, count, size, sized);
   }
 

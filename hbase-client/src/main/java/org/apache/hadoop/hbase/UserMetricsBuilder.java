@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.util.Strings;
@@ -30,7 +31,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 public final class UserMetricsBuilder {
 
   public static UserMetrics toUserMetrics(ClusterStatusProtos.UserLoad userLoad) {
-    UserMetricsBuilder builder = UserMetricsBuilder.newBuilder(userLoad.getUserName().getBytes());
+    UserMetricsBuilder builder =
+      UserMetricsBuilder.newBuilder(userLoad.getUserName().getBytes(StandardCharsets.UTF_8));
     userLoad.getClientMetricsList().stream()
       .map(clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
         clientMetrics.getReadRequestsCount(), clientMetrics.getWriteRequestsCount(),

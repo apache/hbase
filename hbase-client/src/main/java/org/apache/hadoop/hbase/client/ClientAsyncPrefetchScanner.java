@@ -94,34 +94,35 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   public Result next() throws IOException {
     try (Scope ignored = span.makeCurrent()) {
       lock.lock();
-      while (cache.isEmpty()) {
+      try {
+        while (cache.isEmpty()) {
+          handleException();
+          if (this.closed) {
+            return null;
+          }
+          try {
+            notEmpty.await();
+          } catch (InterruptedException e) {
+            span.recordException(e);
+            throw new InterruptedIOException("Interrupted when wait to load cache");
+          }
+        }
+        Result result = pollCache();
+        if (prefetchCondition()) {
+          notFull.signalAll();
+        }
+        return result;
+      } finally {
+        lock.unlock();
         handleException();
-        if (this.closed) {
-          return null;
-        }
-        try {
-          notEmpty.await();
-        } catch (InterruptedException e) {
-          span.recordException(e);
-          throw new InterruptedIOException("Interrupted when wait to load cache");
-        }
       }
-
-      Result result = pollCache();
-      if (prefetchCondition()) {
-        notFull.signalAll();
-      }
-      return result;
-    } finally {
-      lock.unlock();
-      handleException();
     }
   }
 
   @Override
   public void close() {
+    lock.lock();
     try {
-      lock.lock();
       super.close();
       closed = true;
       notFull.signalAll();

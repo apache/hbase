@@ -166,11 +166,12 @@ public interface TableDescriptor {
   String getRegionSplitPolicyClassName();
 
   /**
-   * Get the name of the table n
+   * Get the name of the table
    */
   TableName getTableName();
 
   /**
+   * Get the owner name as a string.
    * @deprecated since 2.0.0 and will be removed in 3.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15583">HBASE-15583</a>
    */
@@ -280,8 +281,8 @@ public interface TableDescriptor {
   boolean isReadOnly();
 
   /**
-   * @return Name of this table and then a map of all of the column family descriptors (with only
-   *         the non-default column family attributes)
+   * Returns Name of this table and then a map of all of the column family descriptors (with only
+   * the non-default column family attributes)
    */
   String toStringCustomizedValues();
 

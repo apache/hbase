@@ -222,6 +222,7 @@ public class HTableMultiplexer {
   }
 
   @InterfaceAudience.Private
+  @SuppressWarnings("FutureReturnValueIgnored")
   LinkedBlockingQueue<PutStatus> getQueue(HRegionLocation addr) {
     FlushWorker worker = serverToFlushWorkerMap.get(addr);
     if (worker == null) {
@@ -455,6 +456,7 @@ public class HTableMultiplexer {
       return this.maxLatency.getAndSet(0);
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     boolean resubmitFailedPut(PutStatus ps, HRegionLocation oldLoc) throws IOException {
       // Decrease the retry count
       final int retryCount = ps.maxAttempCount - 1;

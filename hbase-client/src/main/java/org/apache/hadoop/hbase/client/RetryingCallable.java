@@ -46,13 +46,14 @@ public interface RetryingCallable<T> {
   void throwable(final Throwable t, boolean retrying);
 
   /**
-   * @return Some details from the implementation that we would like to add to a terminating
-   *         exception; i.e. a fatal exception is being thrown ending retries and we might like to
-   *         add more implementation-specific detail on to the exception being thrown.
+   * Returns Some details from the implementation that we would like to add to a terminating
+   * exception; i.e. a fatal exception is being thrown ending retries and we might like to add more
+   * implementation-specific detail on to the exception being thrown.
    */
   String getExceptionMessageAdditionalDetail();
 
   /**
+   * Sleep and retry.
    * @param pause time to pause
    * @param tries amount of tries until till sleep
    * @return Suggestion on how much to sleep between retries

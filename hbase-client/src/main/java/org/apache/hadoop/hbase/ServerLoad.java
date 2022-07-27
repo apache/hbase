@@ -79,16 +79,17 @@ public class ServerLoad implements ServerMetrics {
     for (RegionMetrics rl : metrics.getRegionMetrics().values()) {
       stores += rl.getStoreCount();
       storefiles += rl.getStoreFileCount();
-      storeUncompressedSizeMB += rl.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
-      storefileSizeMB += rl.getStoreFileSize().get(Size.Unit.MEGABYTE);
-      memstoreSizeMB += rl.getMemStoreSize().get(Size.Unit.MEGABYTE);
+      storeUncompressedSizeMB += (int) rl.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
+      storefileSizeMB += (int) rl.getStoreFileSize().get(Size.Unit.MEGABYTE);
+      memstoreSizeMB += (int) rl.getMemStoreSize().get(Size.Unit.MEGABYTE);
       readRequestsCount += rl.getReadRequestCount();
       filteredReadRequestsCount += rl.getFilteredReadRequestCount();
       writeRequestsCount += rl.getWriteRequestCount();
-      storefileIndexSizeKB += rl.getStoreFileIndexSize().get(Size.Unit.KILOBYTE);
-      rootIndexSizeKB += rl.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE);
-      totalStaticIndexSizeKB += rl.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
-      totalStaticBloomSizeKB += rl.getBloomFilterSize().get(Size.Unit.KILOBYTE);
+      storefileIndexSizeKB += (long) rl.getStoreFileIndexSize().get(Size.Unit.KILOBYTE);
+      rootIndexSizeKB += (int) rl.getStoreFileRootLevelIndexSize().get(Size.Unit.KILOBYTE);
+      totalStaticIndexSizeKB +=
+        (int) rl.getStoreFileUncompressedDataIndexSize().get(Size.Unit.KILOBYTE);
+      totalStaticBloomSizeKB += (int) rl.getBloomFilterSize().get(Size.Unit.KILOBYTE);
       totalCompactingKVs += rl.getCompactingCellCount();
       currentCompactedKVs += rl.getCompactedCellCount();
     }

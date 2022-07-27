@@ -43,7 +43,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -194,6 +193,7 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Check for {@link ProtobufMagic#PB_MAGIC}
    * @param bytes Bytes to check.
    * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
@@ -202,6 +202,7 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Check for {@link ProtobufMagic#PB_MAGIC}
    * @param bytes  Bytes to check.
    * @param offset offset to start at
    * @param len    length to use
@@ -212,6 +213,7 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Check for {@link ProtobufMagic#PB_MAGIC}
    * @param bytes bytes to check
    * @throws DeserializationException if we are missing the pb magic prefix
    */
@@ -523,7 +525,7 @@ public final class ProtobufUtil {
             } else {
               put.add(cellBuilder.clear().setRow(put.getRow()).setFamily(family)
                 .setQualifier(qv.hasQualifier() ? qv.getQualifier().toByteArray() : null)
-                .setTimestamp(ts).setType(Type.Put)
+                .setTimestamp(ts).setType(Cell.Type.Put)
                 .setValue(qv.hasValue() ? qv.getValue().toByteArray() : null).build());
             }
           }
@@ -677,9 +679,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Mutate to an Append n * @param proto the protocol buffer Mutate to
-   * convert
-   * @return the converted client Append n
+   * Convert a protocol buffer Mutate to an Append
+   * @return the converted client Append
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -696,8 +697,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Mutate to an Increment
-   * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Increment n
+   * @return the converted client Increment
    */
   public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {

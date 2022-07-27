@@ -50,12 +50,14 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   void setCellScanner(CellScanner cellScanner);
 
   /**
+   * Set the priority for this operation.
    * @param priority Priority for this request; should fall roughly in the range
    *                 {@link HConstants#NORMAL_QOS} to {@link HConstants#HIGH_QOS}
    */
   void setPriority(int priority);
 
   /**
+   * Set the priority for this operation.
    * @param tn Set priority based off the table we are going against.
    */
   void setPriority(final TableName tn);

@@ -44,8 +44,8 @@ public interface CoprocessorEnvironment<C extends Coprocessor> {
   int getLoadSequence();
 
   /**
-   * @return a Read-only Configuration; throws {@link UnsupportedOperationException} if you try to
-   *         set a configuration.
+   * Returns a Read-only Configuration; throws {@link UnsupportedOperationException} if you try to
+   * set a configuration.
    */
   Configuration getConfiguration();
 

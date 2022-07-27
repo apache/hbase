@@ -86,11 +86,7 @@ public class TestHTableDescriptor {
 
     // Try more spec.
     String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
-    try {
-      htd.addCoprocessorWithSpec(spec);
-    } catch (IllegalArgumentException iae) {
-      fail();
-    }
+    htd.addCoprocessorWithSpec(spec);
 
     // Try double add of same coprocessor
     try {

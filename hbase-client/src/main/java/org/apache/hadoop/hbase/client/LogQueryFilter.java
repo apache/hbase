@@ -112,13 +112,10 @@ public class LogQueryFilter {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof LogQueryFilter)) {
       return false;
     }
-
     LogQueryFilter that = (LogQueryFilter) o;
-
     return new EqualsBuilder().append(limit, that.limit).append(regionName, that.regionName)
       .append(clientAddress, that.clientAddress).append(tableName, that.tableName)
       .append(userName, that.userName).append(type, that.type)

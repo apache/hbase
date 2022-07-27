@@ -223,16 +223,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * This is a fluent style API, the code is like:
    *
    * <pre>
-   * <code>
    * table.checkAndMutate(row, family).qualifier(qualifier).ifNotExists().thenPut(put)
-   *     .thenAccept(succ -> {
-   *       if (succ) {
-   *         System.out.println("Check and put succeeded");
-   *       } else {
-   *         System.out.println("Check and put failed");
-   *       }
-   *     });
-   * </code>
+   *   .thenAccept(succ -&gt; {
+   *     if (succ) {
+   *       System.out.println("Check and put succeeded");
+   *     } else {
+   *       System.out.println("Check and put failed");
+   *     }
+   *   });
    * </pre>
    *
    * @deprecated Since 2.4.0, will be removed in 4.0.0. For internal test use only, do not use it
@@ -250,11 +248,13 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   interface CheckAndMutateBuilder {
 
     /**
+     * Match a qualifier.
      * @param qualifier column qualifier to check.
      */
     CheckAndMutateBuilder qualifier(byte[] qualifier);
 
     /**
+     * Match a timerange.
      * @param timeRange time range to check.
      */
     CheckAndMutateBuilder timeRange(TimeRange timeRange);
@@ -273,12 +273,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     }
 
     /**
+     * Compare a value
      * @param compareOp comparison operator to use
      * @param value     the expected value
      */
     CheckAndMutateBuilder ifMatches(CompareOperator compareOp, byte[] value);
 
     /**
+     * Specify a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise. The return value
      *         will be wrapped by a {@link CompletableFuture}.
@@ -286,6 +288,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     CompletableFuture<Boolean> thenPut(Put put);
 
     /**
+     * Specify a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise. The return
      *         value will be wrapped by a {@link CompletableFuture}.
@@ -293,6 +296,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     CompletableFuture<Boolean> thenDelete(Delete delete);
 
     /**
+     * Specify a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise. The return value will be
      *         wrapped by a {@link CompletableFuture}.
@@ -308,16 +312,13 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * execute it. This is a fluent style API, the code is like:
    *
    * <pre>
-   * <code>
-   * table.checkAndMutate(row, filter).thenPut(put)
-   *     .thenAccept(succ -> {
-   *       if (succ) {
-   *         System.out.println("Check and put succeeded");
-   *       } else {
-   *         System.out.println("Check and put failed");
-   *       }
-   *     });
-   * </code>
+   * table.checkAndMutate(row, filter).thenPut(put).thenAccept(succ -&gt; {
+   *   if (succ) {
+   *     System.out.println("Check and put succeeded");
+   *   } else {
+   *     System.out.println("Check and put failed");
+   *   }
+   * });
    * </pre>
    *
    * @deprecated Since 2.4.0, will be removed in 4.0.0. For internal test use only, do not use it
@@ -335,11 +336,13 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   interface CheckAndMutateWithFilterBuilder {
 
     /**
+     * Match a timerange.
      * @param timeRange time range to check.
      */
     CheckAndMutateWithFilterBuilder timeRange(TimeRange timeRange);
 
     /**
+     * Specify a Put to commit if the check succeeds.
      * @param put data to put if check succeeds
      * @return {@code true} if the new put was executed, {@code false} otherwise. The return value
      *         will be wrapped by a {@link CompletableFuture}.
@@ -347,6 +350,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     CompletableFuture<Boolean> thenPut(Put put);
 
     /**
+     * Specify a Delete to commit if the check succeeds.
      * @param delete data to delete if check succeeds
      * @return {@code true} if the new delete was executed, {@code false} otherwise. The return
      *         value will be wrapped by a {@link CompletableFuture}.
@@ -354,6 +358,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     CompletableFuture<Boolean> thenDelete(Delete delete);
 
     /**
+     * Specify a RowMutations to commit if the check succeeds.
      * @param mutation mutations to perform if check succeeds
      * @return true if the new mutation was executed, false otherwise. The return value will be
      *         wrapped by a {@link CompletableFuture}.
@@ -440,16 +445,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * <p>
    *
    * <pre>
-   * <code>
-   * table.scanAll(new Scan().withStartRow(row, false).setLimit(1)).thenAccept(results -> {
+   * table.scanAll(new Scan().withStartRow(row, false).setLimit(1)).thenAccept(results -&gt; {
    *   if (results.isEmpty()) {
-   *      System.out.println("No row after " + Bytes.toStringBinary(row));
+   *     System.out.println("No row after " + Bytes.toStringBinary(row));
    *   } else {
    *     System.out.println("The closest row after " + Bytes.toStringBinary(row) + " is "
-   *         + Bytes.toStringBinary(results.stream().findFirst().get().getRow()));
+   *       + Bytes.toStringBinary(results.stream().findFirst().get().getRow()));
    *   }
    * });
-   * </code>
    * </pre>
    * <p>
    * If your result set is very large, you should use other scan method to get a scanner or use
@@ -574,9 +577,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * one line lambda expression, like:
    *
    * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
+   * channel -&gt; xxxService.newStub(channel)
    * </pre>
    *
    * @param stubMaker a delegation to the actual {@code newStub} call.
@@ -609,7 +610,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *
    * <pre>
    * locateThenCall(byte[] row) {
-   *   locate(row).whenComplete((location, locateError) -> {
+   *   locate(row).whenComplete((location, locateError) -&gt; {
    *     if (locateError != null) {
    *       callback.onError(locateError);
    *       return;
@@ -621,7 +622,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    *     } else {
    *       locateThenCall(region.getEndKey());
    *     }
-   *     sendCall().whenComplete((resp, error) -> {
+   *     sendCall().whenComplete((resp, error) -&gt; {
    *       if (error != null) {
    *         callback.onRegionError(region, error);
    *       } else {
@@ -639,12 +640,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   interface CoprocessorCallback<R> {
 
     /**
+     * Indicate that the respose of a region is available
      * @param region the region that the response belongs to
      * @param resp   the response of the coprocessor call
      */
     void onRegionComplete(RegionInfo region, R resp);
 
     /**
+     * Indicate that the error for a region is available
      * @param region the region that the error belongs to
      * @param error  the response error of the coprocessor call
      */
@@ -675,6 +678,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
   interface CoprocessorServiceBuilder<S, R> {
 
     /**
+     * Specify a start row
      * @param startKey start region selection with region containing this row, inclusive.
      */
     default CoprocessorServiceBuilder<S, R> fromRow(byte[] startKey) {
@@ -682,12 +686,14 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     }
 
     /**
+     * Specify a start row
      * @param startKey  start region selection with region containing this row
      * @param inclusive whether to include the startKey
      */
     CoprocessorServiceBuilder<S, R> fromRow(byte[] startKey, boolean inclusive);
 
     /**
+     * Specify a stop row
      * @param endKey select regions up to and including the region containing this row, exclusive.
      */
     default CoprocessorServiceBuilder<S, R> toRow(byte[] endKey) {
@@ -695,6 +701,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
     }
 
     /**
+     * Specify a stop row
      * @param endKey    select regions up to and including the region containing this row
      * @param inclusive whether to include the endKey
      */
@@ -716,9 +723,7 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * is only a one line lambda expression, like:
    *
    * <pre>
-   * <code>
-   * channel -> xxxService.newStub(channel)
-   * </code>
+   * channel -&gt; xxxService.newStub(channel)
    * </pre>
    *
    * @param stubMaker a delegation to the actual {@code newStub} call.

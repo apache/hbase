@@ -327,7 +327,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     return cache != null ? cache.size() : 0;
   }
 
-  private boolean scanExhausted(Result[] values) {
+  private boolean scanExhausted() {
     return callable.moreResultsForScan() == MoreResults.NO;
   }
 
@@ -484,7 +484,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
         assert newLimit >= 0;
         scan.setLimit(newLimit);
       }
-      if (scan.getLimit() == 0 || scanExhausted(values)) {
+      if (scan.getLimit() == 0 || scanExhausted()) {
         closeScanner();
         closed = true;
         break;
