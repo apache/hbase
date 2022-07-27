@@ -112,7 +112,10 @@ public class KeyPressGenerator {
         } else {
           Thread.sleep(20);
         }
-      } catch (InterruptedException ignored) {
+      } catch (InterruptedException e) {
+        // Restore interrupt status
+        Thread.currentThread().interrupt();
+        done = true;
       } catch (IOException e) {
         LOGGER.error("Caught an exception", e);
         done = true;
