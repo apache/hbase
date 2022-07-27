@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DateTieredCompactionRequest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -36,7 +35,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy {
 
   protected ArrayList<HStoreFile> sfCreate(long[] minTimestamps, long[] maxTimestamps, long[] sizes)
-      throws IOException {
+    throws IOException {
     ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(timeMachine);
     // Has to be > 0 and < now.
@@ -49,15 +48,16 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
     ArrayList<HStoreFile> ret = Lists.newArrayList();
     for (int i = 0; i < sizes.length; i++) {
       MockHStoreFile msf =
-          new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
-      msf.setTimeRangeTracker(TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
+        new MockHStoreFile(TEST_UTIL, TEST_FILE, sizes[i], ageInDisk.get(i), false, i);
+      msf.setTimeRangeTracker(
+        TimeRangeTracker.create(TimeRangeTracker.Type.SYNC, minTimestamps[i], maxTimestamps[i]));
       ret.add(msf);
     }
     return ret;
   }
 
   protected void compactEquals(long now, ArrayList<HStoreFile> candidates, long[] expectedFileSizes,
-      long[] expectedBoundaries, boolean isMajor, boolean toCompact) throws IOException {
+    long[] expectedBoundaries, boolean isMajor, boolean toCompact) throws IOException {
     DateTieredCompactionRequest request = getRequest(now, candidates, isMajor, toCompact);
     List<HStoreFile> actual = Lists.newArrayList(request.getFiles());
     assertEquals(Arrays.toString(expectedFileSizes), Arrays.toString(getSizes(actual)));
@@ -66,7 +66,7 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
   }
 
   private DateTieredCompactionRequest getRequest(long now, ArrayList<HStoreFile> candidates,
-      boolean isMajor, boolean toCompact) throws IOException {
+    boolean isMajor, boolean toCompact) throws IOException {
     ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(timeMachine);
     timeMachine.setValue(now);
@@ -88,8 +88,8 @@ public class AbstractTestDateTieredCompactionPolicy extends TestCompactionPolicy
   }
 
   protected void compactEqualsStoragePolicy(long now, ArrayList<HStoreFile> candidates,
-      Map<Long, String> expectedBoundariesPolicies, boolean isMajor, boolean toCompact)
-      throws IOException {
+    Map<Long, String> expectedBoundariesPolicies, boolean isMajor, boolean toCompact)
+    throws IOException {
     DateTieredCompactionRequest request = getRequest(now, candidates, isMajor, toCompact);
     Map<Long, String> boundariesPolicies = request.getBoundariesPolicies();
     for (Map.Entry<Long, String> entry : expectedBoundariesPolicies.entrySet()) {

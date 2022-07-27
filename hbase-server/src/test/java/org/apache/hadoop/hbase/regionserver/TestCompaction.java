@@ -92,7 +92,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Test compaction framework and common functions
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestCompaction {
 
   @ClassRule
@@ -106,9 +106,9 @@ public class TestCompaction {
 
   private HRegion r = null;
   private TableDescriptor tableDescriptor = null;
-  private static final byte [] COLUMN_FAMILY = fam1;
-  private final byte [] STARTROW = Bytes.toBytes(START_KEY);
-  private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
+  private static final byte[] COLUMN_FAMILY = fam1;
+  private final byte[] STARTROW = Bytes.toBytes(START_KEY);
+  private static final byte[] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
   private int compactionThreshold;
   private byte[] secondRowBytes, thirdRowBytes;
   private static final long MAX_FILES_TO_COMPACT = 10;
@@ -122,7 +122,7 @@ public class TestCompaction {
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
-        NoLimitThroughputController.class.getName());
+      NoLimitThroughputController.class.getName());
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     secondRowBytes = START_KEY_BYTES.clone();
@@ -130,7 +130,7 @@ public class TestCompaction {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     thirdRowBytes = START_KEY_BYTES.clone();
     thirdRowBytes[START_KEY_BYTES.length - 1] =
-        (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
+      (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
   @Before
@@ -156,8 +156,7 @@ public class TestCompaction {
   }
 
   /**
-   * Verify that you can stop a long-running compaction
-   * (used during RS shutdown)
+   * Verify that you can stop a long-running compaction (used during RS shutdown)
    */
   @Test
   public void testInterruptCompactionBySize() throws Exception {
@@ -168,8 +167,8 @@ public class TestCompaction {
 
     try {
       // Create a couple store files w/ 15KB (over 10KB interval)
-      int jmax = (int) Math.ceil(15.0/compactionThreshold);
-      byte [] pad = new byte[1000]; // 1 KB chunk
+      int jmax = (int) Math.ceil(15.0 / compactionThreshold);
+      byte[] pad = new byte[1000]; // 1 KB chunk
       for (int i = 0; i < compactionThreshold; i++) {
         Table loader = new RegionAsTable(r);
         Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
@@ -197,12 +196,13 @@ public class TestCompaction {
       // ensure that the compaction stopped, all old files are intact,
       HStore s = r.getStore(COLUMN_FAMILY);
       assertEquals(compactionThreshold, s.getStorefilesCount());
-      assertTrue(s.getStorefilesSize() > 15*1000);
+      assertTrue(s.getStorefilesSize() > 15 * 1000);
       // and no new store files persisted past compactStores()
       // only one empty dir exists in temp dir
       FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
       assertEquals(1, ls.length);
-      Path storeTempDir = new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
+      Path storeTempDir =
+        new Path(r.getRegionFileSystem().getTempDir(), Bytes.toString(COLUMN_FAMILY));
       assertTrue(r.getFilesystem().exists(storeTempDir));
       ls = r.getFilesystem().listStatus(storeTempDir);
       assertEquals(0, ls.length);
@@ -214,7 +214,7 @@ public class TestCompaction {
       // Delete all Store information once done using
       for (int i = 0; i < compactionThreshold; i++) {
         Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
-        byte [][] famAndQf = {COLUMN_FAMILY, null};
+        byte[][] famAndQf = { COLUMN_FAMILY, null };
         delete.addFamily(famAndQf[0]);
         r.delete(delete);
       }
@@ -244,8 +244,8 @@ public class TestCompaction {
 
     try {
       // Create a couple store files w/ 15KB (over 10KB interval)
-      int jmax = (int) Math.ceil(15.0/compactionThreshold);
-      byte [] pad = new byte[1000]; // 1 KB chunk
+      int jmax = (int) Math.ceil(15.0 / compactionThreshold);
+      byte[] pad = new byte[1000]; // 1 KB chunk
       for (int i = 0; i < compactionThreshold; i++) {
         Table loader = new RegionAsTable(r);
         Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
@@ -273,7 +273,7 @@ public class TestCompaction {
       // ensure that the compaction stopped, all old files are intact,
       HStore s = r.getStore(COLUMN_FAMILY);
       assertEquals(compactionThreshold, s.getStorefilesCount());
-      assertTrue(s.getStorefilesSize() > 15*1000);
+      assertTrue(s.getStorefilesSize() > 15 * 1000);
       // and no new store files persisted past compactStores()
       // only one empty dir exists in temp dir
       FileStatus[] ls = r.getFilesystem().listStatus(r.getRegionFileSystem().getTempDir());
@@ -291,7 +291,7 @@ public class TestCompaction {
       // Delete all Store information once done using
       for (int i = 0; i < compactionThreshold; i++) {
         Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
-        byte [][] famAndQf = {COLUMN_FAMILY, null};
+        byte[][] famAndQf = { COLUMN_FAMILY, null };
         delete.addFamily(famAndQf[0]);
         r.delete(delete);
       }
@@ -384,8 +384,7 @@ public class TestCompaction {
 
     CountDownLatch latch = new CountDownLatch(1);
     Tracker tracker = new Tracker(latch);
-    thread.requestCompaction(r, store, "test custom comapction", PRIORITY_USER, tracker,
-      null);
+    thread.requestCompaction(r, store, "test custom comapction", PRIORITY_USER, tracker, null);
     // wait for the latch to complete.
     latch.await();
 
@@ -408,8 +407,8 @@ public class TestCompaction {
     }
 
     HRegion mockRegion = Mockito.spy(r);
-    Mockito.when(mockRegion.checkSplit()).
-      thenThrow(new RuntimeException("Thrown intentionally by test!"));
+    Mockito.when(mockRegion.checkSplit())
+      .thenThrow(new RuntimeException("Thrown intentionally by test!"));
 
     try (MetricsRegionWrapperImpl metricsWrapper = new MetricsRegionWrapperImpl(r)) {
 
@@ -427,10 +426,10 @@ public class TestCompaction {
       long postCompletedCount = metricsWrapper.getNumCompactionsCompleted();
       long postFailedCount = metricsWrapper.getNumCompactionsFailed();
 
-      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post=" +
-        postCompletedCount + ")", postCompletedCount > preCompletedCount);
-      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post=" +
-        postFailedCount + ")", postFailedCount > preFailedCount);
+      assertTrue("Completed count should have increased (pre=" + preCompletedCount + ", post="
+        + postCompletedCount + ")", postCompletedCount > preCompletedCount);
+      assertTrue("Failed count should have increased (pre=" + preFailedCount + ", post="
+        + postFailedCount + ")", postFailedCount > preFailedCount);
     }
   }
 
@@ -456,29 +455,31 @@ public class TestCompaction {
     assertFalse(thread.isCompactionsEnabled());
     int longCompactions = thread.getLongCompactions().getActiveCount();
     int shortCompactions = thread.getShortCompactions().getActiveCount();
-    assertEquals("longCompactions=" + longCompactions + "," +
-        "shortCompactions=" + shortCompactions, 0, longCompactions + shortCompactions);
+    assertEquals(
+      "longCompactions=" + longCompactions + "," + "shortCompactions=" + shortCompactions, 0,
+      longCompactions + shortCompactions);
     thread.switchCompaction(true);
     assertTrue(thread.isCompactionsEnabled());
     // Make sure no compactions have run.
-    assertEquals(0, thread.getLongCompactions().getCompletedTaskCount() +
-        thread.getShortCompactions().getCompletedTaskCount());
+    assertEquals(0, thread.getLongCompactions().getCompletedTaskCount()
+      + thread.getShortCompactions().getCompletedTaskCount());
     // Request a compaction and make sure it is submitted successfully.
     thread.requestCompaction(r, store, "test", Store.PRIORITY_USER,
-        CompactionLifeCycleTracker.DUMMY, null);
+      CompactionLifeCycleTracker.DUMMY, null);
     // Wait until the compaction finishes.
     Waiter.waitFor(UTIL.getConfiguration(), 5000,
-        (Waiter.Predicate<Exception>) () -> thread.getLongCompactions().getCompletedTaskCount() +
-        thread.getShortCompactions().getCompletedTaskCount() == 1);
+      (Waiter.Predicate<Exception>) () -> thread.getLongCompactions().getCompletedTaskCount()
+        + thread.getShortCompactions().getCompletedTaskCount() == 1);
     // Make sure there are no compactions running.
-    assertEquals(0, thread.getLongCompactions().getActiveCount()
-        + thread.getShortCompactions().getActiveCount());
+    assertEquals(0,
+      thread.getLongCompactions().getActiveCount() + thread.getShortCompactions().getActiveCount());
   }
 
-  @Test public void testInterruptingRunningCompactions() throws Exception {
+  @Test
+  public void testInterruptingRunningCompactions() throws Exception {
     // setup a compact/split thread on a mock server
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
-        WaitThroughPutController.class.getName());
+      WaitThroughPutController.class.getName());
     HRegionServer mockServer = Mockito.mock(HRegionServer.class);
     Mockito.when(mockServer.getConfiguration()).thenReturn(r.getBaseConf());
     CompactSplit thread = new CompactSplit(mockServer);
@@ -504,18 +505,17 @@ public class TestCompaction {
     int initialFiles = s.getStorefilesCount();
 
     thread.requestCompaction(r, store, "test custom comapction", PRIORITY_USER,
-        CompactionLifeCycleTracker.DUMMY, null);
+      CompactionLifeCycleTracker.DUMMY, null);
 
     Thread.sleep(3000);
     thread.switchCompaction(false);
     assertEquals(initialFiles, s.getStorefilesCount());
-    //don't mess up future tests
+    // don't mess up future tests
     thread.switchCompaction(true);
   }
 
   /**
-   * HBASE-7947: Regression test to ensure adding to the correct list in the
-   * {@link CompactSplit}
+   * HBASE-7947: Regression test to ensure adding to the correct list in the {@link CompactSplit}
    * @throws Exception on failure
    */
   @Test
@@ -536,8 +536,8 @@ public class TestCompaction {
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
-      thread.requestCompaction(r, store, "test mulitple custom comapctions", PRIORITY_USER,
-        tracker, null);
+      thread.requestCompaction(r, store, "test mulitple custom comapctions", PRIORITY_USER, tracker,
+        null);
     }
     // wait for the latch to complete.
     latch.await();
@@ -570,7 +570,7 @@ public class TestCompaction {
 
       @Override
       public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
-          boolean mayUseOffPeak, boolean forceMajor) throws IOException {
+        boolean mayUseOffPeak, boolean forceMajor) throws IOException {
         this.request = new CompactionRequestImpl(selectedFiles);
         this.request.setPriority(getPriority());
         return true;
@@ -578,7 +578,7 @@ public class TestCompaction {
 
       @Override
       public List<Path> compact(ThroughputController throughputController, User user)
-          throws IOException {
+        throws IOException {
         finishCompaction(this.selectedFiles);
         return new ArrayList<>();
       }
@@ -599,7 +599,7 @@ public class TestCompaction {
 
     @Override
     public synchronized void cancelCompaction(Object object) {
-      TestCompactionContext ctx = (TestCompactionContext)object;
+      TestCompactionContext ctx = (TestCompactionContext) object;
       compacting.removeAll(ctx.selectedFiles);
       notCompacting.addAll(ctx.selectedFiles);
     }
@@ -632,7 +632,7 @@ public class TestCompaction {
 
       @Override
       public List<Path> compact(ThroughputController throughputController, User user)
-          throws IOException {
+        throws IOException {
         try {
           isInCompact = true;
           synchronized (this) {
@@ -651,7 +651,7 @@ public class TestCompaction {
 
       @Override
       public boolean select(List<HStoreFile> f, boolean i, boolean m, boolean e)
-          throws IOException {
+        throws IOException {
         this.request = new CompactionRequestImpl(new ArrayList<>());
         return true;
       }
@@ -669,7 +669,8 @@ public class TestCompaction {
     }
 
     @Override
-    public void cancelCompaction(Object object) {}
+    public void cancelCompaction(Object object) {
+    }
 
     @Override
     public int getPriority() {
@@ -709,17 +710,16 @@ public class TestCompaction {
     when(mockServer.getChoreService()).thenReturn(new ChoreService("test"));
     CompactSplit cst = new CompactSplit(mockServer);
     when(mockServer.getCompactSplitThread()).thenReturn(cst);
-    //prevent large compaction thread pool stealing job from small compaction queue.
+    // prevent large compaction thread pool stealing job from small compaction queue.
     cst.shutdownLongCompactions();
     // Set up the region mock that redirects compactions.
     HRegion r = mock(HRegion.class);
-    when(
-      r.compact(any(), any(), any(), any())).then(new Answer<Boolean>() {
-        @Override
-        public Boolean answer(InvocationOnMock invocation) throws Throwable {
-          invocation.<CompactionContext>getArgument(0).compact(invocation.getArgument(2), null);
-          return true;
-        }
+    when(r.compact(any(), any(), any(), any())).then(new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        invocation.<CompactionContext> getArgument(0).compact(invocation.getArgument(2), null);
+        return true;
+      }
     });
 
     // Set up store mocks for 2 "real" stores and the one we use for blocking CST.
@@ -774,20 +774,15 @@ public class TestCompaction {
   }
 
   /**
-   * Firstly write 10 cells (with different time stamp) to a qualifier and flush
-   * to hfile1, then write 10 cells (with different time stamp) to the same
-   * qualifier and flush to hfile2. The latest cell (cell-A) in hfile1 and the
-   * oldest cell (cell-B) in hfile2 are with the same time stamp but different
-   * sequence id, and will get scanned successively during compaction.
+   * Firstly write 10 cells (with different time stamp) to a qualifier and flush to hfile1, then
+   * write 10 cells (with different time stamp) to the same qualifier and flush to hfile2. The
+   * latest cell (cell-A) in hfile1 and the oldest cell (cell-B) in hfile2 are with the same time
+   * stamp but different sequence id, and will get scanned successively during compaction.
    * <p/>
-   * We set compaction.kv.max to 10 so compaction will scan 10 versions each
-   * round, meanwhile we set keepSeqIdPeriod=0 in {@link DummyCompactor} so all
-   * 10 versions of hfile2 will be written out with seqId cleaned (set to 0)
-   * including cell-B, then when scanner goes to cell-A it will cause a scan
-   * out-of-order assertion error before HBASE-16931
-   *
-   * @throws Exception
-   *           if error occurs during the test
+   * We set compaction.kv.max to 10 so compaction will scan 10 versions each round, meanwhile we set
+   * keepSeqIdPeriod=0 in {@link DummyCompactor} so all 10 versions of hfile2 will be written out
+   * with seqId cleaned (set to 0) including cell-B, then when scanner goes to cell-A it will cause
+   * a scan out-of-order assertion error before HBASE-16931 n * if error occurs during the test
    */
   @Test
   public void testCompactionSeqId() throws Exception {
@@ -870,7 +865,7 @@ public class TestCompaction {
    * Simple {@link CompactionLifeCycleTracker} on which you can wait until the requested compaction
    * finishes.
    */
-  public static class WaitThroughPutController extends NoLimitThroughputController{
+  public static class WaitThroughPutController extends NoLimitThroughputController {
 
     public WaitThroughPutController() {
     }

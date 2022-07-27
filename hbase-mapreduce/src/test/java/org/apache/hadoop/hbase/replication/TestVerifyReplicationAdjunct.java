@@ -70,7 +70,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestVerifyReplicationAdjunct.class);
+    HBaseClassTestRule.forClass(TestVerifyReplicationAdjunct.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVerifyReplicationAdjunct.class);
 
@@ -90,9 +90,11 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TestReplicationBase.setUpBeforeClass();
-    TableDescriptor peerTable = TableDescriptorBuilder.newBuilder(peerTableName).setColumnFamily(
-                    ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100)
-                            .build()).build();
+    TableDescriptor peerTable =
+      TableDescriptorBuilder.newBuilder(peerTableName)
+        .setColumnFamily(
+          ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).setMaxVersions(100).build())
+        .build();
     Connection connection2 = ConnectionFactory.createConnection(CONF2);
     try (Admin admin2 = connection2.getAdmin()) {
       admin2.createTable(peerTable, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
@@ -243,21 +245,21 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     loadData("zzz", row);
     waitForReplication(NB_ROWS_IN_BATCH * 4, NB_RETRIES * 4);
     String[] args =
-        new String[] { "--row-prefixes=prefixrow,secondrow", PEER_ID, tableName.getNameAsString() };
+      new String[] { "--row-prefixes=prefixrow,secondrow", PEER_ID, tableName.getNameAsString() };
     TestVerifyReplication.runVerifyReplication(args, NB_ROWS_IN_BATCH * 2, 0);
   }
 
   @Test
   public void testVerifyReplicationSnapshotArguments() {
     String[] args =
-        new String[] { "--sourceSnapshotName=snapshot1", "2", tableName.getNameAsString() };
+      new String[] { "--sourceSnapshotName=snapshot1", "2", tableName.getNameAsString() };
     assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
 
     args = new String[] { "--sourceSnapshotTmpDir=tmp", "2", tableName.getNameAsString() };
     assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
 
     args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=tmp", "2",
-        tableName.getNameAsString() };
+      tableName.getNameAsString() };
     assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
 
     args = new String[] { "--peerSnapshotName=snapshot1", "2", tableName.getNameAsString() };
@@ -267,13 +269,13 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
 
     args = new String[] { "--peerSnapshotName=snapshot1", "--peerSnapshotTmpDir=/tmp/",
-        "--peerFSAddress=tempfs", "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2",
-        tableName.getNameAsString() };
+      "--peerFSAddress=tempfs", "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2",
+      tableName.getNameAsString() };
     assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
 
     args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=/tmp/",
-        "--peerSnapshotName=snapshot2", "--peerSnapshotTmpDir=/tmp/", "--peerFSAddress=tempfs",
-        "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2", tableName.getNameAsString() };
+      "--peerSnapshotName=snapshot2", "--peerSnapshotTmpDir=/tmp/", "--peerFSAddress=tempfs",
+      "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2", tableName.getNameAsString() };
 
     assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
   }

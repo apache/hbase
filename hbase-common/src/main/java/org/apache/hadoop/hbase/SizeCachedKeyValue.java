@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,14 +21,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class is an extension to KeyValue where rowLen and keyLen are cached.
- * Parsing the backing byte[] every time to get these values will affect the performance.
- * In read path, we tend to read these values many times in Comparator, SQM etc.
- * Note: Please do not use these objects in write path as it will increase the heap space usage.
- * See https://issues.apache.org/jira/browse/HBASE-13448
+ * This class is an extension to KeyValue where rowLen and keyLen are cached. Parsing the backing
+ * byte[] every time to get these values will affect the performance. In read path, we tend to read
+ * these values many times in Comparator, SQM etc. Note: Please do not use these objects in write
+ * path as it will increase the heap space usage. See
+ * https://issues.apache.org/jira/browse/HBASE-13448
  */
 @InterfaceAudience.Private
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_DOESNT_OVERRIDE_EQUALS")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_DOESNT_OVERRIDE_EQUALS")
 public class SizeCachedKeyValue extends KeyValue {
   // Overhead in this class alone. Parent's overhead will be considered in usage places by calls to
   // super. methods
@@ -49,7 +47,7 @@ public class SizeCachedKeyValue extends KeyValue {
   }
 
   public SizeCachedKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
-      short rowLen) {
+    short rowLen) {
     super(bytes, offset, length);
     // We will read all these cached values at least once. Initialize now itself so that we can
     // avoid uninitialized checks with every time call

@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
@@ -41,8 +40,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
- * This chore, every time it runs, will try to recover regions with high store ref count
- * by reopening them
+ * This chore, every time it runs, will try to recover regions with high store ref count by
+ * reopening them
  */
 @InterfaceAudience.Private
 public class RegionsRecoveryChore extends ScheduledChore {
@@ -62,19 +61,18 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
   /**
    * Construct RegionsRecoveryChore with provided params
-   *
-   * @param stopper When {@link Stoppable#isStopped()} is true, this chore will cancel and cleanup
+   * @param stopper       When {@link Stoppable#isStopped()} is true, this chore will cancel and
+   *                      cleanup
    * @param configuration The configuration params to be used
-   * @param hMaster HMaster instance to initiate RegionTableRegions
+   * @param hMaster       HMaster instance to initiate RegionTableRegions
    */
   RegionsRecoveryChore(final Stoppable stopper, final Configuration configuration,
-      final HMaster hMaster) {
-    super(REGIONS_RECOVERY_CHORE_NAME, stopper, configuration.getInt(
-      HConstants.REGIONS_RECOVERY_INTERVAL, HConstants.DEFAULT_REGIONS_RECOVERY_INTERVAL));
+    final HMaster hMaster) {
+    super(REGIONS_RECOVERY_CHORE_NAME, stopper, configuration
+      .getInt(HConstants.REGIONS_RECOVERY_INTERVAL, HConstants.DEFAULT_REGIONS_RECOVERY_INTERVAL));
     this.hMaster = hMaster;
     this.storeFileRefCountThreshold = configuration.getInt(
-      HConstants.STORE_FILE_REF_COUNT_THRESHOLD,
-      HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
+      HConstants.STORE_FILE_REF_COUNT_THRESHOLD, HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
 
   }
 
@@ -95,20 +93,21 @@ public class RegionsRecoveryChore extends ScheduledChore {
         if (MapUtils.isNotEmpty(tableToReopenRegionsMap)) {
           tableToReopenRegionsMap.forEach((tableName, regionNames) -> {
             try {
-              LOG.warn("Reopening regions due to high storeFileRefCount. " +
-                  "TableName: {} , noOfRegions: {}", tableName, regionNames.size());
+              LOG.warn("Reopening regions due to high storeFileRefCount. "
+                + "TableName: {} , noOfRegions: {}", tableName, regionNames.size());
               hMaster.reopenRegions(tableName, regionNames, NONCE_GENERATOR.getNonceGroup(),
                 NONCE_GENERATOR.newNonce());
             } catch (IOException e) {
-              LOG.error("{} tableName: {}, regionNames: {}", ERROR_REOPEN_REIONS_MSG,
-                tableName, regionNames, e);
+              LOG.error("{} tableName: {}, regionNames: {}", ERROR_REOPEN_REIONS_MSG, tableName,
+                regionNames, e);
             }
           });
         }
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Reopening regions with very high storeFileRefCount is disabled. " +
-            "Provide threshold value > 0 for {} to enable it.",
+          LOG.debug(
+            "Reopening regions with very high storeFileRefCount is disabled. "
+              + "Provide threshold value > 0 for {} to enable it.",
             HConstants.STORE_FILE_REF_COUNT_THRESHOLD);
         }
       }
@@ -121,8 +120,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
     }
   }
 
-  private Map<TableName, List<byte[]>> getTableToRegionsByRefCount(
-      final Map<ServerName, ServerMetrics> serverMetricsMap) {
+  private Map<TableName, List<byte[]>>
+    getTableToRegionsByRefCount(final Map<ServerName, ServerMetrics> serverMetricsMap) {
     final Map<TableName, List<byte[]>> tableToReopenRegionsMap = new HashMap<>();
     for (ServerMetrics serverMetrics : serverMetricsMap.values()) {
       Map<byte[], RegionMetrics> regionMetricsMap = serverMetrics.getRegionMetrics();
@@ -132,8 +131,7 @@ public class RegionsRecoveryChore extends ScheduledChore {
         // store files is beyond a threshold value, we should reopen the region.
         // Here, we take max ref count of all compacted store files and not the cumulative
         // count of all compacted store files
-        final int maxCompactedStoreFileRefCount = regionMetrics
-          .getMaxCompactedStoreFileRefCount();
+        final int maxCompactedStoreFileRefCount = regionMetrics.getMaxCompactedStoreFileRefCount();
 
         if (maxCompactedStoreFileRefCount > storeFileRefCountThreshold) {
           final byte[] regionName = regionMetrics.getRegionName();
@@ -146,8 +144,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
   }
 
   private void prepareTableToReopenRegionsMap(
-      final Map<TableName, List<byte[]>> tableToReopenRegionsMap,
-      final byte[] regionName, final int regionStoreRefCount) {
+    final Map<TableName, List<byte[]>> tableToReopenRegionsMap, final byte[] regionName,
+    final int regionStoreRefCount) {
     final RegionInfo regionInfo = hMaster.getAssignmentManager().getRegionInfo(regionName);
     final TableName tableName = regionInfo.getTable();
     if (TableName.isMetaTableName(tableName)) {
@@ -157,7 +155,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
     }
     LOG.warn("Region {} for Table {} has high storeFileRefCount {}, considering it for reopen..",
       regionInfo.getRegionNameAsString(), tableName, regionStoreRefCount);
-    tableToReopenRegionsMap
-        .computeIfAbsent(tableName, (key) -> new ArrayList<>()).add(regionName);
+    tableToReopenRegionsMap.computeIfAbsent(tableName, (key) -> new ArrayList<>()).add(regionName);
   }
 }

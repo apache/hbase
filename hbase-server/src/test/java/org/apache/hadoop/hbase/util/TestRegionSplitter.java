@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,10 +51,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
- * rolling split of an existing table.
+ * Tests for {@link RegionSplitter}, which can create a pre-split table or do a rolling split of an
+ * existing table.
  */
-@Category({MiscTests.class, MediumTests.class})
+@Category({ MiscTests.class, MediumTests.class })
 public class TestRegionSplitter {
 
   @ClassRule
@@ -103,10 +103,9 @@ public class TestRegionSplitter {
     expectedBounds.add(Bytes.toBytes("f0000000"));
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
-          // Do table creation/pre-splitting and verification of region boundaries
-    preSplitTableAndVerify(expectedBounds,
-        HexStringSplit.class.getSimpleName(),
-        TableName.valueOf(name.getMethodName()));
+    // Do table creation/pre-splitting and verification of region boundaries
+    preSplitTableAndVerify(expectedBounds, HexStringSplit.class.getSimpleName(),
+      TableName.valueOf(name.getMethodName()));
   }
 
   /**
@@ -116,31 +115,31 @@ public class TestRegionSplitter {
   public void testCreatePresplitTableUniform() throws Exception {
     List<byte[]> expectedBounds = new ArrayList<>(17);
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
-    expectedBounds.add(new byte[] {      0x10, 0, 0, 0, 0, 0, 0, 0});
-    expectedBounds.add(new byte[] {      0x20, 0, 0, 0, 0, 0, 0, 0});
-    expectedBounds.add(new byte[] {      0x30, 0, 0, 0, 0, 0, 0, 0});
-    expectedBounds.add(new byte[] {      0x40, 0, 0, 0, 0, 0, 0, 0});
+    expectedBounds.add(new byte[] { 0x10, 0, 0, 0, 0, 0, 0, 0 });
+    expectedBounds.add(new byte[] { 0x20, 0, 0, 0, 0, 0, 0, 0 });
+    expectedBounds.add(new byte[] { 0x30, 0, 0, 0, 0, 0, 0, 0 });
+    expectedBounds.add(new byte[] { 0x40, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { 0x50, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { 0x60, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { 0x70, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0x80, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0x90, 0, 0, 0, 0, 0, 0, 0 });
-    expectedBounds.add(new byte[] {(byte)0xa0, 0, 0, 0, 0, 0, 0, 0});
+    expectedBounds.add(new byte[] { (byte) 0xa0, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0xb0, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0xc0, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0xd0, 0, 0, 0, 0, 0, 0, 0 });
-    expectedBounds.add(new byte[] {(byte)0xe0, 0, 0, 0, 0, 0, 0, 0});
+    expectedBounds.add(new byte[] { (byte) 0xe0, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(new byte[] { (byte) 0xf0, 0, 0, 0, 0, 0, 0, 0 });
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
     // Do table creation/pre-splitting and verification of region boundaries
     preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
-        TableName.valueOf(name.getMethodName()));
+      TableName.valueOf(name.getMethodName()));
   }
 
   /**
-   * Unit tests for the HexStringSplit algorithm. Makes sure it divides up the
-   * space of keys in the way that we expect.
+   * Unit tests for the HexStringSplit algorithm. Makes sure it divides up the space of keys in the
+   * way that we expect.
    */
   @Test
   public void unitTestHexStringSplit() {
@@ -176,8 +175,8 @@ public class TestRegionSplitter {
     assertArrayEquals(Bytes.toBytes("efffffff"), splitPoint);
 
     // Check splitting region with multiple mappers per region
-    byte[][] splits = splitter.split(Bytes.toBytes("00000000"), Bytes.toBytes("30000000"),
-        3, false);
+    byte[][] splits =
+      splitter.split(Bytes.toBytes("00000000"), Bytes.toBytes("30000000"), 3, false);
     assertEquals(2, splits.length);
     assertArrayEquals(Bytes.toBytes("10000000"), splits[0]);
     assertArrayEquals(Bytes.toBytes("20000000"), splits[1]);
@@ -188,8 +187,8 @@ public class TestRegionSplitter {
   }
 
   /**
-   * Unit tests for the DecimalStringSplit algorithm. Makes sure it divides up the
-   * space of keys in the way that we expect.
+   * Unit tests for the DecimalStringSplit algorithm. Makes sure it divides up the space of keys in
+   * the way that we expect.
    */
   @Test
   public void unitTestDecimalStringSplit() {
@@ -229,8 +228,8 @@ public class TestRegionSplitter {
     assertArrayEquals(Bytes.toBytes("89999999"), splitPoint);
 
     // Check splitting region with multiple mappers per region
-    byte[][] splits = splitter.split(Bytes.toBytes("00000000"), Bytes.toBytes("30000000"),
-        3, false);
+    byte[][] splits =
+      splitter.split(Bytes.toBytes("00000000"), Bytes.toBytes("30000000"), 3, false);
     assertEquals(2, splits.length);
     assertArrayEquals(Bytes.toBytes("10000000"), splits[0]);
     assertArrayEquals(Bytes.toBytes("20000000"), splits[1]);
@@ -241,8 +240,8 @@ public class TestRegionSplitter {
   }
 
   /**
-   * Unit tests for the UniformSplit algorithm. Makes sure it divides up the space of
-   * keys in the way that we expect.
+   * Unit tests for the UniformSplit algorithm. Makes sure it divides up the space of keys in the
+   * way that we expect.
    */
   @Test
   public void unitTestUniformSplit() {
@@ -252,7 +251,8 @@ public class TestRegionSplitter {
     try {
       splitter.split(1);
       throw new AssertionError("Splitting into <2 regions should have thrown exception");
-    } catch (IllegalArgumentException e) { }
+    } catch (IllegalArgumentException e) {
+    }
 
     byte[][] twoRegionsSplits = splitter.split(2);
     assertEquals(1, twoRegionsSplits.length);
@@ -260,41 +260,41 @@ public class TestRegionSplitter {
 
     byte[][] threeRegionsSplits = splitter.split(3);
     assertEquals(2, threeRegionsSplits.length);
-    byte[] expectedSplit0 = new byte[] {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+    byte[] expectedSplit0 = new byte[] { 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55 };
     assertArrayEquals(expectedSplit0, threeRegionsSplits[0]);
-    byte[] expectedSplit1 = new byte[] {(byte)0xAA, (byte)0xAA, (byte)0xAA, (byte)0xAA,
-      (byte)0xAA, (byte)0xAA, (byte)0xAA, (byte)0xAA};
+    byte[] expectedSplit1 = new byte[] { (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAA,
+      (byte) 0xAA, (byte) 0xAA, (byte) 0xAA, (byte) 0xAA };
     assertArrayEquals(expectedSplit1, threeRegionsSplits[1]);
 
     // Check splitting existing regions that have start and end points
-    byte[] splitPoint = splitter.split(new byte[] {0x10}, new byte[] {0x30});
+    byte[] splitPoint = splitter.split(new byte[] { 0x10 }, new byte[] { 0x30 });
     assertArrayEquals(new byte[] { 0x20 }, splitPoint);
 
-    byte[] lastRow = new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
+    byte[] lastRow = new byte[] { xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF };
     assertArrayEquals(lastRow, splitter.lastRow());
     byte[] firstRow = ArrayUtils.EMPTY_BYTE_ARRAY;
     assertArrayEquals(firstRow, splitter.firstRow());
 
-    splitPoint = splitter.split(firstRow, new byte[] {0x20});
+    splitPoint = splitter.split(firstRow, new byte[] { 0x20 });
     assertArrayEquals(splitPoint, new byte[] { 0x10 });
 
-    splitPoint = splitter.split(new byte[] {(byte)0xdf, xFF, xFF, xFF, xFF,
-      xFF, xFF, xFF}, lastRow);
-    assertArrayEquals(splitPoint, new byte[] { (byte) 0xef, xFF, xFF, xFF, xFF, xFF, xFF, xFF});
+    splitPoint =
+      splitter.split(new byte[] { (byte) 0xdf, xFF, xFF, xFF, xFF, xFF, xFF, xFF }, lastRow);
+    assertArrayEquals(splitPoint, new byte[] { (byte) 0xef, xFF, xFF, xFF, xFF, xFF, xFF, xFF });
 
-    splitPoint = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'b'});
+    splitPoint = splitter.split(new byte[] { 'a', 'a', 'a' }, new byte[] { 'a', 'a', 'b' });
     assertArrayEquals(splitPoint, new byte[] { 'a', 'a', 'a', (byte) 0x80 });
 
     // Check splitting region with multiple mappers per region
-    byte[][] splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'd'},
-        3, false);
+    byte[][] splits =
+      splitter.split(new byte[] { 'a', 'a', 'a' }, new byte[] { 'a', 'a', 'd' }, 3, false);
     assertEquals(2, splits.length);
-    assertArrayEquals(splits[0], new byte[]{'a', 'a', 'b'});
-    assertArrayEquals(splits[1], new byte[]{'a', 'a', 'c'});
+    assertArrayEquals(splits[0], new byte[] { 'a', 'a', 'b' });
+    assertArrayEquals(splits[1], new byte[] { 'a', 'a', 'c' });
 
-    splits = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'e'}, 2, true);
+    splits = splitter.split(new byte[] { 'a', 'a', 'a' }, new byte[] { 'a', 'a', 'e' }, 2, true);
     assertEquals(3, splits.length);
-    assertArrayEquals(splits[1], new byte[] { 'a', 'a', 'c'});
+    assertArrayEquals(splits[1], new byte[] { 'a', 'a', 'c' });
   }
 
   @Test
@@ -331,13 +331,12 @@ public class TestRegionSplitter {
     return splitFailsPrecondition(algo, 100);
   }
 
-  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow,
-      String lastRow) {
+  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow, String lastRow) {
     return splitFailsPrecondition(algo, firstRow, lastRow, 100);
   }
 
-  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow,
-      String lastRow, int numRegions) {
+  private boolean splitFailsPrecondition(SplitAlgorithm algo, String firstRow, String lastRow,
+    int numRegions) {
     algo.setFirstRow(firstRow);
     algo.setLastRow(lastRow);
     return splitFailsPrecondition(algo, numRegions);
@@ -365,14 +364,13 @@ public class TestRegionSplitter {
   }
 
   /**
-   * Creates a pre-split table with expectedBounds.size()+1 regions, then
-   * verifies that the region boundaries are the same as the expected
-   * region boundaries in expectedBounds.
+   * Creates a pre-split table with expectedBounds.size()+1 regions, then verifies that the region
+   * boundaries are the same as the expected region boundaries in expectedBounds.
    * @throws Various junit assertions
    */
-  private void preSplitTableAndVerify(List<byte[]> expectedBounds,
-      String splitClass, TableName tableName) throws Exception {
-    final int numRegions = expectedBounds.size()-1;
+  private void preSplitTableAndVerify(List<byte[]> expectedBounds, String splitClass,
+    TableName tableName) throws Exception {
+    final int numRegions = expectedBounds.size() - 1;
     final Configuration conf = UTIL.getConfiguration();
     conf.setInt("split.count", numRegions);
     SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
@@ -385,11 +383,11 @@ public class TestRegionSplitter {
     final List<byte[]> expectedBounds = new ArrayList<>(1);
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
     rollingSplitAndVerify(TableName.valueOf(TestRegionSplitter.class.getSimpleName()),
-        "UniformSplit", expectedBounds);
+      "UniformSplit", expectedBounds);
   }
 
   private void rollingSplitAndVerify(TableName tableName, String splitClass,
-      List<byte[]> expectedBounds)  throws Exception {
+    List<byte[]> expectedBounds) throws Exception {
     final Configuration conf = UTIL.getConfiguration();
 
     // Set this larger than the number of splits so RegionSplitter won't block
@@ -399,12 +397,11 @@ public class TestRegionSplitter {
     verifyBounds(expectedBounds, tableName);
   }
 
-  private void verifyBounds(List<byte[]> expectedBounds, TableName tableName)
-          throws Exception {
+  private void verifyBounds(List<byte[]> expectedBounds, TableName tableName) throws Exception {
     // Get region boundaries from the cluster and verify their endpoints
-    final int numRegions = expectedBounds.size()-1;
+    final int numRegions = expectedBounds.size() - 1;
     try (Table table = UTIL.getConnection().getTable(tableName);
-        RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+      RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
       final List<HRegionLocation> regionInfoMap = locator.getAllRegionLocations();
       assertEquals(numRegions, regionInfoMap.size());
       for (HRegionLocation entry : regionInfoMap) {
@@ -425,15 +422,15 @@ public class TestRegionSplitter {
   }
 
   /**
-   * List.indexOf() doesn't really work for a List&lt;byte[]>, because byte[]
-   * doesn't override equals(). This method checks whether a list contains
-   * a given element by checking each element using the byte array comparator.
+   * List.indexOf() doesn't really work for a List&lt;byte[]>, because byte[] doesn't override
+   * equals(). This method checks whether a list contains a given element by checking each element
+   * using the byte array comparator.
    * @return the index of the first element that equals compareTo, or -1 if no elements are equal.
    */
-  static private int indexOfBytes(List<byte[]> list,  byte[] compareTo) {
+  static private int indexOfBytes(List<byte[]> list, byte[] compareTo) {
     int listIndex = 0;
-    for(byte[] elem: list) {
-      if(Bytes.BYTES_COMPARATOR.compare(elem, compareTo) == 0) {
+    for (byte[] elem : list) {
+      if (Bytes.BYTES_COMPARATOR.compare(elem, compareTo) == 0) {
         return listIndex;
       }
       listIndex++;
@@ -442,4 +439,3 @@ public class TestRegionSplitter {
   }
 
 }
-

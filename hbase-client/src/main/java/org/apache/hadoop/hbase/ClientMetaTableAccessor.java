@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.Closeable;
@@ -26,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncTable;
@@ -57,9 +59,12 @@ public final class ClientMetaTableAccessor {
   }
 
   @InterfaceAudience.Private
+  @SuppressWarnings("ImmutableEnumChecker")
   public enum QueryType {
-    ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY), REGION(HConstants.CATALOG_FAMILY),
-    TABLE(HConstants.TABLE_FAMILY), REPLICATION(HConstants.REPLICATION_BARRIER_FAMILY);
+    ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
+    REGION(HConstants.CATALOG_FAMILY),
+    TABLE(HConstants.TABLE_FAMILY),
+    REPLICATION(HConstants.REPLICATION_BARRIER_FAMILY);
 
     private final byte[][] families;
 
@@ -96,12 +101,7 @@ public final class ClientMetaTableAccessor {
     return future;
   }
 
-  /**
-   * Returns the HRegionLocation from meta for the given region
-   * @param metaTable
-   * @param regionName region we're looking for
-   * @return HRegionLocation for the given region
-   */
+  /** Returns the HRegionLocation from meta for the given region */
   public static CompletableFuture<Optional<HRegionLocation>>
     getRegionLocation(AsyncTable<?> metaTable, byte[] regionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
@@ -123,12 +123,7 @@ public final class ClientMetaTableAccessor {
     return future;
   }
 
-  /**
-   * Returns the HRegionLocation from meta for the given encoded region name
-   * @param metaTable
-   * @param encodedRegionName region we're looking for
-   * @return HRegionLocation for the given region
-   */
+  /** Returns the HRegionLocation from meta for the given encoded region name */
   public static CompletableFuture<Optional<HRegionLocation>>
     getRegionLocationWithEncodedName(AsyncTable<?> metaTable, byte[] encodedRegionName) {
     CompletableFuture<Optional<HRegionLocation>> future = new CompletableFuture<>();
@@ -145,8 +140,10 @@ public final class ClientMetaTableAccessor {
           .filter(result -> CatalogFamilyFormat.getRegionInfo(result) != null).forEach(result -> {
             getRegionLocations(result).ifPresent(locations -> {
               for (HRegionLocation location : locations.getRegionLocations()) {
-                if (location != null &&
-                  encodedRegionNameStr.equals(location.getRegion().getEncodedName())) {
+                if (
+                  location != null
+                    && encodedRegionNameStr.equals(location.getRegion().getEncodedName())
+                ) {
                   future.complete(Optional.of(location));
                   return;
                 }
@@ -163,8 +160,8 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
-   * Used to get all region locations for the specific table.
-   * @param metaTable
+   * Used to get all region locations for the specific table
+   * @param metaTable scanner over meta table
    * @param tableName table we're looking for, can be null for getting all regions
    * @return the list of region locations. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -189,8 +186,8 @@ public final class ClientMetaTableAccessor {
 
   /**
    * Used to get table regions' info and server.
-   * @param metaTable
-   * @param tableName table we're looking for, can be null for getting all regions
+   * @param metaTable                   scanner over meta table
+   * @param tableName                   table we're looking for, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
    * @return the list of regioninfos and server. The return value will be wrapped by a
    *         {@link CompletableFuture}.
@@ -220,10 +217,10 @@ public final class ClientMetaTableAccessor {
 
   /**
    * Performs a scan of META table for given table.
-   * @param metaTable
-   * @param tableName table withing we scan
-   * @param type scanned part of meta
-   * @param visitor Visitor invoked against each row
+   * @param metaTable scanner over meta table
+   * @param tableName table within we scan
+   * @param type      scanned part of meta
+   * @param visitor   Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     TableName tableName, QueryType type, final Visitor visitor) {
@@ -233,12 +230,12 @@ public final class ClientMetaTableAccessor {
 
   /**
    * Performs a scan of META table for given table.
-   * @param metaTable
-   * @param startRow Where to start the scan
-   * @param stopRow Where to stop the scan
-   * @param type scanned part of meta
-   * @param maxRows maximum rows to return
-   * @param visitor Visitor invoked against each row
+   * @param metaTable scanner over meta table
+   * @param startRow  Where to start the scan
+   * @param stopRow   Where to stop the scan
+   * @param type      scanned part of meta
+   * @param maxRows   maximum rows to return
+   * @param visitor   Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
@@ -255,13 +252,43 @@ public final class ClientMetaTableAccessor {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Scanning META" + " starting at row=" + Bytes.toStringBinary(scan.getStartRow()) +
-        " stopping at row=" + Bytes.toStringBinary(scan.getStopRow()) + " for max=" +
-        rowUpperLimit + " with caching=" + scan.getCaching());
+      LOG.debug("Scanning META" + " starting at row=" + Bytes.toStringBinary(scan.getStartRow())
+        + " stopping at row=" + Bytes.toStringBinary(scan.getStopRow()) + " for max="
+        + rowUpperLimit + " with caching=" + scan.getCaching());
     }
 
     CompletableFuture<Void> future = new CompletableFuture<Void>();
-    metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+    // Get the region locator's meta replica mode.
+    CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(metaTable.getConfiguration()
+      .get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    if (metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+      addListener(metaTable.getDescriptor(), (desc, error) -> {
+        if (error != null) {
+          LOG.error("Failed to get meta table descriptor, error: ", error);
+          future.completeExceptionally(error);
+          return;
+        }
+
+        int numOfReplicas = desc.getRegionReplication();
+        if (numOfReplicas > 1) {
+          int replicaId = ThreadLocalRandom.current().nextInt(numOfReplicas);
+
+          // When the replicaId is 0, do not set to Consistency.TIMELINE
+          if (replicaId > 0) {
+            scan.setReplicaId(replicaId);
+            scan.setConsistency(Consistency.TIMELINE);
+          }
+        }
+        metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+      });
+    } else {
+      if (metaReplicaMode == CatalogReplicaMode.HEDGED_READ) {
+        scan.setConsistency(Consistency.TIMELINE);
+      }
+      metaTable.scan(scan, new MetaTableScanResultConsumer(rowUpperLimit, visitor, future));
+    }
+
     return future;
   }
 
@@ -290,7 +317,7 @@ public final class ClientMetaTableAccessor {
 
     @Override
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NONNULL_PARAM_VIOLATION",
-      justification = "https://github.com/findbugsproject/findbugs/issues/79")
+        justification = "https://github.com/findbugsproject/findbugs/issues/79")
     public void onComplete() {
       future.complete(null);
     }
@@ -354,9 +381,7 @@ public final class ClientMetaTableAccessor {
 
     abstract void add(Result r);
 
-    /**
-     * @return Collected results; wait till visits complete to collect all possible results
-     */
+    /** Returns Collected results; wait till visits complete to collect all possible results */
     List<T> getResults() {
       return this.results;
     }
@@ -416,8 +441,10 @@ public final class ClientMetaTableAccessor {
     Scan scan = new Scan();
     int scannerCaching = metaTable.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
-    if (metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
-      HConstants.DEFAULT_USE_META_REPLICAS)) {
+    if (
+      metaTable.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+        HConstants.DEFAULT_USE_META_REPLICAS)
+    ) {
       scan.setConsistency(Consistency.TIMELINE);
     }
     if (rowUpperLimit <= scannerCaching) {
@@ -428,19 +455,12 @@ public final class ClientMetaTableAccessor {
     return scan;
   }
 
-  /**
-   * Returns an HRegionLocationList extracted from the result.
-   * @return an HRegionLocationList containing all locations for the region range or null if we
-   *         can't deserialize the result.
-   */
+  /** Returns an HRegionLocationList extracted from the result. */
   private static Optional<RegionLocations> getRegionLocations(Result r) {
     return Optional.ofNullable(CatalogFamilyFormat.getRegionLocations(r));
   }
 
-  /**
-   * @param tableName table we're working with
-   * @return start row for scanning META according to query type
-   */
+  /** Returns start row for scanning META according to query type */
   public static byte[] getTableStartRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
       return null;
@@ -462,10 +482,7 @@ public final class ClientMetaTableAccessor {
     }
   }
 
-  /**
-   * @param tableName table we're working with
-   * @return stop row for scanning META according to query type
-   */
+  /** Returns stop row for scanning META according to query type */
   public static byte[] getTableStopRowForMeta(TableName tableName, QueryType type) {
     if (tableName == null) {
       return null;

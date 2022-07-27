@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.factories;
 
 import org.apache.hadoop.hbase.chaos.actions.UnbalanceKillAndRebalanceAction;
@@ -25,8 +24,10 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 
 public class UnbalanceMonkeyFactory extends MonkeyFactory {
-  /** How often to introduce the chaos. If too frequent, sequence of kills on minicluster
-   * can cause test to fail when Put runs out of retries. */
+  /**
+   * How often to introduce the chaos. If too frequent, sequence of kills on minicluster can cause
+   * test to fail when Put runs out of retries.
+   */
   private long chaosEveryMilliSec;
   private long waitForUnbalanceMilliSec;
   private long waitForKillMilliSec;
@@ -36,28 +37,28 @@ public class UnbalanceMonkeyFactory extends MonkeyFactory {
   @Override
   public ChaosMonkey build() {
     loadProperties();
-    Policy chaosPolicy = new PeriodicRandomActionPolicy(chaosEveryMilliSec,
-        new UnbalanceKillAndRebalanceAction(waitForUnbalanceMilliSec, waitForKillMilliSec,
-            waitAfterBalanceMilliSec, killMetaRs));
+    Policy chaosPolicy =
+      new PeriodicRandomActionPolicy(chaosEveryMilliSec, new UnbalanceKillAndRebalanceAction(
+        waitForUnbalanceMilliSec, waitForKillMilliSec, waitAfterBalanceMilliSec, killMetaRs));
 
     return new PolicyBasedChaosMonkey(properties, util, chaosPolicy);
   }
 
   private void loadProperties() {
-    chaosEveryMilliSec = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.UNBALANCE_CHAOS_EVERY_MS,
-      MonkeyConstants.DEFAULT_UNBALANCE_CHAOS_EVERY_MS + ""));
-    waitForUnbalanceMilliSec = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.UNBALANCE_WAIT_FOR_UNBALANCE_MS,
-      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_UNBALANCE_MS + ""));
-    waitForKillMilliSec = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.UNBALANCE_WAIT_FOR_KILLS_MS,
-      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_KILLS_MS + ""));
-    waitAfterBalanceMilliSec = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.UNBALANCE_WAIT_AFTER_BALANCE_MS,
-      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS + ""));
-    killMetaRs = Boolean.parseBoolean(this.properties.getProperty(
-      MonkeyConstants.UNBALANCE_KILL_META_RS,
-      MonkeyConstants.DEFAULT_UNBALANCE_KILL_META_RS + ""));
+    chaosEveryMilliSec =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_CHAOS_EVERY_MS,
+        MonkeyConstants.DEFAULT_UNBALANCE_CHAOS_EVERY_MS + ""));
+    waitForUnbalanceMilliSec =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_FOR_UNBALANCE_MS,
+        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_UNBALANCE_MS + ""));
+    waitForKillMilliSec =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_FOR_KILLS_MS,
+        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_KILLS_MS + ""));
+    waitAfterBalanceMilliSec =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_AFTER_BALANCE_MS,
+        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS + ""));
+    killMetaRs =
+      Boolean.parseBoolean(this.properties.getProperty(MonkeyConstants.UNBALANCE_KILL_META_RS,
+        MonkeyConstants.DEFAULT_UNBALANCE_KILL_META_RS + ""));
   }
 }

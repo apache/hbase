@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -32,8 +31,7 @@ public interface ByteBufferWriter {
 
   /**
    * Writes <code>len</code> bytes from the specified ByteBuffer starting at offset <code>off</code>
-   *
-   * @param b the data.
+   * @param b   the data.
    * @param off the start offset in the data.
    * @param len the number of bytes to write.
    * @exception IOException if an I/O error occurs.

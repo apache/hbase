@@ -58,7 +58,7 @@ public class TestFavoredNodeTableImport {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
+    HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFavoredNodeTableImport.class);
 
@@ -98,7 +98,7 @@ public class TestFavoredNodeTableImport {
     Thread.sleep(2000);
     LOG.info("Starting cluster again with FN Balancer");
     UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        FavoredStochasticBalancer.class.getName());
+      FavoredStochasticBalancer.class.getName());
     UTIL.restartHBaseCluster(SLAVES);
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     while (!master.isInitialized()) {

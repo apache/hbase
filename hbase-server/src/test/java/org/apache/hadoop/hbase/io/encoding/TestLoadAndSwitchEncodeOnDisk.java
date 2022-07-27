@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestLoadAndSwitchEncodeOnDisk.class);
+    HBaseClassTestRule.forClass(TestLoadAndSwitchEncodeOnDisk.class);
 
   /** We do not alternate the multi-put flag in this test. */
   private static final boolean USE_MULTI_PUT = true;
@@ -58,7 +58,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
   /** Un-parameterize the test */
   @Parameters
   public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][]{ new Object[0] });
+    return Arrays.asList(new Object[][] { new Object[0] });
   }
 
   public TestLoadAndSwitchEncodeOnDisk() {
@@ -90,10 +90,9 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
     System.err.println("\nRe-enabling table\n");
     admin.enableTable(TABLE);
 
-    System.err.println("\nNew column descriptor: " +
-        getColumnDesc(admin) + "\n");
+    System.err.println("\nNew column descriptor: " + getColumnDesc(admin) + "\n");
 
-    // The table may not have all regions on line yet.  Assert online before
+    // The table may not have all regions on line yet. Assert online before
     // moving to major compact.
     assertAllOnLine(t);
 
@@ -111,11 +110,11 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
 
   private void assertAllOnLine(final Table t) throws IOException {
     List<HRegionLocation> regions;
-    try(RegionLocator rl = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {
+    try (RegionLocator rl = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {
       regions = rl.getAllRegionLocations();
     }
-    for (HRegionLocation e: regions) {
-      byte [] startkey = e.getRegion().getStartKey();
+    for (HRegionLocation e : regions) {
+      byte[] startkey = e.getRegion().getStartKey();
       Scan s = new Scan().withStartRow(startkey);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();

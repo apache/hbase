@@ -300,7 +300,7 @@ Table table = ...      // instantiate a Table instance
 
 Scan scan = new Scan();
 scan.addColumn(CF, ATTR);
-scan.setRowPrefixFilter(Bytes.toBytes("row"));
+scan.setStartStopRowForPrefixScan(Bytes.toBytes("row"));
 ResultScanner rs = table.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {

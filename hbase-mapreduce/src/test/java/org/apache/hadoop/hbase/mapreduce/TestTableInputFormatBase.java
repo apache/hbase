@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,19 +56,47 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestTableInputFormatBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableInputFormatBase.class);
+    HBaseClassTestRule.forClass(TestTableInputFormatBase.class);
 
   @Test
-  public void testTableInputFormatBaseReverseDNSForIPv6()
-      throws UnknownHostException {
+  public void testReuseRegionSizeCalculator() throws IOException {
+    JobContext context = mock(JobContext.class);
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
+      ConnectionForMergeTesting.class.getName());
+    conf.set(TableInputFormat.INPUT_TABLE, "testTable");
+    conf.setBoolean(TableInputFormatBase.MAPREDUCE_INPUT_AUTOBALANCE, true);
+    when(context.getConfiguration()).thenReturn(conf);
+
+    TableInputFormat format = Mockito.spy(new TableInputFormatForMergeTesting());
+    format.setConf(conf);
+    // initialize so that table is set, otherwise cloneOnFinish
+    // will be true and each getSplits call will re-initialize everything
+    format.initialize(context);
+    format.getSplits(context);
+    format.getSplits(context);
+
+    // re-initialize which will cause the next getSplits call to create a new RegionSizeCalculator
+    format.initialize(context);
+    format.getSplits(context);
+    format.getSplits(context);
+
+    // should only be 2 despite calling getSplits 4 times
+    Mockito.verify(format, Mockito.times(2)).createRegionSizeCalculator(Mockito.any(),
+      Mockito.any());
+  }
+
+  @Test
+  public void testTableInputFormatBaseReverseDNSForIPv6() throws UnknownHostException {
     String address = "ipv6.google.com";
     String localhost = null;
     InetAddress addr = null;
@@ -80,11 +108,10 @@ public class TestTableInputFormatBase {
       // google.com is down, we can probably forgive this test.
       return;
     }
-    System.out.println("Should retrun the hostname for this host " +
-        localhost + " addr : " + addr);
+    System.out.println("Should retrun the hostname for this host " + localhost + " addr : " + addr);
     String actualHostName = inputFormat.reverseDNS(addr);
-    assertEquals("Should retrun the hostname for this host. Expected : " +
-        localhost + " Actual : " + actualHostName, localhost, actualHostName);
+    assertEquals("Should retrun the hostname for this host. Expected : " + localhost + " Actual : "
+      + actualHostName, localhost, actualHostName);
   }
 
   @Test
@@ -92,7 +119,7 @@ public class TestTableInputFormatBase {
     JobContext context = mock(JobContext.class);
     Configuration conf = HBaseConfiguration.create();
     conf.set(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
-        ConnectionForMergeTesting.class.getName());
+      ConnectionForMergeTesting.class.getName());
     conf.set(TableInputFormat.INPUT_TABLE, "testTable");
     conf.setBoolean(TableInputFormatBase.MAPREDUCE_INPUT_AUTOBALANCE, true);
     when(context.getConfiguration()).thenReturn(conf);
@@ -102,13 +129,13 @@ public class TestTableInputFormatBase {
     // split["b", "c"] is excluded, split["o", "p"] and split["p", "q"] are merged,
     // but split["a", "b"] and split["c", "d"] are not merged.
     assertEquals(ConnectionForMergeTesting.START_KEYS.length - 1 - 1,
-        tifExclude.getSplits(context).size());
+      tifExclude.getSplits(context).size());
   }
 
   /**
    * Subclass of {@link TableInputFormat} to use in {@link #testNonSuccessiveSplitsAreNotMerged}.
-   * This class overrides {@link TableInputFormatBase#includeRegionInSplit}
-   * to exclude specific splits.
+   * This class overrides {@link TableInputFormatBase#includeRegionInSplit} to exclude specific
+   * splits.
    */
   private static class TableInputFormatForMergeTesting extends TableInputFormat {
     private byte[] prefixStartKey = Bytes.toBytes("b");
@@ -119,10 +146,11 @@ public class TestTableInputFormatBase {
      * Exclude regions which contain rows starting with "b".
      */
     @Override
-    protected boolean includeRegionInSplit(final byte[] startKey, final byte [] endKey) {
-      if (Bytes.compareTo(startKey, prefixEndKey) < 0
-          && (Bytes.compareTo(prefixStartKey, endKey) < 0
-              || Bytes.equals(endKey, HConstants.EMPTY_END_ROW))) {
+    protected boolean includeRegionInSplit(final byte[] startKey, final byte[] endKey) {
+      if (
+        Bytes.compareTo(startKey, prefixEndKey) < 0 && (Bytes.compareTo(prefixStartKey, endKey) < 0
+          || Bytes.equals(endKey, HConstants.EMPTY_END_ROW))
+      ) {
         return false;
       } else {
         return true;
@@ -144,20 +172,17 @@ public class TestTableInputFormatBase {
   }
 
   /**
-   * Connection class to use in {@link #testNonSuccessiveSplitsAreNotMerged}.
-   * This class returns mocked {@link Table}, {@link RegionLocator}, {@link RegionSizeCalculator},
-   * and {@link Admin}.
+   * Connection class to use in {@link #testNonSuccessiveSplitsAreNotMerged}. This class returns
+   * mocked {@link Table}, {@link RegionLocator}, {@link RegionSizeCalculator}, and {@link Admin}.
    */
   private static class ConnectionForMergeTesting implements Connection {
-    public static final byte[][] SPLITS = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"), Bytes.toBytes("d"),
-      Bytes.toBytes("e"), Bytes.toBytes("f"), Bytes.toBytes("g"), Bytes.toBytes("h"),
-      Bytes.toBytes("i"), Bytes.toBytes("j"), Bytes.toBytes("k"), Bytes.toBytes("l"),
-      Bytes.toBytes("m"), Bytes.toBytes("n"), Bytes.toBytes("o"), Bytes.toBytes("p"),
-      Bytes.toBytes("q"), Bytes.toBytes("r"), Bytes.toBytes("s"), Bytes.toBytes("t"),
-      Bytes.toBytes("u"), Bytes.toBytes("v"), Bytes.toBytes("w"), Bytes.toBytes("x"),
-      Bytes.toBytes("y"), Bytes.toBytes("z")
-    };
+    public static final byte[][] SPLITS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
+      Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+      Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j"),
+      Bytes.toBytes("k"), Bytes.toBytes("l"), Bytes.toBytes("m"), Bytes.toBytes("n"),
+      Bytes.toBytes("o"), Bytes.toBytes("p"), Bytes.toBytes("q"), Bytes.toBytes("r"),
+      Bytes.toBytes("s"), Bytes.toBytes("t"), Bytes.toBytes("u"), Bytes.toBytes("v"),
+      Bytes.toBytes("w"), Bytes.toBytes("x"), Bytes.toBytes("y"), Bytes.toBytes("z") };
 
     public static final byte[][] START_KEYS;
     public static final byte[][] END_KEYS;
@@ -188,7 +213,7 @@ public class TestTableInputFormatBase {
     }
 
     ConnectionForMergeTesting(Configuration conf, ExecutorService pool, User user)
-        throws IOException {
+      throws IOException {
     }
 
     @Override
@@ -231,39 +256,38 @@ public class TestTableInputFormatBase {
     public RegionLocator getRegionLocator(TableName tableName) throws IOException {
       final Map<byte[], HRegionLocation> locationMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] startKey : START_KEYS) {
-        HRegionLocation hrl = new HRegionLocation(
-            RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).build(),
+        HRegionLocation hrl =
+          new HRegionLocation(RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).build(),
             ServerName.valueOf("localhost", 0, 0));
         locationMap.put(startKey, hrl);
       }
 
       RegionLocator locator = mock(RegionLocator.class);
-      when(locator.getRegionLocation(any(byte [].class), anyBoolean())).
-        thenAnswer(new Answer<HRegionLocation>() {
+      when(locator.getRegionLocation(any(byte[].class), anyBoolean()))
+        .thenAnswer(new Answer<HRegionLocation>() {
           @Override
           public HRegionLocation answer(InvocationOnMock invocationOnMock) throws Throwable {
-            Object [] args = invocationOnMock.getArguments();
-            byte [] key = (byte [])args[0];
+            Object[] args = invocationOnMock.getArguments();
+            byte[] key = (byte[]) args[0];
             return locationMap.get(key);
           }
         });
-      when(locator.getStartEndKeys()).
-        thenReturn(new Pair<byte[][], byte[][]>(START_KEYS, END_KEYS));
+      when(locator.getStartEndKeys())
+        .thenReturn(new Pair<byte[][], byte[][]>(START_KEYS, END_KEYS));
       return locator;
     }
 
     public RegionSizeCalculator getRegionSizeCalculator() {
       RegionSizeCalculator sizeCalculator = mock(RegionSizeCalculator.class);
-      when(sizeCalculator.getRegionSize(any(byte[].class))).
-        thenAnswer(new Answer<Long>() {
-          @Override
-          public Long answer(InvocationOnMock invocationOnMock) throws Throwable {
-            Object [] args = invocationOnMock.getArguments();
-            byte [] regionId = (byte [])args[0];
-            byte[] startKey = RegionInfo.getStartKey(regionId);
-            return SIZE_MAP.get(startKey);
-          }
-        });
+      when(sizeCalculator.getRegionSize(any(byte[].class))).thenAnswer(new Answer<Long>() {
+        @Override
+        public Long answer(InvocationOnMock invocationOnMock) throws Throwable {
+          Object[] args = invocationOnMock.getArguments();
+          byte[] regionId = (byte[]) args[0];
+          byte[] startKey = RegionInfo.getStartKey(regionId);
+          return SIZE_MAP.get(startKey);
+        }
+      });
       return sizeCalculator;
     }
 

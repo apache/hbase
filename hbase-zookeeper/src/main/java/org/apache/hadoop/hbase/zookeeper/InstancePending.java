@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Placeholder of an instance which will be accessed by other threads
- * but is not yet created. Thread safe.
+ * Placeholder of an instance which will be accessed by other threads but is not yet created. Thread
+ * safe.
  */
 class InstancePending<T> {
   // Based on a subtle part of the Java Language Specification,
@@ -44,9 +43,8 @@ class InstancePending<T> {
   }
 
   /**
-   * Returns the instance given by the method {@link #prepare}.
-   * This is an uninterruptible blocking method
-   * and the interruption flag will be set just before returning if any.
+   * Returns the instance given by the method {@link #prepare}. This is an uninterruptible blocking
+   * method and the interruption flag will be set just before returning if any.
    */
   T get() {
     InstanceHolder<T> instanceHolder;
@@ -67,9 +65,8 @@ class InstancePending<T> {
   }
 
   /**
-   * Associates the given instance for the method {@link #get}.
-   * This method should be called once, and {@code instance} should be non-null.
-   * This method is expected to call as soon as possible
+   * Associates the given instance for the method {@link #get}. This method should be called once,
+   * and {@code instance} should be non-null. This method is expected to call as soon as possible
    * because the method {@code get} is uninterruptibly blocked until this method is called.
    */
   void prepare(T instance) {

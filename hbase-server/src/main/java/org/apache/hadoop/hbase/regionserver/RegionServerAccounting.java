@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,16 +21,15 @@ import java.lang.management.MemoryType;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * RegionServerAccounting keeps record of some basic real time information about
- * the Region Server. Currently, it keeps record the global memstore size and global memstore
- * on-heap and off-heap overhead. It also tracks the replay edits per region.
+ * RegionServerAccounting keeps record of some basic real time information about the Region Server.
+ * Currently, it keeps record the global memstore size and global memstore on-heap and off-heap
+ * overhead. It also tracks the replay edits per region.
  */
 @InterfaceAudience.Private
 public class RegionServerAccounting {
@@ -59,7 +57,7 @@ public class RegionServerAccounting {
     this.globalMemStoreLimit = globalMemstoreSizePair.getFirst();
     this.memType = globalMemstoreSizePair.getSecond();
     this.globalMemStoreLimitLowMarkPercent =
-        MemorySizeUtil.getGlobalMemStoreHeapLowerMark(conf, this.memType == MemoryType.HEAP);
+      MemorySizeUtil.getGlobalMemStoreHeapLowerMark(conf, this.memType == MemoryType.HEAP);
     // When off heap memstore in use we configure the global off heap space for memstore as bytes
     // not as % of max memory size. In such case, the lower water mark should be specified using the
     // key "hbase.regionserver.global.memstore.size.lower.limit" which says % of the global upper
@@ -70,15 +68,23 @@ public class RegionServerAccounting {
     // TODO When to get rid of the deprecated config? ie
     // "hbase.regionserver.global.memstore.lowerLimit". Can get rid of this boolean passing then.
     this.globalMemStoreLimitLowMark =
-        (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
+      (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
     this.globalOnHeapMemstoreLimit = MemorySizeUtil.getOnheapGlobalMemStoreSize(conf);
     this.globalOnHeapMemstoreLimitLowMark =
-        (long) (this.globalOnHeapMemstoreLimit * this.globalMemStoreLimitLowMarkPercent);
+      (long) (this.globalOnHeapMemstoreLimit * this.globalMemStoreLimitLowMarkPercent);
     this.retainedRegionRWRequestsCnt = new ConcurrentHashMap<>();
   }
 
   long getGlobalMemStoreLimit() {
     return this.globalMemStoreLimit;
+  }
+
+  long getGlobalOffHeapMemStoreLimit() {
+    if (isOffheap()) {
+      return this.globalMemStoreLimit;
+    } else {
+      return 0;
+    }
   }
 
   long getGlobalOnHeapMemStoreLimit() {
@@ -90,11 +96,11 @@ public class RegionServerAccounting {
     if (this.memType == MemoryType.HEAP) {
       this.globalMemStoreLimit = newGlobalMemstoreLimit;
       this.globalMemStoreLimitLowMark =
-          (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
+        (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
     } else {
       this.globalOnHeapMemstoreLimit = newGlobalMemstoreLimit;
       this.globalOnHeapMemstoreLimitLowMark =
-          (long) (this.globalOnHeapMemstoreLimit * this.globalMemStoreLimitLowMarkPercent);
+        (long) (this.globalOnHeapMemstoreLimit * this.globalMemStoreLimitLowMarkPercent);
     }
   }
 
@@ -110,30 +116,22 @@ public class RegionServerAccounting {
     return this.globalMemStoreLimitLowMarkPercent;
   }
 
-  /**
-   * @return the global Memstore data size in the RegionServer
-   */
+  /** Returns the global Memstore data size in the RegionServer */
   public long getGlobalMemStoreDataSize() {
     return globalMemStoreDataSize.sum();
   }
 
-  /**
-   * @return the global memstore heap size in the RegionServer
-   */
+  /** Returns the global memstore heap size in the RegionServer */
   public long getGlobalMemStoreHeapSize() {
     return this.globalMemStoreHeapSize.sum();
   }
 
-  /**
-   * @return the global memstore heap size in the RegionServer
-   */
+  /** Returns the global memstore heap size in the RegionServer */
   public long getGlobalMemStoreOffHeapSize() {
     return this.globalMemStoreOffHeapSize.sum();
   }
 
-  /**
-   * @return the retained metrics of region's read and write requests count
-   */
+  /** Returns the retained metrics of region's read and write requests count */
   protected ConcurrentMap<String, Pair<Long, Long>> getRetainedRegionRWRequestsCnt() {
     return this.retainedRegionRWRequestsCnt;
   }
@@ -155,8 +153,8 @@ public class RegionServerAccounting {
   }
 
   /**
-   * Return true if we are above the memstore high water mark
-   * @return the flushtype
+   * Return the FlushType if we are above the memstore high water mark
+   * @return the FlushType
    */
   public FlushType isAboveHighWaterMark() {
     // for onheap memstore we check if the global memstore size and the
@@ -187,7 +185,8 @@ public class RegionServerAccounting {
   }
 
   /**
-   * Return true if we're above the low watermark
+   * Return the FlushType if we're above the low watermark
+   * @return the FlushType
    */
   public FlushType isAboveLowWaterMark() {
     // for onheap memstore we check if the global memstore size and the
@@ -220,7 +219,7 @@ public class RegionServerAccounting {
       return (getGlobalMemStoreHeapSize()) * 1.0 / globalMemStoreLimitLowMark;
     } else {
       return Math.max(getGlobalMemStoreOffHeapSize() * 1.0 / globalMemStoreLimitLowMark,
-          getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
+        getGlobalMemStoreHeapSize() * 1.0 / globalOnHeapMemstoreLimitLowMark);
     }
   }
 }

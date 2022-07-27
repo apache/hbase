@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,11 +47,16 @@ public enum SecurityCapability {
 
   public static SecurityCapability valueOf(int value) {
     switch (value) {
-      case 0: return SIMPLE_AUTHENTICATION;
-      case 1: return SECURE_AUTHENTICATION;
-      case 2: return AUTHORIZATION;
-      case 3: return CELL_AUTHORIZATION;
-      case 4: return CELL_VISIBILITY;
+      case 0:
+        return SIMPLE_AUTHENTICATION;
+      case 1:
+        return SECURE_AUTHENTICATION;
+      case 2:
+        return AUTHORIZATION;
+      case 3:
+        return CELL_AUTHORIZATION;
+      case 4:
+        return CELL_VISIBILITY;
       default:
         throw new IllegalArgumentException("Unknown SecurityCapability value " + value);
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,7 +35,7 @@ public class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
   }
 
   public FailedProcedure(long procId, String procName, User owner, NonceKey nonceKey,
-      IOException exception) {
+    IOException exception) {
     this.procName = procName;
     setProcId(procId);
     setState(ProcedureState.ROLLEDBACK);
@@ -54,7 +54,7 @@ public class FailedProcedure<TEnvironment> extends Procedure<TEnvironment> {
 
   @Override
   protected Procedure<TEnvironment>[] execute(TEnvironment env)
-      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
     throw new UnsupportedOperationException();
   }
 

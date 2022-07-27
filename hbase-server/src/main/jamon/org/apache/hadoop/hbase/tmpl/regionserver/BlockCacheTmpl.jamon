@@ -210,7 +210,7 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
     </tr>
     <tr>
         <td>Misses Caching</td>
-        <td><% String.format("%,d", bc.getStats().getMissCount()) %></td>
+        <td><% String.format("%,d", bc.getStats().getMissCachingCount()) %></td>
         <td>Block requests that were cache misses but only requests set to use block cache</td>
     </tr>
     <tr>

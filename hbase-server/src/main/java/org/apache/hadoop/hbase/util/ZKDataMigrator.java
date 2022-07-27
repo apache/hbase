@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,12 +21,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -34,6 +31,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Utlity method to migrate zookeeper data across HBase versions.
@@ -45,43 +45,40 @@ public class ZKDataMigrator {
   private static final Logger LOG = LoggerFactory.getLogger(ZKDataMigrator.class);
 
   // Shutdown constructor.
-  private ZKDataMigrator() {}
+  private ZKDataMigrator() {
+  }
 
   /**
-   * Method for table states migration.
-   * Used when upgrading from pre-2.0 to 2.0
-   * Reading state from zk, applying them to internal state
-   * and delete.
-   * Used by master to clean migration from zk based states to
-   * table descriptor based states.
+   * Method for table states migration. Used when upgrading from pre-2.0 to 2.0 Reading state from
+   * zk, applying them to internal state and delete. Used by master to clean migration from zk based
+   * states to table descriptor based states.
    * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
    */
   @Deprecated
   public static Map<TableName, TableState.State> queryForTableStates(ZKWatcher zkw)
-      throws KeeperException, InterruptedException {
+    throws KeeperException, InterruptedException {
     Map<TableName, TableState.State> rv = new HashMap<>();
     List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().tableZNode);
-    if (children == null)
-      return rv;
-    for (String child: children) {
+    if (children == null) return rv;
+    for (String child : children) {
       TableName tableName = TableName.valueOf(child);
       ZooKeeperProtos.DeprecatedTableState.State state = getTableState(zkw, tableName);
       TableState.State newState = TableState.State.ENABLED;
       if (state != null) {
         switch (state) {
-        case ENABLED:
-          newState = TableState.State.ENABLED;
-          break;
-        case DISABLED:
-          newState = TableState.State.DISABLED;
-          break;
-        case DISABLING:
-          newState = TableState.State.DISABLING;
-          break;
-        case ENABLING:
-          newState = TableState.State.ENABLING;
-          break;
-        default:
+          case ENABLED:
+            newState = TableState.State.ENABLED;
+            break;
+          case DISABLED:
+            newState = TableState.State.DISABLED;
+            break;
+          case DISABLING:
+            newState = TableState.State.DISABLING;
+            break;
+          case ENABLING:
+            newState = TableState.State.ENABLING;
+            break;
+          default:
         }
       }
       rv.put(tableName, newState);
@@ -91,26 +88,23 @@ public class ZKDataMigrator {
 
   /**
    * Gets table state from ZK.
-   * @param zkw ZKWatcher instance to use
+   * @param zkw       ZKWatcher instance to use
    * @param tableName table we're checking
    * @return Null or
-   * {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State}
-   *        found in znode.
-   * @throws KeeperException
-   * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
+   *         {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State}
+   *         found in znode. n * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
    */
   @Deprecated
-  private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
-          final ZKWatcher zkw, final TableName tableName)
-      throws KeeperException, InterruptedException {
-    String znode = ZNodePaths.joinZNode(zkw.getZNodePaths().tableZNode,
-            tableName.getNameAsString());
-    byte [] data = ZKUtil.getData(zkw, znode);
+  private static ZooKeeperProtos.DeprecatedTableState.State getTableState(final ZKWatcher zkw,
+    final TableName tableName) throws KeeperException, InterruptedException {
+    String znode =
+      ZNodePaths.joinZNode(zkw.getZNodePaths().tableZNode, tableName.getNameAsString());
+    byte[] data = ZKUtil.getData(zkw, znode);
     if (data == null || data.length <= 0) return null;
     try {
       ProtobufUtil.expectPBMagicPrefix(data);
       ZooKeeperProtos.DeprecatedTableState.Builder builder =
-          ZooKeeperProtos.DeprecatedTableState.newBuilder();
+        ZooKeeperProtos.DeprecatedTableState.newBuilder();
       int magicLen = ProtobufUtil.lengthOfPBMagic();
       ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
       return builder.getState();

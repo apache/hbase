@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,22 +18,20 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Pass the given key and record as-is to reduce
  */
 @InterfaceAudience.Public
-public class IdentityTableMap
-extends MapReduceBase
-implements TableMap<ImmutableBytesWritable, Result> {
+public class IdentityTableMap extends MapReduceBase
+  implements TableMap<ImmutableBytesWritable, Result> {
 
   /** constructor */
   public IdentityTableMap() {
@@ -42,33 +39,24 @@ implements TableMap<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * Use this before submitting a TableMap job. It will
-   * appropriately set up the JobConf.
-   *
-   * @param table table name
+   * Use this before submitting a TableMap job. It will appropriately set up the JobConf.
+   * @param table   table name
    * @param columns columns to scan
-   * @param mapper mapper class
-   * @param job job configuration
+   * @param mapper  mapper class
+   * @param job     job configuration
    */
   @SuppressWarnings("unchecked")
-  public static void initJob(String table, String columns,
-    Class<? extends TableMap> mapper, JobConf job) {
-    TableMapReduceUtil.initTableMapJob(table, columns, mapper,
-      ImmutableBytesWritable.class,
+  public static void initJob(String table, String columns, Class<? extends TableMap> mapper,
+    JobConf job) {
+    TableMapReduceUtil.initTableMapJob(table, columns, mapper, ImmutableBytesWritable.class,
       Result.class, job);
   }
 
   /**
-   * Pass the key, value to reduce
-   * @param key
-   * @param value
-   * @param output
-   * @param reporter
-   * @throws IOException
+   * Pass the key, value to reduce nnnnn
    */
   public void map(ImmutableBytesWritable key, Result value,
-      OutputCollector<ImmutableBytesWritable,Result> output,
-      Reporter reporter) throws IOException {
+    OutputCollector<ImmutableBytesWritable, Result> output, Reporter reporter) throws IOException {
 
     // convert
     output.collect(key, value);

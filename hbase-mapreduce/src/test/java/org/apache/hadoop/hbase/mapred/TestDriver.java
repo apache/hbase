@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,18 +29,17 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestDriver {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDriver.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestDriver.class);
 
   @Test
   public void testDriverMainMethod() throws Throwable {
     ProgramDriver programDriverMock = mock(ProgramDriver.class);
     Driver.setProgramDriver(programDriverMock);
-    Driver.main(new String[]{});
+    Driver.main(new String[] {});
     verify(programDriverMock).driver(Mockito.any());
   }
 }

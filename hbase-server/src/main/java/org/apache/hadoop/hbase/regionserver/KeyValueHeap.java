@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -24,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
@@ -37,56 +34,49 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Implements KeyValueScanner itself.
  * <p>
- * This class is used at the Region level to merge across Stores
- * and at the Store level to merge across the memstore and StoreFiles.
+ * This class is used at the Region level to merge across Stores and at the Store level to merge
+ * across the memstore and StoreFiles.
  * <p>
- * In the Region case, we also need InternalScanner.next(List), so this class
- * also implements InternalScanner.  WARNING: As is, if you try to use this
- * as an InternalScanner at the Store level, you will get runtime exceptions.
+ * In the Region case, we also need InternalScanner.next(List), so this class also implements
+ * InternalScanner. WARNING: As is, if you try to use this as an InternalScanner at the Store level,
+ * you will get runtime exceptions.
  */
 @InterfaceAudience.Private
 public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
-    implements KeyValueScanner, InternalScanner {
+  implements KeyValueScanner, InternalScanner {
   private static final Logger LOG = LoggerFactory.getLogger(KeyValueHeap.class);
   protected PriorityQueue<KeyValueScanner> heap = null;
-  // Holds the scanners when a ever a eager close() happens.  All such eagerly closed
+  // Holds the scanners when a ever a eager close() happens. All such eagerly closed
   // scans are collected and when the final scanner.close() happens will perform the
   // actual close.
   protected List<KeyValueScanner> scannersForDelayedClose = null;
 
   /**
-   * The current sub-scanner, i.e. the one that contains the next key/value
-   * to return to the client. This scanner is NOT included in {@link #heap}
-   * (but we frequently add it back to the heap and pull the new winner out).
-   * We maintain an invariant that the current sub-scanner has already done
-   * a real seek, and that current.peek() is always a real key/value (or null)
-   * except for the fake last-key-on-row-column supplied by the multi-column
-   * Bloom filter optimization, which is OK to propagate to StoreScanner. In
-   * order to ensure that, always use {@link #pollRealKV()} to update current.
+   * The current sub-scanner, i.e. the one that contains the next key/value to return to the client.
+   * This scanner is NOT included in {@link #heap} (but we frequently add it back to the heap and
+   * pull the new winner out). We maintain an invariant that the current sub-scanner has already
+   * done a real seek, and that current.peek() is always a real key/value (or null) except for the
+   * fake last-key-on-row-column supplied by the multi-column Bloom filter optimization, which is OK
+   * to propagate to StoreScanner. In order to ensure that, always use {@link #pollRealKV()} to
+   * update current.
    */
   protected KeyValueScanner current = null;
 
   protected KVScannerComparator comparator;
 
   /**
-   * Constructor.  This KeyValueHeap will handle closing of passed in
-   * KeyValueScanners.
-   * @param scanners
-   * @param comparator
+   * Constructor. This KeyValueHeap will handle closing of passed in KeyValueScanners. nn
    */
-  public KeyValueHeap(List<? extends KeyValueScanner> scanners,
-      CellComparator comparator) throws IOException {
+  public KeyValueHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator)
+    throws IOException {
     this(scanners, new KVScannerComparator(comparator));
   }
 
   /**
-   * Constructor.
-   * @param scanners
-   * @param comparator
-   * @throws IOException
+   * Constructor. nnn
    */
-  KeyValueHeap(List<? extends KeyValueScanner> scanners,
-      KVScannerComparator comparator) throws IOException {
+  KeyValueHeap(List<? extends KeyValueScanner> scanners, KVScannerComparator comparator)
+    throws IOException {
     this.comparator = comparator;
     this.scannersForDelayedClose = new ArrayList<>(scanners.size());
     if (!scanners.isEmpty()) {
@@ -115,8 +105,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
-  public Cell next()  throws IOException {
-    if(this.current == null) {
+  public Cell next() throws IOException {
+    if (this.current == null) {
       return null;
     }
     Cell kvReturn = this.current.next();
@@ -151,16 +141,15 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     if (this.current == null) {
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
-    InternalScanner currentAsInternal = (InternalScanner)this.current;
+    InternalScanner currentAsInternal = (InternalScanner) this.current;
     boolean moreCells = currentAsInternal.next(result, scannerContext);
     Cell pee = this.current.peek();
 
     /*
-     * By definition, any InternalScanner must return false only when it has no
-     * further rows to be fetched. So, we can close a scanner if it returns
-     * false. All existing implementations seem to be fine with this. It is much
-     * more efficient to close scanners which are not needed than keep them in
-     * the heap. This is also required for certain optimizations.
+     * By definition, any InternalScanner must return false only when it has no further rows to be
+     * fetched. So, we can close a scanner if it returns false. All existing implementations seem to
+     * be fine with this. It is much more efficient to close scanners which are not needed than keep
+     * them in the heap. This is also required for certain optimizations.
      */
 
     if (pee == null || !moreCells) {
@@ -179,9 +168,9 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
   protected static class KVScannerComparator implements Comparator<KeyValueScanner> {
     protected CellComparator kvComparator;
+
     /**
-     * Constructor
-     * @param kvComparator
+     * Constructor n
      */
     public KVScannerComparator(CellComparator kvComparator) {
       this.kvComparator = kvComparator;
@@ -199,17 +188,16 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
         return Long.compare(right.getScannerOrder(), left.getScannerOrder());
       }
     }
+
     /**
-     * Compares two KeyValue
-     * @param left
-     * @param right
-     * @return less than 0 if left is smaller, 0 if equal etc..
+     * Compares two KeyValue nn * @return less than 0 if left is smaller, 0 if equal etc..
      */
     public int compare(Cell left, Cell right) {
       return this.kvComparator.compare(left, right);
     }
+
     /**
-     * @return KVComparator
+     * n
      */
     public CellComparator getComparator() {
       return this.kvComparator;
@@ -234,62 +222,57 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Seeks all scanners at or below the specified seek key.  If we earlied-out
-   * of a row, we may end up skipping values that were never reached yet.
-   * Rather than iterating down, we want to give the opportunity to re-seek.
+   * Seeks all scanners at or below the specified seek key. If we earlied-out of a row, we may end
+   * up skipping values that were never reached yet. Rather than iterating down, we want to give the
+   * opportunity to re-seek.
    * <p>
-   * As individual scanners may run past their ends, those scanners are
-   * automatically closed and removed from the heap.
+   * As individual scanners may run past their ends, those scanners are automatically closed and
+   * removed from the heap.
    * <p>
-   * This function (and {@link #reseek(Cell)}) does not do multi-column
-   * Bloom filter and lazy-seek optimizations. To enable those, call
-   * {@link #requestSeek(Cell, boolean, boolean)}.
+   * This function (and {@link #reseek(Cell)}) does not do multi-column Bloom filter and lazy-seek
+   * optimizations. To enable those, call {@link #requestSeek(Cell, boolean, boolean)}.
    * @param seekKey KeyValue to seek at or after
-   * @return true if KeyValues exist at or after specified key, false if not
-   * @throws IOException
+   * @return true if KeyValues exist at or after specified key, false if not n
    */
   @Override
   public boolean seek(Cell seekKey) throws IOException {
-    return generalizedSeek(false,    // This is not a lazy seek
-                           seekKey,
-                           false,    // forward (false: this is not a reseek)
-                           false);   // Not using Bloom filters
+    return generalizedSeek(false, // This is not a lazy seek
+      seekKey, false, // forward (false: this is not a reseek)
+      false); // Not using Bloom filters
   }
 
   /**
-   * This function is identical to the {@link #seek(Cell)} function except
-   * that scanner.seek(seekKey) is changed to scanner.reseek(seekKey).
+   * This function is identical to the {@link #seek(Cell)} function except that
+   * scanner.seek(seekKey) is changed to scanner.reseek(seekKey).
    */
   @Override
   public boolean reseek(Cell seekKey) throws IOException {
-    return generalizedSeek(false,    // This is not a lazy seek
-                           seekKey,
-                           true,     // forward (true because this is reseek)
-                           false);   // Not using Bloom filters
+    return generalizedSeek(false, // This is not a lazy seek
+      seekKey, true, // forward (true because this is reseek)
+      false); // Not using Bloom filters
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public boolean requestSeek(Cell key, boolean forward,
-      boolean useBloom) throws IOException {
+  public boolean requestSeek(Cell key, boolean forward, boolean useBloom) throws IOException {
     return generalizedSeek(true, key, forward, useBloom);
   }
 
   /**
-   * @param isLazy whether we are trying to seek to exactly the given row/col.
-   *          Enables Bloom filter and most-recent-file-first optimizations for
-   *          multi-column get/scan queries.
-   * @param seekKey key to seek to
-   * @param forward whether to seek forward (also known as reseek)
+   * @param isLazy   whether we are trying to seek to exactly the given row/col. Enables Bloom
+   *                 filter and most-recent-file-first optimizations for multi-column get/scan
+   *                 queries.
+   * @param seekKey  key to seek to
+   * @param forward  whether to seek forward (also known as reseek)
    * @param useBloom whether to optimize seeks using Bloom filters
    */
-  private boolean generalizedSeek(boolean isLazy, Cell seekKey,
-      boolean forward, boolean useBloom) throws IOException {
+  private boolean generalizedSeek(boolean isLazy, Cell seekKey, boolean forward, boolean useBloom)
+    throws IOException {
     if (!isLazy && useBloom) {
-      throw new IllegalArgumentException("Multi-column Bloom filter " +
-          "optimization requires a lazy seek");
+      throw new IllegalArgumentException(
+        "Multi-column Bloom filter " + "optimization requires a lazy seek");
     }
 
     if (current == null) {
@@ -319,8 +302,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
           // If there is only one scanner left, we don't do lazy seek.
           seekResult = scanner.requestSeek(seekKey, forward, useBloom);
         } else {
-          seekResult = NonLazyKeyValueScanner.doRealSeek(scanner, seekKey,
-              forward);
+          seekResult = NonLazyKeyValueScanner.doRealSeek(scanner, seekKey, forward);
         }
 
         if (!seekResult) {
@@ -349,15 +331,13 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Fetches the top sub-scanner from the priority queue, ensuring that a real
-   * seek has been done on it. Works by fetching the top sub-scanner, and if it
-   * has not done a real seek, making it do so (which will modify its top KV),
-   * putting it back, and repeating this until success. Relies on the fact that
-   * on a lazy seek we set the current key of a StoreFileScanner to a KV that
-   * is not greater than the real next KV to be read from that file, so the
-   * scanner that bubbles up to the top of the heap will have global next KV in
-   * this scanner heap if (1) it has done a real seek and (2) its KV is the top
-   * among all top KVs (some of which are fake) in the scanner heap.
+   * Fetches the top sub-scanner from the priority queue, ensuring that a real seek has been done on
+   * it. Works by fetching the top sub-scanner, and if it has not done a real seek, making it do so
+   * (which will modify its top KV), putting it back, and repeating this until success. Relies on
+   * the fact that on a lazy seek we set the current key of a StoreFileScanner to a KV that is not
+   * greater than the real next KV to be read from that file, so the scanner that bubbles up to the
+   * top of the heap will have global next KV in this scanner heap if (1) it has done a real seek
+   * and (2) its KV is the top among all top KVs (some of which are fake) in the scanner heap.
    */
   protected KeyValueScanner pollRealKV() throws IOException {
     KeyValueScanner kvScanner = heap.poll();
@@ -410,9 +390,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return kvScanner;
   }
 
-  /**
-   * @return the current Heap
-   */
+  /** Returns the current Heap */
   public PriorityQueue<KeyValueScanner> getHeap() {
     return this.heap;
   }

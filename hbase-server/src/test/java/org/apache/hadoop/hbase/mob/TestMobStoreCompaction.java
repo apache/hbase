@@ -26,12 +26,14 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -77,18 +80,21 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
  */
+@RunWith(Parameterized.class)
 @Category(MediumTests.class)
 public class TestMobStoreCompaction {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
+    HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
 
   @Rule
   public TestName name = new TestName();
@@ -107,20 +113,38 @@ public class TestMobStoreCompaction {
   private final byte[] STARTROW = Bytes.toBytes(START_KEY);
   private int compactionThreshold;
 
+  private Boolean useFileBasedSFT;
+
+  public TestMobStoreCompaction(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = { false, true };
+    return Arrays.asList(data);
+  }
+
   private void init(Configuration conf, long mobThreshold) throws Exception {
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
+
     this.conf = conf;
     this.mobCellThreshold = mobThreshold;
+
     HBaseTestingUtil UTIL = new HBaseTestingUtil(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
       .setMobThreshold(mobThreshold).setMaxVersions(1).build();
-    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName())
+    tableDescriptor = UTIL.createModifyableTableDescriptor(TestMobUtils.getTableName(name))
       .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    region = HBaseTestingUtil.createRegionAndWAL(regionInfo,
-      UTIL.getDataTestDir(), conf, tableDescriptor, new MobFileCache(conf));
+    region = HBaseTestingUtil.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf,
+      tableDescriptor, new MobFileCache(conf));
     fs = FileSystem.get(conf);
   }
 
@@ -176,23 +200,21 @@ public class TestMobStoreCompaction {
     assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("Before compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
 
     List<HStore> stores = region.getStores();
-    for (HStore store: stores) {
+    for (HStore store : stores) {
       // Force major compaction
       store.triggerMajorCompaction();
-      Optional<CompactionContext> context =
-          store.requestCompaction(HStore.PRIORITY_USER, CompactionLifeCycleTracker.DUMMY,
-            User.getCurrent());
+      Optional<CompactionContext> context = store.requestCompaction(HStore.PRIORITY_USER,
+        CompactionLifeCycleTracker.DUMMY, User.getCurrent());
       if (!context.isPresent()) {
         continue;
       }
-      region.compact(context.get(), store,
-        NoLimitThroughputController.INSTANCE, User.getCurrent());
+      region.compact(context.get(), store, NoLimitThroughputController.INSTANCE, User.getCurrent());
     }
 
     assertEquals("After compaction: store files", 1, countStoreFiles());
@@ -203,22 +225,18 @@ public class TestMobStoreCompaction {
   }
 
   private static HRegion setMobThreshold(HRegion region, byte[] cfName, long modThreshold) {
-    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder
-            .newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
-            .setMobThreshold(modThreshold)
-            .build();
-    TableDescriptor td = TableDescriptorBuilder
-            .newBuilder(region.getTableDescriptor())
-            .removeColumnFamily(cfName)
-            .setColumnFamily(cfd)
-            .build();
+    ColumnFamilyDescriptor cfd =
+      ColumnFamilyDescriptorBuilder.newBuilder(region.getTableDescriptor().getColumnFamily(cfName))
+        .setMobThreshold(modThreshold).build();
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(region.getTableDescriptor())
+      .removeColumnFamily(cfName).setColumnFamily(cfd).build();
     region.setTableDescriptor(td);
     return region;
   }
 
   /**
-   * This test will first generate store files, then bulk load them and trigger the compaction.
-   * When compaction, the cell value will be larger than the threshold.
+   * This test will first generate store files, then bulk load them and trigger the compaction. When
+   * compaction, the cell value will be larger than the threshold.
    */
   @Test
   public void testMobCompactionWithBulkload() throws Exception {
@@ -230,7 +248,7 @@ public class TestMobStoreCompaction {
     Path basedir = new Path(hbaseRootDir, tableDescriptor.getTableName().getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {
-      Path hpath = new Path(basedir, "hfile" + i);
+      Path hpath = new Path(basedir, UUID.randomUUID().toString().replace("-", ""));
       hfiles.add(Pair.newPair(COLUMN_FAMILY, hpath.toString()));
       createHFile(hpath, i, dummyData);
     }
@@ -253,7 +271,7 @@ public class TestMobStoreCompaction {
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
     assertEquals("After compaction: number of mob cells", compactionThreshold,
-        countMobCellsInMetadata());
+      countMobCellsInMetadata());
   }
 
   @Test
@@ -336,11 +354,11 @@ public class TestMobStoreCompaction {
   private void createHFile(Path path, int rowIdx, byte[] dummyData) throws IOException {
     HFileContext meta = new HFileContextBuilder().build();
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf)).withPath(fs, path)
-        .withFileContext(meta).create();
+      .withFileContext(meta).create();
     long now = EnvironmentEdgeManager.currentTime();
     try {
       KeyValue kv = new KeyValue(Bytes.add(STARTROW, Bytes.toBytes(rowIdx)), COLUMN_FAMILY,
-          Bytes.toBytes("colX"), now, dummyData);
+        Bytes.toBytes("colX"), now, dummyData);
       writer.append(kv);
     } finally {
       writer.appendFileInfo(BULKLOAD_TIME_KEY, Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
@@ -373,7 +391,7 @@ public class TestMobStoreCompaction {
 
   private byte[] makeDummyData(int size) {
     byte[] dummyData = new byte[size];
-    new Random().nextBytes(dummyData);
+    Bytes.random(dummyData);
     return dummyData;
   }
 
@@ -407,7 +425,7 @@ public class TestMobStoreCompaction {
         }
         files.add(fileName);
         Path familyPath = MobUtils.getMobFamilyPath(conf, tableDescriptor.getTableName(),
-            familyDescriptor.getNameAsString());
+          familyDescriptor.getNameAsString());
         assertTrue(fs.exists(new Path(familyPath, fileName)));
       }
     } while (hasMore);

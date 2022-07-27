@@ -74,7 +74,7 @@ check_for_znodes() {
   znodes=`"$bin"/hbase zkcli ls $zparent/$zchild 2>&1 | tail -1 | sed "s/\[//" | sed "s/\]//"`
   if [ "$znodes" != "" ]; then
     echo -n "ZNode(s) [${znodes}] of $command are not expired. Exiting without cleaning hbase data."
-    echo #force a newline	
+    echo #force a newline
     exit 1;
   else
     echo -n "All ZNode(s) of $command are expired."
@@ -99,7 +99,7 @@ execute_clean_acls() {
 
 clean_up() {
   case $1 in
-  --cleanZk) 
+  --cleanZk)
     execute_zk_command "deleteall ${zparent}";
     ;;
   --cleanHdfs)
@@ -120,7 +120,7 @@ clean_up() {
     ;;
   *)
     ;;
-  esac	
+  esac
 }
 
 check_znode_exists() {

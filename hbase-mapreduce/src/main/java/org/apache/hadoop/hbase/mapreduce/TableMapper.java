@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +17,19 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Extends the base <code>Mapper</code> class to add the required input key
- * and value classes.
- *
- * @param <KEYOUT>  The type of the key.
- * @param <VALUEOUT>  The type of the value.
+ * Extends the base <code>Mapper</code> class to add the required input key and value classes.
+ * @param <KEYOUT>   The type of the key.
+ * @param <VALUEOUT> The type of the value.
  * @see org.apache.hadoop.mapreduce.Mapper
  */
 @InterfaceAudience.Public
 public abstract class TableMapper<KEYOUT, VALUEOUT>
-extends Mapper<ImmutableBytesWritable, Result, KEYOUT, VALUEOUT> {
+  extends Mapper<ImmutableBytesWritable, Result, KEYOUT, VALUEOUT> {
 
 }

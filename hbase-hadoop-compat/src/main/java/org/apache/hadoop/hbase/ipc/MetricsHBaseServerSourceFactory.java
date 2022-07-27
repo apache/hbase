@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,18 +32,16 @@ public abstract class MetricsHBaseServerSourceFactory {
   static final String METRICS_DESCRIPTION = "Metrics about HBase Server IPC";
 
   /**
-   * The Suffix of the JMX Context that a MetricsHBaseServerSource will register under.
-   *
-   * JMX_CONTEXT will be created by createContextName(serverClassName) + METRICS_JMX_CONTEXT_SUFFIX
+   * The Suffix of the JMX Context that a MetricsHBaseServerSource will register under. JMX_CONTEXT
+   * will be created by createContextName(serverClassName) + METRICS_JMX_CONTEXT_SUFFIX
    */
   static final String METRICS_JMX_CONTEXT_SUFFIX = ",sub=" + METRICS_NAME;
 
   abstract MetricsHBaseServerSource create(String serverName, MetricsHBaseServerWrapper wrapper);
 
   /**
-   * From the name of the class that's starting up create the
-   * context that an IPC source should register itself.
-   *
+   * From the name of the class that's starting up create the context that an IPC source should
+   * register itself.
    * @param serverName The name of the class that's starting up.
    * @return The Camel Cased context name.
    */

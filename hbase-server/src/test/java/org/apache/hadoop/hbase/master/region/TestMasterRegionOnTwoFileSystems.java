@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.region;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -85,9 +87,11 @@ public class TestMasterRegionOnTwoFileSystems {
 
   private static byte[] CQ = Bytes.toBytes("q");
 
-  private static TableDescriptor TD =
-    TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+  private static TableDescriptor TD = TableDescriptorBuilder
+    .newBuilder(TableName.valueOf("test:local"))
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF))
+    .setValue(StoreFileTrackerFactory.TRACKER_IMPL, StoreFileTrackerFactory.Trackers.DEFAULT.name())
+    .build();
 
   private static int COMPACT_MIN = 4;
 
@@ -136,8 +140,8 @@ public class TestMasterRegionOnTwoFileSystems {
     Path walRootDir = WAL_UTIL.getDataTestDirOnTestFS();
     FileSystem walFs = WAL_UTIL.getTestFileSystem();
     walFs.delete(walRootDir, true);
-    region = createMasterRegion(ServerName.valueOf("localhost", 12345,
-      EnvironmentEdgeManager.currentTime()));
+    region = createMasterRegion(
+      ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
   }
 
   @After
@@ -185,7 +189,7 @@ public class TestMasterRegionOnTwoFileSystems {
     LOG.info("wal archive dir {}", walArchiveDir);
     AbstractFSWAL<?> wal = (AbstractFSWAL<?>) region.region.getWAL();
     Path currentWALFile = wal.getCurrentFileName();
-    for (;;) {
+    for (int i = 0;; i++) {
       region.requestRollAll();
       region.waitUntilWalRollFinished();
       Path newWALFile = wal.getCurrentFileName();
@@ -193,6 +197,10 @@ public class TestMasterRegionOnTwoFileSystems {
       if (!newWALFile.equals(currentWALFile)) {
         break;
       }
+      if (i == 10) {
+        fail("Can not roll wal after " + i + " times");
+      }
+      Thread.sleep(1000);
     }
     HFILE_UTIL.waitFor(15000, () -> {
       try {

@@ -53,14 +53,15 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestColumnSeeking {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestColumnSeeking.class);
+    HBaseClassTestRule.forClass(TestColumnSeeking.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
@@ -113,8 +114,7 @@ public class TestColumnSeeking {
           p.setDurability(Durability.SKIP_WAL);
           for (String column : allColumns) {
             for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-              KeyValue kv =
-                  KeyValueTestUtil.create(row, family, column, timestamp, value);
+              KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, value);
               if (Math.random() < putPercentage) {
                 p.add(kv);
                 allKVMap.put(kv.getKeyString(), kv);
@@ -155,8 +155,7 @@ public class TestColumnSeeking {
             scan.addColumn(familyBytes, Bytes.toBytes(column));
           }
           LOG.info("ExplicitColumns scanner");
-          LOG.info("Columns: " + columnLists[i].size() + "  Keys: "
-              + kvSet.size());
+          LOG.info("Columns: " + columnLists[i].size() + "  Keys: " + kvSet.size());
         } else {
           kvSet = allKVMap.values();
           LOG.info("Wildcard scanner");
@@ -184,12 +183,9 @@ public class TestColumnSeeking {
     byte[] familyBytes = Bytes.toBytes("Family");
     TableName table = TableName.valueOf(name.getMethodName());
 
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(table);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(table);
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family))
-        .setMaxVersions(3).build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
 
     RegionInfo info = RegionInfoBuilder.newBuilder(table).build();
@@ -227,9 +223,7 @@ public class TestColumnSeeking {
       p.setDurability(Durability.SKIP_WAL);
       for (String column : allColumns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv =
-              KeyValueTestUtil.create(row, family, column, timestamp,
-                  valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           if (Math.random() < putPercentage) {
             p.add(kv);
             allKVMap.put(kv.getKeyString(), kv);
@@ -270,8 +264,7 @@ public class TestColumnSeeking {
           scan.addColumn(familyBytes, Bytes.toBytes(column));
         }
         LOG.info("ExplicitColumns scanner");
-        LOG.info("Columns: " + columnLists[i].size() + "  Keys: "
-            + kvSet.size());
+        LOG.info("Columns: " + columnLists[i].size() + "  Keys: " + kvSet.size());
       } else {
         kvSet = allKVMap.values();
         LOG.info("Wildcard scanner");
@@ -310,4 +303,3 @@ public class TestColumnSeeking {
   }
 
 }
-

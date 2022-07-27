@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class YammerHistogramUtils {
 
   // not for public consumption
-  private YammerHistogramUtils() {}
+  private YammerHistogramUtils() {
+  }
 
   /**
    * Used formatting doubles so only two places after decimal point.
@@ -38,13 +38,12 @@ public final class YammerHistogramUtils {
   private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#0.00");
 
   /**
-   * Create a new {@link com.codahale.metrics.Histogram} instance. These constructors are
-   * not public in 2.2.0, so we use reflection to find them.
+   * Create a new {@link com.codahale.metrics.Histogram} instance. These constructors are not public
+   * in 2.2.0, so we use reflection to find them.
    */
   public static Histogram newHistogram(Reservoir sample) {
     try {
-      Constructor<?> ctor =
-          Histogram.class.getDeclaredConstructor(Reservoir.class);
+      Constructor<?> ctor = Histogram.class.getDeclaredConstructor(Reservoir.class);
       ctor.setAccessible(true);
       return (Histogram) ctor.newInstance(sample);
     } catch (Exception e) {
@@ -52,47 +51,44 @@ public final class YammerHistogramUtils {
     }
   }
 
-  /** @return an abbreviated summary of {@code hist}. */
+  /** Returns an abbreviated summary of {@code hist}. */
   public static String getShortHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
-    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
-        ", min=" + DOUBLE_FORMAT.format(sn.getMin()) +
-        ", max=" + DOUBLE_FORMAT.format(sn.getMax()) +
-        ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) +
-        ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +
-        ", 99th=" + DOUBLE_FORMAT.format(sn.get99thPercentile());
+    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) + ", min="
+      + DOUBLE_FORMAT.format(sn.getMin()) + ", max=" + DOUBLE_FORMAT.format(sn.getMax())
+      + ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) + ", 95th="
+      + DOUBLE_FORMAT.format(sn.get95thPercentile()) + ", 99th="
+      + DOUBLE_FORMAT.format(sn.get99thPercentile());
   }
 
-  /** @return a summary of {@code hist}. */
+  /** Returns a summary of {@code hist}. */
   public static String getHistogramReport(final Histogram hist) {
     Snapshot sn = hist.getSnapshot();
-    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) +
-        ", min=" + DOUBLE_FORMAT.format(sn.getMin()) +
-        ", max=" + DOUBLE_FORMAT.format(sn.getMax()) +
-        ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) +
-        ", 50th=" + DOUBLE_FORMAT.format(sn.getMedian()) +
-        ", 75th=" + DOUBLE_FORMAT.format(sn.get75thPercentile()) +
-        ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +
-        ", 99th=" + DOUBLE_FORMAT.format(sn.get99thPercentile()) +
-        ", 99.9th=" + DOUBLE_FORMAT.format(sn.get999thPercentile()) +
-        ", 99.99th=" + DOUBLE_FORMAT.format(sn.getValue(0.9999)) +
-        ", 99.999th=" + DOUBLE_FORMAT.format(sn.getValue(0.99999));
+    return "mean=" + DOUBLE_FORMAT.format(sn.getMean()) + ", min="
+      + DOUBLE_FORMAT.format(sn.getMin()) + ", max=" + DOUBLE_FORMAT.format(sn.getMax())
+      + ", stdDev=" + DOUBLE_FORMAT.format(sn.getStdDev()) + ", 50th="
+      + DOUBLE_FORMAT.format(sn.getMedian()) + ", 75th="
+      + DOUBLE_FORMAT.format(sn.get75thPercentile()) + ", 95th="
+      + DOUBLE_FORMAT.format(sn.get95thPercentile()) + ", 99th="
+      + DOUBLE_FORMAT.format(sn.get99thPercentile()) + ", 99.9th="
+      + DOUBLE_FORMAT.format(sn.get999thPercentile()) + ", 99.99th="
+      + DOUBLE_FORMAT.format(sn.getValue(0.9999)) + ", 99.999th="
+      + DOUBLE_FORMAT.format(sn.getValue(0.99999));
   }
 
-  /** @return pretty summary of {@code hist}. */
+  /** Returns pretty summary of {@code hist}. */
   public static String getPrettyHistogramReport(final Histogram h) {
     Snapshot sn = h.getSnapshot();
-    return
-        "Mean      = " + DOUBLE_FORMAT.format(sn.getMean()) + "\n" +
-        "Min       = " + DOUBLE_FORMAT.format(sn.getMin()) + "\n" +
-        "Max       = " + DOUBLE_FORMAT.format(sn.getMax()) + "\n" +
-        "StdDev    = " + DOUBLE_FORMAT.format(sn.getStdDev()) + "\n" +
-        "50th      = " + DOUBLE_FORMAT.format(sn.getMedian()) + "\n" +
-        "75th      = " + DOUBLE_FORMAT.format(sn.get75thPercentile()) + "\n" +
-        "95th      = " + DOUBLE_FORMAT.format(sn.get95thPercentile()) + "\n" +
-        "99th      = " + DOUBLE_FORMAT.format(sn.get99thPercentile()) + "\n" +
-        "99.9th    = " + DOUBLE_FORMAT.format(sn.get999thPercentile()) + "\n" +
-        "99.99th   = " + DOUBLE_FORMAT.format(sn.getValue(0.9999)) + "\n" +
-        "99.999th  = " + DOUBLE_FORMAT.format(sn.getValue(0.99999));
+    return "Mean      = " + DOUBLE_FORMAT.format(sn.getMean()) + "\n" + "Min       = "
+      + DOUBLE_FORMAT.format(sn.getMin()) + "\n" + "Max       = "
+      + DOUBLE_FORMAT.format(sn.getMax()) + "\n" + "StdDev    = "
+      + DOUBLE_FORMAT.format(sn.getStdDev()) + "\n" + "50th      = "
+      + DOUBLE_FORMAT.format(sn.getMedian()) + "\n" + "75th      = "
+      + DOUBLE_FORMAT.format(sn.get75thPercentile()) + "\n" + "95th      = "
+      + DOUBLE_FORMAT.format(sn.get95thPercentile()) + "\n" + "99th      = "
+      + DOUBLE_FORMAT.format(sn.get99thPercentile()) + "\n" + "99.9th    = "
+      + DOUBLE_FORMAT.format(sn.get999thPercentile()) + "\n" + "99.99th   = "
+      + DOUBLE_FORMAT.format(sn.getValue(0.9999)) + "\n" + "99.999th  = "
+      + DOUBLE_FORMAT.format(sn.getValue(0.99999));
   }
 }

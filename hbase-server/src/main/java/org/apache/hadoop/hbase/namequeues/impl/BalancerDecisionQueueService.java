@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,9 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.namequeues.impl;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Queue;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.BalancerDecision;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
@@ -27,18 +30,15 @@ import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueService;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
-import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-import java.util.stream.Collectors;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 
 /**
  * In-memory Queue service provider for Balancer Decision events
@@ -88,8 +88,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
       return;
     }
     BalancerDecisionDetails balancerDecisionDetails = (BalancerDecisionDetails) namedQueuePayload;
-    BalancerDecision balancerDecisionRecords =
-      balancerDecisionDetails.getBalancerDecision();
+    BalancerDecision balancerDecisionRecords = balancerDecisionDetails.getBalancerDecision();
     List<String> regionPlans = balancerDecisionRecords.getRegionPlans();
     List<List<String>> regionPlansList;
     if (regionPlans.size() > REGION_PLANS_THRESHOLD_PER_BALANCER) {
@@ -104,8 +103,7 @@ public class BalancerDecisionQueueService implements NamedQueueService {
         .setComputedTotalCost(balancerDecisionRecords.getComputedTotalCost())
         .setFinalFunctionCosts(balancerDecisionRecords.getFinalFunctionCosts())
         .setComputedSteps(balancerDecisionRecords.getComputedSteps())
-        .addAllRegionPlans(regionPlansPerBalancer)
-        .build();
+        .addAllRegionPlans(regionPlansPerBalancer).build();
       balancerDecisionQueue.add(balancerDecision);
     }
   }

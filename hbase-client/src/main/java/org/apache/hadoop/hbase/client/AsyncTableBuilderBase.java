@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -29,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
-    implements AsyncTableBuilder<C> {
+  implements AsyncTableBuilder<C> {
 
   protected TableName tableName;
 
@@ -45,7 +44,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   protected long pauseNs;
 
-  protected long pauseForCQTBENs;
+  protected long pauseNsForServerOverloaded;
 
   protected int maxAttempts;
 
@@ -53,14 +52,18 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
-    this.operationTimeoutNs = tableName.isSystemTable() ? connConf.getMetaOperationTimeoutNs()
+    this.operationTimeoutNs = tableName.isSystemTable()
+      ? connConf.getMetaOperationTimeoutNs()
       : connConf.getOperationTimeoutNs();
-    this.scanTimeoutNs = connConf.getScanTimeoutNs();
+    this.scanTimeoutNs =
+      tableName.isSystemTable() ? connConf.getMetaScanTimeoutNs() : connConf.getScanTimeoutNs();
     this.rpcTimeoutNs = connConf.getRpcTimeoutNs();
-    this.readRpcTimeoutNs = connConf.getReadRpcTimeoutNs();
+    this.readRpcTimeoutNs = tableName.isSystemTable()
+      ? connConf.getMetaReadRpcTimeoutNs()
+      : connConf.getReadRpcTimeoutNs();
     this.writeRpcTimeoutNs = connConf.getWriteRpcTimeoutNs();
     this.pauseNs = connConf.getPauseNs();
-    this.pauseForCQTBENs = connConf.getPauseForCQTBENs();
+    this.pauseNsForServerOverloaded = connConf.getPauseNsForServerOverloaded();
     this.maxAttempts = retries2Attempts(connConf.getMaxRetries());
     this.startLogErrorsCnt = connConf.getStartLogErrorsCnt();
   }
@@ -102,8 +105,8 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   }
 
   @Override
-  public AsyncTableBuilderBase<C> setRetryPauseForCQTBE(long pause, TimeUnit unit) {
-    this.pauseForCQTBENs = unit.toNanos(pause);
+  public AsyncTableBuilderBase<C> setRetryPauseForServerOverloaded(long pause, TimeUnit unit) {
+    this.pauseNsForServerOverloaded = unit.toNanos(pause);
     return this;
   }
 

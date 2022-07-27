@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -24,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Interface for sources that will export JvmPauseMonitor metrics
  */
 @InterfaceAudience.Private
-public interface JvmPauseMonitorSource  {
+public interface JvmPauseMonitorSource {
 
   String INFO_THRESHOLD_COUNT_KEY = "pauseInfoThresholdExceeded";
   String INFO_THRESHOLD_COUNT_DESC = "Count of INFO level pause threshold alerts";
@@ -36,7 +35,7 @@ public interface JvmPauseMonitorSource  {
 
   String PAUSE_TIME_WITHOUT_GC_KEY = "pauseTimeWithoutGc";
   String PAUSE_TIME_WITHOUT_GC_DESC =
-      "Histogram for excessive pause times without GC activity detected";
+    "Histogram for excessive pause times without GC activity detected";
 
   /**
    * Increment the INFO level threshold exceeded count
@@ -52,14 +51,12 @@ public interface JvmPauseMonitorSource  {
 
   /**
    * Update the pause time histogram where GC activity was detected.
-   *
    * @param t time it took
    */
   void updatePauseTimeWithGc(long t);
 
   /**
    * Update the pause time histogram where GC activity was not detected.
-   *
    * @param t time it took
    */
   void updatePauseTimeWithoutGc(long t);

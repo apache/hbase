@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,22 +34,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This tests whether ServerSocketChannel works over ipv6, which ZooKeeper
- * depends on. On Windows Oracle JDK 6, creating a ServerSocketChannel throws
- * java.net.SocketException: Address family not supported by protocol family
- * exception. It is a known JVM bug, seems to be only resolved for JDK7:
- * http://bugs.sun.com/view_bug.do?bug_id=6230761
- *
- * For this test, we check that whether we are effected by this bug, and if so
- * the test ensures that we are running with java.net.preferIPv4Stack=true, so
- * that ZK will not fail to bind to ipv6 address using ClientCnxnSocketNIO.
+ * This tests whether ServerSocketChannel works over ipv6, which ZooKeeper depends on. On Windows
+ * Oracle JDK 6, creating a ServerSocketChannel throws java.net.SocketException: Address family not
+ * supported by protocol family exception. It is a known JVM bug, seems to be only resolved for
+ * JDK7: http://bugs.sun.com/view_bug.do?bug_id=6230761 For this test, we check that whether we are
+ * effected by this bug, and if so the test ensures that we are running with
+ * java.net.preferIPv4Stack=true, so that ZK will not fail to bind to ipv6 address using
+ * ClientCnxnSocketNIO.
  */
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestIPv6NIOServerSocketChannel {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIPv6NIOServerSocketChannel.class);
+    HBaseClassTestRule.forClass(TestIPv6NIOServerSocketChannel.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIPv6NIOServerSocketChannel.class);
 
@@ -57,7 +55,7 @@ public class TestIPv6NIOServerSocketChannel {
    * Creates and binds a regular ServerSocket.
    */
   private void bindServerSocket(InetAddress inetAddr) throws IOException {
-    while(true) {
+    while (true) {
       int port = HBaseTestingUtil.randomFreePort();
       InetSocketAddress addr = new InetSocketAddress(inetAddr, port);
       ServerSocket serverSocket = null;
@@ -66,7 +64,7 @@ public class TestIPv6NIOServerSocketChannel {
         serverSocket.bind(addr);
         break;
       } catch (BindException ex) {
-        //continue
+        // continue
         LOG.info("Failed on " + addr + ", inedAddr=" + inetAddr, ex);
       } finally {
         if (serverSocket != null) {
@@ -77,9 +75,8 @@ public class TestIPv6NIOServerSocketChannel {
   }
 
   /**
-   * Creates a NIO ServerSocketChannel, and gets the ServerSocket from
-   * there. Then binds the obtained socket.
-   * This fails on Windows with Oracle JDK1.6.0u33, if the passed InetAddress is a
+   * Creates a NIO ServerSocketChannel, and gets the ServerSocket from there. Then binds the
+   * obtained socket. This fails on Windows with Oracle JDK1.6.0u33, if the passed InetAddress is a
    * IPv6 address. Works on Oracle JDK 1.7.
    */
   private void bindNIOServerSocket(InetAddress inetAddr) throws IOException {
@@ -94,7 +91,7 @@ public class TestIPv6NIOServerSocketChannel {
         serverSocket.bind(addr); // This does not work
         break;
       } catch (BindException ex) {
-        //continue
+        // continue
       } finally {
         if (serverSocket != null) {
           serverSocket.close();
@@ -107,8 +104,8 @@ public class TestIPv6NIOServerSocketChannel {
   }
 
   /**
-   * Checks whether we are effected by the JDK issue on windows, and if so
-   * ensures that we are running with preferIPv4Stack=true.
+   * Checks whether we are effected by the JDK issue on windows, and if so ensures that we are
+   * running with preferIPv4Stack=true.
    */
   @Test
   public void testServerSocket() throws IOException {
@@ -118,16 +115,16 @@ public class TestIPv6NIOServerSocketChannel {
     try {
       bindServerSocket(inetAddr);
       bindNIOServerSocket(inetAddr);
-      //if on *nix or windows JDK7, both will pass
-    } catch(java.net.SocketException ex) {
-      //On Windows JDK6, we will get expected exception:
-      //java.net.SocketException: Address family not supported by protocol family
-      //or java.net.SocketException: Protocol family not supported
+      // if on *nix or windows JDK7, both will pass
+    } catch (java.net.SocketException ex) {
+      // On Windows JDK6, we will get expected exception:
+      // java.net.SocketException: Address family not supported by protocol family
+      // or java.net.SocketException: Protocol family not supported
       Assert.assertFalse(ex instanceof BindException);
       Assert.assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
       LOG.info("Received expected exception:", ex);
 
-      //if this is the case, ensure that we are running on preferIPv4=true
+      // if this is the case, ensure that we are running on preferIPv4=true
       ensurePreferIPv4();
     }
   }
@@ -139,17 +136,16 @@ public class TestIPv6NIOServerSocketChannel {
     InetAddress[] addrs = InetAddress.getAllByName("localhost");
     for (InetAddress addr : addrs) {
       LOG.info("resolved localhost as:" + addr);
-      Assert.assertEquals(4, addr.getAddress().length); //ensure 4 byte ipv4 address
+      Assert.assertEquals(4, addr.getAddress().length); // ensure 4 byte ipv4 address
     }
   }
 
   /**
-   * Tests whether every InetAddress we obtain by resolving can open a
-   * ServerSocketChannel.
+   * Tests whether every InetAddress we obtain by resolving can open a ServerSocketChannel.
    */
   @Test
   public void testServerSocketFromLocalhostResolution() throws IOException {
-    InetAddress[] addrs = {InetAddress.getLocalHost()};
+    InetAddress[] addrs = { InetAddress.getLocalHost() };
     for (InetAddress addr : addrs) {
       LOG.info("Resolved localhost as: " + addr);
       bindServerSocket(addr);

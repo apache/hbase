@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.nio.ByteBuffer;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
+
 /**
- * A binary comparator which lexicographically compares against the specified
- * byte array using {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
+ * A binary comparator which lexicographically compares against the specified byte array using
+ * {@link org.apache.hadoop.hbase.util.Bytes#compareTo(byte[], byte[])}.
  */
 @InterfaceAudience.Public
 @SuppressWarnings("ComparableType") // Should this move to Comparator usage?
@@ -45,7 +43,7 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="EQ_UNUSUAL", justification="")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_UNUSUAL", justification = "")
   public boolean equals(Object obj) {
     return obj == null;
   }
@@ -65,26 +63,23 @@ public class NullComparator extends ByteArrayComparable {
     return value != null ? 1 : 0;
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
-  public byte [] toByteArray() {
-    ComparatorProtos.NullComparator.Builder builder =
-      ComparatorProtos.NullComparator.newBuilder();
+  public byte[] toByteArray() {
+    ComparatorProtos.NullComparator.Builder builder = ComparatorProtos.NullComparator.newBuilder();
     return builder.build().toByteArray();
   }
 
   /**
+   * Parse the serialized representation of {@link NullComparator}
    * @param pbBytes A pb serialized {@link NullComparator} instance
    * @return An instance of {@link NullComparator} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
-  public static NullComparator parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static NullComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
     try {
-      // Just parse.  Don't use what we parse since on end we are returning new NullComparator.
+      // Just parse. Don't use what we parse since on end we are returning new NullComparator.
       ComparatorProtos.NullComparator.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
@@ -93,15 +88,17 @@ public class NullComparator extends ByteArrayComparable {
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the comparator that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof NullComparator)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof NullComparator)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(other);
   }
 }

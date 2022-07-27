@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
-
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.DateTieredMultiFileWriter;
@@ -51,16 +51,16 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
     // maxSeqId if we haven't written out anything.
     OptionalLong maxSeqId = StoreUtils.getMaxSequenceIdInList(request.getFiles());
     OptionalLong storeMaxSeqId = store.getMaxSequenceId();
-    return maxSeqId.isPresent() && storeMaxSeqId.isPresent() &&
-        maxSeqId.getAsLong() == storeMaxSeqId.getAsLong();
+    return maxSeqId.isPresent() && storeMaxSeqId.isPresent()
+      && maxSeqId.getAsLong() == storeMaxSeqId.getAsLong();
   }
 
   public List<Path> compact(final CompactionRequestImpl request, final List<Long> lowerBoundaries,
-      final Map<Long, String> lowerBoundariesPolicies,
-      ThroughputController throughputController, User user) throws IOException {
+    final Map<Long, String> lowerBoundariesPolicies, ThroughputController throughputController,
+    User user) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Executing compaction with " + lowerBoundaries.size()
-          + "windows, lower boundaries: " + lowerBoundaries);
+        + "windows, lower boundaries: " + lowerBoundaries);
     }
 
     return compact(request, defaultScannerFactory,
@@ -68,21 +68,22 @@ public class DateTieredCompactor extends AbstractMultiOutputCompactor<DateTiered
 
         @Override
         public DateTieredMultiFileWriter createWriter(InternalScanner scanner, FileDetails fd,
-            boolean shouldDropBehind, boolean major) throws IOException {
+          boolean shouldDropBehind, boolean major, Consumer<Path> writerCreationTracker)
+          throws IOException {
           DateTieredMultiFileWriter writer = new DateTieredMultiFileWriter(lowerBoundaries,
-              lowerBoundariesPolicies,
-              needEmptyFile(request));
-          initMultiWriter(writer, scanner, fd, shouldDropBehind, major);
+            lowerBoundariesPolicies, needEmptyFile(request));
+          initMultiWriter(writer, scanner, fd, shouldDropBehind, major, writerCreationTracker);
           return writer;
         }
       }, throughputController, user);
   }
 
   @Override
-  protected List<Path> commitWriter(FileDetails fd,
-      CompactionRequestImpl request) throws IOException {
+  protected List<Path> commitWriter(DateTieredMultiFileWriter writer, FileDetails fd,
+    CompactionRequestImpl request) throws IOException {
     List<Path> pathList =
       writer.commitWriters(fd.maxSeqId, request.isAllFiles(), request.getFiles());
     return pathList;
   }
+
 }

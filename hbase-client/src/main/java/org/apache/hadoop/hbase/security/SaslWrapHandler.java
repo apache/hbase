@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,83 +17,36 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import javax.security.sasl.SaslClient;
-
-import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import javax.security.sasl.SaslException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
-import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
-import org.apache.hbase.thirdparty.io.netty.channel.CoalescingBufferQueue;
-import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
-import org.apache.hbase.thirdparty.io.netty.util.concurrent.PromiseCombiner;
-
+import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToByteEncoder;
 
 /**
  * wrap sasl messages.
  */
 @InterfaceAudience.Private
-public class SaslWrapHandler extends ChannelOutboundHandlerAdapter {
+public class SaslWrapHandler extends MessageToByteEncoder<ByteBuf> {
 
-  private final SaslClient saslClient;
+  public interface Wrapper {
+    byte[] wrap(byte[] outgoing, int offset, int len) throws SaslException;
+  }
 
-  private CoalescingBufferQueue queue;
+  private final Wrapper wrapper;
 
-  public SaslWrapHandler(SaslClient saslClient) {
-    this.saslClient = saslClient;
+  public SaslWrapHandler(Wrapper wrapper) {
+    this.wrapper = wrapper;
   }
 
   @Override
-  public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-    queue = new CoalescingBufferQueue(ctx.channel());
-  }
-
-  @Override
-  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-      throws Exception {
-    if (msg instanceof ByteBuf) {
-      queue.add((ByteBuf) msg, promise);
-    } else {
-      ctx.write(msg, promise);
-    }
-  }
-
-  @Override
-  public void flush(ChannelHandlerContext ctx) throws Exception {
-    if (queue.isEmpty()) {
-      return;
-    }
-    ByteBuf buf = null;
-    try {
-      ChannelPromise promise = ctx.newPromise();
-      int readableBytes = queue.readableBytes();
-      buf = queue.remove(readableBytes, promise);
-      byte[] bytes = new byte[readableBytes];
-      buf.readBytes(bytes);
-      byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
-      ChannelPromise lenPromise = ctx.newPromise();
-      ctx.write(ctx.alloc().buffer(4).writeInt(wrapperBytes.length), lenPromise);
-      ChannelPromise contentPromise = ctx.newPromise();
-      ctx.write(Unpooled.wrappedBuffer(wrapperBytes), contentPromise);
-      PromiseCombiner combiner = new PromiseCombiner();
-      combiner.addAll(lenPromise, contentPromise);
-      combiner.finish(promise);
-      ctx.flush();
-    } finally {
-      if (buf != null) {
-        ReferenceCountUtil.safeRelease(buf);
-      }
-    }
-  }
-
-  @Override
-  public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-    if (!queue.isEmpty()) {
-      queue.releaseAndFailAll(new ConnectionClosedException("Connection closed"));
-    }
-    ctx.close(promise);
+  protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+    byte[] bytes = new byte[msg.readableBytes()];
+    msg.readBytes(bytes);
+    byte[] wrapperBytes = wrapper.wrap(bytes, 0, bytes.length);
+    out.ensureWritable(4 + wrapperBytes.length);
+    out.writeInt(wrapperBytes.length);
+    out.writeBytes(wrapperBytes);
   }
 }

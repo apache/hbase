@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.http;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -40,11 +41,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestServletFilter extends HttpServerFunctionalTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServletFilter.class);
+    HBaseClassTestRule.forClass(TestServletFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   private static volatile String uri = null;
@@ -64,20 +65,21 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-        FilterChain chain) throws IOException, ServletException {
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+      throws IOException, ServletException {
       if (filterConfig == null) {
         return;
       }
 
-      uri = ((HttpServletRequest)request).getRequestURI();
+      uri = ((HttpServletRequest) request).getRequestURI();
       LOG.info("filtering " + uri);
       chain.doFilter(request, response);
     }
 
     /** Configuration for the filter */
     static public class Initializer extends FilterInitializer {
-      public Initializer() {}
+      public Initializer() {
+      }
 
       @Override
       public void initFilter(FilterContainer container, Configuration conf) {
@@ -88,22 +90,20 @@ public class TestServletFilter extends HttpServerFunctionalTest {
 
   private static void assertExceptionContains(String string, Throwable t) {
     String msg = t.getMessage();
-    Assert.assertTrue(
-        "Expected to find '" + string + "' but got unexpected exception:"
-        + StringUtils.stringifyException(t), msg.contains(string));
+    Assert.assertTrue("Expected to find '" + string + "' but got unexpected exception:"
+      + StringUtils.stringifyException(t), msg.contains(string));
   }
 
   @Test
   @Ignore
-  //From stack
+  // From stack
   // Its a 'foreign' test, one that came in from hadoop when we copy/pasted http
   // It's second class. Could comment it out if only failing test (as per @nkeywal – sort of)
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
 
-    //start an http server with CountingFilter
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-        SimpleFilter.Initializer.class.getName());
+    // start an http server with CountingFilter
+    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, SimpleFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
     http.start();
 
@@ -113,23 +113,22 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     final String logURL = "/logs/a.log";
     final String hadooplogoURL = "/static/hadoop-logo.jpg";
 
-    final String[] urls = {fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL};
-    final Random ran = new Random();
+    final String[] urls = { fsckURL, stacksURL, ajspURL, logURL, hadooplogoURL };
+    final Random rand = ThreadLocalRandom.current();
     final int[] sequence = new int[50];
 
-    //generate a random sequence and update counts
-    for(int i = 0; i < sequence.length; i++) {
-      sequence[i] = ran.nextInt(urls.length);
+    // generate a random sequence and update counts
+    for (int i = 0; i < sequence.length; i++) {
+      sequence[i] = rand.nextInt(urls.length);
     }
 
-    //access the urls as the sequence
-    final String prefix = "http://"
-        + NetUtils.getHostPortString(http.getConnectorAddress(0));
+    // access the urls as the sequence
+    final String prefix = "http://" + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
       for (int aSequence : sequence) {
         access(prefix + urls[aSequence]);
 
-        //make sure everything except fsck get filtered
+        // make sure everything except fsck get filtered
         if (aSequence == 0) {
           assertNull(uri);
         } else {
@@ -164,8 +163,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   public void testServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
     // start an http server with ErrorFilter
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-        ErrorFilter.Initializer.class.getName());
+    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, ErrorFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
     try {
       http.start();
@@ -176,17 +174,15 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   }
 
   /**
-   * Similar to the above test case, except that it uses a different API to add the
-   * filter. Regression test for HADOOP-8786.
+   * Similar to the above test case, except that it uses a different API to add the filter.
+   * Regression test for HADOOP-8786.
    */
   @Test
-  public void testContextSpecificServletFilterWhenInitThrowsException()
-      throws Exception {
+  public void testContextSpecificServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
     HttpServer http = createTestServer(conf);
-    HttpServer.defineFilter(http.webAppContext,
-        "ErrorFilter", ErrorFilter.class.getName(),
-        null, null);
+    HttpServer.defineFilter(http.webAppContext, "ErrorFilter", ErrorFilter.class.getName(), null,
+      null);
     try {
       http.start();
       fail("expecting exception");

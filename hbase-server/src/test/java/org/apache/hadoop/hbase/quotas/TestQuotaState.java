@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,12 +37,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestQuotaState {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaState.class);
+    HBaseClassTestRule.forClass(TestQuotaState.class);
 
   private static final TableName UNKNOWN_TABLE_NAME = TableName.valueOf("unknownTable");
 
@@ -133,7 +133,7 @@ public class TestQuotaState {
     assertEquals(LAST_UPDATE_2, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getGlobalLimiter(),
-        NUM_GLOBAL_THROTTLE_2 - NUM_GLOBAL_THROTTLE_1);
+      NUM_GLOBAL_THROTTLE_2 - NUM_GLOBAL_THROTTLE_1);
 
     // Remove global throttle
     otherQuotaState = new QuotaState(LAST_UPDATE_3);
@@ -188,7 +188,7 @@ public class TestQuotaState {
     assertEquals(LAST_UPDATE_2, quotaInfo.getLastUpdate());
     assertFalse(quotaInfo.isBypass());
     assertThrottleException(quotaInfo.getTableLimiter(tableNameA),
-        TABLE_A_THROTTLE_2 - TABLE_A_THROTTLE_1);
+      TABLE_A_THROTTLE_2 - TABLE_A_THROTTLE_1);
     assertThrottleException(quotaInfo.getTableLimiter(tableNameC), TABLE_C_THROTTLE);
     assertNoopLimiter(quotaInfo.getTableLimiter(tableNameB));
 
@@ -233,10 +233,9 @@ public class TestQuotaState {
 
   private Quotas buildReqNumThrottle(final long limit) {
     return Quotas.newBuilder()
-            .setThrottle(Throttle.newBuilder()
-              .setReqNum(ProtobufUtil.toTimedQuota(limit, TimeUnit.MINUTES, QuotaScope.MACHINE))
-              .build())
-            .build();
+      .setThrottle(Throttle.newBuilder()
+        .setReqNum(ProtobufUtil.toTimedQuota(limit, TimeUnit.MINUTES, QuotaScope.MACHINE)).build())
+      .build();
   }
 
   private void assertThrottleException(final QuotaLimiter limiter, final int availReqs) {

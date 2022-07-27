@@ -58,31 +58,29 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.Aggrega
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AggregateProtos.AggregateService;
 
 /**
- * This client class is for invoking the aggregate functions deployed on the
- * Region Server side via the AggregateService. This class will implement the
- * supporting functionality for summing/processing the individual results
- * obtained from the AggregateService for each region.
+ * This client class is for invoking the aggregate functions deployed on the Region Server side via
+ * the AggregateService. This class will implement the supporting functionality for
+ * summing/processing the individual results obtained from the AggregateService for each region.
  * <p>
- * This will serve as the client side handler for invoking the aggregate
- * functions.
- * For all aggregate functions,
+ * This will serve as the client side handler for invoking the aggregate functions. For all
+ * aggregate functions,
  * <ul>
  * <li>start row &lt; end row is an essential condition (if they are not
  * {@link HConstants#EMPTY_BYTE_ARRAY})
- * <li>Column family can't be null. In case where multiple families are
- * provided, an IOException will be thrown. An optional column qualifier can
- * also be defined.</li>
- * <li>For methods to find maximum, minimum, sum, rowcount, it returns the
- * parameter type. For average and std, it returns a double value. For row
- * count, it returns a long value.</li>
+ * <li>Column family can't be null. In case where multiple families are provided, an IOException
+ * will be thrown. An optional column qualifier can also be defined.</li>
+ * <li>For methods to find maximum, minimum, sum, rowcount, it returns the parameter type. For
+ * average and std, it returns a double value. For row count, it returns a long value.</li>
  * </ul>
- * <p>Call {@link #close()} when done.
+ * <p>
+ * Call {@link #close()} when done.
  */
 @InterfaceAudience.Public
 public class AggregationClient implements Closeable {
-  // TODO: This class is not used.  Move to examples?
+  // TODO: This class is not used. Move to examples?
   private static final Logger log = LoggerFactory.getLogger(AggregationClient.class);
   private final Connection connection;
+  private final boolean manageConnection;
 
   /**
    * An RpcController implementation for use here in this endpoint.
@@ -132,58 +130,103 @@ public class AggregationClient implements Closeable {
   }
 
   /**
-   * Constructor with Conf object
-   * @param cfg Configuration to use
+   * Creates AggregationClient with no underlying Connection. Users of this constructor should limit
+   * themselves to methods here which take a {@link Table} argument, such as
+   * {@link #rowCount(Table, ColumnInterpreter, Scan)}. Use of methods which instead take a
+   * TableName, such as {@link #rowCount(TableName, ColumnInterpreter, Scan)}, will throw an
+   * IOException.
+   */
+  public AggregationClient() {
+    this(null, false);
+  }
+
+  /**
+   * Creates AggregationClient using the passed in Connection, which will be used by methods taking
+   * a {@link TableName} to create the necessary {@link Table} for the call. The Connection is
+   * externally managed by the caller and will not be closed if {@link #close()} is called. There is
+   * no need to call {@link #close()} for AggregationClients created this way.
+   * @param connection the connection to use
+   */
+  public AggregationClient(Connection connection) {
+    this(connection, false);
+  }
+
+  /**
+   * Creates AggregationClient with internally managed Connection, which will be used by methods
+   * taking a {@link TableName} to create the necessary {@link Table} for the call. The Connection
+   * will immediately be created will be closed when {@link #close()} is called. It's important to
+   * call {@link #close()} when done with this AggregationClient and to otherwise treat it as a
+   * shared Singleton.
+   * @param cfg Configuration to use to create connection
    */
   public AggregationClient(Configuration cfg) {
+    // Create a connection on construction. Will use it making each of the calls below.
+    this(createConnection(cfg), true);
+  }
+
+  private static Connection createConnection(Configuration cfg) {
     try {
-      // Create a connection on construction. Will use it making each of the calls below.
-      this.connection = ConnectionFactory.createConnection(cfg);
+      return ConnectionFactory.createConnection(cfg);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
+  private AggregationClient(Connection connection, boolean manageConnection) {
+    this.connection = connection;
+    this.manageConnection = manageConnection;
+  }
+
   @Override
   public void close() throws IOException {
-    if (this.connection != null && !this.connection.isClosed()) {
+    if (manageConnection && this.connection != null && !this.connection.isClosed()) {
       this.connection.close();
     }
   }
 
+  // visible for tests
+  boolean isClosed() {
+    return manageConnection && this.connection != null && this.connection.isClosed();
+  }
+
+  private Connection getConnection() throws IOException {
+    if (connection == null) {
+      throw new IOException(
+        "Connection not initialized. Use the correct constructor, or use the methods taking a Table");
+    }
+    return connection;
+  }
+
   /**
-   * It gives the maximum value of a column for a given column family for the
-   * given range. In case qualifier is null, a max of all values for the given
-   * family is returned.
+   * It gives the maximum value of a column for a given column family for the given range. In case
+   * qualifier is null, a max of all values for the given family is returned.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return max val &lt;R&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> R max(
-          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R
+    max(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return max(table, ci, scan);
     }
   }
 
   /**
-   * It gives the maximum value of a column for a given column family for the
-   * given range. In case qualifier is null, a max of all values for the given
-   * family is returned.
+   * It gives the maximum value of a column for a given column family for the given range. In case
+   * qualifier is null, a max of all values for the given family is returned.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return max val &lt;&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R max(final Table table,
+    final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
@@ -199,61 +242,58 @@ public class AggregationClient implements Closeable {
     }
     MaxCallBack aMaxCallBack = new MaxCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, R>() {
-          @Override
-          public R call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getMax(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            if (response.getFirstPartCount() > 0) {
-              ByteString b = response.getFirstPart(0);
-              Q q = getParsedGenericInstance(ci.getClass(), 3, b);
-              return ci.getCellValueFromProto(q);
-            }
-            return null;
+      new Batch.Call<AggregateService, R>() {
+        @Override
+        public R call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getMax(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
           }
-        }, aMaxCallBack);
+          if (response.getFirstPartCount() > 0) {
+            ByteString b = response.getFirstPart(0);
+            Q q = getParsedGenericInstance(ci.getClass(), 3, b);
+            return ci.getCellValueFromProto(q);
+          }
+          return null;
+        }
+      }, aMaxCallBack);
     return aMaxCallBack.getMax();
   }
 
   /**
-   * It gives the minimum value of a column for a given column family for the
-   * given range. In case qualifier is null, a min of all values for the given
-   * family is returned.
+   * It gives the minimum value of a column for a given column family for the given range. In case
+   * qualifier is null, a min of all values for the given family is returned.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return min val &lt;R&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> R min(
-          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R
+    min(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return min(table, ci, scan);
     }
   }
 
   /**
-   * It gives the minimum value of a column for a given column family for the
-   * given range. In case qualifier is null, a min of all values for the given
-   * family is returned.
+   * It gives the minimum value of a column for a given column family for the given range. In case
+   * qualifier is null, a min of all values for the given family is returned.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return min val &lt;R&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    R min(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R min(final Table table,
+    final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
       private R min = null;
@@ -270,68 +310,66 @@ public class AggregationClient implements Closeable {
 
     MinCallBack minCallBack = new MinCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, R>() {
-          @Override
-          public R call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getMin(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            if (response.getFirstPartCount() > 0) {
-              ByteString b = response.getFirstPart(0);
-              Q q = getParsedGenericInstance(ci.getClass(), 3, b);
-              return ci.getCellValueFromProto(q);
-            }
-            return null;
+      new Batch.Call<AggregateService, R>() {
+        @Override
+        public R call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getMin(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
           }
-        }, minCallBack);
+          if (response.getFirstPartCount() > 0) {
+            ByteString b = response.getFirstPart(0);
+            Q q = getParsedGenericInstance(ci.getClass(), 3, b);
+            return ci.getCellValueFromProto(q);
+          }
+          return null;
+        }
+      }, minCallBack);
     log.debug("Min fom all regions is: " + minCallBack.getMinimum());
     return minCallBack.getMinimum();
   }
 
   /**
-   * It gives the row count, by summing up the individual results obtained from
-   * regions. In case the qualifier is null, FirstKeyValueFilter is used to
-   * optimised the operation. In case qualifier is provided, I can't use the
-   * filter as it may set the flag to skip to next row, but the value read is
-   * not of the given filter: in this case, this particular row will not be
-   * counted ==&gt; an error.
+   * It gives the row count, by summing up the individual results obtained from regions. In case the
+   * qualifier is null, FirstKeyValueFilter is used to optimised the operation. In case qualifier is
+   * provided, I can't use the filter as it may set the flag to skip to next row, but the value read
+   * is not of the given filter: in this case, this particular row will not be counted ==&gt; an
+   * error.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
-          final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> long
+    rowCount(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return rowCount(table, ci, scan);
     }
   }
 
   /**
-   * It gives the row count, by summing up the individual results obtained from
-   * regions. In case the qualifier is null, FirstKeyValueFilter is used to
-   * optimised the operation. In case qualifier is provided, I can't use the
-   * filter as it may set the flag to skip to next row, but the value read is
-   * not of the given filter: in this case, this particular row will not be
-   * counted ==&gt; an error.
+   * It gives the row count, by summing up the individual results obtained from regions. In case the
+   * qualifier is null, FirstKeyValueFilter is used to optimised the operation. In case qualifier is
+   * provided, I can't use the filter as it may set the flag to skip to next row, but the value read
+   * is not of the given filter: in this case, this particular row will not be counted ==&gt; an
+   * error.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    long rowCount(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> long
+    rowCount(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
@@ -348,57 +386,56 @@ public class AggregationClient implements Closeable {
 
     RowNumCallback rowNum = new RowNumCallback();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, Long>() {
-          @Override
-          public Long call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getRowNum(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            byte[] bytes = getBytesFromResponse(response.getFirstPart(0));
-            ByteBuffer bb = ByteBuffer.allocate(8).put(bytes);
-            bb.rewind();
-            return bb.getLong();
+      new Batch.Call<AggregateService, Long>() {
+        @Override
+        public Long call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getRowNum(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
           }
-        }, rowNum);
+          byte[] bytes = getBytesFromResponse(response.getFirstPart(0));
+          ByteBuffer bb = ByteBuffer.allocate(8).put(bytes);
+          bb.rewind();
+          return bb.getLong();
+        }
+      }, rowNum);
     return rowNum.getRowNumCount();
   }
 
   /**
-   * It sums up the value returned from various regions. In case qualifier is
-   * null, summation of all the column qualifiers in the given family is done.
+   * It sums up the value returned from various regions. In case qualifier is null, summation of all
+   * the column qualifiers in the given family is done.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return sum &lt;S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
-      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-    throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> S
+    sum(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return sum(table, ci, scan);
     }
   }
 
   /**
-   * It sums up the value returned from various regions. In case qualifier is
-   * null, summation of all the column qualifiers in the given family is done.
+   * It sums up the value returned from various regions. In case qualifier is null, summation of all
+   * the column qualifiers in the given family is done.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return sum &lt;S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    S sum(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-          throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> S sum(final Table table,
+    final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
 
     class SumCallBack implements Batch.Callback<S> {
@@ -415,59 +452,59 @@ public class AggregationClient implements Closeable {
     }
     SumCallBack sumCallBack = new SumCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, S>() {
-          @Override
-          public S call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            // Not sure what is going on here why I have to do these casts. TODO.
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getSum(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            if (response.getFirstPartCount() == 0) {
-              return null;
-            }
-            ByteString b = response.getFirstPart(0);
-            T t = getParsedGenericInstance(ci.getClass(), 4, b);
-            S s = ci.getPromotedValueFromProto(t);
-            return s;
+      new Batch.Call<AggregateService, S>() {
+        @Override
+        public S call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          // Not sure what is going on here why I have to do these casts. TODO.
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getSum(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
           }
-        }, sumCallBack);
+          if (response.getFirstPartCount() == 0) {
+            return null;
+          }
+          ByteString b = response.getFirstPart(0);
+          T t = getParsedGenericInstance(ci.getClass(), 4, b);
+          S s = ci.getPromotedValueFromProto(t);
+          return s;
+        }
+      }, sumCallBack);
     return sumCallBack.getSumResult();
   }
 
   /**
-   * It computes average while fetching sum and row count from all the
-   * corresponding regions. Approach is to compute a global sum of region level
-   * sum and rowcount and then compute the average.
+   * It computes average while fetching sum and row count from all the corresponding regions.
+   * Approach is to compute a global sum of region level sum and rowcount and then compute the
+   * average.
    * @param tableName the name of the table to scan
-   * @param scan the HBase scan object to use to read data from HBase
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @param scan      the HBase scan object to use to read data from HBase
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
-      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+    final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+    throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return getAvgArgs(table, ci, scan);
     }
   }
 
   /**
-   * It computes average while fetching sum and row count from all the
-   * corresponding regions. Approach is to compute a global sum of region level
-   * sum and rowcount and then compute the average.
+   * It computes average while fetching sum and row count from all the corresponding regions.
+   * Approach is to compute a global sum of region level sum and rowcount and then compute the
+   * average.
    * @param table table to scan.
-   * @param scan the HBase scan object to use to read data from HBase
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @param scan  the HBase scan object to use to read data from HBase
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  private <R, S, P extends Message, Q extends Message, T extends Message>
-    Pair<S, Long> getAvgArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
-          final Scan scan) throws Throwable {
+  private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long>
+    getAvgArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
@@ -486,90 +523,85 @@ public class AggregationClient implements Closeable {
 
     AvgCallBack avgCallBack = new AvgCallBack();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, Pair<S, Long>>() {
-          @Override
-          public Pair<S, Long> call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getAvg(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            Pair<S, Long> pair = new Pair<>(null, 0L);
-            if (response.getFirstPartCount() == 0) {
-              return pair;
-            }
-            ByteString b = response.getFirstPart(0);
-            T t = getParsedGenericInstance(ci.getClass(), 4, b);
-            S s = ci.getPromotedValueFromProto(t);
-            pair.setFirst(s);
-            ByteBuffer bb = ByteBuffer.allocate(8).put(
-                getBytesFromResponse(response.getSecondPart()));
-            bb.rewind();
-            pair.setSecond(bb.getLong());
+      new Batch.Call<AggregateService, Pair<S, Long>>() {
+        @Override
+        public Pair<S, Long> call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getAvg(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
+          }
+          Pair<S, Long> pair = new Pair<>(null, 0L);
+          if (response.getFirstPartCount() == 0) {
             return pair;
           }
-        }, avgCallBack);
+          ByteString b = response.getFirstPart(0);
+          T t = getParsedGenericInstance(ci.getClass(), 4, b);
+          S s = ci.getPromotedValueFromProto(t);
+          pair.setFirst(s);
+          ByteBuffer bb =
+            ByteBuffer.allocate(8).put(getBytesFromResponse(response.getSecondPart()));
+          bb.rewind();
+          pair.setSecond(bb.getLong());
+          return pair;
+        }
+      }, avgCallBack);
     return avgCallBack.getAvgArgs();
   }
 
   /**
-   * This is the client side interface/handle for calling the average method for
-   * a given cf-cq combination. It was necessary to add one more call stack as
-   * its return type should be a decimal value, irrespective of what
-   * columninterpreter says. So, this methods collects the necessary parameters
-   * to compute the average and returs the double value.
+   * This is the client side interface/handle for calling the average method for a given cf-cq
+   * combination. It was necessary to add one more call stack as its return type should be a decimal
+   * value, irrespective of what columninterpreter says. So, this methods collects the necessary
+   * parameters to compute the average and returs the double value.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    double avg(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci,
-          Scan scan) throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> double
+    avg(final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan)
+      throws Throwable {
     Pair<S, Long> p = getAvgArgs(tableName, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
 
   /**
-   * This is the client side interface/handle for calling the average method for
-   * a given cf-cq combination. It was necessary to add one more call stack as
-   * its return type should be a decimal value, irrespective of what
-   * columninterpreter says. So, this methods collects the necessary parameters
-   * to compute the average and returs the double value.
+   * This is the client side interface/handle for calling the average method for a given cf-cq
+   * combination. It was necessary to add one more call stack as its return type should be a decimal
+   * value, irrespective of what columninterpreter says. So, this methods collects the necessary
+   * parameters to compute the average and returs the double value.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> double avg(
-          final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan)
-          throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> double
+    avg(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<S, Long> p = getAvgArgs(table, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
 
   /**
-   * It computes a global standard deviation for a given column and its value.
-   * Standard deviation is square root of (average of squares -
-   * average*average). From individual regions, it obtains sum, square sum and
-   * number of rows. With these, the above values are computed to get the global
-   * std.
+   * It computes a global standard deviation for a given column and its value. Standard deviation is
+   * square root of (average of squares - average*average). From individual regions, it obtains sum,
+   * square sum and number of rows. With these, the above values are computed to get the global std.
    * @param table table to scan.
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return standard deviations
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  private <R, S, P extends Message, Q extends Message, T extends Message>
-    Pair<List<S>, Long> getStdArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
-          final Scan scan) throws Throwable {
+  private <R, S, P extends Message, Q extends Message, T extends Message> Pair<List<S>, Long>
+    getStdArgs(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0L;
@@ -595,100 +627,94 @@ public class AggregationClient implements Closeable {
 
     StdCallback stdCallback = new StdCallback();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, Pair<List<S>, Long>>() {
-          @Override
-          public Pair<List<S>, Long> call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getStd(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-            Pair<List<S>, Long> pair = new Pair<>(new ArrayList<>(), 0L);
-            if (response.getFirstPartCount() == 0) {
-              return pair;
-            }
-            List<S> list = new ArrayList<>();
-            for (int i = 0; i < response.getFirstPartCount(); i++) {
-              ByteString b = response.getFirstPart(i);
-              T t = getParsedGenericInstance(ci.getClass(), 4, b);
-              S s = ci.getPromotedValueFromProto(t);
-              list.add(s);
-            }
-            pair.setFirst(list);
-            ByteBuffer bb = ByteBuffer.allocate(8).put(
-                getBytesFromResponse(response.getSecondPart()));
-            bb.rewind();
-            pair.setSecond(bb.getLong());
+      new Batch.Call<AggregateService, Pair<List<S>, Long>>() {
+        @Override
+        public Pair<List<S>, Long> call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getStd(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
+          }
+          Pair<List<S>, Long> pair = new Pair<>(new ArrayList<>(), 0L);
+          if (response.getFirstPartCount() == 0) {
             return pair;
           }
-        }, stdCallback);
+          List<S> list = new ArrayList<>();
+          for (int i = 0; i < response.getFirstPartCount(); i++) {
+            ByteString b = response.getFirstPart(i);
+            T t = getParsedGenericInstance(ci.getClass(), 4, b);
+            S s = ci.getPromotedValueFromProto(t);
+            list.add(s);
+          }
+          pair.setFirst(list);
+          ByteBuffer bb =
+            ByteBuffer.allocate(8).put(getBytesFromResponse(response.getSecondPart()));
+          bb.rewind();
+          pair.setSecond(bb.getLong());
+          return pair;
+        }
+      }, stdCallback);
     return stdCallback.getStdParams();
   }
 
   /**
-   * This is the client side interface/handle for calling the std method for a
-   * given cf-cq combination. It was necessary to add one more call stack as its
-   * return type should be a decimal value, irrespective of what
-   * columninterpreter says. So, this methods collects the necessary parameters
-   * to compute the std and returns the double value.
+   * This is the client side interface/handle for calling the std method for a given cf-cq
+   * combination. It was necessary to add one more call stack as its return type should be a decimal
+   * value, irrespective of what columninterpreter says. So, this methods collects the necessary
+   * parameters to compute the std and returns the double value.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
-      Scan scan) throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> double std(
+    final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return std(table, ci, scan);
     }
   }
 
   /**
-   * This is the client side interface/handle for calling the std method for a
-   * given cf-cq combination. It was necessary to add one more call stack as its
-   * return type should be a decimal value, irrespective of what
-   * columninterpreter says. So, this methods collects the necessary parameters
-   * to compute the std and returns the double value.
+   * This is the client side interface/handle for calling the std method for a given cf-cq
+   * combination. It was necessary to add one more call stack as its return type should be a decimal
+   * value, irrespective of what columninterpreter says. So, this methods collects the necessary
+   * parameters to compute the std and returns the double value.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return &lt;R, S&gt;
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> double std(
-      final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> double
+    std(final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<List<S>, Long> p = getStdArgs(table, ci, scan);
-    double res = 0d;
     double avg = ci.divideForAvg(p.getFirst().get(0), p.getSecond());
     double avgOfSumSq = ci.divideForAvg(p.getFirst().get(1), p.getSecond());
-    res = avgOfSumSq - (avg) * (avg); // variance
+    double res = avgOfSumSq - avg * avg; // variance
     res = Math.pow(res, 0.5);
     return res;
   }
 
   /**
-   * It helps locate the region with median for a given column whose weight
-   * is specified in an optional column.
-   * From individual regions, it obtains sum of values and sum of weights.
+   * It helps locate the region with median for a given column whose weight is specified in an
+   * optional column. From individual regions, it obtains sum of values and sum of weights.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
-   * @return pair whose first element is a map between start row of the region
-   *   and (sum of values, sum of weights) for the region, the second element is
-   *   (sum of values, sum of weights) for all the regions chosen
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
+   * @return pair whose first element is a map between start row of the region and (sum of values,
+   *         sum of weights) for the region, the second element is (sum of values, sum of weights)
+   *         for all the regions chosen
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-    Pair<NavigableMap<byte[], List<S>>, List<S>>
-    getMedianArgs(final Table table,
+    Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -712,64 +738,63 @@ public class AggregationClient implements Closeable {
     }
     StdCallback stdCallback = new StdCallback();
     table.coprocessorService(AggregateService.class, scan.getStartRow(), scan.getStopRow(),
-        new Batch.Call<AggregateService, List<S>>() {
-          @Override
-          public List<S> call(AggregateService instance) throws IOException {
-            RpcController controller = new AggregationClientRpcController();
-            CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
-                new CoprocessorRpcUtils.BlockingRpcCallback<>();
-            instance.getMedian(controller, requestArg, rpcCallback);
-            AggregateResponse response = rpcCallback.get();
-            if (controller.failed()) {
-              throw new IOException(controller.errorText());
-            }
-
-            List<S> list = new ArrayList<>();
-            for (int i = 0; i < response.getFirstPartCount(); i++) {
-              ByteString b = response.getFirstPart(i);
-              T t = getParsedGenericInstance(ci.getClass(), 4, b);
-              S s = ci.getPromotedValueFromProto(t);
-              list.add(s);
-            }
-            return list;
+      new Batch.Call<AggregateService, List<S>>() {
+        @Override
+        public List<S> call(AggregateService instance) throws IOException {
+          RpcController controller = new AggregationClientRpcController();
+          CoprocessorRpcUtils.BlockingRpcCallback<AggregateResponse> rpcCallback =
+            new CoprocessorRpcUtils.BlockingRpcCallback<>();
+          instance.getMedian(controller, requestArg, rpcCallback);
+          AggregateResponse response = rpcCallback.get();
+          if (controller.failed()) {
+            throw new IOException(controller.errorText());
           }
 
-        }, stdCallback);
+          List<S> list = new ArrayList<>();
+          for (int i = 0; i < response.getFirstPartCount(); i++) {
+            ByteString b = response.getFirstPart(i);
+            T t = getParsedGenericInstance(ci.getClass(), 4, b);
+            S s = ci.getPromotedValueFromProto(t);
+            list.add(s);
+          }
+          return list;
+        }
+
+      }, stdCallback);
     return stdCallback.getMedianParams();
   }
 
   /**
-   * This is the client side interface/handler for calling the median method for a
-   * given cf-cq combination. This method collects the necessary parameters
-   * to compute the median and returns the median.
+   * This is the client side interface/handler for calling the median method for a given cf-cq
+   * combination. This method collects the necessary parameters to compute the median and returns
+   * the median.
    * @param tableName the name of the table to scan
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci        the user's ColumnInterpreter implementation
+   * @param scan      the HBase scan object to use to read data from HBase
    * @return R the median
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
-      Scan scan) throws Throwable {
-    try (Table table = connection.getTable(tableName)) {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R median(
+    final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+    try (Table table = getConnection().getTable(tableName)) {
       return median(table, ci, scan);
     }
   }
 
   /**
-   * This is the client side interface/handler for calling the median method for a
-   * given cf-cq combination. This method collects the necessary parameters
-   * to compute the median and returns the median.
+   * This is the client side interface/handler for calling the median method for a given cf-cq
+   * combination. This method collects the necessary parameters to compute the median and returns
+   * the median.
    * @param table table to scan.
-   * @param ci the user's ColumnInterpreter implementation
-   * @param scan the HBase scan object to use to read data from HBase
+   * @param ci    the user's ColumnInterpreter implementation
+   * @param scan  the HBase scan object to use to read data from HBase
    * @return R the median
-   * @throws Throwable The caller is supposed to handle the exception as they are thrown
-   *           &amp; propagated to it.
+   * @throws Throwable The caller is supposed to handle the exception as they are thrown &amp;
+   *                   propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message>
-    R median(final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+  public <R, S, P extends Message, Q extends Message, T extends Message> R median(final Table table,
+    ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(table, ci, scan);
     byte[] startRow = null;
     byte[] colFamily = scan.getFamilies()[0];
@@ -844,14 +869,6 @@ public class AggregationClient implements Closeable {
   }
 
   byte[] getBytesFromResponse(ByteString response) {
-    ByteBuffer bb = response.asReadOnlyByteBuffer();
-    bb.rewind();
-    byte[] bytes;
-    if (bb.hasArray()) {
-      bytes = bb.array();
-    } else {
-      bytes = response.toByteArray();
-    }
-    return bytes;
+    return response.toByteArray();
   }
 }

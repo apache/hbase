@@ -26,8 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class GssSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
 
-  public static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "KERBEROS", (byte)81, "GSSAPI", AuthenticationMethod.KERBEROS);
+  public static final SaslAuthMethod SASL_AUTH_METHOD =
+    new SaslAuthMethod("KERBEROS", (byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS);
 
   @Override
   public SaslAuthMethod getSaslAuthMethod() {

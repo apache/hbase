@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,20 +20,14 @@ package org.apache.hadoop.hbase.client;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Provide a way to access the inner buffer.
- * The purpose is to reduce the elapsed time to move a large number
- * of elements between collections.
- * @param <T>
+ * Provide a way to access the inner buffer. The purpose is to reduce the elapsed time to move a
+ * large number of elements between collections.
  */
 @InterfaceAudience.Private
 public interface RowAccess<T> extends Iterable<T> {
-  /**
-   * @return true if there are no elements.
-   */
+  /** Returns true if there are no elements. */
   boolean isEmpty();
 
-  /**
-   * @return the number of elements in this list.
-   */
+  /** Returns the number of elements in this list. */
   int size();
 }

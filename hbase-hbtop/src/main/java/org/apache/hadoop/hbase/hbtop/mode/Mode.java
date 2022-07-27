@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
  * Represents a display mode in the top screen.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("ImmutableEnumChecker")
 public enum Mode {
   NAMESPACE("Namespace", "Record per Namespace", new NamespaceModeStrategy()),
   TABLE("Table", "Record per Table", new TableModeStrategy()),
@@ -45,7 +45,7 @@ public enum Mode {
   private final ModeStrategy modeStrategy;
 
   Mode(String header, String description, ModeStrategy modeStrategy) {
-    this.header  = Objects.requireNonNull(header);
+    this.header = Objects.requireNonNull(header);
     this.description = Objects.requireNonNull(description);
     this.modeStrategy = Objects.requireNonNull(modeStrategy);
   }
@@ -59,7 +59,7 @@ public enum Mode {
   }
 
   public List<Record> getRecords(ClusterMetrics clusterMetrics,
-      List<RecordFilter> pushDownFilters) {
+    List<RecordFilter> pushDownFilters) {
     return modeStrategy.getRecords(clusterMetrics, pushDownFilters);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,12 @@ public class TestScannerWithCorruptHFile {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerWithCorruptHFile.class);
+    HBaseClassTestRule.forClass(TestScannerWithCorruptHFile.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
 
   @BeforeClass
   public static void setup() throws Exception {

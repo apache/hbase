@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
@@ -83,17 +82,23 @@ public class ScannerContext {
    * some limits and then repeatedly invoke {@link InternalScanner#next(List)} or
    * {@link RegionScanner#next(List)} where each invocation respects these limits separately.
    * <p>
-   * For example: <pre> {@code
+   * For example:
+   *
+   * <pre>
+   *  {@code
    * ScannerContext context = new ScannerContext.newBuilder().setBatchLimit(5).build();
    * RegionScanner scanner = ...
    * List<Cell> results = new ArrayList<Cell>();
    * while(scanner.next(results, context)) {
    *   // Do something with a batch of 5 cells
    * }
-   * }</pre> However, in the case of RPCs, the server wants to be able to define a set of
-   * limits for a particular RPC request and have those limits respected across multiple
-   * invocations. This means that the progress made towards the limits in earlier calls will be
-   * saved and considered in future invocations
+   * }
+   * </pre>
+   *
+   * However, in the case of RPCs, the server wants to be able to define a set of limits for a
+   * particular RPC request and have those limits respected across multiple invocations. This means
+   * that the progress made towards the limits in earlier calls will be saved and considered in
+   * future invocations
    */
   boolean keepProgress;
   private static boolean DEFAULT_KEEP_PROGRESS = false;
@@ -209,9 +214,8 @@ public class ScannerContext {
    * Note that this is not a typical setter. This setter returns the {@link NextState} that was
    * passed in so that methods can be invoked against the new state. Furthermore, this pattern
    * allows the {@link NoLimitScannerContext} to cleanly override this setter and simply return the
-   * new state, thus preserving the immutability of {@link NoLimitScannerContext}
-   * @param state
-   * @return The state that was passed in.
+   * new state, thus preserving the immutability of {@link NoLimitScannerContext} n * @return The
+   * state that was passed in.
    */
   NextState setScannerState(NextState state) {
     if (!NextState.isValidState(state)) {
@@ -227,40 +231,36 @@ public class ScannerContext {
    *         a limit in the middle of a row
    */
   boolean mayHaveMoreCellsInRow() {
-    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW ||
-        scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW ||
-        scannerState == NextState.BATCH_LIMIT_REACHED;
+    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
+      || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW
+      || scannerState == NextState.BATCH_LIMIT_REACHED;
   }
 
   /**
-   * @param checkerScope
-   * @return true if the batch limit can be enforced in the checker's scope
+   * n * @return true if the batch limit can be enforced in the checker's scope
    */
   boolean hasBatchLimit(LimitScope checkerScope) {
     return limits.canEnforceBatchLimitFromScope(checkerScope) && limits.getBatch() > 0;
   }
 
   /**
-   * @param checkerScope
-   * @return true if the size limit can be enforced in the checker's scope
+   * n * @return true if the size limit can be enforced in the checker's scope
    */
   boolean hasSizeLimit(LimitScope checkerScope) {
     return limits.canEnforceSizeLimitFromScope(checkerScope)
-        && (limits.getDataSize() > 0 || limits.getHeapSize() > 0);
+      && (limits.getDataSize() > 0 || limits.getHeapSize() > 0);
   }
 
   /**
-   * @param checkerScope
-   * @return true if the time limit can be enforced in the checker's scope
+   * n * @return true if the time limit can be enforced in the checker's scope
    */
   boolean hasTimeLimit(LimitScope checkerScope) {
-    return limits.canEnforceTimeLimitFromScope(checkerScope) &&
-      (limits.getTime() > 0 || returnImmediately);
+    return limits.canEnforceTimeLimitFromScope(checkerScope)
+      && (limits.getTime() > 0 || returnImmediately);
   }
 
   /**
-   * @param checkerScope
-   * @return true if any limit can be enforced within the checker's scope
+   * n * @return true if any limit can be enforced within the checker's scope
    */
   boolean hasAnyLimit(LimitScope checkerScope) {
     return hasBatchLimit(checkerScope) || hasSizeLimit(checkerScope) || hasTimeLimit(checkerScope);
@@ -306,17 +306,17 @@ public class ScannerContext {
    */
   boolean checkSizeLimit(LimitScope checkerScope) {
     return hasSizeLimit(checkerScope) && (progress.getDataSize() >= limits.getDataSize()
-        || progress.getHeapSize() >= limits.getHeapSize());
+      || progress.getHeapSize() >= limits.getHeapSize());
   }
 
   /**
    * @param checkerScope The scope that the limit is being checked from. The time limit is always
-   *          checked against {@link EnvironmentEdgeManager.currentTime}
+   *                     checked against {@link EnvironmentEdgeManager.currentTime}
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
-    return hasTimeLimit(checkerScope) &&
-      (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
+    return hasTimeLimit(checkerScope)
+      && (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
   }
 
   /**
@@ -325,7 +325,7 @@ public class ScannerContext {
    */
   boolean checkAnyLimitReached(LimitScope checkerScope) {
     return checkSizeLimit(checkerScope) || checkBatchLimit(checkerScope)
-        || checkTimeLimit(checkerScope);
+      || checkTimeLimit(checkerScope);
   }
 
   Cell getLastPeekedCell() {
@@ -452,9 +452,7 @@ public class ScannerContext {
       return this.moreValues;
     }
 
-    /**
-     * @return true when the state indicates that a limit has been reached and scan should stop
-     */
+    /** Returns true when the state indicates that a limit has been reached and scan should stop */
     public boolean limitReached() {
       return this.limitReached;
     }
@@ -555,7 +553,7 @@ public class ScannerContext {
     void copy(LimitFields limitsToCopy) {
       if (limitsToCopy != null) {
         setFields(limitsToCopy.getBatch(), limitsToCopy.getSizeScope(), limitsToCopy.getDataSize(),
-            limitsToCopy.getHeapSize(), limitsToCopy.getTimeScope(), limitsToCopy.getTime());
+          limitsToCopy.getHeapSize(), limitsToCopy.getTimeScope(), limitsToCopy.getTime());
       }
     }
 
@@ -563,7 +561,7 @@ public class ScannerContext {
      * Set all fields together.
      */
     void setFields(int batch, LimitScope sizeScope, long dataSize, long heapSize,
-        LimitScope timeScope, long time) {
+      LimitScope timeScope, long time) {
       setBatch(batch);
       setSizeScope(sizeScope);
       setDataSize(dataSize);
@@ -581,8 +579,7 @@ public class ScannerContext {
     }
 
     /**
-     * @param checkerScope
-     * @return true when the limit can be enforced from the scope of the checker
+     * n * @return true when the limit can be enforced from the scope of the checker
      */
     boolean canEnforceBatchLimitFromScope(LimitScope checkerScope) {
       return LimitScope.BETWEEN_CELLS.canEnforceLimitFromScope(checkerScope);
@@ -604,9 +601,7 @@ public class ScannerContext {
       this.heapSize = heapSize;
     }
 
-    /**
-     * @return {@link LimitScope} indicating scope in which the size limit is enforced
-     */
+    /** Returns {@link LimitScope} indicating scope in which the size limit is enforced */
     LimitScope getSizeScope() {
       return this.sizeScope;
     }
@@ -619,8 +614,7 @@ public class ScannerContext {
     }
 
     /**
-     * @param checkerScope
-     * @return true when the limit can be enforced from the scope of the checker
+     * n * @return true when the limit can be enforced from the scope of the checker
      */
     boolean canEnforceSizeLimitFromScope(LimitScope checkerScope) {
       return this.sizeScope.canEnforceLimitFromScope(checkerScope);
@@ -634,9 +628,7 @@ public class ScannerContext {
       this.time = time;
     }
 
-    /**
-     * @return {@link LimitScope} indicating scope in which the time limit is enforced
-     */
+    /** Returns {@link LimitScope} indicating scope in which the time limit is enforced */
     LimitScope getTimeScope() {
       return this.timeScope;
     }
@@ -649,8 +641,7 @@ public class ScannerContext {
     }
 
     /**
-     * @param checkerScope
-     * @return true when the limit can be enforced from the scope of the checker
+     * n * @return true when the limit can be enforced from the scope of the checker
      */
     boolean canEnforceTimeLimitFromScope(LimitScope checkerScope) {
       return this.timeScope.canEnforceLimitFromScope(checkerScope);

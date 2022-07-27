@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,25 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.rest.protobuf.generated.TableInfoMessage.TableInfo;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Representation of a list of table regions.
@@ -49,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="TableInfo")
+@XmlRootElement(name = "TableInfo")
 @InterfaceAudience.Private
 public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
@@ -60,11 +56,11 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   /**
    * Default constructor
    */
-  public TableInfoModel() {}
+  public TableInfoModel() {
+  }
 
   /**
-   * Constructor
-   * @param name
+   * Constructor n
    */
   public TableInfoModel(String name) {
     this.name = name;
@@ -86,18 +82,14 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
     return regions.get(index);
   }
 
-  /**
-   * @return the table name
-   */
+  /** Returns the table name */
   @XmlAttribute
   public String getName() {
     return name;
   }
 
-  /**
-   * @return the regions
-   */
-  @XmlElement(name="Region")
+  /** Returns the regions */
+  @XmlElement(name = "Region")
   public List<TableRegionModel> getRegions() {
     return regions;
   }
@@ -116,13 +108,14 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
     this.regions = regions;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    for(TableRegionModel aRegion : regions) {
+    for (TableRegionModel aRegion : regions) {
       sb.append(aRegion.toString());
       sb.append('\n');
     }
@@ -133,7 +126,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   public byte[] createProtobufOutput() {
     TableInfo.Builder builder = TableInfo.newBuilder();
     builder.setName(name);
-    for (TableRegionModel aRegion: regions) {
+    for (TableRegionModel aRegion : regions) {
       TableInfo.Region.Builder regionBuilder = TableInfo.Region.newBuilder();
       regionBuilder.setName(aRegion.getName());
       regionBuilder.setId(aRegion.getId());
@@ -146,16 +139,14 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     TableInfo.Builder builder = TableInfo.newBuilder();
     ProtobufUtil.mergeFrom(builder, message);
     setName(builder.getName());
-    for (TableInfo.Region region: builder.getRegionsList()) {
-      add(new TableRegionModel(builder.getName(), region.getId(),
-          region.getStartKey().toByteArray(),
-          region.getEndKey().toByteArray(),
-          region.getLocation()));
+    for (TableInfo.Region region : builder.getRegionsList()) {
+      add(
+        new TableRegionModel(builder.getName(), region.getId(), region.getStartKey().toByteArray(),
+          region.getEndKey().toByteArray(), region.getLocation()));
     }
     return this;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -33,7 +32,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,6 +39,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Emits Sorted KeyValues. Parse the passed text and creates KeyValues. Sorts them before emit.
@@ -49,8 +48,8 @@ import org.apache.hadoop.util.StringUtils;
  * @see PutSortReducer
  */
 @InterfaceAudience.Public
-public class TextSortReducer extends
-    Reducer<ImmutableBytesWritable, Text, ImmutableBytesWritable, KeyValue> {
+public class TextSortReducer
+  extends Reducer<ImmutableBytesWritable, Text, ImmutableBytesWritable, KeyValue> {
 
   /** Timestamp for all inserted rows */
   private long ts;
@@ -90,12 +89,10 @@ public class TextSortReducer extends
   }
 
   /**
-   * Handles initializing this class with objects specific to it (i.e., the parser).
-   * Common initialization that might be leveraged by a subsclass is done in
-   * <code>doSetup</code>. Hence a subclass may choose to override this method
-   * and call <code>doSetup</code> as well before handling it's own custom params.
-   *
-   * @param context
+   * Handles initializing this class with objects specific to it (i.e., the parser). Common
+   * initialization that might be leveraged by a subsclass is done in <code>doSetup</code>. Hence a
+   * subclass may choose to override this method and call <code>doSetup</code> as well before
+   * handling it's own custom params. n
    */
   @Override
   protected void setup(Context context) {
@@ -110,9 +107,7 @@ public class TextSortReducer extends
   }
 
   /**
-   * Handles common parameter initialization that a subclass might want to leverage.
-   * @param context
-   * @param conf
+   * Handles common parameter initialization that a subclass might want to leverage. nn
    */
   protected void doSetup(Context context, Configuration conf) {
     // If a custom separator has been used,
@@ -132,16 +127,11 @@ public class TextSortReducer extends
   }
 
   @Override
-  protected void reduce(
-      ImmutableBytesWritable rowKey,
-      java.lang.Iterable<Text> lines,
-      Reducer<ImmutableBytesWritable, Text,
-              ImmutableBytesWritable, KeyValue>.Context context)
-      throws java.io.IOException, InterruptedException
-  {
+  protected void reduce(ImmutableBytesWritable rowKey, java.lang.Iterable<Text> lines,
+    Reducer<ImmutableBytesWritable, Text, ImmutableBytesWritable, KeyValue>.Context context)
+    throws java.io.IOException, InterruptedException {
     // although reduce() is called per-row, handle pathological case
-    long threshold = context.getConfiguration().getLong(
-        "reducer.row.threshold", 1L * (1<<30));
+    long threshold = context.getConfiguration().getLong("reducer.row.threshold", 1L * (1 << 30));
     Iterator<Text> iter = lines.iterator();
     while (iter.hasNext()) {
       Set<KeyValue> kvs = new TreeSet<>(CellComparator.getInstance());
@@ -160,8 +150,8 @@ public class TextSortReducer extends
           // create tags for the parsed line
           List<Tag> tags = new ArrayList<>();
           if (cellVisibilityExpr != null) {
-            tags.addAll(kvCreator.getVisibilityExpressionResolver().createVisibilityExpTags(
-              cellVisibilityExpr));
+            tags.addAll(kvCreator.getVisibilityExpressionResolver()
+              .createVisibilityExpTags(cellVisibilityExpr));
           }
           // Add TTL directly to the KV so we can vary them when packing more than one KV
           // into puts
@@ -169,23 +159,25 @@ public class TextSortReducer extends
             tags.add(new ArrayBackedTag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
           }
           for (int i = 0; i < parsed.getColumnCount(); i++) {
-            if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
-                || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()
-                || i == parser.getCellTTLColumnIndex()) {
+            if (
+              i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
+                || i == parser.getAttributesKeyColumnIndex()
+                || i == parser.getCellVisibilityColumnIndex() || i == parser.getCellTTLColumnIndex()
+            ) {
               continue;
             }
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
             Cell cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(),
-                parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
-                parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
-                parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
+              parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
+              parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
+              parsed.getColumnOffset(i), parsed.getColumnLength(i), tags);
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             kvs.add(kv);
             curSize += kv.heapSize();
           }
         } catch (ImportTsv.TsvParser.BadTsvLineException | IllegalArgumentException
-            | InvalidLabelException badLine) {
+          | InvalidLabelException badLine) {
           if (skipBadLines) {
             System.err.println("Bad line." + badLine.getMessage());
             incrementBadLineCount(1);
@@ -194,13 +186,12 @@ public class TextSortReducer extends
           throw new IOException(badLine);
         }
       }
-      context.setStatus("Read " + kvs.size() + " entries of " + kvs.getClass()
-          + "(" + StringUtils.humanReadableInt(curSize) + ")");
+      context.setStatus("Read " + kvs.size() + " entries of " + kvs.getClass() + "("
+        + StringUtils.humanReadableInt(curSize) + ")");
       int index = 0;
       for (KeyValue kv : kvs) {
         context.write(rowKey, kv);
-        if (++index > 0 && index % 100 == 0)
-          context.setStatus("Wrote " + index + " key values.");
+        if (++index > 0 && index % 100 == 0) context.setStatus("Wrote " + index + " key values.");
       }
 
       // if we have more entries to process

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -102,18 +102,17 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     }
     if (conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) != null) {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + "," +
-          CPMasterObserver.class.getName());
+        conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
+          + CPMasterObserver.class.getName());
     } else {
       conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, CPMasterObserver.class.getName());
     }
 
-    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      NUM_SLAVES_BASE - 1);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_SLAVES_BASE);
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.setInt("hbase.rpc.timeout", 100000);
 
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     initialize();
   }
 
@@ -126,8 +125,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return MASTER.isInitialized() &&
-          ((RSGroupBasedLoadBalancer) MASTER.getLoadBalancer()).isOnline();
+        return MASTER.isInitialized()
+          && ((RSGroupBasedLoadBalancer) MASTER.getLoadBalancer()).isOnline();
       }
     });
     ADMIN.balancerSwitch(false, true);
@@ -287,8 +286,8 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   }
 
   protected final String getGroupName(String baseName) {
-    return GROUP_PREFIX + "_" + getNameWithoutIndex(baseName) + "_" +
-      ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+    return GROUP_PREFIX + "_" + getNameWithoutIndex(baseName) + "_"
+      + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
   }
 
   /**
@@ -304,9 +303,9 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
   protected final void toggleQuotaCheckAndRestartMiniCluster(boolean enable) throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, enable);
-    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE - 1);
+    TEST_UTIL.startMiniCluster(NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART,
-      NUM_SLAVES_BASE - 1);
+      NUM_SLAVES_BASE);
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     initialize();
   }
@@ -459,13 +458,13 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
 
     @Override
     public void preBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, BalanceRequest request) throws IOException {
+      String groupName, BalanceRequest request) throws IOException {
       preBalanceRSGroupCalled = true;
     }
 
     @Override
     public void postBalanceRSGroup(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
+      String groupName, BalanceRequest request, BalanceResponse response) throws IOException {
       postBalanceRSGroupCalled = true;
     }
 

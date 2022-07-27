@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndepende
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobSnapshotCloneIndependence.class);
+    HBaseClassTestRule.forClass(TestMobSnapshotCloneIndependence.class);
 
   /**
    * Setup the config for the cluster and start it

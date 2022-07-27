@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
@@ -30,18 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -50,15 +42,17 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.ipc.RemoteException;
@@ -66,32 +60,30 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
+import org.apache.hbase.thirdparty.com.google.common.collect.PeekingIterator;
 
 /**
- * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint}
- * implementation for replicating to another HBase cluster.
- * For the slave cluster it selects a random number of peers
- * using a replication ratio. For example, if replication ration = 0.1
- * and slave cluster has 100 region servers, 10 will be selected.
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} implementation for replicating
+ * to another HBase cluster. For the slave cluster it selects a random number of peers using a
+ * replication ratio. For example, if replication ration = 0.1 and slave cluster has 100 region
+ * servers, 10 will be selected.
  * <p>
- * A stream is considered down when we cannot contact a region server on the
- * peer cluster for more than 55 seconds by default.
+ * A stream is considered down when we cannot contact a region server on the peer cluster for more
+ * than 55 seconds by default.
  * </p>
  */
 @InterfaceAudience.Private
 public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoint {
   private static final Logger LOG =
-      LoggerFactory.getLogger(HBaseInterClusterReplicationEndpoint.class);
-
-  private static final long DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER = 2;
+    LoggerFactory.getLogger(HBaseInterClusterReplicationEndpoint.class);
 
   /** Drop edits for tables that been deleted from the replication source and target */
   public static final String REPLICATION_DROP_ON_DELETED_TABLE_KEY =
-      "hbase.replication.drop.on.deleted.table";
+    "hbase.replication.drop.on.deleted.table";
   /** Drop edits for CFs that been deleted from the replication source and target */
   public static final String REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY =
-      "hbase.replication.drop.on.deleted.columnfamily";
+    "hbase.replication.drop.on.deleted.columnfamily";
 
   // How long should we sleep for each retry
   private long sleepForRetries;
@@ -99,62 +91,46 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   private int maxRetriesMultiplier;
   // Socket timeouts require even bolder actions since we don't want to DDOS
   private int socketTimeoutMultiplier;
-  // Amount of time for shutdown to wait for all tasks to complete
-  private long maxTerminationWait;
   // Size limit for replication RPCs, in bytes
   private int replicationRpcLimit;
-  //Metrics for this source
+  // Metrics for this source
   private MetricsSource metrics;
   private boolean peersSelected = false;
   private String replicationClusterId = "";
-  private ThreadPoolExecutor exec;
   private int maxThreads;
   private Path baseNamespaceDir;
   private Path hfileArchiveDir;
   private boolean replicationBulkLoadDataEnabled;
-  private Abortable abortable;
   private boolean dropOnDeletedTables;
   private boolean dropOnDeletedColumnFamilies;
   private boolean isSerial = false;
-  //Initialising as 0 to guarantee at least one logging message
+  // Initialising as 0 to guarantee at least one logging message
   private long lastSinkFetchTime = 0;
+  private volatile boolean stopping = false;
 
   @Override
   public void init(Context context) throws IOException {
     super.init(context);
     decorateConf();
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
-    this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
-        maxRetriesMultiplier);
-    // A Replicator job is bound by the RPC timeout. We will wait this long for all Replicator
-    // tasks to terminate when doStop() is called.
-    long maxTerminationWaitMultiplier = this.conf.getLong(
-        "replication.source.maxterminationmultiplier",
-        DEFAULT_MAX_TERMINATION_WAIT_MULTIPLIER);
-    this.maxTerminationWait = maxTerminationWaitMultiplier *
-        this.conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-    this.sleepForRetries =
-        this.conf.getLong("replication.source.sleepforretries", 1000);
+    this.socketTimeoutMultiplier =
+      this.conf.getInt("replication.source.socketTimeoutMultiplier", maxRetriesMultiplier);
+    this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     this.metrics = context.getMetrics();
     // per sink thread pool
     this.maxThreads = this.conf.getInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY,
       HConstants.REPLICATION_SOURCE_MAXTHREADS_DEFAULT);
-    this.exec = Threads.getBoundedCachedThreadPool(maxThreads, 60, TimeUnit.SECONDS,
-        new ThreadFactoryBuilder().setDaemon(true).setNameFormat("SinkThread-%d").build());
-    this.abortable = ctx.getAbortable();
     // Set the size limit for replication RPCs to 95% of the max request size.
     // We could do with less slop if we have an accurate estimate of encoded size. Being
     // conservative for now.
-    this.replicationRpcLimit = (int)(0.95 * conf.getLong(RpcServer.MAX_REQUEST_SIZE,
-      RpcServer.DEFAULT_MAX_REQUEST_SIZE));
-    this.dropOnDeletedTables =
-        this.conf.getBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
-    this.dropOnDeletedColumnFamilies = this.conf
-        .getBoolean(REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY, false);
+    this.replicationRpcLimit =
+      (int) (0.95 * conf.getLong(RpcServer.MAX_REQUEST_SIZE, RpcServer.DEFAULT_MAX_REQUEST_SIZE));
+    this.dropOnDeletedTables = this.conf.getBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, false);
+    this.dropOnDeletedColumnFamilies =
+      this.conf.getBoolean(REPLICATION_DROP_ON_DELETED_COLUMN_FAMILY_KEY, false);
 
-    this.replicationBulkLoadDataEnabled =
-        conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
-          HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
+    this.replicationBulkLoadDataEnabled = conf.getBoolean(
+      HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
     if (this.replicationBulkLoadDataEnabled) {
       replicationClusterId = this.conf.get(HConstants.REPLICATION_CLUSTER_ID);
     }
@@ -188,15 +164,15 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   /**
    * Do the sleeping logic
-   * @param msg Why we sleep
+   * @param msg             Why we sleep
    * @param sleepMultiplier by how many times the default sleeping time is augmented
    * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
   private boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("{} {}, sleeping {} times {}",
-          logPeerId(), msg, sleepForRetries, sleepMultiplier);
+        LOG.trace("{} {}, sleeping {} times {}", logPeerId(), msg, sleepForRetries,
+          sleepMultiplier);
       }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
@@ -217,7 +193,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     int numSinks = Math.max(getNumSinks(), 1);
     int n = Math.min(Math.min(this.maxThreads, entries.size() / 100 + 1), numSinks);
     List<List<Entry>> entryLists =
-        Stream.generate(ArrayList<Entry>::new).limit(n).collect(Collectors.toList());
+      Stream.generate(ArrayList<Entry>::new).limit(n).collect(Collectors.toList());
     int[] sizes = new int[n];
     for (Entry e : entries) {
       int index = Math.abs(Bytes.hashCode(e.getKey().getEncodedRegionName()) % n);
@@ -239,7 +215,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     Map<byte[], List<Entry>> regionEntries = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (Entry e : entries) {
       regionEntries.computeIfAbsent(e.getKey().getEncodedRegionName(), key -> new ArrayList<>())
-          .add(e);
+        .add(e);
     }
     return new ArrayList<>(regionEntries.values());
   }
@@ -299,7 +275,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     List<List<Entry>> entryList = new ArrayList<>();
     Map<TableName, Boolean> existMap = new HashMap<>();
     try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
-         Admin localAdmin = localConn.getAdmin()) {
+      Admin localAdmin = localConn.getAdmin()) {
       for (List<Entry> oldEntries : oldEntryList) {
         List<Entry> entries = new ArrayList<>();
         for (Entry e : oldEntries) {
@@ -324,7 +300,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             // and add a table filter there; but that would break the encapsulation,
             // so we're doing the filtering here.
             LOG.warn("Missing table detected at sink, local table also does not exist, "
-                + "filtering edits for table '{}'", tableName);
+              + "filtering edits for table '{}'", tableName);
           }
         }
         if (!entries.isEmpty()) {
@@ -342,7 +318,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     List<List<Entry>> entryList = new ArrayList<>();
     Map<TableName, Set<String>> existColumnFamilyMap = new HashMap<>();
     try (Connection localConn = ConnectionFactory.createConnection(ctx.getLocalConfiguration());
-         Admin localAdmin = localConn.getAdmin()) {
+      Admin localAdmin = localConn.getAdmin()) {
       for (List<Entry> oldEntries : oldEntryList) {
         List<Entry> entries = new ArrayList<>();
         for (Entry e : oldEntries) {
@@ -350,7 +326,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           if (!existColumnFamilyMap.containsKey(tableName)) {
             try {
               Set<String> cfs = localAdmin.getDescriptor(tableName).getColumnFamilyNames().stream()
-                  .map(Bytes::toString).collect(Collectors.toSet());
+                .map(Bytes::toString).collect(Collectors.toSet());
               existColumnFamilyMap.put(tableName, cfs);
             } catch (Exception ex) {
               LOG.warn("Exception getting cf names for local table {}", tableName, ex);
@@ -384,8 +360,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             // and add a table filter there; but that would break the encapsulation,
             // so we're doing the filtering here.
             LOG.warn(
-                "Missing column family detected at sink, local column family also does not exist,"
-                    + " filtering edits for table '{}',column family '{}'", tableName, missingCFs);
+              "Missing column family detected at sink, local column family also does not exist,"
+                + " filtering edits for table '{}',column family '{}'",
+              tableName, missingCFs);
           }
         }
         if (!entries.isEmpty()) {
@@ -399,30 +376,31 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     return entryList;
   }
 
-  private long parallelReplicate(CompletionService<Integer> pool, ReplicateContext replicateContext,
-      List<List<Entry>> batches) throws IOException {
-    int futures = 0;
+  private long parallelReplicate(ReplicateContext replicateContext, List<List<Entry>> batches)
+    throws IOException {
+    List<CompletableFuture<Integer>> futures =
+      new ArrayList<CompletableFuture<Integer>>(batches.size());
     for (int i = 0; i < batches.size(); i++) {
       List<Entry> entries = batches.get(i);
-      if (!entries.isEmpty()) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("{} Submitting {} entries of total size {}", logPeerId(), entries.size(),
-            replicateContext.getSize());
-        }
-        // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
-        pool.submit(createReplicator(entries, i, replicateContext.getTimeout()));
-        futures++;
+      if (entries.isEmpty()) {
+        continue;
       }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("{} Submitting {} entries of total size {}", logPeerId(), entries.size(),
+          replicateContext.getSize());
+      }
+      // RuntimeExceptions encountered here bubble up and are handled in ReplicationSource
+      futures.add(asyncReplicate(entries, i, replicateContext.getTimeout()));
     }
 
     IOException iox = null;
     long lastWriteTime = 0;
-    for (int i = 0; i < futures; i++) {
+
+    for (CompletableFuture<Integer> f : futures) {
       try {
         // wait for all futures, remove successful parts
         // (only the remaining parts will be retried)
-        Future<Integer> f = pool.take();
-        int index = f.get();
+        int index = FutureUtils.get(f);
         List<Entry> batch = batches.get(index);
         batches.set(index, Collections.emptyList()); // remove successful batch
         // Find the most recent write time in the batch
@@ -430,11 +408,10 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
         if (writeTime > lastWriteTime) {
           lastWriteTime = writeTime;
         }
-      } catch (InterruptedException ie) {
-        iox = new IOException(ie);
-      } catch (ExecutionException ee) {
-        iox = ee.getCause() instanceof IOException?
-          (IOException)ee.getCause(): new IOException(ee.getCause());
+      } catch (IOException e) {
+        iox = e;
+      } catch (RuntimeException e) {
+        iox = new IOException(e);
       }
     }
     if (iox != null) {
@@ -449,8 +426,8 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
    */
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
-    CompletionService<Integer> pool = new ExecutorCompletionService<>(this.exec);
     int sleepMultiplier = 1;
+    int initialTimeout = replicateContext.getTimeout();
 
     if (!peersSelected && this.isRunning()) {
       connectToPeers();
@@ -459,12 +436,12 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
     int numSinks = getNumSinks();
     if (numSinks == 0) {
-      if ((EnvironmentEdgeManager.currentTime() - lastSinkFetchTime) >=
-          (maxRetriesMultiplier*1000)) {
-        LOG.warn(
-          "No replication sinks found, returning without replicating. "
-            + "The source should retry with the same set of edits. Not logging this again for "
-            + "the next {} seconds.", maxRetriesMultiplier);
+      if (
+        (EnvironmentEdgeManager.currentTime() - lastSinkFetchTime) >= (maxRetriesMultiplier * 1000)
+      ) {
+        LOG.warn("No replication sinks found, returning without replicating. "
+          + "The source should retry with the same set of edits. Not logging this again for "
+          + "the next {} seconds.", maxRetriesMultiplier);
         lastSinkFetchTime = EnvironmentEdgeManager.currentTime();
       }
       sleepForRetries("No sinks available at peer", sleepMultiplier);
@@ -472,7 +449,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     }
 
     List<List<Entry>> batches = createBatches(replicateContext.getEntries());
-    while (this.isRunning() && !exec.isShutdown()) {
+    while (this.isRunning() && !this.stopping) {
       if (!isPeerEnabled()) {
         if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
           sleepMultiplier++;
@@ -481,7 +458,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       }
       try {
         // replicate the batches to sink side.
-        parallelReplicate(pool, replicateContext, batches);
+        parallelReplicate(replicateContext, batches);
         return true;
       } catch (IOException ioe) {
         if (ioe instanceof RemoteException) {
@@ -496,13 +473,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           } else if (dropOnDeletedColumnFamilies && isNoSuchColumnFamilyException(ioe)) {
             batches = filterNotExistColumnFamilyEdits(batches);
             if (batches.isEmpty()) {
-              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, " +
-                  "just return");
+              LOG.warn("After filter not exist column family's edits, 0 edits to replicate, "
+                + "just return");
               return true;
             }
           } else {
             LOG.warn("{} Peer encountered RemoteException, rechecking all sinks: ", logPeerId(),
-                ioe);
+              ioe);
             chooseSinks();
           }
         } else {
@@ -510,13 +487,17 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
             // This exception means we waited for more than 60s and nothing
             // happened, the cluster is alive and calling it right away
             // even for a test just makes things worse.
-            sleepForRetries("Encountered a SocketTimeoutException. Since the " +
-                  "call to the remote cluster timed out, which is usually " +
-                  "caused by a machine failure or a massive slowdown",
+            sleepForRetries(
+              "Encountered a SocketTimeoutException. Since the "
+                + "call to the remote cluster timed out, which is usually "
+                + "caused by a machine failure or a massive slowdown",
               this.socketTimeoutMultiplier);
           } else if (ioe instanceof ConnectException || ioe instanceof UnknownHostException) {
             LOG.warn("{} Peer is unavailable, rechecking all sinks: ", logPeerId(), ioe);
             chooseSinks();
+          } else if (ioe instanceof CallTimeoutException) {
+            replicateContext
+              .setTimeout(ReplicationUtils.getAdaptiveTimeout(initialTimeout, sleepMultiplier));
           } else {
             LOG.warn("{} Can't replicate because of a local or network error: ", logPeerId(), ioe);
           }
@@ -535,84 +516,120 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
 
   @Override
   protected void doStop() {
-    disconnect(); // don't call super.doStop()
     // Allow currently running replication tasks to finish
-    exec.shutdown();
-    try {
-      exec.awaitTermination(maxTerminationWait, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-    }
-    // Abort if the tasks did not terminate in time
-    if (!exec.isTerminated()) {
-      String errMsg = "HBaseInterClusterReplicationEndpoint termination failed. The " +
-          "ThreadPoolExecutor failed to finish all tasks within " + maxTerminationWait + "ms. " +
-          "Aborting to prevent Replication from deadlocking. See HBASE-16081.";
-      abortable.abort(errMsg, new IOException(errMsg));
-    }
+    this.stopping = true;
+    disconnect(); // don't call super.doStop()
     notifyStopped();
   }
 
-  protected int replicateEntries(List<Entry> entries, int batchIndex, int timeout)
-      throws IOException {
+  protected CompletableFuture<Integer> replicateEntries(List<Entry> entries, int batchIndex,
+    int timeout) {
+    int entriesHashCode = System.identityHashCode(entries);
+    if (LOG.isTraceEnabled()) {
+      long size = entries.stream().mapToLong(this::getEstimatedEntrySize).sum();
+      LOG.trace("{} Replicating batch {} of {} entries with total size {} bytes to {}", logPeerId(),
+        entriesHashCode, entries.size(), size, replicationClusterId);
+    }
     SinkPeer sinkPeer = null;
+    final CompletableFuture<Integer> resultCompletableFuture = new CompletableFuture<Integer>();
     try {
-      int entriesHashCode = System.identityHashCode(entries);
-      if (LOG.isTraceEnabled()) {
-        long size = entries.stream().mapToLong(this::getEstimatedEntrySize).sum();
-        LOG.trace("{} Replicating batch {} of {} entries with total size {} bytes to {}",
-          logPeerId(), entriesHashCode, entries.size(), size, replicationClusterId);
-      }
       sinkPeer = getReplicationSink();
-      AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
-      try {
-        ReplicationProtobufUtil.replicateWALEntry(rsAdmin,
-          entries.toArray(new Entry[entries.size()]), replicationClusterId, baseNamespaceDir,
-          hfileArchiveDir, timeout);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("{} Completed replicating batch {}", logPeerId(), entriesHashCode);
+    } catch (IOException e) {
+      this.onReplicateWALEntryException(entriesHashCode, e, sinkPeer);
+      resultCompletableFuture.completeExceptionally(e);
+      return resultCompletableFuture;
+    }
+    assert sinkPeer != null;
+    AsyncRegionServerAdmin rsAdmin = sinkPeer.getRegionServer();
+    final SinkPeer sinkPeerToUse = sinkPeer;
+    FutureUtils.addListener(
+      ReplicationProtobufUtil.replicateWALEntry(rsAdmin, entries.toArray(new Entry[entries.size()]),
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir, timeout),
+      (response, exception) -> {
+        if (exception != null) {
+          onReplicateWALEntryException(entriesHashCode, exception, sinkPeerToUse);
+          resultCompletableFuture.completeExceptionally(exception);
+          return;
         }
-      } catch (IOException e) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("{} Failed replicating batch {}", logPeerId(), entriesHashCode, e);
-        }
-        throw e;
-      }
-      reportSinkSuccess(sinkPeer);
-    } catch (IOException ioe) {
+        reportSinkSuccess(sinkPeerToUse);
+        resultCompletableFuture.complete(batchIndex);
+      });
+    return resultCompletableFuture;
+  }
+
+  private void onReplicateWALEntryException(int entriesHashCode, Throwable exception,
+    final SinkPeer sinkPeer) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("{} Failed replicating batch {}", logPeerId(), entriesHashCode, exception);
+    }
+    if (exception instanceof IOException) {
       if (sinkPeer != null) {
         reportBadSink(sinkPeer);
       }
-      throw ioe;
     }
-    return batchIndex;
   }
 
-  private int serialReplicateRegionEntries(List<Entry> entries, int batchIndex, int timeout)
-      throws IOException {
-    int batchSize = 0, index = 0;
+  /**
+   * Here for {@link HBaseInterClusterReplicationEndpoint#isSerialis} is true, we iterator over the
+   * WAL {@link Entry} list, once we reached a batch limit, we send it out, and in the callback, we
+   * send the next batch, until we send all entries out.
+   */
+  private CompletableFuture<Integer> serialReplicateRegionEntries(
+    PeekingIterator<Entry> walEntryPeekingIterator, int batchIndex, int timeout) {
+    if (!walEntryPeekingIterator.hasNext()) {
+      return CompletableFuture.completedFuture(batchIndex);
+    }
+    int batchSize = 0;
     List<Entry> batch = new ArrayList<>();
-    for (Entry entry : entries) {
+    while (walEntryPeekingIterator.hasNext()) {
+      Entry entry = walEntryPeekingIterator.peek();
       int entrySize = getEstimatedEntrySize(entry);
       if (batchSize > 0 && batchSize + entrySize > replicationRpcLimit) {
-        replicateEntries(batch, index++, timeout);
-        batch.clear();
-        batchSize = 0;
+        break;
       }
+      walEntryPeekingIterator.next();
       batch.add(entry);
       batchSize += entrySize;
     }
-    if (batchSize > 0) {
-      replicateEntries(batch, index, timeout);
+
+    if (batchSize <= 0) {
+      return CompletableFuture.completedFuture(batchIndex);
     }
-    return batchIndex;
+    final CompletableFuture<Integer> resultCompletableFuture = new CompletableFuture<Integer>();
+    FutureUtils.addListener(replicateEntries(batch, batchIndex, timeout), (response, exception) -> {
+      if (exception != null) {
+        resultCompletableFuture.completeExceptionally(exception);
+        return;
+      }
+      if (!walEntryPeekingIterator.hasNext()) {
+        resultCompletableFuture.complete(batchIndex);
+        return;
+      }
+      FutureUtils.addListener(
+        serialReplicateRegionEntries(walEntryPeekingIterator, batchIndex, timeout),
+        (currentResponse, currentException) -> {
+          if (currentException != null) {
+            resultCompletableFuture.completeExceptionally(currentException);
+            return;
+          }
+          resultCompletableFuture.complete(batchIndex);
+        });
+    });
+    return resultCompletableFuture;
   }
 
-  protected Callable<Integer> createReplicator(List<Entry> entries, int batchIndex, int timeout) {
-    return isSerial ? () -> serialReplicateRegionEntries(entries, batchIndex, timeout)
-        : () -> replicateEntries(entries, batchIndex, timeout);
+  /**
+   * Replicate entries to peer cluster by async API.
+   */
+  protected CompletableFuture<Integer> asyncReplicate(List<Entry> entries, int batchIndex,
+    int timeout) {
+    return isSerial
+      ? serialReplicateRegionEntries(Iterators.peekingIterator(entries.iterator()), batchIndex,
+        timeout)
+      : replicateEntries(entries, batchIndex, timeout);
   }
 
-  private String logPeerId(){
+  private String logPeerId() {
     return "[Source for peer " + this.ctx.getPeerId() + "]:";
   }
 }

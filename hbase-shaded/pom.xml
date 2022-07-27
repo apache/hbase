@@ -1,8 +1,6 @@
-<?xml version="1.0"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!--
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!--
       /**
        * Licensed to the Apache Software Foundation (ASF) under one
        * or more contributor license agreements.  See the NOTICE file
@@ -23,23 +21,15 @@
       -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <artifactId>hbase-build-configuration</artifactId>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-shaded</artifactId>
+  <packaging>pom</packaging>
   <name>Apache HBase - Shaded</name>
   <description>Module of HBase with most deps shaded.</description>
-  <packaging>pom</packaging>
-  <properties>
-      <!-- Don't make a test-jar -->
-    <maven.test.skip>true</maven.test.skip>
-      <!-- Don't make a source-jar -->
-    <source.skip>true</source.skip>
-    <license.bundles.dependencies>true</license.bundles.dependencies>
-    <shaded.prefix>org.apache.hadoop.hbase.shaded</shaded.prefix>
-  </properties>
   <modules>
     <module>hbase-shaded-client-byo-hadoop</module>
     <module>hbase-shaded-client</module>
@@ -49,6 +39,14 @@
     <module>hbase-shaded-check-invariants</module>
     <module>hbase-shaded-with-hadoop-check-invariants</module>
   </modules>
+  <properties>
+    <!-- Don't make a test-jar -->
+    <maven.test.skip>true</maven.test.skip>
+    <!-- Don't make a source-jar -->
+    <source.skip>true</source.skip>
+    <license.bundles.dependencies>true</license.bundles.dependencies>
+    <shaded.prefix>org.apache.hadoop.hbase.shaded</shaded.prefix>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -73,47 +71,6 @@
     </dependency>
   </dependencies>
   <build>
-    <plugins>
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <!-- licensing info from our dependencies -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>aggregate-licenses</id>
-            <goals>
-              <goal>process</goal>
-            </goals>
-            <configuration>
-              <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
-              </properties>
-              <resourceBundles>
-                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
-              </resourceBundles>
-              <supplementalModelArtifacts>
-                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
-              </supplementalModelArtifacts>
-              <supplementalModels>
-                <supplementalModel>supplemental-models.xml</supplementalModel>
-              </supplementalModels>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -130,10 +87,10 @@
           <executions>
             <execution>
               <id>aggregate-into-a-jar-with-relocated-third-parties</id>
-              <phase>package</phase>
               <goals>
                 <goal>shade</goal>
               </goals>
+              <phase>package</phase>
               <configuration>
                 <createSourcesJar>false</createSourcesJar>
                 <shadedArtifactAttached>false</shadedArtifactAttached>
@@ -146,7 +103,8 @@
                          need not be included -->
                     <exclude>javax.annotation:javax.annotation-api</exclude>
                     <exclude>javax.activation:javax.activation-api</exclude>
-                    <exclude>jakarta.activation:jakarta.activation-api</exclude> <!-- Hadoop 3.3.1 -->
+                    <exclude>jakarta.activation:jakarta.activation-api</exclude>
+                    <!-- Hadoop 3.3.1 -->
                     <exclude>jakarta.ws.rs:jakarta.ws.rs-api</exclude>
                     <exclude>jakarta.annotation:jakarta.annotation-api</exclude>
                     <exclude>jakarta.validation:jakarta.validation-api</exclude>
@@ -460,24 +418,20 @@
                   <!-- Need to filter out some extraneous license files.
                        Don't use the ApacheLicenseRT because it just removes all
                        META-INF/LICENSE(.txt)? files, including ours. -->
-                  <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                     <resources>
                       <resource>LICENSE.txt</resource>
                       <resource>ASL2.0</resource>
-                                      <!-- also this unneeded doc -->
+                      <!-- also this unneeded doc -->
                       <resource>overview.html</resource>
                     </resources>
                   </transformer>
                   <!-- Where notices exist, just concat them -->
-                  <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
                     <addHeader>false</addHeader>
                     <projectName>${project.name}</projectName>
                   </transformer>
-                  <transformer
-                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer">
-                  </transformer>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                 </transformers>
                 <filters>
                   <!-- remove utility classes which are not required from dnsjava -->
@@ -491,7 +445,7 @@
                     </excludes>
                   </filter>
                   <filter>
-                                    <!-- this is a signed osgi bundle -->
+                    <!-- this is a signed osgi bundle -->
                     <artifact>org.eclipse.jetty.orbit:javax.servlet.jsp.jstl</artifact>
                     <excludes>
                       <exclude>META-INF/ECLIPSEF.SF</exclude>
@@ -525,8 +479,6 @@
                       <!-- We already concat NOTICE, safe to drop individual ones -->
                       <exclude>LICENSE</exclude>
                       <exclude>NOTICE</exclude>
-                      <!-- Remove the shaded guava added in hadoop-3.3.1+-->
-                      <exclude>org/apache/hadoop/thirdparty/**/*</exclude>
                     </excludes>
                   </filter>
                   <filter>
@@ -567,5 +519,47 @@
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- licensing info from our dependencies -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>aggregate-licenses</id>
+            <goals>
+              <goal>process</goal>
+            </goals>
+            <configuration>
+              <properties>
+                <copyright-end-year>${build.year}</copyright-end-year>
+                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
+                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                <bundled-vega>${license.bundles.vega}</bundled-vega>
+                <bundled-logo>${license.bundles.logo}</bundled-logo>
+                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+              </properties>
+              <resourceBundles>
+                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
+              </resourceBundles>
+              <supplementalModelArtifacts>
+                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
+              </supplementalModelArtifacts>
+              <supplementalModels>
+                <supplementalModel>supplemental-models.xml</supplementalModel>
+              </supplementalModels>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

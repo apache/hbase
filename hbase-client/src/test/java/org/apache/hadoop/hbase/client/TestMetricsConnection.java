@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,12 @@ import static org.junit.Assert.assertTrue;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -48,15 +51,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
-@Category({ClientTests.class, MetricsTests.class, SmallTests.class})
+@Category({ ClientTests.class, MetricsTests.class, SmallTests.class })
 public class TestMetricsConnection {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsConnection.class);
+    HBaseClassTestRule.forClass(TestMetricsConnection.class);
 
   private static MetricsConnection METRICS;
   private static final ThreadPoolExecutor BATCH_POOL =
     (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+
   @BeforeClass
   public static void beforeClass() {
     METRICS = new MetricsConnection("mocked-connection", () -> BATCH_POOL, () -> null);
@@ -68,73 +72,75 @@ public class TestMetricsConnection {
   }
 
   @Test
+  public void testMetricsConnectionScope() throws IOException {
+    Configuration conf = new Configuration();
+    String clusterId = "foo";
+    String scope = "testScope";
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+
+    AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+    Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present", metrics.isPresent());
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.get().scope);
+    conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
+    impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+
+    metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present", metrics.isPresent());
+    assertEquals(scope, metrics.get().scope);
+  }
+
+  @Test
   public void testStaticMetrics() throws IOException {
     final byte[] foo = Bytes.toBytes("foo");
-    final RegionSpecifier region = RegionSpecifier.newBuilder()
-        .setValue(ByteString.EMPTY)
-        .setType(RegionSpecifierType.REGION_NAME)
-        .build();
+    final RegionSpecifier region = RegionSpecifier.newBuilder().setValue(ByteString.EMPTY)
+      .setType(RegionSpecifierType.REGION_NAME).build();
     final int loop = 5;
 
     for (int i = 0; i < loop; i++) {
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Get"),
-          GetRequest.getDefaultInstance(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Scan"),
-          ScanRequest.getDefaultInstance(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Multi"),
-          MultiRequest.getDefaultInstance(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Mutate"),
-          MutateRequest.newBuilder()
-              .setMutation(ProtobufUtil.toMutation(MutationType.APPEND, new Append(foo)))
-              .setRegion(region)
-              .build(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Mutate"),
-          MutateRequest.newBuilder()
-              .setMutation(ProtobufUtil.toMutation(MutationType.DELETE, new Delete(foo)))
-              .setRegion(region)
-              .build(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Mutate"),
-          MutateRequest.newBuilder()
-              .setMutation(ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(foo)))
-              .setRegion(region)
-              .build(),
-          MetricsConnection.newCallStats());
-      METRICS.updateRpc(
-          ClientService.getDescriptor().findMethodByName("Mutate"),
-          MutateRequest.newBuilder()
-              .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo)))
-              .setRegion(region)
-              .build(),
-          MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Get"),
+        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Scan"),
+        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Multi"),
+        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        MutateRequest.newBuilder()
+          .setMutation(ProtobufUtil.toMutation(MutationType.APPEND, new Append(foo)))
+          .setRegion(region).build(),
+        MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        MutateRequest.newBuilder()
+          .setMutation(ProtobufUtil.toMutation(MutationType.DELETE, new Delete(foo)))
+          .setRegion(region).build(),
+        MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        MutateRequest.newBuilder()
+          .setMutation(ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(foo)))
+          .setRegion(region).build(),
+        MetricsConnection.newCallStats());
+      METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        MutateRequest.newBuilder()
+          .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
+          .build(),
+        MetricsConnection.newCallStats());
     }
-    for (String method: new String[]{"Get", "Scan", "Mutate"}) {
+    for (String method : new String[] { "Get", "Scan", "Mutate" }) {
       final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
       final long metricVal = METRICS.rpcCounters.get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
     }
-    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
-      METRICS.getTracker, METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker,
-      METRICS.deleteTracker, METRICS.incrementTracker, METRICS.putTracker
-    }) {
+    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] { METRICS.getTracker,
+      METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker, METRICS.deleteTracker,
+      METRICS.incrementTracker, METRICS.putTracker }) {
       assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
       assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
       assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
     }
-    RatioGauge executorMetrics = (RatioGauge) METRICS.getMetricRegistry()
-            .getMetrics().get(METRICS.getExecutorPoolName());
-    RatioGauge metaMetrics = (RatioGauge) METRICS.getMetricRegistry()
-            .getMetrics().get(METRICS.getMetaPoolName());
+    RatioGauge executorMetrics =
+      (RatioGauge) METRICS.getMetricRegistry().getMetrics().get(METRICS.getExecutorPoolName());
+    RatioGauge metaMetrics =
+      (RatioGauge) METRICS.getMetricRegistry().getMetrics().get(METRICS.getMetaPoolName());
     assertEquals(Ratio.of(0, 3).getValue(), executorMetrics.getValue(), 0);
     assertEquals(Double.NaN, metaMetrics.getValue(), 0);
   }

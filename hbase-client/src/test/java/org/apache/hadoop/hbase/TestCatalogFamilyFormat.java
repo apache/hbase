@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -69,8 +69,8 @@ public class TestCatalogFamilyFormat {
 
     assertArrayEquals(HConstants.STARTCODE_QUALIFIER, CatalogFamilyFormat.getStartCodeColumn(0));
     assertArrayEquals(
-      Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR +
-        CatalogFamilyFormat.META_REPLICA_ID_DELIMITER + "002A"),
+      Bytes.toBytes(HConstants.STARTCODE_QUALIFIER_STR
+        + CatalogFamilyFormat.META_REPLICA_ID_DELIMITER + "002A"),
       CatalogFamilyFormat.getStartCodeColumn(42));
 
     assertArrayEquals(HConstants.SEQNUM_QUALIFIER, CatalogFamilyFormat.getSeqNumColumn(0));
@@ -84,19 +84,18 @@ public class TestCatalogFamilyFormat {
    * The info we can get from the regionName is: table name, start key, regionId, replicaId.
    */
   @Test
-  public void testParseRegionInfoFromRegionName() throws IOException  {
-    RegionInfo originalRegionInfo = RegionInfoBuilder.newBuilder(
-        TableName.valueOf(name.getMethodName())).setRegionId(999999L)
-      .setStartKey(Bytes.toBytes("2")).setEndKey(Bytes.toBytes("3"))
-      .setReplicaId(1).build();
-    RegionInfo newParsedRegionInfo = CatalogFamilyFormat
-      .parseRegionInfoFromRegionName(originalRegionInfo.getRegionName());
+  public void testParseRegionInfoFromRegionName() throws IOException {
+    RegionInfo originalRegionInfo =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setRegionId(999999L)
+        .setStartKey(Bytes.toBytes("2")).setEndKey(Bytes.toBytes("3")).setReplicaId(1).build();
+    RegionInfo newParsedRegionInfo =
+      CatalogFamilyFormat.parseRegionInfoFromRegionName(originalRegionInfo.getRegionName());
     assertEquals("Parse TableName error", originalRegionInfo.getTable(),
       newParsedRegionInfo.getTable());
     assertEquals("Parse regionId error", originalRegionInfo.getRegionId(),
       newParsedRegionInfo.getRegionId());
-    assertTrue("Parse startKey error", Bytes.equals(originalRegionInfo.getStartKey(),
-      newParsedRegionInfo.getStartKey()));
+    assertTrue("Parse startKey error",
+      Bytes.equals(originalRegionInfo.getStartKey(), newParsedRegionInfo.getStartKey()));
     assertEquals("Parse replicaId error", originalRegionInfo.getReplicaId(),
       newParsedRegionInfo.getReplicaId());
     assertTrue("We can't parse endKey from regionName only",

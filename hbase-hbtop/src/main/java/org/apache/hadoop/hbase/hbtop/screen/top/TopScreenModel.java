@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * The data and business logic for the top screen.
@@ -87,12 +86,11 @@ public class TopScreenModel {
     if (initialFields != null) {
       List<Field> tmp = new ArrayList<>(initialFields);
       tmp.addAll(currentMode.getFieldInfos().stream().map(FieldInfo::getField)
-        .filter(f -> !initialFields.contains(f))
-        .collect(Collectors.toList()));
+        .filter(f -> !initialFields.contains(f)).collect(Collectors.toList()));
       fields = Collections.unmodifiableList(tmp);
     } else {
-      fields = Collections.unmodifiableList(currentMode.getFieldInfos().stream()
-        .map(FieldInfo::getField).collect(Collectors.toList()));
+      fields = Collections.unmodifiableList(
+        currentMode.getFieldInfos().stream().map(FieldInfo::getField).collect(Collectors.toList()));
     }
 
     if (keepSortFieldAndSortOrderIfPossible) {
@@ -146,8 +144,7 @@ public class TopScreenModel {
   }
 
   private void refreshSummary(ClusterMetrics clusterMetrics) {
-    String currentTime = ISO_8601_EXTENDED_TIME_FORMAT
-      .format(EnvironmentEdgeManager.currentTime());
+    String currentTime = ISO_8601_EXTENDED_TIME_FORMAT.format(EnvironmentEdgeManager.currentTime());
     String version = clusterMetrics.getHBaseVersion();
     String clusterId = clusterMetrics.getClusterId();
     int liveServers = clusterMetrics.getLiveServerMetrics().size();
@@ -158,16 +155,15 @@ public class TopScreenModel {
     long aggregateRequestPerSecond = clusterMetrics.getLiveServerMetrics().entrySet().stream()
       .mapToLong(e -> e.getValue().getRequestCountPerSecond()).sum();
 
-    summary = new Summary(currentTime, version, clusterId, liveServers + deadServers,
-      liveServers, deadServers, regionCount, ritCount, averageLoad, aggregateRequestPerSecond);
+    summary = new Summary(currentTime, version, clusterId, liveServers + deadServers, liveServers,
+      deadServers, regionCount, ritCount, averageLoad, aggregateRequestPerSecond);
   }
 
   private void refreshRecords(ClusterMetrics clusterMetrics) {
     List<Record> records = currentMode.getRecords(clusterMetrics, pushDownFilters);
 
     // Filter and sort
-    records = records.stream()
-      .filter(r -> filters.stream().allMatch(f -> f.execute(r)))
+    records = records.stream().filter(r -> filters.stream().allMatch(f -> f.execute(r)))
       .sorted((recordLeft, recordRight) -> {
         FieldValue left = recordLeft.get(currentSortField);
         FieldValue right = recordRight.get(currentSortField);

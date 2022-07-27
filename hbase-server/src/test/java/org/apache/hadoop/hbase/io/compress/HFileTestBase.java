@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.io.compress;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.security.SecureRandom;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,7 +45,6 @@ public class HFileTestBase {
 
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected static final Logger LOG = LoggerFactory.getLogger(HFileTestBase.class);
-  protected static final SecureRandom RNG = new SecureRandom();
   protected static FileSystem FS;
 
   public static void setUpBeforeClass() throws Exception {
@@ -56,26 +56,22 @@ public class HFileTestBase {
 
   @SuppressWarnings("deprecation")
   public void doTest(Configuration conf, Path path, Compression.Algorithm compression)
-      throws Exception {
+    throws Exception {
     // Create 10000 random test KVs
     RedundantKVGenerator generator = new RedundantKVGenerator();
     List<KeyValue> testKvs = generator.generateTestKeyValues(10000);
 
     // Iterate through data block encoding and compression combinations
     CacheConfig cacheConf = new CacheConfig(conf);
-    HFileContext fileContext = new HFileContextBuilder()
-      .withBlockSize(4096) // small block
-      .withCompression(compression)
-      .build();
+    HFileContext fileContext = new HFileContextBuilder().withBlockSize(4096) // small block
+      .withCompression(compression).build();
     // write a new test HFile
     LOG.info("Writing with " + fileContext);
     FSDataOutputStream out = FS.create(path);
-    HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
-      .withOutputStream(out)
-      .withFileContext(fileContext)
-      .create();
+    HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf).withOutputStream(out)
+      .withFileContext(fileContext).create();
     try {
-      for (KeyValue kv: testKvs) {
+      for (KeyValue kv : testKvs) {
         writer.append(kv);
       }
     } finally {
@@ -105,13 +101,14 @@ public class HFileTestBase {
     assertEquals("Did not read back as many KVs as written", i, testKvs.size());
 
     // Test random seeks with pread
+    Random rand = ThreadLocalRandom.current();
     LOG.info("Random seeking with " + fileContext);
     reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
       scanner = reader.getScanner(conf, false, true);
       assertTrue("Initial seekTo failed", scanner.seekTo());
       for (i = 0; i < 100; i++) {
-        KeyValue kv = testKvs.get(RNG.nextInt(testKvs.size()));
+        KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));
         assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
       }
     } finally {

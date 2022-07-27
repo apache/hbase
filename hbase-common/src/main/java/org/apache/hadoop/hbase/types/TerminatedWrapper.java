@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,9 +24,8 @@ import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Wraps an existing {@code DataType} implementation as a terminated
- * version of itself. This has the useful side-effect of turning an existing
- * {@code DataType} which is not {@code skippable} into a
+ * Wraps an existing {@code DataType} implementation as a terminated version of itself. This has the
+ * useful side-effect of turning an existing {@code DataType} which is not {@code skippable} into a
  * {@code skippable} variant.
  */
 @InterfaceAudience.Public
@@ -49,9 +48,8 @@ public class TerminatedWrapper<T> implements DataType<T> {
   }
 
   /**
-   * Create a terminated version of the {@code wrapped}.
-   * {@code term} is converted to a {@code byte[]} using
-   * {@link Bytes#toBytes(String)}.
+   * Create a terminated version of the {@code wrapped}. {@code term} is converted to a
+   * {@code byte[]} using {@link Bytes#toBytes(String)}.
    * @throws IllegalArgumentException when {@code term} is null or empty.
    */
   public TerminatedWrapper(DataType<T> wrapped, String term) {
@@ -89,8 +87,8 @@ public class TerminatedWrapper<T> implements DataType<T> {
   }
 
   /**
-   * Return the position at which {@code term} begins within {@code src},
-   * or {@code -1} if {@code term} is not found.
+   * Return the position at which {@code term} begins within {@code src}, or {@code -1} if
+   * {@code term} is not found.
    */
   protected int terminatorPosition(PositionedByteRange src) {
     byte[] a = src.getBytes();
@@ -161,8 +159,8 @@ public class TerminatedWrapper<T> implements DataType<T> {
 
   /**
    * Write instance {@code val} into buffer {@code dst}.
-   * @throws IllegalArgumentException when the encoded representation of
-   *           {@code val} contains the {@code term} sequence.
+   * @throws IllegalArgumentException when the encoded representation of {@code val} contains the
+   *                                  {@code term} sequence.
    */
   @Override
   public int encode(PositionedByteRange dst, T val) {

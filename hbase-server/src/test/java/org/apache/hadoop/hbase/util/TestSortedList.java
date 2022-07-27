@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestSortedList {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSortedList.class);
+    HBaseClassTestRule.forClass(TestSortedList.class);
 
   static class StringComparator implements Comparator<String> {
     @Override
@@ -55,27 +55,28 @@ public class TestSortedList {
     list.add("b");
 
     assertEquals(4, list.size());
-    assertArrayEquals(new String[]{"a", "b", "c", "d"}, list.toArray(new String[4]));
+    assertArrayEquals(new String[] { "a", "b", "c", "d" }, list.toArray(new String[4]));
 
     list.add("c");
     assertEquals(5, list.size());
-    assertArrayEquals(new String[]{"a", "b", "c", "c", "d"}, list.toArray(new String[5]));
+    assertArrayEquals(new String[] { "a", "b", "c", "c", "d" }, list.toArray(new String[5]));
 
     // Test that removal from head or middle maintains sort
     list.remove("b");
     assertEquals(4, list.size());
-    assertArrayEquals(new String[]{"a", "c", "c", "d"}, list.toArray(new String[4]));
+    assertArrayEquals(new String[] { "a", "c", "c", "d" }, list.toArray(new String[4]));
     list.remove("c");
     assertEquals(3, list.size());
-    assertArrayEquals(new String[]{"a", "c", "d"}, list.toArray(new String[3]));
+    assertArrayEquals(new String[] { "a", "c", "d" }, list.toArray(new String[3]));
     list.remove("a");
     assertEquals(2, list.size());
-    assertArrayEquals(new String[]{"c", "d"}, list.toArray(new String[2]));
+    assertArrayEquals(new String[] { "c", "d" }, list.toArray(new String[2]));
   }
 
   @Test
   public void testReadOnlyIterators() throws Exception {
-    SortedList<String> list = new SortedList<>(Lists.newArrayList("a", "b", "c", "d", "e"), new StringComparator());
+    SortedList<String> list =
+      new SortedList<>(Lists.newArrayList("a", "b", "c", "d", "e"), new StringComparator());
 
     Iterator<String> i = list.iterator();
     i.next();
@@ -110,7 +111,8 @@ public class TestSortedList {
 
   @Test
   public void testIteratorIsolation() throws Exception {
-    SortedList<String> list = new SortedList<>(Lists.newArrayList("a", "b", "c", "d", "e"), new StringComparator());
+    SortedList<String> list =
+      new SortedList<>(Lists.newArrayList("a", "b", "c", "d", "e"), new StringComparator());
 
     // isolation of remove()
     Iterator<String> iter = list.iterator();
@@ -162,7 +164,8 @@ public class TestSortedList {
 
   @Test
   public void testRandomAccessIsolation() throws Exception {
-    SortedList<String> list = new SortedList<>(Lists.newArrayList("a", "b", "c"), new StringComparator());
+    SortedList<String> list =
+      new SortedList<>(Lists.newArrayList("a", "b", "c"), new StringComparator());
     List<String> innerList = list.get();
     assertEquals("a", innerList.get(0));
     assertEquals("b", innerList.get(1));
@@ -170,4 +173,3 @@ public class TestSortedList {
     assertEquals("c", innerList.get(2));
   }
 }
-

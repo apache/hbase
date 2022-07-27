@@ -119,6 +119,8 @@ message ExceptionResponse {
   optional int32 port = 4;
   // Set if we are NOT to retry on receipt of this exception
   optional bool do_not_retry = 5;
+  // Set true if the server was considered to be overloaded when exception was thrown
+  optional bool server_overloaded = 6;
 }
 
 /**

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -135,7 +135,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
    * Typically, you can use lambda expression to implement this interface as
    *
    * <pre>
-   * (c, s, d) -> s.xxx(c, your request here, d)
+   * (c, s, d) -&gt; s.xxx(c, your request here, d)
    * </pre>
    */
   @FunctionalInterface
@@ -222,7 +222,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   Set<ServerName> getParsedServers() {
     return addr2Stub.keySet();
   }
@@ -269,11 +269,6 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
       getClass().getSimpleName() + ".getClusterId");
-  }
-
-  @Override
-  public String getConnectionString() {
-    return "unimplemented";
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -28,9 +27,8 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsAssignmentManagerSourceImpl
-    extends BaseSourceImpl
-    implements MetricsAssignmentManagerSource {
+public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl
+  implements MetricsAssignmentManagerSource {
 
   private MutableGaugeLong ritGauge;
   private MutableGaugeLong ritCountOverThresholdGauge;
@@ -63,16 +61,16 @@ public class MetricsAssignmentManagerSourceImpl
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-  public MetricsAssignmentManagerSourceImpl(String metricsName,
-                                            String metricsDescription,
-                                            String metricsContext, String metricsJmxContext) {
+  public MetricsAssignmentManagerSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
+  @Override
   public void init() {
     ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, RIT_COUNT_DESC, 0L);
-    ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME,
-        RIT_COUNT_OVER_THRESHOLD_DESC,0L);
+    ritCountOverThresholdGauge =
+      metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, RIT_COUNT_OVER_THRESHOLD_DESC, 0L);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, RIT_OLDEST_AGE_DESC, 0L);
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME, RIT_DURATION_DESC);
     operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0L);
@@ -80,22 +78,22 @@ public class MetricsAssignmentManagerSourceImpl
     unknownServerOpenRegions = metricsRegistry.newGauge(UNKNOWN_SERVER_OPEN_REGIONS, "", 0);
 
     orphanRegionsOnRsGauge =
-        metricsRegistry.newGauge(ORPHAN_REGIONS_ON_RS, ORPHAN_REGIONS_ON_RS_DESC, 0L);
+      metricsRegistry.newGauge(ORPHAN_REGIONS_ON_RS, ORPHAN_REGIONS_ON_RS_DESC, 0L);
     orphanRegionsOnFsGauge =
-        metricsRegistry.newGauge(ORPHAN_REGIONS_ON_FS, ORPHAN_REGIONS_ON_FS_DESC, 0L);
+      metricsRegistry.newGauge(ORPHAN_REGIONS_ON_FS, ORPHAN_REGIONS_ON_FS_DESC, 0L);
     inconsistentRegionsGauge =
-        metricsRegistry.newGauge(INCONSISTENT_REGIONS, INCONSISTENT_REGIONS_DESC, 0L);
+      metricsRegistry.newGauge(INCONSISTENT_REGIONS, INCONSISTENT_REGIONS_DESC, 0L);
 
     holesGauge = metricsRegistry.newGauge(HOLES, HOLES_DESC, 0L);
     overlapsGauge = metricsRegistry.newGauge(OVERLAPS, OVERLAPS_DESC, 0L);
     unknownServerRegionsGauge =
-        metricsRegistry.newGauge(UNKNOWN_SERVER_REGIONS, UNKNOWN_SERVER_REGIONS_DESC, 0L);
+      metricsRegistry.newGauge(UNKNOWN_SERVER_REGIONS, UNKNOWN_SERVER_REGIONS_DESC, 0L);
     emptyRegionInfoRegionsGauge =
-        metricsRegistry.newGauge(EMPTY_REGION_INFO_REGIONS, EMPTY_REGION_INFO_REGIONS_DESC, 0L);
+      metricsRegistry.newGauge(EMPTY_REGION_INFO_REGIONS, EMPTY_REGION_INFO_REGIONS_DESC, 0L);
 
     /**
-     * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
-     * moving away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
+     * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is moving
+     * away from using Hadoop's metric2 to having independent HBase specific Metrics. Use
      * {@link BaseSourceImpl#registry} to register the new metrics.
      */
     assignMetrics = new OperationMetrics(registry, ASSIGN_METRIC_PREFIX);
@@ -222,7 +220,7 @@ public class MetricsAssignmentManagerSourceImpl
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName);
     metricsRegistry.snapshot(metricsRecordBuilder, all);
-    if(metricsAdapter != null) {
+    if (metricsAdapter != null) {
       metricsAdapter.snapshotAllMetrics(registry, metricsRecordBuilder);
     }
   }

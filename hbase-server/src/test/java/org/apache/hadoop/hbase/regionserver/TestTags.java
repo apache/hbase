@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -73,12 +73,11 @@ import org.junit.rules.TestName;
 /**
  * Class that test tags
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestTags {
 
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTags.class);
+  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestTags.class);
 
   static boolean useFilter = false;
 
@@ -92,7 +91,7 @@ public class TestTags {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt("hfile.format.version", 3);
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
-        TestCoprocessorForTags.class.getName());
+      TestCoprocessorForTags.class.getName());
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -231,8 +230,7 @@ public class TestTags {
           assertEquals(0, current.getTagsLength());
         }
       } finally {
-        if (scanner != null)
-          scanner.close();
+        if (scanner != null) scanner.close();
       }
       admin.compact(tableName);
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
@@ -427,7 +425,7 @@ public class TestTags {
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
       List<String> tagValues = new ArrayList<>();
-      for (Tag tag: tags) {
+      for (Tag tag : tags) {
         tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
@@ -485,7 +483,7 @@ public class TestTags {
       assertEquals(2, tags.size());
       // We cannot assume the ordering of tags
       tagValues.clear();
-      for (Tag tag: tags) {
+      for (Tag tag : tags) {
         tagValues.add(Bytes.toString(Tag.cloneValue(tag)));
       }
       assertTrue(tagValues.contains("tag1"));
@@ -518,7 +516,7 @@ public class TestTags {
   }
 
   private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
-      byte[] value2, byte[] row1, byte[] value1) throws IOException {
+    byte[] value2, byte[] row1, byte[] value1) throws IOException {
     Scan s = new Scan().withStartRow(row);
     // If filters are used this attribute can be specifically check for in
     // filterKV method and
@@ -543,8 +541,7 @@ public class TestTags {
       assertTrue(Bytes.equals(next2.getValue(fam, qual), value2));
 
     } finally {
-      if (scanner != null)
-        scanner.close();
+      if (scanner != null) scanner.close();
     }
   }
 
@@ -560,7 +557,7 @@ public class TestTags {
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
-        final WALEdit edit, final Durability durability) throws IOException {
+      final WALEdit edit, final Durability durability) throws IOException {
       updateMutationAddingTags(put);
     }
 
@@ -579,11 +576,11 @@ public class TestTags {
             List<Tag> tagList = new ArrayList<>();
             tagList.add(tag);
 
-            KeyValue newKV = new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(),
-                CellUtil.cloneFamily(kv), 0, kv.getFamilyLength(), CellUtil.cloneQualifier(kv), 0,
-                kv.getQualifierLength(), kv.getTimestamp(),
-                KeyValue.Type.codeToType(kv.getTypeByte()), CellUtil.cloneValue(kv), 0,
-                kv.getValueLength(), tagList);
+            KeyValue newKV =
+              new KeyValue(CellUtil.cloneRow(kv), 0, kv.getRowLength(), CellUtil.cloneFamily(kv), 0,
+                kv.getFamilyLength(), CellUtil.cloneQualifier(kv), 0, kv.getQualifierLength(),
+                kv.getTimestamp(), KeyValue.Type.codeToType(kv.getTypeByte()),
+                CellUtil.cloneValue(kv), 0, kv.getValueLength(), tagList);
             ((List<Cell>) updatedCells).add(newKV);
           }
         }
@@ -595,21 +592,21 @@ public class TestTags {
 
     @Override
     public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
-        throws IOException {
+      throws IOException {
       updateMutationAddingTags(increment);
       return null;
     }
 
     @Override
     public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
-        throws IOException {
+      throws IOException {
       updateMutationAddingTags(append);
       return null;
     }
 
     @Override
     public boolean postScannerNext(ObserverContext<RegionCoprocessorEnvironment> e,
-        InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
+      InternalScanner s, List<Result> results, int limit, boolean hasMore) throws IOException {
       if (checkTagPresence) {
         if (results.size() > 0) {
           // Check tag presence in the 1st cell in 1st Result

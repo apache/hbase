@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
@@ -43,21 +42,20 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
 public final class SaslClientAuthenticationProviders {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      SaslClientAuthenticationProviders.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(SaslClientAuthenticationProviders.class);
 
   public static final String SELECTOR_KEY = "hbase.client.sasl.provider.class";
   public static final String EXTRA_PROVIDERS_KEY = "hbase.client.sasl.provider.extras";
 
   private static final AtomicReference<SaslClientAuthenticationProviders> providersRef =
-      new AtomicReference<>();
+    new AtomicReference<>();
 
   private final Collection<SaslClientAuthenticationProvider> providers;
   private final AuthenticationProviderSelector selector;
 
-  private SaslClientAuthenticationProviders(
-      Collection<SaslClientAuthenticationProvider> providers,
-      AuthenticationProviderSelector selector) {
+  private SaslClientAuthenticationProviders(Collection<SaslClientAuthenticationProvider> providers,
+    AuthenticationProviderSelector selector) {
     this.providers = providers;
     this.selector = selector;
   }
@@ -90,16 +88,16 @@ public final class SaslClientAuthenticationProviders {
   }
 
   /**
-   * Adds the given {@code provider} to the set, only if an equivalent provider does not
-   * already exist in the set.
+   * Adds the given {@code provider} to the set, only if an equivalent provider does not already
+   * exist in the set.
    */
   static void addProviderIfNotExists(SaslClientAuthenticationProvider provider,
-      HashMap<Byte,SaslClientAuthenticationProvider> providers) {
+    HashMap<Byte, SaslClientAuthenticationProvider> providers) {
     Byte code = provider.getSaslAuthMethod().getCode();
     SaslClientAuthenticationProvider existingProvider = providers.get(code);
     if (existingProvider != null) {
       throw new RuntimeException("Already registered authentication provider with " + code + " "
-          + existingProvider.getClass());
+        + existingProvider.getClass());
     }
     providers.put(code, provider);
   }
@@ -108,9 +106,9 @@ public final class SaslClientAuthenticationProviders {
    * Instantiates the ProviderSelector implementation from the provided configuration.
    */
   static AuthenticationProviderSelector instantiateSelector(Configuration conf,
-      Collection<SaslClientAuthenticationProvider> providers) {
-    Class<? extends AuthenticationProviderSelector> clz = conf.getClass(
-        SELECTOR_KEY, BuiltInProviderSelector.class, AuthenticationProviderSelector.class);
+    Collection<SaslClientAuthenticationProvider> providers) {
+    Class<? extends AuthenticationProviderSelector> clz = conf.getClass(SELECTOR_KEY,
+      BuiltInProviderSelector.class, AuthenticationProviderSelector.class);
     try {
       AuthenticationProviderSelector selector = clz.getConstructor().newInstance();
       selector.configure(conf, providers);
@@ -118,10 +116,10 @@ public final class SaslClientAuthenticationProviders {
         LOG.trace("Loaded ProviderSelector {}", selector.getClass());
       }
       return selector;
-    } catch (InstantiationException | IllegalAccessException | NoSuchMethodException |
-        InvocationTargetException e) {
-      throw new RuntimeException("Failed to instantiate " + clz +
-          " as the ProviderSelector defined by " + SELECTOR_KEY, e);
+    } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
+      | InvocationTargetException e) {
+      throw new RuntimeException(
+        "Failed to instantiate " + clz + " as the ProviderSelector defined by " + SELECTOR_KEY, e);
     }
   }
 
@@ -129,8 +127,8 @@ public final class SaslClientAuthenticationProviders {
    * Extracts and instantiates authentication providers from the configuration.
    */
   static void addExplicitProviders(Configuration conf,
-      HashMap<Byte,SaslClientAuthenticationProvider> providers) {
-    for(String implName : conf.getStringCollection(EXTRA_PROVIDERS_KEY)) {
+    HashMap<Byte, SaslClientAuthenticationProvider> providers) {
+    for (String implName : conf.getStringCollection(EXTRA_PROVIDERS_KEY)) {
       Class<?> clz;
       // Load the class from the config
       try {
@@ -143,7 +141,7 @@ public final class SaslClientAuthenticationProviders {
       // Make sure it's the right type
       if (!SaslClientAuthenticationProvider.class.isAssignableFrom(clz)) {
         LOG.warn("Ignoring SaslClientAuthenticationProvider {} because it is not an instance of"
-            + " SaslClientAuthenticationProvider", clz);
+          + " SaslClientAuthenticationProvider", clz);
         continue;
       }
 
@@ -152,7 +150,7 @@ public final class SaslClientAuthenticationProviders {
       try {
         provider = (SaslClientAuthenticationProvider) clz.getConstructor().newInstance();
       } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
-          | InvocationTargetException e) {
+        | InvocationTargetException e) {
         LOG.warn("Failed to instantiate SaslClientAuthenticationProvider {}", clz, e);
         continue;
       }
@@ -169,21 +167,20 @@ public final class SaslClientAuthenticationProviders {
    */
   static SaslClientAuthenticationProviders instantiate(Configuration conf) {
     ServiceLoader<SaslClientAuthenticationProvider> loader =
-        ServiceLoader.load(SaslClientAuthenticationProvider.class);
-    HashMap<Byte,SaslClientAuthenticationProvider> providerMap = new HashMap<>();
+      ServiceLoader.load(SaslClientAuthenticationProvider.class);
+    HashMap<Byte, SaslClientAuthenticationProvider> providerMap = new HashMap<>();
     for (SaslClientAuthenticationProvider provider : loader) {
       addProviderIfNotExists(provider, providerMap);
     }
 
     addExplicitProviders(conf, providerMap);
 
-    Collection<SaslClientAuthenticationProvider> providers = Collections.unmodifiableCollection(
-        providerMap.values());
+    Collection<SaslClientAuthenticationProvider> providers =
+      Collections.unmodifiableCollection(providerMap.values());
 
     if (LOG.isTraceEnabled()) {
-      String loadedProviders = providers.stream()
-          .map((provider) -> provider.getClass().getName())
-          .collect(Collectors.joining(", "));
+      String loadedProviders = providers.stream().map((provider) -> provider.getClass().getName())
+        .collect(Collectors.joining(", "));
       LOG.trace("Found SaslClientAuthenticationProviders {}", loadedProviders);
     }
 
@@ -192,16 +189,13 @@ public final class SaslClientAuthenticationProviders {
   }
 
   /**
-   * Returns the provider and token pair for SIMPLE authentication.
-   *
-   * This method is a "hack" while SIMPLE authentication for HBase does not flow through
-   * the SASL codepath.
+   * Returns the provider and token pair for SIMPLE authentication. This method is a "hack" while
+   * SIMPLE authentication for HBase does not flow through the SASL codepath.
    */
   public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
-      getSimpleProvider() {
+    getSimpleProvider() {
     Optional<SaslClientAuthenticationProvider> optional = providers.stream()
-        .filter((p) -> p instanceof SimpleSaslClientAuthenticationProvider)
-        .findFirst();
+      .filter((p) -> p instanceof SimpleSaslClientAuthenticationProvider).findFirst();
     return new Pair<>(optional.get(), null);
   }
 
@@ -209,15 +203,14 @@ public final class SaslClientAuthenticationProviders {
    * Chooses the best authentication provider and corresponding token given the HBase cluster
    * identifier and the user.
    */
-  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User clientUser) {
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User clientUser) {
     return selector.selectProvider(clusterId, clientUser);
   }
 
   @Override
   public String toString() {
-    return providers.stream()
-        .map((p) -> p.getClass().getName())
-        .collect(Collectors.joining(", ", "providers=[", "], selector=")) + selector.getClass();
+    return providers.stream().map((p) -> p.getClass().getName())
+      .collect(Collectors.joining(", ", "providers=[", "], selector=")) + selector.getClass();
   }
 }

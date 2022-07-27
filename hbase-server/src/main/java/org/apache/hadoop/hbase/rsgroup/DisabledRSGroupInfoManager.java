@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -110,7 +110,8 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
   }
 
   @Override
-  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request) throws IOException {
+  public BalanceResponse balanceRSGroup(String groupName, BalanceRequest request)
+    throws IOException {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
 
@@ -130,7 +131,7 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
 
   @Override
   public void updateRSGroupConfig(String groupName, Map<String, String> configuration)
-      throws IOException {
+    throws IOException {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
 }

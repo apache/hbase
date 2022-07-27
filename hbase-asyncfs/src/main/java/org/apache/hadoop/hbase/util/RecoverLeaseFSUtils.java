@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -120,8 +120,10 @@ public final class RecoverLeaseFSUtils {
           // Cycle here until (subsequentPause * nbAttempt) elapses. While spinning, check
           // isFileClosed if available (should be in hadoop 2.0.5... not in hadoop 1 though.
           long localStartWaiting = EnvironmentEdgeManager.currentTime();
-          while ((EnvironmentEdgeManager.currentTime() - localStartWaiting) < subsequentPauseBase *
-            nbAttempt) {
+          while (
+            (EnvironmentEdgeManager.currentTime() - localStartWaiting)
+                < subsequentPauseBase * nbAttempt
+          ) {
             Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
             if (findIsFileClosedMeth) {
               try {
@@ -152,10 +154,10 @@ public final class RecoverLeaseFSUtils {
   private static boolean checkIfTimedout(final Configuration conf, final long recoveryTimeout,
     final int nbAttempt, final Path p, final long startWaiting) {
     if (recoveryTimeout < EnvironmentEdgeManager.currentTime()) {
-      LOG.warn("Cannot recoverLease after trying for " +
-        conf.getInt("hbase.lease.recovery.timeout", 900000) +
-        "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; " +
-        getLogMessageDetail(nbAttempt, p, startWaiting));
+      LOG.warn("Cannot recoverLease after trying for "
+        + conf.getInt("hbase.lease.recovery.timeout", 900000)
+        + "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; "
+        + getLogMessageDetail(nbAttempt, p, startWaiting));
       return true;
     }
     return false;
@@ -170,8 +172,8 @@ public final class RecoverLeaseFSUtils {
     boolean recovered = false;
     try {
       recovered = dfs.recoverLease(p);
-      LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ") +
-        getLogMessageDetail(nbAttempt, p, startWaiting));
+      LOG.info((recovered ? "Recovered lease, " : "Failed to recover lease, ")
+        + getLogMessageDetail(nbAttempt, p, startWaiting));
     } catch (IOException e) {
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
         // This exception comes out instead of FNFE, fix it
@@ -184,13 +186,11 @@ public final class RecoverLeaseFSUtils {
     return recovered;
   }
 
-  /**
-   * @return Detail to append to any log message around lease recovering.
-   */
+  /** Returns Detail to append to any log message around lease recovering. */
   private static String getLogMessageDetail(final int nbAttempt, final Path p,
     final long startWaiting) {
-    return "attempt=" + nbAttempt + " on file=" + p + " after " +
-      (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
+    return "attempt=" + nbAttempt + " on file=" + p + " after "
+      + (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
   }
 
   /**

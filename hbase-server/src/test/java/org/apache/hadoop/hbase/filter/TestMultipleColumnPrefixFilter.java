@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,15 +52,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({FilterTests.class, MediumTests.class})
+@Category({ FilterTests.class, MediumTests.class })
 public class TestMultipleColumnPrefixFilter {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
+    HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
 
-  private final static HBaseTestingUtil TEST_UTIL = new
-      HBaseTestingUtil();
+  private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   @Rule
   public TestName name = new TestName();
@@ -71,16 +70,13 @@ public class TestMultipleColumnPrefixFilter {
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family))
-        .setMaxVersions(3)
-        .build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     // HRegionInfo info = new HRegionInfo(htd, null, null, false);
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.
-        getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -96,16 +92,15 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           p.add(kv);
           kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
+          for (String s : prefixMap.keySet()) {
             if (column.startsWith(s)) {
               prefixMap.get(s).add(kv);
             }
@@ -118,9 +113,9 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
     scan.readAllVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
+    byte[][] filter_prefix = new byte[2][];
+    filter_prefix[0] = new byte[] { 'p' };
+    filter_prefix[1] = new byte[] { 'q' };
 
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
@@ -140,20 +135,15 @@ public class TestMultipleColumnPrefixFilter {
     TableDescriptorBuilder tableDescriptorBuilder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family1))
-        .setMaxVersions(3)
-        .build();
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family1)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
-      .newBuilder(Bytes.toBytes(family2))
-      .setMaxVersions(3)
-      .build();
+    columnFamilyDescriptor =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family2)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -169,10 +159,10 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           double rand = Math.random();
           Cell kv;
@@ -183,7 +173,7 @@ public class TestMultipleColumnPrefixFilter {
           }
           p.add(kv);
           kvList.add(kv);
-          for (String s: prefixMap.keySet()) {
+          for (String s : prefixMap.keySet()) {
             if (column.startsWith(s)) {
               prefixMap.get(s).add(kv);
             }
@@ -196,9 +186,9 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter filter;
     Scan scan = new Scan();
     scan.readAllVersions();
-    byte [][] filter_prefix = new byte [2][];
-    filter_prefix[0] = new byte [] {'p'};
-    filter_prefix[1] = new byte [] {'q'};
+    byte[][] filter_prefix = new byte[2][];
+    filter_prefix[0] = new byte[] { 'p' };
+    filter_prefix[1] = new byte[] { 'q' };
 
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
@@ -221,8 +211,8 @@ public class TestMultipleColumnPrefixFilter {
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
-    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), tableDescriptor);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+      TEST_UTIL.getConfiguration(), tableDescriptor);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -230,13 +220,12 @@ public class TestMultipleColumnPrefixFilter {
 
     String valueString = "ValueString";
 
-    for (String row: rows) {
+    for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
       p.setDurability(Durability.SKIP_WAL);
-      for (String column: columns) {
+      for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
-          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
-              valueString);
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp, valueString);
           p.add(kv);
         }
       }
@@ -246,8 +235,8 @@ public class TestMultipleColumnPrefixFilter {
     MultipleColumnPrefixFilter multiplePrefixFilter;
     Scan scan1 = new Scan();
     scan1.readAllVersions();
-    byte [][] filter_prefix = new byte [1][];
-    filter_prefix[0] = new byte [] {'p'};
+    byte[][] filter_prefix = new byte[1][];
+    filter_prefix[0] = new byte[] { 'p' };
 
     multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
     scan1.setFilter(multiplePrefixFilter);
@@ -275,7 +264,7 @@ public class TestMultipleColumnPrefixFilter {
   List<String> generateRandomWords(int numberOfWords, String suffix) {
     Set<String> wordSet = new HashSet<>();
     for (int i = 0; i < numberOfWords; i++) {
-      int lengthOfWords = (int) (Math.random()*2) + 1;
+      int lengthOfWords = (int) (Math.random() * 2) + 1;
       char[] wordChar = new char[lengthOfWords];
       for (int j = 0; j < wordChar.length; j++) {
         wordChar[j] = (char) (Math.random() * 26 + 97);
@@ -293,5 +282,3 @@ public class TestMultipleColumnPrefixFilter {
   }
 
 }
-
-

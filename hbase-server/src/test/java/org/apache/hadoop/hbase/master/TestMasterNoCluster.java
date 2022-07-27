@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,19 +48,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Standup the master and fake it to test various aspects of master function.
- * Does NOT spin up a mini hbase nor mini dfs cluster testing master (it does
- * put up a zk cluster but this is usually pretty fast compared).  Also, should
- * be possible to inject faults at points difficult to get at in cluster context.
- * TODO: Speed up the zk connection by Master.  It pauses 5 seconds establishing
+ * Standup the master and fake it to test various aspects of master function. Does NOT spin up a
+ * mini hbase nor mini dfs cluster testing master (it does put up a zk cluster but this is usually
+ * pretty fast compared). Also, should be possible to inject faults at points difficult to get at in
+ * cluster context. TODO: Speed up the zk connection by Master. It pauses 5 seconds establishing
  * session.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterNoCluster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterNoCluster.class);
+    HBaseClassTestRule.forClass(TestMasterNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
 
@@ -72,7 +71,7 @@ public class TestMasterNoCluster {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TESTUTIL.getConfiguration();
-    // We use local filesystem.  Set it so it writes into the testdir.
+    // We use local filesystem. Set it so it writes into the testdir.
     CommonFSUtils.setRootDir(c, TESTUTIL.getDataTestDir());
     DefaultMetricsSystem.setMiniClusterMode(true);
     // Startup a mini zk cluster.
@@ -85,11 +84,9 @@ public class TestMasterNoCluster {
   }
 
   @After
-  public void tearDown()
-  throws KeeperException, ZooKeeperConnectionException, IOException {
+  public void tearDown() throws KeeperException, ZooKeeperConnectionException, IOException {
     // Make sure zk is clean before we run the next test.
-    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(),
-        "@Before", new Abortable() {
+    ZKWatcher zkw = new ZKWatcher(TESTUTIL.getConfiguration(), "@Before", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         throw new RuntimeException(why, e);

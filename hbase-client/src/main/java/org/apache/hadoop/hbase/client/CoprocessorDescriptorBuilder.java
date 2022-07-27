@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -109,9 +108,7 @@ public final class CoprocessorDescriptorBuilder {
 
     @Override
     public String toString() {
-      return "class:" + className
-        + ", jarPath:" + jarPath
-        + ", priority:" + priority
+      return "class:" + className + ", jarPath:" + jarPath + ", priority:" + priority
         + ", properties:" + properties;
     }
   }

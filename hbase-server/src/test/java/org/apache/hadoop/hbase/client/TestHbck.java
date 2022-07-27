@@ -19,14 +19,18 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -41,6 +45,8 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.hbck.HbckChore;
+import org.apache.hadoop.hbase.master.hbck.HbckReport;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -66,6 +72,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
@@ -84,7 +91,8 @@ public class TestHbck {
   @Rule
   public TestName name = new TestName();
 
-  @SuppressWarnings("checkstyle:VisibilityModifier") @Parameter
+  @SuppressWarnings("checkstyle:VisibilityModifier")
+  @Parameter
   public boolean async;
 
   private static final TableName TABLE_NAME = TableName.valueOf(TestHbck.class.getSimpleName());
@@ -132,7 +140,7 @@ public class TestHbck {
   }
 
   public static class SuspendProcedure extends
-      ProcedureTestingUtility.NoopProcedure<MasterProcedureEnv> implements TableProcedureInterface {
+    ProcedureTestingUtility.NoopProcedure<MasterProcedureEnv> implements TableProcedureInterface {
     public SuspendProcedure() {
       super();
     }
@@ -230,17 +238,16 @@ public class TestHbck {
       pids =
         hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
       waitOnPids(pids);
-      for (long pid: pids) {
+      for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
       // If we pass override, then we should be able to unassign EVEN THOUGH Regions already
       // unassigned.... makes for a mess but operator might want to do this at an extreme when
       // doing fixup of broke cluster.
-      pids =
-        hbck.unassigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()),
-          true);
+      pids = hbck.unassigns(
+        regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()), true);
       waitOnPids(pids);
-      for (long pid: pids) {
+      for (long pid : pids) {
         assertNotEquals(Procedure.NO_PROC_ID, pid);
       }
       // Clean-up by bypassing all the unassigns we just made so tests can continue.
@@ -258,7 +265,7 @@ public class TestHbck {
       // assign will manifest as all pids being -1 (ever since HBASE-24885).
       pids =
         hbck.assigns(regions.stream().map(r -> r.getEncodedName()).collect(Collectors.toList()));
-      for (long pid: pids) {
+      for (long pid : pids) {
         assertEquals(Procedure.NO_PROC_ID, pid);
       }
       for (RegionInfo ri : regions) {
@@ -283,13 +290,11 @@ public class TestHbck {
       true);
     ServerName serverName = testRs.getServerName();
     Hbck hbck = getHbck();
-    List<Long> pids =
-      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
+    List<Long> pids = hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(pids.get(0) > 0);
     LOG.info("pid is {}", pids.get(0));
 
-    List<Long> newPids =
-      hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
+    List<Long> newPids = hbck.scheduleServerCrashProcedures(Arrays.asList(serverName));
     assertTrue(newPids.get(0) < 0);
     LOG.info("pid is {}", newPids.get(0));
     waitOnPids(pids);
@@ -298,20 +303,20 @@ public class TestHbck {
   @Test
   public void testRunHbckChore() throws Exception {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    long endTimestamp = master.getHbckChore().getCheckingEndTimestamp();
+    HbckChore hbckChore = master.getHbckChore();
+    Instant endTimestamp = Optional.ofNullable(hbckChore.getLastReport())
+      .map(HbckReport::getCheckingEndTimestamp).orElse(Instant.EPOCH);
     Hbck hbck = getHbck();
-    boolean ran = false;
-    while (!ran) {
-      ran = hbck.runHbckChore();
-      if (ran) {
-        assertTrue(master.getHbckChore().getCheckingEndTimestamp() > endTimestamp);
-      }
-    }
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(5), hbck::runHbckChore);
+    HbckReport report = hbckChore.getLastReport();
+    assertNotNull(report);
+    assertTrue(report.getCheckingEndTimestamp().isAfter(endTimestamp));
   }
 
   public static class FailingSplitAfterMetaUpdatedMasterObserver
-      implements MasterCoprocessor, MasterObserver {
-    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
+    implements MasterCoprocessor, MasterObserver {
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
@@ -325,7 +330,7 @@ public class TestHbck {
 
     @Override
     public void preSplitRegionAfterMETAAction(ObserverContext<MasterCoprocessorEnvironment> ctx)
-        throws IOException {
+      throws IOException {
       LOG.info("I'm here");
       latch.countDown();
       throw new IOException("this procedure will fail at here forever");
@@ -337,8 +342,9 @@ public class TestHbck {
   }
 
   public static class FailingMergeAfterMetaUpdatedMasterObserver
-      implements MasterCoprocessor, MasterObserver {
-    @SuppressWarnings("checkstyle:VisibilityModifier") public volatile CountDownLatch latch;
+    implements MasterCoprocessor, MasterObserver {
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    public volatile CountDownLatch latch;
 
     @Override
     public void start(CoprocessorEnvironment e) throws IOException {
@@ -356,8 +362,8 @@ public class TestHbck {
 
     @Override
     public void postMergeRegionsCommitAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx, final RegionInfo[] regionsToMerge,
-        final RegionInfo mergedRegion) throws IOException {
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, final RegionInfo[] regionsToMerge,
+      final RegionInfo mergedRegion) throws IOException {
       latch.countDown();
       throw new IOException("this procedure will fail at here forever");
     }

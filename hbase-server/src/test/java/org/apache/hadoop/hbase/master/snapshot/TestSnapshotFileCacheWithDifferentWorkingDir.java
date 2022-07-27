@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,17 +32,18 @@ import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test that we correctly reload the cache, filter directories, etc.
- * while the temporary directory is on a different file system than the root directory
+ * Test that we correctly reload the cache, filter directories, etc. while the temporary directory
+ * is on a different file system than the root directory
  */
-@Category({MasterTests.class, LargeTests.class})
+@Category({ MasterTests.class, LargeTests.class })
 public class TestSnapshotFileCacheWithDifferentWorkingDir extends TestSnapshotFileCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSnapshotFileCacheWithDifferentWorkingDir.class);
 
-  protected static String TEMP_DIR = Paths.get(".", UUID.randomUUID().toString()).toAbsolutePath().toString();
+  protected static String TEMP_DIR =
+    Paths.get(".", UUID.randomUUID().toString()).toAbsolutePath().toString();
 
   @BeforeClass
   public static void startCluster() throws Exception {

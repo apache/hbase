@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,25 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.metrics;
 
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Provides metrics related to scan operations (both server side and client side metrics).
  * <p>
- * The data can be passed to mapreduce framework or other systems.
- * We use atomic longs so that one thread can increment,
- * while another atomically resets to zero after the values are reported
- * to hadoop's counters.
+ * The data can be passed to mapreduce framework or other systems. We use atomic longs so that one
+ * thread can increment, while another atomically resets to zero after the values are reported to
+ * hadoop's counters.
  * <p>
- * Some of these metrics are general for any client operation such as put
- * However, there is no need for this. So they are defined under scan operation
- * for now.
+ * Some of these metrics are general for any client operation such as put However, there is no need
+ * for this. So they are defined under scan operation for now.
  */
 @InterfaceAudience.Public
 public class ScanMetrics extends ServerSideScanMetrics {
@@ -45,13 +40,14 @@ public class ScanMetrics extends ServerSideScanMetrics {
   public static final String RPC_CALLS_METRIC_NAME = "RPC_CALLS";
   public static final String REMOTE_RPC_CALLS_METRIC_NAME = "REMOTE_RPC_CALLS";
   public static final String MILLIS_BETWEEN_NEXTS_METRIC_NAME = "MILLIS_BETWEEN_NEXTS";
-  public static final String NOT_SERVING_REGION_EXCEPTION_METRIC_NAME = "NOT_SERVING_REGION_EXCEPTION";
+  public static final String NOT_SERVING_REGION_EXCEPTION_METRIC_NAME =
+    "NOT_SERVING_REGION_EXCEPTION";
   public static final String BYTES_IN_RESULTS_METRIC_NAME = "BYTES_IN_RESULTS";
   public static final String BYTES_IN_REMOTE_RESULTS_METRIC_NAME = "BYTES_IN_REMOTE_RESULTS";
   public static final String REGIONS_SCANNED_METRIC_NAME = "REGIONS_SCANNED";
   public static final String RPC_RETRIES_METRIC_NAME = "RPC_RETRIES";
   public static final String REMOTE_RPC_RETRIES_METRIC_NAME = "REMOTE_RPC_RETRIES";
- 
+
   /**
    * number of RPC calls
    */
@@ -65,7 +61,8 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * sum of milliseconds between sequential next calls
    */
-  public final AtomicLong sumOfMillisSecBetweenNexts = createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
+  public final AtomicLong sumOfMillisSecBetweenNexts =
+    createCounter(MILLIS_BETWEEN_NEXTS_METRIC_NAME);
 
   /**
    * number of NotServingRegionException caught
@@ -80,7 +77,8 @@ public class ScanMetrics extends ServerSideScanMetrics {
   /**
    * number of bytes in Result objects from remote region servers
    */
-  public final AtomicLong countOfBytesInRemoteResults = createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
+  public final AtomicLong countOfBytesInRemoteResults =
+    createCounter(BYTES_IN_REMOTE_RESULTS_METRIC_NAME);
 
   /**
    * number of regions

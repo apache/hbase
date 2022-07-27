@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -100,7 +100,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
    * @return zk cluster started.
    */
   public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum, int... clientPortList)
-      throws Exception {
+    throws Exception {
     setupClusterTestDir();
     return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
   }
@@ -110,7 +110,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
    * port mentioned is used as the default port for ZooKeeper.
    */
   private MiniZooKeeperCluster startMiniZKCluster(File dir, int zooKeeperServerNum,
-      int[] clientPortList) throws Exception {
+    int[] clientPortList) throws Exception {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
@@ -197,9 +197,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
     });
   }
 
-  /**
-   * @return True if we removed the test dirs
-   */
+  /** Returns True if we removed the test dirs */
   @Override
   public boolean cleanupTestDir() {
     boolean ret = super.cleanupTestDir();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -406,8 +406,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
       @Override
       public boolean evaluate() throws Exception {
-        return fs.getFileStatus(walPath).getLen() > 0 &&
-          ((AbstractFSWAL<?>) log).getInflightWALCloseCount() == 0;
+        return fs.getFileStatus(walPath).getLen() > 0
+          && ((AbstractFSWAL<?>) log).getInflightWALCloseCount() == 0;
       }
 
       @Override
@@ -423,8 +423,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(walPath, entryBatch.getLastWalPath());
 
     long walLength = fs.getFileStatus(walPath).getLen();
-    assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is " +
-      walLength, entryBatch.getLastWalPosition() <= walLength);
+    assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is "
+      + walLength, entryBatch.getLastWalPosition() <= walLength);
     assertEquals(1, entryBatch.getNbEntries());
     assertTrue(entryBatch.isEndOfFile());
 
@@ -726,7 +726,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   @Test
   public void testEOFExceptionInOldWALsDirectory() throws Exception {
     assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
-    AbstractFSWAL  abstractWAL = (AbstractFSWAL)log;
+    AbstractFSWAL abstractWAL = (AbstractFSWAL) log;
     Path emptyLogFile = abstractWAL.getCurrentFileName();
     log.rollWriter(true);
 

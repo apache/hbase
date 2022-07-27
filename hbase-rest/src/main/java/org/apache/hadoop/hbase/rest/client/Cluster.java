@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,29 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.client;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A list of 'host:port' addresses of HTTP servers operating as a single
- * entity, for example multiple redundant web service gateways.
+ * A list of 'host:port' addresses of HTTP servers operating as a single entity, for example
+ * multiple redundant web service gateways.
  */
 @InterfaceAudience.Public
 public class Cluster {
-  protected List<String> nodes = 
-    Collections.synchronizedList(new ArrayList<String>());
+  protected List<String> nodes = Collections.synchronizedList(new ArrayList<String>());
   protected String lastHost;
 
   /**
    * Constructor
    */
-  public Cluster() {}
+  public Cluster() {
+  }
 
   /**
    * Constructor
@@ -48,9 +45,7 @@ public class Cluster {
     this.nodes.addAll(nodes);
   }
 
-  /**
-   * @return true if no locations have been added, false otherwise
-   */
+  /** Returns true if no locations have been added, false otherwise */
   public boolean isEmpty() {
     return nodes.isEmpty();
   }
@@ -99,10 +94,8 @@ public class Cluster {
     return remove(sb.toString());
   }
 
-  @Override public String toString() {
-    return "Cluster{" +
-        "nodes=" + nodes +
-        ", lastHost='" + lastHost + '\'' +
-        '}';
+  @Override
+  public String toString() {
+    return "Cluster{" + "nodes=" + nodes + ", lastHost='" + lastHost + '\'' + '}';
   }
 }

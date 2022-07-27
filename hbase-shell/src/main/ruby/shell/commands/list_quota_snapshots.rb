@@ -45,9 +45,9 @@ EOF
 
       def command(args = {})
         # All arguments may be nil
-        desired_table = args[TABLE]
-        desired_namespace = args[NAMESPACE]
-        desired_regionserver = args[REGIONSERVER]
+        desired_table = args[::HBaseConstants::TABLE]
+        desired_namespace = args[::HBaseConstants::NAMESPACE]
+        desired_regionserver = args[::HBaseConstants::REGIONSERVER]
         formatter.header(%w[TABLE USAGE LIMIT IN_VIOLATION POLICY])
         count = 0
         quotas_admin.get_quota_snapshots(desired_regionserver).each do |table_name, snapshot|

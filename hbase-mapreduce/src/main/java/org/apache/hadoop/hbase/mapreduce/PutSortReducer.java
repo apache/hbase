@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
@@ -33,7 +31,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.TagUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -41,40 +38,35 @@ import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Emits sorted Puts.
- * Reads in all Puts from passed Iterator, sorts them, then emits
- * Puts in sorted order.  If lots of columns per row, it will use lots of
- * memory sorting.
+ * Emits sorted Puts. Reads in all Puts from passed Iterator, sorts them, then emits Puts in sorted
+ * order. If lots of columns per row, it will use lots of memory sorting.
  * @see HFileOutputFormat2
  * @see CellSortReducer
  */
 @InterfaceAudience.Public
-public class PutSortReducer extends
-    Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue> {
+public class PutSortReducer
+  extends Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue> {
   // the cell creator
   private CellCreator kvCreator;
 
   @Override
   protected void
-      setup(Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
-          throws IOException, InterruptedException {
+    setup(Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
+      throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     this.kvCreator = new CellCreator(conf);
   }
 
   @Override
-  protected void reduce(
-      ImmutableBytesWritable row,
-      java.lang.Iterable<Put> puts,
-      Reducer<ImmutableBytesWritable, Put,
-              ImmutableBytesWritable, KeyValue>.Context context)
-      throws java.io.IOException, InterruptedException
-  {
+  protected void reduce(ImmutableBytesWritable row, java.lang.Iterable<Put> puts,
+    Reducer<ImmutableBytesWritable, Put, ImmutableBytesWritable, KeyValue>.Context context)
+    throws java.io.IOException, InterruptedException {
     // although reduce() is called per-row, handle pathological case
-    long threshold = context.getConfiguration().getLong(
-        "putsortreducer.row.threshold", 1L * (1<<30));
+    long threshold =
+      context.getConfiguration().getLong("putsortreducer.row.threshold", 1L * (1 << 30));
     Iterator<Put> iter = puts.iterator();
     while (iter.hasNext()) {
       TreeSet<KeyValue> map = new TreeSet<>(CellComparator.getInstance());
@@ -100,15 +92,15 @@ public class PutSortReducer extends
           if (cellVisibility != null) {
             // add the visibility labels if any
             tags.addAll(kvCreator.getVisibilityExpressionResolver()
-                .createVisibilityExpTags(cellVisibility.getExpression()));
+              .createVisibilityExpTags(cellVisibility.getExpression()));
           }
         } catch (DeserializationException e) {
           // We just throw exception here. Should we allow other mutations to proceed by
           // just ignoring the bad one?
           throw new IOException("Invalid visibility expression found in mutation " + p, e);
         }
-        for (List<Cell> cells: p.getFamilyCellMap().values()) {
-          for (Cell cell: cells) {
+        for (List<Cell> cells : p.getFamilyCellMap().values()) {
+          for (Cell cell : cells) {
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
             KeyValue kv = null;
@@ -128,13 +120,12 @@ public class PutSortReducer extends
           }
         }
       }
-      context.setStatus("Read " + map.size() + " entries of " + map.getClass()
-          + "(" + StringUtils.humanReadableInt(curSize) + ")");
+      context.setStatus("Read " + map.size() + " entries of " + map.getClass() + "("
+        + StringUtils.humanReadableInt(curSize) + ")");
       int index = 0;
       for (KeyValue kv : map) {
         context.write(row, kv);
-        if (++index % 100 == 0)
-          context.setStatus("Wrote " + index);
+        if (++index % 100 == 0) context.setStatus("Wrote " + index);
       }
 
       // if we have more entries to process

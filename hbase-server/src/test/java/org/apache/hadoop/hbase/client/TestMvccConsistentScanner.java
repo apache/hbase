@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -42,7 +43,7 @@ public class TestMvccConsistentScanner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMvccConsistentScanner.class);
+    HBaseClassTestRule.forClass(TestMvccConsistentScanner.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -87,10 +88,10 @@ public class TestMvccConsistentScanner {
 
   private void move() throws IOException, InterruptedException {
     RegionInfo region =
-        UTIL.getHBaseCluster().getRegions(tableName).stream().findAny().get().getRegionInfo();
+      UTIL.getHBaseCluster().getRegions(tableName).stream().findAny().get().getRegionInfo();
     HRegionServer rs =
-        UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
-            .filter(r -> !r.getOnlineTables().contains(tableName)).findAny().get();
+      UTIL.getHBaseCluster().getRegionServerThreads().stream().map(t -> t.getRegionServer())
+        .filter(r -> !r.getOnlineTables().contains(tableName)).findAny().get();
     UTIL.getAdmin().move(region.getEncodedNameAsBytes(), rs.getServerName());
     while (UTIL.getRSForFirstRegionInTable(tableName) != rs) {
       Thread.sleep(100);
@@ -103,7 +104,7 @@ public class TestMvccConsistentScanner {
     put(row, CQ1, Bytes.toBytes(1));
     put(row, CQ2, Bytes.toBytes(2));
     try (Table table = CONN.getTable(tableName);
-        ResultScanner scanner = table.getScanner(new Scan().setBatch(1).setCaching(1))) {
+      ResultScanner scanner = table.getScanner(new Scan().setBatch(1).setCaching(1))) {
       Result result = scanner.next();
       assertEquals(1, result.rawCells().length);
       assertEquals(1, Bytes.toInt(result.getValue(CF, CQ1)));
@@ -121,7 +122,7 @@ public class TestMvccConsistentScanner {
     put(Bytes.toBytes("row1"), CQ1, Bytes.toBytes(1));
     put(Bytes.toBytes("row2"), CQ1, Bytes.toBytes(2));
     try (Table table = CONN.getTable(tableName);
-        ResultScanner scanner = table.getScanner(new Scan().setCaching(1))) {
+      ResultScanner scanner = table.getScanner(new Scan().setCaching(1))) {
       Result result = scanner.next();
       assertArrayEquals(Bytes.toBytes("row1"), result.getRow());
       assertEquals(1, Bytes.toInt(result.getValue(CF, CQ1)));

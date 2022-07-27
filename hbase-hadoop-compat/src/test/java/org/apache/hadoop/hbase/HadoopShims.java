@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
-
 
 /**
  * A compatibility shim layer for interacting with different versions of Hadoop.
  */
-//NOTE: we can move this under src/main if main code wants to use this shim layer
+// NOTE: we can move this under src/main if main code wants to use this shim layer
 public interface HadoopShims {
 
   /**
    * Returns a TaskAttemptContext instance created from the given parameters.
-   * @param job an instance of o.a.h.mapreduce.Job
+   * @param job    an instance of o.a.h.mapreduce.Job
    * @param taskId an identifier for the task attempt id. Should be parsable by
-   * TaskAttemptId.forName()
+   *               TaskAttemptId.forName()
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
    */
-  <T,J> T createTestTaskAttemptContext(final J job, final String taskId);
+  @SuppressWarnings("TypeParameterUnusedInFormals")
+  <T, J> T createTestTaskAttemptContext(final J job, final String taskId);
 
 }

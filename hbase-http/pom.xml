@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
@@ -21,113 +21,14 @@
 -->
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>hbase-build-configuration</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <artifactId>hbase-build-configuration</artifactId>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-http</artifactId>
   <name>Apache HBase - HTTP</name>
   <description>HTTP functionality for HBase Servers</description>
-
-  <build>
-    <!-- Makes sure the resources get added before they are processed
-      by placing this first -->
-    <testResources>
-      <!-- Our test artifact has different license info than our source/bin ones -->
-      <testResource>
-        <directory>src/test/resources/META-INF/</directory>
-        <targetPath>META-INF/</targetPath>
-        <includes>
-          <include>NOTICE</include>
-        </includes>
-        <filtering>true</filtering>
-      </testResource>
-      <testResource>
-        <directory>src/test/resources</directory>
-        <includes>
-          <include>**/**</include>
-        </includes>
-      </testResource>
-    </testResources>
-    <plugins>
-      <!-- licensing info from our bundled works -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default</id>
-            <configuration>
-              <attachToTest>false</attachToTest>
-              <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
-              </properties>
-              <resourceBundles>
-                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
-              </resourceBundles>
-              <supplementalModelArtifacts>
-                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
-              </supplementalModelArtifacts>
-              <supplementalModels>
-                <supplementalModel>supplemental-models.xml</supplementalModel>
-              </supplementalModels>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
-        tests (this is needed for upstream projects whose tests need this jar simply for
-        compilation) -->
-      <plugin>
-        <!--Make it so assembly:single does nothing in here-->
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <skipAssembly>true</skipAssembly>
-        </configuration>
-      </plugin>
-      <!-- Make a jar and put the sources in the jar -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-              <goal>test-jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- Testing plugins -->
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <configuration>
-          <failOnViolation>true</failOnViolation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>net.revelc.code</groupId>
-        <artifactId>warbucks-maven-plugin</artifactId>
-      </plugin>
-    </plugins>
-    <!-- General Resources -->
-  </build>
   <dependencies>
     <dependency>
       <groupId>org.apache.hbase.thirdparty</groupId>
@@ -261,6 +162,106 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <!-- Makes sure the resources get added before they are processed
+      by placing this first -->
+    <testResources>
+      <!-- Our test artifact has different license info than our source/bin ones -->
+      <testResource>
+        <targetPath>META-INF/</targetPath>
+        <filtering>true</filtering>
+        <directory>src/test/resources/META-INF/</directory>
+        <includes>
+          <include>NOTICE</include>
+        </includes>
+      </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <!-- licensing info from our bundled works -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default</id>
+            <configuration>
+              <attachToTest>false</attachToTest>
+              <properties>
+                <copyright-end-year>${build.year}</copyright-end-year>
+                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
+                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                <bundled-vega>${license.bundles.vega}</bundled-vega>
+                <bundled-logo>${license.bundles.logo}</bundled-logo>
+                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+              </properties>
+              <resourceBundles>
+                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
+              </resourceBundles>
+              <supplementalModelArtifacts>
+                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
+              </supplementalModelArtifacts>
+              <supplementalModels>
+                <supplementalModel>supplemental-models.xml</supplementalModel>
+              </supplementalModels>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
+        tests (this is needed for upstream projects whose tests need this jar simply for
+        compilation) -->
+      <plugin>
+        <!--Make it so assembly:single does nothing in here-->
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <skipAssembly>true</skipAssembly>
+        </configuration>
+      </plugin>
+      <!-- Make a jar and put the sources in the jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>jar</goal>
+              <goal>test-jar</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Testing plugins -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>net.revelc.code</groupId>
+        <artifactId>warbucks-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+    <!-- General Resources -->
+  </build>
   <profiles>
     <profile>
       <id>build-with-jdk11</id>
@@ -285,10 +286,10 @@
             <executions>
               <execution>
                 <id>license-javadocs</id>
-                <phase>prepare-package</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>prepare-package</phase>
                 <configuration>
                   <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
                   <resources>
@@ -330,7 +331,9 @@
     <profile>
       <id>hadoop-3.0</id>
       <activation>
-        <property><name>!hadoop.profile</name></property>
+        <property>
+          <name>!hadoop.profile</name>
+        </property>
       </activation>
       <dependencies>
         <dependency>
@@ -340,6 +343,7 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+          <scope>test</scope>
           <exclusions>
             <exclusion>
               <groupId>com.google.guava</groupId>
@@ -354,7 +358,6 @@
               <artifactId>jsr311-api</artifactId>
             </exclusion>
           </exclusions>
-          <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>com.fasterxml.jackson.core</groupId>
@@ -368,10 +371,10 @@
             <executions>
               <execution>
                 <id>create-mrapp-generated-classpath</id>
-                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>build-classpath</goal>
                 </goals>
+                <phase>generate-test-resources</phase>
                 <configuration>
                   <!-- needed to run the unit test for DS to generate
                   the required classpath that is required in the env
@@ -394,8 +397,8 @@
       </activation>
       <build>
         <pluginManagement>
-           <plugins>
-             <!--This plugin's configuration is used to store Eclipse m2e settings
+          <plugins>
+            <!--This plugin's configuration is used to store Eclipse m2e settings
                  only. It has no influence on the Maven build itself and needs to
                  be kept in plugin management, not in the actual plugins. -->
             <plugin>
@@ -430,7 +433,7 @@
                         </goals>
                       </pluginExecutionFilter>
                       <action>
-                        <ignore></ignore>
+                        <ignore/>
                       </action>
                     </pluginExecution>
                   </pluginExecutions>

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup.master;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -48,7 +50,7 @@ public class TestBackupLogCleaner extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupLogCleaner.class);
+    HBaseClassTestRule.forClass(TestBackupLogCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupLogCleaner.class);
 
@@ -120,8 +122,8 @@ public class TestBackupLogCleaner extends TestBackupBase {
       // #3 - incremental backup for multiple tables
 
       List<TableName> tableSetIncList = Lists.newArrayList(table1, table2, table3);
-      String backupIdIncMultiple = backupTables(BackupType.INCREMENTAL, tableSetIncList,
-        BACKUP_ROOT_DIR);
+      String backupIdIncMultiple =
+        backupTables(BackupType.INCREMENTAL, tableSetIncList, BACKUP_ROOT_DIR);
       assertTrue(checkSucceeded(backupIdIncMultiple));
       deletable = cleaner.getDeletableFiles(newWalFiles);
 

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +25,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -53,7 +51,7 @@ public class Threads {
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
-   * @param t thread to frob
+   * @param t    thread to frob
    * @param name new name
    * @return Returns the passed Thread <code>t</code>.
    */
@@ -63,13 +61,13 @@ public class Threads {
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
-   * @param t thread to frob
-   * @param name new name
+   * @param t       thread to frob
+   * @param name    new name
    * @param handler A handler to set on the thread. Pass null if want to use default handler.
    * @return Returns the passed Thread <code>t</code>.
    */
   public static <T extends Thread> T setDaemonThreadRunning(T t, String name,
-      UncaughtExceptionHandler handler) {
+    UncaughtExceptionHandler handler) {
     t.setName(name);
     if (handler != null) {
       t.setUncaughtExceptionHandler(handler);
@@ -90,7 +88,7 @@ public class Threads {
   /**
    * Shutdown passed thread using isAlive and join.
    * @param joinwait Pass 0 if we're to wait forever.
-   * @param t Thread to shutdown
+   * @param t        Thread to shutdown
    */
   public static void shutdown(final Thread t, final long joinwait) {
     if (t == null) return;
@@ -103,14 +101,10 @@ public class Threads {
     }
   }
 
-
   /**
-   * @param t Waits on the passed thread to die dumping a threaddump every
-   * minute while its up.
-   * @throws InterruptedException
+   * @param t Waits on the passed thread to die dumping a threaddump every minute while its up. n
    */
-  public static void threadDumpingIsAlive(final Thread t)
-  throws InterruptedException {
+  public static void threadDumpingIsAlive(final Thread t) throws InterruptedException {
     if (t == null) {
       return;
     }
@@ -119,8 +113,7 @@ public class Threads {
       t.join(60 * 1000);
       if (t.isAlive()) {
         printThreadInfo(System.out,
-            "Automatic Stack Trace every 60 seconds waiting on " +
-            t.getName());
+          "Automatic Stack Trace every 60 seconds waiting on " + t.getName());
       }
     }
   }
@@ -139,8 +132,7 @@ public class Threads {
   }
 
   /**
-   * Sleeps for the given amount of time even if interrupted. Preserves
-   * the interrupt status.
+   * Sleeps for the given amount of time even if interrupted. Preserves the interrupt status.
    * @param msToWait the amount of time to sleep in milliseconds
    */
   public static void sleepWithoutInterrupt(final long msToWait) {
@@ -162,29 +154,26 @@ public class Threads {
   }
 
   /**
-   * Create a new CachedThreadPool with a bounded number as the maximum
-   * thread size in the pool.
-   *
+   * Create a new CachedThreadPool with a bounded number as the maximum thread size in the pool.
    * @param maxCachedThread the maximum thread could be created in the pool
-   * @param timeout the maximum time to wait
-   * @param unit the time unit of the timeout argument
-   * @param threadFactory the factory to use when creating new threads
-   * @return threadPoolExecutor the cachedThreadPool with a bounded number
-   * as the maximum thread size in the pool.
+   * @param timeout         the maximum time to wait
+   * @param unit            the time unit of the timeout argument
+   * @param threadFactory   the factory to use when creating new threads
+   * @return threadPoolExecutor the cachedThreadPool with a bounded number as the maximum thread
+   *         size in the pool.
    */
-  public static ThreadPoolExecutor getBoundedCachedThreadPool(
-      int maxCachedThread, long timeout, TimeUnit unit,
-      ThreadFactory threadFactory) {
-    ThreadPoolExecutor boundedCachedThreadPool =
-      new ThreadPoolExecutor(maxCachedThread, maxCachedThread, timeout,
-        unit, new LinkedBlockingQueue<>(), threadFactory);
+  public static ThreadPoolExecutor getBoundedCachedThreadPool(int maxCachedThread, long timeout,
+    TimeUnit unit, ThreadFactory threadFactory) {
+    ThreadPoolExecutor boundedCachedThreadPool = new ThreadPoolExecutor(maxCachedThread,
+      maxCachedThread, timeout, unit, new LinkedBlockingQueue<>(), threadFactory);
     // allow the core pool threads timeout and terminate
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
 
-  /** Sets an UncaughtExceptionHandler for the thread which logs the
-   * Exception stack if the thread dies.
+  /**
+   * Sets an UncaughtExceptionHandler for the thread which logs the Exception stack if the thread
+   * dies.
    */
   public static void setLoggingUncaughtExceptionHandler(Thread t) {
     t.setUncaughtExceptionHandler(LOGGING_EXCEPTION_HANDLER);
@@ -192,9 +181,8 @@ public class Threads {
 
   /**
    * Print all of the thread's information and stack traces. Wrapper around Hadoop's method.
-   *
    * @param stream the stream to
-   * @param title a string title for the stack trace
+   * @param title  a string title for the stack trace
    */
   public static void printThreadInfo(PrintStream stream, String title) {
     ReflectionUtils.printThreadInfo(stream, title);
@@ -206,7 +194,7 @@ public class Threads {
    */
   public static boolean isNonDaemonThreadRunning() {
     AtomicInteger nonDaemonThreadCount = new AtomicInteger();
-    Set<Thread> threads =  Thread.getAllStackTraces().keySet();
+    Set<Thread> threads = Thread.getAllStackTraces().keySet();
     threads.forEach(t -> {
       // Exclude current thread
       if (t.getId() != Thread.currentThread().getId() && !t.isDaemon()) {
@@ -219,11 +207,11 @@ public class Threads {
   }
 
   /*
-    Print stack trace of the passed thread
+   * Print stack trace of the passed thread
    */
   public static String printStackTrace(Thread t) {
     StringBuilder sb = new StringBuilder();
-    for (StackTraceElement frame: t.getStackTrace()) {
+    for (StackTraceElement frame : t.getStackTrace()) {
       sb.append("\n").append("    ").append(frame.toString());
     }
     return sb.toString();

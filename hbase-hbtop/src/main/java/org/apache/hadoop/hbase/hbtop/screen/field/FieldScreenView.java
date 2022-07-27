@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.hbtop.terminal.KeyPress;
 import org.apache.hadoop.hbase.hbtop.terminal.Terminal;
 import org.apache.hadoop.hbase.hbtop.terminal.TerminalPrinter;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * The screen where we can change the displayed fields, the sort key and the order of the fields.
@@ -122,7 +121,7 @@ public class FieldScreenView extends AbstractScreenView {
     int descriptionMaxLength, boolean moveMode) {
     showScreenDescription(sortFieldHeader);
 
-    for (int i = 0; i < fields.size(); i ++) {
+    for (int i = 0; i < fields.size(); i++) {
       Field field = fields.get(i);
       showField(i, field, fieldDisplayMap.get(field), i == currentPosition, headerMaxLength,
         descriptionMaxLength, moveMode);
@@ -143,8 +142,8 @@ public class FieldScreenView extends AbstractScreenView {
     int fieldHeaderMaxLength, int fieldDescriptionMaxLength, boolean moveMode) {
 
     String fieldHeader = String.format("%-" + fieldHeaderMaxLength + "s", field.getHeader());
-    String fieldDescription = String.format("%-" + fieldDescriptionMaxLength + "s",
-      field.getDescription());
+    String fieldDescription =
+      String.format("%-" + fieldDescriptionMaxLength + "s", field.getDescription());
 
     int row = FIELD_START_ROW + pos;
     TerminalPrinter printer = getTerminalPrinter(row);
@@ -157,8 +156,8 @@ public class FieldScreenView extends AbstractScreenView {
           printer.startBold();
         }
 
-        printer.startHighlight()
-          .printFormat("%s = %s", fieldHeader, fieldDescription).stopHighlight();
+        printer.startHighlight().printFormat("%s = %s", fieldHeader, fieldDescription)
+          .stopHighlight();
 
         if (display) {
           printer.stopBold();
@@ -172,8 +171,8 @@ public class FieldScreenView extends AbstractScreenView {
           printer.startBold();
         }
 
-        printer.startHighlight().print(fieldHeader).stopHighlight()
-          .printFormat(" = %s", fieldDescription);
+        printer.startHighlight().print(fieldHeader).stopHighlight().printFormat(" = %s",
+          fieldDescription);
 
         if (display) {
           printer.stopBold();

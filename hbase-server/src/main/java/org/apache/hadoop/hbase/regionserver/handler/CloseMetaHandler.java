@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,10 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class CloseMetaHandler extends CloseRegionHandler {
 
   // Called when regionserver determines its to go down; not master orchestrated
-  public CloseMetaHandler(final Server server,
-      final RegionServerServices rsServices,
-      final RegionInfo regionInfo,
-      final boolean abort) {
+  public CloseMetaHandler(final Server server, final RegionServerServices rsServices,
+    final RegionInfo regionInfo, final boolean abort) {
     super(server, rsServices, regionInfo, abort, EventType.M_RS_CLOSE_META, null);
   }
 }

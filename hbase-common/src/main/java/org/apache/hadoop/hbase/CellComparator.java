@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -30,13 +31,13 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface CellComparator extends Comparator<Cell> {
+public interface CellComparator extends Comparator<Cell>, Serializable {
   /**
-   * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted
-   * order as necessary for bulk import (i.e. via MapReduce).
+   * A comparator for ordering cells in user-space tables. Useful when writing cells in sorted order
+   * as necessary for bulk import (i.e. via MapReduce).
    * <p>
-   * CAUTION: This comparator may provide inaccurate ordering for cells from system tables,
-   * and should not be relied upon in that case.
+   * CAUTION: This comparator may provide inaccurate ordering for cells from system tables, and
+   * should not be relied upon in that case.
    */
   // For internal use, see CellComparatorImpl utility methods.
   static CellComparator getInstance() {
@@ -46,7 +47,7 @@ public interface CellComparator extends Comparator<Cell> {
   /**
    * Lexographically compares two cells. The key part of the cell is taken for comparison which
    * includes row, family, qualifier, timestamp and type
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
@@ -56,15 +57,15 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * Compare cells.
-   * @param ignoreSequenceid True if we are to compare the key portion only and ignore
-   *    the sequenceid. Set to false to compare key and consider sequenceid.
+   * @param ignoreSequenceid True if we are to compare the key portion only and ignore the
+   *                         sequenceid. Set to false to compare key and consider sequenceid.
    * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
    */
   int compare(Cell leftCell, Cell rightCell, boolean ignoreSequenceid);
 
   /**
    * Lexographically compares the rows of two cells.
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
@@ -72,10 +73,9 @@ public interface CellComparator extends Comparator<Cell> {
   int compareRows(Cell leftCell, Cell rightCell);
 
   /**
-   * Compares the row part of the cell with a simple plain byte[] like the
-   * stopRow in Scan.
-   * @param cell the cell
-   * @param bytes the byte[] representing the row to be compared with
+   * Compares the row part of the cell with a simple plain byte[] like the stopRow in Scan.
+   * @param cell   the cell
+   * @param bytes  the byte[] representing the row to be compared with
    * @param offset the offset of the byte[]
    * @param length the length of the byte[]
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
@@ -85,10 +85,10 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * Compares two row bytes
-   * @param leftRow the byte array of the left row
+   * @param leftRow  the byte array of the left row
    * @param rightRow the byte array of the right row
-   * @return greater than 0 if leftRow is bigger, less than 0 if rightRow is bigger, 0 if both
-   *         rows are equal
+   * @return greater than 0 if leftRow is bigger, less than 0 if rightRow is bigger, 0 if both rows
+   *         are equal
    */
   default int compareRows(byte[] leftRow, byte[] rightRow) {
     return Bytes.compareTo(leftRow, rightRow);
@@ -104,18 +104,16 @@ public interface CellComparator extends Comparator<Cell> {
     if (cell instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
         ((ByteBufferExtendedCell) cell).getRowByteBuffer(),
-        ((ByteBufferExtendedCell) cell).getRowPosition(),
-        cell.getRowLength());
+        ((ByteBufferExtendedCell) cell).getRowPosition(), cell.getRowLength());
     }
-    return ByteBufferUtils.compareTo(row, row.position(), row.remaining(),
-      cell.getRowArray(), cell.getRowOffset(),
-      cell.getRowLength());
+    return ByteBufferUtils.compareTo(row, row.position(), row.remaining(), cell.getRowArray(),
+      cell.getRowOffset(), cell.getRowLength());
   }
 
   /**
    * Lexographically compares the two cells excluding the row part. It compares family, qualifier,
    * timestamp and the type
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
@@ -124,7 +122,7 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * Lexographically compares the families of the two cells
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
@@ -133,7 +131,7 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * Lexographically compares the qualifiers of the two cells
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
    *         cells are equal
@@ -145,7 +143,7 @@ public interface CellComparator extends Comparator<Cell> {
    * newer timestamps looks wrong but it is intentional. This way, newer timestamps are first found
    * when we iterate over a memstore and newer versions are the first we trip over when reading from
    * a store file.
-   * @param leftCell the left hand side cell
+   * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return 1 if left's timestamp &lt; right's timestamp -1 if left's timestamp &gt; right's
    *         timestamp 0 if both timestamps are equal
@@ -157,7 +155,7 @@ public interface CellComparator extends Comparator<Cell> {
    * newer timestamps looks wrong but it is intentional. This way, newer timestamps are first found
    * when we iterate over a memstore and newer versions are the first we trip over when reading from
    * a store file.
-   * @param leftCellts the left cell's timestamp
+   * @param leftCellts  the left cell's timestamp
    * @param rightCellts the right cell's timestamp
    * @return 1 if left's timestamp &lt; right's timestamp -1 if left's timestamp &gt; right's
    *         timestamp 0 if both timestamps are equal
@@ -166,8 +164,9 @@ public interface CellComparator extends Comparator<Cell> {
 
   /**
    * @return A dumbed-down, fast comparator for hbase2 base-type, the {@link ByteBufferKeyValue}.
-   *   Create an instance when you make a new memstore, when you know only BBKVs will be passed.
-   *   Do not pollute with types other than BBKV if can be helped; the Comparator will slow.
+   *         Create an instance when you make a new memstore, when you know only BBKVs will be
+   *         passed. Do not pollute with types other than BBKV if can be helped; the Comparator will
+   *         slow.
    */
   Comparator getSimpleComparator();
 }

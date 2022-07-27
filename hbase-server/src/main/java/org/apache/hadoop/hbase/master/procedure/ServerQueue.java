@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,6 +40,7 @@ class ServerQueue extends Queue<ServerName> {
       case SPLIT_WAL_REMOTE:
       case CLAIM_REPLICATION_QUEUES:
       case CLAIM_REPLICATION_QUEUE_REMOTE:
+      case VERIFY_SNAPSHOT:
         return false;
       default:
         break;

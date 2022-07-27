@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,12 +43,9 @@ public class TestBackupMerge extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupMerge.class);
+    HBaseClassTestRule.forClass(TestBackupMerge.class);
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestBackupMerge.class);
-
-
+  private static final Logger LOG = LoggerFactory.getLogger(TestBackupMerge.class);
 
   @Test
   public void TestIncBackupMergeRestore() throws Exception {
@@ -58,7 +55,6 @@ public class TestBackupMerge extends TestBackupBase {
 
     List<TableName> tables = Lists.newArrayList(table1, table2);
     // Set custom Merge Job implementation
-
 
     Connection conn = ConnectionFactory.createConnection(conf1);
 

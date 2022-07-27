@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,15 +48,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestSimpleRequestController {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleRequestController.class);
+    HBaseClassTestRule.forClass(TestSimpleRequestController.class);
 
-  private static final TableName DUMMY_TABLE
-          = TableName.valueOf("DUMMY_TABLE");
+  private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
   private static final byte[] DUMMY_BYTES_2 = Bytes.toBytes("DUMMY_BYTES_2");
   private static final byte[] DUMMY_BYTES_3 = Bytes.toBytes("DUMMY_BYTES_3");
@@ -103,6 +103,7 @@ public class TestSimpleRequestController {
       new SimpleRequestController(conf);
       fail("The " + key + " must be bigger than zero");
     } catch (IllegalArgumentException e) {
+      // Expected
     }
   }
 
@@ -122,19 +123,17 @@ public class TestSimpleRequestController {
     final int maxConcurrentTasksPerRegion = 1;
     final AtomicLong tasksInProgress = new AtomicLong(0);
     final Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    final Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    final Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker countChecker =
-        new SimpleRequestController.TaskCountChecker(
-            maxTotalConcurrentTasks,
-            maxConcurrentTasksPerServer,
-            maxConcurrentTasksPerRegion,
-            tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+      new SimpleRequestController.TaskCountChecker(maxTotalConcurrentTasks,
+        maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion, tasksInProgress,
+        taskCounterPerServer, taskCounterPerRegion);
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
     // unlimiited
     SimpleRequestController.RequestHeapSizeChecker sizeChecker =
-        new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
+      new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
     RequestController.Checker checker =
-        SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
+      SimpleRequestController.newChecker(Arrays.asList(countChecker, sizeChecker));
     ReturnCode loc1Code = checker.canTakeRow(LOC1, createPut(maxHeapSizePerRequest));
     assertEquals(ReturnCode.INCLUDE, loc1Code);
 
@@ -165,8 +164,8 @@ public class TestSimpleRequestController {
   @Test
   public void testRequestHeapSizeChecker() throws IOException {
     final long maxHeapSizePerRequest = 2 * 1024 * 1024;
-    SimpleRequestController.RequestHeapSizeChecker checker
-            = new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
+    SimpleRequestController.RequestHeapSizeChecker checker =
+      new SimpleRequestController.RequestHeapSizeChecker(maxHeapSizePerRequest);
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
@@ -207,10 +206,10 @@ public class TestSimpleRequestController {
   @Test
   public void testRequestRowsChecker() throws IOException {
     final long maxRowCount = 100;
-    SimpleRequestController.RequestRowsChecker checker
-      = new SimpleRequestController.RequestRowsChecker(maxRowCount);
+    SimpleRequestController.RequestRowsChecker checker =
+      new SimpleRequestController.RequestRowsChecker(maxRowCount);
 
-    final long heapSizeOfRow = 100; //unused
+    final long heapSizeOfRow = 100; // unused
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
       ReturnCode code = checker.canTakeOperation(LOC1, heapSizeOfRow);
@@ -252,8 +251,8 @@ public class TestSimpleRequestController {
   @Test
   public void testSubmittedSizeChecker() {
     final long maxHeapSizeSubmit = 2 * 1024 * 1024;
-    SimpleRequestController.SubmittedSizeChecker checker
-            = new SimpleRequestController.SubmittedSizeChecker(maxHeapSizeSubmit);
+    SimpleRequestController.SubmittedSizeChecker checker =
+      new SimpleRequestController.SubmittedSizeChecker(maxHeapSizeSubmit);
 
     for (int i = 0; i != 10; ++i) {
       ReturnCode include = checker.canTakeOperation(LOC1, 100000);
@@ -287,12 +286,10 @@ public class TestSimpleRequestController {
     int maxConcurrentTasksPerRegion = 1;
     AtomicLong tasksInProgress = new AtomicLong(0);
     Map<ServerName, AtomicInteger> taskCounterPerServer = new HashMap<>();
-    Map<byte[], AtomicInteger> taskCounterPerRegion = new HashMap<>();
+    Map<byte[], AtomicInteger> taskCounterPerRegion = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     SimpleRequestController.TaskCountChecker checker = new SimpleRequestController.TaskCountChecker(
-            maxTotalConcurrentTasks,
-            maxConcurrentTasksPerServer,
-            maxConcurrentTasksPerRegion,
-            tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
+      maxTotalConcurrentTasks, maxConcurrentTasksPerServer, maxConcurrentTasksPerRegion,
+      tasksInProgress, taskCounterPerServer, taskCounterPerRegion);
 
     // inner state is unchanged.
     for (int i = 0; i != 10; ++i) {
@@ -363,10 +360,8 @@ public class TestSimpleRequestController {
       try {
         barrier.await();
         controller.waitForMaximumCurrentTasks(max.get(), 123, 1, null);
-      } catch (InterruptedIOException e) {
+      } catch (InterruptedIOException | InterruptedException | BrokenBarrierException e) {
         Assert.fail(e.getMessage());
-      } catch (InterruptedException | BrokenBarrierException e) {
-        e.printStackTrace();
       }
     };
     // First test that our runnable thread only exits when tasks is zero.

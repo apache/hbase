@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +41,7 @@ public class TestCompressedWAL extends CompressedWALTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCompressedWAL.class);
+    HBaseClassTestRule.forClass(TestCompressedWAL.class);
 
   @Rule
   public TestName name = new TestName();
@@ -57,8 +57,7 @@ public class TestCompressedWAL extends CompressedWALTestBase {
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
-    TEST_UTIL.getConfiguration()
-      .setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     TEST_UTIL.startMiniDFSCluster(3);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -50,7 +49,7 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
   public WrapperAsyncFSOutput(Path file, FSDataOutputStream out) {
     this.out = out;
     this.executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setDaemon(true)
-        .setNameFormat("AsyncFSOutputFlusher-" + file.toString().replace("%", "%%")).build());
+      .setNameFormat("AsyncFSOutputFlusher-" + file.toString().replace("%", "%%")).build());
   }
 
   @Override
@@ -95,8 +94,8 @@ public class WrapperAsyncFSOutput implements AsyncFSOutput {
       }
       long pos = out.getPos();
       /**
-       * This flush0 method could only be called by single thread, so here we could
-       * safely overwrite without any synchronization.
+       * This flush0 method could only be called by single thread, so here we could safely overwrite
+       * without any synchronization.
        */
       this.syncedLength = pos;
       future.complete(pos);

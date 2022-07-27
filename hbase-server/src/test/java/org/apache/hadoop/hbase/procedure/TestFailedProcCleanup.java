@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +43,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,7 @@ public class TestFailedProcCleanup {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFailedProcCleanup.class);
+    HBaseClassTestRule.forClass(TestFailedProcCleanup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFailedProcCleanup.class);
 
@@ -90,10 +89,12 @@ public class TestFailedProcCleanup {
       Thread.sleep(evictionDelay * 3);
     }
     List<Procedure<MasterProcedureEnv>> procedureInfos =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
     for (Procedure procedureInfo : procedureInfos) {
-      if (procedureInfo.getProcName().equals("CreateTableProcedure")
-          && procedureInfo.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK) {
+      if (
+        procedureInfo.getProcName().equals("CreateTableProcedure")
+          && procedureInfo.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK
+      ) {
         fail("Found procedure " + procedureInfo + " that hasn't been cleaned up");
       }
     }
@@ -111,10 +112,12 @@ public class TestFailedProcCleanup {
       Thread.sleep(evictionDelay * 3);
     }
     List<Procedure<MasterProcedureEnv>> procedureInfos =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor().getProcedures();
     for (Procedure procedureInfo : procedureInfos) {
-      if (procedureInfo.getProcName().equals("CreateTableProcedure")
-          && procedureInfo.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK) {
+      if (
+        procedureInfo.getProcName().equals("CreateTableProcedure")
+          && procedureInfo.getState() == ProcedureProtos.ProcedureState.ROLLEDBACK
+      ) {
         fail("Found procedure " + procedureInfo + " that hasn't been cleaned up");
       }
     }
@@ -124,7 +127,7 @@ public class TestFailedProcCleanup {
 
     @Override
     public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        TableDescriptor desc, RegionInfo[] regions) throws IOException {
+      TableDescriptor desc, RegionInfo[] regions) throws IOException {
 
       if (desc.getTableName().equals(TABLE)) {
         throw new AccessDeniedException("Don't allow creation of table");
@@ -140,9 +143,8 @@ public class TestFailedProcCleanup {
   public static class CreateFailObserverHandler implements MasterCoprocessor, MasterObserver {
 
     @Override
-    public void preCreateTableAction(
-        final ObserverContext<MasterCoprocessorEnvironment> ctx, final TableDescriptor desc,
-        final RegionInfo[] regions) throws IOException {
+    public void preCreateTableAction(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableDescriptor desc, final RegionInfo[] regions) throws IOException {
 
       if (desc.getTableName().equals(TABLE)) {
         throw new AccessDeniedException("Don't allow creation of table");

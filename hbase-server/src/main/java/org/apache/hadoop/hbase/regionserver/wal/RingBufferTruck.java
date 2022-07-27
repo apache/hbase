@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +29,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 final class RingBufferTruck {
 
   public enum Type {
-    APPEND, SYNC, EMPTY
+    APPEND,
+    SYNC,
+    EMPTY
   }
 
   private Type type = Type.EMPTY;
@@ -57,9 +58,7 @@ final class RingBufferTruck {
     this.type = Type.SYNC;
   }
 
-  /**
-   * @return the type of this truck's payload.
-   */
+  /** Returns the type of this truck's payload. */
   Type type() {
     return type;
   }

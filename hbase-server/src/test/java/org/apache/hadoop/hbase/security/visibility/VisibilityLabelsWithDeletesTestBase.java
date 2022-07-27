@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -146,7 +146,7 @@ public abstract class VisibilityLabelsWithDeletesTestBase {
   }
 
   private Table createTableAndWriteDataWithLabels(long[] timestamp, String... labelExps)
-      throws Exception {
+    throws Exception {
     Table table = createTable(fam);
     int i = 1;
     List<Put> puts = new ArrayList<>(labelExps.length);

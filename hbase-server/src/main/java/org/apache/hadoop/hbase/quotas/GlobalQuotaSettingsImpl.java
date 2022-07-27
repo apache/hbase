@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,9 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Map.Entry;
-
+import java.util.Objects;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory.QuotaGlobalsSettingsBypass;
@@ -47,16 +47,16 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
   private final QuotaProtos.SpaceQuota spaceProto;
 
   protected GlobalQuotaSettingsImpl(String username, TableName tableName, String namespace,
-      String regionServer, QuotaProtos.Quotas quotas) {
+    String regionServer, QuotaProtos.Quotas quotas) {
     this(username, tableName, namespace, regionServer,
-        (quotas != null && quotas.hasThrottle() ? quotas.getThrottle() : null),
-        (quotas != null && quotas.hasBypassGlobals() ? quotas.getBypassGlobals() : null),
-        (quotas != null && quotas.hasSpace() ? quotas.getSpace() : null));
+      (quotas != null && quotas.hasThrottle() ? quotas.getThrottle() : null),
+      (quotas != null && quotas.hasBypassGlobals() ? quotas.getBypassGlobals() : null),
+      (quotas != null && quotas.hasSpace() ? quotas.getSpace() : null));
   }
 
   protected GlobalQuotaSettingsImpl(String userName, TableName tableName, String namespace,
-      String regionServer, QuotaProtos.Throttle throttleProto, Boolean bypassGlobals,
-      QuotaProtos.SpaceQuota spaceProto) {
+    String regionServer, QuotaProtos.Throttle throttleProto, Boolean bypassGlobals,
+    QuotaProtos.SpaceQuota spaceProto) {
     super(userName, tableName, namespace, regionServer);
     this.throttleProto = throttleProto;
     this.bypassGlobals = bypassGlobals;
@@ -73,7 +73,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     }
     if (bypassGlobals != null && bypassGlobals.booleanValue()) {
       settings.add(new QuotaGlobalsSettingsBypass(getUserName(), getTableName(), getNamespace(),
-          getRegionServer(), true));
+        getRegionServer(), true));
     }
     if (spaceProto != null) {
       settings.add(QuotaSettingsFactory.fromSpace(getTableName(), getNamespace(), spaceProto));
@@ -111,7 +111,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
   }
 
   private boolean hasThrottle(QuotaProtos.ThrottleType quotaType,
-      QuotaProtos.Throttle.Builder throttleBuilder) {
+    QuotaProtos.Throttle.Builder throttleBuilder) {
     boolean hasThrottle = false;
     switch (quotaType) {
       case REQUEST_NUMBER:
@@ -171,7 +171,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
 
     // Propagate the Throttle
     QuotaProtos.Throttle.Builder throttleBuilder =
-        throttleProto == null ? null : throttleProto.toBuilder();
+      throttleProto == null ? null : throttleProto.toBuilder();
 
     if (other instanceof ThrottleSettings) {
       ThrottleSettings otherThrottle = (ThrottleSettings) other;
@@ -180,8 +180,10 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         // To prevent the "empty" row in QuotaTableUtil.QUOTA_TABLE_NAME
 
         QuotaProtos.ThrottleRequest otherProto = otherThrottle.proto;
-        if (throttleBuilder != null && !otherThrottle.proto.hasTimedQuota() && otherThrottle.proto
-            .hasType()) {
+        if (
+          throttleBuilder != null && !otherThrottle.proto.hasTimedQuota()
+            && otherThrottle.proto.hasType()
+        ) {
           switch (otherProto.getType()) {
             case REQUEST_NUMBER:
               throttleBuilder.clearReqNum();
@@ -267,7 +269,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
 
     // Propagate the space quota portion
     QuotaProtos.SpaceQuota.Builder spaceBuilder =
-        (spaceProto == null ? null : spaceProto.toBuilder());
+      (spaceProto == null ? null : spaceProto.toBuilder());
     if (other instanceof SpaceLimitSettings) {
       if (spaceBuilder == null) {
         spaceBuilder = QuotaProtos.SpaceQuota.newBuilder();
@@ -281,8 +283,10 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
         SpaceQuota quotaToMerge = spaceRequest.getQuota();
         // Validate that the two settings are for the same target.
         // SpaceQuotas either apply to a table or a namespace (no user spacequota).
-        if (!Objects.equals(getTableName(), settingsToMerge.getTableName()) && !Objects
-            .equals(getNamespace(), settingsToMerge.getNamespace())) {
+        if (
+          !Objects.equals(getTableName(), settingsToMerge.getTableName())
+            && !Objects.equals(getNamespace(), settingsToMerge.getNamespace())
+        ) {
           throw new IllegalArgumentException("Cannot merge " + settingsToMerge + " into " + this);
         }
 
@@ -298,7 +302,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     }
 
     boolean removeSpaceBuilder =
-        (spaceBuilder == null) || (spaceBuilder.hasRemove() && spaceBuilder.getRemove());
+      (spaceBuilder == null) || (spaceBuilder.hasRemove() && spaceBuilder.getRemove());
 
     Boolean bypassGlobals = this.bypassGlobals;
     if (other instanceof QuotaGlobalsSettingsBypass) {
@@ -310,14 +314,14 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     }
 
     return new GlobalQuotaSettingsImpl(getUserName(), getTableName(), getNamespace(),
-        getRegionServer(), (throttleBuilder == null ? null : throttleBuilder.build()),
-        bypassGlobals, (removeSpaceBuilder ? null : spaceBuilder.build()));
+      getRegionServer(), (throttleBuilder == null ? null : throttleBuilder.build()), bypassGlobals,
+      (removeSpaceBuilder ? null : spaceBuilder.build()));
   }
 
   private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {
     if (timedQuota.getSoftLimit() < 1) {
       throw new DoNotRetryIOException(new UnsupportedOperationException(
-          "The throttle limit must be greater then 0, got " + timedQuota.getSoftLimit()));
+        "The throttle limit must be greater then 0, got " + timedQuota.getSoftLimit()));
     }
   }
 
@@ -326,9 +330,9 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     StringBuilder builder = new StringBuilder();
     builder.append("GlobalQuota: ");
     if (throttleProto != null) {
-      Map<ThrottleType,TimedQuota> throttleQuotas = buildThrottleQuotas(throttleProto);
+      Map<ThrottleType, TimedQuota> throttleQuotas = buildThrottleQuotas(throttleProto);
       builder.append(" { TYPE => THROTTLE ");
-      for (Entry<ThrottleType,TimedQuota> entry : throttleQuotas.entrySet()) {
+      for (Entry<ThrottleType, TimedQuota> entry : throttleQuotas.entrySet()) {
         final ThrottleType type = entry.getKey();
         final TimedQuota timedQuota = entry.getValue();
         builder.append("{THROTTLE_TYPE => ").append(type.name()).append(", LIMIT => ");
@@ -360,7 +364,7 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
           builder.append(timedQuota.getScope().toString());
         }
       }
-      builder.append( "} } ");
+      builder.append("} } ");
     } else {
       builder.append(" {} ");
     }
@@ -386,8 +390,8 @@ public class GlobalQuotaSettingsImpl extends GlobalQuotaSettings {
     return builder.toString();
   }
 
-  private Map<ThrottleType,TimedQuota> buildThrottleQuotas(Throttle proto) {
-    HashMap<ThrottleType,TimedQuota> quotas = new HashMap<>();
+  private Map<ThrottleType, TimedQuota> buildThrottleQuotas(Throttle proto) {
+    HashMap<ThrottleType, TimedQuota> quotas = new HashMap<>();
     if (proto.hasReadNum()) {
       quotas.put(ThrottleType.READ_NUMBER, proto.getReadNum());
     }

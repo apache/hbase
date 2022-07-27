@@ -35,9 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Helper class to obtain a filesystem delegation token.
- * Mainly used by Map-Reduce jobs that requires to read/write data to 
- * a remote file-system (e.g. BulkLoad, ExportSnapshot).
+ * Helper class to obtain a filesystem delegation token. Mainly used by Map-Reduce jobs that
+ * requires to read/write data to a remote file-system (e.g. BulkLoad, ExportSnapshot).
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -60,15 +59,13 @@ public class FsDelegationToken {
   }
 
   /**
-   * Acquire the delegation token for the specified filesystem.
-   * Before requesting a new delegation token, tries to find one already available.
-   * Currently supports checking existing delegation tokens for swebhdfs, webhdfs and hdfs.
-   *
+   * Acquire the delegation token for the specified filesystem. Before requesting a new delegation
+   * token, tries to find one already available. Currently supports checking existing delegation
+   * tokens for swebhdfs, webhdfs and hdfs.
    * @param fs the filesystem that requires the delegation token
    * @throws IOException on fs.getDelegationToken() failure
    */
-  public void acquireDelegationToken(final FileSystem fs)
-      throws IOException {
+  public void acquireDelegationToken(final FileSystem fs) throws IOException {
     String tokenKind;
     String scheme = fs.getUri().getScheme();
     if (SWEBHDFS_SCHEME.equalsIgnoreCase(scheme)) {
@@ -87,15 +84,14 @@ public class FsDelegationToken {
   }
 
   /**
-   * Acquire the delegation token for the specified filesystem and token kind.
-   * Before requesting a new delegation token, tries to find one already available.
-   *
+   * Acquire the delegation token for the specified filesystem and token kind. Before requesting a
+   * new delegation token, tries to find one already available.
    * @param tokenKind non-null token kind to get delegation token from the {@link UserProvider}
-   * @param fs the filesystem that requires the delegation token
+   * @param fs        the filesystem that requires the delegation token
    * @throws IOException on fs.getDelegationToken() failure
    */
   public void acquireDelegationToken(final String tokenKind, final FileSystem fs)
-      throws IOException {
+    throws IOException {
     Objects.requireNonNull(tokenKind, "tokenKind:null");
     if (userProvider.isHadoopSecurityEnabled()) {
       this.fs = fs;
@@ -136,16 +132,12 @@ public class FsDelegationToken {
     return userProvider;
   }
 
-  /**
-   * @return the account name that is allowed to renew the token.
-   */
+  /** Returns the account name that is allowed to renew the token. */
   public String getRenewer() {
     return renewer;
   }
 
-  /**
-   * @return the delegation token acquired, or null in case it was not acquired
-   */
+  /** Returns the delegation token acquired, or null in case it was not acquired */
   public Token<?> getUserToken() {
     return userToken;
   }

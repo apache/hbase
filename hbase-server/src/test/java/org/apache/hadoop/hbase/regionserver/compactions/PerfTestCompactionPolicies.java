@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.mockito.Mockito.mock;
@@ -45,10 +44,10 @@ import org.junit.runners.Parameterized;
 
 /**
  * This is not a unit test. It is not run as part of the general unit test suite. It is for
- * comparing compaction policies. You must run it explicitly;
- * e.g. mvn test -Dtest=PerfTestCompactionPolicies
+ * comparing compaction policies. You must run it explicitly; e.g. mvn test
+ * -Dtest=PerfTestCompactionPolicies
  */
-@Category({RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
@@ -68,33 +67,20 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
 
+    Class<?>[] policyClasses = new Class[] { EverythingPolicy.class,
+      RatioBasedCompactionPolicy.class, ExploringCompactionPolicy.class, };
 
+    Class<?>[] fileListGenClasses =
+      new Class[] { ExplicitFileListGenerator.class, ConstantSizeFileListGenerator.class,
+        SemiConstantSizeFileListGenerator.class, GaussianFileListGenerator.class,
+        SinusoidalFileListGenerator.class, SpikyFileListGenerator.class };
 
-    Class<?>[] policyClasses = new Class[]{
-        EverythingPolicy.class,
-        RatioBasedCompactionPolicy.class,
-        ExploringCompactionPolicy.class,
-    };
+    int[] maxFileValues = new int[] { 10 };
+    int[] minFilesValues = new int[] { 3 };
+    float[] ratioValues = new float[] { 1.2f };
 
-    Class<?>[] fileListGenClasses = new Class[]{
-        ExplicitFileListGenerator.class,
-        ConstantSizeFileListGenerator.class,
-        SemiConstantSizeFileListGenerator.class,
-        GaussianFileListGenerator.class,
-        SinusoidalFileListGenerator.class,
-        SpikyFileListGenerator.class
-     };
-
-    int[] maxFileValues = new int[] {10};
-    int[] minFilesValues = new int[] {3};
-    float[] ratioValues = new float[] {1.2f};
-
-    List<Object[]> params = new ArrayList<>(
-        maxFileValues.length
-        * minFilesValues.length
-        * fileListGenClasses.length
-        * policyClasses.length);
-
+    List<Object[]> params = new ArrayList<>(maxFileValues.length * minFilesValues.length
+      * fileListGenClasses.length * policyClasses.length);
 
     for (Class<?> policyClass : policyClasses) {
       for (Class<?> genClass : fileListGenClasses) {
@@ -114,18 +100,14 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
   /**
    * Test the perf of a CompactionPolicy with settings.
    * @param cpClass The compaction policy to test
-   * @param inMmax The maximum number of file to compact
-   * @param inMin The min number of files to compact
+   * @param inMmax  The maximum number of file to compact
+   * @param inMin   The min number of files to compact
    * @param inRatio The ratio that files must be under to be compacted.
    */
-  public PerfTestCompactionPolicies(
-      final Class<? extends CompactionPolicy> cpClass,
-      final Class<? extends StoreFileListGenerator> fileGenClass,
-      final int inMmax,
-      final int inMin,
-      final float inRatio) throws IllegalAccessException, InstantiationException,
-      NoSuchMethodException, InvocationTargetException {
-    super(PerfTestCompactionPolicies.class);
+  public PerfTestCompactionPolicies(final Class<? extends CompactionPolicy> cpClass,
+    final Class<? extends StoreFileListGenerator> fileGenClass, final int inMmax, final int inMin,
+    final float inRatio) throws IllegalAccessException, InstantiationException,
+    NoSuchMethodException, InvocationTargetException {
     this.fileGenClass = fileGenClass;
     this.max = inMmax;
     this.min = inMin;
@@ -136,7 +118,6 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     Log4jUtils.setLogLevel(RatioBasedCompactionPolicy.class.getName(), "ERROR");
     Log4jUtils.setLogLevel(cpClass.getName(), "ERROR");
 
-
     Configuration configuration = HBaseConfiguration.create();
 
     // Make sure that this doesn't include every file.
@@ -146,8 +127,8 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 
     store = createMockStore();
     this.cp = ReflectionUtils.instantiateWithCustomCtor(cpClass.getName(),
-        new Class[] {Configuration.class, StoreConfigInformation.class },
-        new Object[] {configuration, store });
+      new Class[] { Configuration.class, StoreConfigInformation.class },
+      new Object[] { configuration, store });
 
     this.generator = fileGenClass.getDeclaredConstructor().newInstance();
     // Used for making paths
@@ -166,22 +147,14 @@ public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
     }
 
     // print out tab delimited so that it can be used in excel/gdocs.
-    System.out.println(
-            cp.getClass().getSimpleName()
-            + "\t" + fileGenClass.getSimpleName()
-            + "\t" + max
-            + "\t" + min
-            + "\t" + ratio
-            + "\t" + written
-            + "\t" + fileDiff
-    );
+    System.out.println(cp.getClass().getSimpleName() + "\t" + fileGenClass.getSimpleName() + "\t"
+      + max + "\t" + min + "\t" + ratio + "\t" + written + "\t" + fileDiff);
   }
-
 
   private List<HStoreFile> runIteration(List<HStoreFile> startingStoreFiles) throws IOException {
     List<HStoreFile> storeFiles = new ArrayList<>(startingStoreFiles);
-    CompactionRequestImpl req = cp.selectCompaction(
-        storeFiles, new ArrayList<>(), false, false, false);
+    CompactionRequestImpl req =
+      cp.selectCompaction(storeFiles, new ArrayList<>(), false, false, false);
     long newFileSize = 0;
 
     Collection<HStoreFile> filesToCompact = req.getFiles();

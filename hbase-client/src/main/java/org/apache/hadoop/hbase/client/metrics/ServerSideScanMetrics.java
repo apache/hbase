@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client.metrics;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -36,9 +35,8 @@ public class ServerSideScanMetrics {
   private final Map<String, AtomicLong> counters = new HashMap<>();
 
   /**
-   * Create a new counter with the specified name
-   * @param counterName
-   * @return {@link AtomicLong} instance for the counter with counterName
+   * Create a new counter with the specified name n * @return {@link AtomicLong} instance for the
+   * counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
     AtomicLong c = new AtomicLong(0);
@@ -52,7 +50,8 @@ public class ServerSideScanMetrics {
   /**
    * number of rows filtered during scan RPC
    */
-  public final AtomicLong countOfRowsFiltered = createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
+  public final AtomicLong countOfRowsFiltered =
+    createCounter(COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME);
 
   /**
    * number of rows scanned during scan RPC. Not every row scanned will be returned to the client
@@ -61,8 +60,7 @@ public class ServerSideScanMetrics {
   public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
   /**
-   * @param counterName
-   * @param value
+   * nn
    */
   public void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
@@ -72,24 +70,21 @@ public class ServerSideScanMetrics {
   }
 
   /**
-   * @param counterName
-   * @return true if a counter exists with the counterName
+   * n * @return true if a counter exists with the counterName
    */
   public boolean hasCounter(String counterName) {
     return this.counters.containsKey(counterName);
   }
 
   /**
-   * @param counterName
-   * @return {@link AtomicLong} instance for this counter name, null if counter does not exist.
+   * n * @return {@link AtomicLong} instance for this counter name, null if counter does not exist.
    */
   public AtomicLong getCounter(String counterName) {
     return this.counters.get(counterName);
   }
 
   /**
-   * @param counterName
-   * @param delta
+   * nn
    */
   public void addToCounter(String counterName, long delta) {
     AtomicLong c = this.counters.get(counterName);

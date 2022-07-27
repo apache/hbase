@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,10 +19,6 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.Closeable;
 import java.io.IOException;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -37,21 +32,23 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A Base for {@link TableInputFormat}s. Receives a {@link Table}, a
- * byte[] of input columns and optionally a {@link Filter}.
- * Subclasses may use other TableRecordReader implementations.
- *
+ * A Base for {@link TableInputFormat}s. Receives a {@link Table}, a byte[] of input columns and
+ * optionally a {@link Filter}. Subclasses may use other TableRecordReader implementations.
+ * <p/>
  * Subclasses MUST ensure initializeTable(Connection, TableName) is called for an instance to
  * function properly. Each of the entry points to this class used by the MapReduce framework,
  * {@link #getRecordReader(InputSplit, JobConf, Reporter)} and {@link #getSplits(JobConf, int)},
- * will call {@link #initialize(JobConf)} as a convenient centralized location to handle
- * retrieving the necessary configuration information. If your subclass overrides either of these
- * methods, either call the parent version or call initialize yourself.
- *
+ * will call {@link #initialize(JobConf)} as a convenient centralized location to handle retrieving
+ * the necessary configuration information. If your subclass overrides either of these methods,
+ * either call the parent version or call initialize yourself.
  * <p>
  * An example of a subclass:
+ *
  * <pre>
  *   class ExampleTIF extends TableInputFormatBase {
  *
@@ -77,33 +74,28 @@ import org.apache.hadoop.mapred.Reporter;
  */
 
 @InterfaceAudience.Public
-public abstract class TableInputFormatBase
-implements InputFormat<ImmutableBytesWritable, Result> {
+public abstract class TableInputFormatBase implements InputFormat<ImmutableBytesWritable, Result> {
   private static final Logger LOG = LoggerFactory.getLogger(TableInputFormatBase.class);
-  private byte [][] inputColumns;
+  private byte[][] inputColumns;
   private Table table;
   private RegionLocator regionLocator;
   private Connection connection;
   private TableRecordReader tableRecordReader;
   private Filter rowFilter;
 
-  private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
-      "initialized. Ensure you call initializeTable either in your constructor or initialize " +
-      "method";
-  private static final String INITIALIZATION_ERROR = "Cannot create a record reader because of a" +
-            " previous error. Please look at the previous logs lines from" +
-            " the task's full log for more details.";
+  private static final String NOT_INITIALIZED = "The input format instance has not been properly "
+    + "initialized. Ensure you call initializeTable either in your constructor or initialize "
+    + "method";
+  private static final String INITIALIZATION_ERROR = "Cannot create a record reader because of a"
+    + " previous error. Please look at the previous logs lines from"
+    + " the task's full log for more details.";
 
   /**
-   * Builds a TableRecordReader. If no TableRecordReader was provided, uses
-   * the default.
-   *
-   * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
-   *      JobConf, Reporter)
+   * Builds a TableRecordReader. If no TableRecordReader was provided, uses the default.
+   * @see InputFormat#getRecordReader(InputSplit, JobConf, Reporter)
    */
-  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
-      InputSplit split, JobConf job, Reporter reporter)
-  throws IOException {
+  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(InputSplit split, JobConf job,
+    Reporter reporter) throws IOException {
     // In case a subclass uses the deprecated approach or calls initializeTable directly
     if (table == null) {
       initialize(job);
@@ -120,8 +112,8 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
     TableSplit tSplit = (TableSplit) split;
     // if no table record reader was provided use default
-    final TableRecordReader trr = this.tableRecordReader == null ? new TableRecordReader() :
-        this.tableRecordReader;
+    final TableRecordReader trr =
+      this.tableRecordReader == null ? new TableRecordReader() : this.tableRecordReader;
     trr.setStartRow(tSplit.getStartRow());
     trr.setEndRow(tSplit.getEndRow());
     trr.setHTable(this.table);
@@ -165,22 +157,17 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Calculates the splits that will serve as input for the map tasks.
-   *
-   * Splits are created in number equal to the smallest between numSplits and
-   * the number of {@link org.apache.hadoop.hbase.regionserver.HRegion}s in the table.
-   * If the number of splits is smaller than the number of
-   * {@link org.apache.hadoop.hbase.regionserver.HRegion}s then splits are spanned across
-   * multiple {@link org.apache.hadoop.hbase.regionserver.HRegion}s
-   * and are grouped the most evenly possible. In the
-   * case splits are uneven the bigger splits are placed first in the
-   * {@link InputSplit} array.
-   *
-   * @param job the map task {@link JobConf}
+   * <p/>
+   * Splits are created in number equal to the smallest between numSplits and the number of
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion}s in the table. If the number of splits is
+   * smaller than the number of {@link org.apache.hadoop.hbase.regionserver.HRegion}s then splits
+   * are spanned across multiple {@link org.apache.hadoop.hbase.regionserver.HRegion}s and are
+   * grouped the most evenly possible. In the case splits are uneven the bigger splits are placed
+   * first in the {@link InputSplit} array.
+   * @param job       the map task {@link JobConf}
    * @param numSplits a hint to calculate the number of splits (mapred.map.tasks).
-   *
    * @return the input splits
-   *
-   * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
+   * @see InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     if (this.table == null) {
@@ -196,26 +183,24 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       throw new IOException(INITIALIZATION_ERROR, exception);
     }
 
-    byte [][] startKeys = this.regionLocator.getStartKeys();
+    byte[][] startKeys = this.regionLocator.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
     }
     if (this.inputColumns == null || this.inputColumns.length == 0) {
       throw new IOException("Expecting at least one column");
     }
-    int realNumSplits = numSplits > startKeys.length? startKeys.length:
-      numSplits;
+    int realNumSplits = numSplits > startKeys.length ? startKeys.length : numSplits;
     InputSplit[] splits = new InputSplit[realNumSplits];
     int middle = startKeys.length / realNumSplits;
     int startPos = 0;
     for (int i = 0; i < realNumSplits; i++) {
       int lastPos = startPos + middle;
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
-      String regionLocation = regionLocator.getRegionLocation(startKeys[startPos]).
-        getHostname();
-      splits[i] = new TableSplit(this.table.getName(),
-        startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
-          HConstants.EMPTY_START_ROW, regionLocation);
+      String regionLocation = regionLocator.getRegionLocation(startKeys[startPos]).getHostname();
+      splits[i] = new TableSplit(this.table.getName(), startKeys[startPos],
+        ((i + 1) < realNumSplits) ? startKeys[lastPos] : HConstants.EMPTY_START_ROW,
+        regionLocation);
       LOG.info("split: " + i + "->" + splits[i]);
       startPos = lastPos;
     }
@@ -224,15 +209,13 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Allows subclasses to initialize the table information.
-   *
-   * @param connection  The Connection to the HBase cluster. MUST be unmanaged. We will close.
-   * @param tableName  The {@link TableName} of the table to process.
-   * @throws IOException
+   * @param connection The Connection to the HBase cluster. MUST be unmanaged. We will close.
+   * @param tableName  The {@link TableName} of the table to process. n
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
     if (this.table != null || this.connection != null) {
-      LOG.warn("initializeTable called multiple times. Overwriting connection and table " +
-          "reference; TableInputFormatBase will not close these old references when done.");
+      LOG.warn("initializeTable called multiple times. Overwriting connection and table "
+        + "reference; TableInputFormatBase will not close these old references when done.");
     }
     this.table = connection.getTable(tableName);
     this.regionLocator = connection.getRegionLocator(tableName);
@@ -242,7 +225,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   /**
    * @param inputColumns to be passed in {@link Result} to the map task.
    */
-  protected void setInputColumns(byte [][] inputColumns) {
+  protected void setInputColumns(byte[][] inputColumns) {
     this.inputColumns = inputColumns;
   }
 
@@ -257,47 +240,39 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * Allows subclasses to set the {@link TableRecordReader}.
-   *
-   * @param tableRecordReader
-   *                to provide other {@link TableRecordReader} implementations.
+   * Allows subclasses to set the {@link TableRecordReader}. n * to provide other
+   * {@link TableRecordReader} implementations.
    */
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;
   }
 
   /**
-   * Allows subclasses to set the {@link Filter} to be used.
-   *
-   * @param rowFilter
+   * Allows subclasses to set the {@link Filter} to be used. n
    */
   protected void setRowFilter(Filter rowFilter) {
     this.rowFilter = rowFilter;
   }
 
   /**
-   * Handle subclass specific set up.
-   * Each of the entry points used by the MapReduce framework,
+   * Handle subclass specific set up. Each of the entry points used by the MapReduce framework,
    * {@link #getRecordReader(InputSplit, JobConf, Reporter)} and {@link #getSplits(JobConf, int)},
    * will call {@link #initialize(JobConf)} as a convenient centralized location to handle
    * retrieving the necessary configuration information and calling
    * {@link #initializeTable(Connection, TableName)}.
-   *
+   * <p/>
    * Subclasses should implement their initialize call such that it is safe to call multiple times.
    * The current TableInputFormatBase implementation relies on a non-null table reference to decide
-   * if an initialize call is needed, but this behavior may change in the future. In particular,
-   * it is critical that initializeTable not be called multiple times since this will leak
-   * Connection instances.
-   *
+   * if an initialize call is needed, but this behavior may change in the future. In particular, it
+   * is critical that initializeTable not be called multiple times since this will leak Connection
+   * instances.
    */
   protected void initialize(JobConf job) throws IOException {
   }
 
   /**
    * Close the Table and related objects that were initialized via
-   * {@link #initializeTable(Connection, TableName)}.
-   *
-   * @throws IOException
+   * {@link #initializeTable(Connection, TableName)}. n
    */
   protected void closeTable() throws IOException {
     close(table, connection);
@@ -307,7 +282,9 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   private void close(Closeable... closables) throws IOException {
     for (Closeable c : closables) {
-      if(c != null) { c.close(); }
+      if (c != null) {
+        c.close();
+      }
     }
   }
 }

@@ -38,7 +38,9 @@
 include Java
 
 # Some goodies for hirb. Should these be left up to the user's discretion?
-require 'irb/completion'
+if $stdin.tty?
+  require 'irb/completion'
+end
 require 'pathname'
 require 'getoptlong'
 
@@ -102,7 +104,7 @@ opts = GetoptLong.new(
 opts.ordering = GetoptLong::REQUIRE_ORDER
 
 script2run = nil
-log_level = org.apache.log4j.Level::ERROR
+log_level = org.apache.logging.log4j.Level::ERROR
 @shell_debug = false
 interactive = true
 full_backtrace = false
@@ -116,7 +118,7 @@ opts.each do |opt, arg|
   when D_ARG
     conf_from_cli = add_to_configuration(conf_from_cli, arg)
   when '--debug'
-    log_level = org.apache.log4j.Level::DEBUG
+    log_level = org.apache.logging.log4j.Level::DEBUG
     full_backtrace = true
     @shell_debug = true
     puts 'Setting DEBUG log level...'
@@ -136,8 +138,8 @@ script2run = ARGV.shift unless ARGV.empty?
 ARGV.unshift('-d') if @shell_debug
 
 # Set logging level to avoid verboseness
-org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
-org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
+org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
+org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
 
 # Require HBase now after setting log levels
 require 'hbase_constants'
@@ -163,14 +165,14 @@ def debug
   if @shell_debug
     @shell_debug = false
     conf.back_trace_limit = 0
-    log_level = org.apache.log4j.Level::ERROR
+    log_level = org.apache.logging.log4j.Level::ERROR
   else
     @shell_debug = true
     conf.back_trace_limit = 100
-    log_level = org.apache.log4j.Level::DEBUG
+    log_level = org.apache.logging.log4j.Level::DEBUG
   end
-  org.apache.log4j.Logger.getLogger('org.apache.zookeeper').setLevel(log_level)
-  org.apache.log4j.Logger.getLogger('org.apache.hadoop.hbase').setLevel(log_level)
+  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.zookeeper', log_level)
+  org.apache.logging.log4j.core.config.Configurator.setAllLevels('org.apache.hadoop', log_level)
   debug?
 end
 
@@ -211,7 +213,7 @@ workspace = @shell.get_workspace
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
 if script2run
   ::Shell::Shell.exception_handler(!full_backtrace) do
-    IRB::HIRB.new(workspace, IRB::HBaseLoader.file_for_load(script2run)).run
+    IRB::HIRB.new(workspace, interactive, IRB::HBaseLoader.file_for_load(script2run)).run
   end
   exit @shell.exit_code unless @shell.exit_code.nil?
 end
@@ -220,5 +222,5 @@ if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
 end
-IRB::HIRB.new(workspace).run
+IRB::HIRB.new(workspace, interactive).run
 exit @shell.exit_code unless interactive || @shell.exit_code.nil?

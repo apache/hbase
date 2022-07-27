@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,12 +33,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RegionServerTests.class, SmallTests.class})
+@Category({ RegionServerTests.class, SmallTests.class })
 public class TestSimpleTimeRangeTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSimpleTimeRangeTracker.class);
+    HBaseClassTestRule.forClass(TestSimpleTimeRangeTracker.class);
 
   protected TimeRangeTracker getTimeRangeTracker() {
     return TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
@@ -101,7 +101,7 @@ public class TestSimpleTimeRangeTracker {
     trr.includeTimestamp(2);
     trr.includeTimestamp(1);
     assertTrue(trr.getMin() != TimeRangeTracker.INITIAL_MIN_TIMESTAMP);
-    assertTrue(trr.getMax() != -1 /*The initial max value*/);
+    assertTrue(trr.getMax() != -1 /* The initial max value */);
   }
 
   @Test

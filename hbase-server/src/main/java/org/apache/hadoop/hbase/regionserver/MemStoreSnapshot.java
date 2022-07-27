@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * {@link MemStoreSnapshot} is a Context Object to hold details of the snapshot taken on a MemStore.
@@ -51,16 +50,12 @@ public class MemStoreSnapshot {
     this.snapshotImmutableSegment = snapshot;
   }
 
-  /**
-   * @return snapshot's identifier.
-   */
+  /** Returns snapshot's identifier. */
   public long getId() {
     return id;
   }
 
-  /**
-   * @return Number of Cells in this snapshot.
-   */
+  /** Returns Number of Cells in this snapshot. */
   public int getCellsCount() {
     return cellsCount;
   }
@@ -73,9 +68,7 @@ public class MemStoreSnapshot {
     return memStoreSize;
   }
 
-  /**
-   * @return {@link TimeRangeTracker} for all the Cells in the snapshot.
-   */
+  /** Returns {@link TimeRangeTracker} for all the Cells in the snapshot. */
   public TimeRangeTracker getTimeRangeTracker() {
     return timeRangeTracker;
   }
@@ -93,9 +86,7 @@ public class MemStoreSnapshot {
     return snapshotImmutableSegment.getSnapshotScanners();
   }
 
-  /**
-   * @return true if tags are present in this snapshot
-   */
+  /** Returns true if tags are present in this snapshot */
   public boolean isTagsPresent() {
     return this.tagsPresent;
   }

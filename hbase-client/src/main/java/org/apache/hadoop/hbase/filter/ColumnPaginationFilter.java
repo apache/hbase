@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,24 +20,24 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset.
- * This filter can be used for row-based indexing, where references to other tables are stored across many columns,
- * in order to efficient lookups and paginated results for end users. Only most recent versions are considered
- * for pagination.
+ * A filter, based on the ColumnCountGetFilter, takes two arguments: limit and offset. This filter
+ * can be used for row-based indexing, where references to other tables are stored across many
+ * columns, in order to efficient lookups and paginated results for end users. Only most recent
+ * versions are considered for pagination.
  */
 @InterfaceAudience.Public
 public class ColumnPaginationFilter extends FilterBase {
@@ -49,16 +48,13 @@ public class ColumnPaginationFilter extends FilterBase {
   private int count = 0;
 
   /**
-   * Initializes filter with an integer offset and limit. The offset is arrived at
-   * scanning sequentially and skipping entries. @limit number of columns are
-   * then retrieved. If multiple column families are involved, the columns may be spread
-   * across them.
-   *
-   * @param limit Max number of columns to return.
+   * Initializes filter with an integer offset and limit. The offset is arrived at scanning
+   * sequentially and skipping entries. @limit number of columns are then retrieved. If multiple
+   * column families are involved, the columns may be spread across them.
+   * @param limit  Max number of columns to return.
    * @param offset The integer offset where to start pagination.
    */
-  public ColumnPaginationFilter(final int limit, final int offset)
-  {
+  public ColumnPaginationFilter(final int limit, final int offset) {
     Preconditions.checkArgument(limit >= 0, "limit must be positive %s", limit);
     Preconditions.checkArgument(offset >= 0, "offset must be positive %s", offset);
     this.limit = limit;
@@ -66,41 +62,30 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
-   * Initializes filter with a string/bookmark based offset and limit. The offset is arrived
-   * at, by seeking to it using scanner hints. If multiple column families are involved,
-   * pagination starts at the first column family which contains @columnOffset. Columns are
-   * then retrieved sequentially upto @limit number of columns which maybe spread across
-   * multiple column families, depending on how the scan is setup.
-   *
-   * @param limit Max number of columns to return.
+   * Initializes filter with a string/bookmark based offset and limit. The offset is arrived at, by
+   * seeking to it using scanner hints. If multiple column families are involved, pagination starts
+   * at the first column family which contains @columnOffset. Columns are then retrieved
+   * sequentially upto @limit number of columns which maybe spread across multiple column families,
+   * depending on how the scan is setup.
+   * @param limit        Max number of columns to return.
    * @param columnOffset The string/bookmark offset on where to start pagination.
    */
   public ColumnPaginationFilter(final int limit, final byte[] columnOffset) {
     Preconditions.checkArgument(limit >= 0, "limit must be positive %s", limit);
-    Preconditions.checkArgument(columnOffset != null,
-                                "columnOffset must be non-null %s",
-                                columnOffset);
+    Preconditions.checkArgument(columnOffset != null, "columnOffset must be non-null %s",
+      columnOffset);
     this.limit = limit;
     this.columnOffset = columnOffset;
   }
 
-  /**
-   * @return limit
-   */
   public int getLimit() {
     return limit;
   }
 
-  /**
-   * @return offset
-   */
   public int getOffset() {
     return offset;
   }
 
-  /**
-   * @return columnOffset
-   */
   public byte[] getColumnOffset() {
     return columnOffset;
   }
@@ -112,8 +97,7 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c)
-  {
+  public ReturnCode filterCell(final Cell c) {
     if (columnOffset != null) {
       if (count >= limit) {
         return ReturnCode.NEXT_ROW;
@@ -134,8 +118,7 @@ public class ColumnPaginationFilter extends FilterBase {
         return ReturnCode.NEXT_ROW;
       }
 
-      ReturnCode code = count < offset ? ReturnCode.NEXT_COL :
-                                         ReturnCode.INCLUDE_AND_NEXT_COL;
+      ReturnCode code = count < offset ? ReturnCode.NEXT_COL : ReturnCode.INCLUDE_AND_NEXT_COL;
       count++;
       return code;
     }
@@ -147,24 +130,21 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   @Override
-  public void reset()
-  {
+  public void reset() {
     this.count = 0;
   }
 
-  public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 2,
-                                "Expected 2 but got: %s", filterArguments.size());
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 2, "Expected 2 but got: %s",
+      filterArguments.size());
     int limit = ParseFilter.convertByteArrayToInt(filterArguments.get(0));
     int offset = ParseFilter.convertByteArrayToInt(filterArguments.get(1));
     return new ColumnPaginationFilter(limit, offset);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     FilterProtos.ColumnPaginationFilter.Builder builder =
       FilterProtos.ColumnPaginationFilter.newBuilder();
     builder.setLimit(this.limit);
@@ -178,13 +158,14 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link ColumnPaginationFilter}
    * @param pbBytes A pb serialized {@link ColumnPaginationFilter} instance
    * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
-  public static ColumnPaginationFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static ColumnPaginationFilter parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     FilterProtos.ColumnPaginationFilter proto;
     try {
       proto = FilterProtos.ColumnPaginationFilter.parseFrom(pbBytes);
@@ -192,26 +173,27 @@ public class ColumnPaginationFilter extends FilterBase {
       throw new DeserializationException(e);
     }
     if (proto.hasColumnOffset()) {
-      return new ColumnPaginationFilter(proto.getLimit(),
-                                        proto.getColumnOffset().toByteArray());
+      return new ColumnPaginationFilter(proto.getLimit(), proto.getColumnOffset().toByteArray());
     }
-    return new ColumnPaginationFilter(proto.getLimit(),proto.getOffset());
+    return new ColumnPaginationFilter(proto.getLimit(), proto.getOffset());
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof ColumnPaginationFilter)) return false;
-
-    ColumnPaginationFilter other = (ColumnPaginationFilter)o;
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof ColumnPaginationFilter)) {
+      return false;
+    }
+    ColumnPaginationFilter other = (ColumnPaginationFilter) o;
     if (this.columnOffset != null) {
-      return this.getLimit() == other.getLimit() &&
-          Bytes.equals(this.getColumnOffset(), other.getColumnOffset());
+      return this.getLimit() == other.getLimit()
+        && Bytes.equals(this.getColumnOffset(), other.getColumnOffset());
     }
     return this.getLimit() == other.getLimit() && this.getOffset() == other.getOffset();
   }
@@ -219,11 +201,10 @@ public class ColumnPaginationFilter extends FilterBase {
   @Override
   public String toString() {
     if (this.columnOffset != null) {
-      return (this.getClass().getSimpleName() + "(" + this.limit + ", " +
-          Bytes.toStringBinary(this.columnOffset) + ")");
+      return (this.getClass().getSimpleName() + "(" + this.limit + ", "
+        + Bytes.toStringBinary(this.columnOffset) + ")");
     }
-    return String.format("%s (%d, %d)", this.getClass().getSimpleName(),
-        this.limit, this.offset);
+    return String.format("%s (%d, %d)", this.getClass().getSimpleName(), this.limit, this.offset);
   }
 
   @Override
@@ -233,7 +214,8 @@ public class ColumnPaginationFilter extends FilterBase {
 
   @Override
   public int hashCode() {
-    return columnOffset == null ? Objects.hash(this.limit, this.offset) :
-      Objects.hash(this.limit, Bytes.hashCode(this.columnOffset));
+    return columnOffset == null
+      ? Objects.hash(this.limit, this.offset)
+      : Objects.hash(this.limit, Bytes.hashCode(this.columnOffset));
   }
 }

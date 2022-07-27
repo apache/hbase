@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -30,7 +29,7 @@ import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsUserAggregateImpl implements MetricsUserAggregate{
+public class MetricsUserAggregateImpl implements MetricsUserAggregate {
 
   /** Provider for mapping principal names to Users */
   private final UserProvider userProvider;
@@ -40,15 +39,15 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
 
   public MetricsUserAggregateImpl(Configuration conf) {
     source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-        .getUserAggregate();
+      .getUserAggregate();
     userMetricLossyCounting = new LossyCounting<>("userMetrics", conf, source::deregister);
     this.userProvider = UserProvider.instantiate(conf);
   }
 
   /**
-   * Returns the active user to which authorization checks should be applied.
-   * If we are in the context of an RPC call, the remote user is used,
-   * otherwise the currently logged in user is used.
+   * Returns the active user to which authorization checks should be applied. If we are in the
+   * context of an RPC call, the remote user is used, otherwise the currently logged in user is
+   * used.
    */
   private String getActiveUser() {
     Optional<User> user = RpcServer.getRequestUser();
@@ -162,7 +161,8 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
     }
   }
 
-  @Override public void updateFilteredReadRequests() {
+  @Override
+  public void updateFilteredReadRequests() {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);
@@ -170,7 +170,8 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate{
     }
   }
 
-  @Override public void updateReadRequestCount() {
+  @Override
+  public void updateReadRequestCount() {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);

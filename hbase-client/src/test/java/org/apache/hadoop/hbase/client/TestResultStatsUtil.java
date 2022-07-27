@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,15 +29,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestResultStatsUtil {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-          HBaseClassTestRule.forClass(TestResultStatsUtil.class);
+    HBaseClassTestRule.forClass(TestResultStatsUtil.class);
 
-  private static final RegionLoadStats regionLoadStats = new RegionLoadStats(100,
-          10,90);
-  private static final byte[] regionName = {80};
+  private static final RegionLoadStats regionLoadStats = new RegionLoadStats(100, 10, 90);
+  private static final byte[] regionName = { 80 };
   private static final ServerName server = ServerName.parseServerName("3.1.yg.n,50,1");
 
   @Test
@@ -51,12 +50,12 @@ public class TestResultStatsUtil {
     // Check that the tracker was updated as expected
     ServerStatistics stats = serverStatisticTracker.getStats(server);
 
-    assertEquals(regionLoadStats.memstoreLoad, stats.getStatsForRegion(regionName)
-            .getMemStoreLoadPercent());
-    assertEquals(regionLoadStats.compactionPressure, stats.getStatsForRegion(regionName)
-            .getCompactionPressure());
-    assertEquals(regionLoadStats.heapOccupancy, stats.getStatsForRegion(regionName)
-            .getHeapOccupancyPercent());
+    assertEquals(regionLoadStats.memstoreLoad,
+      stats.getStatsForRegion(regionName).getMemStoreLoadPercent());
+    assertEquals(regionLoadStats.compactionPressure,
+      stats.getStatsForRegion(regionName).getCompactionPressure());
+    assertEquals(regionLoadStats.heapOccupancy,
+      stats.getStatsForRegion(regionName).getHeapOccupancyPercent());
   }
 
   @Test

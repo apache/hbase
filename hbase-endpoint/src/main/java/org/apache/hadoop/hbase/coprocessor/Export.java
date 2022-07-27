@@ -7,14 +7,13 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.coprocessor;
 
@@ -23,7 +22,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -81,10 +79,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.Delegation
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ExportProtos;
 
 /**
- * Export an HBase table. Writes content to sequence files up in HDFS. Use
- * {@link Import} to read it back in again. It is implemented by the endpoint
- * technique.
- *
+ * Export an HBase table. Writes content to sequence files up in HDFS. Use {@link Import} to read it
+ * back in again. It is implemented by the endpoint technique.
  * @see org.apache.hadoop.hbase.mapreduce.Export
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -93,7 +89,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   private static final Logger LOG = LoggerFactory.getLogger(Export.class);
   private static final Class<? extends CompressionCodec> DEFAULT_CODEC = DefaultCodec.class;
   private static final SequenceFile.CompressionType DEFAULT_TYPE =
-      SequenceFile.CompressionType.RECORD;
+    SequenceFile.CompressionType.RECORD;
   private RegionCoprocessorEnvironment env = null;
   private UserProvider userProvider;
 
@@ -110,31 +106,29 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
       return null;
     }
     Triple<TableName, Scan, Path> arguments =
-        ExportUtils.getArgumentsFromCommandLine(conf, otherArgs);
+      ExportUtils.getArgumentsFromCommandLine(conf, otherArgs);
     return run(conf, arguments.getFirst(), arguments.getSecond(), arguments.getThird());
   }
 
-  public static Map<byte[], Response> run(final Configuration conf, TableName tableName,
-      Scan scan, Path dir) throws Throwable {
+  @SuppressWarnings("ModifiedButNotUsed")
+  public static Map<byte[], Response> run(final Configuration conf, TableName tableName, Scan scan,
+    Path dir) throws Throwable {
     FileSystem fs = dir.getFileSystem(conf);
     UserProvider userProvider = UserProvider.instantiate(conf);
     checkDir(fs, dir);
     FsDelegationToken fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
     fsDelegationToken.acquireDelegationToken(fs);
     try {
-      final ExportProtos.ExportRequest request = getConfiguredRequest(conf, dir,
-        scan, fsDelegationToken.getUserToken());
+      final ExportProtos.ExportRequest request =
+        getConfiguredRequest(conf, dir, scan, fsDelegationToken.getUserToken());
       try (Connection con = ConnectionFactory.createConnection(conf);
-              Table table = con.getTable(tableName)) {
+        Table table = con.getTable(tableName)) {
         Map<byte[], Response> result = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-        table.coprocessorService(ExportProtos.ExportService.class,
-          scan.getStartRow(),
-          scan.getStopRow(),
-          (ExportProtos.ExportService service) -> {
+        table.coprocessorService(ExportProtos.ExportService.class, scan.getStartRow(),
+          scan.getStopRow(), (ExportProtos.ExportService service) -> {
             ServerRpcController controller = new ServerRpcController();
-            Map<byte[], ExportProtos.ExportResponse> rval = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-            CoprocessorRpcUtils.BlockingRpcCallback<ExportProtos.ExportResponse>
-              rpcCallback = new CoprocessorRpcUtils.BlockingRpcCallback<>();
+            CoprocessorRpcUtils.BlockingRpcCallback<ExportProtos.ExportResponse> rpcCallback =
+              new CoprocessorRpcUtils.BlockingRpcCallback<>();
             service.export(controller, request, rpcCallback);
             if (controller.failedOnException()) {
               throw controller.getFailedOn();
@@ -159,8 +153,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
   }
 
-  private static SequenceFile.CompressionType getCompressionType(
-      final ExportProtos.ExportRequest request) {
+  private static SequenceFile.CompressionType
+    getCompressionType(final ExportProtos.ExportRequest request) {
     if (request.hasCompressType()) {
       return SequenceFile.CompressionType.valueOf(request.getCompressType());
     } else {
@@ -169,24 +163,24 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private static CompressionCodec getCompressionCodec(final Configuration conf,
-      final ExportProtos.ExportRequest request) {
+    final ExportProtos.ExportRequest request) {
     try {
       Class<? extends CompressionCodec> codecClass;
       if (request.hasCompressCodec()) {
-        codecClass = conf.getClassByName(request.getCompressCodec())
-            .asSubclass(CompressionCodec.class);
+        codecClass =
+          conf.getClassByName(request.getCompressCodec()).asSubclass(CompressionCodec.class);
       } else {
         codecClass = DEFAULT_CODEC;
       }
       return ReflectionUtils.newInstance(codecClass, conf);
     } catch (ClassNotFoundException e) {
-      throw new IllegalArgumentException("Compression codec "
-              + request.getCompressCodec() + " was not found.", e);
+      throw new IllegalArgumentException(
+        "Compression codec " + request.getCompressCodec() + " was not found.", e);
     }
   }
 
   private static SequenceFile.Writer.Option getOutputPath(final Configuration conf,
-          final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
+    final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
     Path file = new Path(request.getOutputPath(), "export-" + info.getEncodedName());
     FileSystem fs = file.getFileSystem(conf);
     if (fs.exists(file)) {
@@ -196,14 +190,14 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private static List<SequenceFile.Writer.Option> getWriterOptions(final Configuration conf,
-          final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
-    List<SequenceFile.Writer.Option> rval = new LinkedList<>();
+    final RegionInfo info, final ExportProtos.ExportRequest request) throws IOException {
+    List<SequenceFile.Writer.Option> rval = new ArrayList<>(5);
     rval.add(SequenceFile.Writer.keyClass(ImmutableBytesWritable.class));
     rval.add(SequenceFile.Writer.valueClass(Result.class));
     rval.add(getOutputPath(conf, info, request));
     if (getCompression(request)) {
       rval.add(SequenceFile.Writer.compression(getCompressionType(request),
-          getCompressionCodec(conf, request)));
+        getCompressionCodec(conf, request)));
     } else {
       rval.add(SequenceFile.Writer.compression(SequenceFile.CompressionType.NONE));
     }
@@ -211,12 +205,12 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private static ExportProtos.ExportResponse processData(final Region region,
-      final Configuration conf, final UserProvider userProvider, final Scan scan,
-      final Token userToken, final List<SequenceFile.Writer.Option> opts) throws IOException {
+    final Configuration conf, final UserProvider userProvider, final Scan scan,
+    final Token userToken, final List<SequenceFile.Writer.Option> opts) throws IOException {
     ScanCoprocessor cp = new ScanCoprocessor(region);
     RegionScanner scanner = null;
     try (RegionOp regionOp = new RegionOp(region);
-            SecureWriter out = new SecureWriter(conf, userProvider, userToken, opts)) {
+      SecureWriter out = new SecureWriter(conf, userProvider, userToken, opts)) {
       scanner = cp.checkScannerOpen(scan);
       ImmutableBytesWritable key = new ImmutableBytesWritable();
       long rowCount = 0;
@@ -235,11 +229,13 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
           }
           Cell firstCell = cells.get(0);
           for (Cell cell : cells) {
-            if (Bytes.compareTo(firstCell.getRowArray(), firstCell.getRowOffset(),
+            if (
+              Bytes.compareTo(firstCell.getRowArray(), firstCell.getRowOffset(),
                 firstCell.getRowLength(), cell.getRowArray(), cell.getRowOffset(),
-                cell.getRowLength()) != 0) {
-              throw new IOException("Why the RegionScanner#nextRaw returns the data of different"
-                  + " rows?? first row="
+                cell.getRowLength()) != 0
+            ) {
+              throw new IOException(
+                "Why the RegionScanner#nextRaw returns the data of different" + " rows?? first row="
                   + Bytes.toHex(firstCell.getRowArray(), firstCell.getRowOffset(),
                     firstCell.getRowLength())
                   + ", current row="
@@ -258,10 +254,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
         }
         results.clear();
       } while (hasMore);
-      return ExportProtos.ExportResponse.newBuilder()
-              .setRowCount(rowCount)
-              .setCellCount(cellCount)
-              .build();
+      return ExportProtos.ExportResponse.newBuilder().setRowCount(rowCount).setCellCount(cellCount)
+        .build();
     } finally {
       cp.checkScannerClose(scanner);
     }
@@ -276,31 +270,24 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
   }
 
-  private static ExportProtos.ExportRequest getConfiguredRequest(Configuration conf,
-          Path dir, final Scan scan, final Token<?> userToken) throws IOException {
+  private static ExportProtos.ExportRequest getConfiguredRequest(Configuration conf, Path dir,
+    final Scan scan, final Token<?> userToken) throws IOException {
     boolean compressed = conf.getBoolean(FileOutputFormat.COMPRESS, false);
-    String compressionType = conf.get(FileOutputFormat.COMPRESS_TYPE,
-            DEFAULT_TYPE.toString());
-    String compressionCodec = conf.get(FileOutputFormat.COMPRESS_CODEC,
-            DEFAULT_CODEC.getName());
+    String compressionType = conf.get(FileOutputFormat.COMPRESS_TYPE, DEFAULT_TYPE.toString());
+    String compressionCodec = conf.get(FileOutputFormat.COMPRESS_CODEC, DEFAULT_CODEC.getName());
     DelegationToken protoToken = null;
     if (userToken != null) {
       protoToken = DelegationToken.newBuilder()
-              .setIdentifier(UnsafeByteOperations.unsafeWrap(userToken.getIdentifier()))
-              .setPassword(UnsafeByteOperations.unsafeWrap(userToken.getPassword()))
-              .setKind(userToken.getKind().toString())
-              .setService(userToken.getService().toString()).build();
+        .setIdentifier(UnsafeByteOperations.unsafeWrap(userToken.getIdentifier()))
+        .setPassword(UnsafeByteOperations.unsafeWrap(userToken.getPassword()))
+        .setKind(userToken.getKind().toString()).setService(userToken.getService().toString())
+        .build();
     }
-    LOG.info("compressed=" + compressed
-            + ", compression type=" + compressionType
-            + ", compression codec=" + compressionCodec
-            + ", userToken=" + userToken);
+    LOG.info("compressed=" + compressed + ", compression type=" + compressionType
+      + ", compression codec=" + compressionCodec + ", userToken=" + userToken);
     ExportProtos.ExportRequest.Builder builder = ExportProtos.ExportRequest.newBuilder()
-            .setScan(ProtobufUtil.toScan(scan))
-            .setOutputPath(dir.toString())
-            .setCompressed(compressed)
-            .setCompressCodec(compressionCodec)
-            .setCompressType(compressionType);
+      .setScan(ProtobufUtil.toScan(scan)).setOutputPath(dir.toString()).setCompressed(compressed)
+      .setCompressCodec(compressionCodec).setCompressType(compressionType);
     if (protoToken != null) {
       builder.setFsToken(protoToken);
     }
@@ -328,11 +315,11 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
 
   @Override
   public void export(RpcController controller, ExportProtos.ExportRequest request,
-          RpcCallback<ExportProtos.ExportResponse> done) {
+    RpcCallback<ExportProtos.ExportResponse> done) {
     Region region = env.getRegion();
     Configuration conf = HBaseConfiguration.create(env.getConfiguration());
     conf.setStrings("io.serializations", conf.get("io.serializations"),
-        ResultSerialization.class.getName());
+      ResultSerialization.class.getName());
     try {
       Scan scan = validateKey(region.getRegionInfo(), request);
       Token userToken = null;
@@ -340,12 +327,11 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
         LOG.warn("Hadoop security is enable, but no found of user token");
       } else if (userProvider.isHadoopSecurityEnabled()) {
         userToken = new Token(request.getFsToken().getIdentifier().toByteArray(),
-                request.getFsToken().getPassword().toByteArray(),
-                new Text(request.getFsToken().getKind()),
-                new Text(request.getFsToken().getService()));
+          request.getFsToken().getPassword().toByteArray(),
+          new Text(request.getFsToken().getKind()), new Text(request.getFsToken().getService()));
       }
-      ExportProtos.ExportResponse response = processData(region, conf, userProvider,
-        scan, userToken, getWriterOptions(conf, region.getRegionInfo(), request));
+      ExportProtos.ExportResponse response = processData(region, conf, userProvider, scan,
+        userToken, getWriterOptions(conf, region.getRegionInfo(), request));
       done.run(response);
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
@@ -354,18 +340,16 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   }
 
   private Scan validateKey(final RegionInfo region, final ExportProtos.ExportRequest request)
-      throws IOException {
+    throws IOException {
     Scan scan = ProtobufUtil.toScan(request.getScan());
     byte[] regionStartKey = region.getStartKey();
     byte[] originStartKey = scan.getStartRow();
-    if (originStartKey == null
-            || Bytes.compareTo(originStartKey, regionStartKey) < 0) {
+    if (originStartKey == null || Bytes.compareTo(originStartKey, regionStartKey) < 0) {
       scan.withStartRow(regionStartKey);
     }
     byte[] regionEndKey = region.getEndKey();
     byte[] originEndKey = scan.getStopRow();
-    if (originEndKey == null
-            || Bytes.compareTo(originEndKey, regionEndKey) > 0) {
+    if (originEndKey == null || Bytes.compareTo(originEndKey, regionEndKey) > 0) {
       scan.withStartRow(regionEndKey);
     }
     return scan;
@@ -423,8 +407,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
       }
     }
 
-    boolean preScannerNext(final InternalScanner s,
-            final List<Result> results, final int limit) throws IOException {
+    boolean preScannerNext(final InternalScanner s, final List<Result> results, final int limit)
+      throws IOException {
       if (region.getCoprocessorHost() == null) {
         return false;
       } else {
@@ -433,9 +417,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
       }
     }
 
-    boolean postScannerNext(final InternalScanner s,
-            final List<Result> results, final int limit, boolean hasMore)
-            throws IOException {
+    boolean postScannerNext(final InternalScanner s, final List<Result> results, final int limit,
+      boolean hasMore) throws IOException {
       if (region.getCoprocessorHost() == null) {
         return false;
       } else {
@@ -447,15 +430,13 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
   private static class SecureWriter implements Closeable {
     private final PrivilegedWriter privilegedWriter;
 
-    SecureWriter(final Configuration conf, final UserProvider userProvider,
-        final Token userToken, final List<SequenceFile.Writer.Option> opts)
-        throws IOException {
+    SecureWriter(final Configuration conf, final UserProvider userProvider, final Token userToken,
+      final List<SequenceFile.Writer.Option> opts) throws IOException {
       User user = getActiveUser(userProvider, userToken);
       try {
         SequenceFile.Writer sequenceFileWriter =
-            user.runAs((PrivilegedExceptionAction<SequenceFile.Writer>) () ->
-                SequenceFile.createWriter(conf,
-                    opts.toArray(new SequenceFile.Writer.Option[opts.size()])));
+          user.runAs((PrivilegedExceptionAction<SequenceFile.Writer>) () -> SequenceFile
+            .createWriter(conf, opts.toArray(new SequenceFile.Writer.Option[opts.size()])));
         privilegedWriter = new PrivilegedWriter(user, sequenceFileWriter);
       } catch (InterruptedException e) {
         throw new IOException(e);
@@ -467,7 +448,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
 
     private static User getActiveUser(final UserProvider userProvider, final Token userToken)
-        throws IOException {
+      throws IOException {
       User user = RpcServer.getRequestUser().orElse(userProvider.getCurrent());
       if (user == null && userToken != null) {
         LOG.warn("No found of user credentials, but a token was got from user request");
@@ -483,8 +464,7 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     }
   }
 
-  private static class PrivilegedWriter implements PrivilegedExceptionAction<Boolean>,
-          Closeable {
+  private static class PrivilegedWriter implements PrivilegedExceptionAction<Boolean>, Closeable {
     private final User user;
     private final SequenceFile.Writer out;
     private Object key;
@@ -541,11 +521,8 @@ public class Export extends ExportProtos.ExportService implements RegionCoproces
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder(35);
-      return builder.append("rowCount=")
-             .append(rowCount)
-             .append(", cellCount=")
-             .append(cellCount)
-             .toString();
+      return builder.append("rowCount=").append(rowCount).append(", cellCount=").append(cellCount)
+        .toString();
     }
   }
 }

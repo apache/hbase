@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,6 +42,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -156,10 +156,9 @@ public abstract class AbstractTestWALReplay {
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.hbaseRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    String serverName =
-      ServerName.valueOf(currentTest.getMethodName() + "-manual", 16010,
-        EnvironmentEdgeManager.currentTime())
-        .toString();
+    String serverName = ServerName
+      .valueOf(currentTest.getMethodName() + "-manual", 16010, EnvironmentEdgeManager.currentTime())
+      .toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.hbaseRootDir, logName);
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
@@ -186,7 +185,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * @throws Exception
+   * n
    */
   @Test
   public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
@@ -613,11 +612,12 @@ public abstract class AbstractTestWALReplay {
     @Override
     public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushId,
       MonitoredTask status, ThroughputController throughputController,
-      FlushLifeCycleTracker tracker) throws IOException {
+      FlushLifeCycleTracker tracker, Consumer<Path> writerCreationTracker) throws IOException {
       if (throwExceptionWhenFlushing.get()) {
         throw new IOException("Simulated exception by tests");
       }
-      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker);
+      return super.flushSnapshot(snapshot, cacheFlushId, status, throughputController, tracker,
+        writerCreationTracker);
     }
   }
 
@@ -1072,7 +1072,7 @@ public abstract class AbstractTestWALReplay {
 
     @Override
     public boolean requestFlush(HRegion region, List<byte[]> families,
-        FlushLifeCycleTracker tracker) {
+      FlushLifeCycleTracker tracker) {
       return true;
     }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,7 +55,7 @@ public class TestMasterQuotasObserver {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterQuotasObserver.class);
+    HBaseClassTestRule.forClass(TestMasterQuotasObserver.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static SpaceQuotaHelperForTests helper;
@@ -104,8 +104,8 @@ public class TestMasterQuotasObserver {
     assertEquals(0, getNumSpaceQuotas());
 
     // Set space quota
-    QuotaSettings settings = QuotaSettingsFactory.limitTableSpace(
-        tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
@@ -129,7 +129,7 @@ public class TestMasterQuotasObserver {
 
     // Set RPC quota
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     assertEquals(1, getThrottleQuotas());
@@ -153,10 +153,10 @@ public class TestMasterQuotasObserver {
     assertEquals(0, getThrottleQuotas());
     // Set Both quotas
     QuotaSettings settings =
-        QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
+      QuotaSettingsFactory.limitTableSpace(tn, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     assertEquals(1, getNumSpaceQuotas());
@@ -182,7 +182,7 @@ public class TestMasterQuotasObserver {
 
     // Set back the throttle quota
     settings =
-        QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleTable(tn, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
     assertEquals(1, getThrottleQuotas());
@@ -210,8 +210,8 @@ public class TestMasterQuotasObserver {
     assertEquals(0, getNumSpaceQuotas());
 
     // Set a quota
-    QuotaSettings settings = QuotaSettingsFactory.limitNamespaceSpace(
-        ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
+    QuotaSettings settings =
+      QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
 
@@ -237,7 +237,7 @@ public class TestMasterQuotasObserver {
 
     // Set a quota
     QuotaSettings settings =
-        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
     assertEquals(1, getThrottleQuotas());
 
@@ -265,11 +265,11 @@ public class TestMasterQuotasObserver {
 
     // Set Both quotas
     QuotaSettings settings =
-        QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
+      QuotaSettingsFactory.limitNamespaceSpace(ns, 1024L, SpaceViolationPolicy.NO_INSERTS);
     admin.setQuota(settings);
 
     settings =
-        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
 
     assertEquals(1, getNumSpaceQuotas());
@@ -295,7 +295,7 @@ public class TestMasterQuotasObserver {
 
     // Set back the throttle quota
     settings =
-        QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
+      QuotaSettingsFactory.throttleNamespace(ns, ThrottleType.REQUEST_SIZE, 2L, TimeUnit.HOURS);
     admin.setQuota(settings);
     assertEquals(1, getNumSpaceQuotas());
     assertEquals(1, getThrottleQuotas());
@@ -312,9 +312,8 @@ public class TestMasterQuotasObserver {
     final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     Set<String> coprocessorNames = cpHost.getCoprocessors();
-    assertTrue(
-        "Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
-        coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
+    assertTrue("Did not find MasterQuotasObserver in list of CPs: " + coprocessorNames,
+      coprocessorNames.contains(MasterQuotasObserver.class.getSimpleName()));
   }
 
   public boolean namespaceExists(String ns) throws IOException {
@@ -351,15 +350,14 @@ public class TestMasterQuotasObserver {
 
   private void createTable(Admin admin, TableName tn) throws Exception {
     // Create a table
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tn);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tn);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("F1")).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     admin.createTable(tableDescriptorBuilder.build());
   }
 
-  private void dropTable(Admin admin, TableName tn) throws  Exception {
+  private void dropTable(Admin admin, TableName tn) throws Exception {
     admin.disableTable(tn);
     admin.deleteTable(tn);
   }

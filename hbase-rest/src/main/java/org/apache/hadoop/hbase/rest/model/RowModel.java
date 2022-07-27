@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -40,21 +35,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Representation of a row. A row is a related set of cells, grouped by common
- * row key. RowModels do not appear in results by themselves. They are always
- * encapsulated within CellSetModels.
- * 
+ * Representation of a row. A row is a related set of cells, grouped by common row key. RowModels do
+ * not appear in results by themselves. They are always encapsulated within CellSetModels.
+ *
  * <pre>
  * &lt;complexType name="Row"&gt;
  *   &lt;sequence&gt;
  *     &lt;element name="key" type="base64Binary"&gt;&lt;/element&gt;
- *     &lt;element name="cell" type="tns:Cell" 
+ *     &lt;element name="cell" type="tns:Cell"
  *       maxOccurs="unbounded" minOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="Row")
+@XmlRootElement(name = "Row")
 @XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class RowModel implements ProtobufMessageHandler, Serializable {
@@ -65,14 +59,14 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   private byte[] key;
 
   @JsonProperty("Cell")
-  @XmlElement(name="Cell")
+  @XmlElement(name = "Cell")
   private List<CellModel> cells = new ArrayList<>();
-
 
   /**
    * Default constructor
    */
-  public RowModel() { }
+  public RowModel() {
+  }
 
   /**
    * Constructor
@@ -81,7 +75,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   public RowModel(final String key) {
     this(Bytes.toBytes(key));
   }
-  
+
   /**
    * Constructor
    * @param key the row key
@@ -93,23 +87,23 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
 
   /**
    * Constructor
-   * @param key the row key
+   * @param key   the row key
    * @param cells the cells
    */
   public RowModel(final String key, final List<CellModel> cells) {
     this(Bytes.toBytes(key), cells);
   }
-  
+
   /**
    * Constructor
-   * @param key the row key
+   * @param key   the row key
    * @param cells the cells
    */
   public RowModel(final byte[] key, final List<CellModel> cells) {
     this.key = key;
     this.cells = cells;
   }
-  
+
   /**
    * Adds a cell to the list of cells for this row
    * @param cell the cell
@@ -118,9 +112,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
     cells.add(cell);
   }
 
-  /**
-   * @return the row key
-   */
+  /** Returns the row key */
   public byte[] getKey() {
     return key;
   }
@@ -132,9 +124,7 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
     this.key = key;
   }
 
-  /**
-   * @return the cells
-   */
+  /** Returns the cells */
   public List<CellModel> getCells() {
     return cells;
   }
@@ -142,16 +132,13 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   @Override
   public byte[] createProtobufOutput() {
     // there is no standalone row protobuf message
-    throw new UnsupportedOperationException(
-        "no protobuf equivalent to RowModel");
+    throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }
 
   @Override
-  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
-      throws IOException {
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException {
     // there is no standalone row protobuf message
-    throw new UnsupportedOperationException(
-        "no protobuf equivalent to RowModel");
+    throw new UnsupportedOperationException("no protobuf equivalent to RowModel");
   }
 
   @Override
@@ -166,25 +153,16 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
       return false;
     }
     RowModel rowModel = (RowModel) obj;
-    return new EqualsBuilder().
-        append(key, rowModel.key).
-        append(cells, rowModel.cells).
-        isEquals();
+    return new EqualsBuilder().append(key, rowModel.key).append(cells, rowModel.cells).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().
-        append(key).
-        append(cells).
-        toHashCode();
+    return new HashCodeBuilder().append(key).append(cells).toHashCode();
   }
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this).
-        append("key", key).
-        append("cells", cells).
-        toString();
+    return new ToStringBuilder(this).append("key", key).append("cells", cells).toString();
   }
 }

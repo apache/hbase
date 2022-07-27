@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,27 +23,25 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Ways to keep cells marked for delete around.
  */
 /*
- * Don't change the TRUE/FALSE labels below, these have to be called
- * this way for backwards compatibility.
+ * Don't change the TRUE/FALSE labels below, these have to be called this way for backwards
+ * compatibility.
  */
 @InterfaceAudience.Public
 public enum KeepDeletedCells {
   /** Deleted Cells are not retained. */
   FALSE,
   /**
-   * Deleted Cells are retained until they are removed by other means
-   * such TTL or VERSIONS.
-   * If no TTL is specified or no new versions of delete cells are
-   * written, they are retained forever.
+   * Deleted Cells are retained until they are removed by other means such TTL or VERSIONS. If no
+   * TTL is specified or no new versions of delete cells are written, they are retained forever.
    */
   TRUE,
   /**
-   * Deleted Cells are retained until the delete marker expires due to TTL.
-   * This is useful when TTL is combined with MIN_VERSIONS and one
-   * wants to keep a minimum number of versions around but at the same
-   * time remove deleted cells after the TTL.
+   * Deleted Cells are retained until the delete marker expires due to TTL. This is useful when TTL
+   * is combined with MIN_VERSIONS and one wants to keep a minimum number of versions around but at
+   * the same time remove deleted cells after the TTL.
    */
   TTL;
+
   public static KeepDeletedCells getValue(String val) {
     return valueOf(val.toUpperCase());
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ public class TestSafemodeBringsDownMaster {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSafemodeBringsDownMaster.class);
+    HBaseClassTestRule.forClass(TestSafemodeBringsDownMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSafemodeBringsDownMaster.class);
 
@@ -83,6 +83,7 @@ public class TestSafemodeBringsDownMaster {
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
     return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
   }
+
   private void resetProcExecutorTestingKillFlag() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
@@ -96,11 +97,10 @@ public class TestSafemodeBringsDownMaster {
   @Test
   public void testSafemodeBringsDownMaster() throws Exception {
     final TableName tableName = TableName.valueOf("testSafemodeBringsDownMaster");
-    final byte[][] splitKeys = new byte[][] {
-      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
-    };
-    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-        getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, "f1", "f2");
     MiniDFSCluster dfsCluster = UTIL.getDFSCluster();
     DistributedFileSystem dfs = (DistributedFileSystem) dfsCluster.getFileSystem();
     dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
@@ -109,17 +109,17 @@ public class TestSafemodeBringsDownMaster {
     int index = -1;
     do {
       index = UTIL.getMiniHBaseCluster().getServerWithMeta();
-    } while (index == -1 &&
-      startTime + timeOut < EnvironmentEdgeManager.currentTime());
+    } while (index == -1 && startTime + timeOut < EnvironmentEdgeManager.currentTime());
 
-    if (index != -1){
+    if (index != -1) {
       UTIL.getMiniHBaseCluster().abortRegionServer(index);
       UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
     }
     UTIL.waitFor(timeOut, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        List<JVMClusterUtil.MasterThread> threads = UTIL.getMiniHBaseCluster().getLiveMasterThreads();
+        List<JVMClusterUtil.MasterThread> threads =
+          UTIL.getMiniHBaseCluster().getLiveMasterThreads();
         return threads == null || threads.isEmpty();
       }
     });

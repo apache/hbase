@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,14 +42,14 @@ public final class NettyAsyncFSWALConfigHelper {
 
   private static final String CONFIG_NAME = "global-event-loop";
 
-  private static final Map<String, Pair<EventLoopGroup, Class<? extends Channel>>> EVENT_LOOP_CONFIG_MAP =
-      new HashMap<>();
+  private static final Map<String,
+    Pair<EventLoopGroup, Class<? extends Channel>>> EVENT_LOOP_CONFIG_MAP = new HashMap<>();
 
   /**
    * Set the EventLoopGroup and channel class for {@code AsyncFSWALProvider}.
    */
   public static void setEventLoopConfig(Configuration conf, EventLoopGroup group,
-      Class<? extends Channel> channelClass) {
+    Class<? extends Channel> channelClass) {
     Preconditions.checkNotNull(group, "group is null");
     Preconditions.checkNotNull(channelClass, "channel class is null");
     conf.set(EVENT_LOOP_CONFIG, CONFIG_NAME);
@@ -68,5 +68,6 @@ public final class NettyAsyncFSWALConfigHelper {
     return EVENT_LOOP_CONFIG_MAP.get(name);
   }
 
-  private NettyAsyncFSWALConfigHelper() {}
+  private NettyAsyncFSWALConfigHelper() {
+  }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableSnapshotInputFormatTestBase.class);
   protected final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static final int NUM_REGION_SERVERS = 2;
-  protected static final byte[][] FAMILIES = {Bytes.toBytes("f1"), Bytes.toBytes("f2")};
+  protected static final byte[][] FAMILIES = { Bytes.toBytes("f1"), Bytes.toBytes("f2") };
 
   protected FileSystem fs;
   protected Path rootDir;
@@ -61,9 +61,9 @@ public abstract class TableSnapshotInputFormatTestBase {
   @Before
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numRegionServers(NUM_REGION_SERVERS).numDataNodes(NUM_REGION_SERVERS)
-        .createRootDir(true).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numRegionServers(NUM_REGION_SERVERS)
+        .numDataNodes(NUM_REGION_SERVERS).createRootDir(true).build();
     UTIL.startMiniCluster(option);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
@@ -128,7 +128,7 @@ public abstract class TableSnapshotInputFormatTestBase {
 
       Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
 
-      testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
+      testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName, tmpTableDir);
 
       Path rootDir = CommonFSUtils.getRootDir(UTIL.getConfiguration());
       for (Path regionDir : FSUtils.getRegionDirs(fs,
@@ -158,10 +158,10 @@ public abstract class TableSnapshotInputFormatTestBase {
   }
 
   public abstract void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
-      String snapshotName, Path tmpTableDir) throws Exception;
+    String snapshotName, Path tmpTableDir) throws Exception;
 
   protected void testWithMapReduce(HBaseTestingUtil util, String snapshotName, int numRegions,
-      int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
+    int numSplitsPerRegion, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
     TableName tableName = TableName.valueOf("testWithMapReduce");
     testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions, numSplitsPerRegion,
@@ -175,26 +175,24 @@ public abstract class TableSnapshotInputFormatTestBase {
     while (scanner.advance()) {
       Cell cell = scanner.current();
 
-      //assert that all Cells in the Result have the same key
-      Assert.assertEquals(0, Bytes.compareTo(row, 0, row.length,
-        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+      // assert that all Cells in the Result have the same key
+      Assert.assertEquals(0, Bytes.compareTo(row, 0, row.length, cell.getRowArray(),
+        cell.getRowOffset(), cell.getRowLength()));
     }
 
     for (byte[] family : FAMILIES) {
       byte[] actual = result.getValue(family, family);
-      Assert.assertArrayEquals(
-        "Row in snapshot does not match, expected:" + Bytes.toString(row) + " ,actual:" + Bytes
-          .toString(actual), row, actual);
+      Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
+        + " ,actual:" + Bytes.toString(actual), row, actual);
     }
   }
 
   protected static void createTableAndSnapshot(HBaseTestingUtil util, TableName tableName,
-    String snapshotName, byte[] startRow, byte[] endRow, int numRegions)
-    throws Exception {
+    String snapshotName, byte[] startRow, byte[] endRow, int numRegions) throws Exception {
     try {
       LOG.debug("Ensuring table doesn't exist.");
       util.deleteTable(tableName);
-    } catch(Exception ex) {
+    } catch (Exception ex) {
       // ignore
     }
 
@@ -214,8 +212,8 @@ public abstract class TableSnapshotInputFormatTestBase {
     FileSystem fs = rootDir.getFileSystem(util.getConfiguration());
 
     LOG.info("snapshot");
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName,
-      Arrays.asList(FAMILIES), null, snapshotName, rootDir, fs, true);
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES), null,
+      snapshotName, rootDir, fs, true);
 
     LOG.info("load different values");
     byte[] value = Bytes.toBytes("after_snapshot_value");

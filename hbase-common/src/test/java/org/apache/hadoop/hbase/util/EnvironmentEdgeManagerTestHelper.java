@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +18,9 @@
 package org.apache.hadoop.hbase.util;
 
 /**
- * Used by tests to inject an edge into the manager. The intent is to minimise
- * the use of the injectEdge method giving it default permissions, but in
- * testing we may need to use this functionality elsewhere.
+ * Used by tests to inject an edge into the manager. The intent is to minimise the use of the
+ * injectEdge method giving it default permissions, but in testing we may need to use this
+ * functionality elsewhere.
  */
 public final class EnvironmentEdgeManagerTestHelper {
   private EnvironmentEdgeManagerTestHelper() {

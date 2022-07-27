@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,32 +18,30 @@
 package org.apache.hadoop.hbase.types;
 
 import java.util.Iterator;
-
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * <p>
- * {@code Struct} is a simple {@link DataType} for implementing "compound
- * rowkey" and "compound qualifier" schema design strategies.
+ * {@code Struct} is a simple {@link DataType} for implementing "compound rowkey" and "compound
+ * qualifier" schema design strategies.
  * </p>
  * <h3>Encoding</h3>
  * <p>
- * {@code Struct} member values are encoded onto the target byte[] in the order
- * in which they are declared. A {@code Struct} may be used as a member of
- * another {@code Struct}. {@code Struct}s are not {@code nullable} but their
- * component fields may be.
+ * {@code Struct} member values are encoded onto the target byte[] in the order in which they are
+ * declared. A {@code Struct} may be used as a member of another {@code Struct}. {@code Struct}s are
+ * not {@code nullable} but their component fields may be.
  * </p>
  * <h3>Trailing Nulls</h3>
  * <p>
- * {@code Struct} treats the right-most nullable field members as special.
- * Rather than writing null values to the output buffer, {@code Struct} omits
- * those records all together. When reading back a value, it will look for the
- * scenario where the end of the buffer has been reached but there are still
- * nullable fields remaining in the {@code Struct} definition. When this
- * happens, it will produce null entries for the remaining values. For example:
+ * {@code Struct} treats the right-most nullable field members as special. Rather than writing null
+ * values to the output buffer, {@code Struct} omits those records all together. When reading back a
+ * value, it will look for the scenario where the end of the buffer has been reached but there are
+ * still nullable fields remaining in the {@code Struct} definition. When this happens, it will
+ * produce null entries for the remaining values. For example:
  * </p>
+ *
  * <pre>
  * StructBuilder builder = new StructBuilder()
  *     .add(OrderedNumeric.ASCENDING) // nullable
@@ -61,17 +59,18 @@ import org.apache.yetus.audience.InterfaceAudience;
  * longer.encode(buf2, val); // write short value with long struct
  * Bytes.equals(buf1.getBytes(), buf2.getBytes()); // =&gt; true; long Struct skips writing null
  * </pre>
+ *
  * <h3>Sort Order</h3>
  * <p>
- * {@code Struct} instances sort according to the composite order of their
- * fields, that is, left-to-right and depth-first. This can also be thought of
- * as lexicographic comparison of concatenated members.
+ * {@code Struct} instances sort according to the composite order of their fields, that is,
+ * left-to-right and depth-first. This can also be thought of as lexicographic comparison of
+ * concatenated members.
  * </p>
  * <p>
- * {@link StructIterator} is provided as a convenience for consuming the
- * sequence of values. Users may find it more appropriate to provide their own
- * custom {@link DataType} for encoding application objects rather than using
- * this {@code Object[]} implementation. Examples are provided in test.
+ * {@link StructIterator} is provided as a convenience for consuming the sequence of values. Users
+ * may find it more appropriate to provide their own custom {@link DataType} for encoding
+ * application objects rather than using this {@code Object[]} implementation. Examples are provided
+ * in test.
  * </p>
  * @see StructIterator
  * @see DataType#isNullable()
@@ -85,12 +84,11 @@ public class Struct implements DataType<Object[]> {
   protected final boolean isSkippable;
 
   /**
-   * Create a new {@code Struct} instance defined as the sequence of
-   * {@code HDataType}s in {@code memberTypes}.
+   * Create a new {@code Struct} instance defined as the sequence of {@code HDataType}s in
+   * {@code memberTypes}.
    * <p>
-   * A {@code Struct} is {@code orderPreserving} when all of its fields
-   * are {@code orderPreserving}. A {@code Struct} is {@code skippable} when
-   * all of its fields are {@code skippable}.
+   * A {@code Struct} is {@code orderPreserving} when all of its fields are {@code orderPreserving}.
+   * A {@code Struct} is {@code skippable} when all of its fields are {@code skippable}.
    * </p>
    */
   @SuppressWarnings("rawtypes")
@@ -154,8 +152,8 @@ public class Struct implements DataType<Object[]> {
   }
 
   /**
-   * Retrieve an {@link Iterator} over the values encoded in {@code src}.
-   * {@code src}'s position is consumed by consuming this iterator.
+   * Retrieve an {@link Iterator} over the values encoded in {@code src}. {@code src}'s position is
+   * consumed by consuming this iterator.
    */
   public StructIterator iterator(PositionedByteRange src) {
     return new StructIterator(src, fields);

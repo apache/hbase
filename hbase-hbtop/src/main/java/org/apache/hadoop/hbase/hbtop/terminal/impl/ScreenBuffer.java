@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -27,7 +27,6 @@ import java.io.PrintWriter;
 import org.apache.hadoop.hbase.hbtop.terminal.Attributes;
 import org.apache.hadoop.hbase.hbtop.terminal.CursorPosition;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * Represents a buffer of the terminal screen for double-buffering.
@@ -78,8 +77,10 @@ public class ScreenBuffer {
       flushRow(row, sb, attributes);
     }
 
-    if (cursorVisible && cursorRow >= 0 && cursorColumn >= 0 && cursorRow < rows &&
-      cursorColumn < columns) {
+    if (
+      cursorVisible && cursorRow >= 0 && cursorColumn >= 0 && cursorRow < rows
+        && cursorColumn < columns
+    ) {
       sb.append(cursor(true));
       sb.append(moveCursor(cursorColumn, cursorRow));
     } else {

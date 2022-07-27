@@ -17,23 +17,23 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Run ThriftServer with passed arguments. Access the exception thrown after we complete run -- if
- * an exception thrown -- via {@link #getRunException()}}. Call close to shutdown this Runner
- * and hosted {@link ThriftServer}.
+ * an exception thrown -- via {@link #getRunException()}}. Call close to shutdown this Runner and
+ * hosted {@link ThriftServer}.
  */
 class ThriftServerRunner extends Thread implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(ThriftServerRunner.class);
   Exception exception = null;
   private final ThriftServer thriftServer;
-  private final String [] args;
+  private final String[] args;
 
-  ThriftServerRunner(ThriftServer thriftServer, String [] args) {
+  ThriftServerRunner(ThriftServer thriftServer, String[] args) {
     this.thriftServer = thriftServer;
     this.args = args;
     LOG.info("thriftServer={}, args={}", getThriftServer(), args);
@@ -43,14 +43,13 @@ class ThriftServerRunner extends Thread implements Closeable {
     return this.thriftServer;
   }
 
-  /**
-   * @return Empty unless {@link #run()} threw an exception; if it did, access it here.
-   */
+  /** Returns Empty unless {@link #run()} threw an exception; if it did, access it here. */
   Exception getRunException() {
     return this.exception;
   }
 
-  @Override public void run() {
+  @Override
+  public void run() {
     try {
       this.thriftServer.run(this.args);
     } catch (Exception e) {
@@ -59,7 +58,8 @@ class ThriftServerRunner extends Thread implements Closeable {
     }
   }
 
-  @Override public void close() throws IOException {
+  @Override
+  public void close() throws IOException {
     LOG.info("Stopping {}", this);
     this.thriftServer.stop();
   }

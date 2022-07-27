@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -66,8 +66,8 @@ class CompletedProcedureCleaner<TEnvironment> extends ProcedureInMemoryChore<TEn
   private Configuration conf;
 
   public CompletedProcedureCleaner(Configuration conf, ProcedureStore store,
-      IdLock procExecutionLock, Map<Long, CompletedProcedureRetainer<TEnvironment>> completedMap,
-      Map<NonceKey, Long> nonceKeysToProcIdsMap) {
+    IdLock procExecutionLock, Map<Long, CompletedProcedureRetainer<TEnvironment>> completedMap,
+    Map<NonceKey, Long> nonceKeysToProcIdsMap) {
     // set the timeout interval that triggers the periodic-procedure
     super(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
     this.completed = completedMap;

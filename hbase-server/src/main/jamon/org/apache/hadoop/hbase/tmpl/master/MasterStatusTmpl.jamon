@@ -174,7 +174,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
     <div class="container-fluid content">
 	<%if master.isActiveMaster() %>
-        <div class="row inner_header">
+        <div class="row inner_header top_header">
             <div class="page-header">
                 <h1>Master <small><% master.getServerName().getHostname() %></small></h1>
             </div>
@@ -275,6 +275,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     </div>
                 </div>
             </div>
+        </section>
+        <section>
+            <h2><a name="region_visualizer"></a>Region Visualizer</h2>
+            <& RegionVisualizerTmpl &>
         </section>
         <section>
             <h2><a name="peers">Peers</a></h2>

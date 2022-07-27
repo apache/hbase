@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.Assert.fail;
+
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;

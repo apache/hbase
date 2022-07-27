@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Optional;
@@ -37,7 +38,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test parts of {@link RSRpcServices}
  */
-@Category({ RegionServerTests.class, MediumTests.class})
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestRSRpcServices {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -46,8 +47,8 @@ public class TestRSRpcServices {
   private static final Logger LOG = LoggerFactory.getLogger(TestRSRpcServices.class);
 
   /**
-   * Simple test of the toString on RegionScannerHolder works.
-   * Just creates one and calls #toString on it.
+   * Simple test of the toString on RegionScannerHolder works. Just creates one and calls #toString
+   * on it.
    */
   @Test
   public void testRegionScannerHolderToString() throws UnknownHostException {
@@ -65,8 +66,7 @@ public class TestRSRpcServices {
     HRegion region = Mockito.mock(HRegion.class);
     Mockito.when(region.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     RSRpcServices.RegionScannerHolder rsh = new RSRpcServices.RegionScannerHolder(null, region,
-      null, null, false, false, clientIpAndPort,
-      userNameTest);
+      null, null, false, false, clientIpAndPort, userNameTest);
     LOG.info("rsh: {}", rsh);
   }
 }

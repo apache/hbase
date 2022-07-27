@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -79,7 +80,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 public class TestFileArchiverNotifierImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFileArchiverNotifierImpl.class);
+    HBaseClassTestRule.forClass(TestFileArchiverNotifierImpl.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final AtomicLong COUNTER = new AtomicLong();
@@ -128,8 +129,8 @@ public class TestFileArchiverNotifierImpl {
       admin.disableTable(tn);
       admin.deleteTable(tn);
     }
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE)).build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE)).build();
     admin.createTable(desc);
 
     FileArchiverNotifierImpl notifier = new FileArchiverNotifierImpl(conn, conf, fs, tn);
@@ -162,8 +163,8 @@ public class TestFileArchiverNotifierImpl {
     }
     final Table quotaTable = conn.getTable(QuotaUtil.QUOTA_TABLE_NAME);
     final TableName tn1 = helper.createTableWithRegions(1);
-    admin.setQuota(QuotaSettingsFactory.limitTableSpace(
-        tn1, SpaceQuotaHelperForTests.ONE_GIGABYTE, SpaceViolationPolicy.NO_INSERTS));
+    admin.setQuota(QuotaSettingsFactory.limitTableSpace(tn1, SpaceQuotaHelperForTests.ONE_GIGABYTE,
+      SpaceViolationPolicy.NO_INSERTS));
 
     // Write some data and flush it
     helper.writeData(tn1, 256L * SpaceQuotaHelperForTests.ONE_KILOBYTE);
@@ -178,7 +179,7 @@ public class TestFileArchiverNotifierImpl {
     long snapshotSize = notifier.computeAndStoreSnapshotSizes(Arrays.asList(snapshotName1));
     assertEquals("The size of the snapshots should be zero", 0, snapshotSize);
     assertTrue("Last compute time was not less than current compute time",
-        t1 < notifier.getLastFullCompute());
+      t1 < notifier.getLastFullCompute());
 
     // No recently archived files and the snapshot should have no size
     assertEquals(0, extractSnapshotSize(quotaTable, tn, snapshotName1));
@@ -216,7 +217,7 @@ public class TestFileArchiverNotifierImpl {
     assertEquals(0, extractSnapshotSize(quotaTable, tn, snapshotName1));
     // We should also have no recently archived files after a re-computation
     assertTrue("Last compute time was not less than current compute time",
-        t2 < notifier.getLastFullCompute());
+      t2 < notifier.getLastFullCompute());
   }
 
   @Test
@@ -228,9 +229,9 @@ public class TestFileArchiverNotifierImpl {
       admin.disableTable(fakeQuotaTableName);
       admin.deleteTable(fakeQuotaTableName);
     }
-    TableDescriptor desc = TableDescriptorBuilder.newBuilder(fakeQuotaTableName).setColumnFamily(
-        ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaUtil.QUOTA_FAMILY_INFO)).build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(fakeQuotaTableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaTableUtil.QUOTA_FAMILY_USAGE))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(QuotaUtil.QUOTA_FAMILY_INFO)).build();
     admin.createTable(desc);
 
     final String ns = "";
@@ -261,8 +262,8 @@ public class TestFileArchiverNotifierImpl {
     }
   }
 
-  private long extractSnapshotSize(
-      Table quotaTable, TableName tn, String snapshot) throws IOException {
+  private long extractSnapshotSize(Table quotaTable, TableName tn, String snapshot)
+    throws IOException {
     Get g = QuotaTableUtil.makeGetForSnapshotSize(tn, snapshot);
     Result r = quotaTable.get(g);
     assertNotNull(r);
@@ -270,8 +271,8 @@ public class TestFileArchiverNotifierImpl {
     assertTrue(cs.advance());
     Cell c = cs.current();
     assertNotNull(c);
-    return QuotaTableUtil.extractSnapshotSize(
-        c.getValueArray(), c.getValueOffset(), c.getValueLength());
+    return QuotaTableUtil.extractSnapshotSize(c.getValueArray(), c.getValueOffset(),
+      c.getValueLength());
   }
 
   private void verify(Table t, IOThrowingRunnable test) throws IOException {
@@ -287,10 +288,10 @@ public class TestFileArchiverNotifierImpl {
 
   private Set<String> getFilesReferencedBySnapshot(String snapshotName) throws IOException {
     HashSet<String> files = new HashSet<>();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
-        snapshotName, CommonFSUtils.getRootDir(conf));
-    SnapshotProtos.SnapshotDescription sd = SnapshotDescriptionUtils.readSnapshotInfo(
-        fs, snapshotDir);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName,
+      CommonFSUtils.getRootDir(conf));
+    SnapshotProtos.SnapshotDescription sd =
+      SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, sd);
     // For each region referenced by the snapshot
     for (SnapshotRegionManifest rm : manifest.getRegionManifests()) {
@@ -305,7 +306,7 @@ public class TestFileArchiverNotifierImpl {
     return files;
   }
 
-  private <K,V> Entry<K,V> entry(K k, V v) {
+  private <K, V> Entry<K, V> entry(K k, V v) {
     return Maps.immutableEntry(k, v);
   }
 }

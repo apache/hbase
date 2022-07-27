@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.hbtop.terminal;
 
 import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
-
 
 /**
  * A 2-d position in 'terminal space'.

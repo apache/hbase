@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestFullBackupWithFailures extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFullBackupWithFailures.class);
+    HBaseClassTestRule.forClass(TestFullBackupWithFailures.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullBackupWithFailures.class);
 
@@ -48,7 +48,7 @@ public class TestFullBackupWithFailures extends TestBackupBase {
   public void testFullBackupWithFailures() throws Exception {
     conf1.set(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS,
       FullTableBackupClientForTest.class.getName());
-    int maxStage = Stage.values().length -1;
+    int maxStage = Stage.values().length - 1;
     // Fail stages between 0 and 4 inclusive
     for (int stage = 0; stage <= maxStage; stage++) {
       LOG.info("Running stage " + stage);
@@ -61,16 +61,15 @@ public class TestFullBackupWithFailures extends TestBackupBase {
     conf1.setInt(FullTableBackupClientForTest.BACKUP_TEST_MODE_STAGE, stage);
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       int before = table.getBackupHistory().size();
-      String[] args =
-          new String[] { "create", "full", BACKUP_ROOT_DIR, "-t",
-              table1.getNameAsString() + "," + table2.getNameAsString() };
+      String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-t",
+        table1.getNameAsString() + "," + table2.getNameAsString() };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertFalse(ret == 0);
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertTrue(after ==  before +1);
+      assertTrue(after == before + 1);
       for (BackupInfo data : backups) {
         String backupId = data.getBackupId();
         assertFalse(checkSucceeded(backupId));
@@ -79,6 +78,5 @@ public class TestFullBackupWithFailures extends TestBackupBase {
       assertTrue(tables.size() == 0);
     }
   }
-
 
 }

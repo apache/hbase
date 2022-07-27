@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobCell;
@@ -46,7 +44,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
   private final List<MobCell> referencedMobCells;
 
   ReversedMobStoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
-      long readPt) throws IOException {
+    long readPt) throws IOException {
     super(store, scanInfo, scan, columns, readPt);
     cacheMobBlocks = MobUtils.isCacheMobBlocks(scan);
     rawMobScan = MobUtils.isRawMobScan(scan);
@@ -60,8 +58,8 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
 
   /**
    * Firstly reads the cells from the HBase. If the cell is a reference cell (which has the
-   * reference tag), the scanner need seek this cell from the mob file, and use the cell found
-   * from the mob file as the result.
+   * reference tag), the scanner need seek this cell from the mob file, and use the cell found from
+   * the mob file as the result.
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext ctx) throws IOException {
@@ -77,7 +75,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
         Cell cell = outResult.get(i);
         if (MobUtils.isMobReferenceCell(cell)) {
           MobCell mobCell =
-              mobStore.resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);
+            mobStore.resolve(cell, cacheMobBlocks, readPt, readEmptyValueOnMobCellMiss);
           mobKVCount++;
           mobKVSize += mobCell.getCell().getValueLength();
           outResult.set(i, mobCell.getCell());

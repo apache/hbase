@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,28 +44,21 @@ import org.apache.hadoop.hbase.chaos.policies.TwoConcurrentActionPolicy;
  * This is a copy of NoKillMonkeyFactory that also does mob compactions.
  */
 public class MobNoKillMonkeyFactory extends MonkeyFactory {
-  @Override public ChaosMonkey build() {
+  @Override
+  public ChaosMonkey build() {
     Action[] actions1 = new Action[] {
       new CompactMobAction(tableName, MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD),
       new CompactTableAction(tableName, MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD),
       new CompactRandomRegionOfTableAction(tableName,
         MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO),
-      new FlushTableAction(tableName),
-      new FlushRandomRegionOfTableAction(tableName),
-      new MoveRandomRegionOfTableAction(tableName)
-    };
+      new FlushTableAction(tableName), new FlushRandomRegionOfTableAction(tableName),
+      new MoveRandomRegionOfTableAction(tableName) };
 
-    Action[] actions2 = new Action[] {
-      new SplitRandomRegionOfTableAction(tableName),
-      new MergeRandomAdjacentRegionsOfTableAction(tableName),
-      new SnapshotTableAction(tableName),
-      new AddColumnAction(tableName),
-      new RemoveColumnAction(tableName, columnFamilies),
-      new ChangeEncodingAction(tableName),
-      new ChangeCompressionAction(tableName),
-      new ChangeBloomFilterAction(tableName),
-      new ChangeVersionsAction(tableName)
-    };
+    Action[] actions2 = new Action[] { new SplitRandomRegionOfTableAction(tableName),
+      new MergeRandomAdjacentRegionsOfTableAction(tableName), new SnapshotTableAction(tableName),
+      new AddColumnAction(tableName), new RemoveColumnAction(tableName, columnFamilies),
+      new ChangeEncodingAction(tableName), new ChangeCompressionAction(tableName),
+      new ChangeBloomFilterAction(tableName), new ChangeVersionsAction(tableName) };
 
     Action[] actions3 = new Action[] {
       new MoveRegionsOfTableAction(MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME,
@@ -78,7 +71,7 @@ public class MobNoKillMonkeyFactory extends MonkeyFactory {
     return new PolicyBasedChaosMonkey(properties, util,
       new TwoConcurrentActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD, actions1,
         actions2),
-      new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD,actions3),
-      new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD,actions4));
+      new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD, actions3),
+      new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD, actions4));
   }
 }

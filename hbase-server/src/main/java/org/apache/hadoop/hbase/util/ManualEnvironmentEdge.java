@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +20,8 @@ package org.apache.hadoop.hbase.util;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An environment edge that uses a manually set value. This is useful for testing events that are supposed to
- * happen in the same millisecond.
+ * An environment edge that uses a manually set value. This is useful for testing events that are
+ * supposed to happen in the same millisecond.
  */
 @InterfaceAudience.Private
 public class ManualEnvironmentEdge implements EnvironmentEdge {

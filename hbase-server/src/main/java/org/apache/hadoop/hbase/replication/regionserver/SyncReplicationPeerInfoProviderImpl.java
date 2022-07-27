@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.util.Optional;
 import java.util.function.BiPredicate;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -35,7 +34,7 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
   private final SyncReplicationPeerMappingManager mapping;
 
   SyncReplicationPeerInfoProviderImpl(ReplicationPeers replicationPeers,
-      SyncReplicationPeerMappingManager mapping) {
+    SyncReplicationPeerMappingManager mapping) {
     this.replicationPeers = replicationPeers;
     this.mapping = mapping;
   }
@@ -54,11 +53,13 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
       return Optional.empty();
     }
     Pair<SyncReplicationState, SyncReplicationState> states =
-        peer.getSyncReplicationStateAndNewState();
-    if ((states.getFirst() == SyncReplicationState.ACTIVE &&
-      states.getSecond() == SyncReplicationState.NONE) ||
-      (states.getFirst() == SyncReplicationState.DOWNGRADE_ACTIVE &&
-        states.getSecond() == SyncReplicationState.ACTIVE)) {
+      peer.getSyncReplicationStateAndNewState();
+    if (
+      (states.getFirst() == SyncReplicationState.ACTIVE
+        && states.getSecond() == SyncReplicationState.NONE)
+        || (states.getFirst() == SyncReplicationState.DOWNGRADE_ACTIVE
+          && states.getSecond() == SyncReplicationState.ACTIVE)
+    ) {
       return Optional.of(Pair.newPair(peerId, peer.getPeerConfig().getRemoteWALDir()));
     } else {
       return Optional.empty();
@@ -67,7 +68,7 @@ class SyncReplicationPeerInfoProviderImpl implements SyncReplicationPeerInfoProv
 
   @Override
   public boolean checkState(TableName table,
-      BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
+    BiPredicate<SyncReplicationState, SyncReplicationState> checker) {
     String peerId = mapping.getPeerId(table);
     if (peerId == null) {
       return false;

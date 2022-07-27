@@ -26,8 +26,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DigestSaslAuthenticationProvider extends BuiltInSaslAuthenticationProvider {
 
-  public static final SaslAuthMethod SASL_AUTH_METHOD = new SaslAuthMethod(
-      "DIGEST", (byte)82, "DIGEST-MD5", AuthenticationMethod.TOKEN);
+  public static final SaslAuthMethod SASL_AUTH_METHOD =
+    new SaslAuthMethod("DIGEST", (byte) 82, "DIGEST-MD5", AuthenticationMethod.TOKEN);
 
   @Override
   public SaslAuthMethod getSaslAuthMethod() {

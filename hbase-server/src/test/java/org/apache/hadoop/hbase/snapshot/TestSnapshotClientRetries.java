@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,13 @@ public class TestSnapshotClientRetries {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotClientRetries.class);
+    HBaseClassTestRule.forClass(TestSnapshotClientRetries.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotClientRetries.class);
 
-  @Rule public TableNameTestRule testTable = new TableNameTestRule();
+  @Rule
+  public TableNameTestRule testTable = new TableNameTestRule();
 
   @Before
   public void setUp() throws Exception {
@@ -67,7 +68,7 @@ public class TestSnapshotClientRetries {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(expected=SnapshotExistsException.class)
+  @Test(expected = SnapshotExistsException.class)
   public void testSnapshotAlreadyExist() throws Exception {
     final String snapshotName = "testSnapshotAlreadyExist";
     TEST_UTIL.createTable(testTable.getTableName(), "f");
@@ -75,7 +76,7 @@ public class TestSnapshotClientRetries {
     snapshotAndAssertOneRetry(snapshotName, testTable.getTableName());
   }
 
-  @Test(expected=SnapshotDoesNotExistException.class)
+  @Test(expected = SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws Exception {
     final String snapshotName = "testCloneNonExistentSnapshot";
     cloneAndAssertOneRetry(snapshotName, testTable.getTableName());
@@ -92,8 +93,8 @@ public class TestSnapshotClientRetries {
 
     @Override
     public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
-        throws IOException {
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
+      throws IOException {
       if (snapshotCount != null) {
         snapshotCount.incrementAndGet();
       }
@@ -101,8 +102,8 @@ public class TestSnapshotClientRetries {
 
     @Override
     public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
-        throws IOException {
+      final SnapshotDescription snapshot, final TableDescriptor hTableDescriptor)
+      throws IOException {
       if (cloneCount != null) {
         cloneCount.incrementAndGet();
       }
@@ -110,7 +111,7 @@ public class TestSnapshotClientRetries {
   }
 
   public void snapshotAndAssertOneRetry(final String snapshotName, final TableName tableName)
-      throws Exception {
+    throws Exception {
     MasterSyncObserver observer = getMasterSyncObserver();
     observer.snapshotCount = new AtomicInteger(0);
     TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
@@ -118,7 +119,7 @@ public class TestSnapshotClientRetries {
   }
 
   public void cloneAndAssertOneRetry(final String snapshotName, final TableName tableName)
-      throws Exception {
+    throws Exception {
     MasterSyncObserver observer = getMasterSyncObserver();
     observer.cloneCount = new AtomicInteger(0);
     TEST_UTIL.getAdmin().cloneSnapshot(snapshotName, tableName);
@@ -126,7 +127,7 @@ public class TestSnapshotClientRetries {
   }
 
   private MasterSyncObserver getMasterSyncObserver() {
-    return (MasterSyncObserver)TEST_UTIL.getHBaseCluster().getMaster()
-      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    return (MasterSyncObserver) TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost()
+      .findCoprocessor(MasterSyncObserver.class.getName());
   }
 }

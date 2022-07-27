@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutateRequest;
 
 /**
- * A region server that will OOME.
- * Everytime {@link #put(byte[], Put)} is called, we add
- * keep around a reference to the batch.  Use this class to test OOME extremes.
- * Needs to be started manually as in
+ * A region server that will OOME. Everytime {@link #put(byte[], Put)} is called, we add keep around
+ * a reference to the batch. Use this class to test OOME extremes. Needs to be started manually as
+ * in
  * <code>${HBASE_HOME}/bin/hbase ./bin/hbase org.apache.hadoop.hbase.OOMERegionServer start</code>.
  */
 public class OOMERegionServer extends HRegionServer {
@@ -42,11 +40,9 @@ public class OOMERegionServer extends HRegionServer {
     super(conf);
   }
 
-  public void put(byte [] regionName, Put put)
-  throws IOException {
+  public void put(byte[] regionName, Put put) throws IOException {
     try {
-      MutateRequest request =
-        RequestConverter.buildMutateRequest(regionName, put);
+      MutateRequest request = RequestConverter.buildMutateRequest(regionName, put);
       rpcServices.mutate(null, request);
       for (int i = 0; i < 30; i++) {
         // Add the batch update 30 times to bring on the OOME faster.

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
+    HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -79,8 +79,8 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
   @Test
   public void testGetMasterInfoPort() throws Exception {
-    assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getInfoServer().getPort(), (int) admin
-        .getMasterInfoPort().get());
+    assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getInfoServer().getPort(),
+      (int) admin.getMasterInfoPort().get());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     ServerName master = admin.getMaster().get();
     admin.updateConfiguration(master).join();
     admin.getBackupMasters().get()
-        .forEach(backupMaster -> admin.updateConfiguration(backupMaster).join());
+      .forEach(backupMaster -> admin.updateConfiguration(backupMaster).join());
 
     // Check the configuration of the Masters
     TEST_UTIL.getMiniHBaseCluster().getMasterThreads().forEach(thread -> {
@@ -145,7 +145,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     byte[] value = Bytes.toBytes(v.toString());
     HRegionServer regionServer = startAndWriteData(tableName, value);
     LOG.info("after writing there are "
-        + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
+      + AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
     for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
@@ -153,38 +153,32 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     }
     admin.rollWALWriter(regionServer.getServerName()).join();
     int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
-    LOG.info("after flushing all regions and rolling logs there are " +
-        count + " log files");
+    LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
     assertTrue(("actual count: " + count), count <= 2);
   }
 
   private void setUpforLogRolling() {
     // Force a region split after every 768KB
-    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE,
-        768L * 1024L);
+    TEST_UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 768L * 1024L);
 
     // We roll the log after every 32 writes
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.maxlogentries", 32);
 
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.logroll.errors.tolerated", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
     // For less frequently updated regions flush after every 2 flushes
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.hregion.memstore.optionalflushcount", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.hregion.memstore.optionalflushcount", 2);
 
     // We flush the cache after every 8192 bytes
-    TEST_UTIL.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
-        8192);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 8192);
 
     // Increase the amount of time between client retries
     TEST_UTIL.getConfiguration().setLong("hbase.client.pause", 10 * 1000);
 
     // Reduce thread wake frequency so that other threads can get
     // a chance to run.
-    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY,
-        2 * 1000);
+    TEST_UTIL.getConfiguration().setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
 
     /**** configuration for testLogRollOnDatanodeDeath ****/
     // lower the namenode & datanode heartbeat so the namenode
@@ -194,10 +188,8 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 30);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.hlog.tolerable.lowreplication", 2);
-    TEST_UTIL.getConfiguration().setInt(
-        "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.tolerable.lowreplication", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.hlog.lowreplication.rolllimit", 3);
   }
 
   private HRegionServer startAndWriteData(TableName tableName, byte[] value) throws Exception {
@@ -224,13 +216,13 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   public void testGetRegionLoads() throws Exception {
     // Turn off the balancer
     admin.balancerSwitch(false).join();
-    TableName[] tables =
-        new TableName[] { TableName.valueOf(tableName.getNameAsString() + "1"),
-            TableName.valueOf(tableName.getNameAsString() + "2"),
-            TableName.valueOf(tableName.getNameAsString() + "3") };
+    TableName[] tables = new TableName[] { TableName.valueOf(tableName.getNameAsString() + "1"),
+      TableName.valueOf(tableName.getNameAsString() + "2"),
+      TableName.valueOf(tableName.getNameAsString() + "3") };
     createAndLoadTable(tables);
     // Sleep to wait region server report
-    Thread.sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
+    Thread
+      .sleep(TEST_UTIL.getConfiguration().getInt("hbase.regionserver.msginterval", 3 * 1000) * 2);
     // Check if regions match with the regionLoad from the server
     Collection<ServerName> servers = admin.getRegionServers().get();
     for (ServerName serverName : servers) {
@@ -251,8 +243,8 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     // Check RegionLoad matches the regionLoad from ClusterStatus
     ClusterMetrics clusterStatus = admin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).get();
     assertEquals(servers.size(), clusterStatus.getLiveServerMetrics().size());
-    for (Map.Entry<ServerName, ServerMetrics> entry :
-      clusterStatus.getLiveServerMetrics().entrySet()) {
+    for (Map.Entry<ServerName, ServerMetrics> entry : clusterStatus.getLiveServerMetrics()
+      .entrySet()) {
       ServerName sn = entry.getKey();
       ServerMetrics sm = entry.getValue();
       compareRegionLoads(sm.getRegionMetrics().values(), admin.getRegionMetrics(sn).get());
@@ -264,7 +256,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   }
 
   @Test
-  public void testGetRegionServers() throws Exception{
+  public void testGetRegionServers() throws Exception {
     List<ServerName> serverNames = new ArrayList<>(admin.getRegionServers(true).get());
     assertEquals(2, serverNames.size());
 
@@ -284,7 +276,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   }
 
   private void compareRegionLoads(Collection<RegionMetrics> regionLoadCluster,
-      Collection<RegionMetrics> regionLoads) {
+    Collection<RegionMetrics> regionLoads) {
 
     assertEquals("No of regionLoads from clusterStatus and regionloads from RS doesn't match",
       regionLoadCluster.size(), regionLoads.size());
@@ -302,7 +294,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   }
 
   private void checkRegionsAndRegionLoads(Collection<RegionInfo> regions,
-      Collection<RegionMetrics> regionLoads) {
+    Collection<RegionMetrics> regionLoads) {
 
     assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
 
@@ -312,7 +304,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     }
     for (RegionInfo info : regions) {
       assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString()
-          + " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
+        + " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
     }
   }
 

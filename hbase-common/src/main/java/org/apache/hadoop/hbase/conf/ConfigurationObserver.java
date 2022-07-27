@@ -22,17 +22,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Every class that wants to observe changes in Configuration properties,
- * must implement interface (and also, register itself with the
- * {@link ConfigurationManager}.
+ * Every class that wants to observe changes in Configuration properties, must implement interface
+ * (and also, register itself with the {@link ConfigurationManager}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface ConfigurationObserver {
 
   /**
-   * This method would be called by the {@link ConfigurationManager}
-   * object when the {@link Configuration} object is reloaded from disk.
+   * This method would be called by the {@link ConfigurationManager} object when the
+   * {@link Configuration} object is reloaded from disk.
    */
   void onConfigurationChange(Configuration conf);
 }

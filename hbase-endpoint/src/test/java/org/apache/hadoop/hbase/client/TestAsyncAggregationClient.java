@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,7 +44,7 @@ public class TestAsyncAggregationClient {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncAggregationClient.class);
+    HBaseClassTestRule.forClass(TestAsyncAggregationClient.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -56,7 +56,7 @@ public class TestAsyncAggregationClient {
 
   private static byte[] CQ2 = Bytes.toBytes("CQ2");
 
-  private static int COUNT = 1000;
+  private static long COUNT = 1000;
 
   private static AsyncConnection CONN;
 
@@ -76,9 +76,9 @@ public class TestAsyncAggregationClient {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
     TABLE = CONN.getTable(TABLE_NAME);
     TABLE.putAll(LongStream.range(0, COUNT)
-        .mapToObj(l -> new Put(Bytes.toBytes(String.format("%03d", l)))
-            .addColumn(CF, CQ, Bytes.toBytes(l)).addColumn(CF, CQ2, Bytes.toBytes(l * l)))
-        .collect(Collectors.toList())).get();
+      .mapToObj(l -> new Put(Bytes.toBytes(String.format("%03d", l)))
+        .addColumn(CF, CQ, Bytes.toBytes(l)).addColumn(CF, CQ2, Bytes.toBytes(l * l)))
+      .collect(Collectors.toList())).get();
   }
 
   @AfterClass
@@ -90,34 +90,35 @@ public class TestAsyncAggregationClient {
   @Test
   public void testMax() throws InterruptedException, ExecutionException {
     assertEquals(COUNT - 1, AsyncAggregationClient
-        .max(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
+      .max(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
   }
 
   @Test
   public void testMin() throws InterruptedException, ExecutionException {
     assertEquals(0, AsyncAggregationClient
-        .min(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
+      .min(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
   }
 
   @Test
   public void testRowCount() throws InterruptedException, ExecutionException {
     assertEquals(COUNT,
       AsyncAggregationClient
-          .rowCount(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get()
-          .longValue());
+        .rowCount(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get()
+        .longValue());
   }
 
   @Test
   public void testSum() throws InterruptedException, ExecutionException {
     assertEquals(COUNT * (COUNT - 1) / 2, AsyncAggregationClient
-        .sum(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
+      .sum(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
   }
 
   private static final double DELTA = 1E-3;
 
   @Test
   public void testAvg() throws InterruptedException, ExecutionException {
-    assertEquals((COUNT - 1) / 2.0, AsyncAggregationClient
+    assertEquals(
+      (COUNT - 1) / 2.0, AsyncAggregationClient
         .avg(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().doubleValue(),
       DELTA);
   }
@@ -125,11 +126,12 @@ public class TestAsyncAggregationClient {
   @Test
   public void testStd() throws InterruptedException, ExecutionException {
     double avgSq =
-        LongStream.range(0, COUNT).map(l -> l * l).reduce((l1, l2) -> l1 + l2).getAsLong()
-            / (double) COUNT;
+      LongStream.range(0, COUNT).map(l -> l * l).reduce((l1, l2) -> l1 + l2).getAsLong()
+        / (double) COUNT;
     double avg = (COUNT - 1) / 2.0;
     double std = Math.sqrt(avgSq - avg * avg);
-    assertEquals(std, AsyncAggregationClient
+    assertEquals(
+      std, AsyncAggregationClient
         .std(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().doubleValue(),
       DELTA);
   }
@@ -139,8 +141,25 @@ public class TestAsyncAggregationClient {
     long halfSum = COUNT * (COUNT - 1) / 4;
     long median = 0L;
     long sum = 0L;
-    for (int i = 0; i < COUNT; i++) {
+    for (long i = 0; i < COUNT; i++) {
       sum += i;
+      if (sum > halfSum) {
+        median = i - 1;
+        break;
+      }
+    }
+    assertEquals(median, AsyncAggregationClient
+      .median(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
+  }
+
+  @Test
+  public void testMedianWithWeight() throws InterruptedException, ExecutionException {
+    long halfSum =
+      LongStream.range(0, COUNT).map(l -> l * l).reduce((l1, l2) -> l1 + l2).getAsLong() / 2;
+    long median = 0L;
+    long sum = 0L;
+    for (long i = 0; i < COUNT; i++) {
+      sum += i * i;
       if (sum > halfSum) {
         median = i - 1;
         break;
@@ -148,24 +167,6 @@ public class TestAsyncAggregationClient {
     }
     assertEquals(median,
       AsyncAggregationClient
-          .median(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get()
-          .longValue());
-  }
-
-  @Test
-  public void testMedianWithWeight() throws InterruptedException, ExecutionException {
-    long halfSum =
-        LongStream.range(0, COUNT).map(l -> l * l).reduce((l1, l2) -> l1 + l2).getAsLong() / 2;
-    long median = 0L;
-    long sum = 0L;
-    for (int i = 0; i < COUNT; i++) {
-      sum += i * i;
-      if (sum > halfSum) {
-        median = i - 1;
-        break;
-      }
-    }
-    assertEquals(median, AsyncAggregationClient
         .median(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ).addColumn(CF, CQ2))
         .get().longValue());
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,32 +29,27 @@ public class ProtobufMagic {
   }
 
   /**
-   * Magic we put ahead of a serialized protobuf message.
-   * For example, all znode content is protobuf messages with the below magic
-   * for preamble.
+   * Magic we put ahead of a serialized protobuf message. For example, all znode content is protobuf
+   * messages with the below magic for preamble.
    */
-  public static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
+  public static final byte[] PB_MAGIC = new byte[] { 'P', 'B', 'U', 'F' };
 
   /**
-   * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * Returns True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
-  public static boolean isPBMagicPrefix(final byte [] bytes) {
+  public static boolean isPBMagicPrefix(final byte[] bytes) {
     if (bytes == null) return false;
     return isPBMagicPrefix(bytes, 0, bytes.length);
   }
 
   /*
-   * Copied from Bytes.java to here
-   * hbase-common now depends on hbase-protocol
-   * Referencing Bytes.java directly would create circular dependency
+   * Copied from Bytes.java to here hbase-common now depends on hbase-protocol Referencing
+   * Bytes.java directly would create circular dependency
    */
-  private static int compareTo(byte[] buffer1, int offset1, int length1,
-      byte[] buffer2, int offset2, int length2) {
+  private static int compareTo(byte[] buffer1, int offset1, int length1, byte[] buffer2,
+    int offset2, int length2) {
     // Short circuit equal case
-    if (buffer1 == buffer2 &&
-        offset1 == offset2 &&
-        length1 == length2) {
+    if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
       return 0;
     }
     // Bring WritableComparator code local
@@ -70,20 +65,13 @@ public class ProtobufMagic {
     return length1 - length2;
   }
 
-  /**
-   * @param bytes Bytes to check.
-   * @param offset offset to start at
-   * @param len length to use
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
-   */
-  public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
+  /** Returns True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix. */
+  public static boolean isPBMagicPrefix(final byte[] bytes, int offset, int len) {
     if (bytes == null || len < PB_MAGIC.length) return false;
     return compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
   }
 
-  /**
-   * @return Length of {@link #PB_MAGIC}
-   */
+  /** Returns Length of {@link #PB_MAGIC} */
   public static int lengthOfPBMagic() {
     return PB_MAGIC.length;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -65,7 +65,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFuzzyRowFilterEndToEnd.class);
+    HBaseClassTestRule.forClass(TestFuzzyRowFilterEndToEnd.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte fuzzyValue = (byte) 63;
@@ -127,13 +127,13 @@ public class TestFuzzyRowFilterEndToEnd {
     String cf = "f";
     String cq = "q";
 
-    Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
+      Integer.MAX_VALUE);
     // Load data
     String[] rows = new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
-        "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
-        "\\x9B\\x00\\x044e\\x9B\\x02\\xBB", "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
-        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", };
+      "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
+      "\\x9B\\x00\\x044e\\x9B\\x02\\xBB", "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
+      "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", };
 
     for (int i = 0; i < rows.length; i++) {
       Put p = new Put(Bytes.toBytesBinary(rows[i]));
@@ -171,26 +171,21 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   @Test
-  public void testHBASE14782() throws IOException
-  {
+  public void testHBASE14782() throws IOException {
     String cf = "f";
     String cq = "q";
 
-    Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
+      Integer.MAX_VALUE);
     // Load data
-    String[] rows = new String[] {
-      "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00",
-      "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00",
-      "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00",
-      "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
-      "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01",
-      "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB",
-    };
+    String[] rows =
+      new String[] { "\\x9C\\x00\\x044\\x00\\x00\\x00\\x00", "\\x9C\\x00\\x044\\x01\\x00\\x00\\x00",
+        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x00", "\\x9C\\x00\\x044\\x00\\x00\\x01\\x00",
+        "\\x9C\\x00\\x044\\x00\\x01\\x00\\x01", "\\x9B\\x00\\x044e\\xBB\\xB2\\xBB", };
 
     String badRow = "\\x9C\\x00\\x03\\xE9e\\xBB{X\\x1Fwts\\x1F\\x15vRX";
 
-    for(int i=0; i < rows.length; i++){
+    for (int i = 0; i < rows.length; i++) {
       Put p = new Put(Bytes.toBytesBinary(rows[i]));
       p.addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq), Bytes.toBytes("value"));
       ht.put(p);
@@ -202,9 +197,9 @@ public class TestFuzzyRowFilterEndToEnd {
 
     TEST_UTIL.flush();
 
-    List<Pair<byte[], byte[]>> data =  new ArrayList<>();
+    List<Pair<byte[], byte[]>> data = new ArrayList<>();
     byte[] fuzzyKey = Bytes.toBytesBinary("\\x00\\x00\\x044");
-    byte[] mask = new byte[] { 1,0,0,0};
+    byte[] mask = new byte[] { 1, 0, 0, 0 };
     data.add(new Pair<>(fuzzyKey, mask));
     FuzzyRowFilter filter = new FuzzyRowFilter(data);
 
@@ -213,7 +208,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
     ResultScanner scanner = ht.getScanner(scan);
     int total = 0;
-    while(scanner.next() != null){
+    while (scanner.next() != null) {
       total++;
     }
     assertEquals(rows.length, total);
@@ -225,7 +220,7 @@ public class TestFuzzyRowFilterEndToEnd {
     String cf = "f";
 
     Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
+      TEST_UTIL.createTable(TableName.valueOf(table), Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier
@@ -362,8 +357,8 @@ public class TestFuzzyRowFilterEndToEnd {
   @Test
   public void testFilterList() throws Exception {
     String cf = "f";
-    Table ht =
-        TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf), Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(cf),
+      Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
     // 4 byte qualifier
@@ -388,8 +383,8 @@ public class TestFuzzyRowFilterEndToEnd {
           p.setDurability(Durability.SKIP_WAL);
           p.addColumn(Bytes.toBytes(cf), cq, Bytes.toBytes(c));
           ht.put(p);
-          LOG.info("Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: "
-              + Bytes.toStringBinary(cq));
+          LOG.info(
+            "Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: " + Bytes.toStringBinary(cq));
         }
       }
     }
@@ -433,7 +428,7 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   private void runScanner(Table hTable, int expectedSize, Filter filter1, Filter filter2)
-      throws IOException {
+    throws IOException {
     String cf = "f";
     Scan scan = new Scan();
     scan.addFamily(Bytes.toBytes(cf));
@@ -447,7 +442,7 @@ public class TestFuzzyRowFilterEndToEnd {
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
         LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
-            + Bytes.toStringBinary(CellUtil.cloneQualifier(kv)));
+          + Bytes.toStringBinary(CellUtil.cloneQualifier(kv)));
         results.add(kv);
       }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,13 +36,12 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRestoreBoundaryTests.class);
+    HBaseClassTestRule.forClass(TestRestoreBoundaryTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRestoreBoundaryTests.class);
 
   /**
    * Verify that a single empty table is restored to a new table.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -52,9 +51,8 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
     LOG.info("backup complete");
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };
-    getBackupAdmin().restore(
-      BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset, tablemap,
-        false));
+    getBackupAdmin().restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
+      tableset, tablemap, false));
     Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
@@ -62,7 +60,6 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -73,9 +70,8 @@ public class TestRestoreBoundaryTests extends TestBackupBase {
     String backupId = fullTableBackup(tables);
     TableName[] restore_tableset = new TableName[] { table2, table3 };
     TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
-    getBackupAdmin().restore(
-      BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, restore_tableset,
-        tablemap, false));
+    getBackupAdmin().restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
+      restore_tableset, tablemap, false));
     Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table2_restore));
     assertTrue(hba.tableExists(table3_restore));

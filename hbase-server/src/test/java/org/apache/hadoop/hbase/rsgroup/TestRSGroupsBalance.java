@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -126,10 +126,11 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     ServerName first = setupBalanceTest(newGroupName, tableName);
 
-    // run the balancer in dry run mode. it should return true, but should not actually move any regions
+    // run the balancer in dry run mode. it should return true, but should not actually move any
+    // regions
     ADMIN.balancerSwitch(true, true);
-    BalanceResponse response = ADMIN.balanceRSGroup(newGroupName,
-      BalanceRequest.newBuilder().setDryRun(true).build());
+    BalanceResponse response =
+      ADMIN.balanceRSGroup(newGroupName, BalanceRequest.newBuilder().setDryRun(true).build());
     assertTrue(response.isBalancerRan());
     assertTrue(response.getMovesCalculated() > 0);
     assertEquals(0, response.getMovesExecuted());
@@ -214,7 +215,8 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
     });
   }
 
-  @Test public void testGetRSGroupAssignmentsByTable() throws Exception {
+  @Test
+  public void testGetRSGroupAssignmentsByTable() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY, 10);
     // disable table

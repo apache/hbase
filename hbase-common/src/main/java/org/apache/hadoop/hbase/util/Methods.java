@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
-
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -35,36 +32,35 @@ public final class Methods {
   private Methods() {
   }
 
-  public static <T> Object call(Class<T> clazz, T instance, String methodName,
-      Class[] types, Object[] args) throws Exception {
+  public static <T> Object call(Class<T> clazz, T instance, String methodName, Class[] types,
+    Object[] args) throws Exception {
     try {
       Method m = clazz.getMethod(methodName, types);
       return m.invoke(instance, args);
     } catch (IllegalArgumentException arge) {
-      LOG.error(HBaseMarkers.FATAL, "Constructed invalid call. class="+clazz.getName()+
-          " method=" + methodName + " types=" + Classes.stringify(types), arge);
+      LOG.error(HBaseMarkers.FATAL, "Constructed invalid call. class=" + clazz.getName()
+        + " method=" + methodName + " types=" + Classes.stringify(types), arge);
       throw arge;
     } catch (NoSuchMethodException nsme) {
       throw new IllegalArgumentException(
-          "Can't find method "+methodName+" in "+clazz.getName()+"!", nsme);
+        "Can't find method " + methodName + " in " + clazz.getName() + "!", nsme);
     } catch (InvocationTargetException ite) {
       // unwrap the underlying exception and rethrow
       if (ite.getTargetException() != null) {
         if (ite.getTargetException() instanceof Exception) {
-          throw (Exception)ite.getTargetException();
+          throw (Exception) ite.getTargetException();
         } else if (ite.getTargetException() instanceof Error) {
-          throw (Error)ite.getTargetException();
+          throw (Error) ite.getTargetException();
         }
       }
       throw new UndeclaredThrowableException(ite,
-          "Unknown exception invoking "+clazz.getName()+"."+methodName+"()");
+        "Unknown exception invoking " + clazz.getName() + "." + methodName + "()");
     } catch (IllegalAccessException iae) {
       throw new IllegalArgumentException(
-          "Denied access calling "+clazz.getName()+"."+methodName+"()", iae);
+        "Denied access calling " + clazz.getName() + "." + methodName + "()", iae);
     } catch (SecurityException se) {
-      LOG.error(HBaseMarkers.FATAL, "SecurityException calling method. class="+
-          clazz.getName()+" method=" + methodName + " types=" +
-          Classes.stringify(types), se);
+      LOG.error(HBaseMarkers.FATAL, "SecurityException calling method. class=" + clazz.getName()
+        + " method=" + methodName + " types=" + Classes.stringify(types), se);
       throw se;
     }
   }

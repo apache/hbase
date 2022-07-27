@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRSGroupsWithACL.class);
+    HBaseClassTestRule.forClass(TestRSGroupsWithACL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsWithACL.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
@@ -125,13 +125,13 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
 
     USER_GROUP_ADMIN =
-        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+      User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
     USER_GROUP_CREATE =
-        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+      User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
-        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+      User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
-        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+      User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
     // Grant table creation permission to USER_OWNER
     grantGlobal(TEST_UTIL, USER_OWNER.getShortName(), Permission.Action.CREATE);

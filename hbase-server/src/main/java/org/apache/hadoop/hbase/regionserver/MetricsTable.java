@@ -1,20 +1,19 @@
-/**
- * Copyright The Apache Software Foundation
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
 
@@ -27,8 +26,8 @@ public class MetricsTable {
   private MetricsTableWrapperAggregate wrapper;
 
   public MetricsTable(final MetricsTableWrapperAggregate wrapper) {
-    tableSourceAgg = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-                                             .getTableAggregate();
+    tableSourceAgg = CompatibilitySingletonFactory
+      .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
     this.wrapper = wrapper;
   }
 
@@ -69,22 +68,21 @@ public class MetricsTable {
   }
 
   public void updateCompactionInputFileCount(String table, boolean isMajor, long c) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper)
-      .updateCompactionInputFileCount(isMajor, c);
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateCompactionInputFileCount(isMajor,
+      c);
   }
 
   public void updateCompactionInputSize(String table, boolean isMajor, long bytes) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper)
-      .updateCompactionInputSize(isMajor, bytes);
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateCompactionInputSize(isMajor, bytes);
   }
 
   public void updateCompactionOutputFileCount(String table, boolean isMajor, long c) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper)
-      .updateCompactionOutputFileCount(isMajor, c);
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateCompactionOutputFileCount(isMajor,
+      c);
   }
 
   public void updateCompactionOutputSize(String table, boolean isMajor, long bytes) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper)
-      .updateCompactionOutputSize(isMajor, bytes);
+    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateCompactionOutputSize(isMajor,
+      bytes);
   }
 }

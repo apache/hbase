@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -23,9 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface MetricsUserAggregate {
 
-  /**
-   * @return return a singleton instance of MetricsUserAggregateSource or null in case of NoOp
-   */
+  /** Returns return a singleton instance of MetricsUserAggregateSource or null in case of NoOp */
   MetricsUserAggregateSource getSource();
 
   void updatePut(long t);

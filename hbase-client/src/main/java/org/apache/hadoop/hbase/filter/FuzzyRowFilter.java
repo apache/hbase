@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,19 +23,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.PriorityQueue;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
 
 /**
  * This is optimized version of a standard FuzzyRowFilter Filters data based on fuzzy row key.
@@ -57,7 +58,7 @@ import org.apache.hadoop.hbase.util.UnsafeAvailChecker;
  */
 @InterfaceAudience.Public
 public class FuzzyRowFilter extends FilterBase {
-  private static final boolean UNSAFE_UNALIGNED = UnsafeAvailChecker.unaligned();
+  private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
   private boolean done = false;
 
@@ -78,8 +79,8 @@ public class FuzzyRowFilter extends FilterBase {
 
     for (Pair<byte[], byte[]> aFuzzyKeysData : fuzzyKeysData) {
       if (aFuzzyKeysData.getFirst().length != aFuzzyKeysData.getSecond().length) {
-        Pair<String, String> readable =
-          new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()), Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
+        Pair<String, String> readable = new Pair<>(Bytes.toStringBinary(aFuzzyKeysData.getFirst()),
+          Bytes.toStringBinary(aFuzzyKeysData.getSecond()));
         throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
       }
 
@@ -98,7 +99,6 @@ public class FuzzyRowFilter extends FilterBase {
     this.tracker = new RowTracker();
   }
 
-
   private void preprocessSearchKey(Pair<byte[], byte[]> p) {
     if (!UNSAFE_UNALIGNED) {
       // do nothing
@@ -116,9 +116,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   /**
    * We need to preprocess mask array, as since we treat 2's as unfixed positions and -1 (0xff) as
-   * fixed positions
-   * @param mask
-   * @return mask array
+   * fixed positions n * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
     if (!UNSAFE_UNALIGNED) {
@@ -156,9 +154,8 @@ public class FuzzyRowFilter extends FilterBase {
       for (int j = 0; j < fuzzyData.getSecond().length; j++) {
         fuzzyData.getSecond()[j] >>= 2;
       }
-      SatisfiesCode satisfiesCode =
-          satisfies(isReversed(), c.getRowArray(), c.getRowOffset(), c.getRowLength(),
-            fuzzyData.getFirst(), fuzzyData.getSecond());
+      SatisfiesCode satisfiesCode = satisfies(isReversed(), c.getRowArray(), c.getRowOffset(),
+        c.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
         lastFoundIndex = index;
         return ReturnCode.INCLUDE;
@@ -196,20 +193,21 @@ public class FuzzyRowFilter extends FilterBase {
 
     RowTracker() {
       nextRows = new PriorityQueue<>(fuzzyKeysData.size(),
-              new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
-                @Override
-                public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
-                    Pair<byte[], Pair<byte[], byte[]>> o2) {
-                  return isReversed()? Bytes.compareTo(o2.getFirst(), o1.getFirst()):
-                    Bytes.compareTo(o1.getFirst(), o2.getFirst());
-                }
-              });
+        new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
+          @Override
+          public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
+            Pair<byte[], Pair<byte[], byte[]>> o2) {
+            return isReversed()
+              ? Bytes.compareTo(o2.getFirst(), o1.getFirst())
+              : Bytes.compareTo(o1.getFirst(), o2.getFirst());
+          }
+        });
     }
 
     byte[] nextRow() {
       if (nextRows.isEmpty()) {
-        throw new IllegalStateException(
-            "NextRows should not be empty, make sure to call nextRow() after updateTracker() return true");
+        throw new IllegalStateException("NextRows should not be empty, "
+          + "make sure to call nextRow() after updateTracker() return true");
       } else {
         return nextRows.peek().getFirst();
       }
@@ -232,14 +230,15 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     boolean lessThan(Cell currentCell, byte[] nextRowKey) {
-      int compareResult = CellComparator.getInstance().compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
+      int compareResult =
+        CellComparator.getInstance().compareRows(currentCell, nextRowKey, 0, nextRowKey.length);
       return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
     }
 
     void updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
       byte[] nextRowKeyCandidate =
-          getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
-            currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
+        getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
+          currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (nextRowKeyCandidate != null) {
         nextRows.add(new Pair<>(nextRowKeyCandidate, fuzzyData));
       }
@@ -252,9 +251,7 @@ public class FuzzyRowFilter extends FilterBase {
     return done;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.FuzzyRowFilter.Builder builder = FilterProtos.FuzzyRowFilter.newBuilder();
@@ -268,9 +265,10 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link FuzzyRowFilter}
    * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
    * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FuzzyRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -320,12 +318,12 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   static SatisfiesCode satisfies(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
-      byte[] fuzzyKeyMeta) {
+    byte[] fuzzyKeyMeta) {
     return satisfies(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
   static SatisfiesCode satisfies(boolean reverse, byte[] row, int offset, int length,
-      byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+    byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
 
     if (!UNSAFE_UNALIGNED) {
       return satisfiesNoUnsafe(reverse, row, offset, length, fuzzyKeyBytes, fuzzyKeyMeta);
@@ -344,7 +342,7 @@ public class FuzzyRowFilter extends FilterBase {
       long fuzzyBytes = Bytes.toLong(fuzzyKeyBytes, i);
       long fuzzyMeta = Bytes.toLong(fuzzyKeyMeta, i);
       long rowValue = Bytes.toLong(row, offset + i);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -356,7 +354,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = Bytes.toInt(fuzzyKeyBytes, off);
       int fuzzyMeta = Bytes.toInt(fuzzyKeyMeta, off);
       int rowValue = Bytes.toInt(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -367,7 +365,7 @@ public class FuzzyRowFilter extends FilterBase {
       short fuzzyBytes = Bytes.toShort(fuzzyKeyBytes, off);
       short fuzzyMeta = Bytes.toShort(fuzzyKeyMeta, off);
       short rowValue = Bytes.toShort(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         // even if it does not (in this case getNextForFuzzyRule
         // will return null)
@@ -380,7 +378,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = fuzzyKeyBytes[off] & 0xff;
       int fuzzyMeta = fuzzyKeyMeta[off] & 0xff;
       int rowValue = row[offset + off] & 0xff;
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -389,7 +387,7 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   static SatisfiesCode satisfiesNoUnsafe(boolean reverse, byte[] row, int offset, int length,
-      byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+    byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     if (row == null) {
       // do nothing, let scan to proceed
       return SatisfiesCode.YES;
@@ -439,7 +437,7 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
-      byte[] fuzzyKeyMeta) {
+    byte[] fuzzyKeyMeta) {
     return getNextForFuzzyRule(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
@@ -525,7 +523,7 @@ public class FuzzyRowFilter extends FilterBase {
    *         otherwise
    */
   static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
-      byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+    byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than
     // the given one we do the following:
     // 1. setting values on all "fixed" positions to the values from fuzzyKeyBytes
@@ -535,7 +533,7 @@ public class FuzzyRowFilter extends FilterBase {
     // It is easier to perform this by using fuzzyKeyBytes copy and setting "non-fixed" position
     // values than otherwise.
     byte[] result =
-        Arrays.copyOf(fuzzyKeyBytes, length > fuzzyKeyBytes.length ? length : fuzzyKeyBytes.length);
+      Arrays.copyOf(fuzzyKeyBytes, length > fuzzyKeyBytes.length ? length : fuzzyKeyBytes.length);
     if (reverse && length > fuzzyKeyBytes.length) {
       // we need trailing 0xff's instead of trailing 0x00's
       for (int i = fuzzyKeyBytes.length; i < result.length; i++) {
@@ -585,49 +583,48 @@ public class FuzzyRowFilter extends FilterBase {
       }
     }
 
-    return reverse? result: trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
+    return reverse ? result : trimTrailingZeroes(result, fuzzyKeyMeta, toInc);
   }
 
   /**
-   * For forward scanner, next cell hint should  not contain any trailing zeroes
-   * unless they are part of fuzzyKeyMeta
-   * hint = '\x01\x01\x01\x00\x00'
-   * will skip valid row '\x01\x01\x01'
-   * 
-   * @param result
-   * @param fuzzyKeyMeta
-   * @param toInc - position of incremented byte
+   * For forward scanner, next cell hint should not contain any trailing zeroes unless they are part
+   * of fuzzyKeyMeta hint = '\x01\x01\x01\x00\x00' will skip valid row '\x01\x01\x01' nn * @param
+   * toInc - position of incremented byte
    * @return trimmed version of result
    */
-  
+
   private static byte[] trimTrailingZeroes(byte[] result, byte[] fuzzyKeyMeta, int toInc) {
-    int off = fuzzyKeyMeta.length >= result.length? result.length -1:
-           fuzzyKeyMeta.length -1;  
-    for( ; off >= 0; off--){
-      if(fuzzyKeyMeta[off] != 0) break;
+    int off = fuzzyKeyMeta.length >= result.length ? result.length - 1 : fuzzyKeyMeta.length - 1;
+    for (; off >= 0; off--) {
+      if (fuzzyKeyMeta[off] != 0) break;
     }
-    if (off < toInc)  off = toInc;
-    byte[] retValue = new byte[off+1];
+    if (off < toInc) off = toInc;
+    byte[] retValue = new byte[off + 1];
     System.arraycopy(result, 0, retValue, 0, retValue.length);
     return retValue;
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FuzzyRowFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FuzzyRowFilter)) {
+      return false;
+    }
     FuzzyRowFilter other = (FuzzyRowFilter) o;
     if (this.fuzzyKeysData.size() != other.fuzzyKeysData.size()) return false;
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
       Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
       Pair<byte[], byte[]> otherData = other.fuzzyKeysData.get(i);
-      if (!(Bytes.equals(thisData.getFirst(), otherData.getFirst()) && Bytes.equals(
-        thisData.getSecond(), otherData.getSecond()))) {
+      if (
+        !(Bytes.equals(thisData.getFirst(), otherData.getFirst())
+          && Bytes.equals(thisData.getSecond(), otherData.getSecond()))
+      ) {
         return false;
       }
     }

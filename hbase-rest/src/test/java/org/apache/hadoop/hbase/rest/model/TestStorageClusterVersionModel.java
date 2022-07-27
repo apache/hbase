@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,20 +25,19 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestStorageClusterVersionModel extends TestModelBase<StorageClusterVersionModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestStorageClusterVersionModel.class);
+    HBaseClassTestRule.forClass(TestStorageClusterVersionModel.class);
 
   private static final String VERSION = "0.0.1-testing";
 
   public TestStorageClusterVersionModel() throws Exception {
     super(StorageClusterVersionModel.class);
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"+
-      "<ClusterVersion Version=\"" + VERSION + "\"/>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+      + "<ClusterVersion Version=\"" + VERSION + "\"/>";
 
     AS_JSON = "{\"Version\": \"0.0.1-testing\"}";
   }
@@ -57,7 +56,6 @@ public class TestStorageClusterVersionModel extends TestModelBase<StorageCluster
 
   @Override
   public void testFromPB() throws Exception {
-    //ignore test no pb
+    // ignore test no pb
   }
 }
-

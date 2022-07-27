@@ -1,12 +1,13 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,26 +20,27 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A point-in-time view of a space quota on a table.
  */
 @InterfaceAudience.Private
 public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
-  private static final SpaceQuotaSnapshot NO_SUCH_SNAPSHOT = new SpaceQuotaSnapshot(
-      SpaceQuotaStatus.notInViolation(), 0, Long.MAX_VALUE);
+  private static final SpaceQuotaSnapshot NO_SUCH_SNAPSHOT =
+    new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 0, Long.MAX_VALUE);
   private final SpaceQuotaStatus quotaStatus;
   private final long usage;
   private final long limit;
 
   /**
-   * Encapsulates the state of a quota on a table. The quota may or may not be in violation.
-   * If the quota is not in violation, the violation may be null. If the quota is in violation,
-   * there is guaranteed to be a non-null violation policy.
+   * Encapsulates the state of a quota on a table. The quota may or may not be in violation. If the
+   * quota is not in violation, the violation may be null. If the quota is in violation, there is
+   * guaranteed to be a non-null violation policy.
    */
   @InterfaceAudience.Private
   public static class SpaceQuotaStatus implements SpaceQuotaStatusView {
@@ -72,9 +74,7 @@ public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
       return policy;
     }
 
-    /**
-     * @return {@code true} if the quota is being violated, {@code false} otherwise.
-     */
+    /** Returns {@code true} if the quota is being violated, {@code false} otherwise. */
     @Override
     public boolean isInViolation() {
       return inViolation;
@@ -90,7 +90,7 @@ public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
     @Override
     public int hashCode() {
       return new HashCodeBuilder().append(policy == null ? 0 : policy.hashCode())
-          .append(inViolation).toHashCode();
+        .append(inViolation).toHashCode();
     }
 
     @Override
@@ -160,11 +160,8 @@ public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder()
-        .append(quotaStatus.hashCode())
-        .append(usage)
-        .append(limit)
-        .toHashCode();
+    return new HashCodeBuilder().append(quotaStatus.hashCode()).append(usage).append(limit)
+      .toHashCode();
   }
 
   @Override
@@ -188,13 +185,13 @@ public class SpaceQuotaSnapshot implements SpaceQuotaSnapshotView {
   // ProtobufUtil is in hbase-client, and this doesn't need to be public.
   public static SpaceQuotaSnapshot toSpaceQuotaSnapshot(QuotaProtos.SpaceQuotaSnapshot proto) {
     return new SpaceQuotaSnapshot(SpaceQuotaStatus.toStatus(proto.getQuotaStatus()),
-        proto.getQuotaUsage(), proto.getQuotaLimit());
+      proto.getQuotaUsage(), proto.getQuotaLimit());
   }
 
   public static QuotaProtos.SpaceQuotaSnapshot toProtoSnapshot(SpaceQuotaSnapshot snapshot) {
     return QuotaProtos.SpaceQuotaSnapshot.newBuilder()
-        .setQuotaStatus(SpaceQuotaStatus.toProto(snapshot.getQuotaStatus()))
-        .setQuotaUsage(snapshot.getUsage()).setQuotaLimit(snapshot.getLimit()).build();
+      .setQuotaStatus(SpaceQuotaStatus.toProto(snapshot.getQuotaStatus()))
+      .setQuotaUsage(snapshot.getUsage()).setQuotaLimit(snapshot.getLimit()).build();
   }
 
   /**

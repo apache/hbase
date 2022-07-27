@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.Map;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Public
 public interface Attributes {
   /**
-   * Sets an attribute.
-   * In case value = null attribute is removed from the attributes map.
-   * Attribute names starting with _ indicate system attributes.
-   * @param name attribute name
+   * Sets an attribute. In case value = null attribute is removed from the attributes map. Attribute
+   * names starting with _ indicate system attributes.
+   * @param name  attribute name
    * @param value attribute value
    */
   Attributes setAttribute(String name, byte[] value);

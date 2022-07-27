@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
@@ -33,20 +32,18 @@ public class MetricsSnapshotSourceImpl extends BaseSourceImpl implements Metrics
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
 
-  public MetricsSnapshotSourceImpl(String metricsName,
-                                   String metricsDescription,
-                                   String metricsContext, String metricsJmxContext) {
+  public MetricsSnapshotSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
   @Override
   public void init() {
-    snapshotTimeHisto = metricsRegistry.newTimeHistogram(
-        SNAPSHOT_TIME_NAME, SNAPSHOT_TIME_DESC);
-    snapshotCloneTimeHisto = metricsRegistry.newTimeHistogram(
-        SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC);
-    snapshotRestoreTimeHisto = metricsRegistry.newTimeHistogram(
-        SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC);
+    snapshotTimeHisto = metricsRegistry.newTimeHistogram(SNAPSHOT_TIME_NAME, SNAPSHOT_TIME_DESC);
+    snapshotCloneTimeHisto =
+      metricsRegistry.newTimeHistogram(SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC);
+    snapshotRestoreTimeHisto =
+      metricsRegistry.newTimeHistogram(SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC);
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,11 +35,10 @@ public class SnapshotCleanupTracker extends ZKNodeTracker {
 
   /**
    * Constructs a new ZK node tracker.
-   *
-   * <p>After construction, use {@link #start} to kick off tracking.
-   *
-   * @param watcher reference to the {@link ZKWatcher} which also contains configuration and
-   *   constants
+   * <p>
+   * After construction, use {@link #start} to kick off tracking.
+   * @param watcher   reference to the {@link ZKWatcher} which also contains configuration and
+   *                  constants
    * @param abortable used to abort if a fatal error occurs
    */
   public SnapshotCleanupTracker(ZKWatcher watcher, Abortable abortable) {
@@ -50,19 +47,18 @@ public class SnapshotCleanupTracker extends ZKNodeTracker {
 
   /**
    * Returns the current state of the snapshot auto cleanup based on TTL
-   *
-   * @return <code>true</code> if the snapshot auto cleanup is enabled,
-   *   <code>false</code> otherwise.
+   * @return <code>true</code> if the snapshot auto cleanup is enabled, <code>false</code>
+   *         otherwise.
    */
   public boolean isSnapshotCleanupEnabled() {
     byte[] snapshotCleanupZNodeData = super.getData(false);
     try {
       // if data in ZK is null, use default of on.
-      return snapshotCleanupZNodeData == null ||
-          parseFrom(snapshotCleanupZNodeData).getSnapshotCleanupEnabled();
+      return snapshotCleanupZNodeData == null
+        || parseFrom(snapshotCleanupZNodeData).getSnapshotCleanupEnabled();
     } catch (DeserializationException dex) {
-      LOG.error("ZK state for Snapshot Cleanup could not be parsed " +
-          Bytes.toStringBinary(snapshotCleanupZNodeData), dex);
+      LOG.error("ZK state for Snapshot Cleanup could not be parsed "
+        + Bytes.toStringBinary(snapshotCleanupZNodeData), dex);
       // return false to be safe.
       return false;
     }
@@ -70,36 +66,34 @@ public class SnapshotCleanupTracker extends ZKNodeTracker {
 
   /**
    * Set snapshot auto clean on/off
-   *
-   * @param snapshotCleanupEnabled true if the snapshot auto cleanup should be on,
-   *   false otherwise
+   * @param snapshotCleanupEnabled true if the snapshot auto cleanup should be on, false otherwise
    * @throws KeeperException if ZooKeeper operation fails
    */
   public void setSnapshotCleanupEnabled(final boolean snapshotCleanupEnabled)
-      throws KeeperException {
-    byte [] snapshotCleanupZNodeData = toByteArray(snapshotCleanupEnabled);
+    throws KeeperException {
+    byte[] snapshotCleanupZNodeData = toByteArray(snapshotCleanupEnabled);
     try {
       ZKUtil.setData(watcher, watcher.getZNodePaths().snapshotCleanupZNode,
-          snapshotCleanupZNodeData);
-    } catch(KeeperException.NoNodeException nne) {
+        snapshotCleanupZNodeData);
+    } catch (KeeperException.NoNodeException nne) {
       ZKUtil.createAndWatch(watcher, watcher.getZNodePaths().snapshotCleanupZNode,
-          snapshotCleanupZNodeData);
+        snapshotCleanupZNodeData);
     }
     super.nodeDataChanged(watcher.getZNodePaths().snapshotCleanupZNode);
   }
 
   private byte[] toByteArray(final boolean isSnapshotCleanupEnabled) {
     SnapshotCleanupProtos.SnapshotCleanupState.Builder builder =
-        SnapshotCleanupProtos.SnapshotCleanupState.newBuilder();
+      SnapshotCleanupProtos.SnapshotCleanupState.newBuilder();
     builder.setSnapshotCleanupEnabled(isSnapshotCleanupEnabled);
     return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }
 
   private SnapshotCleanupProtos.SnapshotCleanupState parseFrom(final byte[] pbBytes)
-      throws DeserializationException {
+    throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(pbBytes);
     SnapshotCleanupProtos.SnapshotCleanupState.Builder builder =
-        SnapshotCleanupProtos.SnapshotCleanupState.newBuilder();
+      SnapshotCleanupProtos.SnapshotCleanupState.newBuilder();
     try {
       int magicLen = ProtobufUtil.lengthOfPBMagic();
       ProtobufUtil.mergeFrom(builder, pbBytes, magicLen, pbBytes.length - magicLen);

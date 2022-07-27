@@ -164,6 +164,21 @@ module Hbase
       assert_nil(res)
     end
 
+    define_test "delete should set proper cell type" do
+      del = @test_table._createdelete_internal('104', 'x:a', 1212)
+      assert_equal(del.get('x'.to_java_bytes, 'a'.to_java_bytes).get(0).getType.getCode,
+                   org.apache.hadoop.hbase::KeyValue::Type::DeleteColumn.getCode)
+      del = @test_table._createdelete_internal('104', 'x:a', 1212, [], false)
+      assert_equal(del.get('x'.to_java_bytes, 'a'.to_java_bytes).get(0).getType.getCode,
+                   org.apache.hadoop.hbase::KeyValue::Type::Delete.getCode)
+      del = @test_table._createdelete_internal('104', 'x', 1212)
+      assert_equal(del.get('x'.to_java_bytes, nil).get(0).getType.getCode,
+                   org.apache.hadoop.hbase::KeyValue::Type::DeleteFamily.getCode)
+      del = @test_table._createdelete_internal('104', 'x', 1212, [], false)
+      assert_equal(del.get('x'.to_java_bytes, nil).get(0).getType.getCode,
+                   org.apache.hadoop.hbase::KeyValue::Type::DeleteFamilyVersion.getCode)
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "deleteall should work w/o columns and timestamps" do
@@ -192,6 +207,13 @@ module Hbase
       assert_nil(res1)
       res2 = @test_table._get_internal('112')
       assert_nil(res2)
+    end
+
+    define_test "deleteall with row prefix in hbase:meta should not be allowed." do
+      assert_raise(ArgumentError) do
+        @meta_table = table('hbase:meta')
+        @meta_table.deleteall({ROWPREFIXFILTER => "test_meta"})
+      end
     end
 
     define_test "append should work with value" do

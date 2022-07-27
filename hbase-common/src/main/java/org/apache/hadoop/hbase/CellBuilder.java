@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
@@ -27,12 +26,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface CellBuilder {
 
   CellBuilder setRow(final byte[] row);
+
   CellBuilder setRow(final byte[] row, final int rOffset, final int rLength);
 
   CellBuilder setFamily(final byte[] family);
+
   CellBuilder setFamily(final byte[] family, final int fOffset, final int fLength);
 
   CellBuilder setQualifier(final byte[] qualifier);
+
   CellBuilder setQualifier(final byte[] qualifier, final int qOffset, final int qLength);
 
   CellBuilder setTimestamp(final long timestamp);
@@ -40,13 +42,13 @@ public interface CellBuilder {
   CellBuilder setType(final Cell.Type type);
 
   CellBuilder setValue(final byte[] value);
+
   CellBuilder setValue(final byte[] value, final int vOffset, final int vLength);
 
   Cell build();
 
   /**
-   * Remove all internal elements from builder.
-   * @return this
+   * Remove all internal elements from builder. n
    */
   CellBuilder clear();
 }

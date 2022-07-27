@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -8,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -26,8 +25,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * Encapsulation of the environment of each coprocessor
@@ -48,10 +45,11 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
 
   /**
    * Constructor
-   * @param impl the coprocessor instance
+   * @param impl     the coprocessor instance
    * @param priority chaining priority
    */
-  public BaseEnvironment(final C impl, final int priority, final int seq, final Configuration conf) {
+  public BaseEnvironment(final C impl, final int priority, final int seq,
+    final Configuration conf) {
     this.impl = impl;
     this.classLoader = impl.getClass().getClassLoader();
     this.priority = priority;
@@ -62,8 +60,7 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
 
   /** Initialize the environment */
   public void startup() throws IOException {
-    if (state == Coprocessor.State.INSTALLED ||
-        state == Coprocessor.State.STOPPED) {
+    if (state == Coprocessor.State.INSTALLED || state == Coprocessor.State.STOPPED) {
       state = Coprocessor.State.STARTING;
       Thread currentThread = Thread.currentThread();
       ClassLoader hostClassLoader = currentThread.getContextClassLoader();
@@ -75,8 +72,8 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
         currentThread.setContextClassLoader(hostClassLoader);
       }
     } else {
-      LOG.warn("Not starting coprocessor " + impl.getClass().getName() +
-          " because not inactive (state=" + state.toString() + ")");
+      LOG.warn("Not starting coprocessor " + impl.getClass().getName()
+        + " because not inactive (state=" + state.toString() + ")");
     }
   }
 
@@ -91,13 +88,13 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
         impl.stop(this);
         state = Coprocessor.State.STOPPED;
       } catch (IOException ioe) {
-        LOG.error("Error stopping coprocessor "+impl.getClass().getName(), ioe);
+        LOG.error("Error stopping coprocessor " + impl.getClass().getName(), ioe);
       } finally {
         currentThread.setContextClassLoader(hostClassLoader);
       }
     } else {
-      LOG.warn("Not stopping coprocessor "+impl.getClass().getName()+
-          " because not active (state="+state.toString()+")");
+      LOG.warn("Not stopping coprocessor " + impl.getClass().getName()
+        + " because not active (state=" + state.toString() + ")");
     }
   }
 
@@ -121,13 +118,13 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
     return seq;
   }
 
-  /** @return the coprocessor environment version */
+  /** Returns the coprocessor environment version */
   @Override
   public int getVersion() {
     return Coprocessor.VERSION;
   }
 
-  /** @return the HBase release */
+  /** Returns the HBase release */
   @Override
   public String getHBaseVersion() {
     return VersionInfo.getVersion();

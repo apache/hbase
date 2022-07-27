@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,10 +32,10 @@ import org.junit.experimental.categories.Category;
 
 @Category({ RegionServerTests.class, SmallTests.class })
 public class TestDateTieredCompactionPolicyHeterogeneousStorage
-    extends AbstractTestDateTieredCompactionPolicy {
+  extends AbstractTestDateTieredCompactionPolicy {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDateTieredCompactionPolicyHeterogeneousStorage.class);
+    HBaseClassTestRule.forClass(TestDateTieredCompactionPolicyHeterogeneousStorage.class);
   public static final String HOT_WINDOW_SP = "ALL_SSD";
   public static final String WARM_WINDOW_SP = "ONE_SSD";
   public static final String COLD_WINDOW_SP = "HOT";
@@ -72,8 +72,8 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
   }
 
   /**
-   * Test for minor compaction of incoming window.
-   * Incoming window start ts >= now - hot age. So it is HOT window, will use HOT_WINDOW_SP.
+   * Test for minor compaction of incoming window. Incoming window start ts >= now - hot age. So it
+   * is HOT window, will use HOT_WINDOW_SP.
    * @throws IOException with error
    */
   @Test
@@ -85,14 +85,13 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     // expected DateTieredCompactionRequest boundaries = { Long.MIN_VALUE, 12 }
     // test whether DateTieredCompactionRequest boundariesPolicies matches expected
     expected.put(12L, HOT_WINDOW_SP);
-    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected, false, true);
+    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes), expected, false,
+      true);
   }
 
   /**
-   * Test for not incoming window.
-   * now - hot age > window start >= now - warm age,
-   * so this window and is WARM window, will use WARM_WINDOW_SP
+   * Test for not incoming window. now - hot age > window start >= now - warm age, so this window
+   * and is WARM window, will use WARM_WINDOW_SP
    * @throws IOException with error
    */
   @Test
@@ -103,14 +102,13 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     Map<Long, String> expected = new HashMap<>();
     // expected DateTieredCompactionRequest boundaries = { Long.MIN_VALUE, 6 }
     expected.put(6L, WARM_WINDOW_SP);
-    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected, false, true);
+    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes), expected, false,
+      true);
   }
 
   /**
-   * Test for not incoming window.
-   * this window start ts >= ow - hot age,
-   * So this incoming window and is HOT window. Use HOT_WINDOW_SP
+   * Test for not incoming window. this window start ts >= ow - hot age, So this incoming window and
+   * is HOT window. Use HOT_WINDOW_SP
    * @throws IOException with error
    */
   @Test
@@ -121,13 +119,13 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     Map<Long, String> expected = new HashMap<>();
     // expected DateTieredCompactionRequest boundaries = { Long.MIN_VALUE, 6 }
     expected.put(6L, HOT_WINDOW_SP);
-    compactEqualsStoragePolicy(12, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected, false, true);
+    compactEqualsStoragePolicy(12, sfCreate(minTimestamps, maxTimestamps, sizes), expected, false,
+      true);
   }
 
   /**
-   * Test for not incoming window.
-   * COLD window start timestamp < now - warm age, so use COLD_WINDOW_SP
+   * Test for not incoming window. COLD window start timestamp < now - warm age, so use
+   * COLD_WINDOW_SP
    * @throws IOException with error
    */
   @Test
@@ -138,14 +136,14 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     Map<Long, String> expected = new HashMap<>();
     // expected DateTieredCompactionRequest boundaries = { Long.MIN_VALUE, 6 }
     expected.put(6L, COLD_WINDOW_SP);
-    compactEqualsStoragePolicy(22, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected, false, true);
+    compactEqualsStoragePolicy(22, sfCreate(minTimestamps, maxTimestamps, sizes), expected, false,
+      true);
   }
 
   /**
-   * Test for not incoming window. but not all hfiles will be selected to compact.
-   * Apply exploring logic on non-incoming window. More than one hfile left in this window.
-   * this means minor compact single out is true. boundaries only contains Long.MIN_VALUE
+   * Test for not incoming window. but not all hfiles will be selected to compact. Apply exploring
+   * logic on non-incoming window. More than one hfile left in this window. this means minor compact
+   * single out is true. boundaries only contains Long.MIN_VALUE
    * @throws IOException with error
    */
   @Test
@@ -156,13 +154,13 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     Map<Long, String> expected = new HashMap<>();
     // window start = 6, expected DateTieredCompactionRequest boundaries = { Long.MIN_VALUE }
     expected.put(Long.MIN_VALUE, WARM_WINDOW_SP);
-    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected, false, true);
+    compactEqualsStoragePolicy(16, sfCreate(minTimestamps, maxTimestamps, sizes), expected, false,
+      true);
   }
 
   /**
-   * Test for Major compaction. It will compact all files and create multi output files
-   * with different window storage policy.
+   * Test for Major compaction. It will compact all files and create multi output files with
+   * different window storage policy.
    * @throws IOException with error
    */
   @Test
@@ -183,7 +181,7 @@ public class TestDateTieredCompactionPolicyHeterogeneousStorage
     compactEquals(161, sfCreate(minTimestamps, maxTimestamps, sizes),
       new long[] { 0, 50, 51, 40, 41, 42, 33, 30, 31, 2, 1 },
       new long[] { Long.MIN_VALUE, 24, 48, 72, 96, 120, 144, 150, 156 }, true, true);
-    compactEqualsStoragePolicy(161, sfCreate(minTimestamps, maxTimestamps, sizes),
-      expected,true, true);
+    compactEqualsStoragePolicy(161, sfCreate(minTimestamps, maxTimestamps, sizes), expected, true,
+      true);
   }
 }

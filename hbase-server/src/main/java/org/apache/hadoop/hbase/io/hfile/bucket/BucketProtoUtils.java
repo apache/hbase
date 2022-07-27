@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -12,7 +10,6 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
-
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -24,7 +21,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -32,8 +28,9 @@ import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 
@@ -44,39 +41,33 @@ final class BucketProtoUtils {
   }
 
   static BucketCacheProtos.BucketCacheEntry toPB(BucketCache cache) {
-    return BucketCacheProtos.BucketCacheEntry.newBuilder()
-      .setCacheCapacity(cache.getMaxSize())
+    return BucketCacheProtos.BucketCacheEntry.newBuilder().setCacheCapacity(cache.getMaxSize())
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
       .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
-      .setChecksum(ByteString.copyFrom(((PersistentIOEngine) cache.ioEngine).
-        calculateChecksum(cache.getAlgorithm()))).build();
+      .setChecksum(ByteString
+        .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
+      .build();
   }
 
-  private static BucketCacheProtos.BackingMap toPB(
-      Map<BlockCacheKey, BucketEntry> backingMap) {
+  private static BucketCacheProtos.BackingMap toPB(Map<BlockCacheKey, BucketEntry> backingMap) {
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
-      builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder()
-          .setKey(toPB(entry.getKey()))
-          .setValue(toPB(entry.getValue()))
-          .build());
+      builder.addEntry(BucketCacheProtos.BackingMapEntry.newBuilder().setKey(toPB(entry.getKey()))
+        .setValue(toPB(entry.getValue())).build());
     }
     return builder.build();
   }
 
   private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
-    return BucketCacheProtos.BlockCacheKey.newBuilder()
-        .setHfilename(key.getHfileName())
-        .setOffset(key.getOffset())
-        .setPrimaryReplicaBlock(key.isPrimary())
-        .setBlockType(toPB(key.getBlockType()))
-        .build();
+    return BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
+      .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
+      .setBlockType(toPB(key.getBlockType())).build();
   }
 
   private static BucketCacheProtos.BlockType toPB(BlockType blockType) {
-    switch(blockType) {
+    switch (blockType) {
       case DATA:
         return BucketCacheProtos.BlockType.data;
       case META:
@@ -107,13 +98,9 @@ final class BucketProtoUtils {
   }
 
   private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
-    return BucketCacheProtos.BucketEntry.newBuilder()
-        .setOffset(entry.offset())
-        .setLength(entry.getLength())
-        .setDeserialiserIndex(entry.deserializerIndex)
-        .setAccessCounter(entry.getAccessCounter())
-        .setPriority(toPB(entry.getPriority()))
-        .build();
+    return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
+      .setLength(entry.getLength()).setDeserialiserIndex(entry.deserializerIndex)
+      .setAccessCounter(entry.getAccessCounter()).setPriority(toPB(entry.getPriority())).build();
   }
 
   private static BucketCacheProtos.BlockPriority toPB(BlockPriority p) {
@@ -129,24 +116,21 @@ final class BucketProtoUtils {
     }
   }
 
-  static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(
-      Map<Integer, String> deserializers, BucketCacheProtos.BackingMap backingMap,
-      Function<BucketEntry, Recycler> createRecycler)
-      throws IOException {
+  static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(Map<Integer, String> deserializers,
+    BucketCacheProtos.BackingMap backingMap, Function<BucketEntry, Recycler> createRecycler)
+    throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
       BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
-          protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+        protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.
-      BucketEntry value = new BucketEntry(
-          protoValue.getOffset(),
-          protoValue.getLength(),
-          protoValue.getAccessCounter(),
-          protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
-          ByteBuffAllocator.HEAP);
+      BucketEntry value = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
+        protoValue.getAccessCounter(),
+        protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
+        ByteBuffAllocator.HEAP);
       // This is the deserializer that we stored
       int oldIndex = protoValue.getDeserialiserIndex();
       String deserializerClass = deserializers.get(oldIndex);

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,12 +23,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
@@ -61,7 +60,7 @@ final public class FilterList extends FilterBase {
   /**
    * Constructor that takes a set of {@link Filter}s and an operator.
    * @param operator Operator to process filter set with.
-   * @param filters Set of row filters.
+   * @param filters  Set of row filters.
    */
   public FilterList(final Operator operator, final List<Filter> filters) {
     if (operator == Operator.MUST_PASS_ALL) {
@@ -85,8 +84,7 @@ final public class FilterList extends FilterBase {
 
   /**
    * Constructor that takes a var arg number of {@link Filter}s. The default operator MUST_PASS_ALL
-   * is assumed.
-   * @param filters
+   * is assumed. n
    */
   public FilterList(final Filter... filters) {
     this(Operator.MUST_PASS_ALL, Arrays.asList(filters));
@@ -103,23 +101,21 @@ final public class FilterList extends FilterBase {
   /**
    * Constructor that takes a var arg number of {@link Filter}s and an operator.
    * @param operator Operator to process filter set with.
-   * @param filters Filters to use
+   * @param filters  Filters to use
    */
   public FilterList(final Operator operator, final Filter... filters) {
     this(operator, Arrays.asList(filters));
   }
 
   /**
-   * Get the operator.
-   * @return operator
+   * Get the operator. n
    */
   public Operator getOperator() {
     return operator;
   }
 
   /**
-   * Get the filters.
-   * @return filters
+   * Get the filters. n
    */
   public List<Filter> getFilters() {
     return filterListBase.getFilters();
@@ -185,9 +181,7 @@ final public class FilterList extends FilterBase {
     return filterListBase.filterRow();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.FilterList.Builder builder = FilterProtos.FilterList.newBuilder();
@@ -200,9 +194,10 @@ final public class FilterList extends FilterBase {
   }
 
   /**
+   * Parse a seralized representation of {@link FilterList}
    * @param pbBytes A pb serialized {@link FilterList} instance
    * @return An instance of {@link FilterList} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FilterList parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -226,18 +221,20 @@ final public class FilterList extends FilterBase {
   }
 
   /**
-   * @param other
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter other) {
-    if (other == this) return true;
-    if (!(other instanceof FilterList)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof FilterList)) {
+      return false;
+    }
     FilterList o = (FilterList) other;
     return this.getOperator().equals(o.getOperator())
-        && ((this.getFilters() == o.getFilters()) || this.getFilters().equals(o.getFilters()));
+      && ((this.getFilters() == o.getFilters()) || this.getFilters().equals(o.getFilters()));
   }
 
   @Override

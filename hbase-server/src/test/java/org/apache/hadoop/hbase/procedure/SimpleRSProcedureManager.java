@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,19 +28,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
@@ -56,8 +56,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     ZKWatcher zkw = rss.getZooKeeper();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw, getProcedureSignature());
 
-    ThreadPoolExecutor pool =
-        ProcedureMember.defaultPool(rss.getServerName().toString(), 1);
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(rss.getServerName().toString(), 1);
     this.member = new ProcedureMember(memberRpcs, pool, new SimleSubprocedureBuilder());
     LOG.info("Initialized: " + rss.getServerName().toString());
   }
@@ -91,8 +90,8 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     // don't run a procedure if the parent is stop(ping)
     if (rss.isStopping() || rss.isStopped()) {
-      throw new IllegalStateException("Can't start procedure on RS: " + rss.getServerName()
-          + ", because stopping/stopped!");
+      throw new IllegalStateException(
+        "Can't start procedure on RS: " + rss.getServerName() + ", because stopping/stopped!");
     }
 
     LOG.info("Attempting to run a procedure.");
@@ -100,7 +99,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     Configuration conf = rss.getConfiguration();
 
     SimpleSubprocedurePool taskManager =
-        new SimpleSubprocedurePool(rss.getServerName().toString(), conf);
+      new SimpleSubprocedurePool(rss.getServerName().toString(), conf);
     return new SimpleSubprocedure(rss, member, errorDispatcher, taskManager, name);
   }
 
@@ -142,21 +141,20 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     /**
      * Wait for all of the currently outstanding tasks submitted via {@link #submitTask(Callable)}
-     *
-     * @return <tt>true</tt> on success, <tt>false</tt> otherwise
-     * @throws ForeignException
+     * @return <tt>true</tt> on success, <tt>false</tt> otherwise n
      */
     public boolean waitForOutstandingTasks() throws ForeignException {
       LOG.debug("Waiting for procedure to finish.");
 
       try {
-        for (Future<Void> f: futures) {
+        for (Future<Void> f : futures) {
           f.get();
         }
         return true;
       } catch (InterruptedException e) {
-        if (aborted) throw new ForeignException(
-            "Interrupted and found to be aborted while waiting for tasks!", e);
+        if (aborted)
+          throw new ForeignException("Interrupted and found to be aborted while waiting for tasks!",
+            e);
         Thread.currentThread().interrupt();
       } catch (ExecutionException e) {
         if (e.getCause() instanceof ForeignException) {
@@ -165,7 +163,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
         throw new ForeignException(name, e.getCause());
       } finally {
         // close off remaining tasks
-        for (Future<Void> f: futures) {
+        for (Future<Void> f : futures) {
           if (!f.isDone()) {
             f.cancel(true);
           }
@@ -203,7 +201,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     private final SimpleSubprocedurePool taskManager;
 
     public SimpleSubprocedure(RegionServerServices rss, ProcedureMember member,
-        ForeignExceptionDispatcher errorListener, SimpleSubprocedurePool taskManager, String name) {
+      ForeignExceptionDispatcher errorListener, SimpleSubprocedurePool taskManager, String name) {
       super(member, name, errorListener, 500, 60000);
       LOG.info("Constructing a SimpleSubprocedure.");
       this.rss = rss;
@@ -211,12 +209,12 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     }
 
     /**
-     * Callable task.
-     * TODO. We don't need a thread pool to execute roll log. This can be simplified
+     * Callable task. TODO. We don't need a thread pool to execute roll log. This can be simplified
      * with no use of subprocedurepool.
      */
     class RSSimpleTask implements Callable<Void> {
-      RSSimpleTask() {}
+      RSSimpleTask() {
+      }
 
       @Override
       public Void call() throws Exception {

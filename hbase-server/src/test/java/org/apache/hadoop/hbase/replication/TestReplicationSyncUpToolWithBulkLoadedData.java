@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,9 +90,9 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     randomHFileRangeListIterator = randomHFileRangeList.iterator();
 
     /**
-     * at Master: t1_syncup: Load 50 rows into cf1, and 50 rows from other hdfs into cf1, and 3
-     * rows into norep t2_syncup: Load 100 rows into cf1, and 100 rows from other hdfs into cf1,
-     * and 3 rows into norep verify correctly replicated to slave
+     * at Master: t1_syncup: Load 50 rows into cf1, and 50 rows from other hdfs into cf1, and 3 rows
+     * into norep t2_syncup: Load 100 rows into cf1, and 100 rows from other hdfs into cf1, and 3
+     * rows into norep verify correctly replicated to slave
      */
     loadAndReplicateHFiles(true, randomHFileRangeListIterator);
 
@@ -110,7 +110,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void mimicSyncUpAfterBulkLoad(Iterator<String> randomHFileRangeListIterator)
-      throws Exception {
+    throws Exception {
     LOG.debug("mimicSyncUpAfterBulkLoad");
     shutDownTargetHBaseCluster();
 
@@ -161,16 +161,16 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
         LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
         break;
       } else {
-        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i +
-          ", with rowCount_ht1TargetPeer1 =" + rowCountHt1TargetAtPeer1 +
-          " and rowCount_ht2TargetAtPeer1 =" + rowCountHt2TargetAtPeer1);
+        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
+          + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
+          + rowCountHt2TargetAtPeer1);
       }
       Thread.sleep(SLEEP_TIME);
     }
   }
 
   private void loadAndReplicateHFiles(boolean verifyReplicationOnSlave,
-      Iterator<String> randomHFileRangeListIterator) throws Exception {
+    Iterator<String> randomHFileRangeListIterator) throws Exception {
     LOG.debug("loadAndReplicateHFiles");
 
     // Load 50 + 50 + 3 hfiles to t1_syncup.
@@ -180,10 +180,10 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source, hfileRanges, 50);
 
     hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadFromOtherHDFSAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source,
-        hfileRanges, 50);
+      hfileRanges, 50);
 
     hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
@@ -198,10 +198,10 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source, hfileRanges, 100);
 
     hfileRanges =
-        new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
-            Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
     loadFromOtherHDFSAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source,
-        hfileRanges, 100);
+      hfileRanges, 100);
 
     hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
@@ -220,7 +220,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void loadAndValidateHFileReplication(String testName, byte[] row, byte[] fam,
-      Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
+    Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
     Path dir = UTIL1.getDataTestDirOnTestFS(testName);
     FileSystem fs = UTIL1.getTestFileSystem();
     dir = dir.makeQualified(fs);
@@ -240,7 +240,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void loadFromOtherHDFSAndValidateHFileReplication(String testName, byte[] row, byte[] fam,
-      Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
+    Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
     Path dir = UTIL2.getDataTestDirOnTestFS(testName);
     FileSystem fs = UTIL2.getTestFileSystem();
     dir = dir.makeQualified(fs);
@@ -251,7 +251,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
       byte[] from = range[0];
       byte[] to = range[1];
       HFileTestUtil.createHFile(UTIL2.getConfiguration(), fs,
-          new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
+        new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
     }
 
     final TableName tableName = source.getName();
@@ -260,7 +260,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   }
 
   private void wait(Table target, int expectedCount, String msg)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     for (int i = 0; i < NB_RETRIES; i++) {
       int rowCountHt2TargetAtPeer1 = countRows(target);
       if (i == NB_RETRIES - 1) {

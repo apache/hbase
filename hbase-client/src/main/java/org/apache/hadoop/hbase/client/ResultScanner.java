@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,9 +23,8 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Interface for client-side scanning. Go to {@link Table} to obtain instances.
@@ -88,8 +86,7 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * setting (or hbase.client.scanner.caching in hbase-site.xml).
    * @param nbRows number of rows to return
    * @return Between zero and nbRows rowResults. Scan is done if returned array is of zero-length
-   *         (We never return null).
-   * @throws IOException
+   *         (We never return null). n
    */
   default Result[] next(int nbRows) throws IOException {
     List<Result> resultSets = new ArrayList<>(nbRows);
@@ -116,8 +113,6 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    */
   boolean renewLease();
 
-  /**
-   * @return the scan metrics, or {@code null} if we do not enable metrics.
-   */
+  /** Returns the scan metrics, or {@code null} if we do not enable metrics. */
   ScanMetrics getScanMetrics();
 }

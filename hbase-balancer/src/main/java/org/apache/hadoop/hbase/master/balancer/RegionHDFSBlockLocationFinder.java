@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
@@ -129,8 +130,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
    */
   private void refreshLocalityChangedRegions(ClusterMetrics oldStatus, ClusterMetrics newStatus) {
     if (oldStatus == null || newStatus == null) {
-      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}",
-        oldStatus, newStatus);
+      LOG.debug("Skipping locality-based refresh due to oldStatus={}, newStatus={}", oldStatus,
+        newStatus);
       return;
     }
 
@@ -244,7 +245,8 @@ class RegionHDFSBlockLocationFinder extends Configured {
    * @return ServerName list
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*|.*/RegionHDFSBlockLocationFinder.java")
+      allowedOnPath = ".*/src/test/.*|.*/RegionHDFSBlockLocationFinder.java")
+  @SuppressWarnings("MixedMutabilityReturnType")
   List<ServerName> mapHostNameToServerName(List<String> hosts) {
     if (hosts == null || status == null) {
       if (hosts == null) {
@@ -331,7 +333,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   LoadingCache<RegionInfo, HDFSBlocksDistribution> getCache() {
     return cache;
   }

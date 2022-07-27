@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,11 +25,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -44,7 +42,7 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRoundRobinPoolMap.class);
+    HBaseClassTestRule.forClass(TestRoundRobinPoolMap.class);
 
   @Override
   protected PoolType getPoolType() {
@@ -122,10 +120,10 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
           String value = Integer.toString(id.getAndIncrement());
           String result = poolMap.getOrCreate(key, () -> value);
           results.add(result);
-
-          Thread.yield();
+          // Sleep for a short time to ensure a yield. Thread#yield has platform dependent behavior.
+          Thread.sleep(10);
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
         throw new CompletionException(e);
       }
     };

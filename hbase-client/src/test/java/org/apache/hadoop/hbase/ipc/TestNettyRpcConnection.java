@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -69,9 +70,8 @@ public class TestNettyRpcConnection {
 
   @Test
   public void testPrivateMethodExecutedInEventLoop() throws IllegalAccessException {
-    // make sure the test is executed with "-ea"
     assertThrows(AssertionError.class, () -> {
-      assert false;
+      assertTrue(false);
     });
     for (Method method : NettyRpcConnection.class.getDeclaredMethods()) {
       if (Modifier.isPrivate(method.getModifiers()) && !method.getName().contains("$")) {

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
@@ -57,6 +55,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.getScheduler().getReplicationQueueLength();
+  }
+
+  @Override
+  public int getBulkLoadQueueLength() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getBulkLoadQueueLength();
   }
 
   @Override
@@ -121,6 +127,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.getScheduler().getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getActiveBulkLoadRpcHandlerCount();
   }
 
   @Override

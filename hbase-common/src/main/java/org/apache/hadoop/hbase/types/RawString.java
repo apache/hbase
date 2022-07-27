@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,9 +23,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * An {@code DataType} for interacting with values encoded using
- * {@link Bytes#toBytes(String)}. Intended to make it easier to transition
- * away from direct use of {@link Bytes}.
+ * An {@code DataType} for interacting with values encoded using {@link Bytes#toBytes(String)}.
+ * Intended to make it easier to transition away from direct use of {@link Bytes}.
  * @see Bytes#toBytes(String)
  * @see Bytes#toString(byte[])
  * @see RawStringTerminated
@@ -56,7 +55,6 @@ public class RawString implements DataType<String> {
   /**
    * Creates a new {@link DataType} for interacting with values encoded using
    * {@link Bytes#toBytes(String)}.
-   *
    * @param order the {@link Order} to use
    */
   public RawString(Order order) {
@@ -105,7 +103,7 @@ public class RawString implements DataType<String> {
     if (Order.ASCENDING == this.order) {
       // avoid unnecessary array copy for ASC case.
       String val =
-          Bytes.toString(src.getBytes(), src.getOffset() + src.getPosition(), src.getRemaining());
+        Bytes.toString(src.getBytes(), src.getOffset() + src.getPosition(), src.getRemaining());
       src.setPosition(src.getLength());
       return val;
     } else {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,14 +37,12 @@ public class MutableSegment extends Segment {
 
   private final AtomicBoolean flushed = new AtomicBoolean(false);
 
-  public final static long DEEP_OVERHEAD = ClassSize.align(Segment.DEEP_OVERHEAD
-      + ClassSize.CONCURRENT_SKIPLISTMAP
-      + ClassSize.SYNC_TIMERANGE_TRACKER
-      + ClassSize.REFERENCE
-      + ClassSize.ATOMIC_BOOLEAN);
+  public final static long DEEP_OVERHEAD =
+    ClassSize.align(Segment.DEEP_OVERHEAD + ClassSize.CONCURRENT_SKIPLISTMAP
+      + ClassSize.SYNC_TIMERANGE_TRACKER + ClassSize.REFERENCE + ClassSize.ATOMIC_BOOLEAN);
 
-  protected MutableSegment(CellSet cellSet, CellComparator comparator,
-      MemStoreLAB memStoreLAB, MemStoreSizing memstoreSizing) {
+  protected MutableSegment(CellSet cellSet, CellComparator comparator, MemStoreLAB memStoreLAB,
+    MemStoreSizing memstoreSizing) {
     super(cellSet, comparator, memStoreLAB, TimeRangeTracker.create(TimeRangeTracker.Type.SYNC));
     incMemStoreSize(0, DEEP_OVERHEAD, 0, 0); // update the mutable segment metadata
     if (memstoreSizing != null) {
@@ -56,16 +52,16 @@ public class MutableSegment extends Segment {
 
   /**
    * Adds the given cell into the segment
-   * @param cell the cell to add
+   * @param cell      the cell to add
    * @param mslabUsed whether using MSLAB
    */
   public void add(Cell cell, boolean mslabUsed, MemStoreSizing memStoreSizing,
-      boolean sizeAddedPreOperation) {
+    boolean sizeAddedPreOperation) {
     internalAdd(cell, mslabUsed, memStoreSizing, sizeAddedPreOperation);
   }
 
   public void upsert(Cell cell, long readpoint, MemStoreSizing memStoreSizing,
-      boolean sizeAddedPreOperation) {
+    boolean sizeAddedPreOperation) {
     internalAdd(cell, false, memStoreSizing, sizeAddedPreOperation);
 
     // Get the Cells for the row/family/qualifier regardless of timestamp.
@@ -126,7 +122,8 @@ public class MutableSegment extends Segment {
     return this.getCellSet().first();
   }
 
-  @Override protected long indexEntrySize() {
-      return ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY;
+  @Override
+  protected long indexEntrySize() {
+    return ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY;
   }
 }

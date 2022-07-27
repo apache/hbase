@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -67,12 +67,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestAccessController2 extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAccessController2.class);
+    HBaseClassTestRule.forClass(TestAccessController2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController2.class);
 
@@ -84,9 +84,11 @@ public class TestAccessController2 extends SecureTestUtil {
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf;
 
-  /** The systemUserConnection created here is tied to the system user. In case, you are planning
-   * to create AccessTestAction, DON'T use this systemUserConnection as the 'doAs' user
-   * gets  eclipsed by the system user. */
+  /**
+   * The systemUserConnection created here is tied to the system user. In case, you are planning to
+   * create AccessTestAction, DON'T use this systemUserConnection as the 'doAs' user gets eclipsed
+   * by the system user.
+   */
   private static Connection systemUserConnection;
 
   private final static byte[] Q1 = Bytes.toBytes("q1");
@@ -127,9 +129,9 @@ public class TestAccessController2 extends SecureTestUtil {
 
     TESTGROUP_1_NAME = toGroupEntry(TESTGROUP_1);
     TESTGROUP1_USER1 =
-        User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
+      User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
     TESTGROUP2_USER1 =
-        User.createUserForTesting(conf, "testgroup2_user2", new String[] { TESTGROUP_2 });
+      User.createUserForTesting(conf, "testgroup2_user2", new String[] { TESTGROUP_2 });
 
     systemUserConnection = ConnectionFactory.createConnection(conf);
   }
@@ -137,20 +139,20 @@ public class TestAccessController2 extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     createNamespace(TEST_UTIL, NamespaceDescriptor.create(namespace).build());
-    try (Table table = createTable(TEST_UTIL, tableName,
-          new byte[][] { TEST_FAMILY, TEST_FAMILY_2 })) {
+    try (Table table =
+      createTable(TEST_UTIL, tableName, new byte[][] { TEST_FAMILY, TEST_FAMILY_2 })) {
       TEST_UTIL.waitTableEnabled(tableName);
 
       // Ingesting test data.
       table.put(Arrays.asList(new Put(TEST_ROW).addColumn(TEST_FAMILY, Q1, value1),
-          new Put(TEST_ROW_2).addColumn(TEST_FAMILY, Q2, value2),
-          new Put(TEST_ROW_3).addColumn(TEST_FAMILY_2, Q1, value1)));
+        new Put(TEST_ROW_2).addColumn(TEST_FAMILY, Q2, value2),
+        new Put(TEST_ROW_3).addColumn(TEST_FAMILY_2, Q1, value1)));
     }
 
     assertEquals(1, PermissionStorage.getTablePermissions(conf, tableName).size());
     try {
-      assertEquals(1, AccessControlClient.getUserPermissions(systemUserConnection,
-          tableName.toString()).size());
+      assertEquals(1,
+        AccessControlClient.getUserPermissions(systemUserConnection, tableName.toString()).size());
     } catch (Throwable e) {
       LOG.error("Error during call of AccessControlClient.getUserPermissions. ", e);
     }
@@ -181,8 +183,8 @@ public class TestAccessController2 extends SecureTestUtil {
   @Test
   public void testCreateWithCorrectOwner() throws Exception {
     // Create a test user
-    final User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
-      new String[0]);
+    final User testUser =
+      User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser", new String[0]);
     // Grant the test user the ability to create tables
     SecureTestUtil.grantGlobal(TEST_UTIL, testUser.getShortName(), Action.CREATE);
     verifyAllowed(new AccessTestAction() {
@@ -192,7 +194,7 @@ public class TestAccessController2 extends SecureTestUtil {
           TableDescriptorBuilder.newBuilder(testTable.getTableName())
             .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         try (Connection connection =
-            ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
+          ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
           try (Admin admin = connection.getAdmin()) {
             createTable(TEST_UTIL, admin, tableDescriptor);
           }
@@ -204,7 +206,7 @@ public class TestAccessController2 extends SecureTestUtil {
     // Verify that owner permissions have been granted to the test user on the
     // table just created
     List<UserPermission> perms = PermissionStorage
-        .getTablePermissions(conf, testTable.getTableName()).get(testUser.getShortName());
+      .getTablePermissions(conf, testTable.getTableName()).get(testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());
     // Should be RWXCA
@@ -226,7 +228,7 @@ public class TestAccessController2 extends SecureTestUtil {
             TableDescriptorBuilder.newBuilder(testTable.getTableName())
               .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
           try (Connection connection =
-              ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+            ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
             try (Admin admin = connection.getAdmin()) {
               admin.createTable(tableDescriptor);
             }
@@ -277,14 +279,14 @@ public class TestAccessController2 extends SecureTestUtil {
     User tableWrite = User.createUserForTesting(conf, "tableWrite", new String[0]);
     User tableCreate = User.createUserForTesting(conf, "tableCreate", new String[0]);
     User tableAdmin = User.createUserForTesting(conf, "tableAdmin", new String[0]);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tableRead.getShortName(),
-      testTable.getTableName(), null, null, Action.READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tableWrite.getShortName(),
-      testTable.getTableName(), null, null, Action.WRITE);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tableCreate.getShortName(),
-      testTable.getTableName(), null, null, Action.CREATE);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(),
-      testTable.getTableName(), null, null, Action.ADMIN);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableRead.getShortName(), testTable.getTableName(), null,
+      null, Action.READ);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableWrite.getShortName(), testTable.getTableName(),
+      null, null, Action.WRITE);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableCreate.getShortName(), testTable.getTableName(),
+      null, null, Action.CREATE);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(), testTable.getTableName(),
+      null, null, Action.ADMIN);
 
     grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
     try {
@@ -295,7 +297,7 @@ public class TestAccessController2 extends SecureTestUtil {
         public Object run() throws Exception {
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
             t.put(new Put(TEST_ROW).addColumn(PermissionStorage.ACL_LIST_FAMILY, TEST_QUALIFIER,
               TEST_VALUE));
             return null;
@@ -322,7 +324,7 @@ public class TestAccessController2 extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           try (Connection conn = ConnectionFactory.createConnection(conf);
-              Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            Table t = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
             ResultScanner s = t.getScanner(new Scan());
             try {
               for (Result r = s.next(); r != null; r = s.next()) {
@@ -356,12 +358,12 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having table level access should be able to scan all "
-                + "the data in the table.", next1.length == 3);
+              + "the data in the table.", next1.length == 3);
           }
         }
         return null;
@@ -372,12 +374,12 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having column family level access should be able to scan all "
-                + "the data belonging to that family.", next1.length == 2);
+              + "the data belonging to that family.", next1.length == 2);
           }
         }
         return null;
@@ -388,7 +390,7 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
           try (ResultScanner scanner1 = table.getScanner(s1)) {
@@ -403,12 +405,12 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
             assertTrue("User having column qualifier level access should be able to scan "
-                + "that column family qualifier data.", next1.length == 1);
+              + "that column family qualifier data.", next1.length == 1);
           }
         }
         return null;
@@ -419,7 +421,7 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addFamily(TEST_FAMILY_2);
           try (ResultScanner scanner1 = table.getScanner(s1)) {
@@ -434,7 +436,7 @@ public class TestAccessController2 extends SecureTestUtil {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-            Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Scan s1 = new Scan();
           s1.addColumn(TEST_FAMILY, Q2);
           try (ResultScanner scanner1 = table.getScanner(s1)) {
@@ -457,8 +459,7 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group which has column family level access can read all the data
     // belonging to that family and group which has no access can't read any data.
-    grantOnTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, null,
-      Permission.Action.READ);
+    grantOnTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, null, Permission.Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithFamilyLevelAccess);
     verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithFamilyLevelAccess);
@@ -491,15 +492,15 @@ public class TestAccessController2 extends SecureTestUtil {
   @Test
   public void testCoprocessorLoading() throws Exception {
     MasterCoprocessorHost cpHost =
-        TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     cpHost.load(MyAccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
     AccessController ACCESS_CONTROLLER = cpHost.findCoprocessor(MyAccessController.class);
-    MasterCoprocessorEnvironment CP_ENV = cpHost.createEnvironment(
-      ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
-    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
-        .getRegionServerCoprocessorHost();
-    RegionServerCoprocessorEnvironment RSCP_ENV = rsHost.createEnvironment(
-      ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    MasterCoprocessorEnvironment CP_ENV =
+      cpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RegionServerCoprocessorHost rsHost =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
+    RegionServerCoprocessorEnvironment RSCP_ENV =
+      rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
   @Test
@@ -518,18 +519,18 @@ public class TestAccessController2 extends SecureTestUtil {
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
     ZKWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
-    assertTrue("The acl znode for table should exist",  ZKUtil.checkExists(zkw, baseAclZNode +
-        table.getNameAsString()) != -1);
-    assertTrue("The acl znode for namespace should exist", ZKUtil.checkExists(zkw, baseAclZNode +
-        convertToNamespace(ns)) != -1);
+    assertTrue("The acl znode for table should exist",
+      ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) != -1);
+    assertTrue("The acl znode for namespace should exist",
+      ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) != -1);
 
     revokeFromNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
     deleteTable(TEST_UTIL, table);
     deleteNamespace(TEST_UTIL, ns);
 
     assertTrue("The acl znode for table should have been deleted",
-        ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1);
-    assertTrue( "The acl znode for namespace should have been deleted",
-        ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1);
+      ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1);
+    assertTrue("The acl znode for namespace should have been deleted",
+      ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1);
   }
 }

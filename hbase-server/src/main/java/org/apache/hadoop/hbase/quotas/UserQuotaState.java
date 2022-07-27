@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * In-Memory state of the user quotas
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
-  justification="FindBugs seems confused; says bypassGlobals, namepaceLimiters, and " +
-    "tableLimiters are mostly synchronized...but to me it looks like they are totally synchronized")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
+    justification = "FindBugs seems confused; says bypassGlobals, namepaceLimiters, and "
+      + "tableLimiters are mostly synchronized..."
+      + "but to me it looks like they are totally synchronized")
 public class UserQuotaState extends QuotaState {
   private Map<String, QuotaLimiter> namespaceLimiters = null;
   private Map<TableName, QuotaLimiter> tableLimiters = null;
@@ -65,7 +65,7 @@ public class UserQuotaState extends QuotaState {
 
       if (tableLimiters != null && !tableLimiters.isEmpty()) {
         builder.append(" [");
-        for (TableName table: tableLimiters.keySet()) {
+        for (TableName table : tableLimiters.keySet()) {
           builder.append(" " + table);
         }
         builder.append(" ]");
@@ -73,7 +73,7 @@ public class UserQuotaState extends QuotaState {
 
       if (namespaceLimiters != null && !namespaceLimiters.isEmpty()) {
         builder.append(" [");
-        for (String ns: namespaceLimiters.keySet()) {
+        for (String ns : namespaceLimiters.keySet()) {
           builder.append(" " + ns);
         }
         builder.append(" ]");
@@ -83,15 +83,12 @@ public class UserQuotaState extends QuotaState {
     return builder.toString();
   }
 
-  /**
-   * @return true if there is no quota information associated to this object
-   */
+  /** Returns true if there is no quota information associated to this object */
   @Override
   public synchronized boolean isBypass() {
-    return !bypassGlobals &&
-        getGlobalLimiterWithoutUpdatingLastQuery() == NoopQuotaLimiter.get() &&
-        (tableLimiters == null || tableLimiters.isEmpty()) &&
-        (namespaceLimiters == null || namespaceLimiters.isEmpty());
+    return !bypassGlobals && getGlobalLimiterWithoutUpdatingLastQuery() == NoopQuotaLimiter.get()
+      && (tableLimiters == null || tableLimiters.isEmpty())
+      && (namespaceLimiters == null || namespaceLimiters.isEmpty());
   }
 
   public synchronized boolean hasBypassGlobals() {
@@ -105,29 +102,29 @@ public class UserQuotaState extends QuotaState {
   }
 
   /**
-   * Add the quota information of the specified table.
-   * (This operation is part of the QuotaState setup)
+   * Add the quota information of the specified table. (This operation is part of the QuotaState
+   * setup)
    */
   public synchronized void setQuotas(final TableName table, Quotas quotas) {
     tableLimiters = setLimiter(tableLimiters, table, quotas);
   }
 
   /**
-   * Add the quota information of the specified namespace.
-   * (This operation is part of the QuotaState setup)
+   * Add the quota information of the specified namespace. (This operation is part of the QuotaState
+   * setup)
    */
   public void setQuotas(final String namespace, Quotas quotas) {
     namespaceLimiters = setLimiter(namespaceLimiters, namespace, quotas);
   }
 
-  private <K> Map<K, QuotaLimiter> setLimiter(Map<K, QuotaLimiter> limiters,
-      final K key, final Quotas quotas) {
+  private <K> Map<K, QuotaLimiter> setLimiter(Map<K, QuotaLimiter> limiters, final K key,
+    final Quotas quotas) {
     if (limiters == null) {
       limiters = new HashMap<>();
     }
 
-    QuotaLimiter limiter = quotas.hasThrottle() ?
-      QuotaLimiterFactory.fromThrottle(quotas.getThrottle()) : null;
+    QuotaLimiter limiter =
+      quotas.hasThrottle() ? QuotaLimiterFactory.fromThrottle(quotas.getThrottle()) : null;
     if (limiter != null && !limiter.isBypass()) {
       limiters.put(key, limiter);
     } else {
@@ -137,15 +134,15 @@ public class UserQuotaState extends QuotaState {
   }
 
   /**
-   * Perform an update of the quota state based on the other quota state object.
-   * (This operation is executed by the QuotaCache)
+   * Perform an update of the quota state based on the other quota state object. (This operation is
+   * executed by the QuotaCache)
    */
   @Override
   public synchronized void update(final QuotaState other) {
     super.update(other);
 
     if (other instanceof UserQuotaState) {
-      UserQuotaState uOther = (UserQuotaState)other;
+      UserQuotaState uOther = (UserQuotaState) other;
       tableLimiters = updateLimiters(tableLimiters, uOther.tableLimiters);
       namespaceLimiters = updateLimiters(namespaceLimiters, uOther.namespaceLimiters);
       bypassGlobals = uOther.bypassGlobals;
@@ -157,7 +154,7 @@ public class UserQuotaState extends QuotaState {
   }
 
   private static <K> Map<K, QuotaLimiter> updateLimiters(final Map<K, QuotaLimiter> map,
-      final Map<K, QuotaLimiter> otherMap) {
+    final Map<K, QuotaLimiter> otherMap) {
     if (map == null) {
       return otherMap;
     }
@@ -169,7 +166,7 @@ public class UserQuotaState extends QuotaState {
       map.keySet().removeAll(toRemove);
 
       // To Update/Add
-      for (final Map.Entry<K, QuotaLimiter> entry: otherMap.entrySet()) {
+      for (final Map.Entry<K, QuotaLimiter> entry : otherMap.entrySet()) {
         QuotaLimiter limiter = map.get(entry.getKey());
         if (limiter == null) {
           limiter = entry.getValue();
@@ -184,10 +181,9 @@ public class UserQuotaState extends QuotaState {
   }
 
   /**
-   * Return the limiter for the specified table associated with this quota.
-   * If the table does not have its own quota limiter the global one will be returned.
-   * In case there is no quota limiter associated with this object a noop limiter will be returned.
-   *
+   * Return the limiter for the specified table associated with this quota. If the table does not
+   * have its own quota limiter the global one will be returned. In case there is no quota limiter
+   * associated with this object a noop limiter will be returned.
    * @return the quota limiter for the specified table
    */
   public synchronized QuotaLimiter getTableLimiter(final TableName table) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -58,13 +58,13 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Tests encoded seekers by loading and reading values.
  */
-@Category({IOTests.class, LargeTests.class})
+@Category({ IOTests.class, LargeTests.class })
 @RunWith(Parameterized.class)
 public class TestEncodedSeekers {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestEncodedSeekers.class);
+    HBaseClassTestRule.forClass(TestEncodedSeekers.class);
 
   private static final String TABLE_NAME = "encodedSeekersTable";
   private static final String CF_NAME = "encodedSeekersCF";
@@ -109,29 +109,26 @@ public class TestEncodedSeekers {
   @Test
   public void testEncodedSeeker() throws IOException {
     System.err.println("Testing encoded seekers for encoding : " + encoding + ", includeTags : "
-        + includeTags + ", compressTags : " + compressTags);
-    if(includeTags) {
+      + includeTags + ", compressTags : " + compressTags);
+    if (includeTags) {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }
 
     LruBlockCache cache =
-        (LruBlockCache) BlockCacheFactory.createBlockCache(testUtil.getConfiguration());
+      (LruBlockCache) BlockCacheFactory.createBlockCache(testUtil.getConfiguration());
     // Need to disable default row bloom filter for this test to pass.
-    ColumnFamilyDescriptor cfd =
-        ColumnFamilyDescriptorBuilder.newBuilder(CF_BYTES).setMaxVersions(MAX_VERSIONS).
-            setDataBlockEncoding(encoding).
-            setBlocksize(BLOCK_SIZE).
-            setBloomFilterType(BloomType.NONE).
-            setCompressTags(compressTags).build();
+    ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(CF_BYTES)
+      .setMaxVersions(MAX_VERSIONS).setDataBlockEncoding(encoding).setBlocksize(BLOCK_SIZE)
+      .setBloomFilterType(BloomType.NONE).setCompressTags(compressTags).build();
     HRegion region = testUtil.createTestRegion(TABLE_NAME, cfd, cache);
 
-    //write the data, but leave some in the memstore
+    // write the data, but leave some in the memstore
     doPuts(region);
 
-    //verify correctness when memstore contains data
+    // verify correctness when memstore contains data
     doGets(region);
 
-    //verify correctness again after compacting
+    // verify correctness again after compacting
     region.compact(false);
     doGets(region);
 
@@ -146,9 +143,9 @@ public class TestEncodedSeekers {
     assertTrue(encodingCounts.get(encodingInCache) > 0);
   }
 
-  private void doPuts(HRegion region) throws IOException{
+  private void doPuts(HRegion region) throws IOException {
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
-     for (int i = 0; i < NUM_ROWS; ++i) {
+    for (int i = 0; i < NUM_ROWS; ++i) {
       byte[] key = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
@@ -163,9 +160,9 @@ public class TestEncodedSeekers {
         } else {
           put.addColumn(CF_BYTES, col, value);
         }
-        if(VERBOSE){
+        if (VERBOSE) {
           KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);
-          System.err.println(Strings.padFront(i+"", ' ', 4)+" "+kvPut);
+          System.err.println(Strings.padFront(i + "", ' ', 4) + " " + kvPut);
         }
         region.put(put);
       }
@@ -175,14 +172,14 @@ public class TestEncodedSeekers {
     }
   }
 
-  private void doGets(Region region) throws IOException{
+  private void doGets(Region region) throws IOException {
     for (int i = 0; i < NUM_ROWS; ++i) {
       final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         final String qualStr = String.valueOf(j);
         if (VERBOSE) {
-          System.err.println("Reading row " + i + ", column " + j + " " + Bytes.toString(rowKey)+"/"
-              +qualStr);
+          System.err.println(
+            "Reading row " + i + ", column " + j + " " + Bytes.toString(rowKey) + "/" + qualStr);
         }
         final byte[] qualBytes = Bytes.toBytes(qualStr);
         Get get = new Get(rowKey);

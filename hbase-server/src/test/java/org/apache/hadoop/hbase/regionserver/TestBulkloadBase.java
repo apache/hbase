@@ -27,9 +27,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Random;
-
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -53,34 +54,53 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
+@RunWith(Parameterized.class)
 public class TestBulkloadBase {
   @ClassRule
   public static TemporaryFolder testFolder = new TemporaryFolder();
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   protected final WAL log = mock(WAL.class);
   protected final Configuration conf = HBaseConfiguration.create();
-  private final Random random = new Random();
   private final byte[] randomBytes = new byte[100];
   protected final byte[] family1 = Bytes.toBytes("family1");
   protected final byte[] family2 = Bytes.toBytes("family2");
   protected final byte[] family3 = Bytes.toBytes("family3");
 
+  protected Boolean useFileBasedSFT;
+
   @Rule
   public TestName name = new TestName();
 
+  public TestBulkloadBase(boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = { false, true };
+    return Arrays.asList(data);
+  }
+
   @Before
   public void before() throws IOException {
-    random.nextBytes(randomBytes);
+    Bytes.random(randomBytes);
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    } else {
+      conf.unset(StoreFileTrackerFactory.TRACKER_IMPL);
+    }
   }
 
   protected Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
@@ -93,13 +113,13 @@ public class TestBulkloadBase {
   }
 
   protected Pair<byte[], String> withInvalidColumnFamilyButProperHFileLocation(byte[] family)
-      throws IOException {
+    throws IOException {
     createHFileForFamilies(family);
     return new Pair<>(new byte[] { 0x00, 0x01, 0x02 }, getNotExistFilePath());
   }
 
   protected HRegion testRegionWithFamiliesAndSpecifiedTableName(TableName tableName,
-      byte[]... families) throws IOException {
+    byte[]... families) throws IOException {
     RegionInfo hRegionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
 
@@ -115,7 +135,8 @@ public class TestBulkloadBase {
   }
 
   protected HRegion testRegionWithFamilies(byte[]... families) throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName =
+      TableName.valueOf(name.getMethodName().substring(0, name.getMethodName().indexOf("[")));
     return testRegionWithFamiliesAndSpecifiedTableName(tableName, families);
   }
 
@@ -134,7 +155,7 @@ public class TestBulkloadBase {
   private String createHFileForFamilies(byte[] family) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
     // TODO We need a way to do this without creating files
-    File hFileLocation = testFolder.newFile();
+    File hFileLocation = testFolder.newFile(generateUniqueName(null));
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
@@ -142,8 +163,8 @@ public class TestBulkloadBase {
       HFile.Writer writer = hFileFactory.create();
       try {
         writer.append(new KeyValue(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-            .setRow(randomBytes).setFamily(family).setQualifier(randomBytes).setTimestamp(0L)
-            .setType(KeyValue.Type.Put.getCode()).setValue(randomBytes).build()));
+          .setRow(randomBytes).setFamily(family).setQualifier(randomBytes).setTimestamp(0L)
+          .setType(KeyValue.Type.Put.getCode()).setValue(randomBytes).build()));
       } finally {
         writer.close();
       }
@@ -153,12 +174,18 @@ public class TestBulkloadBase {
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
+  private static String generateUniqueName(final String suffix) {
+    String name = UUID.randomUUID().toString().replaceAll("-", "");
+    if (suffix != null) name += suffix;
+    return name;
+  }
+
   protected static Matcher<WALEdit> bulkLogWalEditType(byte[] typeBytes) {
     return new WalMatcher(typeBytes);
   }
 
   protected static Matcher<WALEdit> bulkLogWalEdit(byte[] typeBytes, byte[] tableName,
-      byte[] familyName, List<String> storeFileNames) {
+    byte[] familyName, List<String> storeFileNames) {
     return new WalMatcher(typeBytes, tableName, familyName, storeFileNames);
   }
 
@@ -173,7 +200,7 @@ public class TestBulkloadBase {
     }
 
     public WalMatcher(byte[] typeBytes, byte[] tableName, byte[] familyName,
-        List<String> storeFileNames) {
+      List<String> storeFileNames) {
       this.typeBytes = typeBytes;
       this.tableName = tableName;
       this.familyName = familyName;

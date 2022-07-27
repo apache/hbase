@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -90,13 +90,13 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
   @Override
   public void setConf(Configuration config) {
     // If either replication or replication of bulk load hfiles is disabled, keep all members null
-    if (!(config.getBoolean(
-      HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
-      HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT))) {
-      LOG.warn(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
-          + " is not enabled. Better to remove "
-          + ReplicationHFileCleaner.class + " from " + HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS
-          + " configuration.");
+    if (
+      !(config.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+        HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT))
+    ) {
+      LOG.warn(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is not enabled. Better to remove "
+        + ReplicationHFileCleaner.class + " from " + HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS
+        + " configuration.");
       return;
     }
     // Make my own Configuration. Then I'll have my own connection to zk that
@@ -154,7 +154,7 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
       hfileRefsFromQueue = rqs.getAllHFileRefs();
     } catch (ReplicationException e) {
       LOG.warn("Failed to read hfile references from zookeeper, skipping checking deletable "
-          + "file for " + fStat.getPath());
+        + "file for " + fStat.getPath());
       return false;
     }
     return !hfileRefsFromQueue.contains(fStat.getPath().getName());

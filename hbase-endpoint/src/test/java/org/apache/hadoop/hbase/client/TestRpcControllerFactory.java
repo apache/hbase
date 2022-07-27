@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -78,7 +78,7 @@ public class TestRpcControllerFactory {
 
     @Override
     public HBaseRpcController newController(RegionInfo regionInfo,
-        List<CellScannable> cellIterables) {
+      List<CellScannable> cellIterables) {
       return new CountingRpcController(super.newController(regionInfo, cellIterables));
     }
   }
@@ -140,7 +140,7 @@ public class TestRpcControllerFactory {
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
     try (Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(tableName)) {
+      Table table = connection.getTable(tableName)) {
       byte[] row = Bytes.toBytes("row");
       Put p = new Put(row);
       p.addColumn(fam1, fam1, Bytes.toBytes("val0"));
@@ -192,7 +192,7 @@ public class TestRpcControllerFactory {
 
       // reversed, regular
       scanInfo.setReadType(ReadType.STREAM);
-      counter = doScan(table, scanInfo, counter + 1);
+      doScan(table, scanInfo, counter + 1);
 
       // make sure we have no priority count
       verifyPriorityGroupCount(HConstants.ADMIN_QOS, 0);

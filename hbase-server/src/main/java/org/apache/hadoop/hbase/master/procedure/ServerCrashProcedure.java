@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.master.procedure;
+
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
@@ -53,17 +56,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.S
 /**
  * Handle crashed server. This is a port to ProcedureV2 of what used to be euphemistically called
  * ServerShutdownHandler.
- *
- * <p>The procedure flow varies dependent on whether meta is assigned and if we are to split logs.
- *
- * <p>We come in here after ServerManager has noticed a server has expired. Procedures
- * queued on the rpc should have been notified about fail and should be concurrently
- * getting themselves ready to assign elsewhere.
+ * <p>
+ * The procedure flow varies dependent on whether meta is assigned and if we are to split logs.
+ * <p>
+ * We come in here after ServerManager has noticed a server has expired. Procedures queued on the
+ * rpc should have been notified about fail and should be concurrently getting themselves ready to
+ * assign elsewhere.
  */
 @InterfaceAudience.Private
-public class ServerCrashProcedure
-    extends StateMachineProcedure<MasterProcedureEnv, ServerCrashState>
-    implements ServerProcedureInterface {
+public class ServerCrashProcedure extends
+  StateMachineProcedure<MasterProcedureEnv, ServerCrashState> implements ServerProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(ServerCrashProcedure.class);
 
   /**
@@ -105,12 +107,12 @@ public class ServerCrashProcedure
 
   /**
    * Call this constructor queuing up a Procedure.
-   * @param serverName Name of the crashed server.
+   * @param serverName     Name of the crashed server.
    * @param shouldSplitWal True if we should split WALs as part of crashed server processing.
-   * @param carryingMeta True if carrying hbase:meta table region.
+   * @param carryingMeta   True if carrying hbase:meta table region.
    */
   public ServerCrashProcedure(final MasterProcedureEnv env, final ServerName serverName,
-      final boolean shouldSplitWal, final boolean carryingMeta) {
+    final boolean shouldSplitWal, final boolean carryingMeta) {
     this.serverName = serverName;
     this.shouldSplitWal = shouldSplitWal;
     this.carryingMeta = carryingMeta;
@@ -130,7 +132,7 @@ public class ServerCrashProcedure
 
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, ServerCrashState state)
-      throws ProcedureSuspendedException, ProcedureYieldException {
+    throws ProcedureSuspendedException, ProcedureYieldException {
     final MasterServices services = env.getMasterServices();
     final AssignmentManager am = env.getAssignmentManager();
     updateProgress(true);
@@ -165,8 +167,10 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_SPLIT_META_LOGS:
-          if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-              DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+          if (
+            env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+              DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+          ) {
             zkCoordinatedSplitMetaLogs(env);
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN_META);
           } else {
@@ -204,8 +208,10 @@ public class ServerCrashProcedure
           }
           break;
         case SERVER_CRASH_SPLIT_LOGS:
-          if (env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-            DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+          if (
+            env.getMasterConfiguration().getBoolean(HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+              DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+          ) {
             zkCoordinatedSplitLogs(env);
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
           } else {
@@ -229,9 +235,8 @@ public class ServerCrashProcedure
           // Filter changes this.regionsOnCrashedServer.
           if (filterDefaultMetaRegions()) {
             if (LOG.isTraceEnabled()) {
-              LOG
-                .trace("Assigning regions " + RegionInfo.getShortNameToLog(regionsOnCrashedServer) +
-                  ", " + this + "; cycles=" + getCycles());
+              LOG.trace("Assigning regions " + RegionInfo.getShortNameToLog(regionsOnCrashedServer)
+                + ", " + this + "; cycles=" + getCycles());
             }
             assignRegions(env, regionsOnCrashedServer);
           }
@@ -260,9 +265,7 @@ public class ServerCrashProcedure
     return Flow.HAS_MORE_STATE;
   }
 
-  /**
-   * @return List of Regions on crashed server.
-   */
+  /** Returns List of Regions on crashed server. */
   List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
     return env.getMasterServices().getAssignmentManager().getRegionsOnServer(serverName);
   }
@@ -279,7 +282,7 @@ public class ServerCrashProcedure
       }
       splitWALManager.deleteWALDir(serverName);
     } catch (IOException e) {
-      LOG.warn("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
+      LOG.info("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
     }
   }
 
@@ -296,7 +299,7 @@ public class ServerCrashProcedure
   }
 
   private Procedure[] createSplittingWalProcedures(MasterProcedureEnv env, boolean splitMeta)
-      throws IOException {
+    throws IOException {
     LOG.info("Splitting WALs {}, isMeta: {}", this, splitMeta);
     SplitWALManager splitWALManager = env.getMasterServices().getSplitWALManager();
     List<Procedure> procedures = splitWALManager.splitWALs(serverName, splitMeta);
@@ -316,8 +319,8 @@ public class ServerCrashProcedure
   }
 
   /**
-   * Split hbase:meta logs using 'classic' zk-based coordination.
-   * Superceded by procedure-based WAL splitting.
+   * Split hbase:meta logs using 'classic' zk-based coordination. Superceded by procedure-based WAL
+   * splitting.
    * @see #createSplittingWalProcedures(MasterProcedureEnv, boolean)
    */
   private void zkCoordinatedSplitMetaLogs(MasterProcedureEnv env) throws IOException {
@@ -331,8 +334,7 @@ public class ServerCrashProcedure
   }
 
   /**
-   * Split logs using 'classic' zk-based coordination.
-   * Superceded by procedure-based WAL splitting.
+   * Split logs using 'classic' zk-based coordination. Superceded by procedure-based WAL splitting.
    * @see #createSplittingWalProcedures(MasterProcedureEnv, boolean)
    */
   private void zkCoordinatedSplitLogs(final MasterProcedureEnv env) throws IOException {
@@ -365,8 +367,10 @@ public class ServerCrashProcedure
       currentRunningState = getCurrentState();
     }
     int childrenLatch = getChildrenLatch();
-    status.setStatus(msg + " current State " + currentRunningState + (childrenLatch > 0?
-      "; remaining num of running child procedures = " + childrenLatch: ""));
+    status.setStatus(msg + " current State " + currentRunningState
+      + (childrenLatch > 0
+        ? "; remaining num of running child procedures = " + childrenLatch
+        : ""));
   }
 
   @Override
@@ -418,22 +422,21 @@ public class ServerCrashProcedure
     sb.append(carryingMeta);
   }
 
-  @Override public String getProcName() {
+  @Override
+  public String getProcName() {
     return getClass().getSimpleName() + " " + this.serverName;
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
 
     MasterProcedureProtos.ServerCrashStateData.Builder state =
-      MasterProcedureProtos.ServerCrashStateData.newBuilder().
-      setServerName(ProtobufUtil.toServerName(this.serverName)).
-      setCarryingMeta(this.carryingMeta).
-      setShouldSplitWal(this.shouldSplitWal);
+      MasterProcedureProtos.ServerCrashStateData.newBuilder()
+        .setServerName(ProtobufUtil.toServerName(this.serverName))
+        .setCarryingMeta(this.carryingMeta).setShouldSplitWal(this.shouldSplitWal);
     if (this.regionsOnCrashedServer != null && !this.regionsOnCrashedServer.isEmpty()) {
-      for (RegionInfo hri: this.regionsOnCrashedServer) {
+      for (RegionInfo hri : this.regionsOnCrashedServer) {
         state.addRegionsOnCrashedServer(ProtobufUtil.toRegionInfo(hri));
       }
     }
@@ -441,21 +444,20 @@ public class ServerCrashProcedure
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
 
     MasterProcedureProtos.ServerCrashStateData state =
-        serializer.deserialize(MasterProcedureProtos.ServerCrashStateData.class);
+      serializer.deserialize(MasterProcedureProtos.ServerCrashStateData.class);
     this.serverName = ProtobufUtil.toServerName(state.getServerName());
-    this.carryingMeta = state.hasCarryingMeta()? state.getCarryingMeta(): false;
+    this.carryingMeta = state.hasCarryingMeta() ? state.getCarryingMeta() : false;
     // shouldSplitWAL has a default over in pb so this invocation will always work.
     this.shouldSplitWal = state.getShouldSplitWal();
     int size = state.getRegionsOnCrashedServerCount();
     if (size > 0) {
       this.regionsOnCrashedServer = new ArrayList<>(size);
-      for (org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo ri:
-          state.getRegionsOnCrashedServerList()) {
+      for (org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionInfo ri : state
+        .getRegionsOnCrashedServerList()) {
         this.regionsOnCrashedServer.add(ProtobufUtil.toRegionInfo(ri));
       }
     }
@@ -477,7 +479,6 @@ public class ServerCrashProcedure
     return ServerOperationType.CRASH_HANDLER;
   }
 
-
   @Override
   protected boolean shouldWaitClientAck(MasterProcedureEnv env) {
     // The operation is triggered internally on the server
@@ -486,8 +487,8 @@ public class ServerCrashProcedure
   }
 
   /**
-   * Moved out here so can be overridden by the HBCK fix-up SCP to be less strict about what
-   * it will tolerate as a 'match'.
+   * Moved out here so can be overridden by the HBCK fix-up SCP to be less strict about what it will
+   * tolerate as a 'match'.
    * @return True if the region location in <code>rsn</code> matches that of this crashed server.
    */
   protected boolean isMatchingRegionLocation(RegionStateNode rsn) {
@@ -538,8 +539,10 @@ public class ServerCrashProcedure
             !retainAssignment);
           continue;
         }
-        if (env.getMasterServices().getTableStateManager()
-          .isTableState(regionNode.getTable(), TableState.State.DISABLING)) {
+        if (
+          env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
+            TableState.State.DISABLING)
+        ) {
           // We need to change the state here otherwise the TRSP scheduled by DTP will try to
           // close the region from a dead server and will never succeed. Please see HBASE-23636
           // for more details.
@@ -548,14 +551,16 @@ public class ServerCrashProcedure
             this, regionNode);
           continue;
         }
-        if (env.getMasterServices().getTableStateManager()
-          .isTableState(regionNode.getTable(), TableState.State.DISABLED)) {
+        if (
+          env.getMasterServices().getTableStateManager().isTableState(regionNode.getTable(),
+            TableState.State.DISABLED)
+        ) {
           // This should not happen, table disabled but has regions on server.
           LOG.warn("Found table disabled for region {}, procDetails: {}", regionNode, this);
           continue;
         }
         TransitRegionStateProcedure proc =
-            TransitRegionStateProcedure.assign(env, region, !retainAssignment, null);
+          TransitRegionStateProcedure.assign(env, region, !retainAssignment, null);
         regionNode.setProcedure(proc);
         addChildProcedure(proc);
       } finally {
@@ -579,7 +584,7 @@ public class ServerCrashProcedure
       return;
     }
     Procedure parentProcedure =
-        env.getMasterServices().getMasterProcedureExecutor().getProcedure(parentId);
+      env.getMasterServices().getMasterProcedureExecutor().getProcedure(parentId);
     if (parentProcedure != null && parentProcedure instanceof ServerCrashProcedure) {
       ((ServerCrashProcedure) parentProcedure).updateProgress(false);
     }

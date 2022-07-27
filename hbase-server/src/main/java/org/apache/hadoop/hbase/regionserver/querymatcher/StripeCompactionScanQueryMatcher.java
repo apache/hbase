@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +18,10 @@
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.PrivateCellUtil;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Query matcher for stripe compaction if range drop deletes is used.
@@ -35,14 +34,16 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
   private final byte[] dropDeletesToRow;
 
   private enum DropDeletesInOutput {
-    BEFORE, IN, AFTER
+    BEFORE,
+    IN,
+    AFTER
   }
 
   private DropDeletesInOutput dropDeletesInOutput = DropDeletesInOutput.BEFORE;
 
   public StripeCompactionScanQueryMatcher(ScanInfo scanInfo, DeleteTracker deletes,
-      ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
-      long now, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
+    ColumnTracker columns, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
+    long now, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) {
     super(scanInfo, deletes, columns, readPointToUse, earliestPutTs, oldestUnexpiredTS, now);
     this.dropDeletesFromRow = dropDeletesFromRow;
     this.dropDeletesToRow = dropDeletesToRow;
@@ -83,13 +84,14 @@ public class StripeCompactionScanQueryMatcher extends DropDeletesCompactionScanQ
   }
 
   private boolean entered() {
-    return dropDeletesFromRow.length == 0 || rowComparator.compareRows(currentRow,
-      dropDeletesFromRow, 0, dropDeletesFromRow.length) >= 0;
+    return dropDeletesFromRow.length == 0
+      || rowComparator.compareRows(currentRow, dropDeletesFromRow, 0, dropDeletesFromRow.length)
+          >= 0;
   }
 
   private boolean left() {
     return dropDeletesToRow.length > 0
-        && rowComparator.compareRows(currentRow, dropDeletesToRow, 0, dropDeletesToRow.length) >= 0;
+      && rowComparator.compareRows(currentRow, dropDeletesToRow, 0, dropDeletesToRow.length) >= 0;
   }
 
   @Override

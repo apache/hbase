@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTra
 
 import java.io.IOException;
 import java.util.Collection;
-
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -67,6 +67,11 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   }
 
   @Override
+  public final List<StoreFileInfo> load() throws IOException {
+    return doLoadStoreFiles(!isPrimaryReplica);
+  }
+
+  @Override
   public final void add(Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddNewStoreFiles(newFiles);
@@ -78,6 +83,13 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     Collection<StoreFileInfo> newFiles) throws IOException {
     if (isPrimaryReplica) {
       doAddCompactionResults(compactedFiles, newFiles);
+    }
+  }
+
+  @Override
+  public final void set(List<StoreFileInfo> files) throws IOException {
+    if (isPrimaryReplica) {
+      doSetStoreFiles(files);
     }
   }
 
@@ -124,12 +136,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       // if data blocks are to be cached on write
       // during compaction, we should forcefully
       // cache index and bloom blocks as well
-      if (cacheCompactedBlocksOnWrite &&
-        totalCompactedFilesSize <= cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
+      if (
+        cacheCompactedBlocksOnWrite
+          && totalCompactedFilesSize <= cacheConf.getCacheCompactedBlocksOnWriteThreshold()
+      ) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled " +
-            "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks", this);
+          LOG.info("For {} , cacheCompactedBlocksOnWrite is true, hence enabled "
+            + "cacheOnWrite for Data blocks, Index blocks and Bloom filter blocks", this);
           cacheOnWriteLogged = true;
         }
       } else {
@@ -137,8 +151,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         if (totalCompactedFilesSize > cacheConf.getCacheCompactedBlocksOnWriteThreshold()) {
           // checking condition once again for logging
           LOG.debug(
-            "For {}, setting cacheCompactedBlocksOnWrite as false as total size of compacted " +
-              "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
+            "For {}, setting cacheCompactedBlocksOnWrite as false as total size of compacted "
+              + "files - {}, is greater than cacheCompactedBlocksOnWriteThreshold - {}",
             this, totalCompactedFilesSize, cacheConf.getCacheCompactedBlocksOnWriteThreshold());
         }
       }
@@ -147,8 +161,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       if (shouldCacheDataOnWrite) {
         writerCacheConf.enableCacheOnWrite();
         if (!cacheOnWriteLogged) {
-          LOG.info("For {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for " +
-            "Index blocks and Bloom filter blocks", this);
+          LOG.info("For {} , cacheDataOnWrite is true, hence enabled cacheOnWrite for "
+            + "Index blocks and Bloom filter blocks", this);
           cacheOnWriteLogged = true;
         }
       }
@@ -169,12 +183,24 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         .withMaxKeyCount(params.maxKeyCount()).withFavoredNodes(ctx.getFavoredNodes())
         .withFileContext(hFileContext).withShouldDropCacheBehind(params.shouldDropBehind())
         .withCompactedFilesSupplier(ctx.getCompactedFilesSupplier())
-        .withFileStoragePolicy(params.fileStoragePolicy());
+        .withFileStoragePolicy(params.fileStoragePolicy())
+        .withWriterCreationTracker(params.writerCreationTracker());
     return builder.build();
   }
+
+  /**
+   * For primary replica, we will call load once when opening a region, and the implementation could
+   * choose to do some cleanup work. So here we use {@code readOnly} to indicate that whether you
+   * are allowed to do the cleanup work. For secondary replicas, we will set {@code readOnly} to
+   * {@code true}.
+   */
+  protected abstract List<StoreFileInfo> doLoadStoreFiles(boolean readOnly) throws IOException;
 
   protected abstract void doAddNewStoreFiles(Collection<StoreFileInfo> newFiles) throws IOException;
 
   protected abstract void doAddCompactionResults(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException;
+
+  protected abstract void doSetStoreFiles(Collection<StoreFileInfo> files) throws IOException;
+
 }

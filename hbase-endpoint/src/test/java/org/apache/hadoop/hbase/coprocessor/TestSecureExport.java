@@ -22,8 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -80,15 +79,16 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestSecureExport {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureExport.class);
+    HBaseClassTestRule.forClass(TestSecureExport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureExport.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -125,25 +125,20 @@ public class TestSecureExport {
   private static final String TOPSECRET = "topsecret";
   @Rule
   public final TestName name = new TestName();
+
   private static void setUpKdcServer() throws Exception {
     KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     SERVER_PRINCIPAL = USERNAME + "/" + LOCALHOST;
     HTTP_PRINCIPAL = "HTTP/" + LOCALHOST;
-    KDC.createPrincipal(KEYTAB_FILE,
-      SERVER_PRINCIPAL,
-      HTTP_PRINCIPAL,
-      USER_ADMIN + "/" + LOCALHOST,
-      USER_OWNER + "/" + LOCALHOST,
-      USER_RX + "/" + LOCALHOST,
-      USER_RO + "/" + LOCALHOST,
-      USER_XO + "/" + LOCALHOST,
-      USER_NONE + "/" + LOCALHOST);
+    KDC.createPrincipal(KEYTAB_FILE, SERVER_PRINCIPAL, HTTP_PRINCIPAL, USER_ADMIN + "/" + LOCALHOST,
+      USER_OWNER + "/" + LOCALHOST, USER_RX + "/" + LOCALHOST, USER_RO + "/" + LOCALHOST,
+      USER_XO + "/" + LOCALHOST, USER_NONE + "/" + LOCALHOST);
   }
 
   private static User getUserByLogin(final String user) throws IOException {
-    return User.create(UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-        getPrinciple(user), KEYTAB_FILE.getAbsolutePath()));
+    return User.create(UserGroupInformation.loginUserFromKeytabAndReturnUGI(getPrinciple(user),
+      KEYTAB_FILE.getAbsolutePath()));
   }
 
   private static String getPrinciple(final String user) {
@@ -152,28 +147,27 @@ public class TestSecureExport {
 
   private static void setUpClusterKdc() throws Exception {
     HBaseKerberosUtils.setSecuredConfiguration(UTIL.getConfiguration(),
-        SERVER_PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
+      SERVER_PRINCIPAL + "@" + KDC.getRealm(), HTTP_PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSSLConfiguration(UTIL, TestSecureExport.class);
 
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        UTIL.getConfiguration().get(
-            CoprocessorHost.REGION_COPROCESSOR_CONF_KEY) + "," + Export.class.getName());
+      UTIL.getConfiguration().get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY) + ","
+        + Export.class.getName());
   }
 
   private static void addLabels(final Configuration conf, final List<String> users,
-      final List<String> labels) throws Exception {
-    PrivilegedExceptionAction<VisibilityLabelsProtos.VisibilityLabelsResponse> action
-      = () -> {
-        try (Connection conn = ConnectionFactory.createConnection(conf)) {
-          VisibilityClient.addLabels(conn, labels.toArray(new String[labels.size()]));
-          for (String user : users) {
-            VisibilityClient.setAuths(conn, labels.toArray(new String[labels.size()]), user);
-          }
-        } catch (Throwable t) {
-          throw new IOException(t);
+    final List<String> labels) throws Exception {
+    PrivilegedExceptionAction<VisibilityLabelsProtos.VisibilityLabelsResponse> action = () -> {
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        VisibilityClient.addLabels(conn, labels.toArray(new String[labels.size()]));
+        for (String user : users) {
+          VisibilityClient.setAuths(conn, labels.toArray(new String[labels.size()]), user);
         }
-        return null;
-      };
+      } catch (Throwable t) {
+        throw new IOException(t);
+      }
+      return null;
+    };
     getUserByLogin(USER_ADMIN).runAs(action);
   }
 
@@ -199,7 +193,7 @@ public class TestSecureExport {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UserProvider.setUserProviderForTesting(UTIL.getConfiguration(),
-        HadoopSecurityEnabledUserProviderForTesting.class);
+      HadoopSecurityEnabledUserProviderForTesting.class);
     setUpKdcServer();
     SecureTestUtil.enableSecurity(UTIL.getConfiguration());
     UTIL.getConfiguration().setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
@@ -211,15 +205,11 @@ public class TestSecureExport {
     UTIL.waitUntilAllRegionsAssigned(VisibilityConstants.LABELS_TABLE_NAME);
     UTIL.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME, 50000);
     UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME, 50000);
-    SecureTestUtil.grantGlobal(UTIL, USER_ADMIN,
-            Permission.Action.ADMIN,
-            Permission.Action.CREATE,
-            Permission.Action.EXEC,
-            Permission.Action.READ,
-            Permission.Action.WRITE);
+    SecureTestUtil.grantGlobal(UTIL, USER_ADMIN, Permission.Action.ADMIN, Permission.Action.CREATE,
+      Permission.Action.EXEC, Permission.Action.READ, Permission.Action.WRITE);
     SecureTestUtil.grantGlobal(UTIL, USER_OWNER, Permission.Action.CREATE);
     addLabels(UTIL.getConfiguration(), Arrays.asList(USER_OWNER),
-            Arrays.asList(PRIVATE, CONFIDENTIAL, SECRET, TOPSECRET));
+      Arrays.asList(PRIVATE, CONFIDENTIAL, SECRET, TOPSECRET));
   }
 
   @AfterClass
@@ -231,49 +221,38 @@ public class TestSecureExport {
   }
 
   /**
-   * Test the ExportEndpoint's access levels. The {@link Export} test is ignored
-   * since the access exceptions cannot be collected from the mappers.
+   * Test the ExportEndpoint's access levels. The {@link Export} test is ignored since the access
+   * exceptions cannot be collected from the mappers.
    */
   @Test
   public void testAccessCase() throws Throwable {
     final String exportTable = name.getMethodName();
-    TableDescriptor exportHtd = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(exportTable))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .build();
+    TableDescriptor exportHtd = TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA)).build();
     User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
-    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
-    SecureTestUtil.grantOnTable(UTIL, USER_RO,
-            TableName.valueOf(exportTable), null, null,
-            Permission.Action.READ);
-    SecureTestUtil.grantOnTable(UTIL, USER_RX,
-            TableName.valueOf(exportTable), null, null,
-            Permission.Action.READ,
-            Permission.Action.EXEC);
-    SecureTestUtil.grantOnTable(UTIL, USER_XO,
-            TableName.valueOf(exportTable), null, null,
-            Permission.Action.EXEC);
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][] { Bytes.toBytes("s") });
+    SecureTestUtil.grantOnTable(UTIL, USER_RO, TableName.valueOf(exportTable), null, null,
+      Permission.Action.READ);
+    SecureTestUtil.grantOnTable(UTIL, USER_RX, TableName.valueOf(exportTable), null, null,
+      Permission.Action.READ, Permission.Action.EXEC);
+    SecureTestUtil.grantOnTable(UTIL, USER_XO, TableName.valueOf(exportTable), null, null,
+      Permission.Action.EXEC);
     assertEquals(4, PermissionStorage
-        .getTablePermissions(UTIL.getConfiguration(), TableName.valueOf(exportTable)).size());
+      .getTablePermissions(UTIL.getConfiguration(), TableName.valueOf(exportTable)).size());
     AccessTestAction putAction = () -> {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, Bytes.toBytes("qual_0"), NOW, QUAL);
       p.addColumn(FAMILYA, Bytes.toBytes("qual_1"), NOW, QUAL);
       try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-              Table t = conn.getTable(TableName.valueOf(exportTable))) {
+        Table t = conn.getTable(TableName.valueOf(exportTable))) {
         t.put(p);
       }
       return null;
     };
     // no hdfs access.
-    SecureTestUtil.verifyAllowed(putAction,
-      getUserByLogin(USER_ADMIN),
-      getUserByLogin(USER_OWNER));
-    SecureTestUtil.verifyDenied(putAction,
-      getUserByLogin(USER_RO),
-      getUserByLogin(USER_XO),
-      getUserByLogin(USER_RX),
-      getUserByLogin(USER_NONE));
+    SecureTestUtil.verifyAllowed(putAction, getUserByLogin(USER_ADMIN), getUserByLogin(USER_OWNER));
+    SecureTestUtil.verifyDenied(putAction, getUserByLogin(USER_RO), getUserByLogin(USER_XO),
+      getUserByLogin(USER_RX), getUserByLogin(USER_NONE));
 
     final FileSystem fs = UTIL.getDFSCluster().getFileSystem();
     final Path openDir = fs.makeQualified(new Path("testAccessCase"));
@@ -282,9 +261,9 @@ public class TestSecureExport {
     final Path output = fs.makeQualified(new Path(openDir, "output"));
     AccessTestAction exportAction = () -> {
       try {
-        String[] args = new String[]{exportTable, output.toString()};
-        Map<byte[], Export.Response> result
-                = Export.run(new Configuration(UTIL.getConfiguration()), args);
+        String[] args = new String[] { exportTable, output.toString() };
+        Map<byte[], Export.Response> result =
+          Export.run(new Configuration(UTIL.getConfiguration()), args);
         long rowCount = 0;
         long cellCount = 0;
         for (Export.Response r : result.values()) {
@@ -308,7 +287,7 @@ public class TestSecureExport {
           assertEquals("Unexpected file owner", currentUserName, outputDirFileStatus.getOwner());
 
           FileStatus[] outputFileStatus = fs.listStatus(new Path(openDir, "output"));
-          for (FileStatus fileStatus: outputFileStatus) {
+          for (FileStatus fileStatus : outputFileStatus) {
             assertEquals("Unexpected file owner", currentUserName, fileStatus.getOwner());
           }
         } else {
@@ -318,14 +297,10 @@ public class TestSecureExport {
         clearOutput(output);
       }
     };
-    SecureTestUtil.verifyDenied(exportAction,
-      getUserByLogin(USER_RO),
-      getUserByLogin(USER_XO),
+    SecureTestUtil.verifyDenied(exportAction, getUserByLogin(USER_RO), getUserByLogin(USER_XO),
       getUserByLogin(USER_NONE));
-    SecureTestUtil.verifyAllowed(exportAction,
-      getUserByLogin(USER_ADMIN),
-      getUserByLogin(USER_OWNER),
-      getUserByLogin(USER_RX));
+    SecureTestUtil.verifyAllowed(exportAction, getUserByLogin(USER_ADMIN),
+      getUserByLogin(USER_OWNER), getUserByLogin(USER_RX));
     AccessTestAction deleteAction = () -> {
       UTIL.deleteTable(TableName.valueOf(exportTable));
       return null;
@@ -339,12 +314,11 @@ public class TestSecureExport {
   public void testVisibilityLabels() throws IOException, Throwable {
     final String exportTable = name.getMethodName() + "_export";
     final String importTable = name.getMethodName() + "_import";
-    final TableDescriptor exportHtd = TableDescriptorBuilder
-            .newBuilder(TableName.valueOf(exportTable))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA))
-            .build();
+    final TableDescriptor exportHtd =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(exportTable))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYA)).build();
     User owner = User.createUserForTesting(UTIL.getConfiguration(), USER_OWNER, new String[0]);
-    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][]{Bytes.toBytes("s")});
+    SecureTestUtil.createTable(UTIL, owner, exportHtd, new byte[][] { Bytes.toBytes("s") });
     AccessTestAction putAction = () -> {
       Put p1 = new Put(ROW1);
       p1.addColumn(FAMILYA, QUAL, NOW, QUAL);
@@ -356,7 +330,7 @@ public class TestSecureExport {
       p3.addColumn(FAMILYA, QUAL, NOW, QUAL);
       p3.setCellVisibility(new CellVisibility("!" + CONFIDENTIAL + " & " + TOPSECRET));
       try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-              Table t = conn.getTable(TableName.valueOf(exportTable))) {
+        Table t = conn.getTable(TableName.valueOf(exportTable))) {
         t.put(p1);
         t.put(p2);
         t.put(p3);
@@ -364,7 +338,7 @@ public class TestSecureExport {
       return null;
     };
     SecureTestUtil.verifyAllowed(putAction, getUserByLogin(USER_OWNER));
-    List<Pair<List<String>, Integer>> labelsAndRowCounts = new LinkedList<>();
+    List<Pair<List<String>, Integer>> labelsAndRowCounts = new ArrayList<>(5);
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(SECRET), 1));
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(PRIVATE, CONFIDENTIAL), 1));
     labelsAndRowCounts.add(new Pair<>(Arrays.asList(TOPSECRET), 1));
@@ -373,7 +347,7 @@ public class TestSecureExport {
     for (final Pair<List<String>, Integer> labelsAndRowCount : labelsAndRowCounts) {
       final List<String> labels = labelsAndRowCount.getFirst();
       final int rowCount = labelsAndRowCount.getSecond();
-      //create a open permission directory.
+      // create a open permission directory.
       final Path openDir = new Path("testAccessCase");
       final FileSystem fs = openDir.getFileSystem(UTIL.getConfiguration());
       fs.mkdirs(openDir);
@@ -384,10 +358,9 @@ public class TestSecureExport {
         labels.forEach(v -> buf.append(v).append(","));
         buf.deleteCharAt(buf.length() - 1);
         try {
-          String[] args = new String[]{
-            "-D " + ExportUtils.EXPORT_VISIBILITY_LABELS + "=" + buf.toString(),
-            exportTable,
-            output.toString(),};
+          String[] args =
+            new String[] { "-D " + ExportUtils.EXPORT_VISIBILITY_LABELS + "=" + buf.toString(),
+              exportTable, output.toString(), };
           Export.run(new Configuration(UTIL.getConfiguration()), args);
           return null;
         } catch (ServiceException | IOException ex) {
@@ -397,19 +370,16 @@ public class TestSecureExport {
         }
       };
       SecureTestUtil.verifyAllowed(exportAction, getUserByLogin(USER_OWNER));
-      final TableDescriptor importHtd = TableDescriptorBuilder
-              .newBuilder(TableName.valueOf(importTable))
-              .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB))
-              .build();
-      SecureTestUtil.createTable(UTIL, owner, importHtd, new byte[][]{Bytes.toBytes("s")});
+      final TableDescriptor importHtd =
+        TableDescriptorBuilder.newBuilder(TableName.valueOf(importTable))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILYB)).build();
+      SecureTestUtil.createTable(UTIL, owner, importHtd, new byte[][] { Bytes.toBytes("s") });
       AccessTestAction importAction = () -> {
-        String[] args = new String[]{
-          "-D" + Import.CF_RENAME_PROP + "=" + FAMILYA_STRING + ":" + FAMILYB_STRING,
-          importTable,
-          output.toString()
-        };
-        assertEquals(0, ToolRunner.run(
-            new Configuration(UTIL.getConfiguration()), new Import(), args));
+        String[] args =
+          new String[] { "-D" + Import.CF_RENAME_PROP + "=" + FAMILYA_STRING + ":" + FAMILYB_STRING,
+            importTable, output.toString() };
+        assertEquals(0,
+          ToolRunner.run(new Configuration(UTIL.getConfiguration()), new Import(), args));
         return null;
       };
       SecureTestUtil.verifyAllowed(importAction, getUserByLogin(USER_OWNER));
@@ -417,13 +387,9 @@ public class TestSecureExport {
         Scan scan = new Scan();
         scan.setAuthorizations(new Authorizations(labels));
         try (Connection conn = ConnectionFactory.createConnection(UTIL.getConfiguration());
-                Table table = conn.getTable(importHtd.getTableName());
-                ResultScanner scanner = table.getScanner(scan)) {
-          int count = 0;
-          for (Result r : scanner) {
-            ++count;
-          }
-          assertEquals(rowCount, count);
+          Table table = conn.getTable(importHtd.getTableName());
+          ResultScanner scanner = table.getScanner(scan)) {
+          assertEquals(rowCount, Iterables.size(scanner));
         }
         return null;
       };

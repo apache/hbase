@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestBackupHFileCleaner {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupHFileCleaner.class);
+    HBaseClassTestRule.forClass(TestBackupHFileCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupHFileCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -121,14 +121,15 @@ public class TestBackupHFileCleaner {
         found = true;
       }
     }
-    assertTrue("Cleaner should allow to delete this file as there is no hfile reference "
-        + "for it.", found);
+    assertTrue(
+      "Cleaner should allow to delete this file as there is no hfile reference " + "for it.",
+      found);
 
     // 4. Add the file as bulk load
     List<Path> list = new ArrayList<>(1);
     list.add(file);
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        BackupSystemTable sysTbl = new BackupSystemTable(conn)) {
+      BackupSystemTable sysTbl = new BackupSystemTable(conn)) {
       List<TableName> sTableList = new ArrayList<>();
       sTableList.add(tableName);
       Map<byte[], List<Path>>[] maps = new Map[1];
@@ -146,7 +147,8 @@ public class TestBackupHFileCleaner {
         found = true;
       }
     }
-    assertFalse("Cleaner should not allow to delete this file as there is a hfile reference "
-        + "for it.", found);
+    assertFalse(
+      "Cleaner should not allow to delete this file as there is a hfile reference " + "for it.",
+      found);
   }
 }

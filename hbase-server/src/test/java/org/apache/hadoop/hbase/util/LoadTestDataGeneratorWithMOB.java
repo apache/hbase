@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,16 +22,14 @@ import java.util.Arrays;
 /**
  * A load test data generator for MOB
  */
-public class LoadTestDataGeneratorWithMOB
-    extends MultiThreadedAction.DefaultDataGenerator {
+public class LoadTestDataGeneratorWithMOB extends MultiThreadedAction.DefaultDataGenerator {
 
   private byte[] mobColumnFamily;
   private LoadTestKVGenerator mobKvGenerator;
 
-  public LoadTestDataGeneratorWithMOB(int minValueSize, int maxValueSize,
-      int minColumnsPerKey, int maxColumnsPerKey, byte[]... columnFamilies) {
-    super(minValueSize, maxValueSize, minColumnsPerKey, maxColumnsPerKey,
-        columnFamilies);
+  public LoadTestDataGeneratorWithMOB(int minValueSize, int maxValueSize, int minColumnsPerKey,
+    int maxColumnsPerKey, byte[]... columnFamilies) {
+    super(minValueSize, maxValueSize, minColumnsPerKey, maxColumnsPerKey, columnFamilies);
   }
 
   public LoadTestDataGeneratorWithMOB(byte[]... columnFamilies) {
@@ -42,11 +40,9 @@ public class LoadTestDataGeneratorWithMOB
   public void initialize(String[] args) {
     super.initialize(args);
     if (args.length != 3) {
-      throw new IllegalArgumentException(
-          "LoadTestDataGeneratorWithMOB can have 3 arguments."
-              + "1st argument is a column family, the 2nd argument "
-              + "is the minimum mob data size and the 3rd argument "
-              + "is the maximum mob data size.");
+      throw new IllegalArgumentException("LoadTestDataGeneratorWithMOB can have 3 arguments."
+        + "1st argument is a column family, the 2nd argument "
+        + "is the minimum mob data size and the 3rd argument " + "is the maximum mob data size.");
     }
     String mobColumnFamily = args[0];
     int minMobDataSize = Integer.parseInt(args[1]);
@@ -54,16 +50,14 @@ public class LoadTestDataGeneratorWithMOB
     configureMob(Bytes.toBytes(mobColumnFamily), minMobDataSize, maxMobDataSize);
   }
 
-  private void configureMob(byte[] mobColumnFamily, int minMobDataSize,
-      int maxMobDataSize) {
+  private void configureMob(byte[] mobColumnFamily, int minMobDataSize, int maxMobDataSize) {
     this.mobColumnFamily = mobColumnFamily;
     mobKvGenerator = new LoadTestKVGenerator(minMobDataSize, maxMobDataSize);
   }
 
   @Override
-  public byte[] generateValue(byte[] rowKey, byte[] cf,
-      byte[] column) {
-    if(Arrays.equals(cf, mobColumnFamily))
+  public byte[] generateValue(byte[] rowKey, byte[] cf, byte[] column) {
+    if (Arrays.equals(cf, mobColumnFamily))
       return mobKvGenerator.generateRandomSizeValue(rowKey, cf, column);
 
     return super.generateValue(rowKey, cf, column);

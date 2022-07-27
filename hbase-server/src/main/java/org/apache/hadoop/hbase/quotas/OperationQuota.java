@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,15 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
 /**
  * Interface that allows to check the quota available for an operation.
@@ -31,43 +29,44 @@ import org.apache.hadoop.hbase.client.Result;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface OperationQuota {
-  public enum OperationType { MUTATE, GET, SCAN }
+  public enum OperationType {
+    MUTATE,
+    GET,
+    SCAN
+  }
 
   /**
-   * Checks if it is possible to execute the specified operation.
-   * The quota will be estimated based on the number of operations to perform
-   * and the average size accumulated during time.
-   *
+   * Checks if it is possible to execute the specified operation. The quota will be estimated based
+   * on the number of operations to perform and the average size accumulated during time.
    * @param numWrites number of write operation that will be performed
-   * @param numReads number of small-read operation that will be performed
-   * @param numScans number of long-read operation that will be performed
-   * @throws RpcThrottlingException if the operation cannot be performed because
-   *   RPC quota is exceeded.
+   * @param numReads  number of small-read operation that will be performed
+   * @param numScans  number of long-read operation that will be performed
+   * @throws RpcThrottlingException if the operation cannot be performed because RPC quota is
+   *                                exceeded.
    */
-  void checkQuota(int numWrites, int numReads, int numScans)
-    throws RpcThrottlingException;
+  void checkQuota(int numWrites, int numReads, int numScans) throws RpcThrottlingException;
 
   /** Cleanup method on operation completion */
   void close();
 
   /**
-   * Add a get result. This will be used to calculate the exact quota and
-   * have a better short-read average size for the next time.
+   * Add a get result. This will be used to calculate the exact quota and have a better short-read
+   * average size for the next time.
    */
   void addGetResult(Result result);
 
   /**
-   * Add a scan result. This will be used to calculate the exact quota and
-   * have a better long-read average size for the next time.
+   * Add a scan result. This will be used to calculate the exact quota and have a better long-read
+   * average size for the next time.
    */
   void addScanResult(List<Result> results);
 
   /**
-   * Add a mutation result. This will be used to calculate the exact quota and
-   * have a better mutation average size for the next time.
+   * Add a mutation result. This will be used to calculate the exact quota and have a better
+   * mutation average size for the next time.
    */
   void addMutation(Mutation mutation);
 
-  /** @return the number of bytes available to read to avoid exceeding the quota */
+  /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
 }

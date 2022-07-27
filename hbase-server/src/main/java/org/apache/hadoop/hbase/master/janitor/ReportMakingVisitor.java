@@ -54,7 +54,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
   /**
    * Report is not done until after the close has been called.
    */
-  private Report report = new Report();
+  private CatalogJanitorReport report = new CatalogJanitorReport();
 
   /**
    * RegionInfo from previous row.
@@ -77,7 +77,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
   /**
    * Do not call until after {@link #close()}. Will throw a {@link RuntimeException} if you do.
    */
-  Report getReport() {
+  CatalogJanitorReport getReport() {
     if (!this.closed) {
       throw new RuntimeException("Report not ready until after close()");
     }
@@ -136,8 +136,8 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
 
     if (!Bytes.equals(metaTableRow.getRow(), ri.getRegionName())) {
       LOG.warn(
-        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; " +
-          "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
+        "INCONSISTENCY: Row name is not equal to serialized info:regioninfo content; "
+          + "row={} {}; See if RegionInfo is referenced in another hbase:meta row? Delete?",
         Bytes.toStringBinary(metaTableRow.getRow()), ri.getRegionNameAsString());
       return null;
     }
@@ -196,9 +196,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     this.report.holes.add(new Pair<>(a, b));
   }
 
-  /**
-   * @return True if table is disabled or disabling; defaults false!
-   */
+  /** Returns True if table is disabled or disabling; defaults false! */
   boolean isTableDisabled(RegionInfo ri) {
     if (ri == null) {
       return false;
@@ -275,9 +273,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     }
   }
 
-  /**
-   * @return True iff first row in hbase:meta or if we've broached a new table in hbase:meta
-   */
+  /** Returns True iff first row in hbase:meta or if we've broached a new table in hbase:meta */
   private boolean isTableTransition(RegionInfo ri) {
     return this.previous == null || !this.previous.getTable().equals(ri.getTable());
   }

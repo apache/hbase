@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,11 +36,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-
 
 /**
  * A real-time monitoring tool for HBase like Unix top command.
@@ -120,6 +120,7 @@ public class HBTop extends Configured implements Tool {
         try {
           delay = Integer.parseInt(commandLine.getOptionValue("delay"));
         } catch (NumberFormatException ignored) {
+          // Deliberately ignored, we handle the issue below.
         }
 
         if (delay < 1) {
@@ -164,7 +165,7 @@ public class HBTop extends Configured implements Tool {
       }
 
       if (commandLine.hasOption("fields")) {
-        String[] fields = commandLine.getOptionValue("fields").split(",");
+        Iterable<String> fields = Splitter.on(',').split(commandLine.getOptionValue("fields"));
         initialFields = new ArrayList<>();
         for (String field : fields) {
           Optional<FieldInfo> fieldInfo = initialMode.getFieldInfos().stream()
@@ -178,7 +179,7 @@ public class HBTop extends Configured implements Tool {
       }
 
       if (commandLine.hasOption("filters")) {
-        String[] filters = commandLine.getOptionValue("filters").split(",");
+        Iterable<String> filters = Splitter.on(',').split(commandLine.getOptionValue("filters"));
         List<Field> fields = initialMode.getFieldInfos().stream().map(FieldInfo::getField)
           .collect(Collectors.toList());
         for (String filter : filters) {
@@ -212,15 +213,12 @@ public class HBTop extends Configured implements Tool {
 
   private Options getOptions() {
     Options opts = new Options();
-    opts.addOption("h", "help", false,
-      "Print usage; for help while the tool is running press 'h'");
-    opts.addOption("d", "delay", true,
-      "The refresh delay (in seconds); default is 3 seconds");
+    opts.addOption("h", "help", false, "Print usage; for help while the tool is running press 'h'");
+    opts.addOption("d", "delay", true, "The refresh delay (in seconds); default is 3 seconds");
     opts.addOption("m", "mode", true,
       "The mode; n (Namespace)|t (Table)|r (Region)|s (RegionServer)|u (User)"
         + "|c (Client), default is r");
-    opts.addOption("n", "numberOfIterations", true,
-      "The number of iterations");
+    opts.addOption("n", "numberOfIterations", true, "The number of iterations");
     opts.addOption("s", "sortField", true,
       "The initial sort field. You can prepend a `+' or `-' to the field name to also override"
         + " the sort direction. A leading `+' will force sorting high to low, whereas a `-' will"

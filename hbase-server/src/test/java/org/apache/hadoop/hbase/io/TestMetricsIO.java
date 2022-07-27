@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -30,7 +30,7 @@ public class TestMetricsIO {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsIO.class);
+    HBaseClassTestRule.forClass(TestMetricsIO.class);
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -38,7 +38,9 @@ public class TestMetricsIO {
   public void testMetrics() {
     MetricsIO metrics = new MetricsIO(new MetricsIOWrapper() {
       @Override
-      public long getChecksumFailures() { return 40; }
+      public long getChecksumFailures() {
+        return 40;
+      }
     });
 
     metrics.updateFsReadTime(100);

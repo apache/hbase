@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
@@ -74,12 +73,12 @@ import org.slf4j.LoggerFactory;
  * change the cells which will be applied to memstore and WAL. So add unit test for the case which
  * change the cell's column family and tags.
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestPostIncrementAndAppendBeforeWAL {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPostIncrementAndAppendBeforeWAL.class);
+    HBaseClassTestRule.forClass(TestPostIncrementAndAppendBeforeWAL.class);
 
   @Rule
   public TestName name = new TestName();
@@ -90,7 +89,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
   private static Connection connection;
 
-  private static final byte [] ROW = Bytes.toBytes("row");
+  private static final byte[] ROW = Bytes.toBytes("row");
   private static final String CF1 = "cf1";
   private static final byte[] CF1_BYTES = Bytes.toBytes(CF1);
   private static final String CF2 = "cf2";
@@ -118,11 +117,11 @@ public class TestPostIncrementAndAppendBeforeWAL {
   }
 
   private void createTableWithCoprocessor(TableName tableName, String coprocessor)
-      throws IOException {
+    throws IOException {
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF1_BYTES).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2_BYTES).build())
-        .setCoprocessor(coprocessor).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF1_BYTES).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF2_BYTES).build())
+      .setCoprocessor(coprocessor).build();
     connection.getAdmin().createTable(tableDesc);
   }
 
@@ -179,8 +178,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
     createTableWithCoprocessor(tableName, ChangeCellWithACLTagObserver.class.getName());
     try (Table table = connection.getTable(tableName)) {
       // Increment without TTL
-      Increment firstIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1)
-        .setACL(USER, PERMS);
+      Increment firstIncrement =
+        new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setACL(USER, PERMS);
       Result result = table.increment(firstIncrement);
       assertEquals(1, result.size());
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
@@ -192,8 +191,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertEquals(1, Bytes.toLong(result.getValue(CF1_BYTES, CQ1)));
 
       // Increment with TTL
-      Increment secondIncrement = new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000)
-        .setACL(USER, PERMS);
+      Increment secondIncrement =
+        new Increment(ROW).addColumn(CF1_BYTES, CQ1, 1).setTTL(1000).setACL(USER, PERMS);
       result = table.increment(secondIncrement);
 
       // We should get value 2 here
@@ -229,8 +228,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
       assertTrue(Bytes.equals(VALUE, result.getValue(CF1_BYTES, CQ2)));
 
       // Append with TTL
-      Append secondAppend = new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000)
-        .setACL(USER, PERMS);
+      Append secondAppend =
+        new Append(ROW).addColumn(CF1_BYTES, CQ2, VALUE).setTTL(1000).setACL(USER, PERMS);
       result = table.append(secondAppend);
 
       // We should get "valuevalue""
@@ -253,8 +252,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
     while (iter.hasNext()) {
       Tag tag = iter.next();
       if (tag.getType() == TagType.ACL_TAG_TYPE) {
-        Tag temp = TagBuilderFactory.create().
-          setTagType(TagType.ACL_TAG_TYPE).setTagValue(acl).build();
+        Tag temp =
+          TagBuilderFactory.create().setTagType(TagType.ACL_TAG_TYPE).setTagValue(acl).build();
         return Tag.matchingValue(tag, temp);
       }
     }
@@ -262,7 +261,7 @@ public class TestPostIncrementAndAppendBeforeWAL {
   }
 
   public static class ChangeCellWithDifferntColumnFamilyObserver
-      implements RegionCoprocessor, RegionObserver {
+    implements RegionCoprocessor, RegionObserver {
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
@@ -270,35 +269,35 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
-          .map(
-            pair -> new Pair<>(pair.getFirst(), newCellWithDifferentColumnFamily(pair.getSecond())))
-          .collect(Collectors.toList());
+        .map(
+          pair -> new Pair<>(pair.getFirst(), newCellWithDifferentColumnFamily(pair.getSecond())))
+        .collect(Collectors.toList());
     }
 
     private Cell newCellWithDifferentColumnFamily(Cell cell) {
       return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
-          .setFamily(CF2_BYTES, 0, CF2_BYTES.length).setQualifier(CellUtil.cloneQualifier(cell))
-          .setTimestamp(cell.getTimestamp()).setType(cell.getType().getCode())
-          .setValue(CellUtil.cloneValue(cell)).build();
+        .setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+        .setFamily(CF2_BYTES, 0, CF2_BYTES.length).setQualifier(CellUtil.cloneQualifier(cell))
+        .setTimestamp(cell.getTimestamp()).setType(cell.getType().getCode())
+        .setValue(CellUtil.cloneValue(cell)).build();
     }
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
-          .map(
-            pair -> new Pair<>(pair.getFirst(), newCellWithDifferentColumnFamily(pair.getSecond())))
-          .collect(Collectors.toList());
+        .map(
+          pair -> new Pair<>(pair.getFirst(), newCellWithDifferentColumnFamily(pair.getSecond())))
+        .collect(Collectors.toList());
     }
   }
 
   public static class ChangeCellWithNotExistColumnFamilyObserver
-      implements RegionCoprocessor, RegionObserver {
+    implements RegionCoprocessor, RegionObserver {
     @Override
     public Optional<RegionObserver> getRegionObserver() {
       return Optional.of(this);
@@ -306,30 +305,28 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
-          .map(
-            pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
-          .collect(Collectors.toList());
+        .map(pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
+        .collect(Collectors.toList());
     }
 
     private Cell newCellWithNotExistColumnFamily(Cell cell) {
       return ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
-          .setFamily(CF_NOT_EXIST_BYTES, 0, CF_NOT_EXIST_BYTES.length)
-          .setQualifier(CellUtil.cloneQualifier(cell)).setTimestamp(cell.getTimestamp())
-          .setType(cell.getType().getCode()).setValue(CellUtil.cloneValue(cell)).build();
+        .setRow(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+        .setFamily(CF_NOT_EXIST_BYTES, 0, CF_NOT_EXIST_BYTES.length)
+        .setQualifier(CellUtil.cloneQualifier(cell)).setTimestamp(cell.getTimestamp())
+        .setType(cell.getType().getCode()).setValue(CellUtil.cloneValue(cell)).build();
     }
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       return cellPairs.stream()
-          .map(
-            pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
-          .collect(Collectors.toList());
+        .map(pair -> new Pair<>(pair.getFirst(), newCellWithNotExistColumnFamily(pair.getSecond())))
+        .collect(Collectors.toList());
     }
   }
 
@@ -341,8 +338,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postIncrementBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postIncrementBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
         if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {
@@ -354,8 +351,8 @@ public class TestPostIncrementAndAppendBeforeWAL {
 
     @Override
     public List<Pair<Cell, Cell>> postAppendBeforeWAL(
-        ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
-        List<Pair<Cell, Cell>> cellPairs) throws IOException {
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation mutation,
+      List<Pair<Cell, Cell>> cellPairs) throws IOException {
       List<Pair<Cell, Cell>> result = super.postAppendBeforeWAL(ctx, mutation, cellPairs);
       for (Pair<Cell, Cell> pair : result) {
         if (mutation.getACL() != null && !checkAclTag(mutation.getACL(), pair.getSecond())) {

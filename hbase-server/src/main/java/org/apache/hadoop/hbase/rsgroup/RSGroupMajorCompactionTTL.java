@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rsgroup;
 
 import java.util.Arrays;
@@ -91,8 +90,8 @@ public class RSGroupMajorCompactionTTL extends MajorCompactorTTL {
     try {
       commandLine = cmdLineParser.parse(options, args);
     } catch (ParseException parseException) {
-      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args) +
-        " due to: " + parseException);
+      System.out.println("ERROR: Unable to parse command-line arguments " + Arrays.toString(args)
+        + " due to: " + parseException);
       printUsage(options);
       return -1;
     }

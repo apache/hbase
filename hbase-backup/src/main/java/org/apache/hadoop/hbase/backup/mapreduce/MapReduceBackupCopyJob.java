@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -125,29 +124,27 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
   /**
    * Update the ongoing backup with new progress.
-   * @param backupInfo backup info
+   * @param backupInfo  backup info
    * @param newProgress progress
    * @param bytesCopied bytes copied
    * @throws NoNodeException exception
    */
-  static void updateProgress(BackupInfo backupInfo, BackupManager backupManager,
-      int newProgress, long bytesCopied) throws IOException {
+  static void updateProgress(BackupInfo backupInfo, BackupManager backupManager, int newProgress,
+    long bytesCopied) throws IOException {
     // compose the new backup progress data, using fake number for now
     String backupProgressData = newProgress + "%";
 
     backupInfo.setProgress(newProgress);
     backupManager.updateBackupInfo(backupInfo);
     LOG.debug("Backup progress data \"" + backupProgressData
-        + "\" has been updated to backup system table for " + backupInfo.getBackupId());
+      + "\" has been updated to backup system table for " + backupInfo.getBackupId());
   }
 
   /**
-   * Extends DistCp for progress updating to backup system table
-   * during backup. Using DistCpV2 (MAPREDUCE-2765).
-   * Simply extend it and override execute() method to get the
-   * Job reference for progress updating.
-   * Only the argument "src1, [src2, [...]] dst" is supported,
-   * no more DistCp options.
+   * Extends DistCp for progress updating to backup system table during backup. Using DistCpV2
+   * (MAPREDUCE-2765). Simply extend it and override execute() method to get the Job reference for
+   * progress updating. Only the argument "src1, [src2, [...]] dst" is supported, no more DistCp
+   * options.
    */
 
   class BackupDistCp extends DistCp {
@@ -156,13 +153,11 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     private BackupManager backupManager;
 
     public BackupDistCp(Configuration conf, DistCpOptions options, BackupInfo backupInfo,
-        BackupManager backupManager) throws Exception {
+      BackupManager backupManager) throws Exception {
       super(conf, options);
       this.backupInfo = backupInfo;
       this.backupManager = backupManager;
     }
-
-
 
     @Override
     public Job execute() throws Exception {
@@ -188,43 +183,41 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
         long totalSrcLgth = 0;
         for (Path aSrc : srcs) {
-          totalSrcLgth +=
-              BackupUtils.getFilesLength(aSrc.getFileSystem(super.getConf()), aSrc);
+          totalSrcLgth += BackupUtils.getFilesLength(aSrc.getFileSystem(super.getConf()), aSrc);
         }
 
         // Async call
         job = super.execute();
         // Update the copy progress to system table every 0.5s if progress value changed
-        int progressReportFreq =
-            MapReduceBackupCopyJob.this.getConf().getInt("hbase.backup.progressreport.frequency",
-              500);
+        int progressReportFreq = MapReduceBackupCopyJob.this.getConf()
+          .getInt("hbase.backup.progressreport.frequency", 500);
         float lastProgress = progressDone;
         while (!job.isComplete()) {
           float newProgress =
-              progressDone + job.mapProgress() * subTaskPercntgInWholeTask * (1 - INIT_PROGRESS);
+            progressDone + job.mapProgress() * subTaskPercntgInWholeTask * (1 - INIT_PROGRESS);
 
           if (newProgress > lastProgress) {
 
             BigDecimal progressData =
-                new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
+              new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
             String newProgressStr = progressData + "%";
             LOG.info("Progress: " + newProgressStr);
             updateProgress(backupInfo, backupManager, progressData.intValue(), bytesCopied);
             LOG.debug("Backup progress data updated to backup system table: \"Progress: "
-                + newProgressStr + ".\"");
+              + newProgressStr + ".\"");
             lastProgress = newProgress;
           }
           Thread.sleep(progressReportFreq);
         }
         // update the progress data after copy job complete
         float newProgress =
-            progressDone + job.mapProgress() * subTaskPercntgInWholeTask * (1 - INIT_PROGRESS);
+          progressDone + job.mapProgress() * subTaskPercntgInWholeTask * (1 - INIT_PROGRESS);
         BigDecimal progressData =
-            new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
+          new BigDecimal(newProgress * 100).setScale(1, BigDecimal.ROUND_HALF_UP);
 
         String newProgressStr = progressData + "%";
         LOG.info("Progress: " + newProgressStr + " subTask: " + subTaskPercntgInWholeTask
-            + " mapProgress: " + job.mapProgress());
+          + " mapProgress: " + job.mapProgress());
 
         // accumulate the overall backup progress
         progressDone = newProgress;
@@ -232,7 +225,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
         updateProgress(backupInfo, backupManager, progressData.intValue(), bytesCopied);
         LOG.debug("Backup progress data updated to backup system table: \"Progress: "
-            + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
+          + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
       } catch (Throwable t) {
         LOG.error(t.toString(), t);
         throw t;
@@ -241,8 +234,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       String jobID = job.getJobID().toString();
       job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
 
-      LOG.debug("DistCp job-id: " + jobID + " completed: " + job.isComplete() + " "
-          + job.isSuccessful());
+      LOG.debug(
+        "DistCp job-id: " + jobID + " completed: " + job.isComplete() + " " + job.isSuccessful());
       Counters ctrs = job.getCounters();
       LOG.debug(Objects.toString(ctrs));
       if (job.isComplete() && !job.isSuccessful()) {
@@ -252,11 +245,11 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       return job;
     }
 
-    private Field getInputOptionsField(Class<?> classDistCp) throws IOException{
+    private Field getInputOptionsField(Class<?> classDistCp) throws IOException {
       Field f = null;
       try {
         f = classDistCp.getDeclaredField("inputOptions");
-      } catch(Exception e) {
+      } catch (Exception e) {
         // Haddop 3
         try {
           f = classDistCp.getDeclaredField("context");
@@ -268,7 +261,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     }
 
     @SuppressWarnings("unchecked")
-    private List<Path> getSourcePaths(Field fieldInputOptions) throws IOException{
+    private List<Path> getSourcePaths(Field fieldInputOptions) throws IOException {
       Object options;
       try {
         options = fieldInputOptions.get(this);
@@ -282,9 +275,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
           return (List<Path>) methodGetSourcePaths.invoke(options);
         }
-      } catch (IllegalArgumentException | IllegalAccessException |
-                ClassNotFoundException | NoSuchMethodException |
-                SecurityException | InvocationTargetException e) {
+      } catch (IllegalArgumentException | IllegalAccessException | ClassNotFoundException
+        | NoSuchMethodException | SecurityException | InvocationTargetException e) {
         throw new IOException(e);
       }
 
@@ -321,8 +313,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         cfg.set(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH, fileListingPath.toString());
         cfg.setLong(DistCpConstants.CONF_LABEL_TOTAL_NUMBER_OF_RECORDS, totalRecords);
       } catch (NoSuchFieldException | SecurityException | IllegalArgumentException
-          | IllegalAccessException | NoSuchMethodException | ClassNotFoundException
-          | InvocationTargetException e) {
+        | IllegalAccessException | NoSuchMethodException | ClassNotFoundException
+        | InvocationTargetException e) {
         throw new IOException(e);
       }
       return fileListingPath;
@@ -340,8 +332,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     }
 
     private List<Path> getSourceFiles() throws NoSuchFieldException, SecurityException,
-        IllegalArgumentException, IllegalAccessException, NoSuchMethodException,
-        ClassNotFoundException, InvocationTargetException, IOException {
+      IllegalArgumentException, IllegalAccessException, NoSuchMethodException,
+      ClassNotFoundException, InvocationTargetException, IOException {
       Field options = null;
       try {
         options = DistCp.class.getDeclaredField("inputOptions");
@@ -351,8 +343,6 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       options.setAccessible(true);
       return getSourcePaths(options);
     }
-
-
 
     private SequenceFile.Writer getWriter(Path pathToListFile) throws IOException {
       FileSystem fs = pathToListFile.getFileSystem(conf);
@@ -367,15 +357,15 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
 
   /**
    * Do backup copy based on different types.
-   * @param context The backup info
-   * @param conf The hadoop configuration
+   * @param context  The backup info
+   * @param conf     The hadoop configuration
    * @param copyType The backup copy type
-   * @param options Options for customized ExportSnapshot or DistCp
+   * @param options  Options for customized ExportSnapshot or DistCp
    * @throws Exception exception
    */
   @Override
   public int copy(BackupInfo context, BackupManager backupManager, Configuration conf,
-      BackupType copyType, String[] options) throws IOException {
+    BackupType copyType, String[] options) throws IOException {
     int res = 0;
 
     try {
@@ -391,7 +381,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
         setSubTaskPercntgInWholeTask(1f);
 
         BackupDistCp distcp =
-            new BackupDistCp(new Configuration(conf), null, context, backupManager);
+          new BackupDistCp(new Configuration(conf), null, context, backupManager);
         // Handle a special case where the source file is a single file.
         // In this case, distcp will not create the target dir. It just take the
         // target as a file name and copy source file to the target (as a file name).

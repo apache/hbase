@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,13 +19,12 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.OutputStream;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class is an extension to ContentSizeCachedKeyValue where there are no tags in Cell.
- * Note: Please do not use these objects in write path as it will increase the heap space usage.
- * See https://issues.apache.org/jira/browse/HBASE-13448
+ * This class is an extension to ContentSizeCachedKeyValue where there are no tags in Cell. Note:
+ * Please do not use these objects in write path as it will increase the heap space usage. See
+ * https://issues.apache.org/jira/browse/HBASE-13448
  */
 @InterfaceAudience.Private
 public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
@@ -37,7 +34,7 @@ public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
   }
 
   public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId, int keyLen,
-      short rowLen) {
+    short rowLen) {
     super(bytes, offset, length, seqId, keyLen, rowLen);
   }
 

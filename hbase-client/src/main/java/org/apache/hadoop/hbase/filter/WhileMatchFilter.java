@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,26 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 /**
- * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
- * as the wrapped filters {@link Filter#filterRowKey(Cell)},
+ * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon as the wrapped
+ * filters {@link Filter#filterRowKey(Cell)},
  * {@link Filter#filterCell(org.apache.hadoop.hbase.Cell)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
- * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
- * returns true.
+ * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods returns true.
  */
 @InterfaceAudience.Public
 public class WhileMatchFilter extends FilterBase {
@@ -90,31 +88,28 @@ public class WhileMatchFilter extends FilterBase {
     changeFAR(filterRow);
     return filterRow;
   }
-  
+
   @Override
   public boolean hasFilterRow() {
     return true;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
-    FilterProtos.WhileMatchFilter.Builder builder =
-      FilterProtos.WhileMatchFilter.newBuilder();
+    FilterProtos.WhileMatchFilter.Builder builder = FilterProtos.WhileMatchFilter.newBuilder();
     builder.setFilter(ProtobufUtil.toFilter(this.filter));
     return builder.build().toByteArray();
   }
 
   /**
+   * Parse a serialized representation of {@link WhileMatchFilter}
    * @param pbBytes A pb serialized {@link WhileMatchFilter} instance
    * @return An instance of {@link WhileMatchFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
-  public static WhileMatchFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static WhileMatchFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.WhileMatchFilter proto;
     try {
       proto = FilterProtos.WhileMatchFilter.parseFrom(pbBytes);
@@ -129,16 +124,18 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof WhileMatchFilter)) return false;
-
-    WhileMatchFilter other = (WhileMatchFilter)o;
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof WhileMatchFilter)) {
+      return false;
+    }
+    WhileMatchFilter other = (WhileMatchFilter) o;
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }
 

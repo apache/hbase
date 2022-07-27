@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,28 +65,28 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests around replay of recovered.edits content.
  */
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRecoveredEdits {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRecoveredEdits.class);
+    HBaseClassTestRule.forClass(TestRecoveredEdits.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
 
   private static BlockCache blockCache;
 
-  @Rule public TestName testName = new TestName();
+  @Rule
+  public TestName testName = new TestName();
 
   /**
-   * Path to a recovered.edits file in hbase-server test resources folder.
-   * This is a little fragile getting this path to a file of 10M of edits.
+   * Path to a recovered.edits file in hbase-server test resources folder. This is a little fragile
+   * getting this path to a file of 10M of edits.
    */
   @SuppressWarnings("checkstyle:VisibilityModifier")
   public static final Path RECOVEREDEDITS_PATH = new Path(
-    System.getProperty("test.build.classes", "target/test-classes"),
-    "0000000000000016310");
+    System.getProperty("test.build.classes", "target/test-classes"), "0000000000000016310");
 
   /**
    * Name of table referenced by edits in the recovered.edits file.
@@ -95,9 +96,9 @@ public class TestRecoveredEdits {
   /**
    * Column family referenced by edits in the recovered.edits file.
    */
-  public static final byte [] RECOVEREDEDITS_COLUMNFAMILY = Bytes.toBytes("meta");
+  public static final byte[] RECOVEREDEDITS_COLUMNFAMILY = Bytes.toBytes("meta");
   public static final byte[][] RECOVEREDITS_COLUMNFAMILY_ARRAY =
-    new byte[][] {RECOVEREDEDITS_COLUMNFAMILY};
+    new byte[][] { RECOVEREDEDITS_COLUMNFAMILY };
   public static final ColumnFamilyDescriptor RECOVEREDEDITS_CFD =
     ColumnFamilyDescriptorBuilder.newBuilder(RECOVEREDEDITS_COLUMNFAMILY).build();
 
@@ -110,10 +111,9 @@ public class TestRecoveredEdits {
   }
 
   /**
-   * HBASE-12782 ITBLL fails for me if generator does anything but 5M per maptask.
-   * Create a region. Close it. Then copy into place a file to replay, one that is bigger than
-   * configured flush size so we bring on lots of flushes.  Then reopen and confirm all edits
-   * made it in.
+   * HBASE-12782 ITBLL fails for me if generator does anything but 5M per maptask. Create a region.
+   * Close it. Then copy into place a file to replay, one that is bigger than configured flush size
+   * so we bring on lots of flushes. Then reopen and confirm all edits made it in.
    */
   @Test
   public void testReplayWorksThoughLotsOfFlushing() throws IOException {
@@ -122,28 +122,27 @@ public class TestRecoveredEdits {
     }
   }
 
-  private void testReplayWorksWithMemoryCompactionPolicy(MemoryCompactionPolicy policy) throws
-    IOException {
+  private void testReplayWorksWithMemoryCompactionPolicy(MemoryCompactionPolicy policy)
+    throws IOException {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    // Set it so we flush every 1M or so.  Thats a lot.
-    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
+    // Set it so we flush every 1M or so. Thats a lot.
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.
-      newBuilder(TableName.valueOf(testName.getMethodName())).
-      setColumnFamily(RECOVEREDEDITS_CFD) .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testName.getMethodName()))
+        .setColumnFamily(RECOVEREDEDITS_CFD).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     final String encodedRegionName = hri.getEncodedName();
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path tableDir = CommonFSUtils.getTableDir(hbaseRootDir, tableDescriptor.getTableName());
-    HRegionFileSystem hrfs =
-        new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
+    HRegionFileSystem hrfs = new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
     if (fs.exists(hrfs.getRegionDir())) {
       LOG.info("Region directory already exists. Deleting.");
       fs.delete(hrfs.getRegionDir(), true);
     }
-    HRegion region = HBaseTestingUtil
-        .createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, blockCache);
+    HRegion region =
+      HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, blockCache);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
     List<String> storeFiles = region.getStoreFileList(RECOVEREDITS_COLUMNFAMILY_ARRAY);
     // There should be no store files.
@@ -162,7 +161,7 @@ public class TestRecoveredEdits {
     // Our 0000000000000016310 is 10MB. Most of the edits are for one region. Lets assume that if
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
-    if(policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
+    if (policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() >= 1);
     } else {
       assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
@@ -173,12 +172,10 @@ public class TestRecoveredEdits {
     LOG.info("Checked " + count + " edits made it in");
   }
 
-  /**
-   * @return Return how many edits seen.
-   */
+  /** Returns Return how many edits seen. */
   // Used by TestWALPlayer over in hbase-mapreduce too.
   public static int verifyAllEditsMadeItIn(final FileSystem fs, final Configuration conf,
-      final Path edits, final HRegion region) throws IOException {
+    final Path edits, final HRegion region) throws IOException {
     int count = 0;
     // Read all cells from recover edits
     List<Cell> walCells = new ArrayList<>();
@@ -189,8 +186,9 @@ public class TestRecoveredEdits {
         WALEdit val = entry.getEdit();
         count++;
         // Check this edit is for this region.
-        if (!Bytes.equals(key.getEncodedRegionName(),
-            region.getRegionInfo().getEncodedNameAsBytes())) {
+        if (
+          !Bytes.equals(key.getEncodedRegionName(), region.getRegionInfo().getEncodedNameAsBytes())
+        ) {
           continue;
         }
         Cell previous = null;
@@ -220,10 +218,9 @@ public class TestRecoveredEdits {
 
     Collections.sort(walCells, CellComparatorImpl.COMPARATOR);
     int found = 0;
-    for (int i = 0, j = 0; i < walCells.size() && j < regionCells.size(); ) {
-      int compareResult = PrivateCellUtil
-          .compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR, walCells.get(i),
-              regionCells.get(j));
+    for (int i = 0, j = 0; i < walCells.size() && j < regionCells.size();) {
+      int compareResult = PrivateCellUtil.compareKeyIgnoresMvcc(CellComparatorImpl.COMPARATOR,
+        walCells.get(i), regionCells.get(j));
       if (compareResult == 0) {
         i++;
         j++;
@@ -234,8 +231,8 @@ public class TestRecoveredEdits {
         i++;
       }
     }
-    assertEquals("Only found " + found + " cells in region, but there are " + walCells.size() +
-        " cells in recover edits", found, walCells.size());
+    assertEquals("Only found " + found + " cells in region, but there are " + walCells.size()
+      + " cells in recover edits", found, walCells.size());
     return count;
   }
 }

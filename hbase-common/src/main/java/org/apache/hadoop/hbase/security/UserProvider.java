@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,10 +46,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class UserProvider extends BaseConfigurable {
 
   private static final String USER_PROVIDER_CONF_KEY = "hbase.client.userprovider.class";
-  private static final ListeningExecutorService executor = MoreExecutors.listeningDecorator(
-      Executors.newScheduledThreadPool(
-          1,
-          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
+  private static final ListeningExecutorService executor =
+    MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
 
   private LoadingCache<String, String[]> groupCache = null;
 
@@ -73,51 +72,50 @@ public class UserProvider extends BaseConfigurable {
       }
     }
 
-    long cacheTimeout =
-        getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
-            CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
+    long cacheTimeout = getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
+      CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
 
     this.groupCache = CacheBuilder.newBuilder()
-        // This is the same timeout that hadoop uses. So we'll follow suit.
-        .refreshAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
-        .expireAfterWrite(10 * cacheTimeout, TimeUnit.MILLISECONDS)
-            // Set concurrency level equal to the default number of handlers that
-            // the simple handler spins up.
-        .concurrencyLevel(20)
-            // create the loader
-            // This just delegates to UGI.
-        .build(new CacheLoader<String, String[]>() {
+      // This is the same timeout that hadoop uses. So we'll follow suit.
+      .refreshAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
+      .expireAfterWrite(10 * cacheTimeout, TimeUnit.MILLISECONDS)
+      // Set concurrency level equal to the default number of handlers that
+      // the simple handler spins up.
+      .concurrencyLevel(20)
+      // create the loader
+      // This just delegates to UGI.
+      .build(new CacheLoader<String, String[]>() {
 
-          // Since UGI's don't hash based on the user id
-          // The cache needs to be keyed on the same thing that Hadoop's Groups class
-          // uses. So this cache uses shortname.
-          @Override
-          public String[] load(String ugi) throws Exception {
-            return getGroupStrings(ugi);
+        // Since UGI's don't hash based on the user id
+        // The cache needs to be keyed on the same thing that Hadoop's Groups class
+        // uses. So this cache uses shortname.
+        @Override
+        public String[] load(String ugi) throws Exception {
+          return getGroupStrings(ugi);
+        }
+
+        private String[] getGroupStrings(String ugi) {
+          try {
+            Set<String> result = new LinkedHashSet<>(groups.getGroups(ugi));
+            return result.toArray(new String[result.size()]);
+          } catch (Exception e) {
+            return new String[0];
           }
+        }
 
-          private String[] getGroupStrings(String ugi) {
-            try {
-              Set<String> result = new LinkedHashSet<>(groups.getGroups(ugi));
-              return result.toArray(new String[result.size()]);
-            } catch (Exception e) {
-              return new String[0];
+        // Provide the reload function that uses the executor thread.
+        @Override
+        public ListenableFuture<String[]> reload(final String k, String[] oldValue)
+          throws Exception {
+
+          return executor.submit(new Callable<String[]>() {
+            @Override
+            public String[] call() throws Exception {
+              return getGroupStrings(k);
             }
-          }
-
-          // Provide the reload function that uses the executor thread.
-          @Override
-          public ListenableFuture<String[]> reload(final String k, String[] oldValue)
-              throws Exception {
-
-            return executor.submit(new Callable<String[]>() {
-              @Override
-              public String[] call() throws Exception {
-                return getGroupStrings(k);
-              }
-            });
-          }
-        });
+          });
+        }
+      });
   }
 
   /**
@@ -128,17 +126,17 @@ public class UserProvider extends BaseConfigurable {
    */
   public static UserProvider instantiate(Configuration conf) {
     Class<? extends UserProvider> clazz =
-        conf.getClass(USER_PROVIDER_CONF_KEY, UserProvider.class, UserProvider.class);
+      conf.getClass(USER_PROVIDER_CONF_KEY, UserProvider.class, UserProvider.class);
     return ReflectionUtils.newInstance(clazz, conf);
   }
 
   /**
    * Set the {@link UserProvider} in the given configuration that should be instantiated
-   * @param conf to update
+   * @param conf     to update
    * @param provider class of the provider to set
    */
   public static void setUserProviderForTesting(Configuration conf,
-      Class<? extends UserProvider> provider) {
+    Class<? extends UserProvider> provider) {
     conf.set(USER_PROVIDER_CONF_KEY, provider.getName());
   }
 
@@ -151,9 +149,7 @@ public class UserProvider extends BaseConfigurable {
     return user == null ? null : user.getName();
   }
 
-  /**
-   * @return <tt>true</tt> if security is enabled, <tt>false</tt> otherwise
-   */
+  /** Returns <tt>true</tt> if security is enabled, <tt>false</tt> otherwise */
   public boolean isHBaseSecurityEnabled() {
     return User.isHBaseSecurityEnabled(this.getConf());
   }
@@ -168,9 +164,8 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
-   * In secure environment, if a user specified his keytab and principal,
-   * a hbase client will try to login with them. Otherwise, hbase client will try to obtain
-   * ticket(through kinit) from system.
+   * In secure environment, if a user specified his keytab and principal, a hbase client will try to
+   * login with them. Otherwise, hbase client will try to obtain ticket(through kinit) from system.
    */
   public boolean shouldLoginFromKeytab() {
     return User.shouldLoginFromKeytab(this.getConf());
@@ -186,8 +181,7 @@ public class UserProvider extends BaseConfigurable {
 
   /**
    * Wraps an underlying {@code UserGroupInformation} instance.
-   * @param ugi The base Hadoop user
-   * @return User
+   * @param ugi The base Hadoop user n
    */
   public User create(UserGroupInformation ugi) {
     if (ugi == null) {
@@ -205,20 +199,20 @@ public class UserProvider extends BaseConfigurable {
    * org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String). On regular
    * Hadoop (without security features), this will safely be ignored.
    * </p>
-   * @param fileConfKey Property key used to configure path to the credential file
+   * @param fileConfKey      Property key used to configure path to the credential file
    * @param principalConfKey Property key used to configure login principal
-   * @param localhost Current hostname to use in any credentials
+   * @param localhost        Current hostname to use in any credentials
    * @throws IOException underlying exception from SecurityUtil.login() call
    */
   public void login(String fileConfKey, String principalConfKey, String localhost)
-      throws IOException {
+    throws IOException {
     User.login(getConf(), fileConfKey, principalConfKey, localhost);
   }
 
   /**
    * Login with given keytab and principal. This can be used for both SPN(Service Principal Name)
    * and UPN(User Principal Name) which format should be clientname@REALM.
-   * @param fileConfKey config name for client keytab
+   * @param fileConfKey      config name for client keytab
    * @param principalConfKey config name for client principal
    * @throws IOException underlying exception from UserGroupInformation.loginUserFromKeytab
    */

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,56 +37,54 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test that FileLink switches between alternate locations
- * when the current location moves or gets deleted.
+ * Test that FileLink switches between alternate locations when the current location moves or gets
+ * deleted.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileLink {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileLink.class);
+    HBaseClassTestRule.forClass(TestHFileLink.class);
 
   @Rule
   public TestName name = new TestName();
 
   @Test
   public void testValidLinkNames() {
-    String validLinkNames[] = {"foo=fefefe-0123456", "ns=foo=abababa-fefefefe"};
+    String validLinkNames[] = { "foo=fefefe-0123456", "ns=foo=abababa-fefefefe" };
 
-    for(String name : validLinkNames) {
+    for (String name : validLinkNames) {
       Assert.assertTrue("Failed validating:" + name, name.matches(HFileLink.LINK_NAME_REGEX));
     }
 
-    for(String name : validLinkNames) {
+    for (String name : validLinkNames) {
       Assert.assertTrue("Failed validating:" + name, HFileLink.isHFileLink(name));
     }
 
     String testName = name.getMethodName() + "=fefefe-0123456";
     Assert.assertEquals(TableName.valueOf(name.getMethodName()),
-        HFileLink.getReferencedTableName(testName));
+      HFileLink.getReferencedTableName(testName));
     Assert.assertEquals("fefefe", HFileLink.getReferencedRegionName(testName));
     Assert.assertEquals("0123456", HFileLink.getReferencedHFileName(testName));
     Assert.assertEquals(testName,
-        HFileLink.createHFileLinkName(TableName.valueOf(name.getMethodName()), "fefefe", "0123456"));
+      HFileLink.createHFileLinkName(TableName.valueOf(name.getMethodName()), "fefefe", "0123456"));
 
     testName = "ns=" + name.getMethodName() + "=fefefe-0123456";
     Assert.assertEquals(TableName.valueOf("ns", name.getMethodName()),
-        HFileLink.getReferencedTableName(testName));
+      HFileLink.getReferencedTableName(testName));
     Assert.assertEquals("fefefe", HFileLink.getReferencedRegionName(testName));
     Assert.assertEquals("0123456", HFileLink.getReferencedHFileName(testName));
-    Assert.assertEquals(testName,
-        HFileLink.createHFileLinkName(TableName.valueOf("ns", name.getMethodName()), "fefefe", "0123456"));
+    Assert.assertEquals(testName, HFileLink
+      .createHFileLinkName(TableName.valueOf("ns", name.getMethodName()), "fefefe", "0123456"));
 
-    for(String name : validLinkNames) {
+    for (String name : validLinkNames) {
       Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(name);
       assertTrue(m.matches());
       Assert.assertEquals(HFileLink.getReferencedTableName(name),
-          TableName.valueOf(m.group(1), m.group(2)));
-      Assert.assertEquals(HFileLink.getReferencedRegionName(name),
-          m.group(3));
-      Assert.assertEquals(HFileLink.getReferencedHFileName(name),
-          m.group(4));
+        TableName.valueOf(m.group(1), m.group(2)));
+      Assert.assertEquals(HFileLink.getReferencedRegionName(name), m.group(3));
+      Assert.assertEquals(HFileLink.getReferencedHFileName(name), m.group(4));
     }
   }
 
@@ -99,22 +97,22 @@ public class TestHFileLink {
     String encodedRegion = "FEFE";
     String cf = "cf1";
 
-    TableName refTables[] = {TableName.valueOf(name.getMethodName()),
-        TableName.valueOf("ns", name.getMethodName())};
+    TableName refTables[] =
+      { TableName.valueOf(name.getMethodName()), TableName.valueOf("ns", name.getMethodName()) };
 
-    for(TableName refTable : refTables) {
+    for (TableName refTable : refTables) {
       Path refTableDir = CommonFSUtils.getTableDir(archiveDir, refTable);
       Path refRegionDir = HRegion.getRegionDir(refTableDir, encodedRegion);
       Path refDir = new Path(refRegionDir, cf);
       Path refLinkDir = new Path(refDir, linkDir);
-      String refStoreFileName = refTable.getNameAsString().replace(
-          TableName.NAMESPACE_DELIM, '=') + "=" + encodedRegion + "-" + storeFileName;
+      String refStoreFileName = refTable.getNameAsString().replace(TableName.NAMESPACE_DELIM, '=')
+        + "=" + encodedRegion + "-" + storeFileName;
 
-      TableName tableNames[] = {TableName.valueOf(name.getMethodName() + "1"),
-              TableName.valueOf("ns", name.getMethodName() + "2"),
-              TableName.valueOf(name.getMethodName()+ ":" +name.getMethodName())};
+      TableName tableNames[] = { TableName.valueOf(name.getMethodName() + "1"),
+        TableName.valueOf("ns", name.getMethodName() + "2"),
+        TableName.valueOf(name.getMethodName() + ":" + name.getMethodName()) };
 
-      for( TableName tableName : tableNames) {
+      for (TableName tableName : tableNames) {
         Path tableDir = CommonFSUtils.getTableDir(rootDir, tableName);
         Path regionDir = HRegion.getRegionDir(tableDir, encodedRegion);
         Path cfDir = new Path(regionDir, cf);
@@ -125,21 +123,19 @@ public class TestHFileLink {
           HFileLink.createBackReferenceName(CommonFSUtils.getTableName(tableDir).getNameAsString(),
             encodedRegion));
 
-        //verify parsing back reference
-        Pair<TableName, String> parsedRef =
-            HFileLink.parseBackReferenceName(encodedRegion+"."+
-                tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
+        // verify parsing back reference
+        Pair<TableName, String> parsedRef = HFileLink.parseBackReferenceName(encodedRegion + "."
+          + tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
         assertEquals(parsedRef.getFirst(), tableName);
         assertEquals(encodedRegion, parsedRef.getSecond());
 
-        //verify resolving back reference
-        Path storeFileDir =  new Path(refLinkDir, encodedRegion+"."+
-            tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
+        // verify resolving back reference
+        Path storeFileDir = new Path(refLinkDir, encodedRegion + "."
+          + tableName.getNameAsString().replace(TableName.NAMESPACE_DELIM, '='));
         Path linkPath = new Path(cfDir, refStoreFileName);
         assertEquals(linkPath, HFileLink.getHFileFromBackReference(rootDir, storeFileDir));
       }
     }
   }
-
 
 }

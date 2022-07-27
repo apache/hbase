@@ -24,12 +24,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class Constants {
-  private Constants(){}
+  private Constants() {
+  }
 
-  public static final int DEFAULT_HTTP_MAX_HEADER_SIZE = 64 * 1024; // 64k
+  // Jetty's max header size is Character.MAX_VALUE - 1, See ArrayTernaryTrie for more details
+  // And in newer jetty version, they add a check when creating a server so we must follow this
+  // limitation otherwise the UTs will fail
+  public static final int DEFAULT_HTTP_MAX_HEADER_SIZE = Character.MAX_VALUE - 1;
 
-  public static final String SERVER_TYPE_CONF_KEY =
-      "hbase.regionserver.thrift.server.type";
+  public static final String SERVER_TYPE_CONF_KEY = "hbase.regionserver.thrift.server.type";
 
   public static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   public static final boolean COMPACT_CONF_DEFAULT = false;
@@ -38,7 +41,7 @@ public final class Constants {
   public static final boolean FRAMED_CONF_DEFAULT = false;
 
   public static final String MAX_FRAME_SIZE_CONF_KEY =
-      "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
+    "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
   public static final int MAX_FRAME_SIZE_CONF_DEFAULT = 2;
 
   public static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
@@ -54,26 +57,23 @@ public final class Constants {
   public static final String THRIFT_SSL_ENABLED_KEY = "hbase.thrift.ssl.enabled";
   public static final String THRIFT_SSL_KEYSTORE_STORE_KEY = "hbase.thrift.ssl.keystore.store";
   public static final String THRIFT_SSL_KEYSTORE_PASSWORD_KEY =
-      "hbase.thrift.ssl.keystore.password";
-  public static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY
-      = "hbase.thrift.ssl.keystore.keypassword";
+    "hbase.thrift.ssl.keystore.password";
+  public static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY =
+    "hbase.thrift.ssl.keystore.keypassword";
   public static final String THRIFT_SSL_EXCLUDE_CIPHER_SUITES_KEY =
-      "hbase.thrift.ssl.exclude.cipher.suites";
+    "hbase.thrift.ssl.exclude.cipher.suites";
   public static final String THRIFT_SSL_INCLUDE_CIPHER_SUITES_KEY =
-      "hbase.thrift.ssl.include.cipher.suites";
+    "hbase.thrift.ssl.include.cipher.suites";
   public static final String THRIFT_SSL_EXCLUDE_PROTOCOLS_KEY =
-      "hbase.thrift.ssl.exclude.protocols";
+    "hbase.thrift.ssl.exclude.protocols";
   public static final String THRIFT_SSL_INCLUDE_PROTOCOLS_KEY =
-      "hbase.thrift.ssl.include.protocols";
-  public static final String THRIFT_SSL_KEYSTORE_TYPE_KEY =
-    "hbase.thrift.ssl.keystore.type";
-  public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT =
-    "jks";
-
+    "hbase.thrift.ssl.include.protocols";
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_KEY = "hbase.thrift.ssl.keystore.type";
+  public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT = "jks";
 
   public static final String THRIFT_SUPPORT_PROXYUSER_KEY = "hbase.thrift.support.proxyuser";
 
-  //kerberos related configs
+  // kerberos related configs
   public static final String THRIFT_DNS_INTERFACE_KEY = "hbase.thrift.dns.interface";
   public static final String THRIFT_DNS_NAMESERVER_KEY = "hbase.thrift.dns.nameserver";
   public static final String THRIFT_KERBEROS_PRINCIPAL_KEY = "hbase.thrift.kerberos.principal";
@@ -82,23 +82,18 @@ public final class Constants {
   public static final String THRIFT_SPNEGO_KEYTAB_FILE_KEY = "hbase.thrift.spnego.keytab.file";
 
   /**
-   * Amount of time in milliseconds before a server thread will timeout
-   * waiting for client to send data on a connected socket. Currently,
-   * applies only to TBoundedThreadPoolServer
+   * Amount of time in milliseconds before a server thread will timeout waiting for client to send
+   * data on a connected socket. Currently, applies only to TBoundedThreadPoolServer
    */
   public static final String THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY =
-      "hbase.thrift.server.socket.read.timeout";
+    "hbase.thrift.server.socket.read.timeout";
   public static final int THRIFT_SERVER_SOCKET_READ_TIMEOUT_DEFAULT = 60000;
 
-
   /**
-   * Thrift quality of protection configuration key. Valid values can be:
-   * auth-conf: authentication, integrity and confidentiality checking
-   * auth-int: authentication and integrity checking
-   * auth: authentication only
-   *
-   * This is used to authenticate the callers and support impersonation.
-   * The thrift server and the HBase cluster must run in secure mode.
+   * Thrift quality of protection configuration key. Valid values can be: auth-conf: authentication,
+   * integrity and confidentiality checking auth-int: authentication and integrity checking auth:
+   * authentication only This is used to authenticate the callers and support impersonation. The
+   * thrift server and the HBase cluster must run in secure mode.
    */
   public static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
 
@@ -112,7 +107,7 @@ public final class Constants {
   public static final int DEFAULT_LISTEN_PORT = 9090;
 
   public static final String THRIFT_HTTP_ALLOW_OPTIONS_METHOD =
-      "hbase.thrift.http.allow.options.method";
+    "hbase.thrift.http.allow.options.method";
   public static final boolean THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT = false;
 
   public static final String THRIFT_INFO_SERVER_PORT = "hbase.thrift.info.port";
@@ -142,14 +137,14 @@ public final class Constants {
   public static final String PORT_OPTION = "port";
   public static final String INFOPORT_OPTION = "infoport";
 
-  //for thrift2 server
-  public static final String READONLY_OPTION ="readonly";
+  // for thrift2 server
+  public static final String READONLY_OPTION = "readonly";
 
   public static final String THRIFT_READONLY_ENABLED = "hbase.thrift.readonly";
   public static final boolean THRIFT_READONLY_ENABLED_DEFAULT = false;
 
   public static final String HBASE_THRIFT_CLIENT_SCANNER_CACHING =
-      "hbase.thrift.client.scanner.caching";
+    "hbase.thrift.client.scanner.caching";
 
   public static final int HBASE_THRIFT_CLIENT_SCANNER_CACHING_DEFAULT = 20;
 
@@ -157,7 +152,6 @@ public final class Constants {
   public static final String HBASE_THRIFT_SERVER_PORT = "hbase.thrift.server.port";
 
   public static final String HBASE_THRIFT_CLIENT_BUIDLER_CLASS =
-      "hbase.thrift.client.builder.class";
-
+    "hbase.thrift.client.builder.class";
 
 }

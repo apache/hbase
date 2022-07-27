@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,27 +34,25 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestThrottleSettings {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThrottleSettings.class);
+    HBaseClassTestRule.forClass(TestThrottleSettings.class);
 
   @Test
   public void testMerge() throws IOException {
     TimedQuota tq1 = TimedQuota.newBuilder().setSoftLimit(10)
-        .setScope(QuotaProtos.QuotaScope.MACHINE)
-        .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
+      .setScope(QuotaProtos.QuotaScope.MACHINE).setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest tr1 = ThrottleRequest.newBuilder().setTimedQuota(tq1)
-        .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
+      .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
     ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, tr1);
 
     TimedQuota tq2 = TimedQuota.newBuilder().setSoftLimit(10)
-        .setScope(QuotaProtos.QuotaScope.MACHINE)
-        .setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build();
+      .setScope(QuotaProtos.QuotaScope.MACHINE).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build();
     ThrottleRequest tr2 = ThrottleRequest.newBuilder().setTimedQuota(tq2)
-        .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
+      .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
 
     ThrottleSettings merged = orig.merge(new ThrottleSettings("joe", null, null, null, tr2));
 
@@ -66,17 +64,15 @@ public class TestThrottleSettings {
   @Test
   public void testIncompatibleThrottleTypes() throws IOException {
     TimedQuota requestsQuota = TimedQuota.newBuilder().setSoftLimit(10)
-        .setScope(QuotaProtos.QuotaScope.MACHINE)
-        .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
+      .setScope(QuotaProtos.QuotaScope.MACHINE).setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest requestsQuotaReq = ThrottleRequest.newBuilder().setTimedQuota(requestsQuota)
-        .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
+      .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
     ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, requestsQuotaReq);
 
     TimedQuota readsQuota = TimedQuota.newBuilder().setSoftLimit(10)
-        .setScope(QuotaProtos.QuotaScope.MACHINE)
-        .setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build();
+      .setScope(QuotaProtos.QuotaScope.MACHINE).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build();
     ThrottleRequest readsQuotaReq = ThrottleRequest.newBuilder().setTimedQuota(readsQuota)
-        .setType(QuotaProtos.ThrottleType.READ_NUMBER).build();
+      .setType(QuotaProtos.ThrottleType.READ_NUMBER).build();
 
     try {
       orig.merge(new ThrottleSettings("joe", null, null, null, readsQuotaReq));
@@ -89,17 +85,15 @@ public class TestThrottleSettings {
   @Test
   public void testNoThrottleReturnsOriginal() throws IOException {
     TimedQuota tq1 = TimedQuota.newBuilder().setSoftLimit(10)
-        .setScope(QuotaProtos.QuotaScope.MACHINE)
-        .setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
+      .setScope(QuotaProtos.QuotaScope.MACHINE).setTimeUnit(HBaseProtos.TimeUnit.MINUTES).build();
     ThrottleRequest tr1 = ThrottleRequest.newBuilder().setTimedQuota(tq1)
-        .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
+      .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
     ThrottleSettings orig = new ThrottleSettings("joe", null, null, null, tr1);
 
-    ThrottleRequest tr2 = ThrottleRequest.newBuilder()
-        .setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
+    ThrottleRequest tr2 =
+      ThrottleRequest.newBuilder().setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
 
-    assertTrue(
-        "The same object should be returned by merge, but it wasn't",
+    assertTrue("The same object should be returned by merge, but it wasn't",
       orig == orig.merge(new ThrottleSettings("joe", null, null, null, tr2)));
   }
 }

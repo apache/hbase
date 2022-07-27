@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
@@ -104,7 +105,7 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     public ExecuteProceduresResponse executeProcedures(RpcController controller,
-        ExecuteProceduresRequest request) throws ServiceException {
+      ExecuteProceduresRequest request) throws ServiceException {
       if (request.getOpenRegionCount() > 0) {
         if (ARRIVE_EXEC_PROC != null) {
           SERVER_TO_KILL = getServer().getServerName();
@@ -142,10 +143,12 @@ public class TestWakeUpUnexpectedProcedure {
 
     @Override
     public ReportRegionStateTransitionResponse reportRegionStateTransition(
-        ReportRegionStateTransitionRequest req) throws PleaseHoldException {
+      ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition rst = req.getTransition(0);
-      if (rst.getTransitionCode() == TransitionCode.OPENED &&
-        ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)) {
+      if (
+        rst.getTransitionCode() == TransitionCode.OPENED
+          && ProtobufUtil.toTableName(rst.getRegionInfo(0).getTableName()).equals(NAME)
+      ) {
         CountDownLatch arrive = ARRIVE_REPORT;
         if (ARRIVE_REPORT != null) {
           ARRIVE_REPORT = null;
@@ -165,8 +168,8 @@ public class TestWakeUpUnexpectedProcedure {
 
   private static final class SMForTest extends ServerManager {
 
-    public SMForTest(MasterServices master) {
-      super(master);
+    public SMForTest(MasterServices master, RegionServerList storage) {
+      super(master, storage);
     }
 
     @Override
@@ -209,9 +212,10 @@ public class TestWakeUpUnexpectedProcedure {
     }
 
     @Override
-    protected ServerManager createServerManager(MasterServices master) throws IOException {
+    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
+      throws IOException {
       setupClusterConnection();
-      return new SMForTest(master);
+      return new SMForTest(master, storage);
     }
   }
 
@@ -232,6 +236,7 @@ public class TestWakeUpUnexpectedProcedure {
     UTIL.shutdownMiniCluster();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   @Test
   public void test() throws Exception {
     RegionInfo region = UTIL.getMiniHBaseCluster().getRegions(NAME).get(0).getRegionInfo();

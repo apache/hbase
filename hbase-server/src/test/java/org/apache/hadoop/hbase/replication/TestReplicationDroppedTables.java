@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.replication.regionserver.HBaseInterCluster
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -55,7 +54,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationDroppedTables.class);
+    HBaseClassTestRule.forClass(TestReplicationDroppedTables.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationDroppedTables.class);
   private static final int ROWS_COUNT = 1000;
@@ -64,8 +63,7 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   public void setUpBase() throws Exception {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
-    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster()
-        .getRegionServerThreads()) {
+    for (JVMClusterUtil.RegionServerThread r : UTIL1.getHBaseCluster().getRegionServerThreads()) {
       UTIL1.getAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     // Initialize the peer after wal rolling, so that we will abandon the stuck WALs.
@@ -149,10 +147,8 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     byte[] row = Bytes.toBytes("row");
 
     TableDescriptor table =
-        TableDescriptorBuilder
-            .newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
-                .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-            .build();
+      TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
 
     Connection connection1 = ConnectionFactory.createConnection(UTIL1.getConfiguration());
     Connection connection2 = ConnectionFactory.createConnection(UTIL2.getConfiguration());
@@ -223,10 +219,8 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     byte[] row = Bytes.toBytes("row");
 
     TableDescriptor table =
-        TableDescriptorBuilder
-            .newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
-                .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-            .build();
+      TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
 
     Connection connection1 = ConnectionFactory.createConnection(CONF1);
     Connection connection2 = ConnectionFactory.createConnection(CONF2);

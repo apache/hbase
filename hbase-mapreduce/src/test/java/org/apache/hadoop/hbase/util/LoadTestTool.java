@@ -1,25 +1,25 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -69,8 +69,8 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
- * {@link org.apache.hadoop.hbase.PerformanceEvaluation}, this tool validates the data written,
- * and supports simultaneously writing and reading the same set of keys.
+ * {@link org.apache.hadoop.hbase.PerformanceEvaluation}, this tool validates the data written, and
+ * supports simultaneously writing and reading the same set of keys.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadTestTool extends AbstractHBaseTool {
@@ -95,23 +95,21 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   /** Usage string for the load option */
   protected static final String OPT_USAGE_LOAD =
-      "<avg_cols_per_key>:<avg_data_size>" +
-      "[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
+    "<avg_cols_per_key>:<avg_data_size>" + "[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   /** Usage string for the read option */
   protected static final String OPT_USAGE_READ =
-      "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
+    "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   /** Usage string for the update option */
-  protected static final String OPT_USAGE_UPDATE =
-      "<update_percent>[:<#threads=" + DEFAULT_NUM_THREADS
-      + ">][:<#whether to ignore nonce collisions=0>]";
+  protected static final String OPT_USAGE_UPDATE = "<update_percent>[:<#threads="
+    + DEFAULT_NUM_THREADS + ">][:<#whether to ignore nonce collisions=0>]";
 
-  protected static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
-      Arrays.toString(BloomType.values());
+  protected static final String OPT_USAGE_BLOOM =
+    "Bloom filter type, one of " + Arrays.toString(BloomType.values());
 
-  protected static final String OPT_USAGE_COMPRESSION = "Compression type, " +
-      "one of " + Arrays.toString(Compression.Algorithm.values());
+  protected static final String OPT_USAGE_COMPRESSION =
+    "Compression type, " + "one of " + Arrays.toString(Compression.Algorithm.values());
 
   protected static final String OPT_VERBOSE = "verbose";
 
@@ -122,12 +120,12 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_DEFERRED_LOG_FLUSH_USAGE = "Enable deferred log flush.";
 
   public static final String OPT_INMEMORY = "in_memory";
-  public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
-      "inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
+  public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF "
+    + "inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
 
   public static final String OPT_GENERATOR = "generator";
   public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."
-      + " Any args for this class can be passed as colon separated after class name";
+    + " Any args for this class can be passed as colon separated after class name";
 
   public static final String OPT_WRITER = "writer";
   public static final String OPT_WRITER_USAGE = "The class for executing the write requests";
@@ -158,25 +156,25 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   public static final String OPT_ENCRYPTION = "encryption";
   protected static final String OPT_ENCRYPTION_USAGE =
-    "Enables transparent encryption on the test table, one of " +
-    Arrays.toString(Encryption.getSupportedCiphers());
+    "Enables transparent encryption on the test table, one of "
+      + Arrays.toString(Encryption.getSupportedCiphers());
 
   public static final String OPT_NUM_REGIONS_PER_SERVER = "num_regions_per_server";
-  protected static final String OPT_NUM_REGIONS_PER_SERVER_USAGE
-    = "Desired number of regions per region server. Defaults to 5.";
+  protected static final String OPT_NUM_REGIONS_PER_SERVER_USAGE =
+    "Desired number of regions per region server. Defaults to 5.";
   public static int DEFAULT_NUM_REGIONS_PER_SERVER = 5;
 
   public static final String OPT_REGION_REPLICATION = "region_replication";
   protected static final String OPT_REGION_REPLICATION_USAGE =
-      "Desired number of replicas per region";
+    "Desired number of replicas per region";
 
   public static final String OPT_REGION_REPLICA_ID = "region_replica_id";
   protected static final String OPT_REGION_REPLICA_ID_USAGE =
-      "Region replica id to do the reads from";
+    "Region replica id to do the reads from";
 
   public static final String OPT_MOB_THRESHOLD = "mob_threshold";
   protected static final String OPT_MOB_THRESHOLD_USAGE =
-      "Desired cell size to exceed in bytes that will use the MOB write path";
+    "Desired cell size to exceed in bytes that will use the MOB write path";
 
   protected static final long DEFAULT_START_KEY = 0;
 
@@ -223,7 +221,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private String superUser;
 
   private String userNames;
-  //This file is used to read authentication information in secure clusters.
+  // This file is used to read authentication information in secure clusters.
   private String authnFileName;
 
   private int numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
@@ -233,21 +231,19 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int mobThreshold = -1; // not set
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
-  //       console tool itself should only be used from console.
+  // console tool itself should only be used from console.
   protected boolean isSkipInit = false;
   protected boolean isInitOnly = false;
 
   protected Cipher cipher = null;
 
-  protected String[] splitColonSeparated(String option,
-      int minNumCols, int maxNumCols) {
+  protected String[] splitColonSeparated(String option, int minNumCols, int maxNumCols) {
     String optVal = cmd.getOptionValue(option);
     String[] cols = optVal.split(COLON);
     if (cols.length < minNumCols || cols.length > maxNumCols) {
-      throw new IllegalArgumentException("Expected at least "
-          + minNumCols + " columns but no more than " + maxNumCols +
-          " in the colon-separated value '" + optVal + "' of the " +
-          "-" + option + " option");
+      throw new IllegalArgumentException(
+        "Expected at least " + minNumCols + " columns but no more than " + maxNumCols
+          + " in the colon-separated value '" + optVal + "' of the " + "-" + option + " option");
     }
     return cols;
   }
@@ -261,22 +257,21 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   /**
-   * Apply column family options such as Bloom filters, compression, and data
-   * block encoding.
+   * Apply column family options such as Bloom filters, compression, and data block encoding.
    */
-  protected void applyColumnFamilyOptions(TableName tableName,
-      byte[][] columnFamilies) throws IOException {
+  protected void applyColumnFamilyOptions(TableName tableName, byte[][] columnFamilies)
+    throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        Admin admin = conn.getAdmin()) {
+      Admin admin = conn.getAdmin()) {
       TableDescriptor tableDesc = admin.getDescriptor(tableName);
       LOG.info("Disabling table " + tableName);
       admin.disableTable(tableName);
       for (byte[] cf : columnFamilies) {
         ColumnFamilyDescriptor columnDesc = tableDesc.getColumnFamily(cf);
         boolean isNewCf = columnDesc == null;
-        ColumnFamilyDescriptorBuilder columnDescBuilder = isNewCf ?
-            ColumnFamilyDescriptorBuilder.newBuilder(cf) :
-            ColumnFamilyDescriptorBuilder.newBuilder(columnDesc);
+        ColumnFamilyDescriptorBuilder columnDescBuilder = isNewCf
+          ? ColumnFamilyDescriptorBuilder.newBuilder(cf)
+          : ColumnFamilyDescriptorBuilder.newBuilder(columnDesc);
         if (bloomType != null) {
           columnDescBuilder.setBloomFilterType(bloomType);
         }
@@ -291,13 +286,10 @@ public class LoadTestTool extends AbstractHBaseTool {
         }
         if (cipher != null) {
           byte[] keyBytes = new byte[cipher.getKeyLength()];
-          new SecureRandom().nextBytes(keyBytes);
+          Bytes.secureRandom(keyBytes);
           columnDescBuilder.setEncryptionType(cipher.getName());
-          columnDescBuilder.setEncryptionKey(
-              EncryptionUtil.wrapKey(conf,
-                  User.getCurrent().getShortName(),
-                  new SecretKeySpec(keyBytes,
-                      cipher.getName())));
+          columnDescBuilder.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+            User.getCurrent().getShortName(), new SecretKeySpec(keyBytes, cipher.getName())));
         }
         if (mobThreshold >= 0) {
           columnDescBuilder.setMobEnabled(true);
@@ -318,8 +310,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   @Override
   protected void addOptions() {
     addOptNoArg("v", OPT_VERBOSE, "Will display a full readout of logs, including ZooKeeper");
-    addOptWithArg(OPT_ZK_QUORUM, "ZK quorum as comma-separated host names " +
-        "without port numbers");
+    addOptWithArg(OPT_ZK_QUORUM,
+      "ZK quorum as comma-separated host names " + "without port numbers");
     addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
     addOptWithArg(OPT_COLUMN_FAMILIES, "The name of the column families to use separated by comma");
@@ -330,20 +322,23 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
     addOptWithArg(OPT_BLOOM_PARAM, "the parameter of bloom filter type");
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
-    addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING, HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
-    addOptWithArg(OPT_MAX_READ_ERRORS, "The maximum number of read errors " +
-        "to tolerate before terminating all reader threads. The default is " +
-        MultiThreadedReader.DEFAULT_MAX_ERRORS + ".");
-    addOptWithArg(OPT_MULTIGET, "Whether to use multi-gets as opposed to " +
-        "separate gets for every column in a row");
-    addOptWithArg(OPT_KEY_WINDOW, "The 'key window' to maintain between " +
-        "reads and writes for concurrent write/read workload. The default " +
-        "is " + MultiThreadedReader.DEFAULT_KEY_WINDOW + ".");
+    addOptWithArg(HFileTestUtil.OPT_DATA_BLOCK_ENCODING,
+      HFileTestUtil.OPT_DATA_BLOCK_ENCODING_USAGE);
+    addOptWithArg(OPT_MAX_READ_ERRORS,
+      "The maximum number of read errors "
+        + "to tolerate before terminating all reader threads. The default is "
+        + MultiThreadedReader.DEFAULT_MAX_ERRORS + ".");
+    addOptWithArg(OPT_MULTIGET,
+      "Whether to use multi-gets as opposed to " + "separate gets for every column in a row");
+    addOptWithArg(OPT_KEY_WINDOW,
+      "The 'key window' to maintain between "
+        + "reads and writes for concurrent write/read workload. The default " + "is "
+        + MultiThreadedReader.DEFAULT_KEY_WINDOW + ".");
 
-    addOptNoArg(OPT_MULTIPUT, "Whether to use multi-puts as opposed to " +
-        "separate puts for every column in a row");
-    addOptNoArg(OPT_BATCHUPDATE, "Whether to use batch as opposed to " +
-        "separate updates for every column in a row");
+    addOptNoArg(OPT_MULTIPUT,
+      "Whether to use multi-puts as opposed to " + "separate puts for every column in a row");
+    addOptNoArg(OPT_BATCHUPDATE,
+      "Whether to use batch as opposed to " + "separate updates for every column in a row");
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
     addOptWithArg(OPT_GENERATOR, OPT_GENERATOR_USAGE);
     addOptWithArg(OPT_WRITER, OPT_WRITER_USAGE);
@@ -351,16 +346,14 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_READER, OPT_READER_USAGE);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
-    addOptWithArg(OPT_START_KEY, "The first key to read/write " +
-        "(a 0-based index). The default value is " +
-        DEFAULT_START_KEY + ".");
-    addOptNoArg(OPT_SKIP_INIT, "Skip the initialization; assume test table "
-        + "already exists");
+    addOptWithArg(OPT_START_KEY, "The first key to read/write "
+      + "(a 0-based index). The default value is " + DEFAULT_START_KEY + ".");
+    addOptNoArg(OPT_SKIP_INIT, "Skip the initialization; assume test table " + "already exists");
 
     addOptWithArg(NUM_TABLES,
       "A positive integer number. When a number n is specified, load test "
-          + "tool  will load n table parallely. -tn parameter value becomes "
-          + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
+        + "tool  will load n table parallely. -tn parameter value becomes "
+        + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
 
     addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
     addOptNoArg(OPT_DEFERRED_LOG_FLUSH, OPT_DEFERRED_LOG_FLUSH_USAGE);
@@ -377,22 +370,21 @@ public class LoadTestTool extends AbstractHBaseTool {
     return new DefaultParser() {
       @Override
       public CommandLine parse(Options opts, String[] args, Properties props, boolean stop)
-          throws ParseException {
+        throws ParseException {
         CommandLine cl = super.parse(opts, args, props, stop);
 
-        boolean isReadWriteUpdate = cmd.hasOption(OPT_READ)
-            || cmd.hasOption(OPT_WRITE)
-            || cmd.hasOption(OPT_UPDATE);
+        boolean isReadWriteUpdate =
+          cmd.hasOption(OPT_READ) || cmd.hasOption(OPT_WRITE) || cmd.hasOption(OPT_UPDATE);
         boolean isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
 
         if (!isInitOnly && !isReadWriteUpdate) {
           throw new MissingOptionException("Must specify either -" + OPT_INIT_ONLY
-              + " or at least one of -" + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+            + " or at least one of -" + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
         }
 
         if (isInitOnly && isReadWriteUpdate) {
           throw new AlreadySelectedException(OPT_INIT_ONLY + " cannot be specified with any of -"
-              + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
+            + OPT_READ + ", -" + OPT_WRITE + ", -" + OPT_UPDATE);
         }
 
         if (isReadWriteUpdate && !cmd.hasOption(OPT_NUM_KEYS)) {
@@ -408,8 +400,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected void processOptions(CommandLine cmd) {
     this.cmd = cmd;
 
-    tableName = TableName.valueOf(cmd.getOptionValue(OPT_TABLE_NAME,
-        DEFAULT_TABLE_NAME));
+    tableName = TableName.valueOf(cmd.getOptionValue(OPT_TABLE_NAME, DEFAULT_TABLE_NAME));
 
     if (cmd.hasOption(OPT_COLUMN_FAMILIES)) {
       String[] list = cmd.getOptionValue(OPT_COLUMN_FAMILIES).split(",");
@@ -429,10 +420,9 @@ public class LoadTestTool extends AbstractHBaseTool {
     deferredLogFlush = cmd.hasOption(OPT_DEFERRED_LOG_FLUSH);
 
     if (!isInitOnly) {
-      startKey = parseLong(cmd.getOptionValue(OPT_START_KEY,
-          String.valueOf(DEFAULT_START_KEY)), 0, Long.MAX_VALUE);
-      long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1,
-          Long.MAX_VALUE - startKey);
+      startKey = parseLong(cmd.getOptionValue(OPT_START_KEY, String.valueOf(DEFAULT_START_KEY)), 0,
+        Long.MAX_VALUE);
+      long numKeys = parseLong(cmd.getOptionValue(OPT_NUM_KEYS), 1, Long.MAX_VALUE - startKey);
       endKey = startKey + numKeys;
       isSkipInit = cmd.hasOption(OPT_SKIP_INIT);
       System.out.println("Key range: [" + startKey + ".." + (endKey - 1) + "]");
@@ -446,8 +436,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       int colIndex = 0;
       minColsPerKey = 1;
       maxColsPerKey = 2 * Integer.parseInt(writeOpts[colIndex++]);
-      int avgColDataSize =
-          parseInt(writeOpts[colIndex++], 1, Integer.MAX_VALUE);
+      int avgColDataSize = parseInt(writeOpts[colIndex++], 1, Integer.MAX_VALUE);
       minColDataSize = avgColDataSize / 2;
       maxColDataSize = avgColDataSize * 3 / 2;
 
@@ -463,10 +452,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
 
       System.out.println("Multi-puts: " + isMultiPut);
-      System.out.println("Columns per key: " + minColsPerKey + ".."
-          + maxColsPerKey);
-      System.out.println("Data size per column: " + minColDataSize + ".."
-          + maxColDataSize);
+      System.out.println("Columns per key: " + minColsPerKey + ".." + maxColsPerKey);
+      System.out.println("Data size per column: " + minColDataSize + ".." + maxColDataSize);
     }
 
     if (isUpdate) {
@@ -497,18 +484,15 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
 
       if (cmd.hasOption(OPT_MAX_READ_ERRORS)) {
-        maxReadErrors = parseInt(cmd.getOptionValue(OPT_MAX_READ_ERRORS),
-            0, Integer.MAX_VALUE);
+        maxReadErrors = parseInt(cmd.getOptionValue(OPT_MAX_READ_ERRORS), 0, Integer.MAX_VALUE);
       }
 
       if (cmd.hasOption(OPT_KEY_WINDOW)) {
-        keyWindow = parseInt(cmd.getOptionValue(OPT_KEY_WINDOW),
-            0, Integer.MAX_VALUE);
+        keyWindow = parseInt(cmd.getOptionValue(OPT_KEY_WINDOW), 0, Integer.MAX_VALUE);
       }
 
       if (cmd.hasOption(OPT_MULTIGET)) {
-        multiGetBatchSize = parseInt(cmd.getOptionValue(OPT_MULTIGET),
-            0, Integer.MAX_VALUE);
+        multiGetBatchSize = parseInt(cmd.getOptionValue(OPT_MULTIGET), 0, Integer.MAX_VALUE);
       }
 
       System.out.println("Multi-gets (value of 1 means no multigets): " + multiGetBatchSize);
@@ -539,16 +523,15 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private void parseColumnFamilyOptions(CommandLine cmd) {
     String dataBlockEncodingStr = cmd.getOptionValue(HFileTestUtil.OPT_DATA_BLOCK_ENCODING);
-    dataBlockEncodingAlgo = dataBlockEncodingStr == null ? null :
-        DataBlockEncoding.valueOf(dataBlockEncodingStr);
+    dataBlockEncodingAlgo =
+      dataBlockEncodingStr == null ? null : DataBlockEncoding.valueOf(dataBlockEncodingStr);
 
     String compressStr = cmd.getOptionValue(OPT_COMPRESSION);
-    compressAlgo = compressStr == null ? Compression.Algorithm.NONE :
-        Compression.Algorithm.valueOf(compressStr);
+    compressAlgo =
+      compressStr == null ? Compression.Algorithm.NONE : Compression.Algorithm.valueOf(compressStr);
 
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
-    bloomType = bloomStr == null ? BloomType.ROW :
-        BloomType.valueOf(bloomStr);
+    bloomType = bloomStr == null ? BloomType.ROW : BloomType.valueOf(bloomStr);
 
     if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
       if (!cmd.hasOption(OPT_BLOOM_PARAM)) {
@@ -571,9 +554,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       durability = Durability.ASYNC_WAL;
     }
 
-    HBaseTestingUtil.createPreSplitLoadTestTable(conf, tableName,
-      getColumnFamilies(), compressAlgo, dataBlockEncodingAlgo, numRegionsPerServer,
-        regionReplication, durability);
+    HBaseTestingUtil.createPreSplitLoadTestTable(conf, tableName, getColumnFamilies(), compressAlgo,
+      dataBlockEncodingAlgo, numRegionsPerServer, regionReplication, durability);
     applyColumnFamilyOptions(tableName, getColumnFamilies());
   }
 
@@ -635,27 +617,27 @@ public class LoadTestTool extends AbstractHBaseTool {
           userOwner = User.createUserForTesting(conf, superUser, new String[0]);
         }
       } else {
-        args = clazzAndArgs.length == 1 ? new String[0] : Arrays.copyOfRange(clazzAndArgs, 1,
-            clazzAndArgs.length);
+        args = clazzAndArgs.length == 1
+          ? new String[0]
+          : Arrays.copyOfRange(clazzAndArgs, 1, clazzAndArgs.length);
       }
       dataGen.initialize(args);
     } else {
       // Default DataGenerator is MultiThreadedAction.DefaultDataGenerator
       dataGen = new MultiThreadedAction.DefaultDataGenerator(minColDataSize, maxColDataSize,
-          minColsPerKey, maxColsPerKey, families);
+        minColsPerKey, maxColsPerKey, families);
     }
 
     if (userOwner != null) {
       LOG.info("Granting permissions for user " + userOwner.getShortName());
-      Permission.Action[] actions = {
-        Permission.Action.ADMIN, Permission.Action.CREATE,
+      Permission.Action[] actions = { Permission.Action.ADMIN, Permission.Action.CREATE,
         Permission.Action.READ, Permission.Action.WRITE };
       try {
-        AccessControlClient.grant(ConnectionFactory.createConnection(conf),
-            tableName, userOwner.getShortName(), null, null, actions);
+        AccessControlClient.grant(ConnectionFactory.createConnection(conf), tableName,
+          userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
-        LOG.error(HBaseMarkers.FATAL, "Error in granting permission for the user " +
-            userOwner.getShortName(), e);
+        LOG.error(HBaseMarkers.FATAL,
+          "Error in granting permission for the user " + userOwner.getShortName(), e);
         return EXIT_FAILURE;
       }
     }
@@ -692,7 +674,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (isUpdate) {
       if (userOwner != null) {
         updaterThreads = new MultiThreadedUpdaterWithACL(dataGen, conf, tableName, updatePercent,
-            userOwner, userNames);
+          userOwner, userNames);
       } else {
         String updaterClass = null;
         if (cmd.hasOption(OPT_UPDATER)) {
@@ -708,8 +690,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (isRead) {
       if (userOwner != null) {
-        readerThreads = new MultiThreadedReaderWithACL(dataGen, conf, tableName, verifyPercent,
-            userNames);
+        readerThreads =
+          new MultiThreadedReaderWithACL(dataGen, conf, tableName, verifyPercent, userNames);
       } else {
         String readerClass = null;
         if (cmd.hasOption(OPT_READER)) {
@@ -726,14 +708,12 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     if (isUpdate && isWrite) {
-      LOG.info("Concurrent write/update workload: making updaters aware of the " +
-        "write point");
+      LOG.info("Concurrent write/update workload: making updaters aware of the " + "write point");
       updaterThreads.linkToWriter(writerThreads);
     }
 
     if (isRead && (isUpdate || isWrite)) {
-      LOG.info("Concurrent write/read workload: making readers aware of the " +
-        "write point");
+      LOG.info("Concurrent write/read workload: making readers aware of the " + "write point");
       readerThreads.linkToWriter(isUpdate ? updaterThreads : writerThreads);
     }
 
@@ -775,8 +755,8 @@ public class LoadTestTool extends AbstractHBaseTool {
       success = success && updaterThreads.getNumWriteFailures() == 0;
     }
     if (isRead) {
-      success = success && readerThreads.getNumReadErrors() == 0
-          && readerThreads.getNumReadFailures() == 0;
+      success =
+        success && readerThreads.getNumReadErrors() == 0 && readerThreads.getNumReadFailures() == 0;
     }
     return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
@@ -784,46 +764,46 @@ public class LoadTestTool extends AbstractHBaseTool {
   private LoadTestDataGenerator getLoadGeneratorInstance(String clazzName) throws IOException {
     try {
       Class<?> clazz = Class.forName(clazzName);
-      Constructor<?> constructor = clazz.getConstructor(int.class, int.class, int.class, int.class,
-          byte[][].class);
+      Constructor<?> constructor =
+        clazz.getConstructor(int.class, int.class, int.class, int.class, byte[][].class);
       return (LoadTestDataGenerator) constructor.newInstance(minColDataSize, maxColDataSize,
-          minColsPerKey, maxColsPerKey, families);
+        minColsPerKey, maxColsPerKey, families);
     } catch (Exception e) {
       throw new IOException(e);
     }
   }
 
-  private MultiThreadedWriter getMultiThreadedWriterInstance(String clazzName
-      , LoadTestDataGenerator dataGen) throws IOException {
+  private MultiThreadedWriter getMultiThreadedWriterInstance(String clazzName,
+    LoadTestDataGenerator dataGen) throws IOException {
     try {
       Class<?> clazz = Class.forName(clazzName);
-      Constructor<?> constructor = clazz.getConstructor(
-        LoadTestDataGenerator.class, Configuration.class, TableName.class);
+      Constructor<?> constructor =
+        clazz.getConstructor(LoadTestDataGenerator.class, Configuration.class, TableName.class);
       return (MultiThreadedWriter) constructor.newInstance(dataGen, conf, tableName);
     } catch (Exception e) {
       throw new IOException(e);
     }
   }
 
-  private MultiThreadedUpdater getMultiThreadedUpdaterInstance(String clazzName
-      , LoadTestDataGenerator dataGen) throws IOException {
+  private MultiThreadedUpdater getMultiThreadedUpdaterInstance(String clazzName,
+    LoadTestDataGenerator dataGen) throws IOException {
     try {
       Class<?> clazz = Class.forName(clazzName);
-      Constructor<?> constructor = clazz.getConstructor(
-        LoadTestDataGenerator.class, Configuration.class, TableName.class, double.class);
-      return (MultiThreadedUpdater) constructor.newInstance(
-        dataGen, conf, tableName, updatePercent);
+      Constructor<?> constructor = clazz.getConstructor(LoadTestDataGenerator.class,
+        Configuration.class, TableName.class, double.class);
+      return (MultiThreadedUpdater) constructor.newInstance(dataGen, conf, tableName,
+        updatePercent);
     } catch (Exception e) {
       throw new IOException(e);
     }
   }
 
-  private MultiThreadedReader getMultiThreadedReaderInstance(String clazzName
-      , LoadTestDataGenerator dataGen) throws IOException {
+  private MultiThreadedReader getMultiThreadedReaderInstance(String clazzName,
+    LoadTestDataGenerator dataGen) throws IOException {
     try {
       Class<?> clazz = Class.forName(clazzName);
-      Constructor<?> constructor = clazz.getConstructor(
-        LoadTestDataGenerator.class, Configuration.class, TableName.class, double.class);
+      Constructor<?> constructor = clazz.getConstructor(LoadTestDataGenerator.class,
+        Configuration.class, TableName.class, double.class);
       return (MultiThreadedReader) constructor.newInstance(dataGen, conf, tableName, verifyPercent);
     } catch (Exception e) {
       throw new IOException(e);
@@ -835,15 +815,12 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   /**
-   * When NUM_TABLES is specified, the function starts multiple worker threads
-   * which individually start a LoadTestTool instance to load a table. Each
-   * table name is in format &lt;tn>_&lt;index>. For example, "-tn test -num_tables 2"
-   * , table names will be "test_1", "test_2"
-   *
+   * When NUM_TABLES is specified, the function starts multiple worker threads which individually
+   * start a LoadTestTool instance to load a table. Each table name is in format &lt;tn>_&lt;index>.
+   * For example, "-tn test -num_tables 2" , table names will be "test_1", "test_2"
    * @throws IOException if one of the load tasks is unable to complete
    */
-  private int parallelLoadTables()
-      throws IOException {
+  private int parallelLoadTables() throws IOException {
     // create new command args
     String tableName = cmd.getOptionValue(OPT_TABLE_NAME, DEFAULT_TABLE_NAME);
     String[] newArgs = null;
@@ -870,7 +847,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     List<WorkerThread> workers = new ArrayList<>();
     for (int i = 0; i < numTables; i++) {
       String[] workerArgs = newArgs.clone();
-      workerArgs[tableNameValueIndex] = tableName + "_" + (i+1);
+      workerArgs[tableNameValueIndex] = tableName + "_" + (i + 1);
       WorkerThread worker = new WorkerThread(i, workerArgs);
       workers.add(worker);
       LOG.info(worker + " starting");
@@ -937,7 +914,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   private void addAuthInfoToConf(Properties authConfig, Configuration conf, String owner,
-      String userList) throws IOException {
+    String userList) throws IOException {
     List<String> users = new ArrayList<>(Arrays.asList(userList.split(",")));
     users.add(owner);
     for (String user : users) {

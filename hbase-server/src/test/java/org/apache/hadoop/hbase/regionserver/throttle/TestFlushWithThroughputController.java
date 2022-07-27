@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -61,14 +60,15 @@ public class TestFlushWithThroughputController {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFlushWithThroughputController.class);
+    HBaseClassTestRule.forClass(TestFlushWithThroughputController.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFlushWithThroughputController.class);
+    LoggerFactory.getLogger(TestFlushWithThroughputController.class);
   private static final double EPSILON = 1.3E-6;
 
   private HBaseTestingUtil hbtu;
-  @Rule public TestName testName = new TestName();
+  @Rule
+  public TestName testName = new TestName();
   private TableName tableName;
   private final byte[] family = Bytes.toBytes("f");
   private final byte[] qualifier = Bytes.toBytes("q");
@@ -78,8 +78,8 @@ public class TestFlushWithThroughputController {
     hbtu = new HBaseTestingUtil();
     tableName = TableName.valueOf("Table-" + testName.getMethodName());
     hbtu.getConfiguration().set(
-        FlushThroughputControllerFactory.HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY,
-        PressureAwareFlushThroughputController.class.getName());
+      FlushThroughputControllerFactory.HBASE_FLUSH_THROUGHPUT_CONTROLLER_KEY,
+      PressureAwareFlushThroughputController.class.getName());
   }
 
   @After
@@ -102,9 +102,9 @@ public class TestFlushWithThroughputController {
   private void setMaxMinThroughputs(long max, long min) {
     Configuration conf = hbtu.getConfiguration();
     conf.setLong(
-        PressureAwareFlushThroughputController.HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND, min);
+      PressureAwareFlushThroughputController.HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_LOWER_BOUND, min);
     conf.setLong(
-        PressureAwareFlushThroughputController.HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND, max);
+      PressureAwareFlushThroughputController.HBASE_HSTORE_FLUSH_MAX_THROUGHPUT_UPPER_BOUND, max);
   }
 
   /**
@@ -115,13 +115,12 @@ public class TestFlushWithThroughputController {
     // Internally, throughput is controlled after every cell write, so keep value size less for
     // better control.
     final int NUM_FLUSHES = 3, NUM_PUTS = 50, VALUE_SIZE = 200 * 1024;
-    Random rand = new Random();
     long duration = 0;
     for (int i = 0; i < NUM_FLUSHES; i++) {
       // Write about 10M (10 times of throughput rate) per iteration.
       for (int j = 0; j < NUM_PUTS; j++) {
         byte[] value = new byte[VALUE_SIZE];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       long startTime = System.nanoTime();
@@ -130,8 +129,8 @@ public class TestFlushWithThroughputController {
     }
     HStore store = getStoreWithName(tableName);
     assertEquals(NUM_FLUSHES, store.getStorefilesCount());
-    double throughput = (double)store.getStorefilesSize()
-        / TimeUnit.NANOSECONDS.toSeconds(duration);
+    double throughput =
+      (double) store.getStorefilesSize() / TimeUnit.NANOSECONDS.toSeconds(duration);
     return new Pair<>(throughput, duration);
   }
 
@@ -149,7 +148,7 @@ public class TestFlushWithThroughputController {
     LOG.debug("Throughput is: " + (result.getFirst() / 1024 / 1024) + " MB/s");
     // confirm that the speed limit work properly(not too fast, and also not too slow)
     // 20% is the max acceptable error rate.
-    assertTrue(result.getFirst()  < throughputLimit * 1.2);
+    assertTrue(result.getFirst() < throughputLimit * 1.2);
     assertTrue(result.getFirst() > throughputLimit * 0.8);
     return result.getSecond();
   }
@@ -171,15 +170,16 @@ public class TestFlushWithThroughputController {
       3000);
     hbtu.startMiniCluster(1);
     Connection conn = ConnectionFactory.createConnection(conf);
-    hbtu.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
-      .build());
+    hbtu.getAdmin()
+      .createTable(TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).setCompactionEnabled(false)
+        .build());
     hbtu.waitTableAvailable(tableName);
     HRegionServer regionServer = hbtu.getRSForFirstRegionInTable(tableName);
     double pressure = regionServer.getFlushPressure();
     LOG.debug("Flush pressure before flushing: " + pressure);
     PressureAwareFlushThroughputController throughputController =
-        (PressureAwareFlushThroughputController) regionServer.getFlushThroughputController();
+      (PressureAwareFlushThroughputController) regionServer.getFlushThroughputController();
     for (HRegion region : regionServer.getRegions()) {
       region.flush(true);
     }
@@ -190,11 +190,10 @@ public class TestFlushWithThroughputController {
     assertTrue(regionServer.getFlushPressure() < pressure);
     Thread.sleep(5000);
     Table table = conn.getTable(tableName);
-    Random rand = new Random();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[256 * 1024];
-        rand.nextBytes(value);
+        Bytes.random(value);
         table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
     }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,12 +60,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
  * Testing the region snapshot task on a cluster.
  * @see org.apache.hadoop.hbase.regionserver.snapshot.FlushSnapshotSubprocedure.RegionSnapshotTask
  */
-@Category({MediumTests.class, RegionServerTests.class})
+@Category({ MediumTests.class, RegionServerTests.class })
 public class TestRegionSnapshotTask {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionSnapshotTask.class);
+    HBaseClassTestRule.forClass(TestRegionSnapshotTask.class);
 
   private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -98,13 +98,12 @@ public class TestRegionSnapshotTask {
   }
 
   /**
-   * Tests adding a region to the snapshot manifest while compactions are running on the region.
-   * The idea is to slow down the process of adding a store file to the manifest while
-   * triggering compactions on the region, allowing the store files to be marked for archival while
-   * snapshot operation is running.
-   * This test checks for the correct behavior in such a case that the compacted files should
-   * not be moved around if a snapshot operation is in progress.
-   * See HBASE-18398
+   * Tests adding a region to the snapshot manifest while compactions are running on the region. The
+   * idea is to slow down the process of adding a store file to the manifest while triggering
+   * compactions on the region, allowing the store files to be marked for archival while snapshot
+   * operation is running. This test checks for the correct behavior in such a case that the
+   * compacted files should not be moved around if a snapshot operation is in progress. See
+   * HBASE-18398
    */
   @Test
   public void testAddRegionWithCompactions() throws Exception {
@@ -114,19 +113,16 @@ public class TestRegionSnapshotTask {
     List<HRegion> hRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
 
     final SnapshotProtos.SnapshotDescription snapshot =
-        SnapshotProtos.SnapshotDescription.newBuilder()
-        .setTable(tableName.getNameAsString())
-        .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH)
-        .setName("test_table_snapshot")
-        .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION)
-        .build();
+      SnapshotProtos.SnapshotDescription.newBuilder().setTable(tableName.getNameAsString())
+        .setType(SnapshotProtos.SnapshotDescription.Type.FLUSH).setName("test_table_snapshot")
+        .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION).build();
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(snapshot.getName());
 
     final HRegion region = spy(hRegions.get(0));
 
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     final SnapshotManifest manifest =
-        SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
+      SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
     manifest.addTableDescriptor(table.getDescriptor());
 
     if (!fs.exists(workingDir)) {
@@ -141,7 +137,7 @@ public class TestRegionSnapshotTask {
     }).when(region).addRegionToSnapshot(snapshot, monitor);
 
     FlushSnapshotSubprocedure.RegionSnapshotTask snapshotTask =
-        new FlushSnapshotSubprocedure.RegionSnapshotTask(region, snapshot, true, monitor);
+      new FlushSnapshotSubprocedure.RegionSnapshotTask(region, snapshot, true, monitor);
     ExecutorService executor = Executors.newFixedThreadPool(1);
     Future f = executor.submit(snapshotTask);
 
@@ -163,8 +159,8 @@ public class TestRegionSnapshotTask {
     SnapshotReferenceUtil.verifySnapshot(conf, fs, manifest);
   }
 
-  private void addRegionToSnapshot(SnapshotProtos.SnapshotDescription snapshot,
-      HRegion region, SnapshotManifest manifest) throws Exception {
+  private void addRegionToSnapshot(SnapshotProtos.SnapshotDescription snapshot, HRegion region,
+    SnapshotManifest manifest) throws Exception {
     LOG.info("Adding region to snapshot: " + region.getRegionInfo().getRegionNameAsString());
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir, conf);
     SnapshotManifest.RegionVisitor visitor = createRegionVisitorWithDelay(snapshot, workingDir);
@@ -172,13 +168,13 @@ public class TestRegionSnapshotTask {
     LOG.info("Added the region to snapshot: " + region.getRegionInfo().getRegionNameAsString());
   }
 
-  private SnapshotManifest.RegionVisitor createRegionVisitorWithDelay(
-      SnapshotProtos.SnapshotDescription desc, Path workingDir) {
+  private SnapshotManifest.RegionVisitor
+    createRegionVisitorWithDelay(SnapshotProtos.SnapshotDescription desc, Path workingDir) {
     return new SnapshotManifestV2.ManifestBuilder(conf, fs, workingDir) {
       @Override
       public void storeFile(final SnapshotProtos.SnapshotRegionManifest.Builder region,
-          final SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder family,
-          final StoreFileInfo storeFile) throws IOException {
+        final SnapshotProtos.SnapshotRegionManifest.FamilyFiles.Builder family,
+        final StoreFileInfo storeFile) throws IOException {
         try {
           LOG.debug("Introducing delay before adding store file to manifest");
           Thread.sleep(2000);
@@ -194,16 +190,13 @@ public class TestRegionSnapshotTask {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
     // Flush many files, but do not compact immediately
     // Make sure that the region does not split
-    builder
-        .setMemStoreFlushSize(5000)
-        .setRegionSplitPolicyClassName(ConstantSizeRegionSplitPolicy.class.getName())
-        .setMaxFileSize(100 * 1024 * 1024)
-        .setValue("hbase.hstore.compactionThreshold", "250");
+    builder.setMemStoreFlushSize(5000)
+      .setRegionSplitPolicyClassName(ConstantSizeRegionSplitPolicy.class.getName())
+      .setMaxFileSize(100 * 1024 * 1024).setValue("hbase.hstore.compactionThreshold", "250");
 
     TableDescriptor td = builder.build();
     byte[] fam = Bytes.toBytes("fam");
-    Table table = TEST_UTIL.createTable(td, new byte[][] {fam},
-        TEST_UTIL.getConfiguration());
+    Table table = TEST_UTIL.createTable(td, new byte[][] { fam }, TEST_UTIL.getConfiguration());
     TEST_UTIL.loadTable(table, fam);
     return table;
   }

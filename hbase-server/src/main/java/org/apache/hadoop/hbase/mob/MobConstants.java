@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,8 +21,8 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The constants used in mob.
@@ -46,7 +45,10 @@ public final class MobConstants {
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";
   public static final String MOB_CACHE_EVICT_REMAIN_RATIO = "hbase.mob.cache.evict.remain.ratio";
   public static final Tag MOB_REF_TAG =
-      new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE, HConstants.EMPTY_BYTE_ARRAY);
+    new ArrayBackedTag(TagType.MOB_REFERENCE_TAG_TYPE, HConstants.EMPTY_BYTE_ARRAY);
+  public static final String MOB_CLEANER_BATCH_SIZE_UPPER_BOUND =
+    "hbase.master.mob.cleaner.batch.size.upper.bound";
+  public static final int DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND = 10000;
 
   public static final float DEFAULT_EVICT_REMAIN_RATIO = 0.5f;
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600L;
@@ -60,7 +62,7 @@ public final class MobConstants {
    */
 
   public static final String MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE =
-      "hbase.mob.major.compaction.region.batch.size";
+    "hbase.mob.major.compaction.region.batch.size";
 
   /**
    * Default is 0 - means no limit - all regions of a MOB table will be compacted at once
@@ -92,7 +94,7 @@ public final class MobConstants {
    * Maximum size of a MOB compaction selection
    */
   public static final String MOB_COMPACTION_MAX_FILE_SIZE_KEY =
-      "hbase.mob.compactions.max.file.size";
+    "hbase.mob.compactions.max.file.size";
   /**
    * Default maximum selection size = 1GB
    */
@@ -125,7 +127,7 @@ public final class MobConstants {
    * be merged in mob compaction. The default value is 1280MB.
    */
   public static final String MOB_COMPACTION_MERGEABLE_THRESHOLD =
-      "hbase.mob.compaction.mergeable.threshold";
+    "hbase.mob.compaction.mergeable.threshold";
   public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 10 * 128 * 1024 * 1024;
   public static final String MOB_DELFILE_MAX_COUNT = "hbase.mob.delfile.max.count";
   public static final int DEFAULT_MOB_DELFILE_MAX_COUNT = 3;

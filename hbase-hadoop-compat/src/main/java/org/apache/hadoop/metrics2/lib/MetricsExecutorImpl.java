@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.lib;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- *  Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by
- *  MetricsRegionAggregateSourceImpl, and
- *  JmxCacheBuster
+ * Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by
+ * MetricsRegionAggregateSourceImpl, and JmxCacheBuster
  */
 @InterfaceAudience.Private
 public class MetricsExecutorImpl implements MetricsExecutor {
@@ -46,10 +43,12 @@ public class MetricsExecutorImpl implements MetricsExecutor {
     }
   }
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum ExecutorSingleton {
     INSTANCE;
-    private final transient ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1,
-        new ThreadPoolExecutorThreadFactory("HBase-Metrics2-"));
+
+    private final transient ScheduledExecutorService scheduler =
+      new ScheduledThreadPoolExecutor(1, new ThreadPoolExecutorThreadFactory("HBase-Metrics2-"));
   }
 
   private final static class ThreadPoolExecutorThreadFactory implements ThreadFactory {

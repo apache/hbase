@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
@@ -35,14 +33,16 @@ public class InstrumentedLogWriter extends ProtobufLogWriter {
   }
 
   public static boolean activateFailure = false;
+
   @Override
-    public void append(Entry entry) throws IOException {
-      super.append(entry);
-      if (activateFailure &&
-          Bytes.equals(entry.getKey().getEncodedRegionName(), Bytes.toBytes("break"))) {
-        System.out.println(getClass().getName() + ": I will throw an exception now...");
-        throw(new IOException("This exception is instrumented and should only be thrown for testing"
-            ));
-      }
+  public void append(Entry entry) throws IOException {
+    super.append(entry);
+    if (
+      activateFailure && Bytes.equals(entry.getKey().getEncodedRegionName(), Bytes.toBytes("break"))
+    ) {
+      System.out.println(getClass().getName() + ": I will throw an exception now...");
+      throw (new IOException(
+        "This exception is instrumented and should only be thrown for testing"));
     }
+  }
 }

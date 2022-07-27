@@ -28,16 +28,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsZooKeeperSourceImpl {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetricsZooKeeperSourceImpl.class);
+    HBaseClassTestRule.forClass(TestMetricsZooKeeperSourceImpl.class);
 
   @Test
   public void testGetInstance() {
     MetricsZooKeeperSource zkSource =
-            CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
+      CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
     assertTrue(zkSource instanceof MetricsZooKeeperSourceImpl);
     assertSame(zkSource, CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class));
   }

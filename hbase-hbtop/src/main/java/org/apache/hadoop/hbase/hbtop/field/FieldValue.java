@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,11 +22,8 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.Size;
 import org.apache.yetus.audience.InterfaceAudience;
 
-
 /**
- * Represents a value of a field.
- *
- * The type of a value is defined by {@link FieldValue}.
+ * Represents a value of a field. The type of a value is defined by {@link FieldValue}.
  */
 @InterfaceAudience.Private
 public final class FieldValue implements Comparable<FieldValue> {
@@ -103,23 +100,29 @@ public final class FieldValue implements Comparable<FieldValue> {
 
   private Size optimizeSize(Size size) {
     if (size.get(Size.Unit.BYTE) < 1024d) {
-      return size.getUnit() == Size.Unit.BYTE ?
-        size : new Size(size.get(Size.Unit.BYTE), Size.Unit.BYTE);
+      return size.getUnit() == Size.Unit.BYTE
+        ? size
+        : new Size(size.get(Size.Unit.BYTE), Size.Unit.BYTE);
     } else if (size.get(Size.Unit.KILOBYTE) < 1024d) {
-      return size.getUnit() == Size.Unit.KILOBYTE ?
-        size : new Size(size.get(Size.Unit.KILOBYTE), Size.Unit.KILOBYTE);
+      return size.getUnit() == Size.Unit.KILOBYTE
+        ? size
+        : new Size(size.get(Size.Unit.KILOBYTE), Size.Unit.KILOBYTE);
     } else if (size.get(Size.Unit.MEGABYTE) < 1024d) {
-      return size.getUnit() == Size.Unit.MEGABYTE ?
-        size : new Size(size.get(Size.Unit.MEGABYTE), Size.Unit.MEGABYTE);
+      return size.getUnit() == Size.Unit.MEGABYTE
+        ? size
+        : new Size(size.get(Size.Unit.MEGABYTE), Size.Unit.MEGABYTE);
     } else if (size.get(Size.Unit.GIGABYTE) < 1024d) {
-      return size.getUnit() == Size.Unit.GIGABYTE ?
-        size : new Size(size.get(Size.Unit.GIGABYTE), Size.Unit.GIGABYTE);
+      return size.getUnit() == Size.Unit.GIGABYTE
+        ? size
+        : new Size(size.get(Size.Unit.GIGABYTE), Size.Unit.GIGABYTE);
     } else if (size.get(Size.Unit.TERABYTE) < 1024d) {
-      return size.getUnit() == Size.Unit.TERABYTE ?
-        size : new Size(size.get(Size.Unit.TERABYTE), Size.Unit.TERABYTE);
+      return size.getUnit() == Size.Unit.TERABYTE
+        ? size
+        : new Size(size.get(Size.Unit.TERABYTE), Size.Unit.TERABYTE);
     }
-    return size.getUnit() == Size.Unit.PETABYTE ?
-      size : new Size(size.get(Size.Unit.PETABYTE), Size.Unit.PETABYTE);
+    return size.getUnit() == Size.Unit.PETABYTE
+      ? size
+      : new Size(size.get(Size.Unit.PETABYTE), Size.Unit.PETABYTE);
   }
 
   private Size parseSizeString(String sizeString) {
@@ -133,7 +136,7 @@ public final class FieldValue implements Comparable<FieldValue> {
   }
 
   private Size.Unit convertToUnit(String unitSimpleName) {
-    for (Size.Unit unit: Size.Unit.values()) {
+    for (Size.Unit unit : Size.Unit.values()) {
       if (unitSimpleName.equals(unit.getSimpleName())) {
         return unit;
       }

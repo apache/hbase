@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -32,15 +31,14 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.yetus.audience.InterfaceAudience;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /***
  * Processes multiple {@link Constraint Constraints} on a given table.
  * <p>
- * This is an ease of use mechanism - all the functionality here could be
- * implemented on any given system by a coprocessor.
+ * This is an ease of use mechanism - all the functionality here could be implemented on any given
+ * system by a coprocessor.
  */
 @InterfaceAudience.Private
 public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
@@ -70,7 +68,7 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
     // make sure we are on a region server
     if (!(environment instanceof RegionCoprocessorEnvironment)) {
       throw new IllegalArgumentException(
-          "Constraints only act on regions - started in an environment that was not a region");
+        "Constraints only act on regions - started in an environment that was not a region");
     }
     RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) environment;
     TableDescriptor desc = env.getRegion().getTableDescriptor();
@@ -82,15 +80,15 @@ public class ConstraintProcessor implements RegionCoprocessor, RegionObserver {
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("Finished loading " + constraints.size()
-          + " user Constraints on table: " + desc.getTableName());
+      LOG.info("Finished loading " + constraints.size() + " user Constraints on table: "
+        + desc.getTableName());
     }
 
   }
 
   @Override
-  public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put,
-      WALEdit edit, Durability durability) throws IOException {
+  public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
+    Durability durability) throws IOException {
     // check the put against the stored constraints
     for (Constraint c : constraints) {
       c.check(put);

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,56 +20,50 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * RPCs for the coordinator to run a barriered procedure with subprocedures executed at
- * distributed members.
+ * RPCs for the coordinator to run a barriered procedure with subprocedures executed at distributed
+ * members.
  * @see ProcedureCoordinator
  */
 @InterfaceAudience.Private
 public interface ProcedureCoordinatorRpcs extends Closeable {
 
   /**
-   * Initialize and start threads necessary to connect an implementation's rpc mechanisms.
-   * @param listener
-   * @return true if succeed, false if encountered initialization errors.
+   * Initialize and start threads necessary to connect an implementation's rpc mechanisms. n
+   * * @return true if succeed, false if encountered initialization errors.
    */
   boolean start(final ProcedureCoordinator listener);
 
   /**
    * Notify the members that the coordinator has aborted the procedure and that it should release
    * barrier resources.
-   *
    * @param procName name of the procedure that was aborted
-   * @param cause the reason why the procedure needs to be aborted
+   * @param cause    the reason why the procedure needs to be aborted
    * @throws IOException if the rpcs can't reach the other members of the procedure (and can't
-   *           recover).
+   *                     recover).
    */
   void sendAbortToMembers(Procedure procName, ForeignException cause) throws IOException;
 
   /**
    * Notify the members to acquire barrier for the procedure
-   *
    * @param procName name of the procedure to start
-   * @param info information that should be passed to all members
-   * @param members names of the members requested to reach the acquired phase
+   * @param info     information that should be passed to all members
+   * @param members  names of the members requested to reach the acquired phase
    * @throws IllegalArgumentException if the procedure was already marked as failed
-   * @throws IOException if we can't reach the remote notification mechanism
+   * @throws IOException              if we can't reach the remote notification mechanism
    */
   void sendGlobalBarrierAcquire(Procedure procName, byte[] info, List<String> members)
-      throws IOException, IllegalArgumentException;
+    throws IOException, IllegalArgumentException;
 
   /**
-   * Notify members that all members have acquired their parts of the barrier and that they can
-   * now execute under the global barrier.
-   *
-   * Must come after calling {@link #sendGlobalBarrierAcquire(Procedure, byte[], List)}
-   *
+   * Notify members that all members have acquired their parts of the barrier and that they can now
+   * execute under the global barrier. Must come after calling
+   * {@link #sendGlobalBarrierAcquire(Procedure, byte[], List)}
    * @param procName name of the procedure to start
-   * @param members members to tell we have reached in-barrier phase
+   * @param members  members to tell we have reached in-barrier phase
    * @throws IOException if we can't reach the remote notification mechanism
    */
   void sendGlobalBarrierReached(Procedure procName, List<String> members) throws IOException;

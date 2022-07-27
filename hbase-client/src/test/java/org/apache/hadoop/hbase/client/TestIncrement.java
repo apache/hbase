@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,27 +29,27 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ClientTests.class, SmallTests.class})
+@Category({ ClientTests.class, SmallTests.class })
 public class TestIncrement {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIncrement.class);
+    HBaseClassTestRule.forClass(TestIncrement.class);
 
   @Test
   public void testIncrementInstance() {
     final long expected = 13;
-    Increment inc = new Increment(new byte [] {'r'});
+    Increment inc = new Increment(new byte[] { 'r' });
     int total = 0;
     for (int i = 0; i < 2; i++) {
-      byte [] bytes = Bytes.toBytes(i);
+      byte[] bytes = Bytes.toBytes(i);
       inc.addColumn(bytes, bytes, expected);
       total++;
     }
-    Map<byte[], NavigableMap<byte [], Long>> familyMapOfLongs = inc.getFamilyMapOfLongs();
+    Map<byte[], NavigableMap<byte[], Long>> familyMapOfLongs = inc.getFamilyMapOfLongs();
     int found = 0;
-    for (Map.Entry<byte [], NavigableMap<byte [], Long>> entry: familyMapOfLongs.entrySet()) {
-      for (Map.Entry<byte [], Long> e: entry.getValue().entrySet()) {
+    for (Map.Entry<byte[], NavigableMap<byte[], Long>> entry : familyMapOfLongs.entrySet()) {
+      for (Map.Entry<byte[], Long> e : entry.getValue().entrySet()) {
         assertEquals(expected, e.getValue().longValue());
         found++;
       }

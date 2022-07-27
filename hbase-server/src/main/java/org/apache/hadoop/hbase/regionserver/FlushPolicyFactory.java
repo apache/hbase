@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * The class that creates a flush policy from a conf and HTableDescriptor.
@@ -41,7 +40,7 @@ public class FlushPolicyFactory {
   public static final String HBASE_FLUSH_POLICY_KEY = "hbase.regionserver.flush.policy";
 
   private static final Class<? extends FlushPolicy> DEFAULT_FLUSH_POLICY_CLASS =
-      FlushAllLargeStoresPolicy.class;
+    FlushAllLargeStoresPolicy.class;
 
   /**
    * Create the FlushPolicy configured for the given table.
@@ -57,7 +56,7 @@ public class FlushPolicyFactory {
    * Get FlushPolicy class for the given table.
    */
   public static Class<? extends FlushPolicy> getFlushPolicyClass(TableDescriptor htd,
-      Configuration conf) throws IOException {
+    Configuration conf) throws IOException {
     String className = htd.getFlushPolicyClassName();
     if (className == null) {
       className = conf.get(HBASE_FLUSH_POLICY_KEY, DEFAULT_FLUSH_POLICY_CLASS.getName());
@@ -66,10 +65,9 @@ public class FlushPolicyFactory {
       Class<? extends FlushPolicy> clazz = Class.forName(className).asSubclass(FlushPolicy.class);
       return clazz;
     } catch (Exception e) {
-      LOG.warn(
-        "Unable to load configured flush policy '" + className + "' for table '"
-            + htd.getTableName() + "', load default flush policy "
-            + DEFAULT_FLUSH_POLICY_CLASS.getName() + " instead", e);
+      LOG.warn("Unable to load configured flush policy '" + className + "' for table '"
+        + htd.getTableName() + "', load default flush policy "
+        + DEFAULT_FLUSH_POLICY_CLASS.getName() + " instead", e);
       return DEFAULT_FLUSH_POLICY_CLASS;
     }
   }

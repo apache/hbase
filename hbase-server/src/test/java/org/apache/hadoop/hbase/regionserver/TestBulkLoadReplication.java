@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -81,25 +80,22 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Integration test for bulk load replication. Defines three clusters, with the following
- * replication topology: "1 <-> 2 <-> 3" (active-active between 1 and 2, and active-active between
- * 2 and 3).
- *
- * For each of defined test clusters, it performs a bulk load, asserting values on bulk loaded file
- * gets replicated to other two peers. Since we are doing 3 bulk loads, with the given replication
- * topology all these bulk loads should get replicated only once on each peer. To assert this,
- * this test defines a preBulkLoad coprocessor and adds it to all test table regions, on each of the
- * clusters. This CP counts the amount of times bulk load actually gets invoked, certifying
+ * replication topology: "1 <-> 2 <-> 3" (active-active between 1 and 2, and active-active between 2
+ * and 3). For each of defined test clusters, it performs a bulk load, asserting values on bulk
+ * loaded file gets replicated to other two peers. Since we are doing 3 bulk loads, with the given
+ * replication topology all these bulk loads should get replicated only once on each peer. To assert
+ * this, this test defines a preBulkLoad coprocessor and adds it to all test table regions, on each
+ * of the clusters. This CP counts the amount of times bulk load actually gets invoked, certifying
  * we are not entering the infinite loop condition addressed by HBASE-22380.
  */
-@Category({ ReplicationTests.class, MediumTests.class})
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestBulkLoadReplication extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestBulkLoadReplication.class);
 
-  protected static final Logger LOG =
-    LoggerFactory.getLogger(TestBulkLoadReplication.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(TestBulkLoadReplication.class);
 
   private static final String PEER1_CLUSTER_ID = "peer1";
   private static final String PEER2_CLUSTER_ID = "peer2";
@@ -140,10 +136,8 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     UTIL3.startMiniCluster(NUM_SLAVES1);
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
-        .setMobEnabled(true)
-        .setMobThreshold(4000)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMobEnabled(true)
+        .setMobThreshold(4000).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
     Connection connection3 = ConnectionFactory.createConnection(CONF3);
@@ -157,18 +151,18 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   @Before
   @Override
   public void setUpBase() throws Exception {
-    //"super.setUpBase()" already sets replication from 1->2,
-    //then on the subsequent lines, sets 2->1, 2->3 and 3->2.
-    //So we have following topology: "1 <-> 2 <->3"
+    // "super.setUpBase()" already sets replication from 1->2,
+    // then on the subsequent lines, sets 2->1, 2->3 and 3->2.
+    // So we have following topology: "1 <-> 2 <->3"
     super.setUpBase();
     ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
     ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
     ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
-    //adds cluster1 as a remote peer on cluster2
+    // adds cluster1 as a remote peer on cluster2
     UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
-    //adds cluster3 as a remote peer on cluster2
+    // adds cluster3 as a remote peer on cluster2
     UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
-    //adds cluster2 as a remote peer on cluster3
+    // adds cluster2 as a remote peer on cluster3
     UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
     setupCoprocessor(UTIL1);
     setupCoprocessor(UTIL2);
@@ -177,24 +171,23 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util) {
-    return ReplicationPeerConfig.newBuilder()
-      .setClusterKey(util.getClusterKey()).setSerial(isSerialPeer()).build();
+    return ReplicationPeerConfig.newBuilder().setClusterKey(util.getClusterKey())
+      .setSerial(isSerialPeer()).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtil cluster){
+  private void setupCoprocessor(HBaseTestingUtil cluster) {
     cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
       try {
-        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost().
-          findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
-        if(cp == null) {
-          r.getCoprocessorHost().
-            load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
-              cluster.getConfiguration());
-          cp = r.getCoprocessorHost().
-            findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost()
+          .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+        if (cp == null) {
+          r.getCoprocessorHost().load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
+            cluster.getConfiguration());
+          cp = r.getCoprocessorHost()
+            .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
           cp.clusterName = cluster.getClusterKey();
         }
-      } catch (Exception e){
+      } catch (Exception e) {
         LOG.error(e.getMessage(), e);
       }
     });
@@ -214,8 +207,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     config.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     config.set(REPLICATION_CLUSTER_ID, clusterReplicationId);
     File sourceConfigFolder = testFolder.newFolder(clusterReplicationId);
-    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath()
-      + "/hbase-site.xml");
+    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath() + "/hbase-site.xml");
     config.writeXml(new FileOutputStream(sourceConfigFile));
     config.set(REPLICATION_CONF_DIR, testFolder.getRoot().getAbsolutePath());
   }
@@ -227,27 +219,26 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     Table peer3TestTable = UTIL3.getConnection().getTable(TestReplicationBase.tableName);
     byte[] row = Bytes.toBytes("001");
     byte[] value = Bytes.toBytes("v1");
-    assertBulkLoadConditions(tableName, row, value, UTIL1, peer1TestTable,
-        peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL1, peer1TestTable, peer2TestTable,
+      peer3TestTable);
     row = Bytes.toBytes("002");
     value = Bytes.toBytes("v2");
-    assertBulkLoadConditions(tableName, row, value, UTIL2, peer1TestTable,
-        peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL2, peer1TestTable, peer2TestTable,
+      peer3TestTable);
     row = Bytes.toBytes("003");
     value = Bytes.toBytes("v3");
-    assertBulkLoadConditions(tableName, row, value, UTIL3, peer1TestTable,
-        peer2TestTable, peer3TestTable);
-    //Additional wait to make sure no extra bulk load happens
+    assertBulkLoadConditions(tableName, row, value, UTIL3, peer1TestTable, peer2TestTable,
+      peer3TestTable);
+    // Additional wait to make sure no extra bulk load happens
     Thread.sleep(400);
-    //We have 3 bulk load events (1 initiated on each cluster).
-    //Each event gets 3 counts (the originator cluster, plus the two peers),
-    //so BULK_LOADS_COUNT expected value is 3 * 3 = 9.
+    // We have 3 bulk load events (1 initiated on each cluster).
+    // Each event gets 3 counts (the originator cluster, plus the two peers),
+    // so BULK_LOADS_COUNT expected value is 3 * 3 = 9.
     assertEquals(9, BULK_LOADS_COUNT.get());
   }
 
-
   protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,
-      HBaseTestingUtil utility, Table...tables) throws Exception {
+    HBaseTestingUtil utility, Table... tables) throws Exception {
     BULK_LOAD_LATCH = new CountDownLatch(3);
     bulkLoadOnCluster(tableName, row, value, utility);
     assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
@@ -257,7 +248,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
   }
 
   protected void bulkLoadOnCluster(TableName tableName, byte[] row, byte[] value,
-                                 HBaseTestingUtil cluster) throws Exception {
+    HBaseTestingUtil cluster) throws Exception {
     String bulkLoadFilePath = createHFileForFamilies(row, value, cluster.getConfiguration());
     copyToHdfs(bulkLoadFilePath, cluster.getDFSCluster());
     BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(cluster.getConfiguration());
@@ -283,20 +274,16 @@ public class TestBulkLoadReplication extends TestReplicationBase {
     assertTrue(result.isEmpty());
   }
 
-  private String createHFileForFamilies(byte[] row, byte[] value,
-      Configuration clusterConfig) throws IOException {
+  private String createHFileForFamilies(byte[] row, byte[] value, Configuration clusterConfig)
+    throws IOException {
     CellBuilder cellBuilder = CellBuilderFactory.create(CellBuilderType.DEEP_COPY);
-    cellBuilder.setRow(row)
-      .setFamily(TestReplicationBase.famName)
-      .setQualifier(Bytes.toBytes("1"))
-      .setValue(value)
-      .setType(Cell.Type.Put);
+    cellBuilder.setRow(row).setFamily(TestReplicationBase.famName).setQualifier(Bytes.toBytes("1"))
+      .setValue(value).setType(Cell.Type.Put);
 
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(clusterConfig);
     // TODO We need a way to do this without creating files
     File hFileLocation = testFolder.newFile();
-    FSDataOutputStream out =
-      new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
+    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
       hFileFactory.withFileContext(new HFileContextBuilder().build());
@@ -324,7 +311,7 @@ public class TestBulkLoadReplication extends TestReplicationBase {
         @Override
         public void postBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
           List<Pair<byte[], String>> stagingFamilyPaths, Map<byte[], List<Path>> finalPaths)
-            throws IOException {
+          throws IOException {
           BULK_LOAD_LATCH.countDown();
           BULK_LOADS_COUNT.incrementAndGet();
           LOG.debug("Another file bulk loaded. Total for {}: {}", clusterName,
