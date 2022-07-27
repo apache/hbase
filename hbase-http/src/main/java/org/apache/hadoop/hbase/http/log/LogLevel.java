@@ -85,7 +85,7 @@ public final class LogLevel {
   }
 
   public static boolean isValidProtocol(String protocol) {
-    return (protocol.equals(PROTOCOL_HTTP) || protocol.equals(PROTOCOL_HTTPS));
+    return protocol.equals(PROTOCOL_HTTP) || protocol.equals(PROTOCOL_HTTPS);
   }
 
   static class CLI extends Configured implements Tool {

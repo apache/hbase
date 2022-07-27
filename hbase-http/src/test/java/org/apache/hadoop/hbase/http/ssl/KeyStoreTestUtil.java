@@ -372,11 +372,8 @@ public final class KeyStoreTestUtil {
    * @throws IOException if there is an I/O error saving the file
    */
   public static void saveConfig(File file, Configuration conf) throws IOException {
-    Writer writer = Files.newWriter(file, StandardCharsets.UTF_8);
-    try {
+    try (Writer writer = Files.newWriter(file, StandardCharsets.UTF_8)) {
       conf.writeXml(writer);
-    } finally {
-      writer.close();
     }
   }
 }
