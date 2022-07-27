@@ -73,16 +73,16 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
   }
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final ProcedurePrepareLatch syncLatch) {
+    final ProcedurePrepareLatch syncLatch) {
     this(env, tableName, syncLatch, true);
   }
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
-      final ProcedurePrepareLatch syncLatch, final boolean archive) {
+    final ProcedurePrepareLatch syncLatch, final boolean archive) {
 
     super(env, syncLatch);
     this.tableName = tableName;
-    this.archive = archive; 
+    this.archive = archive;
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,14 +24,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -39,8 +38,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,11 +51,11 @@ import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 @Category(MediumTests.class)
-public class TestDeleteTable{
+public class TestDeleteTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeleteTable.class);
+    HBaseClassTestRule.forClass(TestDeleteTable.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -79,7 +78,6 @@ public class TestDeleteTable{
     TEST_UTIL.shutdownMiniCluster();
   }
 
-
   private static byte[] generateValue(int size) {
     byte[] val = new byte[size];
     random.nextBytes(val);
@@ -93,10 +91,8 @@ public class TestDeleteTable{
     builder1.setMobEnabled(true);
     builder1.setMobThreshold(0);
 
-    return TableDescriptorBuilder.newBuilder(tableName)
-      .setColumnFamily(builder1.build())
-      .setColumnFamily(builder2.build())
-      .build();
+    return TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(builder1.build())
+      .setColumnFamily(builder2.build()).build();
   }
 
   private Table createTableWithFiles(TableDescriptor htd) throws IOException {
@@ -122,7 +118,6 @@ public class TestDeleteTable{
     return table;
   }
 
-
   @Test
   public void testDeleteTableWithoutArchive() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
@@ -145,7 +140,6 @@ public class TestDeleteTable{
     table.close();
     TEST_UTIL.deleteTable(tableName, false);
 
-
     Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
     Assert.assertEquals(0, countMobFiles(tableName, hcd_mob.getNameAsString()));
     Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd_mob.getNameAsString()));
@@ -166,7 +160,6 @@ public class TestDeleteTable{
 
     RegionInfo regionInfo = TEST_UTIL.getAdmin().getRegions(tableName).get(0);
 
-
     // the mob file exists
     Assert.assertEquals(1, countMobFiles(tableName, hcd_mob.getNameAsString()));
     Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd_mob.getNameAsString()));
@@ -177,7 +170,6 @@ public class TestDeleteTable{
 
     table.close();
     TEST_UTIL.deleteTable(tableName, true);
-
 
     Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
     Assert.assertEquals(0, countMobFiles(tableName, hcd_mob.getNameAsString()));
@@ -199,7 +191,6 @@ public class TestDeleteTable{
 
     RegionInfo regionInfo = TEST_UTIL.getAdmin().getRegions(tableName).get(0);
 
-
     // the mob file exists
     Assert.assertEquals(1, countMobFiles(tableName, hcd_mob.getNameAsString()));
     Assert.assertEquals(0, countArchiveMobFiles(tableName, hcd_mob.getNameAsString()));
@@ -211,7 +202,6 @@ public class TestDeleteTable{
     table.close();
     TEST_UTIL.deleteTable(tableName);
 
-
     Assert.assertFalse(TEST_UTIL.getAdmin().tableExists(tableName));
     Assert.assertEquals(0, countMobFiles(tableName, hcd_mob.getNameAsString()));
     Assert.assertEquals(1, countArchiveMobFiles(tableName, hcd_mob.getNameAsString()));
@@ -221,58 +211,49 @@ public class TestDeleteTable{
     Assert.assertFalse(tableDirExist(tableName));
   }
 
-
   @Test
-  public void testDeleteTableWithSnapshot() throws Exception{
+  public void testDeleteTableWithSnapshot() throws Exception {
 
-    //no snapshot
+    // no snapshot
     final TableName tn_no_snapshot = TableName.valueOf(name.getMethodName());
-    //snapshot in progress
-    final TableName tn_snapshot_inprogress = TableName.valueOf(name.getMethodName()
-      +"_snapshot_inprogress");
-    //complete snapshot
-    final TableName tn_snapshot = TableName.valueOf(name.getMethodName()+"_snapshot");
-
-
+    // snapshot in progress
+    final TableName tn_snapshot_inprogress =
+      TableName.valueOf(name.getMethodName() + "_snapshot_inprogress");
+    // complete snapshot
+    final TableName tn_snapshot = TableName.valueOf(name.getMethodName() + "_snapshot");
 
     TableDescriptor htd_no_snapshot = createTableDescriptor(tn_no_snapshot);
     TableDescriptor htd_snapshot_ingress = createTableDescriptor(tn_snapshot_inprogress);
     TableDescriptor htd_snapshot = createTableDescriptor(tn_snapshot);
 
-
     Table tb_no_snapshot = createTableWithFiles(htd_no_snapshot);
     Table tb_snapshot_ingress = createTableWithFiles(htd_snapshot_ingress);
     Table tb_snapshot = createTableWithFiles(htd_snapshot);
 
-
-    String snapshotName = name.getMethodName()+"-snapshot";
+    String snapshotName = name.getMethodName() + "-snapshot";
     TEST_UTIL.getAdmin().snapshot(snapshotName, tn_snapshot);
 
-
-
-    //if delete the table with snapshot in progress without archive, there should be exception
-    Exception exception_withsnap_inprogress = Assert.assertThrows(DoNotRetryIOException.class,
-      ()-> {
+    // if delete the table with snapshot in progress without archive, there should be exception
+    Exception exception_withsnap_inprogress =
+      Assert.assertThrows(DoNotRetryIOException.class, () -> {
         TEST_UTIL.deleteTable(tn_snapshot, false);
       });
-    Assert.assertTrue(exception_withsnap_inprogress.getMessage().
-      contains("There is snapshot for the table and archive is needed"));
-
+    Assert.assertTrue(exception_withsnap_inprogress.getMessage()
+      .contains("There is snapshot for the table and archive is needed"));
 
     // set a mock handler and make the table in the handler to mock the in process
     DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
     TEST_UTIL.getMiniHBaseCluster().getMaster().getSnapshotManager()
       .setSnapshotHandlerForTesting(tn_snapshot_inprogress, mockHandler);
 
-    //if delete the table with snapshot without archive, there should be exception
-    Exception exception_withsnap = Assert.assertThrows(DoNotRetryIOException.class, ()->{
+    // if delete the table with snapshot without archive, there should be exception
+    Exception exception_withsnap = Assert.assertThrows(DoNotRetryIOException.class, () -> {
       TEST_UTIL.deleteTable(tn_snapshot_inprogress, false);
     });
-    Assert.assertTrue(exception_withsnap.getMessage().
-      contains("There is snapshot for the table and archive is needed"));
+    Assert.assertTrue(exception_withsnap.getMessage()
+      .contains("There is snapshot for the table and archive is needed"));
 
-
-    //test with correct step
+    // test with correct step
     TEST_UTIL.deleteTable(tn_no_snapshot, false);
     TEST_UTIL.deleteTable(tn_snapshot_inprogress, true);
     TEST_UTIL.deleteTable(tn_snapshot, true);
@@ -280,7 +261,6 @@ public class TestDeleteTable{
     tb_no_snapshot.close();
     tb_snapshot_ingress.close();
     tb_snapshot.close();
-
 
   }
 
@@ -293,8 +273,7 @@ public class TestDeleteTable{
     return 0;
   }
 
-  private int countArchiveMobFiles(TableName tn, String familyName)
-    throws IOException {
+  private int countArchiveMobFiles(TableName tn, String familyName) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path storePath = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(), tn,
       MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
@@ -311,20 +290,19 @@ public class TestDeleteTable{
     return fs.exists(tableDir);
   }
 
-
   private int countRegionFiles(TableName tn, String familyName) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
 
     Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
 
-    if(TEST_UTIL.getAdmin().getRegions(tn).isEmpty()) {
+    if (TEST_UTIL.getAdmin().getRegions(tn).isEmpty()) {
       return 0;
     }
 
     RegionInfo regionInfo = TEST_UTIL.getAdmin().getRegions(tn).get(0);
 
     Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, regionInfo);
-    Path nfDir = new Path(regionDir,familyName);
+    Path nfDir = new Path(regionDir, familyName);
 
     if (fs.exists(nfDir)) {
       return fs.listStatus(nfDir).length;
