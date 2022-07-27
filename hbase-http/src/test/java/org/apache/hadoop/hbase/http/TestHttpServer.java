@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.http;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -322,7 +327,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   private static String readFully(final InputStream input) throws IOException {
     // TODO: when the time comes, delete me and replace with a JDK11 IO helper API.
-    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+    try (final BufferedReader reader =
+      new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
       final StringBuilder sb = new StringBuilder();
       final CharBuffer buffer = CharBuffer.allocate(1024 * 2);
       while (reader.read(buffer) > 0) {
