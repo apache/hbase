@@ -38,22 +38,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
+class NettyRpcFrameDecoder extends ByteToMessageDecoder {
 
   private static int FRAME_LENGTH_FIELD_LENGTH = 4;
 
   private final int maxFrameLength;
+  final NettyServerRpcConnection connection;
+
   private boolean requestTooBig;
   private boolean requestTooBigSent;
   private String requestTooBigMessage;
 
-  public NettyRpcFrameDecoder(int maxFrameLength) {
+  public NettyRpcFrameDecoder(int maxFrameLength, NettyServerRpcConnection connection) {
     this.maxFrameLength = maxFrameLength;
-  }
-
-  NettyServerRpcConnection connection;
-
-  void setConnection(NettyServerRpcConnection connection) {
     this.connection = connection;
   }
 
@@ -80,10 +77,10 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
 
     if (frameLength > maxFrameLength) {
       requestTooBig = true;
-      requestTooBigMessage = "RPC data length of " + frameLength + " received from "
-        + connection.getHostAddress() + " is greater than max allowed "
-        + connection.rpcServer.maxRequestSize + ". Set \"" + SimpleRpcServer.MAX_REQUEST_SIZE
-        + "\" on server to override this limit (not recommended)";
+      requestTooBigMessage =
+        "RPC data length of " + frameLength + " received from " + connection.getHostAddress()
+          + " is greater than max allowed " + connection.rpcServer.maxRequestSize + ". Set \""
+          + RpcServer.MAX_REQUEST_SIZE + "\" on server to override this limit (not recommended)";
 
       NettyRpcServer.LOG.warn(requestTooBigMessage);
 
@@ -137,7 +134,7 @@ public class NettyRpcFrameDecoder extends ByteToMessageDecoder {
     // Make sure the client recognizes the underlying exception
     // Otherwise, throw a DoNotRetryIOException.
     if (
-      VersionInfoUtil.hasMinimumVersion(connection.connectionHeader.getVersionInfo(),
+      VersionInfoUtil.hasMinimumVersion(connection.getVersionInfo(),
         RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)
     ) {
       reqTooBig.setResponse(null, null, reqTooBigEx, requestTooBigMessage);

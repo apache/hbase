@@ -108,11 +108,9 @@ public class NettyRpcServer extends RpcServer {
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
-          pipeline.addLast("preambleDecoder", preambleDecoder);
-          pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
-          pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
-          pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
-          pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
+          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder);
+          pipeline.addLast(createNettyRpcServerPreambleHandler(),
+            new NettyRpcServerResponseEncoder(metrics));
         }
       });
     try {

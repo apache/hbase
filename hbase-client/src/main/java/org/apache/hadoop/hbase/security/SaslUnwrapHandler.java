@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -32,22 +32,20 @@ import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 @InterfaceAudience.Private
 public class SaslUnwrapHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-  private final SaslClient saslClient;
-
-  public SaslUnwrapHandler(SaslClient saslClient) {
-    this.saslClient = saslClient;
+  public interface Unwrapper {
+    byte[] unwrap(byte[] incoming, int offset, int len) throws SaslException;
   }
 
-  @Override
-  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    SaslUtil.safeDispose(saslClient);
-    ctx.fireChannelInactive();
+  private final Unwrapper unwrapper;
+
+  public SaslUnwrapHandler(Unwrapper unwrapper) {
+    this.unwrapper = unwrapper;
   }
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
     byte[] bytes = new byte[msg.readableBytes()];
     msg.readBytes(bytes);
-    ctx.fireChannelRead(Unpooled.wrappedBuffer(saslClient.unwrap(bytes, 0, bytes.length)));
+    ctx.fireChannelRead(Unpooled.wrappedBuffer(unwrapper.unwrap(bytes, 0, bytes.length)));
   }
 }
