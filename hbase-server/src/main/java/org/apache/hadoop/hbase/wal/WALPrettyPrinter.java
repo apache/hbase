@@ -344,6 +344,7 @@ public class WALPrettyPrinter {
     }
 
     rowDetails += ", column=" + op.get("family") + ":" + op.get("qualifier");
+    rowDetails += ", timestamp=" + op.get("timestamp");
     rowDetails += ", type=" + op.get("type");
     out.println(rowDetails);
     if (op.get("tag") != null) {
