@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AddCPULoadAction extends SudoCommandAction {
   private static final Logger LOG = LoggerFactory.getLogger(AddCPULoadAction.class);
+  @SuppressWarnings("InlineFormatString")
   private static final String CPU_LOAD_COMMAND =
     "seq 1 %s | xargs -I{} -n 1 -P %s timeout %s dd if=/dev/urandom of=/dev/null bs=1M "
       + "iflag=fullblock";
@@ -51,6 +52,7 @@ public class AddCPULoadAction extends SudoCommandAction {
     return LOG;
   }
 
+  @Override
   protected void localPerform() throws IOException {
     getLogger().info("Starting to execute AddCPULoadAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());

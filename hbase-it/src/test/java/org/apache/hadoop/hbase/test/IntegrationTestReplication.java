@@ -43,6 +43,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -109,7 +111,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
    * Wrapper around an HBase ClusterID allowing us to get admin connections and configurations for
    * it
    */
-  protected class ClusterID {
+  protected static class ClusterID {
     private final Configuration configuration;
     private Connection connection = null;
 
@@ -121,10 +123,10 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     public ClusterID(Configuration base, String key) {
       configuration = new Configuration(base);
-      String[] parts = key.split(":");
-      configuration.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
-      configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, parts[1]);
-      configuration.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
+      Iterable<String> parts = Splitter.on(':').split(key);
+      configuration.set(HConstants.ZOOKEEPER_QUORUM, Iterables.get(parts, 0));
+      configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, Iterables.get(parts, 1));
+      configuration.set(HConstants.ZOOKEEPER_ZNODE_PARENT, Iterables.get(parts, 2));
     }
 
     @Override
@@ -150,8 +152,20 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       this.connection = null;
     }
 
-    public boolean equals(ClusterID other) {
-      return this.toString().equalsIgnoreCase(other.toString());
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+      if (!(other instanceof ClusterID)) {
+        return false;
+      }
+      return toString().equalsIgnoreCase(other.toString());
+    }
+
+    @Override
+    public int hashCode() {
+      return toString().hashCode();
     }
   }
 
@@ -306,7 +320,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       if (!noReplicationSetup) {
         setupTablesAndReplication();
       }
-      int expectedNumNodes = 0;
+      long expectedNumNodes = 0;
       for (int i = 0; i < numIterations; i++) {
         LOG.info("Starting iteration = " + i);
 

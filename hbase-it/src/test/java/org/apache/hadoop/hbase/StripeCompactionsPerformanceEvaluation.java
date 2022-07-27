@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
@@ -43,6 +44,8 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -108,10 +111,12 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     int minValueSize = 0, maxValueSize = 0;
     String valueSize = cmd.getOptionValue(VALUE_SIZE_KEY, VALUE_SIZE_DEFAULT);
     if (valueSize.contains(":")) {
-      String[] valueSizes = valueSize.split(":");
-      if (valueSize.length() != 2) throw new RuntimeException("Invalid value size: " + valueSize);
-      minValueSize = Integer.parseInt(valueSizes[0]);
-      maxValueSize = Integer.parseInt(valueSizes[1]);
+      List<String> valueSizes = Splitter.on(':').splitToList(valueSize);
+      if (valueSizes.size() != 2) {
+        throw new RuntimeException("Invalid value size: " + valueSize);
+      }
+      minValueSize = Integer.parseInt(Iterables.get(valueSizes, 0));
+      maxValueSize = Integer.parseInt(Iterables.get(valueSizes, 1));
     } else {
       minValueSize = maxValueSize = Integer.parseInt(valueSize);
     }

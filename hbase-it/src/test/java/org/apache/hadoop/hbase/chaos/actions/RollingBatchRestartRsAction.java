@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -66,11 +67,13 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   }
 
   @Override
+  // deadServers is both list and queue here, a valid use case for LinkedList
+  @SuppressWarnings("JdkObsolete")
   public void perform() throws Exception {
     getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
       (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
-    Queue<ServerName> serversToBeKilled = new LinkedList<>(selectedServers);
+    Queue<ServerName> serversToBeKilled = new ArrayDeque<>(selectedServers);
     LinkedList<ServerName> deadServers = new LinkedList<>();
     Random rand = ThreadLocalRandom.current();
     // loop while there are servers to be killed or dead servers to be restarted

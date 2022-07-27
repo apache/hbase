@@ -124,8 +124,8 @@ public class IntegrationTestRpcClient {
     }
 
     void stopRandomServer() throws Exception {
-      lock.writeLock().lock();
       RpcServer rpcServer = null;
+      lock.writeLock().lock();
       try {
         if (rpcServers.size() <= minServers) {
           return;
@@ -243,6 +243,7 @@ public class IntegrationTestRpcClient {
     }
 
     @Override
+    @SuppressWarnings("AssertionFailureIgnored") // intended
     public void run() {
       while (running.get()) {
         boolean isBigPayload = ThreadLocalRandom.current().nextBoolean();
