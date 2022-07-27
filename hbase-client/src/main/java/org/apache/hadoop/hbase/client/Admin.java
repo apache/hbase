@@ -291,7 +291,28 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   default void deleteTable(TableName tableName) throws IOException {
-    get(deleteTableAsync(tableName), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+    get(deleteTableAsync(tableName, true), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Deletes a table. Synchronous operation.
+   * @param tableName name of table to delete
+   * @param archive   if archive the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void deleteTable(TableName tableName, boolean archive) throws IOException {
+    get(deleteTableAsync(tableName, archive), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * backward compatible
+   * @param tableName name of table to delete
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async delete. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  default Future<Void> deleteTableAsync(TableName tableName) throws IOException {
+    return deleteTableAsync(tableName, true);
   }
 
   /**
@@ -300,11 +321,12 @@ public interface Admin extends Abortable, Closeable {
    * ExecutionException if there was an error while executing the operation or TimeoutException in
    * case the wait timeout was not long enough to allow the operation to complete.
    * @param tableName name of table to delete
+   * @param archive   if archive the table
    * @throws IOException if a remote or network exception occurs
    * @return the result of the async delete. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete.
    */
-  Future<Void> deleteTableAsync(TableName tableName) throws IOException;
+  Future<Void> deleteTableAsync(TableName tableName, boolean archive) throws IOException;
 
   /**
    * Truncate a table. Synchronous operation.

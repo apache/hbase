@@ -61,6 +61,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
 
   private List<RegionInfo> regions;
   private TableName tableName;
+  private boolean archive;
 
   public DeleteTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -73,8 +74,15 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
 
   public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
     final ProcedurePrepareLatch syncLatch) {
+    this(env, tableName, syncLatch, true);
+  }
+
+  public DeleteTableProcedure(final MasterProcedureEnv env, final TableName tableName,
+    final ProcedurePrepareLatch syncLatch, final boolean archive) {
+
     super(env, syncLatch);
     this.tableName = tableName;
+    this.archive = archive;
   }
 
   @Override
@@ -108,7 +116,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
           break;
         case DELETE_TABLE_CLEAR_FS_LAYOUT:
           LOG.debug("Deleting regions from filesystem for {}", this);
-          DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
+          DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, archive);
           setNextState(DeleteTableState.DELETE_TABLE_REMOVE_FROM_META);
           break;
         case DELETE_TABLE_REMOVE_FROM_META:
@@ -298,7 +306,7 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
       Path mobTableDir =
         CommonFSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME), tableName);
       Path regionDir = new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
-      if (fs.exists(regionDir)) {
+      if (fs.exists(regionDir) && archive) {
         HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
       }
 
