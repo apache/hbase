@@ -2431,27 +2431,57 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return tableName.equals(TableName.META_TABLE_NAME);
   }
 
+  private void checkSnapshot(TableName tableName, boolean archive) throws IOException{
+    /*
+    * If decide to delete the table without archive, need to make sure the table has no snapshot
+    * Meanwhile, the check will scan the snapshots which will do list and open, if there is lots
+    * of snapshot, the performance may be impacted, should evaluate the performance between directly
+    * archive and snapshot scan
+    * TODO: find some any way to get if the table snapshotted or not
+    */
+    if(!archive){
+      LOG.debug("Scan the snapshot to check if there is snapshot for:"
+        + tableName.getNameAsString());
+
+      //List all the snapshots
+      List<SnapshotDescription> snapShotslist = snapshotManager.getCompletedSnapshots();
+      List<String> tableList = snapShotslist.stream().map(n -> n.getTable()).
+        filter(c -> c.equals(tableName.getNameAsString())).
+        collect(Collectors.toList());
+      if(!tableList.isEmpty() || snapshotManager.isTakingSnapshot(tableName)){
+        throw new DoNotRetryIOException("There is snapshot for the table and archive is needed");
+      }
+    }
+  }
+
   @Override
-  public long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
-    throws IOException {
+  public long deleteTable(
+      final TableName tableName,
+      final long nonceGroup,
+      final long nonce,
+      final boolean archive) throws IOException {
     checkInitialized();
 
-    return MasterProcedureUtil
-      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
-        @Override
-        protected void run() throws IOException {
-          getMaster().getMasterCoprocessorHost().preDeleteTable(tableName);
+    //Check if there is snapshot for the table if without archive called for deleteTable
+    checkSnapshot(tableName,archive);
+
+
+    return MasterProcedureUtil.submitProcedure(
+        new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+      @Override
+      protected void run() throws IOException {
+        getMaster().getMasterCoprocessorHost().preDeleteTable(tableName);
 
           LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
 
-          // TODO: We can handle/merge duplicate request
-          //
-          // We need to wait for the procedure to potentially fail due to "prepare" sanity
-          // checks. This will block only the beginning of the procedure. See HBASE-19953.
-          ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-          submitProcedure(
-            new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch));
-          latch.await();
+        // TODO: We can handle/merge duplicate request
+        //
+        // We need to wait for the procedure to potentially fail due to "prepare" sanity
+        // checks. This will block only the beginning of the procedure. See HBASE-19953.
+        ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+        submitProcedure(new DeleteTableProcedure(procedureExecutor.getEnvironment(),
+            tableName, latch, archive));
+        latch.await();
 
           getMaster().getMasterCoprocessorHost().postDeleteTable(tableName);
         }

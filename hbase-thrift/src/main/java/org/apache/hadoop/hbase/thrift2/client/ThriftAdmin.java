@@ -1100,6 +1100,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> deleteTableAsync(TableName tableName, boolean archive) {
+    throw new NotImplementedException("deleteTableAsync not supported in ThriftAdmin");
+  }
+
+  @Override
   public Future<Void> truncateTableAsync(TableName tableName, boolean preserveSplits) {
     throw new NotImplementedException("truncateTableAsync not supported in ThriftAdmin");
   }
