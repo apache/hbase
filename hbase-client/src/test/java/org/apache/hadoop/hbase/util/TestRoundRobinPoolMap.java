@@ -120,10 +120,10 @@ public class TestRoundRobinPoolMap extends PoolMapTestBase {
           String value = Integer.toString(id.getAndIncrement());
           String result = poolMap.getOrCreate(key, () -> value);
           results.add(result);
-
-          Thread.yield();
+          // Sleep for a short time to ensure a yield. Thread#yield has platform dependent behavior.
+          Thread.sleep(10);
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
         throw new CompletionException(e);
       }
     };

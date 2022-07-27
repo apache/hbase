@@ -62,9 +62,10 @@ public class LongComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parses a serialized representation of {@link LongComparator}
    * @param pbBytes A pb serialized {@link LongComparator} instance
    * @return An instance of {@link LongComparator} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static LongComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -78,11 +79,16 @@ public class LongComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   boolean areSerializedFieldsEqual(LongComparator other) {
-    if (other == this) return true;
+    if (other == this) {
+      return true;
+    }
+    if (other == null) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(other);
   }
 }

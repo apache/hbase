@@ -205,8 +205,11 @@ final public class FilterList extends FilterBase {
   }
 
   /**
+   * Parse a seralized representation of {@link FilterList}
    * @param pbBytes A pb serialized {@link FilterList} instance
-   * @return An instance of {@link FilterList} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link FilterList} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static FilterList parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FilterList proto;
@@ -229,14 +232,17 @@ final public class FilterList extends FilterBase {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
    * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter other) {
-    if (other == this) return true;
-    if (!(other instanceof FilterList)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof FilterList)) {
+      return false;
+    }
     FilterList o = (FilterList) other;
     return this.getOperator().equals(o.getOperator())
       && ((this.getFilters() == o.getFilters()) || this.getFilters().equals(o.getFilters()));

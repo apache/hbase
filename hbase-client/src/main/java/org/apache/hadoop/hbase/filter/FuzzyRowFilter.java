@@ -299,9 +299,11 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link FuzzyRowFilter}
    * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
-   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static FuzzyRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FuzzyRowFilter proto;
@@ -379,7 +381,7 @@ public class FuzzyRowFilter extends FilterBase {
       long fuzzyBytes = Bytes.toLong(fuzzyKeyBytes, i);
       long fuzzyMeta = Bytes.toLong(fuzzyKeyMeta, i);
       long rowValue = Bytes.toLong(row, offset + i);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -391,7 +393,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = Bytes.toInt(fuzzyKeyBytes, off);
       int fuzzyMeta = Bytes.toInt(fuzzyKeyMeta, off);
       int rowValue = Bytes.toInt(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -402,7 +404,7 @@ public class FuzzyRowFilter extends FilterBase {
       short fuzzyBytes = Bytes.toShort(fuzzyKeyBytes, off);
       short fuzzyMeta = Bytes.toShort(fuzzyKeyMeta, off);
       short rowValue = Bytes.toShort(row, offset + off);
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         // even if it does not (in this case getNextForFuzzyRule
         // will return null)
@@ -415,7 +417,7 @@ public class FuzzyRowFilter extends FilterBase {
       int fuzzyBytes = fuzzyKeyBytes[off] & 0xff;
       int fuzzyMeta = fuzzyKeyMeta[off] & 0xff;
       int rowValue = row[offset + off] & 0xff;
-      if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
+      if ((rowValue & fuzzyMeta) != fuzzyBytes) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
       }
@@ -645,14 +647,17 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FuzzyRowFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FuzzyRowFilter)) {
+      return false;
+    }
     FuzzyRowFilter other = (FuzzyRowFilter) o;
     if (this.fuzzyKeysData.size() != other.fuzzyKeysData.size()) return false;
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {

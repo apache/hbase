@@ -27,11 +27,9 @@ abstract class AbstractResponse {
 
   public enum ResponseType {
 
-    SINGLE(0),
-    MULTI(1);
+    SINGLE,
+    MULTI;
 
-    ResponseType(int value) {
-    }
   }
 
   public abstract ResponseType type();

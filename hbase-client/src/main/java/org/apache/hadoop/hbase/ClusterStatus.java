@@ -186,6 +186,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /** Returns the HBase version string as reported by the HMaster */
+  @Override
   public String getHBaseVersion() {
     return metrics.getHBaseVersion();
   }
@@ -279,6 +280,7 @@ public class ClusterStatus implements ClusterMetrics {
     return serverMetrics == null ? null : new ServerLoad(serverMetrics);
   }
 
+  @Override
   public String getClusterId() {
     return metrics.getClusterId();
   }
@@ -289,6 +291,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
+   * Get the list of master coprocessor names.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link #getMasterCoprocessorNames} instead.
    */
@@ -299,6 +302,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
+   * Get the last major compaction time for a given table.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link #getLastMajorCompactionTimestamp(TableName)} instead.
    */
@@ -308,6 +312,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
+   * Get the last major compaction time for a given region.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link #getLastMajorCompactionTimestamp(byte[])} instead.
    */
@@ -317,6 +322,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
+   * Returns true if the balancer is enabled.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 No flag in 2.0
    */
   @Deprecated

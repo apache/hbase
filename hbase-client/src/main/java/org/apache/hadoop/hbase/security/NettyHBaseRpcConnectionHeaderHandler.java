@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -66,15 +67,14 @@ public class NettyHBaseRpcConnectionHeaderHandler extends SimpleChannelInboundHa
       // replace the Sasl handler with Crypto AES handler
       setupCryptoAESHandler(ctx.pipeline(), cryptoAES);
     }
-
-    saslPromise.setSuccess(true);
+    NettyFutureUtils.consume(saslPromise.setSuccess(true));
   }
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) {
     try {
       // send the connection header to server first
-      ctx.writeAndFlush(connectionHeaderWithLength.retainedDuplicate());
+      NettyFutureUtils.safeWriteAndFlush(ctx, connectionHeaderWithLength.retainedDuplicate());
     } catch (Exception e) {
       // the exception thrown by handlerAdded will not be passed to the exceptionCaught below
       // because netty will remove a handler if handlerAdded throws an exception.

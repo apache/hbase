@@ -384,6 +384,7 @@ public class RegionState {
   /**
    * A slower (but more easy-to-read) stringification
    */
+  @SuppressWarnings("JavaUtilDate")
   public String toDescriptiveString() {
     long relTime = EnvironmentEdgeManager.currentTime() - stamp;
     return hri.getRegionNameAsString() + " state=" + state + ", ts=" + new Date(stamp) + " ("
@@ -417,12 +418,13 @@ public class RegionState {
    */
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof RegionState)) {
       return false;
     }
     RegionState tmp = (RegionState) obj;
-
     return RegionInfo.COMPARATOR.compare(tmp.hri, hri) == 0 && tmp.state == state
       && ((serverName != null && serverName.equals(tmp.serverName))
         || (tmp.serverName == null && serverName == null));

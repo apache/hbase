@@ -189,9 +189,13 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   final int rpcTimeout;
 
   /**
-   * Global nonceGenerator shared per client.Currently there's no reason to limit its scope. Once
+   * Global nonceGenerator shared per client. Currently there's no reason to limit its scope. Once
    * it's set under nonceGeneratorCreateLock, it is never unset or changed.
    */
+  // XXX: It is a bad pattern to assign a value to a static field from a constructor. However
+  // it would likely change semantics if we change it because the NonceGenerator is selected
+  // from configuration passed in as a parameter of the constructor. This has been cleaned up
+  // in later branches.
   private static volatile NonceGenerator nonceGenerator = null;
   /** The nonce generator lock. Only taken when creating Connection, which gets a private copy. */
   private static final Object nonceGeneratorCreateLock = new Object();
@@ -294,7 +298,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
 
     this.stats = ServerStatisticTracker.create(conf);
-    this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
+    this.interceptor = new RetryingCallerInterceptorFactory(conf).build();
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
@@ -1186,6 +1190,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
      * @param timeout  how long to wait before timeout, in unit of millisecond
      * @param maxTries how many times to try
      */
+    @SuppressWarnings("JavaUtilDate")
     public ServerErrorTracker(long timeout, int maxTries) {
       this.maxTries = maxTries;
       this.canRetryUntil = EnvironmentEdgeManager.currentTime() + timeout;

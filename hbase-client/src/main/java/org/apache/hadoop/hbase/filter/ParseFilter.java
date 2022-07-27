@@ -157,7 +157,7 @@ public class ParseFilter {
           operatorStack.pop();
           continue;
         }
-        while (!(argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER))) {
+        while (!argumentOnTopOfStack.equals(ParseConstants.LPAREN_BUFFER)) {
           filterStack.push(popArguments(operatorStack, filterStack));
           if (operatorStack.empty()) {
             throw new IllegalArgumentException("Mismatched parenthesis");
@@ -242,17 +242,12 @@ public class ParseFilter {
       Class<?>[] argTypes = new Class[] { ArrayList.class };
       Method m = c.getDeclaredMethod("createFilterFromArguments", argTypes);
       return (Filter) m.invoke(null, filterArguments);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    } catch (NoSuchMethodException e) {
-      e.printStackTrace();
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
-    } catch (InvocationTargetException e) {
-      e.printStackTrace();
+    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+      | InvocationTargetException e) {
+      LOG.warn("Exception while invoking createFilterFromArguments", e);
+      throw new IllegalArgumentException(
+        "Incorrect filter string " + new String(filterStringAsByteArray, StandardCharsets.UTF_8));
     }
-    throw new IllegalArgumentException(
-      "Incorrect filter string " + new String(filterStringAsByteArray, StandardCharsets.UTF_8));
   }
 
   /**
@@ -367,7 +362,7 @@ public class ParseFilter {
   public void reduce(Stack<ByteBuffer> operatorStack, Stack<Filter> filterStack,
     ByteBuffer operator) {
     while (
-      !operatorStack.empty() && !(ParseConstants.LPAREN_BUFFER.equals(operatorStack.peek()))
+      !operatorStack.empty() && !ParseConstants.LPAREN_BUFFER.equals(operatorStack.peek())
         && hasHigherPriority(operatorStack.peek(), operator)
     ) {
       filterStack.push(popArguments(operatorStack, filterStack));

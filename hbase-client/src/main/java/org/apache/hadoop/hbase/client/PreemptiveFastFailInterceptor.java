@@ -86,7 +86,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   // fast fail mode for any reason.
   private long fastFailClearingTimeMilliSec;
 
-  private final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode = new ThreadLocal<>();
+  private static final ThreadLocal<MutableBoolean> threadRetryingInFastFailMode =
+    new ThreadLocal<>();
 
   public PreemptiveFastFailInterceptor(Configuration conf) {
     this.fastFailThresholdMilliSec = conf.getLong(HConstants.HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS,
@@ -216,8 +217,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    * @return true, if the thread is already in FF mode.
    */
   private boolean currentThreadInFastFailMode() {
-    return (this.threadRetryingInFastFailMode.get() != null
-      && (this.threadRetryingInFastFailMode.get().booleanValue() == true));
+    return (threadRetryingInFastFailMode.get() != null
+      && (threadRetryingInFastFailMode.get().booleanValue() == true));
   }
 
   /**
@@ -232,10 +233,10 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     // actively trying to connect. If we are the chosen one, we will retry
     // and not throw an exception.
     if (fInfo != null && fInfo.exclusivelyRetringInspiteOfFastFail.compareAndSet(false, true)) {
-      MutableBoolean threadAlreadyInFF = this.threadRetryingInFastFailMode.get();
+      MutableBoolean threadAlreadyInFF = threadRetryingInFastFailMode.get();
       if (threadAlreadyInFF == null) {
         threadAlreadyInFF = new MutableBoolean();
-        this.threadRetryingInFastFailMode.set(threadAlreadyInFF);
+        threadRetryingInFastFailMode.set(threadAlreadyInFF);
       }
       threadAlreadyInFF.setValue(true);
       return true;

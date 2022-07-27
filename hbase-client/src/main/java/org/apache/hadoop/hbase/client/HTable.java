@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -481,8 +480,8 @@ public class HTable implements Table {
   }
 
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
-    Callback<R> callback, ClusterConnection connection, ExecutorService pool, TableName tableName)
-    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
+    Batch.Callback<R> callback, ClusterConnection connection, ExecutorService pool,
+    TableName tableName) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
     int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
       connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -1264,7 +1263,7 @@ public class HTable implements Table {
   @Override
   public <R extends Message> void batchCoprocessorService(
     final Descriptors.MethodDescriptor methodDescriptor, final Message request, byte[] startKey,
-    byte[] endKey, final R responsePrototype, final Callback<R> callback)
+    byte[] endKey, final R responsePrototype, final Batch.Callback<R> callback)
     throws ServiceException, Throwable {
     final Supplier<Span> supplier = new TableOperationSpanBuilder(connection)
       .setTableName(tableName).setOperation(HBaseSemanticAttributes.Operation.COPROC_EXEC);
@@ -1310,7 +1309,7 @@ public class HTable implements Table {
         RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
         RpcControllerFactory.instantiate(configuration));
 
-      Callback<ClientProtos.CoprocessorServiceResult> resultsCallback =
+      Batch.Callback<ClientProtos.CoprocessorServiceResult> resultsCallback =
         (byte[] region, byte[] row, ClientProtos.CoprocessorServiceResult serviceResult) -> {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Received result for endpoint {}: region={}, row={}, value={}",

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -77,6 +76,7 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
+   * Set or clear the indication if the first KV has been found.
    * @param value update {@link #foundKV} flag with value.
    */
   protected void setFoundKV(boolean value) {
@@ -91,9 +91,10 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link FirstKeyOnlyFilter}
    * @param pbBytes A pb serialized {@link FirstKeyOnlyFilter} instance
    * @return An instance of {@link FirstKeyOnlyFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static FirstKeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -108,15 +109,17 @@ public class FirstKeyOnlyFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FirstKeyOnlyFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof FirstKeyOnlyFilter)) {
+      return false;
+    }
     return true;
   }
 
@@ -127,6 +130,6 @@ public class FirstKeyOnlyFilter extends FilterBase {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(foundKV);
+    return Boolean.hashCode(foundKV);
   }
 }

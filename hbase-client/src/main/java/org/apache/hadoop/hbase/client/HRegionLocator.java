@@ -131,6 +131,7 @@ public class HRegionLocator implements RegionLocator {
     return this.tableName;
   }
 
+  @SuppressWarnings("MixedMutabilityReturnType")
   private List<RegionLocations> listRegionLocations() throws IOException {
     if (TableName.isMetaTableName(tableName)) {
       return Collections

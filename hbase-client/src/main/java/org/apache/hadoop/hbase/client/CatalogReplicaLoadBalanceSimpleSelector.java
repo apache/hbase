@@ -129,6 +129,7 @@ class CatalogReplicaLoadBalanceSimpleSelector
    * Selector's internal state.
    * @param loc the location which causes exception.
    */
+  @Override
   public void onError(HRegionLocation loc) {
     ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = computeIfAbsent(staleCache,
       loc.getRegion().getTable(), () -> new ConcurrentSkipListMap<>(BYTES_COMPARATOR));
@@ -160,18 +161,19 @@ class CatalogReplicaLoadBalanceSimpleSelector
    * When it looks up a location, it will call this method to find a replica region to go. For a
    * normal case, > 99% of region locations from catalog/meta replica will be up to date. In extreme
    * cases such as region server crashes, it will depends on how fast replication catches up.
-   * @param tablename  table name it looks up
+   * @param tableName  table name it looks up
    * @param row        key it looks up.
    * @param locateType locateType, Only BEFORE and CURRENT will be passed in.
    * @return catalog replica id
    */
-  public int select(final TableName tablename, final byte[] row,
+  @Override
+  public int select(final TableName tableName, final byte[] row,
     final RegionLocateType locateType) {
     Preconditions.checkArgument(
       locateType == RegionLocateType.BEFORE || locateType == RegionLocateType.CURRENT,
       "Expected type BEFORE or CURRENT but got: %s", locateType);
 
-    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = staleCache.get(tablename);
+    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = staleCache.get(tableName);
 
     // If there is no entry in StaleCache, select a random replica id.
     if (tableCache == null) {
@@ -200,7 +202,7 @@ class CatalogReplicaLoadBalanceSimpleSelector
       (EnvironmentEdgeManager.currentTime() - entry.getValue().getTimestamp())
           >= STALE_CACHE_TIMEOUT_IN_MILLISECONDS
     ) {
-      LOG.debug("Entry for table {} with startKey {}, {} times out", tablename, entry.getKey(),
+      LOG.debug("Entry for table {} with startKey {}, {} times out", tableName, entry.getKey(),
         entry);
       tableCache.remove(entry.getKey());
       return getRandomReplicaId();

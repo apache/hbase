@@ -33,8 +33,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestCoprocessorDescriptor {
@@ -42,8 +40,6 @@ public class TestCoprocessorDescriptor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCoprocessorDescriptor.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorDescriptor.class);
 
   @Rule
   public TestName name = new TestName();

@@ -469,11 +469,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return future;
   }
 
-  @FunctionalInterface
-  private interface TableOperator {
-    CompletableFuture<Void> operate(TableName table);
-  }
-
   @Override
   public CompletableFuture<Boolean> tableExists(TableName tableName) {
     if (TableName.isMetaTableName(tableName)) {
@@ -1539,11 +1534,13 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
-        .action(((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
-          controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
-          (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null)))
-        .call(), (ret, err2) -> {
+      addListener(
+        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+          .action((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
+            controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
+            (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null))
+          .call(),
+        (ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
           } else {
@@ -1564,10 +1561,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
       addListener(
         this.<Void> newMasterCaller().priority(regionInfo.getTable())
-          .action(((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
+          .action((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
             Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
-              (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null)))
+              (s, c, req, done) -> s.unassignRegion(c, req, done), resp -> null))
           .call(),
         (ret, err2) -> {
           if (err2 != null) {
@@ -1588,14 +1585,11 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
-          .action(((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse,
-            Void> call(controller, stub,
-              RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
-              (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null)))
-          .call(),
-        (ret, err2) -> {
+      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        .action((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
+          controller, stub, RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
+          (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null))
+        .call(), (ret, err2) -> {
           if (err2 != null) {
             future.completeExceptionally(err2);
           } else {
@@ -2206,7 +2200,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       listSnapshotsFuture = getCompletedSnapshots(tableNamePattern, snapshotNamePattern);
     }
     CompletableFuture<Void> future = new CompletableFuture<>();
-    addListener(listSnapshotsFuture, ((snapshotDescriptions, err) -> {
+    addListener(listSnapshotsFuture, (snapshotDescriptions, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
         return;
@@ -2223,7 +2217,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.complete(v);
           }
         });
-    }));
+    });
     return future;
   }
 
@@ -3966,9 +3960,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   private CompletableFuture<Boolean> clearSlowLogsResponses(final ServerName serverName) {
     return this.<Boolean> newAdminCaller()
-      .action(((controller, stub) -> this.adminCall(controller, stub,
+      .action((controller, stub) -> this.adminCall(controller, stub,
         RequestConverter.buildClearSlowLogResponseRequest(),
-        AdminService.Interface::clearSlowLogsResponses, ProtobufUtil::toClearSlowLogPayload)))
+        AdminService.Interface::clearSlowLogsResponses, ProtobufUtil::toClearSlowLogPayload))
       .serverName(serverName).call();
   }
 
@@ -4030,9 +4024,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> flushMasterStore() {
     FlushMasterStoreRequest.Builder request = FlushMasterStoreRequest.newBuilder();
     return this.<Void> newMasterCaller()
-      .action(((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
+      .action((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
         Void> call(controller, stub, request.build(),
-          (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null)))
+          (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
   }
 }

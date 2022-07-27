@@ -36,8 +36,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class MultiAction {
   // TODO: This class should not be visible outside of the client package.
 
-  // map of regions to lists of puts/gets/deletes for that region.
-  protected Map<byte[], List<Action>> actions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  /**
+   * A map of regions to lists of puts/gets/deletes for that region. Package visible.
+   */
+  Map<byte[], List<Action>> actions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   private long nonceGroup = HConstants.NO_NONCE;
 
@@ -60,7 +62,7 @@ public final class MultiAction {
   /**
    * Add an Action to this container based on it's regionName. If the regionName is wrong, the
    * initial execution will fail, but will be automatically retried after looking up the correct
-   * region. nn
+   * region.
    */
   public void add(byte[] regionName, Action a) {
     add(regionName, Collections.singletonList(a));
@@ -69,7 +71,7 @@ public final class MultiAction {
   /**
    * Add an Action to this container based on it's regionName. If the regionName is wrong, the
    * initial execution will fail, but will be automatically retried after looking up the correct
-   * region. n * @param actionList list of actions to add for the region
+   * region.
    */
   public void add(byte[] regionName, List<Action> actionList) {
     List<Action> rsActions = actions.get(regionName);

@@ -51,7 +51,7 @@ public class RegionReplicaUtil {
   /**
    * Returns the RegionInfo for the given replicaId. RegionInfo's correspond to a range of a table,
    * but more than one "instance" of the same range can be deployed which are differentiated by the
-   * replicaId. n * @param replicaId the replicaId to use
+   * replicaId.
    * @return an RegionInfo object corresponding to the same range (table, start and end key), but
    *         for the given replicaId.
    */
@@ -149,7 +149,7 @@ public class RegionReplicaUtil {
     if ((newReplicaCount - 1) <= 0) {
       return regions;
     }
-    List<RegionInfo> hRegionInfos = new ArrayList<>((newReplicaCount) * regions.size());
+    List<RegionInfo> hRegionInfos = new ArrayList<>(newReplicaCount * regions.size());
     for (RegionInfo ri : regions) {
       if (
         RegionReplicaUtil.isDefaultReplica(ri)

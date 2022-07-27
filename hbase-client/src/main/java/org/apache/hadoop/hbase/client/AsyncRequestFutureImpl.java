@@ -539,7 +539,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           runnable.run();
         } else {
           try {
-            pool.submit(runnable);
+            pool.execute(runnable);
           } catch (Throwable t) {
             if (t instanceof RejectedExecutionException) {
               // This should never happen. But as the pool is provided by the end user,
@@ -564,6 +564,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     }
   }
 
+  @SuppressWarnings("MixedMutabilityReturnType")
   private Collection<? extends Runnable> getNewMultiActionRunnable(ServerName server,
     MultiAction multiAction, int numAttempt) {
     // no stats to manage, just do the standard action
@@ -644,7 +645,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       // Start the thread that may kick off replica gets.
       // TODO: we could do it on the same thread, but it's a user thread, might be a bad idea.
       try {
-        pool.submit(replicaRunnable);
+        pool.execute(replicaRunnable);
       } catch (RejectedExecutionException ree) {
         LOG.warn("id=" + asyncProcess.id + " replica task rejected by pool; no replica calls", ree);
       }
@@ -770,6 +771,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private void logNoResubmit(ServerName oldServer, int numAttempt, int failureCount,
     Throwable throwable, int failed, int stopped) {
     if (failureCount != 0 || numAttempt > asyncProcess.startLogErrorsCnt + 1) {
+      @SuppressWarnings("JavaUtilDate")
       String timeStr = new Date(errorsByServer.getStartTrackingTime()).toString();
       String logMessage = createLog(numAttempt, failureCount, 0, oldServer, throwable, -1, false,
         timeStr, failed, stopped);
@@ -955,14 +957,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     if (result == null) {
       throw new RuntimeException("Result cannot be null");
     }
-    ReplicaResultState state = null;
     boolean isStale = !RegionReplicaUtil.isDefaultReplica(action.getReplicaId());
     int index = action.getOriginalIndex();
     if (results == null) {
       decActionCounter(index);
       return; // Simple case, no replica requests.
     }
-    state = trySetResultSimple(index, action.getAction(), false, result, null, isStale);
+    ReplicaResultState state =
+      trySetResultSimple(index, action.getAction(), false, result, null, isStale);
     if (state == null) {
       return; // Simple case, no replica requests.
     }
@@ -995,7 +997,6 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param server    The source server.
    */
   private void setError(int index, Row row, Throwable throwable, ServerName server) {
-    ReplicaResultState state = null;
     if (results == null) {
       // Note that we currently cannot have replica requests with null results. So it shouldn't
       // happen that multiple replica calls will call dAC for same actions with results == null.
@@ -1004,7 +1005,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       decActionCounter(index);
       return; // Simple case, no replica requests.
     }
-    state = trySetResultSimple(index, row, true, throwable, server, false);
+    ReplicaResultState state = trySetResultSimple(index, row, true, throwable, server, false);
     if (state == null) {
       return; // Simple case, no replica requests.
     }

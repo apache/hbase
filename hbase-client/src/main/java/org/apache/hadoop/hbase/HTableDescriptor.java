@@ -801,6 +801,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
     new HTableDescriptor(TableDescriptorBuilder.NAMESPACE_TABLEDESC);
 
   /**
+   * Set the table owner.
    * @deprecated since 0.94.1
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
    */
@@ -811,6 +812,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
+   * Set the table owner.
    * @deprecated since 0.94.1
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
    */
@@ -822,6 +824,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
+   * Get the table owner.
    * @deprecated since 0.94.1
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-6188">HBASE-6188</a>
    */
@@ -832,14 +835,14 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * @return This instance serialized with pb with pb magic prefix
-   * @see #parseFrom(byte[])
+   * Returns This instance serialized with pb with pb magic prefix
    */
   public byte[] toByteArray() {
     return TableDescriptorBuilder.toByteArray(delegatee);
   }
 
   /**
+   * Parse the serialized representation of a {@link HTableDescriptor}
    * @param bytes A pb serialized {@link HTableDescriptor} instance with pb magic prefix
    * @return An instance of {@link HTableDescriptor} made from <code>bytes</code> nn * @see
    *         #toByteArray()

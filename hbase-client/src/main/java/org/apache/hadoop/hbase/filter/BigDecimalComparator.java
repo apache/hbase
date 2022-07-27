@@ -82,9 +82,10 @@ public class BigDecimalComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of {@link BigDecimalComparator}
    * @param pbBytes A pb serialized {@link BigDecimalComparator} instance
    * @return An instance of {@link BigDecimalComparator} made from <code>bytes</code>
-   * @throws DeserializationException A deserialization exception
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BigDecimalComparator parseFrom(final byte[] pbBytes)
@@ -100,10 +101,10 @@ public class BigDecimalComparator extends ByteArrayComparable {
   }
 
   /**
-   * @param other the other comparator
-   * @return true if and only if the fields of the comparator that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
+  @SuppressWarnings("ReferenceEquality")
   boolean areSerializedFieldsEqual(BigDecimalComparator other) {
     if (other == this) {
       return true;

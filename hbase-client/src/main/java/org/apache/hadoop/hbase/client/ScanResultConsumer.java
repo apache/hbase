@@ -30,8 +30,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ScanResultConsumer extends ScanResultConsumerBase {
 
   /**
-   * @param result the data fetched from HBase service.
-   * @return {@code false} if you want to terminate the scan process. Otherwise {@code true}
+   * Return {@code false} if you want to terminate the scan process. Otherwise {@code true}
    */
   boolean onNext(Result result);
 }

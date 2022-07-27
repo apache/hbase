@@ -22,14 +22,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class ClientBackoffPolicyFactory {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ClientBackoffPolicyFactory.class);
 
   private ClientBackoffPolicyFactory() {
   }

@@ -59,8 +59,8 @@ public class TestTableDescriptorBuilder {
   @Test(expected = IOException.class)
   public void testAddCoprocessorTwice() throws IOException {
     String cpName = "a.b.c.d";
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
-      .setCoprocessor(cpName).setCoprocessor(cpName).build();
+    TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME).setCoprocessor(cpName)
+      .setCoprocessor(cpName).build();
   }
 
   @Test
@@ -327,7 +327,7 @@ public class TestTableDescriptorBuilder {
   public void testModifyInexistentFamily() {
     byte[] familyName = Bytes.toBytes("cf");
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
       .modifyColumnFamily(hcd).build();
   }
 

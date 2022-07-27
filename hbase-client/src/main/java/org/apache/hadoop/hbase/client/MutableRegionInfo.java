@@ -230,6 +230,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
+   * Change the split status flag.
    * @param split set split status n
    */
   public MutableRegionInfo setSplit(boolean split) {

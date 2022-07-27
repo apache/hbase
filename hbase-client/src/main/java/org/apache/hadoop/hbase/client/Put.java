@@ -257,6 +257,7 @@ public class Put extends Mutation implements HeapSize {
    * immutable and its backing array will not be modified for the duration of this Put.
    * @param cell individual cell n * @throws java.io.IOException e
    */
+  @Override
   public Put add(Cell cell) throws IOException {
     super.add(cell);
     return this;

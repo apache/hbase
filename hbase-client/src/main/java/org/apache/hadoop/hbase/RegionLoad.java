@@ -354,6 +354,7 @@ public class RegionLoad implements RegionMetrics {
   }
 
   /** Returns the reference count for the stores of this region */
+  @Override
   public int getStoreRefCount() {
     return metrics.getStoreRefCount();
   }

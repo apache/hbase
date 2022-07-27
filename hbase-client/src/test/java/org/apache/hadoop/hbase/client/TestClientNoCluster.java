@@ -32,7 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.NotImplementedException;
@@ -72,7 +71,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Stopwatch;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -177,9 +175,6 @@ public class TestClientNoCluster extends Configured implements Tool {
       // I expect this exception.
       LOG.info("Got expected exception", e);
       t = e;
-    } catch (RetriesExhaustedException e) {
-      // This is the old, unwanted behavior. If we get here FAIL!!!
-      fail();
     } finally {
       table.close();
     }
@@ -242,9 +237,6 @@ public class TestClientNoCluster extends Configured implements Tool {
       // I expect this exception.
       LOG.info("Got expected exception", e);
       t = e;
-    } catch (RetriesExhaustedException e) {
-      // This is the old, unwanted behavior. If we get here FAIL!!!
-      fail();
     } finally {
       table.close();
       connection.close();
@@ -830,14 +822,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     getConf().setInt("hbase.test.multi.too.many", 10);
     final int clients = 2;
 
-    // Have them all share the same connection so they all share the same instance of
-    // ManyServersManyRegionsConnection so I can keep an eye on how many requests by server.
-    final ExecutorService pool =
-      Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("p-pool-%d")
-        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
-    // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
     // Share a connection so I can keep counts in the 'server' on concurrency.
-    final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/* , pool */);
+    final Connection sharedConnection = ConnectionFactory.createConnection(getConf());
     try {
       Thread[] ts = new Thread[clients];
       for (int j = 0; j < ts.length; j++) {
@@ -850,7 +836,7 @@ public class TestClientNoCluster extends Configured implements Tool {
             try {
               cycle(id, c, sharedConnection);
             } catch (IOException e) {
-              e.printStackTrace();
+              LOG.info("Exception in cycle " + id, e);
             }
           }
         };

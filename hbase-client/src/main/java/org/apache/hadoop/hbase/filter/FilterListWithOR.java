@@ -409,11 +409,11 @@ public class FilterListWithOR extends FilterListBase {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || (!(obj instanceof FilterListWithOR))) {
-      return false;
-    }
     if (this == obj) {
       return true;
+    }
+    if (!(obj instanceof FilterListWithOR)) {
+      return false;
     }
     FilterListWithOR f = (FilterListWithOR) obj;
     return this.filters.equals(f.getFilters()) && this.prevFilterRCList.equals(f.prevFilterRCList)

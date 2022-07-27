@@ -143,6 +143,7 @@ public class TestQuotaGlobalsSettingsBypass {
       one.merge(two);
       fail("Expected to see an Exception merging " + two + " into " + one);
     } catch (IllegalArgumentException e) {
+      // Expected
     }
   }
 }

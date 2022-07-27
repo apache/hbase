@@ -209,15 +209,19 @@ public class TableState {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    TableState that = (TableState) o;
-
-    if (state != that.state) return false;
-    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null)
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof TableState)) {
       return false;
-
+    }
+    TableState that = (TableState) o;
+    if (state != that.state) {
+      return false;
+    }
+    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null) {
+      return false;
+    }
     return true;
   }
 

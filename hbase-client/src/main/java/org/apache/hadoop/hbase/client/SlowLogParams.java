@@ -62,13 +62,10 @@ public class SlowLogParams {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof SlowLogParams)) {
       return false;
     }
-
     SlowLogParams that = (SlowLogParams) o;
-
     return new EqualsBuilder().append(regionName, that.regionName).append(params, that.params)
       .isEquals();
   }

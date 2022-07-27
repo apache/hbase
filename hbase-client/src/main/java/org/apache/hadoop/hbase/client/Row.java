@@ -32,9 +32,11 @@ public interface Row extends Comparable<Row> {
   byte[] getRow();
 
   /**
+   * Compare this row to another row.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link Row#COMPARATOR} instead
    */
   @Deprecated
+  @Override
   int compareTo(Row var1);
 }
