@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -216,8 +217,9 @@ class NettyRpcConnection extends RpcConnection {
       failInit(ch, e);
       return;
     }
-    ch.pipeline().addFirst(new SaslChallengeDecoder(), saslHandler);
-    saslPromise.addListener(new FutureListener<Boolean>() {
+    ch.pipeline().addFirst("SaslDecoder", new SaslChallengeDecoder()).addAfter("SaslDecoder",
+      "SaslHandler", saslHandler);
+    NettyFutureUtils.addListener(saslPromise, new FutureListener<Boolean>() {
 
       @Override
       public void operationComplete(Future<Boolean> future) throws Exception {
