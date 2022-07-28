@@ -218,8 +218,9 @@ class NettyRpcConnection extends RpcConnection {
       failInit(ch, e);
       return;
     }
-    ch.pipeline().addFirst(new SaslChallengeDecoder(), saslHandler);
-    NettyFutureUtils.consume(saslPromise.addListener(new FutureListener<Boolean>() {
+    ch.pipeline().addFirst("SaslDecoder", new SaslChallengeDecoder()).addAfter("SaslDecoder",
+      "SaslHandler", saslHandler);
+    NettyFutureUtils.addListener(saslPromise, new FutureListener<Boolean>() {
 
       @Override
       public void operationComplete(Future<Boolean> future) throws Exception {
@@ -266,7 +267,7 @@ class NettyRpcConnection extends RpcConnection {
           failInit(ch, toIOE(error));
         }
       }
-    }));
+    });
   }
 
   private void connect() throws UnknownHostException {
