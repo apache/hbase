@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2553,32 +2555,42 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       for (RegionSpecifierAndState s : request.getStatesList()) {
         RegionSpecifier spec = s.getRegionSpecifier();
         String encodedName;
+        RegionInfo info;
+        int replicaId;
         if (spec.getType() == RegionSpecifierType.ENCODED_REGION_NAME) {
-          encodedName = spec.getValue().toStringUtf8();
+          info = this.server.getAssignmentManager()
+            .getRegionInfoFromEncodedRegionName(spec.getValue().toStringUtf8());
         } else {
           // TODO: actually, a full region name can save a lot on meta scan, improve later.
-          encodedName = RegionInfo.encodeRegionName(spec.getValue().toByteArray());
+          info = CatalogFamilyFormat.parseRegionInfoFromRegionName(spec.getValue().toByteArray());
         }
-        RegionInfo info = this.server.getAssignmentManager().loadRegionFromMeta(encodedName);
-        LOG.trace("region info loaded from meta table: {}", info);
+        replicaId = info.getReplicaId();
+        LOG.trace("region info", info);
         RegionState prevState =
           this.server.getAssignmentManager().getRegionStates().getRegionState(info);
         RegionState.State newState = RegionState.State.convert(s.getState());
         LOG.info("{} set region={} state from {} to {}", server.getClientIdAuditPrefix(), info,
           prevState.getState(), newState);
-        Put metaPut =
-          MetaTableAccessor.makePutFromRegionInfo(info, EnvironmentEdgeManager.currentTime());
-        metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
-          Bytes.toBytes(newState.name()));
-        List<Put> putList = new ArrayList<>();
-        putList.add(metaPut);
-        MetaTableAccessor.putsToMetaTable(this.server.getConnection(), putList);
-        // Loads from meta again to refresh AM cache with the new region state
-        this.server.getAssignmentManager().loadRegionFromMeta(encodedName);
-        builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
-          .setState(prevState.getState().convert()));
+        // If state does not change, no need to set.
+        if (prevState.getState() != newState) {
+          if (replicaId > RegionInfo.DEFAULT_REPLICA_ID) {
+            // If it is a non-primary replica region, use primary region as the key.
+            info = RegionInfoBuilder.newBuilder(info).setReplicaId(RegionInfo.DEFAULT_REPLICA_ID)
+              .build();
+          }
+          Put metaPut = new Put(info.getRegionName());
+          metaPut.addColumn(HConstants.CATALOG_FAMILY,
+            CatalogFamilyFormat.getRegionStateColumn(replicaId), Bytes.toBytes(newState.name()));
+          List<Put> putList = new ArrayList<>();
+          putList.add(metaPut);
+          MetaTableAccessor.putsToMetaTable(this.server.getConnection(), putList);
+          // Loads from meta again to refresh AM cache with the new region state
+          this.server.getAssignmentManager().loadRegionFromMeta(info.getEncodedName());
+          builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
+            .setState(prevState.getState().convert()));
+        }
       }
-    } catch (Exception e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
     return builder.build();

@@ -144,6 +144,10 @@ public class RegionStates {
     return regionsMap.get(regionName);
   }
 
+  public RegionStateNode getRegionStateNodeFromEncodedRegionName(final String encodedRegionName) {
+    return encodedRegionsMap.get(encodedRegionName);
+  }
+
   public RegionStateNode getRegionStateNode(RegionInfo regionInfo) {
     return getRegionStateNodeFromName(regionInfo.getRegionName());
   }

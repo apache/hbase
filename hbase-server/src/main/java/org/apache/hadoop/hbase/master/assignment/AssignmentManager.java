@@ -1928,6 +1928,12 @@ public class AssignmentManager {
     return regionState != null ? regionState.getRegionInfo() : null;
   }
 
+  public RegionInfo getRegionInfoFromEncodedRegionName(final String encodedRegionName) {
+    final RegionStateNode regionState =
+      regionStates.getRegionStateNodeFromEncodedRegionName(encodedRegionName);
+    return regionState != null ? regionState.getRegionInfo() : null;
+  }
+
   // ============================================================================================
   // Expected states on region state transition.
   // Notice that there is expected states for transiting to OPENING state, this is because SCP.

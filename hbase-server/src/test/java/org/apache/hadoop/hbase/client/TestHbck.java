@@ -117,7 +117,7 @@ public class TestHbck {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.createMultiRegionTable(TABLE_NAME, Bytes.toBytes("family1"), 5);
+    TEST_UTIL.createMultiRegionTable(TABLE_NAME, 3, new byte[][] { Bytes.toBytes("family1") });
     procExec = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost().load(
