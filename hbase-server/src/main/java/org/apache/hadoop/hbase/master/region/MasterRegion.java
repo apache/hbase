@@ -225,9 +225,11 @@ public final class MasterRegion {
     FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
     String serverName) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
-    Path regionDir =
-      fs.listStatus(tableDir, p -> RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0]
-        .getPath();
+    // on branch-2, the RegionInfo.isEncodedRegionName will returns true for .initializing and
+    // .initialized, see HBASE-25368. Since RegionInfo is IA.Public, changing the implementation may
+    // raise compatibility concerns, so here we just skip them by our own.
+    Path regionDir = fs.listStatus(tableDir, p -> !p.getName().startsWith(".")
+      && RegionInfo.isEncodedRegionName(Bytes.toBytes(p.getName())))[0].getPath();
     RegionInfo regionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
 
     Path walRegionDir = FSUtils.getRegionDirFromRootDir(walRootDir, regionInfo);
