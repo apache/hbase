@@ -242,6 +242,12 @@ public class BlockCacheUtil {
     }
   }
 
+  private static final int DEFAULT_MAX = 1000000;
+
+  public static int getMaxCachedBlocksByFile(Configuration conf) {
+    return conf == null ? DEFAULT_MAX : conf.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+  }
+
   /**
    * Use one of these to keep a running account of cached blocks by file. Throw it away when done.
    * This is different than metrics in that it is stats on current state of a cache. See
@@ -259,14 +265,13 @@ public class BlockCacheUtil {
      * displays warning in red when stats are incomplete.
      */
     private final int max;
-    public static final int DEFAULT_MAX = 1000000;
 
     CachedBlocksByFile() {
       this(null);
     }
 
     CachedBlocksByFile(final Configuration c) {
-      this.max = c == null ? DEFAULT_MAX : c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+      this.max = getMaxCachedBlocksByFile(c);
     }
 
     /**
