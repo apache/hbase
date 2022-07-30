@@ -1782,6 +1782,7 @@
           <version>${surefire.version}</version>
           <!-- Generic testing configuration for all packages -->
           <configuration>
+            <argLine>${argLine}</argLine>
             <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
             <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
@@ -1834,6 +1835,7 @@
               </goals>
               <phase>test</phase>
               <configuration>
+                <argLine>${argLine}</argLine>
                 <skip>${surefire.skipSecondPart}</skip>
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
                 <!--
