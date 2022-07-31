@@ -58,7 +58,7 @@ public class TaskMonitor {
   private final int maxTasks;
   private final long rpcWarnTime;
   private final long expirationTime;
-  private final CircularFifoQueue tasks;
+  private final CircularFifoQueue<TaskAndWeakRefPair> tasks;
   private final List<TaskAndWeakRefPair> rpcTasks;
   private final long monitorInterval;
   private Thread monitorThread;
@@ -67,7 +67,7 @@ public class TaskMonitor {
     maxTasks = conf.getInt(MAX_TASKS_KEY, DEFAULT_MAX_TASKS);
     expirationTime = conf.getLong(EXPIRATION_TIME_KEY, DEFAULT_EXPIRATION_TIME);
     rpcWarnTime = conf.getLong(RPC_WARN_TIME_KEY, DEFAULT_RPC_WARN_TIME);
-    tasks = new CircularFifoQueue(maxTasks);
+    tasks = new CircularFifoQueue<>(maxTasks);
     rpcTasks = Lists.newArrayList();
     monitorInterval = conf.getLong(MONITOR_INTERVAL_KEY, DEFAULT_MONITOR_INTERVAL);
     monitorThread = new Thread(new MonitorRunnable());
@@ -84,12 +84,17 @@ public class TaskMonitor {
     return instance;
   }
 
-  public synchronized MonitoredTask createStatus(String description) {
+  public MonitoredTask createStatus(String description) {
     return createStatus(description, false);
   }
 
-  public synchronized MonitoredTask createStatus(String description, boolean ignore) {
-    MonitoredTask stat = new MonitoredTaskImpl();
+  public MonitoredTask createStatus(String description, boolean ignore) {
+    return createStatus(description, ignore, false);
+  }
+
+  public synchronized MonitoredTask createStatus(String description, boolean ignore,
+    boolean enableJournal) {
+    MonitoredTask stat = new MonitoredTaskImpl(enableJournal);
     stat.setDescription(description);
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(stat.getClass().getClassLoader(),
       new Class<?>[] { MonitoredTask.class }, new PassthroughInvocationHandler<>(stat));

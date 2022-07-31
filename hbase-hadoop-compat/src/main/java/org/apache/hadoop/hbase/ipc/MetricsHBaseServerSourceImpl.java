@@ -143,6 +143,8 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
           wrapper.getGeneralQueueLength())
         .addGauge(Interns.info(REPLICATION_QUEUE_NAME, REPLICATION_QUEUE_DESC),
           wrapper.getReplicationQueueLength())
+        .addGauge(Interns.info(BULKLOAD_QUEUE_NAME, BULKLOAD_QUEUE_DESC),
+          wrapper.getBulkLoadQueueLength())
         .addGauge(Interns.info(PRIORITY_QUEUE_NAME, PRIORITY_QUEUE_DESC),
           wrapper.getPriorityQueueLength())
         .addGauge(Interns.info(METAPRIORITY_QUEUE_NAME, METAPRIORITY_QUEUE_DESC),
@@ -163,6 +165,8 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
         .addCounter(Interns.info(NUM_LIFO_MODE_SWITCHES_NAME, NUM_LIFO_MODE_SWITCHES_DESC),
           wrapper.getNumLifoModeSwitches())
         .addGauge(Interns.info(WRITE_QUEUE_NAME, WRITE_QUEUE_DESC), wrapper.getWriteQueueLength())
+        .addGauge(Interns.info(NUM_ACTIVE_BULKLOAD_HANDLER_NAME, NUM_ACTIVE_BULKLOAD_HANDLER_DESC),
+          wrapper.getActiveBulkLoadRpcHandlerCount())
         .addGauge(Interns.info(READ_QUEUE_NAME, READ_QUEUE_DESC), wrapper.getReadQueueLength())
         .addGauge(Interns.info(SCAN_QUEUE_NAME, SCAN_QUEUE_DESC), wrapper.getScanQueueLength())
         .addGauge(Interns.info(NUM_ACTIVE_WRITE_HANDLER_NAME, NUM_ACTIVE_WRITE_HANDLER_DESC),

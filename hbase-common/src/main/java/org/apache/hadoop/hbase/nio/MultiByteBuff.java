@@ -131,17 +131,13 @@ public class MultiByteBuff extends ByteBuff {
     throw new UnsupportedOperationException();
   }
 
-  /**
-   * @return false. MBB does not support array based operations
-   */
+  /** Returns false. MBB does not support array based operations */
   @Override
   public boolean hasArray() {
     return false;
   }
 
-  /**
-   * @return the total capacity of this MultiByteBuffer.
-   */
+  /** Returns the total capacity of this MultiByteBuffer. */
   @Override
   public int capacity() {
     checkRefCount();
@@ -384,9 +380,7 @@ public class MultiByteBuff extends ByteBuff {
     return getLong(index, itemIndex);
   }
 
-  /**
-   * @return this MBB's current position
-   */
+  /** Returns this MBB's current position */
   @Override
   public int position() {
     checkRefCount();

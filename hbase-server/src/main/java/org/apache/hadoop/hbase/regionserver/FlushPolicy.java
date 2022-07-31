@@ -40,8 +40,6 @@ public abstract class FlushPolicy extends Configured {
     this.region = region;
   }
 
-  /**
-   * @return the stores need to be flushed.
-   */
+  /** Returns the stores need to be flushed. */
   public abstract Collection<HStore> selectStoresToFlush();
 }

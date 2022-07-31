@@ -85,9 +85,7 @@ public class CatalogJanitorReport {
     return emptyRegionInfo;
   }
 
-  /**
-   * @return True if an 'empty' lastReport -- no problems found.
-   */
+  /** Returns True if an 'empty' lastReport -- no problems found. */
   public boolean isEmpty() {
     return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty()
       && this.emptyRegionInfo.isEmpty();

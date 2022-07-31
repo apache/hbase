@@ -27,9 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface ChangedReadersObserver {
 
-  /**
-   * @return the read point of the current scan
-   */
+  /** Returns the read point of the current scan */
   long getReadPoint();
 
   /**

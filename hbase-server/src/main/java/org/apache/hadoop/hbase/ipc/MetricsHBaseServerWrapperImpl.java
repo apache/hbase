@@ -58,6 +58,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
   }
 
   @Override
+  public int getBulkLoadQueueLength() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getBulkLoadQueueLength();
+  }
+
+  @Override
   public int getPriorityQueueLength() {
     if (!isServerStarted() || this.server.getScheduler() == null) {
       return 0;
@@ -119,6 +127,14 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
       return 0;
     }
     return server.getScheduler().getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    if (!isServerStarted() || this.server.getScheduler() == null) {
+      return 0;
+    }
+    return server.getScheduler().getActiveBulkLoadRpcHandlerCount();
   }
 
   @Override

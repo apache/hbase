@@ -56,7 +56,7 @@ public class TestAsyncAggregationClient {
 
   private static byte[] CQ2 = Bytes.toBytes("CQ2");
 
-  private static int COUNT = 1000;
+  private static long COUNT = 1000;
 
   private static AsyncConnection CONN;
 
@@ -141,7 +141,7 @@ public class TestAsyncAggregationClient {
     long halfSum = COUNT * (COUNT - 1) / 4;
     long median = 0L;
     long sum = 0L;
-    for (int i = 0; i < COUNT; i++) {
+    for (long i = 0; i < COUNT; i++) {
       sum += i;
       if (sum > halfSum) {
         median = i - 1;
@@ -158,7 +158,7 @@ public class TestAsyncAggregationClient {
       LongStream.range(0, COUNT).map(l -> l * l).reduce((l1, l2) -> l1 + l2).getAsLong() / 2;
     long median = 0L;
     long sum = 0L;
-    for (int i = 0; i < COUNT; i++) {
+    for (long i = 0; i < COUNT; i++) {
       sum += i * i;
       if (sum > halfSum) {
         median = i - 1;

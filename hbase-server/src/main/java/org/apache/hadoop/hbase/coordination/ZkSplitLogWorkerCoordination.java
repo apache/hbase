@@ -317,9 +317,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements SplitLog
     server.getExecutorService().submit(hsh);
   }
 
-  /**
-   * @return true if more splitters are available, otherwise false.
-   */
+  /** Returns true if more splitters are available, otherwise false. */
   private boolean areSplittersAvailable() {
     return maxConcurrentTasks - tasksInProgress.get() > 0;
   }

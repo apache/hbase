@@ -40,43 +40,31 @@ public interface UserMetrics {
     long getFilteredReadRequestsCount();
   }
 
-  /**
-   * @return the user name
-   */
+  /** Returns the user name */
   byte[] getUserName();
 
-  /**
-   * @return the number of read requests made by user
-   */
+  /** Returns the number of read requests made by user */
   long getReadRequestCount();
 
-  /**
-   * @return the number of write requests made by user
-   */
+  /** Returns the number of write requests made by user */
   long getWriteRequestCount();
 
   /**
-   * @return the number of write requests and read requests and coprocessor service requests made by
-   *         the user
+   * Returns the number of write requests and read requests and coprocessor service requests made by
+   * the user
    */
   default long getRequestCount() {
     return getReadRequestCount() + getWriteRequestCount();
   }
 
-  /**
-   * @return the user name as a string
-   */
+  /** Returns the user name as a string */
   default String getNameAsString() {
     return Bytes.toStringBinary(getUserName());
   }
 
-  /**
-   * @return metrics per client(hostname)
-   */
+  /** Returns metrics per client(hostname) */
   Map<String, ClientMetrics> getClientMetrics();
 
-  /**
-   * @return count of filtered read requests for a user
-   */
+  /** Returns count of filtered read requests for a user */
   long getFilteredReadRequests();
 }

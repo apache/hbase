@@ -92,6 +92,11 @@ public interface MetricsRegionServerWrapper {
   long getNumStoreFiles();
 
   /**
+   * Get the max number of store files across all regions of this region server.
+   */
+  long getMaxStoreFiles();
+
+  /**
    * Get the size of the memstore on this region server.
    */
   long getMemStoreSize();
@@ -116,24 +121,16 @@ public interface MetricsRegionServerWrapper {
    */
   double getStoreFileSizeGrowthRate();
 
-  /**
-   * @return Max age of store files hosted on this region server
-   */
+  /** Returns Max age of store files hosted on this region server */
   long getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files hosted on this region server
-   */
+  /** Returns Min age of store files hosted on this region server */
   long getMinStoreFileAge();
 
-  /**
-   * @return Average age of store files hosted on this region server
-   */
+  /** Returns Average age of store files hosted on this region server */
   long getAvgStoreFileAge();
 
-  /**
-   * @return Number of reference files on this region server
-   */
+  /** Returns Number of reference files on this region server */
   long getNumReferenceFiles();
 
   /**
@@ -268,6 +265,11 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheCount();
 
   /**
+   * Get the number of DATA blocks in the block cache.
+   */
+  long getBlockCacheDataBlockCount();
+
+  /**
    * Get the total size (in bytes) of the block cache.
    */
   long getBlockCacheSize();
@@ -318,6 +320,26 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheFailedInsertions();
 
   /**
+   * Cache size (bytes) of L1 cache
+   */
+  long getL1CacheSize();
+
+  /**
+   * Free cache size (bytes) of L1 cache
+   */
+  long getL1CacheFreeSize();
+
+  /**
+   * Number of blocks in L1 cache
+   */
+  long getL1CacheCount();
+
+  /**
+   * Number of blocks evicted from L1 cache
+   */
+  long getL1CacheEvictedCount();
+
+  /**
    * Hit count of L1 cache.
    */
   long getL1CacheHitCount();
@@ -336,6 +358,26 @@ public interface MetricsRegionServerWrapper {
    * Miss ratio of L1 cache.
    */
   double getL1CacheMissRatio();
+
+  /**
+   * Cache size (bytes) of L2 cache
+   */
+  long getL2CacheSize();
+
+  /**
+   * Free cache size (bytes) of L2 cache
+   */
+  long getL2CacheFreeSize();
+
+  /**
+   * Number of blocks in L2 cache
+   */
+  long getL2CacheCount();
+
+  /**
+   * Number of blocks evicted from L2 cache
+   */
+  long getL2CacheEvictedCount();
 
   /**
    * Hit count of L2 cache.
@@ -467,43 +509,29 @@ public interface MetricsRegionServerWrapper {
    */
   double getMobFileCacheHitPercent();
 
-  /**
-   * @return Count of hedged read operations
-   */
+  /** Returns Count of hedged read operations */
   long getHedgedReadOps();
 
-  /**
-   * @return Count of times a hedged read beat out the primary read.
-   */
+  /** Returns Count of times a hedged read beat out the primary read. */
   long getHedgedReadWins();
 
-  /**
-   * @return Count of times a hedged read executes in current thread
-   */
+  /** Returns Count of times a hedged read executes in current thread */
   long getHedgedReadOpsInCurThread();
 
-  /**
-   * @return Number of total bytes read from HDFS.
-   */
+  /** Returns Number of total bytes read from HDFS. */
   long getTotalBytesRead();
 
-  /**
-   * @return Number of bytes read from the local HDFS DataNode.
-   */
+  /** Returns Number of bytes read from the local HDFS DataNode. */
   long getLocalBytesRead();
 
-  /**
-   * @return Number of bytes read locally through HDFS short circuit.
-   */
+  /** Returns Number of bytes read locally through HDFS short circuit. */
   long getShortCircuitBytesRead();
 
-  /**
-   * @return Number of bytes read locally through HDFS zero copy.
-   */
+  /** Returns Number of bytes read locally through HDFS zero copy. */
   long getZeroCopyBytesRead();
 
   /**
-   * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
+   * Returns Count of requests blocked because the memstore size is larger than blockingMemStoreSize
    */
   long getBlockedRequestsCount();
 

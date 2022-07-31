@@ -186,9 +186,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
     }
   }
 
-  /**
-   * @return The total number of visibility labels.
-   */
+  /** Returns The total number of visibility labels. */
   public int getLabelsCount() {
     this.lock.readLock().lock();
     try {

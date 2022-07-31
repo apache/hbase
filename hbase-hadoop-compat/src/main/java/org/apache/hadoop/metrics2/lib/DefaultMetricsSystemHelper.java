@@ -33,6 +33,7 @@ public class DefaultMetricsSystemHelper {
   private final Field mapField;
 
   public DefaultMetricsSystemHelper() {
+    @SuppressWarnings("GetClassOnEnum")
     Class<? extends DefaultMetricsSystem> clazz = DefaultMetricsSystem.INSTANCE.getClass();
     Method m;
     try {

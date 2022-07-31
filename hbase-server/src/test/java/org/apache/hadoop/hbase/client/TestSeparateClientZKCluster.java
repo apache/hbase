@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -76,9 +77,8 @@ public class TestSeparateClientZKCluster {
     clientZkCluster = new MiniZooKeeperCluster(TEST_UTIL.getConfiguration());
     clientZkCluster.setDefaultClientPort(clientZkPort);
     clientZkCluster.startup(clientZkDir);
-    // reduce the retry number and start log counter
-    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.start.log.errors.counter", -1);
+    // start log counter
+    TEST_UTIL.getConfiguration().setInt("hbase.client.start.log.errors.counter", 3);
     TEST_UTIL.getConfiguration().setInt("zookeeper.recovery.retry", 1);
     // core settings for testing client ZK cluster
     TEST_UTIL.getConfiguration().setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
@@ -98,6 +98,24 @@ public class TestSeparateClientZKCluster {
     TEST_UTIL.shutdownMiniCluster();
     clientZkCluster.shutdown();
     FileUtils.deleteDirectory(clientZkDir);
+  }
+
+  @Before
+  public void setUp() throws IOException {
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      waitForNewMasterUpAndAddressSynced(admin);
+    }
+  }
+
+  private void waitForNewMasterUpAndAddressSynced(Admin admin) {
+    TEST_UTIL.waitFor(30000, () -> {
+      try {
+        return admin.listNamespaces().length > 0;
+      } catch (Exception e) {
+        LOG.warn("failed to list namespaces", e);
+        return false;
+      }
+    });
   }
 
   @Test
@@ -133,18 +151,13 @@ public class TestSeparateClientZKCluster {
       HMaster master = cluster.getMaster();
       master.stopMaster();
       LOG.info("Stopped master {}", master.getServerName());
-      while (master.isAlive()) {
-        Thread.sleep(200);
-      }
+      TEST_UTIL.waitFor(30000, () -> !master.isAlive());
       LOG.info("Shutdown master {}", master.getServerName());
-      while (cluster.getMaster() == null || !cluster.getMaster().isInitialized()) {
-        LOG.info("Get master {}",
-          cluster.getMaster() == null ? "null" : cluster.getMaster().getServerName());
-        Thread.sleep(200);
-      }
+      TEST_UTIL.waitFor(30000,
+        () -> cluster.getMaster() != null && cluster.getMaster().isInitialized());
       LOG.info("Got master {}", cluster.getMaster().getServerName());
       // confirm client access still works
-      assertTrue(admin.balance(BalanceRequest.defaultInstance()).isBalancerRan());
+      waitForNewMasterUpAndAddressSynced(admin);
     }
   }
 

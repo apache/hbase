@@ -26,11 +26,14 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,6 +66,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionAsTable;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -76,12 +80,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
  */
+@RunWith(Parameterized.class)
 @Category(MediumTests.class)
 public class TestMobStoreCompaction {
 
@@ -106,15 +113,33 @@ public class TestMobStoreCompaction {
   private final byte[] STARTROW = Bytes.toBytes(START_KEY);
   private int compactionThreshold;
 
+  private Boolean useFileBasedSFT;
+
+  public TestMobStoreCompaction(Boolean useFileBasedSFT) {
+    this.useFileBasedSFT = useFileBasedSFT;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> data() {
+    Boolean[] data = { false, true };
+    return Arrays.asList(data);
+  }
+
   private void init(Configuration conf, long mobThreshold) throws Exception {
+    if (useFileBasedSFT) {
+      conf.set(StoreFileTrackerFactory.TRACKER_IMPL,
+        "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
+    }
+
     this.conf = conf;
     this.mobCellThreshold = mobThreshold;
+
     HBaseTestingUtil UTIL = new HBaseTestingUtil(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
       .setMobThreshold(mobThreshold).setMaxVersions(1).build();
-    tableDescriptor = UTIL.createModifyableTableDescriptor(name.getMethodName())
+    tableDescriptor = UTIL.createModifyableTableDescriptor(TestMobUtils.getTableName(name))
       .modifyColumnFamily(familyDescriptor).build();
 
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
@@ -223,7 +248,7 @@ public class TestMobStoreCompaction {
     Path basedir = new Path(hbaseRootDir, tableDescriptor.getTableName().getNameAsString());
     List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {
-      Path hpath = new Path(basedir, "hfile" + i);
+      Path hpath = new Path(basedir, UUID.randomUUID().toString().replace("-", ""));
       hfiles.add(Pair.newPair(COLUMN_FAMILY, hpath.toString()));
       createHFile(hpath, i, dummyData);
     }

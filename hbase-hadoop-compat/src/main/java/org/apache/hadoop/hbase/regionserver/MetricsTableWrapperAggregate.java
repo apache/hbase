@@ -89,32 +89,25 @@ public interface MetricsTableWrapperAggregate {
   long getNumStoreFiles(String table);
 
   /**
-   * @return Max age of store files for this table
+   * Get the max number of store files across all regions of this table
    */
+  long getMaxStoreFiles(String table);
+
+  /** Returns Max age of store files for this table */
   long getMaxStoreFileAge(String table);
 
-  /**
-   * @return Min age of store files for this table
-   */
+  /** Returns Min age of store files for this table */
   long getMinStoreFileAge(String table);
 
-  /**
-   * @return Average age of store files for this table
-   */
+  /** Returns Average age of store files for this table */
   long getAvgStoreFileAge(String table);
 
-  /**
-   * @return Number of reference files for this table
-   */
+  /** Returns Number of reference files for this table */
   long getNumReferenceFiles(String table);
 
-  /**
-   * @return number of row reads completely from memstore per store for this table
-   */
+  /** Returns number of row reads completely from memstore per store for this table */
   Map<String, Long> getMemstoreOnlyRowReadsCount(String table);
 
-  /**
-   * @return number of row reads from file and memstore per store for this table
-   */
+  /** Returns number of row reads from file and memstore per store for this table */
   Map<String, Long> getMixedRowReadsCount(String table);
 }

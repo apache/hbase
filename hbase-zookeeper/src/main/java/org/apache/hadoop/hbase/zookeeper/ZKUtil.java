@@ -1115,37 +1115,27 @@ public final class ZKUtil {
       this.path = path;
     }
 
-    /**
-     * @return a createAndFailSilent ZKUtilOp
-     */
+    /** Returns a createAndFailSilent ZKUtilOp */
     public static ZKUtilOp createAndFailSilent(String path, byte[] data) {
       return new CreateAndFailSilent(path, data);
     }
 
-    /**
-     * @return a deleteNodeFailSilent ZKUtilOP
-     */
+    /** Returns a deleteNodeFailSilent ZKUtilOP */
     public static ZKUtilOp deleteNodeFailSilent(String path) {
       return new DeleteNodeFailSilent(path);
     }
 
-    /**
-     * @return a setData ZKUtilOp
-     */
+    /** Returns a setData ZKUtilOp */
     public static ZKUtilOp setData(String path, byte[] data) {
       return new SetData(path, data);
     }
 
-    /**
-     * @return a setData ZKUtilOp
-     */
+    /** Returns a setData ZKUtilOp */
     public static ZKUtilOp setData(String path, byte[] data, int version) {
       return new SetData(path, data, version);
     }
 
-    /**
-     * @return path to znode where the ZKOp will occur
-     */
+    /** Returns path to znode where the ZKOp will occur */
     public String getPath() {
       return path;
     }

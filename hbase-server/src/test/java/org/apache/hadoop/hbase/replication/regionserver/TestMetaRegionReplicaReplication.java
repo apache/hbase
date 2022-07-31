@@ -254,9 +254,7 @@ public class TestMetaRegionReplicaReplication {
     return results;
   }
 
-  /**
-   * @return All Regions for tableName including Replicas.
-   */
+  /** Returns All Regions for tableName including Replicas. */
   private Region[] getAllRegions(TableName tableName, int replication) {
     final Region[] regions = new Region[replication];
     for (int i = 0; i < NB_SERVERS; i++) {

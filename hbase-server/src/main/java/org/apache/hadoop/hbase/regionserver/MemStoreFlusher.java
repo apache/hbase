@@ -289,23 +289,17 @@ public class MemStoreFlusher implements FlushRequester {
     return true;
   }
 
-  /**
-   * @return Return memstore offheap size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore offheap size or null if <code>r</code> is null */
   private static long getMemStoreOffHeapSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreOffHeapSize();
   }
 
-  /**
-   * @return Return memstore heap size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore heap size or null if <code>r</code> is null */
   private static long getMemStoreHeapSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreHeapSize();
   }
 
-  /**
-   * @return Return memstore data size or null if <code>r</code> is null
-   */
+  /** Returns Return memstore data size or null if <code>r</code> is null */
   private static long getMemStoreDataSize(HRegion r) {
     return r == null ? 0 : r.getMemStoreDataSize();
   }
@@ -432,14 +426,14 @@ public class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Return true if global memory usage is above the high watermark
+   * Return the FlushType if global memory usage is above the high watermark
    */
   private FlushType isAboveHighWaterMark() {
     return server.getRegionServerAccounting().isAboveHighWaterMark();
   }
 
   /**
-   * Return true if we're above the low watermark
+   * Return the FlushType if we're above the low watermark
    */
   private FlushType isAboveLowWaterMark() {
     return server.getRegionServerAccounting().isAboveLowWaterMark();
@@ -856,9 +850,7 @@ public class MemStoreFlusher implements FlushRequester {
       return (EnvironmentEdgeManager.currentTime() - this.createTime) > maximumWait;
     }
 
-    /**
-     * @return True if the entry is a delay flush task
-     */
+    /** Returns True if the entry is a delay flush task */
     protected boolean isDelay() {
       return this.whenToExpire > this.createTime;
     }

@@ -129,9 +129,7 @@ public interface DataBlockEncoder {
      */
     ByteBuffer getValueShallowCopy();
 
-    /**
-     * @return the Cell at the current position. Includes memstore timestamp.
-     */
+    /** Returns the Cell at the current position. Includes memstore timestamp. */
     Cell getCell();
 
     /** Set position to beginning of given block */

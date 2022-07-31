@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.nio;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -79,9 +80,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /******************************* Methods for ByteBuff **************************************/
 
-  /**
-   * @return this ByteBuff's current position
-   */
+  /** Returns this ByteBuff's current position */
   public abstract int position();
 
   /**
@@ -101,9 +100,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff moveBack(int len);
 
-  /**
-   * @return the total capacity of this ByteBuff.
-   */
+  /** Returns the total capacity of this ByteBuff. */
   public abstract int capacity();
 
   /**
@@ -262,19 +259,13 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff put(byte[] src);
 
-  /**
-   * @return true or false if the underlying BB support hasArray
-   */
+  /** Returns true or false if the underlying BB support hasArray */
   public abstract boolean hasArray();
 
-  /**
-   * @return the byte[] if the underlying BB has single BB and hasArray true
-   */
+  /** Returns the byte[] if the underlying BB has single BB and hasArray true */
   public abstract byte[] array();
 
-  /**
-   * @return the arrayOffset of the byte[] incase of a single BB backed ByteBuff
-   */
+  /** Returns the arrayOffset of the byte[] incase of a single BB backed ByteBuff */
   public abstract int arrayOffset();
 
   /**
@@ -545,6 +536,28 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   public static ByteBuff wrap(ByteBuffer buffer) {
     return wrap(buffer, RefCnt.create());
+  }
+
+  /**
+   * Calling this method in strategic locations where ByteBuffs are referenced may help diagnose
+   * potential buffer leaks. We pass the buffer itself as a default hint, but one can use
+   * {@link #touch(Object)} to pass their own hint as well.
+   */
+  @Override
+  public ByteBuff touch() {
+    return touch(this);
+  }
+
+  @Override
+  public ByteBuff touch(Object hint) {
+    refCnt.touch(hint);
+    return this;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public RefCnt getRefCnt() {
+    return refCnt;
   }
 
   /**

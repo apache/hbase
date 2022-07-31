@@ -207,9 +207,7 @@ public final class MetaTableAccessor {
       regionInfo, regionInfo.getReplicaId());
   }
 
-  /**
-   * @return Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta.
-   */
+  /** Returns Return the {@link HConstants#CATALOG_FAMILY} row from hbase:meta. */
   public static Result getCatalogFamilyRow(Connection connection, RegionInfo ri)
     throws IOException {
     Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(ri));
@@ -515,9 +513,7 @@ public final class MetaTableAccessor {
     }
   }
 
-  /**
-   * @return Get closest metatable region row to passed <code>row</code>
-   */
+  /** Returns Get closest metatable region row to passed <code>row</code> */
   @NonNull
   private static RegionInfo getClosestRegionInfo(Connection connection,
     @NonNull final TableName tableName, @NonNull final byte[] row) throws IOException {

@@ -89,9 +89,7 @@ class EntryBuffers {
     controller.checkForErrors();
   }
 
-  /**
-   * @return RegionEntryBuffer a buffer of edits to be written.
-   */
+  /** Returns RegionEntryBuffer a buffer of edits to be written. */
   synchronized RegionEntryBuffer getChunkToWrite() {
     long biggestSize = 0;
     byte[] biggestBufferKey = null;

@@ -46,9 +46,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     super();
   }
 
-  /**
-   * @return The RegionInfo of the region we are operating on.
-   */
+  /** Returns The RegionInfo of the region we are operating on. */
   public RegionInfo getRegion() {
     return this.hri;
   }

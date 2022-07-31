@@ -212,7 +212,7 @@ public class ExecutorService {
     }
 
     /**
-     * @return the executor name inferred from the type and the servername on which this is running.
+     * Returns the executor name inferred from the type and the servername on which this is running.
      */
     public String getName() {
       return getExecutorType().getExecutorName(servername);

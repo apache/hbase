@@ -129,9 +129,7 @@ public abstract class User {
     ugi.addToken(token);
   }
 
-  /**
-   * @return true if user credentials are obtained from keytab.
-   */
+  /** Returns true if user credentials are obtained from keytab. */
   public boolean isLoginFromKeytab() {
     return ugi.isFromKeytab();
   }

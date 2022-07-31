@@ -110,8 +110,6 @@ public interface MetricsMasterSource extends BaseSource {
    */
   void incWriteRequests(final long inc);
 
-  /**
-   * @return {@link OperationMetrics} containing common metrics for server crash operation
-   */
+  /** Returns {@link OperationMetrics} containing common metrics for server crash operation */
   OperationMetrics getServerCrashMetrics();
 }

@@ -222,9 +222,7 @@ public class ReplicationPeerManager {
     return desc;
   }
 
-  /**
-   * @return the old desciption of the peer
-   */
+  /** Returns the old desciption of the peer */
   ReplicationPeerDescription preTransitPeerSyncReplicationState(String peerId,
     SyncReplicationState state) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);

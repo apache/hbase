@@ -306,11 +306,6 @@ public final class ConnectionUtils {
     return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
   }
 
-  static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
-  }
-
   public static ScanResultCache createScanResultCache(Scan scan) {
     if (scan.getAllowPartialResults()) {
       return new AllowPartialScanResultCache();

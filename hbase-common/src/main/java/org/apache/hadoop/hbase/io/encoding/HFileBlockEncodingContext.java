@@ -31,14 +31,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface HFileBlockEncodingContext {
 
-  /**
-   * @return the block type after encoding
-   */
+  /** Returns the block type after encoding */
   BlockType getBlockType();
 
-  /**
-   * @return the {@link DataBlockEncoding} encoding used
-   */
+  /** Returns the {@link DataBlockEncoding} encoding used */
   DataBlockEncoding getDataBlockEncoding();
 
   /**
@@ -52,9 +48,7 @@ public interface HFileBlockEncodingContext {
    */
   void close();
 
-  /**
-   * @return HFile context information
-   */
+  /** Returns HFile context information */
   HFileContext getHFileContext();
 
   /**
@@ -62,9 +56,7 @@ public interface HFileBlockEncodingContext {
    */
   void setEncodingState(EncodingState state);
 
-  /**
-   * @return the encoding state
-   */
+  /** Returns the encoding state */
   EncodingState getEncodingState();
 
   /**

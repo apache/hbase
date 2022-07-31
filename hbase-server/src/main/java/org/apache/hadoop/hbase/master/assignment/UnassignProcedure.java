@@ -130,7 +130,7 @@ public class UnassignProcedure extends RegionTransitionProcedure {
   }
 
   /**
-   * @return If true, we will re-wake up this procedure; if false, the procedure stays suspended.
+   * Returns If true, we will re-wake up this procedure; if false, the procedure stays suspended.
    */
   @Override
   protected boolean remoteCallFailed(final MasterProcedureEnv env, final RegionStateNode regionNode,

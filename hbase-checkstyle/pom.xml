@@ -25,11 +25,11 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase</artifactId>
-    <version>3.0.0-alpha-3-SNAPSHOT</version>
+    <version>3.0.0-alpha-4-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-checkstyle</artifactId>
-  <version>3.0.0-alpha-3-SNAPSHOT</version>
+  <version>3.0.0-alpha-4-SNAPSHOT</version>
   <name>Apache HBase - Checkstyle</name>
   <description>Module to hold Checkstyle properties for HBase.</description>
 

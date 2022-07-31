@@ -197,12 +197,12 @@ public class RegionStates {
     return regions;
   }
 
-  /** @return A view of region state nodes for all the regions. */
+  /** Returns A view of region state nodes for all the regions. */
   public Collection<RegionStateNode> getRegionStateNodes() {
     return Collections.unmodifiableCollection(regionsMap.values());
   }
 
-  /** @return A snapshot of region state nodes for all the regions. */
+  /** Returns A snapshot of region state nodes for all the regions. */
   public ArrayList<RegionState> getRegionStates() {
     final ArrayList<RegionState> regions = new ArrayList<>(regionsMap.size());
     for (RegionStateNode node : regionsMap.values()) {
@@ -235,9 +235,7 @@ public class RegionStates {
     return !getTableRegionStates(tableName).isEmpty();
   }
 
-  /**
-   * @return Return online regions of table; does not include OFFLINE or SPLITTING regions.
-   */
+  /** Returns Return online regions of table; does not include OFFLINE or SPLITTING regions. */
   public List<RegionInfo> getRegionsOfTable(TableName table) {
     return getRegionsOfTable(table, regionNode -> !regionNode.isInState(State.OFFLINE, State.SPLIT)
       && !regionNode.getRegionInfo().isSplitParent());
@@ -370,9 +368,7 @@ public class RegionStates {
       .collect(Collectors.toList());
   }
 
-  /**
-   * @return Return the regions of the table and filter them.
-   */
+  /** Returns Return the regions of the table and filter them. */
   private List<RegionInfo> getRegionsOfTable(TableName table, Predicate<RegionStateNode> filter) {
     return getTableRegionStateNodes(table).stream().filter(filter).map(n -> n.getRegionInfo())
       .collect(Collectors.toList());
@@ -483,9 +479,7 @@ public class RegionStates {
     return isRegionInState(regionInfo, State.OPEN);
   }
 
-  /**
-   * @return True if region is offline (In OFFLINE or CLOSED state).
-   */
+  /** Returns True if region is offline (In OFFLINE or CLOSED state). */
   public boolean isRegionOffline(final RegionInfo regionInfo) {
     return isRegionInState(regionInfo, State.OFFLINE, State.CLOSED);
   }
@@ -768,9 +762,7 @@ public class RegionStates {
     serverMap.remove(serverName);
   }
 
-  /**
-   * @return Pertinent ServerStateNode or NULL if none found (Do not make modifications).
-   */
+  /** Returns Pertinent ServerStateNode or NULL if none found (Do not make modifications). */
   public ServerStateNode getServerNode(final ServerName serverName) {
     return serverMap.get(serverName);
   }

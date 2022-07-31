@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.mob;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -166,14 +167,38 @@ public class TestMobFileCleanerChore {
 
     Thread.sleep(minAgeToArchive + 1000);
     LOG.info("Cleaning up MOB files");
-    // Cleanup again
+    // Cleanup
     chore.cleanupObsoleteMobFiles(conf, table.getName());
 
+    // verify that nothing have happened
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
-    assertEquals(1, num);
+    assertEquals(4, num);
 
     long scanned = scanTable();
     assertEquals(30, scanned);
+
+    // add a MOB file to with a name refering to a non-existing region
+    Path extraMOBFile = MobTestUtil.generateMOBFileForRegion(conf, table.getName(),
+      familyDescriptor, "nonExistentRegion");
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(5, num);
+
+    LOG.info("Waiting for {}ms", minAgeToArchive + 1000);
+
+    Thread.sleep(minAgeToArchive + 1000);
+    LOG.info("Cleaning up MOB files");
+    chore.cleanupObsoleteMobFiles(conf, table.getName());
+
+    // check that the extra file got deleted
+    num = getNumberOfMobFiles(conf, table.getName(), new String(fam));
+    assertEquals(4, num);
+
+    FileSystem fs = FileSystem.get(conf);
+    assertFalse(fs.exists(extraMOBFile));
+
+    scanned = scanTable();
+    assertEquals(30, scanned);
+
   }
 
   private long getNumberOfMobFiles(Configuration conf, TableName tableName, String family)

@@ -314,9 +314,7 @@ public class ActiveMasterManager extends ZKListener {
     return false;
   }
 
-  /**
-   * @return True if cluster has an active master.
-   */
+  /** Returns True if cluster has an active master. */
   boolean hasActiveMaster() {
     try {
       if (ZKUtil.checkExists(watcher, watcher.getZNodePaths().masterAddressZNode) >= 0) {
@@ -353,9 +351,7 @@ public class ActiveMasterManager extends ZKListener {
     }
   }
 
-  /**
-   * @return list of registered backup masters.
-   */
+  /** Returns list of registered backup masters. */
   public List<ServerName> getBackupMasters() {
     return backupMasters;
   }

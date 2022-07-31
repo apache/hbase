@@ -119,9 +119,7 @@ public class HFileContext implements HeapSize, Cloneable {
       : CellComparator.getInstance();
   }
 
-  /**
-   * @return true when on-disk blocks are compressed, and/or encrypted; false otherwise.
-   */
+  /** Returns true when on-disk blocks are compressed, and/or encrypted; false otherwise. */
   public boolean isCompressedOrEncrypted() {
     Compression.Algorithm compressAlgo = getCompression();
     boolean compressed = compressAlgo != null && compressAlgo != Compression.Algorithm.NONE;

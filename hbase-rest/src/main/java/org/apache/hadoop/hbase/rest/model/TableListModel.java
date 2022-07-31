@@ -62,9 +62,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
     return tables.get(index);
   }
 
-  /**
-   * @return the tables
-   */
+  /** Returns the tables */
   @XmlElementRef(name = "table")
   public List<TableModel> getTables() {
     return tables;

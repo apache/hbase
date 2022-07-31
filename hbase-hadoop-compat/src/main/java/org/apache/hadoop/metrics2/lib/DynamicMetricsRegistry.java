@@ -26,8 +26,6 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -43,7 +41,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 public class DynamicMetricsRegistry {
-  private static final Logger LOG = LoggerFactory.getLogger(DynamicMetricsRegistry.class);
 
   private final ConcurrentMap<String, MutableMetric> metricsMap = Maps.newConcurrentMap();
   private final ConcurrentMap<String, MetricsTag> tagsMap = Maps.newConcurrentMap();
@@ -68,9 +65,7 @@ public class DynamicMetricsRegistry {
     metricsInfo = info;
   }
 
-  /**
-   * @return the info object of the metrics registry
-   */
+  /** Returns the info object of the metrics registry */
   public MetricsInfo info() {
     return metricsInfo;
   }

@@ -165,14 +165,10 @@ public interface ProcedureStore {
    */
   void stop(boolean abort);
 
-  /**
-   * @return true if the store is running, otherwise false.
-   */
+  /** Returns true if the store is running, otherwise false. */
   boolean isRunning();
 
-  /**
-   * @return the number of threads/slots passed to start()
-   */
+  /** Returns the number of threads/slots passed to start() */
   int getNumThreads();
 
   /**

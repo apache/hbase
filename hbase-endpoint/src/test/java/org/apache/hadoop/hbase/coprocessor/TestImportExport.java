@@ -51,11 +51,10 @@ public class TestImportExport extends org.apache.hadoop.hbase.mapreduce.TestImpo
     Export.main(args);
   }
 
-  /**
-   * Skip the test which is unrelated to the coprocessor.Export.
-   */
   @Test
   @Ignore
+  @Override
   public void testImport94Table() throws Throwable {
+    // Skip the test which is unrelated to the coprocessor.Export.
   }
 }

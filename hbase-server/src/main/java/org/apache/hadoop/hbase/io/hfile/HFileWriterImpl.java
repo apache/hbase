@@ -172,8 +172,9 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
-    float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 1f);
+    float encodeBlockSizeRatio = conf.getFloat(UNIFIED_ENCODED_BLOCKSIZE_RATIO, 0f);
     this.encodedBlockSizeLimit = (int) (hFileContext.getBlocksize() * encodeBlockSizeRatio);
+
     finishInit(conf);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Writer" + (path != null ? " for " + path : "") + " initialized with cacheConf: "
@@ -259,9 +260,7 @@ public class HFileWriterImpl implements HFile.Writer {
     }
   }
 
-  /**
-   * @return Path or null if we were passed a stream rather than a Path.
-   */
+  /** Returns Path or null if we were passed a stream rather than a Path. */
   @Override
   public Path getPath() {
     return path;
@@ -311,12 +310,16 @@ public class HFileWriterImpl implements HFile.Writer {
    * At a block boundary, write all the inline blocks and opens new block.
    */
   protected void checkBlockBoundary() throws IOException {
-    // For encoder like prefixTree, encoded size is not available, so we have to compare both
-    // encoded size and unencoded size to blocksize limit.
-    if (
-      blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit
-        || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize()
-    ) {
+    boolean shouldFinishBlock = false;
+    // This means hbase.writer.unified.encoded.blocksize.ratio was set to something different from 0
+    // and we should use the encoding ratio
+    if (encodedBlockSizeLimit > 0) {
+      shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= encodedBlockSizeLimit;
+    } else {
+      shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= hFileContext.getBlocksize()
+        || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
+    }
+    if (shouldFinishBlock) {
       finishBlock();
       writeInlineBlocks(false);
       newBlock();

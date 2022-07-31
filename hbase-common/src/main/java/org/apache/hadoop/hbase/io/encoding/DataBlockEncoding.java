@@ -77,16 +77,12 @@ public enum DataBlockEncoding {
     this.encoderCls = encoderClsName;
   }
 
-  /**
-   * @return name converted to bytes.
-   */
+  /** Returns name converted to bytes. */
   public byte[] getNameInBytes() {
     return Bytes.toBytes(toString());
   }
 
-  /**
-   * @return The id of a data block encoder.
-   */
+  /** Returns The id of a data block encoder. */
   public short getId() {
     return id;
   }

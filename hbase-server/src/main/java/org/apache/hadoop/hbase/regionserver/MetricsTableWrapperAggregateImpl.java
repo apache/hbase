@@ -75,6 +75,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             familyName = store.getColumnFamilyName();
 
             mt.storeFileCount += store.getStorefilesCount();
+            mt.maxStoreFileCount = Math.max(mt.maxStoreFileCount, store.getStorefilesCount());
             mt.memstoreSize += (store.getMemStoreSize().getDataSize()
               + store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
             mt.storeFileSize += store.getStorefilesSize();
@@ -264,6 +265,15 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
+  public long getMaxStoreFiles(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+    return metricsTable.maxStoreFileCount;
+  }
+
+  @Override
   public long getMaxStoreFileAge(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
@@ -334,6 +344,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long regionCount;
     long storeCount;
     long storeFileCount;
+    long maxStoreFileCount;
     long storeFileSize;
     long maxStoreFileAge;
     long minStoreFileAge = Long.MAX_VALUE;

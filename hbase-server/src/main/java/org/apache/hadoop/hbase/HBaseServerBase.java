@@ -231,8 +231,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     // init the filesystem
     this.dataFs = new HFileSystem(this.conf, useHBaseChecksum);
     this.dataRootDir = CommonFSUtils.getRootDir(this.conf);
+    int tableDescriptorParallelLoadThreads =
+      conf.getInt("hbase.tabledescriptor.parallel.load.threads", 0);
     this.tableDescriptors = new FSTableDescriptors(this.dataFs, this.dataRootDir,
-      !canUpdateTableDescriptor(), cacheTableDescriptor());
+      !canUpdateTableDescriptor(), cacheTableDescriptor(), tableDescriptorParallelLoadThreads);
   }
 
   public HBaseServerBase(Configuration conf, String name) throws IOException {
@@ -466,6 +468,17 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     }
   }
 
+  protected final void closeTableDescriptors() {
+    if (this.tableDescriptors != null) {
+      LOG.info("Close table descriptors");
+      try {
+        this.tableDescriptors.close();
+      } catch (IOException e) {
+        LOG.debug("Failed to close table descriptors gracefully", e);
+      }
+    }
+  }
+
   /**
    * In order to register ShutdownHook, this method is called when HMaster and HRegionServer are
    * started. For details, please refer to HBASE-26951
@@ -491,9 +504,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return choreService;
   }
 
-  /**
-   * @return Return table descriptors implementation.
-   */
+  /** Returns Return table descriptors implementation. */
   public TableDescriptors getTableDescriptors() {
     return this.tableDescriptors;
   }
@@ -521,9 +532,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return ConnectionFactory.createConnection(conf, null, user);
   }
 
-  /**
-   * @return Return the rootDir.
-   */
+  /** Returns Return the rootDir. */
   public Path getDataRootDir() {
     return dataRootDir;
   }
@@ -533,30 +542,22 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return dataFs;
   }
 
-  /**
-   * @return Return the walRootDir.
-   */
+  /** Returns Return the walRootDir. */
   public Path getWALRootDir() {
     return walRootDir;
   }
 
-  /**
-   * @return Return the walFs.
-   */
+  /** Returns Return the walFs. */
   public FileSystem getWALFileSystem() {
     return walFs;
   }
 
-  /**
-   * @return True if the cluster is up.
-   */
+  /** Returns True if the cluster is up. */
   public boolean isClusterUp() {
     return !clusterMode() || this.clusterStatusTracker.isClusterUp();
   }
 
-  /**
-   * @return time stamp in millis of when this server was started
-   */
+  /** Returns time stamp in millis of when this server was started */
   public long getStartcode() {
     return this.startcode;
   }

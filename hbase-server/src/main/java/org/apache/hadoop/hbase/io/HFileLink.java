@@ -160,23 +160,17 @@ public class HFileLink extends FileLink {
     return HFileLink.buildFromHFileLinkPattern(conf, createPath(table, region, family, hfile));
   }
 
-  /**
-   * @return the origin path of the hfile.
-   */
+  /** Returns the origin path of the hfile. */
   public Path getOriginPath() {
     return this.originPath;
   }
 
-  /**
-   * @return the path of the archived hfile.
-   */
+  /** Returns the path of the archived hfile. */
   public Path getArchivePath() {
     return this.archivePath;
   }
 
-  /**
-   * @return the path of the mob hfiles.
-   */
+  /** Returns the path of the mob hfiles. */
   public Path getMobPath() {
     return this.mobPath;
   }

@@ -86,9 +86,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
       getValueLength(), getTagsLength(), withTags);
   }
 
-  /**
-   * @return Serialized size (defaults to include tag length).
-   */
+  /** Returns Serialized size (defaults to include tag length). */
   @Override
   default int getSerializedSize() {
     return getSerializedSize(true);
@@ -155,9 +153,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
    */
   byte[] getTagsArray();
 
-  /**
-   * @return the first offset where the tags start in the Cell
-   */
+  /** Returns the first offset where the tags start in the Cell */
   int getTagsOffset();
 
   /**
@@ -170,8 +166,6 @@ public interface ExtendedCell extends RawCell, HeapSize {
    */
   int getTagsLength();
 
-  /**
-   * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
-   */
+  /** Returns The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc */
   byte getTypeByte();
 }

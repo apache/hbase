@@ -946,6 +946,10 @@ Bloom Filters::
 Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics.
 For keys, sampling can be done by using the HFile command line tool and look for the average key size metric.
 Since HBase 0.98.3, you can view details on BlockCache stats and metrics in a special Block Cache section in the UI.
+As of HBase 2.4.14, you can estimate HFile indexes and bloom filters vs other DATA blocks using blockCacheCount and blockCacheDataBlockCount in JMX. The
+formula `(blockCacheCount - blockCacheDataBlockCount) * blockSize` will give you an estimate which can be useful when trying to enable the BucketCache. You
+should make sure the post-BucketCache config gives enough memory to the on-heap LRU cache to hold at least the same number of non-DATA blocks from pre-BucketCache.
+Once BucketCache is enabled, the L1 metrics like l1CacheSize, l1CacheCount, and l1CacheEvictionCount can help you further tune the size.
 
 It's generally bad to use block caching when the WSS doesn't fit in memory.
 This is the case when you have for example 40GB available across all your region servers' block caches but you need to process 1TB of data.
@@ -2955,7 +2959,10 @@ client-side, clients will try to read META replicas first before falling back on
 the primary. Before this, the replica lookup mode -- now named `HedgedRead` in
 hbase-2.4.0 -- had clients read the primary and if no response after a
 configurable amount of time had elapsed, it would start up reads against the
-replicas.
+replicas. Starting from hbase-2.4.12(and all higher minor versions), with
+client-side `LoadBalance` mode, clients load balance META scan requests across
+all META replica regions, including the primary META region. In case of exceptions
+such as NotServingRegionException, it will fall back on the primary META region.
 
 The new 'LoadBalance' mode helps alleviate hotspotting on the META
 table distributing META read load.

@@ -124,12 +124,12 @@ public class HRegionFileSystem {
       conf.getInt("hdfs.client.sleep.before.retries", DEFAULT_BASE_SLEEP_BEFORE_RETRIES);
   }
 
-  /** @return the underlying {@link FileSystem} */
+  /** Returns the underlying {@link FileSystem} */
   public FileSystem getFileSystem() {
     return this.fs;
   }
 
-  /** @return the {@link RegionInfo} that describe this on-disk region view */
+  /** Returns the {@link RegionInfo} that describe this on-disk region view */
   public RegionInfo getRegionInfo() {
     return this.regionInfo;
   }
@@ -138,12 +138,12 @@ public class HRegionFileSystem {
     return this.regionInfoForFs;
   }
 
-  /** @return {@link Path} to the region's root directory. */
+  /** Returns {@link Path} to the region's root directory. */
   public Path getTableDir() {
     return this.tableDir;
   }
 
-  /** @return {@link Path} to the region directory. */
+  /** Returns {@link Path} to the region directory. */
   public Path getRegionDir() {
     return regionDir;
   }
@@ -151,7 +151,7 @@ public class HRegionFileSystem {
   // ===========================================================================
   // Temp Helpers
   // ===========================================================================
-  /** @return {@link Path} to the region's temp directory, used for file creations */
+  /** Returns {@link Path} to the region's temp directory, used for file creations */
   public Path getTempDir() {
     return new Path(getRegionDir(), REGION_TEMP_DIR);
   }
@@ -217,7 +217,7 @@ public class HRegionFileSystem {
    * <br>
    * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
    * @param familyName The name of column family.
-   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See see hadoop 2.6+
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See hadoop 2.6+
    *                   org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g 'COLD',
    *                   'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
    */
@@ -379,9 +379,7 @@ public class HRegionFileSystem {
     return false;
   }
 
-  /**
-   * @return the set of families present on disk n
-   */
+  /** Returns the set of families present on disk n */
   public Collection<String> getFamilies() throws IOException {
     FileStatus[] fds =
       CommonFSUtils.listStatus(fs, getRegionDir(), new FSUtils.FamilyDirFilter(fs));

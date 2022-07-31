@@ -141,9 +141,7 @@ public class TestLogRollingNoCluster {
       this.log = LoggerFactory.getLogger("Appender:" + getName());
     }
 
-    /**
-     * @return Call when the thread is done.
-     */
+    /** Returns Call when the thread is done. */
     boolean isException() {
       return !isAlive() && this.e != null;
     }

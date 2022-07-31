@@ -66,6 +66,7 @@ public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
   }
 
+  @Override
   public void init() {
     ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, RIT_COUNT_DESC, 0L);
     ritCountOverThresholdGauge =

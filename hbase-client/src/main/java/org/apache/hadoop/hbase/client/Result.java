@@ -671,9 +671,7 @@ public class Result implements CellScannable, CellScanner {
     return this.cells == null || this.cells.length == 0;
   }
 
-  /**
-   * @return the size of the underlying Cell []
-   */
+  /** Returns the size of the underlying Cell [] */
   public int size() {
     return this.cells == null ? 0 : this.cells.length;
   }
@@ -896,8 +894,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @return the associated statistics about the region from which this was returned. Can be
-   *         <tt>null</tt> if stats are disabled.
+   * Returns the associated statistics about the region from which this was returned. Can be
+   * <tt>null</tt> if stats are disabled.
    */
   public RegionLoadStats getStats() {
     return stats;

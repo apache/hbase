@@ -78,11 +78,11 @@ class MasterCoprocessorRpcChannelImpl implements RpcChannel {
     Message responsePrototype, RpcCallback<Message> done) {
     addListener(
       callerBuilder.action((c, s) -> rpcCall(method, request, responsePrototype, c, s)).call(),
-      ((r, e) -> {
+      (r, e) -> {
         if (e != null) {
           ((ClientCoprocessorRpcController) controller).setFailed(e);
         }
         done.run(r);
-      }));
+      });
   }
 }

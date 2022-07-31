@@ -100,16 +100,12 @@ public final class PrivateCellUtil {
     return buffer;
   }
 
-  /**
-   * @return A new cell which is having the extra tags also added to it.
-   */
+  /** Returns A new cell which is having the extra tags also added to it. */
   public static Cell createCell(Cell cell, List<Tag> tags) {
     return createCell(cell, TagUtil.fromList(tags));
   }
 
-  /**
-   * @return A new cell which is having the extra tags also added to it.
-   */
+  /** Returns A new cell which is having the extra tags also added to it. */
   public static Cell createCell(Cell cell, byte[] tags) {
     if (cell instanceof ByteBufferExtendedCell) {
       return new TagRewriteByteBufferExtendedCell((ByteBufferExtendedCell) cell, tags);
@@ -839,9 +835,7 @@ public final class PrivateCellUtil {
     return KeyValue.Type.Delete.getCode() <= type && type <= KeyValue.Type.DeleteFamily.getCode();
   }
 
-  /**
-   * @return True if this cell is a {@link KeyValue.Type#Delete} type.
-   */
+  /** Returns True if this cell is a {@link KeyValue.Type#Delete} type. */
   public static boolean isDeleteType(Cell cell) {
     return cell.getTypeByte() == KeyValue.Type.Delete.getCode();
   }
@@ -862,9 +856,7 @@ public final class PrivateCellUtil {
     return cell.getTypeByte() == KeyValue.Type.Delete.getCode();
   }
 
-  /**
-   * @return True if this cell is a delete family or column type.
-   */
+  /** Returns True if this cell is a delete family or column type. */
   public static boolean isDeleteColumnOrFamily(Cell cell) {
     int t = cell.getTypeByte();
     return t == KeyValue.Type.DeleteColumn.getCode() || t == KeyValue.Type.DeleteFamily.getCode();

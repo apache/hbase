@@ -30,6 +30,7 @@ public interface HadoopShims {
    *               TaskAttemptId.forName()
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
    */
+  @SuppressWarnings("TypeParameterUnusedInFormals")
   <T, J> T createTestTaskAttemptContext(final J job, final String taskId);
 
 }

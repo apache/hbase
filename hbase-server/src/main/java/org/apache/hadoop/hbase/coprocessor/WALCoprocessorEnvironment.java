@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface WALCoprocessorEnvironment extends CoprocessorEnvironment<WALCoprocessor> {
-  /** @return reference to the region server's WAL */
+  /** Returns reference to the region server's WAL */
   WAL getWAL();
 
   /**

@@ -115,6 +115,7 @@ public final class RegionModeStrategy implements ModeStrategy {
         elements.length == 4 ? Integer.valueOf(Bytes.toString(elements[3])).toString() : "";
       region = RegionInfo.encodeRegionName(regionMetrics.getRegionName());
     } catch (IOException ignored) {
+      // Exception deliberately ignored
     }
 
     builder.put(Field.NAMESPACE, namespaceName);

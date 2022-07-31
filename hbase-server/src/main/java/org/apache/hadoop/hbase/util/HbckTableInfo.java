@@ -96,9 +96,7 @@ public class HbckTableInfo {
     deployedOn = new TreeSet<>();
   }
 
-  /**
-   * @return descriptor common to all regions. null if are none or multiple!
-   */
+  /** Returns descriptor common to all regions. null if are none or multiple! */
   TableDescriptor getTableDescriptor() {
     if (htds.size() == 1) {
       return (TableDescriptor) htds.toArray()[0];

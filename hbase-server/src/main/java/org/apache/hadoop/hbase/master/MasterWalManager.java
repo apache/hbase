@@ -172,9 +172,7 @@ public class MasterWalManager {
       p -> !p.getName().endsWith(AbstractFSWALProvider.SPLITTING_EXT));
   }
 
-  /**
-   * @return listing of ServerNames found by parsing WAL directory paths in FS.
-   */
+  /** Returns listing of ServerNames found by parsing WAL directory paths in FS. */
   public Set<ServerName> getServerNamesFromWALDirPath(final PathFilter filter) throws IOException {
     FileStatus[] walDirForServerNames = getWALDirPaths(filter);
     return Stream.of(walDirForServerNames).map(s -> {
@@ -190,7 +188,7 @@ public class MasterWalManager {
   }
 
   /**
-   * @return List of all RegionServer WAL dirs; i.e. this.rootDir/HConstants.HREGION_LOGDIR_NAME.
+   * Returns List of all RegionServer WAL dirs; i.e. this.rootDir/HConstants.HREGION_LOGDIR_NAME.
    */
   public FileStatus[] getWALDirPaths(final PathFilter filter) throws IOException {
     Path walDirPath = new Path(CommonFSUtils.getWALRootDir(conf), HConstants.HREGION_LOGDIR_NAME);

@@ -114,6 +114,7 @@ public final class TestUtils {
       .build();
   }
 
+  @SuppressWarnings("JavaUtilDate")
   private static RegionMetrics createRegionMetrics(String regionName, long readRequestCount,
     long filteredReadRequestCount, long writeRequestCount, Size storeFileSize,
     Size uncompressedStoreFileSize, int storeFileCount, Size memStoreSize, float locality,

@@ -69,9 +69,7 @@ public abstract class CompareFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
@@ -138,7 +136,7 @@ public abstract class CompareFilter extends FilterBase {
     }
   }
 
-  // returns an array of heterogeneous objects
+  /** Returns an array of heterogeneous objects */
   public static ArrayList<Object> extractArguments(ArrayList<byte[]> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 2, "Expected 2 but got: %s",
       filterArguments.size());
@@ -158,9 +156,7 @@ public abstract class CompareFilter extends FilterBase {
     return arguments;
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.CompareFilter convert() {
     FilterProtos.CompareFilter.Builder builder = FilterProtos.CompareFilter.newBuilder();
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.op.name());
@@ -170,13 +166,17 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
    * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof CompareFilter)) return false;
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof CompareFilter)) {
+      return false;
+    }
     CompareFilter other = (CompareFilter) o;
     return this.getCompareOperator().equals(other.getCompareOperator())
       && (this.getComparator() == other.getComparator()

@@ -70,12 +70,12 @@ public interface QuotaLimiter {
    */
   void consumeRead(long size, long capacityUnit);
 
-  /** @return true if the limiter is a noop */
+  /** Returns true if the limiter is a noop */
   boolean isBypass();
 
-  /** @return the number of bytes available to read to avoid exceeding the quota */
+  /** Returns the number of bytes available to read to avoid exceeding the quota */
   long getReadAvailable();
 
-  /** @return the number of bytes available to write to avoid exceeding the quota */
+  /** Returns the number of bytes available to write to avoid exceeding the quota */
   long getWriteAvailable();
 }

@@ -390,9 +390,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     return kvScanner;
   }
 
-  /**
-   * @return the current Heap
-   */
+  /** Returns the current Heap */
   public PriorityQueue<KeyValueScanner> getHeap() {
     return this.heap;
   }

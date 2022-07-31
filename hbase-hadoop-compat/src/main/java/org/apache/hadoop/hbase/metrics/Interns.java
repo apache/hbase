@@ -39,6 +39,7 @@ public final class Interns {
   private static LoadingCache<String, ConcurrentHashMap<String, MetricsInfo>> infoCache =
     CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
       .build(new CacheLoader<String, ConcurrentHashMap<String, MetricsInfo>>() {
+        @Override
         public ConcurrentHashMap<String, MetricsInfo> load(String key) {
           return new ConcurrentHashMap<>();
         }
@@ -46,6 +47,7 @@ public final class Interns {
   private static LoadingCache<MetricsInfo, ConcurrentHashMap<String, MetricsTag>> tagCache =
     CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
       .build(new CacheLoader<MetricsInfo, ConcurrentHashMap<String, MetricsTag>>() {
+        @Override
         public ConcurrentHashMap<String, MetricsTag> load(MetricsInfo key) {
           return new ConcurrentHashMap<>();
         }

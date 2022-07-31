@@ -57,7 +57,7 @@ public class JSONBean {
   private static final String COMMA = ",";
   private static final String ASTERICK = "*";
   private static final Logger LOG = LoggerFactory.getLogger(JSONBean.class);
-  private static final Gson GSON = GsonUtil.createGson().create();
+  private static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   /**
    * Use dumping out mbeans as JSON.
@@ -129,9 +129,7 @@ public class JSONBean {
     };
   }
 
-  /**
-   * @return Return non-zero if failed to find bean. 0
-   */
+  /** Returns Return non-zero if failed to find bean. 0 */
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
     String attribute, boolean description, ObjectName excluded) throws IOException {
     LOG.debug("Listing beans for {}", qry);

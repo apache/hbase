@@ -265,9 +265,7 @@ public class ServerCrashProcedure extends
     return Flow.HAS_MORE_STATE;
   }
 
-  /**
-   * @return List of Regions on crashed server.
-   */
+  /** Returns List of Regions on crashed server. */
   List<RegionInfo> getRegionsOnCrashedServer(MasterProcedureEnv env) {
     return env.getMasterServices().getAssignmentManager().getRegionsOnServer(serverName);
   }
@@ -284,7 +282,7 @@ public class ServerCrashProcedure extends
       }
       splitWALManager.deleteWALDir(serverName);
     } catch (IOException e) {
-      LOG.warn("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
+      LOG.info("Remove WAL directory for {} failed, ignore...{}", serverName, e.getMessage());
     }
   }
 

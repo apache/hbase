@@ -200,17 +200,13 @@ public abstract class ScheduledChore implements Runnable {
     return timeOfThisRun - timeOfLastRun;
   }
 
-  /**
-   * @return true when the time between runs exceeds the acceptable threshold
-   */
+  /** Returns true when the time between runs exceeds the acceptable threshold */
   private synchronized boolean missedStartTime() {
     return isValidTime(timeOfLastRun) && isValidTime(timeOfThisRun)
       && getTimeBetweenRuns() > getMaximumAllowedTimeBetweenRuns();
   }
 
-  /**
-   * @return max allowed time in millis between runs.
-   */
+  /** Returns max allowed time in millis between runs. */
   private double getMaximumAllowedTimeBetweenRuns() {
     // Threshold used to determine if the Chore's current run started too late
     return 1.5 * timeUnit.toMillis(period);
@@ -224,9 +220,7 @@ public abstract class ScheduledChore implements Runnable {
     return time > 0 && time <= EnvironmentEdgeManager.currentTime();
   }
 
-  /**
-   * @return false when the Chore is not currently scheduled with a ChoreService
-   */
+  /** Returns false when the Chore is not currently scheduled with a ChoreService */
   public synchronized boolean triggerNow() {
     if (choreService == null) {
       return false;
@@ -261,16 +255,12 @@ public abstract class ScheduledChore implements Runnable {
     return stopper;
   }
 
-  /**
-   * @return period to execute chore in getTimeUnit() units
-   */
+  /** Returns period to execute chore in getTimeUnit() units */
   public int getPeriod() {
     return period;
   }
 
-  /**
-   * @return initial delay before executing chore in getTimeUnit() units
-   */
+  /** Returns initial delay before executing chore in getTimeUnit() units */
   public long getInitialDelay() {
     return initialDelay;
   }
@@ -295,9 +285,7 @@ public abstract class ScheduledChore implements Runnable {
     return timeOfThisRun;
   }
 
-  /**
-   * @return true when this Chore is scheduled with a ChoreService
-   */
+  /** Returns true when this Chore is scheduled with a ChoreService */
   public synchronized boolean isScheduled() {
     return choreService != null && choreService.isChoreScheduled(this);
   }

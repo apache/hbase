@@ -90,9 +90,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     return this.jitterRate > 0;
   }
 
-  /**
-   * @return true if region size exceed the sizeToCheck
-   */
+  /** Returns true if region size exceed the sizeToCheck */
   protected final boolean isExceedSize(long sizeToCheck) {
     if (overallHRegionFiles) {
       long sumSize = 0;

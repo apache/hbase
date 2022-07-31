@@ -152,63 +152,45 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   };
 
   /**
-   * @return Return a short, printable name for this region (usually encoded name) for us logging.
+   * Returns Return a short, printable name for this region (usually encoded name) for us logging.
    */
   String getShortNameToLog();
 
-  /**
-   * @return the regionId.
-   */
+  /** Returns the regionId. */
   long getRegionId();
 
   /**
-   * @return the regionName as an array of bytes.
+   * Returns the regionName as an array of bytes.
    * @see #getRegionNameAsString()
    */
   byte[] getRegionName();
 
-  /**
-   * @return Region name as a String for use in logging, etc.
-   */
+  /** Returns Region name as a String for use in logging, etc. */
   String getRegionNameAsString();
 
-  /**
-   * @return the encoded region name.
-   */
+  /** Returns the encoded region name. */
   String getEncodedName();
 
-  /**
-   * @return the encoded region name as an array of bytes.
-   */
+  /** Returns the encoded region name as an array of bytes. */
   byte[] getEncodedNameAsBytes();
 
-  /**
-   * @return the startKey.
-   */
+  /** Returns the startKey. */
   byte[] getStartKey();
 
-  /**
-   * @return the endKey.
-   */
+  /** Returns the endKey. */
   byte[] getEndKey();
 
-  /**
-   * @return current table name of the region
-   */
+  /** Returns current table name of the region */
   TableName getTable();
 
-  /**
-   * @return returns region replica id
-   */
+  /** Returns returns region replica id */
   int getReplicaId();
 
-  /**
-   * @return True if has been split and has daughters.
-   */
+  /** Returns True if has been split and has daughters. */
   boolean isSplit();
 
   /**
-   * @return True if this region is offline.
+   * Returns True if this region is offline.
    * @deprecated since 3.0.0 and will be removed in 4.0.0
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
@@ -216,29 +198,25 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   boolean isOffline();
 
   /**
-   * @return True if this is a split parent region.
+   * Returns True if this is a split parent region.
    * @deprecated since 3.0.0 and will be removed in 4.0.0, Use {@link #isSplit()} instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-25210">HBASE-25210</a>
    */
   @Deprecated
   boolean isSplitParent();
 
-  /**
-   * @return true if this region is a meta region.
-   */
+  /** Returns true if this region is a meta region. */
   boolean isMetaRegion();
 
   /**
-   * @return true if the given inclusive range of rows is fully contained by this region. For
-   *         example, if the region is foo,a,g and this is passed ["b","c"] or ["a","c"] it will
-   *         return true, but if this is passed ["b","z"] it will return false.
+   * Returns true if the given inclusive range of rows is fully contained by this region. For
+   * example, if the region is foo,a,g and this is passed ["b","c"] or ["a","c"] it will return
+   * true, but if this is passed ["b","z"] it will return false.
    * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
   boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey);
 
-  /**
-   * @return true if the given row falls in this region.
-   */
+  /** Returns true if the given row falls in this region. */
   boolean containsRow(byte[] row);
 
   /**
@@ -253,9 +231,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
       && (regionName[regionName.length - 1] == RegionInfo.ENC_SEPARATOR);
   }
 
-  /**
-   * @return the encodedName
-   */
+  /** Returns the encodedName */
   @InterfaceAudience.Private
   static String encodeRegionName(final byte[] regionName) {
     String encodedName;
@@ -295,16 +271,16 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
-   *         for us logging.
+   * Returns a String of short, printable names for <code>hris</code> (usually encoded name) for us
+   * logging.
    */
   static String getShortNameToLog(RegionInfo... hris) {
     return getShortNameToLog(Arrays.asList(hris));
   }
 
   /**
-   * @return Return a String of short, printable names for <code>hris</code> (usually encoded name)
-   *         for us logging.
+   * Returns a String of short, printable names for <code>hris</code> (usually encoded name) for us
+   * logging.
    */
   static String getShortNameToLog(final List<RegionInfo> ris) {
     return ris.stream().map(RegionInfo::getEncodedName).collect(Collectors.toList()).toString();
@@ -371,7 +347,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
+   * Returns A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
    */
   @InterfaceAudience.Private
   static RegionInfo parseFromOrNull(final byte[] bytes) {
@@ -380,7 +356,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
+   * Returns A deserialized {@link RegionInfo} or null if we failed deserialize or passed bytes null
    */
   @InterfaceAudience.Private
   static RegionInfo parseFromOrNull(final byte[] bytes, int offset, int len) {
@@ -393,8 +369,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @param bytes A pb RegionInfo serialized with a pb magic prefix.
-   * @return A deserialized {@link RegionInfo}
+   * Returns A deserialized {@link RegionInfo}
    */
   @InterfaceAudience.Private
   static RegionInfo parseFrom(final byte[] bytes) throws DeserializationException {
@@ -403,6 +378,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
+   * Parse a serialized representation of {@link RegionInfo}
    * @param bytes  A pb RegionInfo serialized with a pb magic prefix.
    * @param offset starting point in the byte array
    * @param len    length to read on the byte array
@@ -447,7 +423,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return This instance serialized as protobuf w/ a magic pb prefix.
+   * Returns This instance serialized as protobuf w/ a magic pb prefix.
    * @see #parseFrom(byte[])
    */
   static byte[] toByteArray(RegionInfo ri) {
@@ -764,22 +740,18 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return ris;
   }
 
-  /**
-   * @return True if this is first Region in Table
-   */
+  /** Returns True if this is first Region in Table */
   default boolean isFirst() {
     return Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW);
   }
 
-  /**
-   * @return True if this is last Region in Table
-   */
+  /** Returns True if this is last Region in Table */
   default boolean isLast() {
     return Bytes.equals(getEndKey(), HConstants.EMPTY_END_ROW);
   }
 
   /**
-   * @return True if region is next, adjacent but 'after' this one.
+   * Returns True if region is next, adjacent but 'after' this one.
    * @see #isAdjacent(RegionInfo)
    * @see #areAdjacent(RegionInfo, RegionInfo)
    */
@@ -788,22 +760,20 @@ public interface RegionInfo extends Comparable<RegionInfo> {
   }
 
   /**
-   * @return True if region is adjacent, either just before or just after this one.
+   * Returns True if region is adjacent, either just before or just after this one.
    * @see #isNext(RegionInfo)
    */
   default boolean isAdjacent(RegionInfo other) {
     return getTable().equals(other.getTable()) && areAdjacent(this, other);
   }
 
-  /**
-   * @return True if RegionInfo is degenerate... if startKey > endKey.
-   */
+  /** Returns True if RegionInfo is degenerate... if startKey > endKey. */
   default boolean isDegenerate() {
     return !isLast() && Bytes.compareTo(getStartKey(), getEndKey()) > 0;
   }
 
   /**
-   * @return True if an overlap in region range.
+   * Returns True if an overlap in region range.
    * @see #isDegenerate()
    */
   default boolean isOverlap(RegionInfo other) {
@@ -829,6 +799,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
     return Bytes.compareTo(getStartKey(), other.getEndKey()) < 0;
   }
 
+  @Override
   default int compareTo(RegionInfo other) {
     return RegionInfo.COMPARATOR.compare(this, other);
   }

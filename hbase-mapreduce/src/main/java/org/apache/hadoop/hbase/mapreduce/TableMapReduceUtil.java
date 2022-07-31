@@ -730,6 +730,7 @@ public class TableMapReduceUtil {
       org.apache.hbase.thirdparty.com.google.gson.GsonBuilder.class, // hbase-shaded-gson
       org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations.class, // hb-sh-protobuf
       org.apache.hbase.thirdparty.io.netty.channel.Channel.class, // hbase-shaded-netty
+      org.apache.hadoop.hbase.unsafe.HBasePlatformDependent.class, // hbase-unsafe
       org.apache.zookeeper.ZooKeeper.class, // zookeeper
       com.codahale.metrics.MetricRegistry.class, // metrics-core
       org.apache.commons.lang3.ArrayUtils.class, // commons-lang

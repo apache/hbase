@@ -32,14 +32,10 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public interface RegionServerCoprocessorEnvironment
   extends CoprocessorEnvironment<RegionServerCoprocessor> {
-  /**
-   * @return Hosting Server's ServerName
-   */
+  /** Returns Hosting Server's ServerName */
   ServerName getServerName();
 
-  /**
-   * @return Interface to Map of regions online on this RegionServer {@link #getServerName()}}.
-   */
+  /** Returns Interface to Map of regions online on this RegionServer {@link #getServerName()}}. */
   OnlineRegions getOnlineRegions();
 
   /**

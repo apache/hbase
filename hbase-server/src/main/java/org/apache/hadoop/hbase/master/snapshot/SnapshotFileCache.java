@@ -349,9 +349,7 @@ public class SnapshotFileCache implements Stoppable {
       this.files = files;
     }
 
-    /**
-     * @return the hfiles in the snapshot when <tt>this</tt> was made.
-     */
+    /** Returns the hfiles in the snapshot when <tt>this</tt> was made. */
     public Collection<String> getFiles() {
       return this.files;
     }

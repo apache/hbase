@@ -118,13 +118,13 @@ public class BaseEnvironment<C extends Coprocessor> implements CoprocessorEnviro
     return seq;
   }
 
-  /** @return the coprocessor environment version */
+  /** Returns the coprocessor environment version */
   @Override
   public int getVersion() {
     return Coprocessor.VERSION;
   }
 
-  /** @return the HBase release */
+  /** Returns the HBase release */
   @Override
   public String getHBaseVersion() {
     return VersionInfo.getVersion();

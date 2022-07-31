@@ -130,9 +130,7 @@ public class MetricsMaster {
     masterQuotaSource.incrementSpaceQuotaObserverChoreTime(executionTime);
   }
 
-  /**
-   * @return Set of metrics for assign procedure
-   */
+  /** Returns Set of metrics for assign procedure */
   public ProcedureMetrics getServerCrashProcMetrics() {
     return serverCrashProcMetrics;
   }

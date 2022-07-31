@@ -65,9 +65,7 @@ public final class TagUtil {
     return StreamUtils.readRawVarint32(tag.getValueByteBuffer(), offset);
   }
 
-  /**
-   * @return A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null.
-   */
+  /** Returns A List&lt;Tag&gt; of any Tags found in <code>cell</code> else null. */
   public static List<Tag> carryForwardTags(final Cell cell) {
     return carryForwardTags(null, cell);
   }
@@ -108,9 +106,7 @@ public final class TagUtil {
     return b;
   }
 
-  /**
-   * @return Carry forward the TTL tag.
-   */
+  /** Returns Carry forward the TTL tag. */
   public static List<Tag> carryForwardTTLTag(final List<Tag> tagsOrNull, final long ttl) {
     if (ttl == Long.MAX_VALUE) {
       return tagsOrNull;

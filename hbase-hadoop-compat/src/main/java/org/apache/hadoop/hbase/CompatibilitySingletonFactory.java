@@ -31,6 +31,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   public static enum SingletonStorage {
     INSTANCE;
 

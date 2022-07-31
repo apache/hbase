@@ -531,9 +531,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return the maximum result size in bytes. See {@link #setMaxResultSize(long)}
-   */
+  /** Returns the maximum result size in bytes. See {@link #setMaxResultSize(long)} */
   public long getMaxResultSize() {
     return maxResultSize;
   }
@@ -571,9 +569,7 @@ public class Scan extends Query {
     return this.familyMap;
   }
 
-  /**
-   * @return the number of families in familyMap
-   */
+  /** Returns the number of families in familyMap */
   public int numFamilies() {
     if (hasFamilies()) {
       return this.familyMap.size();
@@ -581,16 +577,12 @@ public class Scan extends Query {
     return 0;
   }
 
-  /**
-   * @return true if familyMap is non empty, false otherwise
-   */
+  /** Returns true if familyMap is non empty, false otherwise */
   public boolean hasFamilies() {
     return !this.familyMap.isEmpty();
   }
 
-  /**
-   * @return the keys of the familyMap
-   */
+  /** Returns the keys of the familyMap */
   public byte[][] getFamilies() {
     if (hasFamilies()) {
       return this.familyMap.keySet().toArray(new byte[0][0]);
@@ -598,51 +590,37 @@ public class Scan extends Query {
     return null;
   }
 
-  /**
-   * @return the startrow
-   */
+  /** Returns the startrow */
   public byte[] getStartRow() {
     return this.startRow;
   }
 
-  /**
-   * @return if we should include start row when scan
-   */
+  /** Returns if we should include start row when scan */
   public boolean includeStartRow() {
     return includeStartRow;
   }
 
-  /**
-   * @return the stoprow
-   */
+  /** Returns the stoprow */
   public byte[] getStopRow() {
     return this.stopRow;
   }
 
-  /**
-   * @return if we should include stop row when scan
-   */
+  /** Returns if we should include stop row when scan */
   public boolean includeStopRow() {
     return includeStopRow;
   }
 
-  /**
-   * @return the max number of versions to fetch
-   */
+  /** Returns the max number of versions to fetch */
   public int getMaxVersions() {
     return this.maxVersions;
   }
 
-  /**
-   * @return maximum number of values to return for a single call to next()
-   */
+  /** Returns maximum number of values to return for a single call to next() */
   public int getBatch() {
     return this.batch;
   }
 
-  /**
-   * @return maximum number of values to return per row per CF
-   */
+  /** Returns maximum number of values to return per row per CF */
   public int getMaxResultsPerColumnFamily() {
     return this.storeLimit;
   }
@@ -655,9 +633,7 @@ public class Scan extends Query {
     return this.storeOffset;
   }
 
-  /**
-   * @return caching the number of rows fetched when calling next on a scanner
-   */
+  /** Returns caching the number of rows fetched when calling next on a scanner */
   public int getCaching() {
     return this.caching;
   }
@@ -677,9 +653,7 @@ public class Scan extends Query {
     return filter;
   }
 
-  /**
-   * @return true is a filter has been specified, false if not
-   */
+  /** Returns true is a filter has been specified, false if not */
   public boolean hasFilter() {
     return filter != null;
   }
@@ -736,9 +710,9 @@ public class Scan extends Query {
   }
 
   /**
-   * @return true when the constructor of this scan understands that the results they will see may
-   *         only represent a partial portion of a row. The entire row would be retrieved by
-   *         subsequent calls to {@link ResultScanner#next()}
+   * Returns true when the constructor of this scan understands that the results they will see may
+   * only represent a partial portion of a row. The entire row would be retrieved by subsequent
+   * calls to {@link ResultScanner#next()}
    */
   public boolean getAllowPartialResults() {
     return allowPartialResults;
@@ -840,9 +814,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return True if this Scan is in "raw" mode.
-   */
+  /** Returns True if this Scan is in "raw" mode. */
   public boolean isRaw() {
     byte[] attr = getAttribute(RAW_ATTR);
     return attr == null ? false : Bytes.toBoolean(attr);
@@ -902,9 +874,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return True if collection of scan metrics is enabled. For advanced users.
-   */
+  /** Returns True if collection of scan metrics is enabled. For advanced users. */
   public boolean isScanMetricsEnabled() {
     byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
     return attr == null ? false : Bytes.toBoolean(attr);
@@ -924,9 +894,7 @@ public class Scan extends Query {
     return this;
   }
 
-  /**
-   * @return the limit of rows for this scan
-   */
+  /** Returns the limit of rows for this scan */
   public int getLimit() {
     return limit;
   }
@@ -958,9 +926,7 @@ public class Scan extends Query {
     PREAD
   }
 
-  /**
-   * @return the read type for this scan
-   */
+  /** Returns the read type for this scan */
   public ReadType getReadType() {
     return readType;
   }

@@ -210,9 +210,7 @@ public enum BlockType {
     }
   }
 
-  /**
-   * @return whether this block type is encoded or unencoded data block
-   */
+  /** Returns whether this block type is encoded or unencoded data block */
   public final boolean isData() {
     return this == DATA || this == ENCODED_DATA;
   }

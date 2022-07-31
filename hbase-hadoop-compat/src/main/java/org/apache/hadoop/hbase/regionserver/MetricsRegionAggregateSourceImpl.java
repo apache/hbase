@@ -52,6 +52,7 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
 
     // Every few mins clean the JMX cache.
     executor.getExecutor().scheduleWithFixedDelay(new Runnable() {
+      @Override
       public void run() {
         JmxCacheBuster.clearJmxCache();
       }
