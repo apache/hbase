@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
+import java.util.Locale;
 
 /**
  * An immutable type to hold a hostname and port combo, like an Endpoint or
@@ -76,7 +77,7 @@ public class Address implements Comparable<Address> {
    */
   @Deprecated
   public String getHostname() {
-    return this.hostAndPort.getHost();
+    return this.hostAndPort.getHost().toLowerCase(Locale.ROOT);
   }
 
   public int getPort() {
@@ -85,7 +86,7 @@ public class Address implements Comparable<Address> {
 
   @Override
   public String toString() {
-    return this.hostAndPort.toString();
+    return this.hostAndPort.toString().toLowerCase(Locale.ROOT);
   }
 
   /**
