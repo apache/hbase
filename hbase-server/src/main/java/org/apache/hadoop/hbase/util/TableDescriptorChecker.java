@@ -60,12 +60,7 @@ public final class TableDescriptorChecker {
   private TableDescriptorChecker() {
   }
 
-  private static boolean shouldSanityCheck(final Configuration conf, final TableDescriptor td) {
-    String tableVal = td.getValue(TABLE_SANITY_CHECKS);
-    // If table descriptor is explicitly overriding, return the same
-    if (tableVal != null) {
-      return Boolean.valueOf(tableVal);
-    }
+  private static boolean shouldSanityCheck(final Configuration conf) {
     if (conf.getBoolean(TABLE_SANITY_CHECKS, DEFAULT_TABLE_SANITY_CHECKS)) {
       return true;
     }
@@ -81,7 +76,7 @@ public final class TableDescriptorChecker {
     CompoundConfiguration conf = new CompoundConfiguration().add(c).addBytesMap(td.getValues());
 
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
 
     // check max file size
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
@@ -200,7 +195,7 @@ public final class TableDescriptorChecker {
   private static void checkReplicationScope(final Configuration conf, final TableDescriptor td)
     throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
     try {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         // check replication scope
@@ -281,7 +276,7 @@ public final class TableDescriptorChecker {
   private static void checkBloomFilterType(final Configuration conf, final TableDescriptor td)
     throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
     try {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         Configuration cfdConf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
@@ -299,7 +294,7 @@ public final class TableDescriptorChecker {
   public static void checkCompression(final Configuration conf, final TableDescriptor td)
     throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
     try {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         CompressionTest.testCompression(cfd.getCompressionType());
@@ -315,7 +310,7 @@ public final class TableDescriptorChecker {
   public static void checkEncryption(final Configuration conf, final TableDescriptor td)
     throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
     try {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
         EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
@@ -328,7 +323,7 @@ public final class TableDescriptorChecker {
   public static void checkClassLoading(final Configuration conf, final TableDescriptor td)
     throws IOException {
     // Setting logs to warning instead of throwing exception if sanityChecks are disabled
-    boolean logWarn = !shouldSanityCheck(conf, td);
+    boolean logWarn = !shouldSanityCheck(conf);
     try {
       RegionSplitPolicy.getSplitPolicyClass(td, conf);
       RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
