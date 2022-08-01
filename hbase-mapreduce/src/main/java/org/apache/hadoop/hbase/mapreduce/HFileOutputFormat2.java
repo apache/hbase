@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -254,7 +255,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
           tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
-          tableNameBytes = TableName.valueOf(tableNameBytes).toBytes();
+          tableNameBytes = TableName.valueOf(tableNameBytes).getNameWithNamespaceInclAsString()
+            .getBytes(Charset.defaultCharset());
           if (!allTableNames.contains(Bytes.toString(tableNameBytes))) {
             throw new IllegalArgumentException(
               "TableName " + Bytes.toString(tableNameBytes) + " not expected");
@@ -262,8 +264,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         } else {
           tableNameBytes = Bytes.toBytes(writeTableNames);
         }
+        String tableName = Bytes.toString(tableNameBytes);
         Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
+
         WriterLength wl = this.writers.get(tableAndFamily);
 
         // If this is a new column family, verify that the directory exists
@@ -291,7 +295,6 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
 
-            String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (
                 Connection connection =
@@ -650,7 +653,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
     for (TableInfo tableInfo : multiTableInfo) {
       regionLocators.add(tableInfo.getRegionLocator());
-      allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
+      String tn = writeMultipleTables
+        ? tableInfo.getRegionLocator().getName().getNameWithNamespaceInclAsString()
+        : tableInfo.getRegionLocator().getName().getNameAsString();
+      allTableNames.add(tn);
       tableDescriptors.add(tableInfo.getTableDescriptor());
     }
     // Record tablenames for creating writer by favored nodes, and decoding compression,
