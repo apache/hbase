@@ -225,6 +225,12 @@ public final class MasterRegion {
     FileSystem walFs, Path walRootDir, WALFactory walFactory, MasterRegionWALRoller walRoller,
     String serverName) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
+    FileStatus[] nonRegionDirs = fs.listStatus(tableDir, p -> p.getName().startsWith("."));
+    if (nonRegionDirs.length > 0) {
+      LOG.warn("There are non-region directories under " + tableDir + ", such as "
+        + nonRegionDirs[0].getPath() + ", ignored");
+    }
+
     // on branch-2, the RegionInfo.isEncodedRegionName will returns true for .initializing and
     // .initialized, see HBASE-25368. Since RegionInfo is IA.Public, changing the implementation may
     // raise compatibility concerns, so here we just skip them by our own.
