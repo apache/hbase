@@ -616,13 +616,17 @@ public class TestCellBasedHFileOutputFormat2 {
     Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
     // Generate the bulk load files
     runIncrementalPELoad(conf, tableInfo, testDir, putSortReducer);
+    if (writeMultipleTables) {
+      testDir = new Path(testDir, "default");
+    }
 
     for (Table tableSingle : allTables.values()) {
       // This doesn't write into the table, just makes files
       assertEquals("HFOF should not touch actual table", 0, util.countRows(tableSingle));
     }
     int numTableDirs = 0;
-    for (FileStatus tf : testDir.getFileSystem(conf).listStatus(testDir)) {
+    FileStatus[] fss = testDir.getFileSystem(conf).listStatus(testDir);
+    for (FileStatus tf : fss) {
       Path tablePath = testDir;
 
       if (writeMultipleTables) {
@@ -636,7 +640,8 @@ public class TestCellBasedHFileOutputFormat2 {
 
       // Make sure that a directory was created for every CF
       int dir = 0;
-      for (FileStatus f : tablePath.getFileSystem(conf).listStatus(tablePath)) {
+      fss = tablePath.getFileSystem(conf).listStatus(tablePath);
+      for (FileStatus f : fss) {
         for (byte[] family : FAMILIES) {
           if (Bytes.toString(family).equals(f.getPath().getName())) {
             ++dir;

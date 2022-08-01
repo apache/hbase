@@ -59,6 +59,7 @@
         <include>org.apache.hbase:hbase-testing-util</include>
         <include>org.apache.hbase:hbase-thrift</include>
         <include>org.apache.hbase:hbase-zookeeper</include>
+        <include>org.apache.hbase:hbase-backup</include>
       </includes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->
       <binaries>
