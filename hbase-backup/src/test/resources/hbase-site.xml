@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<configuration>
+  <property>
+    <name>hbase.regionserver.msginterval</name>
+    <value>100</value>
+    <description>Interval between messages from the RegionServer to HMaster
+     in milliseconds.  Default is 15. Set this value low if you want unit
+     tests to be responsive.
+    </description>
+  </property>
+  <property>
+    <name>hbase.server.thread.wakefrequency</name>
+    <value>100</value>
+    <description>Time to sleep in between searches for work (in milliseconds).
+     Used as sleep interval by service threads such as hbase:meta scanner and log roller.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.compaction.check.period</name>
+    <value>1000</value>
+  </property>
+  <property>
+    <name>hbase.regionserver.flush.check.period</name>
+    <value>1000</value>
+  </property>
+  <property>
+    <name>hbase.defaults.for.version.skip</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.hconnection.threads.keepalivetime</name>
+    <value>3</value>
+  </property>
+  <property>
+    <name>hbase.regionserver.handler.count</name>
+    <value>3</value>
+    <description>Default is 30</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.metahandler.count</name>
+    <value>3</value>
+    <description>Default is 20</description>
+   </property>
+  <property>
+    <name>hbase.netty.worker.count</name>
+    <value>3</value>
+    <description>Default is 0</description>
+  </property>
+  <property>
+    <name>hbase.hconnection.threads.max</name>
+    <value>6</value>
+    <description>Default is 256</description>
+  </property>
+  <property>
+    <name>hbase.htable.threads.max</name>
+    <value>3</value>
+    <description>Default is MAX_INTEGER</description>
+  </property>
+  <property>
+    <name>hbase.region.replica.replication.threads.max</name>
+    <value>7</value>
+    <description>Default is 256</description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.max</name>
+    <value>5</value>
+    <description>Default is 100</description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.copy.maxthreads</name>
+    <value>3</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>hbase.loadincremental.threads.max</name>
+    <value>1</value>
+    <description>Default is # of CPUs</description>
+  </property>
+  <property>
+    <name>hbase.hstore.flusher.count</name>
+    <value>1</value>
+    <description>Default is 2</description>
+  </property>
+  <property>
+    <name>hbase.oldwals.cleaner.thread.size</name>
+    <value>1</value>
+    <description>Default is 2</description>
+  </property>
+  <property>
+    <name>hbase.master.procedure.threads</name>
+    <value>5</value>
+    <description>Default is at least 16</description>
+  </property>
+  <property>
+    <name>hbase.procedure.remote.dispatcher.threadpool.size</name>
+    <value>3</value>
+    <description>Default is 128</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.executor.closeregion.threads</name>
+    <value>1</value>
+    <description>Default is 3</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.executor.openregion.threads</name>
+    <value>1</value>
+    <description>Default is 3</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.executor.openpriorityregion.threads</name>
+    <value>1</value>
+    <description>Default is 3</description>
+  </property>
+  <property>
+    <name>hbase.storescanner.parallel.seek.threads</name>
+    <value>3</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>hbase.hfile.compaction.discharger.thread.count</name>
+    <value>1</value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.executor.refresh.peer.threads</name>
+    <value>1</value>
+    <description>Default is 2</description>
+  </property>
+  <property>
+    <name>hbase.hregion.open.and.init.threads.max</name>
+    <value>3</value>
+    <description>Default is 16 or # of Regions</description>
+  </property>
+  <property>
+    <name>hbase.master.handler.count</name>
+    <value>7</value>
+    <description>Default is 25</description>
+  </property>
+  <property>
+    <name>hbase.replication.source.maxthreads</name>
+    <value></value>
+    <description>Default is 10</description>
+  </property>
+  <property>
+    <name>hbase.hconnection.meta.lookup.threads.max</name>
+    <value>5</value>
+    <description>Default is 128</description>
+  </property>
+</configuration>
