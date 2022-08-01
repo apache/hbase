@@ -262,8 +262,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         } else {
           tableNameBytes = Bytes.toBytes(writeTableNames);
         }
+        String tableName = Bytes.toString(tableNameBytes);
         Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
+
         WriterLength wl = this.writers.get(tableAndFamily);
 
         // If this is a new column family, verify that the directory exists
@@ -291,7 +293,6 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
 
-            String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (
                 Connection connection =
