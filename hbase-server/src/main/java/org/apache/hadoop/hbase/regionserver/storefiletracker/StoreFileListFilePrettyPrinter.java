@@ -22,7 +22,10 @@ import java.io.PrintStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,8 +38,14 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.org.apache.commons.cli.*;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLineParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.OptionGroup;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileList;
 
@@ -86,9 +95,9 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   public boolean parseOptions(String args[]) throws ParseException, IOException {
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
-      formatter.printHelp(
-        "sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]",
-        options, true);
+      formatter
+        .printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename>"
+          + " --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
       return false;
     }
 
@@ -101,25 +110,22 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
       regionName = cmd.getOptionValue(regionOption);
       if (StringUtils.isEmpty(regionName)) {
         err.println("Region name is not specified.");
-        formatter.printHelp(
-          "sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]",
-          options, true);
+        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
+          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
         System.exit(-1);
       }
       columnFamily = cmd.getOptionValue(columnFamilyOption);
       if (StringUtils.isEmpty(columnFamily)) {
         err.println("Column family is not specified.");
-        formatter.printHelp(
-          "sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]",
-          options, true);
+        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
+          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
         System.exit(-1);
       }
       String tableNameWtihNS = cmd.getOptionValue(tableNameOption);
       if (StringUtils.isEmpty(tableNameWtihNS)) {
         err.println("Table name is not specified.");
-        formatter.printHelp(
-          "sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]",
-          options, true);
+        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
+          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
         System.exit(-1);
       }
       TableName tn = TableName.valueOf(tableNameWtihNS);
