@@ -92,7 +92,7 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
     options.addOptionGroup(files);
   }
 
-  public boolean parseOptions(String args[]) throws ParseException, IOException {
+  public boolean parseOptions(String[] args) throws ParseException, IOException {
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
       formatter
