@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -162,7 +163,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     MoveServersResponse.Builder builder = MoveServersResponse.newBuilder();
     Set<Address> hostPorts = Sets.newHashSet();
     for (HBaseProtos.ServerName el : request.getServersList()) {
-      hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
+      hostPorts.add(Address.fromParts(el.getHostName().toLowerCase(Locale.ROOT), el.getPort()));
     }
     LOG.info(master.getClientIdAuditPrefix() + " move servers " + hostPorts + " to rsgroup "
       + request.getTargetGroup());
@@ -357,7 +358,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     MoveServersAndTablesResponse.Builder builder = MoveServersAndTablesResponse.newBuilder();
     Set<Address> hostPorts = Sets.newHashSet();
     for (HBaseProtos.ServerName el : request.getServersList()) {
-      hostPorts.add(Address.fromParts(el.getHostName(), el.getPort()));
+      hostPorts.add(Address.fromParts(el.getHostName().toLowerCase(Locale.ROOT), el.getPort()));
     }
     Set<TableName> tables = new HashSet<>(request.getTableNameList().size());
     for (HBaseProtos.TableName tableName : request.getTableNameList()) {
@@ -388,7 +389,7 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
     RemoveServersResponse.Builder builder = RemoveServersResponse.newBuilder();
     Set<Address> servers = Sets.newHashSet();
     for (HBaseProtos.ServerName el : request.getServersList()) {
-      servers.add(Address.fromParts(el.getHostName(), el.getPort()));
+      servers.add(Address.fromParts(el.getHostName().toLowerCase(Locale.ROOT), el.getPort()));
     }
     LOG.info(
       master.getClientIdAuditPrefix() + " remove decommissioned servers from rsgroup: " + servers);

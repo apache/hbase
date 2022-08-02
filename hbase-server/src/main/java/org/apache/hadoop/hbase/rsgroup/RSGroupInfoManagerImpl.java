@@ -761,7 +761,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     // Get all online servers from Zookeeper and find out servers in default group
     SortedSet<Address> defaultServers = Sets.newTreeSet();
     for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
-      Address server = Address.fromParts(serverName.getHostname(), serverName.getPort());
+      Address server = Address.fromParts(serverName.getHostnameLowerCase(), serverName.getPort());
       if (!serversInOtherGroup.contains(server)) { // not in other groups
         defaultServers.add(server);
       }
