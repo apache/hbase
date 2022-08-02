@@ -191,15 +191,14 @@ public class TestHStoreFile {
   }
 
   public static void writeLargeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier,
-    int rounds)
-    throws IOException {
+    int rounds) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     try {
-      for(int i=0; i<rounds; i++) {
+      for (int i = 0; i < rounds; i++) {
         for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
           for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
             byte[] b = new byte[] { (byte) d, (byte) e };
-            byte[] key = new byte []{ (byte)i};
+            byte[] key = new byte[] { (byte) i };
             writer.append(new KeyValue(key, fam, qualifier, now, b));
           }
         }
@@ -1221,38 +1220,29 @@ public class TestHStoreFile {
     conf.setBoolean("hbase.block.size.limit.compressed", true);
     cacheConf = new CacheConfig(conf);
     HFileContext meta =
-      new HFileContextBuilder()
-        .withBlockSize(BLOCKSIZE_SMALL)
-        .withChecksumType(CKTYPE)
-        .withBytesPerCheckSum(CKBYTES)
-        .withDataBlockEncoding(dataBlockEncoderAlgo)
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo)
         .withCompression(Compression.Algorithm.GZ).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
-      .withFilePath(path)
-      .withMaxKeyCount(2000)
-      .withFileContext(meta)
-      .build();
-    writeLargeStoreFile(writer,
-      Bytes.toBytes(name.getMethodName()), Bytes.toBytes(name.getMethodName()), 200);
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
+    writeLargeStoreFile(writer, Bytes.toBytes(name.getMethodName()),
+      Bytes.toBytes(name.getMethodName()), 200);
     writer.close();
     HStoreFile storeFile =
       new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
     storeFile.initReader();
-    HFile.Reader fReader = HFile
-      .createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
     FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
     long fileSize = fs.getFileStatus(writer.getPath()).getLen();
-    FixedFileTrailer trailer = FixedFileTrailer
-      .readFromStream(fsdis.getStream(false), fileSize);
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
     long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
     HFileBlock block;
     int blockCount = 0;
     while (offset <= max) {
-      block = fReader.readBlock(offset, -1,
-        /* cacheBlock */ false, /* pread */ false,
-        /* isCompaction */ false, /* updateCacheMetrics */ false,
-        null, null);
+      block = fReader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+        /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
       offset += block.getOnDiskSizeWithHeader();
       blockCount += 1;
       assertTrue(block.getUncompressedSizeWithoutHeader() >= BLOCKSIZE_SMALL);

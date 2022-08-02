@@ -734,6 +734,10 @@ public class HFileBlock implements Cacheable {
       BLOCK_READY
     }
 
+    public boolean isSizeLimitCompressed() {
+      return sizeLimitCompressed;
+    }
+
     private boolean sizeLimitCompressed;
 
     private int maxSizeCompressed;
@@ -818,12 +822,13 @@ public class HFileBlock implements Cacheable {
      */
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
       HFileContext fileContext) {
-      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP, false, fileContext.getBlocksize());
+      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP, false,
+        fileContext.getBlocksize());
     }
 
-
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
-      HFileContext fileContext, ByteBuffAllocator allocator, boolean sizeLimitcompleted, int maxSizeCompressed) {
+      HFileContext fileContext, ByteBuffAllocator allocator, boolean sizeLimitcompleted,
+      int maxSizeCompressed) {
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " + " Minimum is "
           + HConstants.HFILEBLOCK_HEADER_SIZE + " but the configured value is "
@@ -904,14 +909,14 @@ public class HFileBlock implements Cacheable {
       int uncompressedBlockSize = blockSizeWritten();
       if (uncompressedBlockSize >= fileContext.getBlocksize()) {
         if (sizeLimitCompressed && uncompressedBlockSize < maxSizeCompressed) {
-          //In order to avoid excessive compression size calculations, we do it only once when
-          //the uncompressed size has reached BLOCKSIZE. We then use this compression size to
-          //calculate the compression rate, and adjust the block size limit by this ratio.
+          // In order to avoid excessive compression size calculations, we do it only once when
+          // the uncompressed size has reached BLOCKSIZE. We then use this compression size to
+          // calculate the compression rate, and adjust the block size limit by this ratio.
           if (adjustedBlockSize == 0) {
             int compressedSize = EncodedDataBlock.getCompressedSize(fileContext.getCompression(),
               fileContext.getCompression().getCompressor(), baosInMemory.getBuffer(), 0,
               baosInMemory.size());
-            adjustedBlockSize = uncompressedBlockSize/compressedSize;
+            adjustedBlockSize = uncompressedBlockSize / compressedSize;
             adjustedBlockSize *= fileContext.getBlocksize();
           }
           return uncompressedBlockSize >= adjustedBlockSize;
