@@ -1689,10 +1689,6 @@ public class TestHFileOutputFormat2 {
     public boolean isAborted() {
       return delegate.isAborted();
     }
-
-    @Override
-    public String getClusterId() {
-      return delegate.getClusterId();
-    }
   }
+
 }

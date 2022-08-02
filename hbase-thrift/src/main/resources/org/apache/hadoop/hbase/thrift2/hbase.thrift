@@ -1127,8 +1127,4 @@ service THBaseService {
     1: set<TServerName> serverNames
   ) throws (1: TIOError io)
 
-  /**
-   * Returns the cluster ID for this cluster.
-   */
-  string getClusterId()
 }

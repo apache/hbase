@@ -105,9 +105,4 @@ public class SharedConnection implements Connection {
   public Hbck getHbck(ServerName masterServer) throws IOException {
     return conn.getHbck(masterServer);
   }
-
-  @Override
-  public String getClusterId() {
-    return conn.getClusterId();
-  }
 }

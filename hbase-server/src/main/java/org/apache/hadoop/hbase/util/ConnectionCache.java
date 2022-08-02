@@ -203,17 +203,6 @@ public class ConnectionCache {
     return false;
   }
 
-  /** Returns Cluster ID for the HBase cluster or null if there is an err making the connection. */
-  public String getClusterId() {
-    try {
-      ConnectionInfo connInfo = getCurrentConnection();
-      return connInfo.connection.getClusterId();
-    } catch (IOException e) {
-      LOG.error("Error getting connection: ", e);
-    }
-    return null;
-  }
-
   class ConnectionInfo {
     final Connection connection;
     final String userName;

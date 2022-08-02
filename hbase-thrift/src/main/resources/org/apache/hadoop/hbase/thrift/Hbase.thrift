@@ -981,9 +981,4 @@ service Hbase {
    * @return the type of this thrift server
    */
   TThriftServerType getThriftServerType()
-
-  /**
-   * Returns the cluster ID for this cluster.
-   */
-   string getClusterId()
 }

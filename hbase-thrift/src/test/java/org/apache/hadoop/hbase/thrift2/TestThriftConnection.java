@@ -192,19 +192,10 @@ public class TestThriftConnection {
   }
 
   @Test
-  public void testGetClusterId() {
-    String actualClusterId = TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId();
-    for (Connection conn : new Connection[] { thriftConnection, thriftHttpConnection }) {
-      String thriftClusterId = conn.getClusterId();
-      assertEquals(actualClusterId, thriftClusterId);
-    }
-  }
-
-  @Test
-  public void testThriftAdmin() throws Exception {
-    testThriftAdmin(thriftConnection, "testThriftAdminNamespace", "testThriftAdminTable");
-    testThriftAdmin(thriftHttpConnection, "testThriftHttpAdminNamespace",
-      "testThriftHttpAdminTable");
+  public void testThrfitAdmin() throws Exception {
+    testThriftAdmin(thriftConnection, "testThrfitAdminNamesapce", "testThrfitAdminTable");
+    testThriftAdmin(thriftHttpConnection, "testThrfitHttpAdminNamesapce",
+      "testThrfitHttpAdminTable");
   }
 
   @Test
@@ -214,7 +205,7 @@ public class TestThriftConnection {
 
   }
 
-  private void testGet(Connection connection, String tableName) throws IOException {
+  public void testGet(Connection connection, String tableName) throws IOException {
     createTable(thriftAdmin, tableName);
     try (Table table = connection.getTable(TableName.valueOf(tableName))) {
       Get get = new Get(ROW_1);

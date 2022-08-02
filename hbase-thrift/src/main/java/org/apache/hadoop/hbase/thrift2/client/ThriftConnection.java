@@ -52,7 +52,6 @@ import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
-import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -62,14 +61,11 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.apache.thrift.transport.layered.TFramedTransport;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 public class ThriftConnection implements Connection {
-  private static final Logger LOG = LoggerFactory.getLogger(ThriftConnection.class);
   private Configuration conf;
   private User user;
   // For HTTP protocol
@@ -82,8 +78,7 @@ public class ThriftConnection implements Connection {
   private boolean isFramed = false;
   private boolean isCompact = false;
 
-  // TODO: We can rip out the ThriftClient piece of it rather than creating a new client every time.
-  ThriftClientBuilder clientBuilder;
+  private ThriftClientBuilder clientBuilder;
 
   private int operationTimeout;
   private int connectTimeout;
@@ -145,6 +140,10 @@ public class ThriftConnection implements Connection {
 
   public int getConnectTimeout() {
     return connectTimeout;
+  }
+
+  public ThriftClientBuilder getClientBuilder() {
+    return clientBuilder;
   }
 
   /**
@@ -329,6 +328,7 @@ public class ThriftConnection implements Connection {
         } catch (IOException ioE) {
           throw new RuntimeException(ioE);
         }
+
       }
     };
   }
@@ -361,16 +361,5 @@ public class ThriftConnection implements Connection {
   @Override
   public void clearRegionLocationCache() {
     throw new NotImplementedException("clearRegionLocationCache not supported in ThriftTable");
-  }
-
-  @Override
-  public String getClusterId() {
-    try {
-      Pair<THBaseService.Client, TTransport> client = clientBuilder.getClient();
-      return client.getFirst().getClusterId();
-    } catch (TException | IOException e) {
-      LOG.error("Error fetching cluster ID: ", e);
-    }
-    return null;
   }
 }
