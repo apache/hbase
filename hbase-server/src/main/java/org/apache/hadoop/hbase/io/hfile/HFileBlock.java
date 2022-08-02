@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferWriterDataOutputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -238,6 +239,10 @@ public class HFileBlock implements Cacheable {
 
   static final byte[] DUMMY_HEADER_NO_CHECKSUM =
     new byte[HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM];
+
+  public static final String BLOCK_SIZE_LIMIT_COMPRESSED = "hbase.block.size.limit.compressed";
+
+  public static final String MAX_BLOCK_SIZE_COMPRESSED = "hbase.block.size.max.compressed";
 
   /**
    * Used deserializing blocks from Cache. <code>
@@ -454,7 +459,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /** Returns the uncompressed size of data part (header and checksum excluded). */
-  int getUncompressedSizeWithoutHeader() {
+  public int getUncompressedSizeWithoutHeader() {
     return uncompressedSizeWithoutHeader;
   }
 
@@ -729,6 +734,12 @@ public class HFileBlock implements Cacheable {
       BLOCK_READY
     }
 
+    private boolean sizeLimitCompressed;
+
+    private int maxSizeCompressed;
+
+    private int adjustedBlockSize;
+
     /** Writer state. Used to ensure the correct usage protocol. */
     private State state = State.INIT;
 
@@ -807,11 +818,12 @@ public class HFileBlock implements Cacheable {
      */
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
       HFileContext fileContext) {
-      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP);
+      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP, false, fileContext.getBlocksize());
     }
 
+
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
-      HFileContext fileContext, ByteBuffAllocator allocator) {
+      HFileContext fileContext, ByteBuffAllocator allocator, boolean sizeLimitcompleted, int maxSizeCompressed) {
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " + " Minimum is "
           + HConstants.HFILEBLOCK_HEADER_SIZE + " but the configured value is "
@@ -834,6 +846,8 @@ public class HFileBlock implements Cacheable {
       // TODO: Why fileContext saved away when we have dataBlockEncoder and/or
       // defaultDataBlockEncoder?
       this.fileContext = fileContext;
+      this.sizeLimitCompressed = sizeLimitcompleted;
+      this.maxSizeCompressed = maxSizeCompressed;
     }
 
     /**
@@ -884,6 +898,27 @@ public class HFileBlock implements Cacheable {
 
       // This will set state to BLOCK_READY.
       finishBlock();
+    }
+
+    public boolean shouldFinishBlock() throws IOException {
+      int uncompressedBlockSize = blockSizeWritten();
+      if (uncompressedBlockSize >= fileContext.getBlocksize()) {
+        if (sizeLimitCompressed && uncompressedBlockSize < maxSizeCompressed) {
+          //In order to avoid excessive compression size calculations, we do it only once when
+          //the uncompressed size has reached BLOCKSIZE. We then use this compression size to
+          //calculate the compression rate, and adjust the block size limit by this ratio.
+          if (adjustedBlockSize == 0) {
+            int compressedSize = EncodedDataBlock.getCompressedSize(fileContext.getCompression(),
+              fileContext.getCompression().getCompressor(), baosInMemory.getBuffer(), 0,
+              baosInMemory.size());
+            adjustedBlockSize = uncompressedBlockSize/compressedSize;
+            adjustedBlockSize *= fileContext.getBlocksize();
+          }
+          return uncompressedBlockSize >= adjustedBlockSize;
+        }
+        return true;
+      }
+      return false;
     }
 
     /**
@@ -1066,7 +1101,7 @@ public class HFileBlock implements Cacheable {
     /**
      * The uncompressed size of the block data, including header size.
      */
-    int getUncompressedSizeWithHeader() {
+    public int getUncompressedSizeWithHeader() {
       expectState(State.BLOCK_READY);
       return baosInMemory.size();
     }
