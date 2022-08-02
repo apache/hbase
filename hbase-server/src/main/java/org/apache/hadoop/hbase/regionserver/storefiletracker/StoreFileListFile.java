@@ -73,7 +73,7 @@ class StoreFileListFile {
 
   private static final char TRACK_FILE_SEPARATOR = '.';
 
-  private static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
+  static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
 
   // 16 MB, which is big enough for a tracker file
   private static final int MAX_FILE_SIZE = 16 * 1024 * 1024;
@@ -94,8 +94,7 @@ class StoreFileListFile {
     trackFileDir = new Path(ctx.getFamilyStoreDirectoryPath(), TRACK_FILE_DIR);
   }
 
-  private StoreFileList load(Path path) throws IOException {
-    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+  static StoreFileList load(FileSystem fs, Path path) throws IOException {
     byte[] data;
     int expectedChecksum;
     try (FSDataInputStream in = fs.open(path)) {
@@ -116,6 +115,10 @@ class StoreFileListFile {
         "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
     }
     return StoreFileList.parseFrom(data);
+  }
+  StoreFileList load(Path path) throws IOException {
+    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+    return load(fs, path);
   }
 
   private int select(StoreFileList[] lists) {
