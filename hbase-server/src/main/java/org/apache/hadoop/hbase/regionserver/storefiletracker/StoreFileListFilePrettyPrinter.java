@@ -112,21 +112,21 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
         err.println("Region name is not specified.");
         formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
           + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
-        System.exit(-1);
+        System.exit(1);
       }
       columnFamily = cmd.getOptionValue(columnFamilyOption);
       if (StringUtils.isEmpty(columnFamily)) {
         err.println("Column family is not specified.");
         formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
           + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
-        System.exit(-1);
+        System.exit(1);
       }
       String tableNameWtihNS = cmd.getOptionValue(tableNameOption);
       if (StringUtils.isEmpty(tableNameWtihNS)) {
         err.println("Table name is not specified.");
         formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
           + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
-        System.exit(-1);
+        System.exit(1);
       }
       TableName tn = TableName.valueOf(tableNameWtihNS);
       namespace = tn.getNamespaceAsString();
@@ -139,6 +139,7 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
     if (getConf() == null) {
       throw new RuntimeException("A Configuration instance must be provided.");
     }
+    boolean pass = true;
     try {
       CommonFSUtils.setFsDefault(getConf(), CommonFSUtils.getRootDir(getConf()));
       if (!parseOptions(args)) {
@@ -157,12 +158,12 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
         fs = path.getFileSystem(getConf());
         if (fs.isDirectory(path)) {
           err.println("ERROR, wrong path given: " + path);
-          return -2;
+          return 2;
         }
         return print(fs, path);
       } catch (IOException e) {
         LOG.error("Error reading " + path, e);
-        return -2;
+        return 2;
       }
     } else {
       try {
@@ -186,28 +187,28 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
           ) {
             out.println("Printing contents for file " + lfs.getPath().toString());
             int ret = print(fs, lfs.getPath());
-            if (ret < 0) {
-              return ret;
+            if (ret != 0) {
+              pass = false;
             }
           }
         }
       } catch (IOException e) {
         LOG.error("Error processing " + e);
-        return -2;
+        return 2;
       }
     }
-    return 0;
+    return pass ? 0 : 2;
   }
 
   private int print(FileSystem fs, Path path) throws IOException {
     try {
       if (!fs.exists(path)) {
         err.println("ERROR, file doesnt exist: " + path);
-        return -2;
+        return 2;
       }
     } catch (IOException e) {
       err.println("ERROR, reading file: " + path + e);
-      return -2;
+      return 2;
     }
     StoreFileList storeFile = StoreFileListFile.load(fs, path);
     int end = storeFile.getStoreFileCount();
