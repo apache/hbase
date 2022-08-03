@@ -1,5 +1,75 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.7.2 08/02/2022
+
+** Sub-task
+    * [HBASE-27260] Set version as 1.7.2 in branch-1 in prep for first RC of 1.7.2
+    * [HBASE-27006] cordon off large ci worker nodes
+    * [HBASE-26995] Remove ref guide check in pre commit and nightly for branches other than master
+    * [HBASE-26932] Skip generating ref guide when running 'mvn site' on branch other than master
+    * [HBASE-26435] [branch-1] The log rolling request maybe canceled immediately in LogRoller due to a race
+    * [HBASE-26749] Migrate HBase main pre commit job to ci-hbase
+    * [HBASE-26697] Migrate HBase Nightly HBase-Flaky-Tests and HBase-Find-Flaky-Tests to ci-hbase
+    * [HBASE-26747] Use python2 instead of python in our python scripts
+    * [HBASE-26319] Make flaky find job track more builds
+    * [HBASE-26390] Upload src tarball to nightlies for nightly jobs
+    * [HBASE-26382] Use gen_redirect_html for linking flaky test logs
+    * [HBASE-26362] Upload mvn site artifacts for nightly build to nightlies
+    * [HBASE-26360] Use gen_redirect_html for linking test logs
+    * [HBASE-26341] Upload dashboard html for flaky find job to nightlies
+    * [HBASE-26339] SshPublisher will skip uploading artifacts if the build is failure
+    * [HBASE-26313] Publish the test logs for our nightly jobs to nightlies.apache.org
+    * [HBASE-26318] Publish test logs for flaky jobs to nightlies
+    * [HBASE-27261] Generate CHANGES.txt for 1.7.2
+
+** Bug
+    * [HBASE-23147] Branches-1 shaded artifact for mapreduce integration misses MainClass
+    * [HBASE-26977] HMaster's ShutdownHook does not take effect, if tablesOnMaster is false
+    * [HBASE-26705] Backport HBASE-26688 to branch-1
+    * [HBASE-26998] TestRegionProcessRowsWithLocks#testProcessExceptionAndRollBack is broken in branch-1
+    * [HBASE-26783] ScannerCallable doubly clears meta cache on retries
+    * [HBASE-26797] HBase 1.x clients will choke on rep\_barrier rows when scanning hbase 2.x meta
+    * [HBASE-26752] Fix flappy test TestSimpleRegionNormalizerOnCluster.java
+    * [HBASE-26744] Normalizer exits without normalizing all the tables
+    * [HBASE-26660] Backporting of HBASE-25643
+    * [HBASE-26619] Backport HBASE-26613 to branch-1
+    * [HBASE-26537] FuzzyRowFilter backwards compatibility
+    * [HBASE-26482] HMaster may clean wals that is replicating in rare cases
+    * [HBASE-26468] Region Server doesn't exit cleanly incase it crashes.
+    * [HBASE-26480] Close NamedQueueRecorder to allow HMaster/RS to shutdown gracefully
+    * [HBASE-26458] Value of hbase.master.snapshot.ttl is not used
+    * [HBASE-26433] Rollback from ZK-less to ZK-based assignment could produce inconsistent state - doubly assigned regions
+    * [HBASE-26393] The dockerfile for running pre commit and nightly jobs can not be built on branch-1
+    * [HBASE-26371] Prioritize meta region move over other region moves in region\_mover
+    * [HBASE-26195] Data is present in replicated cluster but not present in primary cluster.
+    * [HBASE-26244] Avoid trim the error stack trace when running UT with maven
+    * [HBASE-26120] New replication gets stuck or data loss when multiwal groups more than 10
+    * [HBASE-26094] In branch-1 L2 BC should not be the victimhandler of L1 BC when using combined BC
+    * [HBASE-26083] L1 miss metric is incorrect when using CombinedBlockCache
+
+** Improvement
+    * [HBASE-26681] Introduce a little RAMBuffer for bucketcache to reduce gc and improve throughput
+    * [HBASE-26848] Set java.io.tmpdir on mvn command when running jenkins job
+    * [HBASE-26792] Implement ScanInfo#toString
+    * [HBASE-26702] Make ageOfLastShip, ageOfLastApplied  extend TimeHistogram instead of plain histogram.
+    * [HBASE-26726] Allow disable of region warmup before graceful move
+    * [HBASE-26459] HMaster should move non-meta region only if meta is ONLINE
+    * [HBASE-26325] Backport HBASE-26305 to branch-1
+    * [HBASE-25849] Backport HBASE-22738, HBASE-24760, & HBASE-25298 (Fallback feature for RS groups when there are no RS in current group) to branch-1
+    * [HBASE-25469] Add detailed RIT info in JSON format for consumption as metrics
+    * [HBASE-25986] Expose the NORMALIZARION_ENABLED table descriptor through a property in hbase-site
+    * [HBASE-25923] Region state stuck in PENDING_OPEN
+
+** Test
+    * [HBASE-26185] Fix TestMaster#testMoveRegionWhenNotInitialized with hbase.min.version.move.system.tables
+
+* Task
+    * [HBASE-26109] Wrap up 1.7.1 release
+    * [HBASE-26788] Disable Checks API callback from test results in PRs
+    * [HBASE-26678] Backport HBASE-26579 to branch-1
+    * [HBASE-26551] Add FastPath feature to HBase RWQueueRpcExecutor
+
+
 Release Notes - HBase - Version 1.7.1 07/15/2021
 
 ** Sub-task
@@ -16,14 +86,14 @@ Release Notes - HBase - Version 1.7.1 07/15/2021
     * [HBASE-25984] Avoid premature reuse of sync futures in FSHLog
     * [HBASE-25924] Re-compute size of WAL file while removing from WALEntryStream
 
-* Improvement
+** Improvement
     * [HBASE-26025] Add a flag to mark if the IOError can be solved by retry in thrift IOError
 
 ** Test
     * [HBASE-26074] Fix testLogLevelByHttps/testLogLevelByHttpsWithSpnego
     * [HBASE-25910] Fix port assignment test
 
-* Task
+** Task
     * [HBASE-26033] complement the admin operations in thrift2 after HBASE-21674
     * [HBASE-21674] Port HBASE-21652 (Refactor ThriftServer making thrift2 server inherited from thrift1 server) to branch-1
 
