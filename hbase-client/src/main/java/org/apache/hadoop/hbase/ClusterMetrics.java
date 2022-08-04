@@ -76,6 +76,9 @@ public interface ClusterMetrics {
   /** Returns the names of region servers on the dead list */
   List<ServerName> getDeadServerNames();
 
+  /** Returns the names of region servers on the unknown list */
+  List<ServerName> getUnknownServerNames();
+
   /** Returns the names of region servers on the decommissioned list */
   List<ServerName> getDecommissionedServerNames();
 
@@ -179,6 +182,10 @@ public interface ClusterMetrics {
      * metrics about dead region servers
      */
     DEAD_SERVERS,
+    /**
+     * metrics about unknown region servers
+     */
+    UNKNOWN_SERVERS,
     /**
      * metrics about master name
      */
