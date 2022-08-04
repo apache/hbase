@@ -88,7 +88,8 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
     files.addOption(new Option(regionOption, "region", true,
       "Region to scan. Pass region name; e.g. '3d58e9067bf23e378e68c071f3dd39eb'"));
     files.addOption(new Option(fileOption, "file", true,
-      "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34"));
+      "File to scan. Pass full-path; e.g. /root/hbase-3.0.0-alpha-4-SNAPSHOT/hbase-data/"
+        + "data/default/tbl-sft/093fa06bf84b3b631007f951a14b8457/f/.filelist/f2.1655139542249"));
     options.addOptionGroup(files);
   }
 
