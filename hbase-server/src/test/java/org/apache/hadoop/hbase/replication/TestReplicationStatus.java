@@ -139,6 +139,7 @@ public class TestReplicationStatus extends TestReplicationBase {
       metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
     while (list.size() <= greaterThan) {
       Threads.sleep(1000);
+      list = metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
     }
     return list;
   }
