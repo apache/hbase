@@ -239,7 +239,7 @@ class NettyRpcConnection extends RpcConnection {
             p.addBefore(BufferCallBeforeInitHandler.NAME, readTimeoutHandlerName,
               new ReadTimeoutHandler(RpcClient.DEFAULT_SOCKET_TIMEOUT_READ, TimeUnit.MILLISECONDS))
               .addBefore(BufferCallBeforeInitHandler.NAME, null, chHandler);
-            connectionHeaderPromise.addListener(new FutureListener<Boolean>() {
+            NettyFutureUtils.addListener(connectionHeaderPromise, new FutureListener<Boolean>() {
               @Override
               public void operationComplete(Future<Boolean> future) throws Exception {
                 if (future.isSuccess()) {
