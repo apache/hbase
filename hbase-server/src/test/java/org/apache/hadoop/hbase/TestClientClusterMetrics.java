@@ -48,9 +48,6 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionServerList;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MetricsUserAggregateFactory;
@@ -83,7 +80,6 @@ public class TestClientClusterMetrics {
   private static HRegionServer DEAD;
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] CF = Bytes.toBytes("cf");
-  private static boolean IS_UNKNOWN_SERVER = true;
 
   // We need to promote the visibility of tryRegionServerReport for this test
   public static class MyRegionServer
@@ -511,22 +507,6 @@ public class TestClientClusterMetrics {
     Assert.assertNotNull(metrics.getBalancerOn());
   }
 
-  @Test
-  public void testUnknownServers() throws Exception {
-    HBaseTestingUtil util = new HBaseTestingUtil();
-    util.getConfiguration().setClass(HConstants.MASTER_IMPL,
-      TestClientClusterMetrics.HMasterForTest.class, HMaster.class);
-    util.startMiniCluster(1);
-    Admin admin = util.getAdmin();
-    Assert.assertEquals(admin.listUnknownServers().size(), 1);
-    IS_UNKNOWN_SERVER = false;
-    Assert.assertEquals(admin.listUnknownServers().size(), 0);
-    if (admin != null) {
-      admin.close();
-    }
-    util.shutdownMiniCluster();
-  }
-
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (ADMIN != null) {
@@ -575,32 +555,6 @@ public class TestClientClusterMetrics {
     public void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
       ClusterMetrics metrics) throws IOException {
       POST_COUNT.incrementAndGet();
-    }
-  }
-
-  private static final class ServerManagerForTest extends ServerManager {
-
-    public ServerManagerForTest(MasterServices master, RegionServerList storage) {
-      super(master, storage);
-    }
-
-    @Override
-    public boolean isServerUnknown(ServerName serverName) {
-      return IS_UNKNOWN_SERVER;
-    }
-  }
-
-  public static final class HMasterForTest extends HMaster {
-
-    public HMasterForTest(Configuration conf) throws IOException {
-      super(conf);
-    }
-
-    @Override
-    protected ServerManager createServerManager(MasterServices master, RegionServerList storage)
-      throws IOException {
-      setupClusterConnection();
-      return new TestClientClusterMetrics.ServerManagerForTest(master, storage);
     }
   }
 }
