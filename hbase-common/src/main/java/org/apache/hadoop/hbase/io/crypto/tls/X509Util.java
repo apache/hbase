@@ -149,7 +149,7 @@ public final class X509Util {
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
 
     if (keyStoreLocation.isEmpty()) {
-      LOG.warn("{} not specified", TLS_CONFIG_KEYSTORE_LOCATION);
+      LOG.warn(TLS_CONFIG_KEYSTORE_LOCATION + " not specified");
     } else {
       sslContextBuilder
         .keyManager(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
@@ -163,7 +163,7 @@ public final class X509Util {
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
 
     if (trustStoreLocation.isEmpty()) {
-      LOG.warn("{} not specified", TLS_CONFIG_TRUSTSTORE_LOCATION);
+      LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
     } else {
       sslContextBuilder.trustManager(createTrustManager(trustStoreLocation, trustStorePassword,
         trustStoreType, sslCrlEnabled, sslOcspEnabled));
@@ -200,7 +200,7 @@ public final class X509Util {
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
 
     if (trustStoreLocation.isEmpty()) {
-      LOG.warn("{} not specified", TLS_CONFIG_TRUSTSTORE_LOCATION);
+      LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
     } else {
       sslContextBuilder.trustManager(createTrustManager(trustStoreLocation, trustStorePassword,
         trustStoreType, sslCrlEnabled, sslOcspEnabled));

@@ -44,11 +44,11 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
 
 @Category({ RPCTests.class, MediumTests.class })
-public class TestNettyIPCSsl {
+public class TestNettyIPCSslFailure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyIPCSsl.class);
+    HBaseClassTestRule.forClass(TestNettyIPCSslFailure.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
 
