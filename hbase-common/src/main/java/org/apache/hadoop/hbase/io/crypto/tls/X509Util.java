@@ -38,7 +38,6 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
-import com.google.common.collect.ObjectArrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
@@ -48,6 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ObjectArrays;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 
