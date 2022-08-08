@@ -96,7 +96,7 @@ public class NettyRpcServer extends RpcServer {
     // Get the event loop group configuration from the server class if available.
     NettyEventLoopGroupConfig config = null;
     if (server instanceof HBaseServerBase) {
-      config = ((HBaseServerBase) server).getEventLoopGroupConfig();
+      config = ((HBaseServerBase<?>) server).getEventLoopGroupConfig();
     }
     if (config == null) {
       config = new NettyEventLoopGroupConfig(conf, "NettyRpcServer");

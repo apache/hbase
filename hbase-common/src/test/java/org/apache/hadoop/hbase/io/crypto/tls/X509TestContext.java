@@ -53,7 +53,7 @@ public final class X509TestContext {
   private static final String KEY_STORE_PREFIX = "hbase_test_key";
 
   private final File tempDir;
-  private final Configuration hbaseConf = HBaseConfiguration.create();
+  private final Configuration conf;
 
   private final X509Certificate trustStoreCertificate;
   private final String trustStorePassword;
@@ -70,6 +70,7 @@ public final class X509TestContext {
 
   /**
    * Constructor is intentionally private, use the Builder class instead.
+   * @param conf               the configuration
    * @param tempDir            the directory in which key store and trust store temp files will be
    *                           written.
    * @param trustStoreKeyPair  the key pair for the trust store.
@@ -78,12 +79,13 @@ public final class X509TestContext {
    * @param keyStoreKeyPair    the key pair for the key store.
    * @param keyStorePassword   the password to protect the key store private key.
    */
-  private X509TestContext(File tempDir, KeyPair trustStoreKeyPair, String trustStorePassword,
-    KeyPair keyStoreKeyPair, String keyStorePassword)
+  private X509TestContext(Configuration conf, File tempDir, KeyPair trustStoreKeyPair,
+    String trustStorePassword, KeyPair keyStoreKeyPair, String keyStorePassword)
     throws IOException, GeneralSecurityException, OperatorCreationException {
     if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
       throw new IllegalStateException("BC Security provider was not found");
     }
+    this.conf = conf;
     this.tempDir = requireNonNull(tempDir);
     if (!tempDir.isDirectory()) {
       throw new IllegalArgumentException("Not a directory: " + tempDir);
@@ -204,8 +206,8 @@ public final class X509TestContext {
     return keyStorePassword.length() > 0;
   }
 
-  public Configuration getHbaseConf() {
-    return hbaseConf;
+  public Configuration getConf() {
+    return conf;
   }
 
   /**
@@ -301,25 +303,25 @@ public final class X509TestContext {
    * @param trustStoreFileType the store file type to use for the trust store (JKS, PEM, ...).
    * @throws IOException if there is an error creating the key store file or trust store file.
    */
-  public void setSystemProperties(KeyStoreFileType keyStoreFileType,
+  public void setConfigurations(KeyStoreFileType keyStoreFileType,
     KeyStoreFileType trustStoreFileType) throws IOException {
-    hbaseConf.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION,
+    conf.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION,
       this.getKeyStoreFile(keyStoreFileType).getAbsolutePath());
-    hbaseConf.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD, this.getKeyStorePassword());
-    hbaseConf.set(X509Util.TLS_CONFIG_KEYSTORE_TYPE, keyStoreFileType.getPropertyValue());
-    hbaseConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION,
+    conf.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD, this.getKeyStorePassword());
+    conf.set(X509Util.TLS_CONFIG_KEYSTORE_TYPE, keyStoreFileType.getPropertyValue());
+    conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION,
       this.getTrustStoreFile(trustStoreFileType).getAbsolutePath());
-    hbaseConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD, this.getTrustStorePassword());
-    hbaseConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE, trustStoreFileType.getPropertyValue());
+    conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD, this.getTrustStorePassword());
+    conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE, trustStoreFileType.getPropertyValue());
   }
 
-  public void clearSystemProperties() {
-    hbaseConf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
-    hbaseConf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
-    hbaseConf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
-    hbaseConf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION);
-    hbaseConf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD);
-    hbaseConf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE);
+  public void clearConfigurations() {
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+    conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE);
   }
 
   /**
@@ -327,6 +329,7 @@ public final class X509TestContext {
    */
   public static class Builder {
 
+    private final Configuration conf;
     private File tempDir;
     private X509KeyType trustStoreKeyType;
     private String trustStorePassword;
@@ -334,9 +337,10 @@ public final class X509TestContext {
     private String keyStorePassword;
 
     /**
-     * Creates an empty builder.
+     * Creates an empty builder with the given Configuration.
      */
-    public Builder() {
+    public Builder(Configuration conf) {
+      this.conf = conf;
       trustStoreKeyType = X509KeyType.EC;
       trustStorePassword = "";
       keyStoreKeyType = X509KeyType.EC;
@@ -351,8 +355,8 @@ public final class X509TestContext {
       throws IOException, GeneralSecurityException, OperatorCreationException {
       KeyPair trustStoreKeyPair = X509TestHelpers.generateKeyPair(trustStoreKeyType);
       KeyPair keyStoreKeyPair = X509TestHelpers.generateKeyPair(keyStoreKeyType);
-      return new X509TestContext(tempDir, trustStoreKeyPair, trustStorePassword, keyStoreKeyPair,
-        keyStorePassword);
+      return new X509TestContext(conf, tempDir, trustStoreKeyPair, trustStorePassword,
+        keyStoreKeyPair, keyStorePassword);
     }
 
     /**
@@ -416,7 +420,14 @@ public final class X509TestContext {
    * @return a new Builder.
    */
   public static Builder newBuilder() {
-    return new Builder();
+    return newBuilder(HBaseConfiguration.create());
   }
 
+  /**
+   * Returns a new default-constructed Builder.
+   * @return a new Builder.
+   */
+  public static Builder newBuilder(Configuration conf) {
+    return new Builder(conf);
+  }
 }
