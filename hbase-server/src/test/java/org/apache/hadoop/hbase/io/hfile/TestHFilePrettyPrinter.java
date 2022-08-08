@@ -157,7 +157,7 @@ public class TestHFilePrettyPrinter {
 
   private void assertContainsRanges(String result, int... rangeCountPairs) {
     for (int i = 0; i < rangeCountPairs.length - 1; i += 2) {
-      String expected = rangeCountPairs[i] + " <= " + rangeCountPairs[i + 1];
+      String expected = rangeCountPairs[i + 1] + " <= " + rangeCountPairs[i];
       assertTrue("expected:\n" + result + "\nto contain: '" + expected + "'",
         result.contains(expected));
     }

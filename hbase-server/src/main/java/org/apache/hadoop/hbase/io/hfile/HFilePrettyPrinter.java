@@ -41,7 +41,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -836,6 +835,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       // 100, etc) will have a count printed if any values were seen in that range. If no values
       // were seen for a range, that range will be excluded to keep the output small.
       if (stats.hasRangeCounts()) {
+        output.printf(locale, "           (range <= count):%n");
         long lastVal = 0;
         long lastRange = 0;
         for (long range : stats.getRanges()) {
@@ -857,14 +857,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
     }
 
-    private void printRangeCount(long range, long countAtOrBelowVal) {
-      String countAtOrBelow = Long.toString(countAtOrBelowVal);
-      countAtOrBelow = StringUtils.leftPad(countAtOrBelow, 17, " ");
-      if (range == Long.MAX_VALUE) {
-        output.printf(locale, "inf <= %s%n", countAtOrBelow);
-      } else {
-        output.printf(locale, "%d <= %s%n", range, countAtOrBelow);
-      }
+    private void printRangeCount(long range, long countAtOrBelow) {
+      String rangeString = range == Long.MAX_VALUE ? "inf" : Long.toString(range);
+      output.printf(locale, "%17s <= %d%n", rangeString, countAtOrBelow);
     }
   }
 
