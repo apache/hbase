@@ -83,6 +83,7 @@ show_usage() {
   if [ "${in_omnibus_tarball}" = "true" ]; then
     echo "  wal              Write-ahead-log analyzer"
     echo "  hfile            Store file analyzer"
+    echo "  sft              Store file tracker viewer"
     echo "  zkcli            Run the ZooKeeper shell"
     echo "  master           Run an HBase HMaster node"
     echo "  regionserver     Run an HBase HRegionServer node"
@@ -595,6 +596,8 @@ elif [ "$COMMAND" = "wal" ] ; then
   CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
+elif [ "$COMMAND" = "sft" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
   for f in $HBASE_HOME/lib/zkcli/*.jar; do
