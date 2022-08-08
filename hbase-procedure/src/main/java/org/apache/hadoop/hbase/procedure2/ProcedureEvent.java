@@ -126,7 +126,7 @@ public class ProcedureEvent<T> {
   }
 
   @Override
-  public String toString() {
+  public synchronized String toString() {
     return getClass().getSimpleName() + " for " + object + ", ready=" + isReady() + ", "
       + suspendedProcedures;
   }
