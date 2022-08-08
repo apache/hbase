@@ -861,9 +861,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       String countAtOrBelow = Long.toString(countAtOrBelowVal);
       countAtOrBelow = StringUtils.leftPad(countAtOrBelow, 17, " ");
       if (range == Long.MAX_VALUE) {
-        output.printf(locale, "%s <= inf%n", countAtOrBelow);
+        output.printf(locale, "inf <= %s%n", countAtOrBelow);
       } else {
-        output.printf(locale, "%s <= %d%n", countAtOrBelow, range);
+        output.printf(locale, "%d <= %s%n", range, countAtOrBelow);
       }
     }
   }
