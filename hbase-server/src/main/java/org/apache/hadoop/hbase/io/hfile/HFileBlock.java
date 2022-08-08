@@ -912,7 +912,7 @@ public class HFileBlock implements Cacheable {
           // In order to avoid excessive compression size calculations, we do it only once when
           // the uncompressed size has reached BLOCKSIZE. We then use this compression size to
           // calculate the compression rate, and adjust the block size limit by this ratio.
-          if (adjustedBlockSize == 0) {
+          if (adjustedBlockSize == 0 || uncompressedBlockSize >= adjustedBlockSize) {
             int compressedSize = EncodedDataBlock.getCompressedSize(fileContext.getCompression(),
               fileContext.getCompression().getCompressor(), baosInMemory.getBuffer(), 0,
               baosInMemory.size());
