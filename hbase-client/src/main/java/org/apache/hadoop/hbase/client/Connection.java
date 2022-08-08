@@ -180,8 +180,13 @@ public interface Connection extends Abortable, Closeable {
    */
   AsyncConnection toAsyncConnection();
 
-  /** Returns the cluster ID unique to this HBase cluster. */
-  String getClusterId();
+  /**
+   * Returns the cluster ID unique to this HBase cluster. <br>
+   * The default implementation is added to keep client compatibility.
+   * */
+  default String getClusterId() {
+    return null;
+  }
 
   /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
