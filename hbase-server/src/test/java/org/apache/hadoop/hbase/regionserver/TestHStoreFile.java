@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.HFileBlock.BLOCK_DELIMIT_COMPRESSED;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1217,7 +1218,7 @@ public class TestHStoreFile {
     Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
     DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
-    conf.setBoolean("hbase.block.size.limit.compressed", true);
+    conf.setBoolean(BLOCK_DELIMIT_COMPRESSED, true);
     cacheConf = new CacheConfig(conf);
     HFileContext meta =
       new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
