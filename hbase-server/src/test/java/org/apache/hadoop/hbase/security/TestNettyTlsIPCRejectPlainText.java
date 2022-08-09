@@ -70,7 +70,7 @@ public class TestNettyTlsIPCRejectPlainText {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyTlsIPC.class);
+    HBaseClassTestRule.forClass(TestNettyTlsIPCRejectPlainText.class);
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
