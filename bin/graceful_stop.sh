@@ -115,7 +115,7 @@ if [ "$nob" == "true"  ]; then
   HBASE_BALANCER_STATE=false
 else
   log "Disabling load balancer"
-  HBASE_BALANCER_STATE=$(echo 'balance_switch false' | "$bin"/hbase --config "${HBASE_CONF_DIR}" shell -n | tail -1)
+  HBASE_BALANCER_STATE=$(echo 'balance_switch false' | "$bin"/hbase --config "${HBASE_CONF_DIR}" shell -n | grep 'Previous balancer state' | awk -F": " '{print $2}')
   log "Previous balancer state was $HBASE_BALANCER_STATE"
 fi
 
