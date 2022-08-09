@@ -99,6 +99,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private volatile long storefileIndexSize = 0;
   private volatile long totalStaticIndexSize = 0;
   private volatile long totalStaticBloomSize = 0;
+  private volatile long bloomFilterRequestsCount = 0;
+  private volatile long bloomFilterNegativeResultsCount = 0;
+  private volatile long bloomFilterEligibleRequestsCount = 0;
   private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
   private volatile double percentFileLocal = 0;
@@ -617,6 +620,21 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getBloomFilterRequestsCount() {
+    return bloomFilterRequestsCount;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return bloomFilterNegativeResultsCount;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return bloomFilterEligibleRequestsCount;
+  }
+
+  @Override
   public long getNumMutationsWithoutWAL() {
     return numMutationsWithoutWAL;
   }
@@ -778,6 +796,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         long tempStorefileIndexSize = 0;
         long tempTotalStaticIndexSize = 0;
         long tempTotalStaticBloomSize = 0;
+        long tempBloomFilterRequestsCount = 0;
+        long tempBloomFilterNegativeResultsCount = 0;
+        long tempBloomFilterEligibleRequestsCount = 0;
         long tempNumMutationsWithoutWAL = 0;
         long tempDataInMemoryWithoutWAL = 0;
         double tempPercentFileLocal = 0;
@@ -884,6 +905,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
             tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
             tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
             tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
+            tempBloomFilterRequestsCount += store.getBloomFilterRequestsCount();
+            tempBloomFilterNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+            tempBloomFilterEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
             tempFlushedCellsCount += store.getFlushedCellsCount();
             tempCompactedCellsCount += store.getCompactedCellsCount();
             tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
@@ -984,6 +1008,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         storefileIndexSize = tempStorefileIndexSize;
         totalStaticIndexSize = tempTotalStaticIndexSize;
         totalStaticBloomSize = tempTotalStaticBloomSize;
+        bloomFilterRequestsCount = tempBloomFilterRequestsCount;
+        bloomFilterNegativeResultsCount = tempBloomFilterNegativeResultsCount;
+        bloomFilterEligibleRequestsCount = tempBloomFilterEligibleRequestsCount;
         numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
         dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
         percentFileLocal = tempPercentFileLocal;

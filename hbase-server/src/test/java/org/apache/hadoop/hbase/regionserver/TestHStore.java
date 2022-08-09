@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -309,6 +310,86 @@ public class TestHStore {
         return null;
       }
     });
+  }
+
+  @Test
+  public void testStoreBloomFilterMetricsWithBloomRowCol() throws IOException {
+    int numStoreFiles = 5;
+    writeAndRead(BloomType.ROWCOL, numStoreFiles);
+
+    assertEquals(0, store.getBloomFilterEligibleRequestsCount());
+    // hard to know exactly the numbers here, we are just trying to
+    // prove that they are incrementing
+    assertTrue(store.getBloomFilterRequestsCount() >= numStoreFiles);
+    assertTrue(store.getBloomFilterNegativeResultsCount() > 0);
+  }
+
+  @Test
+  public void testStoreBloomFilterMetricsWithBloomRow() throws IOException {
+    int numStoreFiles = 5;
+    writeAndRead(BloomType.ROWCOL, numStoreFiles);
+
+    assertEquals(0, store.getBloomFilterEligibleRequestsCount());
+    // hard to know exactly the numbers here, we are just trying to
+    // prove that they are incrementing
+    assertTrue(store.getBloomFilterRequestsCount() >= numStoreFiles);
+    assertTrue(store.getBloomFilterNegativeResultsCount() > 0);
+  }
+
+  @Test
+  public void testStoreBloomFilterMetricsWithBloomRowPrefix() throws IOException {
+    int numStoreFiles = 5;
+    writeAndRead(BloomType.ROWPREFIX_FIXED_LENGTH, numStoreFiles);
+
+    assertEquals(0, store.getBloomFilterEligibleRequestsCount());
+    // hard to know exactly the numbers here, we are just trying to
+    // prove that they are incrementing
+    assertTrue(store.getBloomFilterRequestsCount() >= numStoreFiles);
+  }
+
+  @Test
+  public void testStoreBloomFilterMetricsWithBloomNone() throws IOException {
+    int numStoreFiles = 5;
+    writeAndRead(BloomType.NONE, numStoreFiles);
+
+    assertEquals(0, store.getBloomFilterRequestsCount());
+    assertEquals(0, store.getBloomFilterNegativeResultsCount());
+
+    // hard to know exactly the numbers here, we are just trying to
+    // prove that they are incrementing
+    assertTrue(store.getBloomFilterEligibleRequestsCount() >= numStoreFiles);
+  }
+
+  private void writeAndRead(BloomType bloomType, int numStoreFiles) throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem fs = FileSystem.get(conf);
+
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setCompressionType(Compression.Algorithm.GZ).setBloomFilterType(bloomType)
+      .setConfiguration(BloomFilterUtil.PREFIX_LENGTH_KEY, "3").build();
+    init(name.getMethodName(), conf, hcd);
+
+    for (int i = 1; i <= numStoreFiles; i++) {
+      byte[] row = Bytes.toBytes("row" + i);
+      LOG.info("Adding some data for the store file #" + i);
+      long timeStamp = EnvironmentEdgeManager.currentTime();
+      this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null), null);
+      this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null), null);
+      this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null), null);
+      flush(i);
+    }
+
+    // Verify the total number of store files
+    assertEquals(numStoreFiles, this.store.getStorefiles().size());
+
+    TreeSet<byte[]> columns = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    columns.add(qf1);
+
+    for (int i = 1; i <= numStoreFiles; i++) {
+      KeyValueScanner scanner =
+        store.getScanner(new Scan(new Get(Bytes.toBytes("row" + i))), columns, 0);
+      scanner.peek();
+    }
   }
 
   /**
