@@ -1244,7 +1244,7 @@ public class TestHStoreFile {
       block = fReader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
         /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
       offset += block.getOnDiskSizeWithHeader();
-      blockCount += 1;
+      blockCount++;
       assertTrue(block.getUncompressedSizeWithoutHeader() >= BLOCKSIZE_SMALL);
     }
     assertEquals(blockCount, 100);
