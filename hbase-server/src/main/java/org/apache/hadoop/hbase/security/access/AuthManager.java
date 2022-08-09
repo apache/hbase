@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +65,7 @@ public final class AuthManager {
 
     void put(String name, T perm) {
       synchronized (mutex) {
-        Set<T> perms = cache.getOrDefault(name, new HashSet<>());
+        Set<T> perms = cache.getOrDefault(name, ConcurrentHashMap.newKeySet());
         perms.add(perm);
         cache.put(name, perms);
       }
