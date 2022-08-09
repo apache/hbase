@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
@@ -85,10 +86,15 @@ public final class BloomFilterFactory {
    */
   public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader)
     throws IllegalArgumentException, IOException {
+    return createFromMeta(meta, reader, null);
+  }
+
+  public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader,
+    BloomFilterMetrics metrics) throws IllegalArgumentException, IOException {
     int version = meta.readInt();
     switch (version) {
       case CompoundBloomFilterBase.VERSION:
-        return new CompoundBloomFilter(meta, reader);
+        return new CompoundBloomFilter(meta, reader, metrics);
 
       default:
         throw new IllegalArgumentException("Bad bloom filter format version " + version);

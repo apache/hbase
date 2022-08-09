@@ -189,6 +189,21 @@ public interface MetricsRegionServerWrapper {
   long getTotalStaticBloomSize();
 
   /**
+   * Count of bloom filter requests.
+   */
+  long getBloomFilterRequestsCount();
+
+  /**
+   * Count of bloom filter requests which return a negative result.
+   */
+  long getBloomFilterNegativeResultsCount();
+
+  /**
+   * Count of requests which could have used bloom filters, but they weren't configured or loaded.
+   */
+  long getBloomFilterEligibleRequestsCount();
+
+  /**
    * Number of mutations received with WAL explicitly turned off.
    */
   long getNumMutationsWithoutWAL();

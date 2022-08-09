@@ -2425,4 +2425,19 @@ public class HStore
     return storeFileWriterCreationTrackers.stream().flatMap(t -> t.get().stream())
       .collect(Collectors.toSet());
   }
+
+  @Override
+  public long getBloomFilterRequestsCount() {
+    return storeEngine.getBloomFilterMetrics().getRequestsCount();
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return storeEngine.getBloomFilterMetrics().getNegativeResultsCount();
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return storeEngine.getBloomFilterMetrics().getEligibleRequestsCount();
+  }
 }
