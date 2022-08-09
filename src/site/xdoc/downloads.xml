@@ -93,23 +93,23 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        1.7.1
+        1.7.2
       </td>
       <td style="test-align: left">
-        2021/07/21
+        2022/08/09
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/1.7.1/api_compare_1.7.0_to_1.7.1-RC0.html">1.7.0 vs 1.7.1</a>
+        <a href="https://downloads.apache.org/hbase/1.7.2/api_compare_1.7.1_to_1.7.2RC0.html">1.7.1 vs 1.7.2</a>
       </td>
       <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.7.1/CHANGES.txt">Changes</a>
+        <a href="https://github.com/apache/hbase/blob/rel/1.7.2/CHANGES.txt">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://issues.apache.org/jira/projects/HBASE/versions/12350241">Release Notes</a>
+        <a href="https://issues.apache.org/jira/projects/HBASE/versions/12350412">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.1/hbase-1.7.1-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.7.1/hbase-1.7.1-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.1/hbase-1.7.1-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.1/hbase-1.7.1-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.7.1/hbase-1.7.1-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.1/hbase-1.7.1-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.2/hbase-1.7.2-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.2/hbase-1.7.2-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-bin.tar.gz.asc">asc</a>)
       </td>
       <td />
     </tr>
