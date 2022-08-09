@@ -241,7 +241,7 @@ class NettyRpcConnection extends RpcConnection {
             // because of the different configuration in client side and server side
             final String readTimeoutHandlerName = "ReadTimeout";
             p.addBefore(BufferCallBeforeInitHandler.NAME, readTimeoutHandlerName,
-              new ReadTimeoutHandler(RpcClient.DEFAULT_SOCKET_TIMEOUT_READ, TimeUnit.MILLISECONDS))
+              new ReadTimeoutHandler(rpcClient.readTO, TimeUnit.MILLISECONDS))
               .addBefore(BufferCallBeforeInitHandler.NAME, null, chHandler);
             NettyFutureUtils.addListener(connectionHeaderPromise, new FutureListener<Boolean>() {
               @Override
@@ -250,7 +250,7 @@ class NettyRpcConnection extends RpcConnection {
                   ChannelPipeline p = ch.pipeline();
                   p.remove(readTimeoutHandlerName);
                   p.remove(NettyHBaseRpcConnectionHeaderHandler.class);
-                  // don't send connection header, NettyHbaseRpcConnectionHeaderHandler
+                  // don't send connection header, NettyHBaseRpcConnectionHeaderHandler
                   // sent it already
                   established(ch);
                 } else {
