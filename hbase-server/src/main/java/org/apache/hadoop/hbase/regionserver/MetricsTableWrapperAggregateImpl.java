@@ -93,6 +93,14 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                 (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
+
+            mt.staticIndexSize += store.getTotalStaticIndexSize();
+            mt.staticBloomSize += store.getTotalStaticBloomSize();
+
+            mt.bloomRequestsCount += store.getBloomFilterRequestsCount();
+            mt.bloomNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+            mt.bloomEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
+
             tempKey = tbl.getNameAsString() + HASH + familyName;
             Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
             if (tempVal == null) {
@@ -303,6 +311,56 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
+  public long getStaticIndexSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.staticIndexSize;
+  }
+
+  @Override
+  public long getStaticBloomSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.staticBloomSize;
+  }
+
+  @Override
+  public long getBloomFilterRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomRequestsCount;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomNegativeResultsCount;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomEligibleRequestsCount;
+  }
+
+  @Override
   public long getNumReferenceFiles(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
@@ -348,7 +406,15 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long maxStoreFileAge;
     long minStoreFileAge = Long.MAX_VALUE;
     long totalStoreFileAge;
+
+    long staticIndexSize;
+
+    long staticBloomSize;
     long referenceFileCount;
+
+    long bloomRequestsCount;
+    long bloomNegativeResultsCount;
+    long bloomEligibleRequestsCount;
     long cpRequestCount;
     Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
     Map<String, Long> perStoreMixedReadCount = new HashMap<>();
