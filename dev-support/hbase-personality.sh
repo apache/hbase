@@ -145,7 +145,6 @@ function personality_modules
   local repostatus=$1
   local testtype=$2
   local extra=""
-  local jdk8module=""
   local MODULES=("${CHANGED_MODULES[@]}")
 
   yetus_info "Personality: ${repostatus} ${testtype}"
