@@ -407,7 +407,19 @@
                     <pattern>net/</pattern>
                     <shadedPattern>${shaded.prefix}.net.</shadedPattern>
                   </relocation>
-
+                  <relocation>
+                    <pattern>org.agrona</pattern>
+                    <shadedPattern>${shaded.prefix}.org.agrona</shadedPattern>
+                  </relocation>
+                  <!-- okhttp -->
+                  <relocation>
+                    <pattern>okhttp3.</pattern>
+                    <shadedPattern>${shaded.prefix}.okhttp3.</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>kotlin.</pattern>
+                    <shadedPattern>${shaded.prefix}.kotlin.</shadedPattern>
+                  </relocation>
                 </relocations>
                 <transformers>
                   <!-- Need to filter out some extraneous license files.
