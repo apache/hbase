@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.BackupInfo.Builder;
 
 /**
  * An object to encapsulate the information for each backup session
@@ -451,13 +450,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
     return toProtosBackupInfo().toByteArray();
   }
 
-  private void setBackupTableInfoMap(Builder builder) {
+  private void setBackupTableInfoMap(BackupProtos.BackupInfo.Builder builder) {
     for (Entry<TableName, BackupTableInfo> entry : backupTableInfoMap.entrySet()) {
       builder.addBackupTableInfo(entry.getValue().toProto());
     }
   }
 
-  private void setTableSetTimestampMap(Builder builder) {
+  private void setTableSetTimestampMap(BackupProtos.BackupInfo.Builder builder) {
     if (this.getTableSetTimestampMap() != null) {
       for (Entry<TableName, Map<String, Long>> entry : this.getTableSetTimestampMap().entrySet()) {
         builder.putTableSetTimestamp(entry.getKey().getNameAsString(),
@@ -531,10 +530,9 @@ public class BackupInfo implements Comparable<BackupInfo> {
     sb.append("Type=" + getType()).append(",");
     sb.append("Tables=" + getTableListAsString()).append(",");
     sb.append("State=" + getState()).append(",");
-    Date date = null;
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(getStartTs());
-    date = cal.getTime();
+    Date date = cal.getTime();
     sb.append("Start time=" + date).append(",");
     if (state == BackupState.FAILED) {
       sb.append("Failed message=" + getFailedMsg()).append(",");
@@ -560,7 +558,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   public String getTableListAsString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("{");
     sb.append(StringUtils.join(backupTableInfoMap.keySet(), ","));
     sb.append("}");

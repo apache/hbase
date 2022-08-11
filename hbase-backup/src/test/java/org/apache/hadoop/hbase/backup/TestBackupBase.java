@@ -330,9 +330,6 @@ public class TestBackupBase {
     }
   }
 
-  /**
-   * @throws Exception if deleting the archive directory or shutting down the mini cluster fails
-   */
   @AfterClass
   public static void tearDown() throws Exception {
     try {

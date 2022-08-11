@@ -83,7 +83,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     Log4jUtils.disableZkAndClientLoggers();
   }
 
-  private int parseAndRun(String[] args) throws IOException {
+  private int parseAndRun() throws IOException {
     // Check if backup is enabled
     if (!BackupManager.isBackupEnabled(getConf())) {
       System.err.println(BackupRestoreConstants.ENABLE_BACKUP);
@@ -213,7 +213,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    return parseAndRun(cmd.getArgs());
+    return parseAndRun();
   }
 
   public static void main(String[] args) throws Exception {

@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -68,6 +70,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -237,6 +242,7 @@ public final class BackupSystemTable implements Closeable {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
       }
       if (EnvironmentEdgeManager.currentTime() - startTime > TIMEOUT) {
         throw new IOException(
@@ -302,6 +308,7 @@ public final class BackupSystemTable implements Closeable {
   public Map<byte[], List<Path>>[] readBulkLoadedFiles(String backupId, List<TableName> sTableList)
     throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
+    @SuppressWarnings("unchecked")
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
     try (Table table = connection.getTable(bulkLoadTableName);
       ResultScanner scanner = table.getScanner(scan)) {
@@ -574,7 +581,7 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val);
+      return new String(val, StandardCharsets.UTF_8);
     }
   }
 
@@ -1639,7 +1646,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val).split(",");
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
@@ -1654,7 +1662,7 @@ public final class BackupSystemTable implements Closeable {
     Get get = new Get(MERGE_OP_ROW);
     try (Table table = connection.getTable(tableName)) {
       Result res = table.get(get);
-      return (!res.isEmpty());
+      return !res.isEmpty();
     }
   }
 
@@ -1720,7 +1728,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val).split(",");
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
@@ -1737,20 +1746,22 @@ public final class BackupSystemTable implements Closeable {
   }
 
   static String getTableNameFromOrigBulkLoadRow(String rowStr) {
-    String[] parts = rowStr.split(BLK_LD_DELIM);
-    return parts[1];
+    // format is bulk : namespace : table : region : file
+    return Iterators.get(Splitter.onPattern(BLK_LD_DELIM).split(rowStr).iterator(), 1);
   }
 
   static String getRegionNameFromOrigBulkLoadRow(String rowStr) {
     // format is bulk : namespace : table : region : file
-    String[] parts = rowStr.split(BLK_LD_DELIM);
+    List<String> parts = Splitter.onPattern(BLK_LD_DELIM).splitToList(rowStr);
+    Iterator<String> i = parts.iterator();
     int idx = 3;
-    if (parts.length == 4) {
+    if (parts.size() == 4) {
       // the table is in default namespace
       idx = 2;
     }
-    LOG.debug("bulk row string " + rowStr + " region " + parts[idx]);
-    return parts[idx];
+    String region = Iterators.get(i, idx);
+    LOG.debug("bulk row string " + rowStr + " region " + region);
+    return region;
   }
 
   /*
