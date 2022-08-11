@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.junit.Assert.fail;
+
 import java.io.FileNotFoundException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
