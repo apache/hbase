@@ -172,9 +172,12 @@ public interface Connection extends Abortable, Closeable {
   TableBuilder getTableBuilder(TableName tableName, ExecutorService pool);
 
   /**
-   * @return the cluster ID unique to this HBase cluster.
+   * Returns the cluster ID unique to this HBase cluster. <br>
+   * The default implementation is added to keep client compatibility.
    */
-  String getClusterId();
+  default String getClusterId() {
+    return null;
+  }
 
   /**
    * Retrieve an Hbck implementation to fix an HBase cluster. The returned Hbck is not guaranteed to
