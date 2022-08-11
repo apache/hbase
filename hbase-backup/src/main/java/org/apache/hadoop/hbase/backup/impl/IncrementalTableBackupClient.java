@@ -204,8 +204,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       String tgtDest = backupInfo.getBackupRootDir() + Path.SEPARATOR + backupInfo.getBackupId();
       int attempt = 1;
       while (activeFiles.size() > 0) {
-        LOG.info(
-          "Copy " + activeFiles.size() + " active bulk loaded files. Attempt =" + (attempt++));
+        LOG.info("Copy " + activeFiles.size() + " active bulk loaded files. Attempt =" + attempt++);
         String[] toCopy = new String[activeFiles.size()];
         activeFiles.toArray(toCopy);
         // Active file can be archived during copy operation,

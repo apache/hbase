@@ -22,11 +22,12 @@ import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -257,7 +258,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
    */
   protected Path convertToDest(Path p, Path backupDirPath) {
     String backupId = backupDirPath.getName();
-    Stack<String> stack = new Stack<String>();
+    Deque<String> stack = new ArrayDeque<String>();
     String name = null;
     while (true) {
       name = p.getName();
