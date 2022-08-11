@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.io.hfile.HFileBlock.BLOCK_DELIMIT_COMPRESSED;
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.BLOCK_COMPRESSED_SIZE_PREDICATOR;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -76,8 +78,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.PreviousBlockCompressionRatePredicator;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.UncompressedBlockSizePredicator;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -1215,10 +1219,21 @@ public class TestHStoreFile {
 
   @Test
   public void testDataBlockSizeCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, PreviousBlockCompressionRatePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(100, s -> s >= BLOCKSIZE_SMALL);
+  }
+
+  @Test
+  public void testDataBlockSizeUnCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, UncompressedBlockSizePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(200, s -> s < BLOCKSIZE_SMALL);
+  }
+
+  private void testDataBlockSizeWithCompressionRatePredicator(int expectedBlockCount,
+      Function<Integer, Boolean> validation) throws Exception {
     Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
     DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
-    conf.setBoolean(BLOCK_DELIMIT_COMPRESSED, true);
     cacheConf = new CacheConfig(conf);
     HFileContext meta =
       new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
@@ -1246,9 +1261,9 @@ public class TestHStoreFile {
         /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
       offset += block.getOnDiskSizeWithHeader();
       blockCount++;
-      assertTrue(block.getUncompressedSizeWithoutHeader() >= BLOCKSIZE_SMALL);
+      assertTrue(validation.apply(block.getUncompressedSizeWithoutHeader()));
     }
-    assertEquals(blockCount, 100);
+    assertEquals(blockCount, expectedBlockCount);
   }
 
 }

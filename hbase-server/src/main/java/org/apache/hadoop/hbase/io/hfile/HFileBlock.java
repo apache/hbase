@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.BLOCK_COMPRESSED_SIZE_PREDICATOR;
 
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -239,8 +241,6 @@ public class HFileBlock implements Cacheable {
 
   static final byte[] DUMMY_HEADER_NO_CHECKSUM =
     new byte[HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM];
-
-  public static final String BLOCK_DELIMIT_COMPRESSED = "hbase.block.delimit.compressed";
 
   public static final String MAX_BLOCK_SIZE_UNCOMPRESSED = "hbase.block.max.size.uncompressed";
 
@@ -734,15 +734,9 @@ public class HFileBlock implements Cacheable {
       BLOCK_READY
     }
 
-    public boolean isDelimitByCompressedSize() {
-      return delimitByCompressedSize;
-    }
-
-    private boolean delimitByCompressedSize;
-
     private int maxSizeUnCompressed;
 
-    private int adjustedBlockSize;
+    private BlockCompressedSizePredicator compressedSizePredicator;
 
     /** Writer state. Used to ensure the correct usage protocol. */
     private State state = State.INIT;
@@ -822,12 +816,11 @@ public class HFileBlock implements Cacheable {
      */
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
       HFileContext fileContext) {
-      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP, false,
-        fileContext.getBlocksize());
+      this(conf, dataBlockEncoder, fileContext, ByteBuffAllocator.HEAP, fileContext.getBlocksize());
     }
 
     public Writer(Configuration conf, HFileDataBlockEncoder dataBlockEncoder,
-      HFileContext fileContext, ByteBuffAllocator allocator, boolean sizeLimitcompleted,
+      HFileContext fileContext, ByteBuffAllocator allocator,
       int maxSizeUnCompressed) {
       if (fileContext.getBytesPerChecksum() < HConstants.HFILEBLOCK_HEADER_SIZE) {
         throw new RuntimeException("Unsupported value of bytesPerChecksum. " + " Minimum is "
@@ -851,7 +844,9 @@ public class HFileBlock implements Cacheable {
       // TODO: Why fileContext saved away when we have dataBlockEncoder and/or
       // defaultDataBlockEncoder?
       this.fileContext = fileContext;
-      this.delimitByCompressedSize = sizeLimitcompleted;
+      this.compressedSizePredicator = (BlockCompressedSizePredicator) ReflectionUtils.
+        newInstance(conf.getClass(BLOCK_COMPRESSED_SIZE_PREDICATOR,
+          UncompressedBlockSizePredicator.class), new Configuration(conf));
       this.maxSizeUnCompressed = maxSizeUnCompressed;
     }
 
@@ -908,17 +903,9 @@ public class HFileBlock implements Cacheable {
     public boolean shouldFinishBlock() throws IOException {
       int uncompressedBlockSize = blockSizeWritten();
       if (uncompressedBlockSize >= fileContext.getBlocksize()) {
-        if (delimitByCompressedSize && uncompressedBlockSize < maxSizeUnCompressed) {
-          // In order to avoid excessive compression size calculations, we do it only once when
-          // the uncompressed size has reached BLOCKSIZE. We then use this compression size to
-          // calculate the compression rate, and adjust the block size limit by this ratio.
-          if (adjustedBlockSize == 0 || uncompressedBlockSize >= adjustedBlockSize) {
-            int compressedSize = EncodedDataBlock.getCompressedSize(fileContext.getCompression(),
-              fileContext.getCompression().getCompressor(), baosInMemory.getBuffer(), 0,
-              baosInMemory.size());
-            adjustedBlockSize = uncompressedBlockSize / compressedSize;
-            adjustedBlockSize *= fileContext.getBlocksize();
-          }
+        if (uncompressedBlockSize < maxSizeUnCompressed) {
+          int adjustedBlockSize = compressedSizePredicator.
+            calculateCompressionSizeLimit(fileContext, uncompressedBlockSize, baosInMemory);
           return uncompressedBlockSize >= adjustedBlockSize;
         }
         return true;
