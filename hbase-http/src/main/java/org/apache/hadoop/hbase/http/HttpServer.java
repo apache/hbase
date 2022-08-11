@@ -154,12 +154,18 @@ public class HttpServer implements FilterContainer {
   public static final String APP_DIR = "webapps";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
-  public static final String METRICS_SERVLETS_DEFAULT[] = {"jmx,prometheus"};
-  private static final Map<String, ServletConfig> METRIC_SERVLETS = new HashMap<String, ServletConfig>() {{
-    put("jmx", new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"));
-    put("metrics", new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"));
-    put("prometheus", new ServletConfig("prometheus", "/prometheus", "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoop2Servlet"));
-  }};
+  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx,prometheus" };
+  private static final Map<String, ServletConfig> METRIC_SERVLETS =
+    new HashMap<String, ServletConfig>() {
+      {
+        put("jmx",
+          new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"));
+        put("metrics",
+          new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"));
+        put("prometheus", new ServletConfig("prometheus", "/prometheus",
+          "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoop2Servlet"));
+      }
+    };
 
   private final AccessControlList adminsAcl;
 
@@ -789,7 +795,8 @@ public class HttpServer implements FilterContainer {
       try {
         ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
         Class<?> clz = Class.forName(servletConfig.getClazz());
-        addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(), clz.asSubclass(HttpServlet.class));
+        addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+          clz.asSubclass(HttpServlet.class));
       } catch (Exception e) {
         /* shouldn't be fatal, so warn the user about it */
         LOG.warn("Couldn't register the servlet " + enabledServlet, e);

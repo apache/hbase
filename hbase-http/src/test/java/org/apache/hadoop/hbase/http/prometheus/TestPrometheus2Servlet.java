@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.http.prometheus;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -27,7 +28,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
-import org.apache.hadoop.metrics2.impl.MetricsExportHelper;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.junit.Assert;
@@ -47,7 +47,7 @@ public class TestPrometheus2Servlet {
 
   @Test
   public void testPublish() throws IOException {
-    //GIVEN
+    // GIVEN
     MetricsSystem metrics = DefaultMetricsSystem.instance();
     metrics.init("test");
     TestMetrics testMetrics = metrics.register("TestMetrics", "Testing metrics", new TestMetrics());
@@ -58,11 +58,11 @@ public class TestPrometheus2Servlet {
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     OutputStreamWriter writer = new OutputStreamWriter(stream, UTF_8);
 
-    //WHEN
+    // WHEN
     PrometheusHadoop2Servlet prom2Servlet = new PrometheusHadoop2Servlet();
     prom2Servlet.writeMetrics(writer);
 
-    //THEN
+    // THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
     Assert.assertTrue("The expected metric line is missing from prometheus metrics output",

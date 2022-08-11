@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.http.prometheus;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
@@ -41,21 +40,18 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
     Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=([A-Z][a-z]))|\\W|(_)+");
 
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-    throws IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
     writeMetrics(resp.getWriter());
   }
 
   static String toPrometheusName(String metricRecordName, String metricName) {
     String baseName = metricRecordName + StringUtils.capitalize(metricName);
     String[] parts = SPLIT_PATTERN.split(baseName);
-    return String
-      .join("_", parts)
-      .toLowerCase();
+    return String.join("_", parts).toLowerCase();
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*/src/test/.*")
+      allowedOnPath = ".*/src/test/.*")
   void writeMetrics(Writer writer) throws IOException {
     Collection<MetricsRecord> metricRecords = MetricsExportHelper.export();
     for (MetricsRecord metricsRecord : metricRecords) {
@@ -64,16 +60,13 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
 
           String key = toPrometheusName(metricsRecord.name(), metrics.name());
           writer.append("# TYPE ").append(key).append(" ")
-            .append(metrics.type().toString().toLowerCase()).append("\n")
-            .append(key).append("{");
+            .append(metrics.type().toString().toLowerCase()).append("\n").append(key).append("{");
 
           /* add tags */
           String sep = "";
           for (MetricsTag tag : metricsRecord.tags()) {
             String tagName = tag.name().toLowerCase();
-            writer.append(sep).append(tagName)
-              .append("=\"")
-              .append(tag.value()).append("\"");
+            writer.append(sep).append(tagName).append("=\"").append(tag.value()).append("\"");
             sep = ",";
           }
           writer.append("} ");

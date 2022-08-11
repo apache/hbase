@@ -30,7 +30,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MetricsTests.class, SmallTests.class})
+@Category({ MetricsTests.class, SmallTests.class })
 public class TestMetricsExportHelper {
 
   @ClassRule
@@ -55,21 +55,19 @@ public class TestMetricsExportHelper {
     DefaultMetricsSystem.instance().stop();
 
     Assert.assertTrue(metrics.stream().anyMatch(mr -> mr.name().equals(metricsName)));
-    Assert.assertTrue(gaugeName + " is missing in the export", contains(metrics, metricsName, gaugeName));
-    Assert.assertTrue(counterName + " is missing in the export", contains(metrics, metricsName, counterName));
+    Assert.assertTrue(gaugeName + " is missing in the export",
+      contains(metrics, metricsName, gaugeName));
+    Assert.assertTrue(counterName + " is missing in the export",
+      contains(metrics, metricsName, counterName));
   }
 
-  private boolean contains(Collection<MetricsRecord> metrics, String metricsName, String metricName) {
-    return metrics
-            .stream()
-            .filter(mr -> mr.name().equals(metricsName))
-            .anyMatch(mr -> {
-                for (AbstractMetric metric : mr.metrics()) {
-                  if(metric.name().equals(metricName))
-                    return true;
-                }
-                return false;
-              }
-            );
+  private boolean contains(Collection<MetricsRecord> metrics, String metricsName,
+    String metricName) {
+    return metrics.stream().filter(mr -> mr.name().equals(metricsName)).anyMatch(mr -> {
+      for (AbstractMetric metric : mr.metrics()) {
+        if (metric.name().equals(metricName)) return true;
+      }
+      return false;
+    });
   }
 }
