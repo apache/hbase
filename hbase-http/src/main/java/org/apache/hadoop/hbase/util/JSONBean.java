@@ -128,8 +128,7 @@ public class JSONBean {
   private static int write(JsonWriter writer, MBeanServer mBeanServer, ObjectName qry,
     String attribute, boolean description) throws IOException {
     LOG.debug("Listing beans for {}", qry);
-    Set<ObjectName> names = null;
-    names = mBeanServer.queryNames(qry, null);
+    Set<ObjectName> names = mBeanServer.queryNames(qry, null);
     writer.name("beans").beginArray();
     Iterator<ObjectName> it = names.iterator();
     Pattern[] matchingPattern = null;

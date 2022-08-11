@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.http.jmx;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
+import java.util.Iterator;
+import java.util.List;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.util.JSONBean;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -173,17 +177,17 @@ public class JMXJsonServlet extends HttpServlet {
         // query per mbean attribute
         String getmethod = request.getParameter("get");
         if (getmethod != null) {
-          String[] splitStrings = getmethod.split("\\:\\:");
-          if (splitStrings.length != 2) {
+          List<String> splitStrings = Splitter.onPattern("\\:\\:").splitToList(getmethod);
+          if (splitStrings.size() != 2) {
             beanWriter.write("result", "ERROR");
             beanWriter.write("message", "query format is not as expected.");
             beanWriter.flush();
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
           }
+          Iterator<String> i = splitStrings.iterator();
           if (
-            beanWriter.write(this.mBeanServer, new ObjectName(splitStrings[0]), splitStrings[1],
-              description) != 0
+            beanWriter.write(this.mBeanServer, new ObjectName(i.next()), i.next(), description) != 0
           ) {
             beanWriter.flush();
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
