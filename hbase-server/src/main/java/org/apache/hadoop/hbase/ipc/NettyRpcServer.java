@@ -17,15 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -47,6 +53,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -106,6 +114,9 @@ public class NettyRpcServer extends RpcServer {
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
+          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
+            initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
+          }
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder);
           pipeline.addLast(createNettyRpcServerPreambleHandler(),
             new NettyRpcServerResponseEncoder(metrics));
@@ -213,5 +224,18 @@ public class NettyRpcServer extends RpcServer {
     int channelsCount = allChannels.size();
     // allChannels also contains the server channel, so exclude that from the count.
     return channelsCount > 0 ? channelsCount - 1 : channelsCount;
+  }
+
+  private void initSSL(ChannelPipeline p, boolean supportPlaintext)
+    throws X509Exception, SSLException {
+    SslContext nettySslContext = X509Util.createSslContextForServer(conf);
+
+    if (supportPlaintext) {
+      p.addLast("ssl", new OptionalSslHandler(nettySslContext));
+      LOG.debug("Dual mode SSL handler added for channel: {}", p.channel());
+    } else {
+      p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
+      LOG.debug("SSL handler added for channel: {}", p.channel());
+    }
   }
 }

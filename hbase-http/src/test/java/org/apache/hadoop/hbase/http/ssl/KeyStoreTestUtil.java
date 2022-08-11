@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.http.ssl;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigInteger;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -47,6 +47,8 @@ import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.bouncycastle.x509.X509V1CertificateGenerator;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Files;
+
 public final class KeyStoreTestUtil {
   private KeyStoreTestUtil() {
   }
@@ -68,6 +70,7 @@ public final class KeyStoreTestUtil {
    * @param algorithm the signing algorithm, eg "SHA1withRSA"
    * @return the self-signed certificate
    */
+  @SuppressWarnings("JavaUtilDate")
   public static X509Certificate generateCertificate(String dn, KeyPair pair, int days,
     String algorithm) throws CertificateEncodingException, InvalidKeyException,
     IllegalStateException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException {
@@ -369,11 +372,8 @@ public final class KeyStoreTestUtil {
    * @throws IOException if there is an I/O error saving the file
    */
   public static void saveConfig(File file, Configuration conf) throws IOException {
-    Writer writer = new FileWriter(file);
-    try {
+    try (Writer writer = Files.newWriter(file, StandardCharsets.UTF_8)) {
       conf.writeXml(writer);
-    } finally {
-      writer.close();
     }
   }
 }

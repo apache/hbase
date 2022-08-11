@@ -99,6 +99,9 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("staticBloomSize", 408, serverSource);
     HELPER.assertGauge("mutationsWithoutWALCount", 409, serverSource);
     HELPER.assertGauge("mutationsWithoutWALSize", 410, serverSource);
+    HELPER.assertCounter("bloomFilterRequestsCount", 411, serverSource);
+    HELPER.assertCounter("bloomFilterNegativeResultsCount", 412, serverSource);
+    HELPER.assertCounter("bloomFilterEligibleRequestsCount", 413, serverSource);
     HELPER.assertGauge("percentFilesLocal", 99, serverSource);
     HELPER.assertGauge("percentFilesLocalSecondaryRegions", 99, serverSource);
     HELPER.assertGauge("compactionQueueLength", 411, serverSource);

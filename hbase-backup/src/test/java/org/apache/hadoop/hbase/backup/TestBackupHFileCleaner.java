@@ -22,9 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,9 +62,6 @@ public class TestBackupHFileCleaner {
   static FileSystem fs = null;
   Path root;
 
-  /**
-   * @throws Exception if starting the mini cluster or getting the filesystem fails
-   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf.setBoolean(BackupRestoreConstants.BACKUP_ENABLE_KEY, true);
@@ -74,9 +70,6 @@ public class TestBackupHFileCleaner {
     fs = FileSystem.get(conf);
   }
 
-  /**
-   * @throws Exception if closing the filesystem or shutting down the mini cluster fails
-   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     if (fs != null) {
@@ -109,12 +102,13 @@ public class TestBackupHFileCleaner {
     BackupHFileCleaner cleaner = new BackupHFileCleaner();
     cleaner.setConf(conf);
     cleaner.setCheckForFullyBackedUpTables(false);
-    // 3. Assert that file as is should be deletable
     List<FileStatus> stats = new ArrayList<>();
+    // Prime the cleaner
+    cleaner.getDeletableFiles(stats);
+    // 3. Assert that file as is should be deletable
     FileStatus stat = fs.getFileStatus(file);
     stats.add(stat);
     Iterable<FileStatus> deletable = cleaner.getDeletableFiles(stats);
-    deletable = cleaner.getDeletableFiles(stats);
     boolean found = false;
     for (FileStatus stat1 : deletable) {
       if (stat.equals(stat1)) {
@@ -132,14 +126,14 @@ public class TestBackupHFileCleaner {
       BackupSystemTable sysTbl = new BackupSystemTable(conn)) {
       List<TableName> sTableList = new ArrayList<>();
       sTableList.add(tableName);
-      Map<byte[], List<Path>>[] maps = new Map[1];
-      maps[0] = new HashMap<>();
+      @SuppressWarnings("unchecked")
+      IdentityHashMap<byte[], List<Path>>[] maps = new IdentityHashMap[1];
+      maps[0] = new IdentityHashMap<>();
       maps[0].put(Bytes.toBytes(famName), list);
       sysTbl.writeBulkLoadedFiles(sTableList, maps, "1");
     }
 
     // 5. Assert file should not be deletable
-    deletable = cleaner.getDeletableFiles(stats);
     deletable = cleaner.getDeletableFiles(stats);
     found = false;
     for (FileStatus stat1 : deletable) {

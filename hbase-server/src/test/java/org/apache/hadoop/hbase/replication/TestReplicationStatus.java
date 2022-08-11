@@ -133,13 +133,24 @@ public class TestReplicationStatus extends TestReplicationBase {
    * @param greaterThan size of replicationLoadSourceList must be greater before we proceed
    */
   private List<ReplicationLoadSource> waitOnMetricsReport(int greaterThan, ServerName serverName)
-    throws IOException {
-    ClusterMetrics metrics = hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
-    List<ReplicationLoadSource> list =
-      metrics.getLiveServerMetrics().get(serverName).getReplicationLoadSourceList();
-    while (list.size() <= greaterThan) {
-      Threads.sleep(1000);
-    }
-    return list;
+    throws Exception {
+    UTIL1.waitFor(30000, 1000, new Waiter.ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        List<ReplicationLoadSource> list =
+          hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
+            .get(serverName).getReplicationLoadSourceList();
+        return list.size() > greaterThan;
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        return "The ReplicationLoadSourceList's size is lesser than or equal to " + greaterThan
+          + " for " + serverName;
+      }
+    });
+
+    return hbaseAdmin.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS)).getLiveServerMetrics()
+      .get(serverName).getReplicationLoadSourceList();
   }
 }

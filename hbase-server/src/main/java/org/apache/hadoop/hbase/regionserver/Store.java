@@ -240,4 +240,16 @@ public interface Store {
    *         if you try to set a configuration.
    */
   Configuration getReadOnlyConfiguration();
+
+  /** Returns count of bloom filter results for this store. */
+  long getBloomFilterRequestsCount();
+
+  /** Returns count of negative results for bloom filter requests for this store. */
+  long getBloomFilterNegativeResultsCount();
+
+  /**
+   * Returns count of requests which could have used bloom filters, but they weren't configured or
+   * loaded.
+   */
+  long getBloomFilterEligibleRequestsCount();
 }
