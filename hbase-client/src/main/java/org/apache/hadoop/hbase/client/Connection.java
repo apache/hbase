@@ -183,7 +183,7 @@ public interface Connection extends Abortable, Closeable {
   /**
    * Returns the cluster ID unique to this HBase cluster. <br>
    * The default implementation is added to keep client compatibility.
-   * */
+   */
   default String getClusterId() {
     return null;
   }
