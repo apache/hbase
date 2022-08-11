@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -54,9 +56,6 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSSLHttpServer.class);
-
-  private static final String BASEDIR = System.getProperty("test.build.dir", "target/test-dir")
-    + "/" + TestSSLHttpServer.class.getSimpleName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration serverConf;
