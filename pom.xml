@@ -774,7 +774,7 @@
     <hadoop-three.version>3.2.4</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
-    <hadoop.version>3.2.4</hadoop.version>
+    <hadoop.version>${hadoop-three.version}</hadoop.version>
     <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
     <!--This property is for hadoops netty. HBase netty
          comes in via hbase-thirdparty hbase-shaded-netty-->
