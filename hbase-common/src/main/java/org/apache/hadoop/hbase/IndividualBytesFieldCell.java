@@ -293,6 +293,6 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
 
   @Override
   public String toString() {
-    return CellUtil.toString(this, true);
+    return CellUtil.toString(this, false);
   }
 }
