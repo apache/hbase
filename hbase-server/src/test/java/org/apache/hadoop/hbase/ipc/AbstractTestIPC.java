@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.GzipCodec;
@@ -80,7 +79,7 @@ public abstract class AbstractTestIPC {
     CONF.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, SimpleRpcServer.class.getName());
   }
 
-  protected abstract RpcServer createRpcServer(final Server server, final String name,
+  protected abstract RpcServer createRpcServer(final String name,
     final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException;
 
@@ -91,11 +90,11 @@ public abstract class AbstractTestIPC {
    */
   @Test
   public void testNoCodec() throws IOException, ServiceException {
-    Configuration conf = HBaseConfiguration.create();
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClientNoCodec(conf)) {
+    try (AbstractRpcClient<?> client = createRpcClientNoCodec(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       HBaseRpcController pcrc = new HBaseRpcControllerImpl();
@@ -117,18 +116,18 @@ public abstract class AbstractTestIPC {
    */
   @Test
   public void testCompressCellBlock() throws IOException, ServiceException {
-    Configuration conf = new Configuration(HBaseConfiguration.create());
-    conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
+    Configuration clientConf = new Configuration(CONF);
+    clientConf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
     List<Cell> cells = new ArrayList<>();
     int count = 3;
     for (int i = 0; i < count; i++) {
       cells.add(CELL);
     }
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
 
-    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       HBaseRpcController pcrc = new HBaseRpcControllerImpl(CellUtil.createCellScanner(cells));
@@ -153,11 +152,11 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testRTEDuringConnectionSetup() throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClientRTEDuringConnectionSetup(conf)) {
+    try (AbstractRpcClient<?> client = createRpcClientRTEDuringConnectionSetup(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       stub.ping(null, EmptyRequestProto.getDefaultInstance());
@@ -175,12 +174,13 @@ public abstract class AbstractTestIPC {
    */
   @Test
   public void testRpcScheduler() throws IOException, ServiceException, InterruptedException {
+    Configuration clientConf = new Configuration(CONF);
     RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, scheduler);
     verify(scheduler).init((RpcScheduler.Context) anyObject());
-    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       verify(scheduler).start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
@@ -198,12 +198,12 @@ public abstract class AbstractTestIPC {
   /** Tests that the rpc scheduler is called when requests arrive. */
   @Test
   public void testRpcMaxRequestSize() throws IOException, ServiceException {
-    Configuration conf = new Configuration(CONF);
-    conf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    clientConf.setInt(RpcServer.MAX_REQUEST_SIZE, 1000);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
-      new InetSocketAddress("localhost", 0), conf, new FifoRpcScheduler(conf, 1));
-    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+      new InetSocketAddress("localhost", 0), clientConf, new FifoRpcScheduler(clientConf, 1));
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       StringBuilder message = new StringBuilder(1200);
@@ -232,11 +232,12 @@ public abstract class AbstractTestIPC {
   @Test
   public void testRpcServerForNotNullRemoteAddressInCallObject()
     throws IOException, ServiceException {
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
     InetSocketAddress localAddr = new InetSocketAddress("localhost", 0);
-    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       assertEquals(localAddr.getAddress().getHostAddress(),
@@ -248,10 +249,11 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testRemoteError() throws IOException, ServiceException {
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       stub.error(null, EmptyRequestProto.getDefaultInstance());
@@ -267,10 +269,11 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testTimeout() throws IOException {
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       HBaseRpcController pcrc = new HBaseRpcControllerImpl();
@@ -297,19 +300,19 @@ public abstract class AbstractTestIPC {
     }
   }
 
-  protected abstract RpcServer createTestFailingRpcServer(final Server server, final String name,
+  protected abstract RpcServer createTestFailingRpcServer(final String name,
     final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException;
 
   /** Tests that the connection closing is handled by the client with outstanding RPC calls */
   @Test
   public void testConnectionCloseWithOutstandingRPCs() throws InterruptedException, IOException {
-    Configuration conf = new Configuration(CONF);
-    RpcServer rpcServer = createTestFailingRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createTestFailingRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
 
-    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       BlockingInterface stub = newBlockingStub(client, rpcServer.getListenerAddress());
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -324,11 +327,11 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testAsyncEcho() throws IOException {
-    Configuration conf = HBaseConfiguration.create();
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClient(conf)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       Interface stub = newStub(client, rpcServer.getListenerAddress());
       int num = 10;
@@ -342,10 +345,11 @@ public abstract class AbstractTestIPC {
         callbackList.add(done);
       }
       for (int i = 0; i < num; i++) {
+        EchoResponseProto resp = callbackList.get(i).get();
         HBaseRpcController pcrc = pcrcList.get(i);
+        assertEquals("hello-" + i, resp.getMessage());
         assertFalse(pcrc.failed());
         assertNull(pcrc.cellScanner());
-        assertEquals("hello-" + i, callbackList.get(i).get().getMessage());
       }
     } finally {
       rpcServer.stop();
@@ -354,8 +358,9 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testAsyncRemoteError() throws IOException {
-    AbstractRpcClient<?> client = createRpcClient(CONF);
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    AbstractRpcClient<?> client = createRpcClient(clientConf);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
     try {
@@ -378,10 +383,11 @@ public abstract class AbstractTestIPC {
 
   @Test
   public void testAsyncTimeout() throws IOException {
-    RpcServer rpcServer = createRpcServer(null, "testRpcServer",
+    Configuration clientConf = new Configuration(CONF);
+    RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress("localhost", 0), CONF, new FifoRpcScheduler(CONF, 1));
-    try (AbstractRpcClient<?> client = createRpcClient(CONF)) {
+    try (AbstractRpcClient<?> client = createRpcClient(clientConf)) {
       rpcServer.start();
       Interface stub = newStub(client, rpcServer.getListenerAddress());
       List<HBaseRpcController> pcrcList = new ArrayList<>();
@@ -413,5 +419,4 @@ public abstract class AbstractTestIPC {
       rpcServer.stop();
     }
   }
-
 }
