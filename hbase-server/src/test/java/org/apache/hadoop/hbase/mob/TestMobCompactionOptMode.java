@@ -19,15 +19,10 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Mob file compaction chore in a generational non-batch mode test. 1. Uses default (non-batch) mode
@@ -39,37 +34,23 @@ import org.slf4j.LoggerFactory;
  * than minimum age to archive 10. Runs Mob cleaner chore 11 Verifies that number of MOB files in a
  * mob directory is 20. 12 Runs scanner and checks all 3 * 1000 rows.
  */
-@SuppressWarnings("deprecation")
 @Category(LargeTests.class)
-public class TestMobCompactionOptMode extends TestMobCompactionBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestMobCompactionOptMode.class);
+public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
 
-  public TestMobCompactionOptMode() {
-  }
-
-  @Override
-  protected void initConf() {
-    super.initConf();
+  @BeforeClass
+  public static void configureOptimizedCompaction() throws InterruptedException, IOException {
+    HTU.shutdownMiniHBaseCluster();
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     conf.setLong(MobConstants.MOB_COMPACTION_MAX_FILE_SIZE_KEY, 1000000);
-  }
-
-  @Test
-  public void testMobFileCompactionBatchMode() throws InterruptedException, IOException {
-    LOG.info("MOB compaction generational (non-batch) mode started");
-    baseTestMobFileCompaction();
-    LOG.info("MOB compaction generational (non-batch) mode finished OK");
-
+    HTU.startMiniHBaseCluster();
   }
 
   @Override
-  protected void mobCompact(Admin admin, HTableDescriptor hdt, HColumnDescriptor hcd)
-    throws IOException, InterruptedException {
-    // Major compact MOB table
-    admin.majorCompact(hdt.getTableName(), hcd.getName());
+  protected String description() {
+    return "generational (non-batch) mode";
   }
 
 }
