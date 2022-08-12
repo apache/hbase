@@ -73,7 +73,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   }
 
   /** Used in test only. */
-  NettyRpcClient(Configuration configuration) {
+  public NettyRpcClient(Configuration configuration) {
     this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null);
   }
 

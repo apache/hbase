@@ -40,17 +40,17 @@ public class TestBlockingIPC extends AbstractTestIPC {
     HBaseClassTestRule.forClass(TestBlockingIPC.class);
 
   @Override
-  protected RpcServer createRpcServer(Server server, String name,
+  protected RpcServer createRpcServer(String name,
     List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException {
-    return RpcServerFactory.createRpcServer(server, name, services, bindAddress, conf, scheduler);
+    return RpcServerFactory.createRpcServer(null, name, services, bindAddress, conf, scheduler);
   }
 
   @Override
   protected BlockingRpcClient createRpcClientNoCodec(Configuration conf) {
     return new BlockingRpcClient(conf) {
       @Override
-      Codec getCodec() {
+      protected Codec getCodec() {
         return null;
       }
     };
@@ -67,7 +67,7 @@ public class TestBlockingIPC extends AbstractTestIPC {
     return new BlockingRpcClient(conf) {
 
       @Override
-      boolean isTcpNoDelay() {
+      protected boolean isTcpNoDelay() {
         throw new RuntimeException("Injected fault");
       }
     };
@@ -102,9 +102,9 @@ public class TestBlockingIPC extends AbstractTestIPC {
   }
 
   @Override
-  protected RpcServer createTestFailingRpcServer(Server server, String name,
+  protected RpcServer createTestFailingRpcServer(String name,
     List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
     Configuration conf, RpcScheduler scheduler) throws IOException {
-    return new TestFailingRpcServer(server, name, services, bindAddress, conf, scheduler);
+    return new TestFailingRpcServer(null, name, services, bindAddress, conf, scheduler);
   }
 }

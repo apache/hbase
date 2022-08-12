@@ -106,7 +106,7 @@ public class TestTlsWithKerberos {
       .setTempDir(new File(TEST_UTIL.getDataTestDir().toUri().getPath()))
       .setKeyStorePassword("Pa$$word").setKeyStoreKeyType(X509KeyType.RSA)
       .setTrustStoreKeyType(X509KeyType.RSA).setTrustStorePassword("Pa$$word").build();
-    x509TestContext.setSystemProperties(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+    x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
   }
 
   @AfterClass
@@ -123,10 +123,10 @@ public class TestTlsWithKerberos {
     krbKeytab = getKeytabFileForTesting();
     krbPrincipal = getPrincipalForTesting();
     ugi = loginKerberosPrincipal(krbKeytab, krbPrincipal);
-    clientConf = HBaseConfiguration.create(x509TestContext.getHbaseConf());
+    clientConf = HBaseConfiguration.create(x509TestContext.getConf());
     setSecuredConfiguration(clientConf);
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, RPC_CLIENT_IMPL);
-    serverConf = HBaseConfiguration.create(x509TestContext.getHbaseConf());
+    serverConf = HBaseConfiguration.create(x509TestContext.getConf());
     setSecuredConfiguration(serverConf);
     serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, RPC_SERVER_IMPL);
   }
