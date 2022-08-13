@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.io.ByteBufferWriterDataOutputStream;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -253,8 +252,6 @@ public class HFileBlock implements Cacheable {
 
   static final byte[] DUMMY_HEADER_NO_CHECKSUM =
     new byte[HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM];
-
-  public static final String MAX_BLOCK_SIZE_UNCOMPRESSED = "hbase.block.max.size.uncompressed";
 
   /**
    * Used deserializing blocks from Cache. <code>
@@ -915,11 +912,12 @@ public class HFileBlock implements Cacheable {
     }
 
     public boolean shouldFinishBlock() throws IOException {
-      int uncompressedBlockSize = blockSizeWritten();
+//      int uncompressedBlockSize = blockSizeWritten();
+      int uncompressedBlockSize = baosInMemory.size();
       if (uncompressedBlockSize >= fileContext.getBlocksize()) {
         if (uncompressedBlockSize < maxSizeUnCompressed) {
           int adjustedBlockSize = compressedSizePredicator.
-            calculateCompressionSizeLimit(fileContext, uncompressedBlockSize, baosInMemory);
+            calculateCompressionSizeLimit(fileContext, uncompressedBlockSize);
           return uncompressedBlockSize >= adjustedBlockSize;
         }
         return true;
@@ -1010,6 +1008,7 @@ public class HFileBlock implements Cacheable {
     private void putHeader(ByteArrayOutputStream dest, int onDiskSize, int uncompressedSize,
       int onDiskDataSize) {
       putHeader(dest.getBuffer(), 0, onDiskSize, uncompressedSize, onDiskDataSize);
+      compressedSizePredicator.updateLatestBlockSizes(uncompressedSize, onDiskSize);
     }
 
     /**

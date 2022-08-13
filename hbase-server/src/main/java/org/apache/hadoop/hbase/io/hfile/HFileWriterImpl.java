@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.apache.hadoop.hbase.io.hfile.HFileBlock.MAX_BLOCK_SIZE_UNCOMPRESSED;
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;

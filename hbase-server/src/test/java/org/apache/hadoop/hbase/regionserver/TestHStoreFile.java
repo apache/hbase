@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.apache.hadoop.conf.Configuration;
@@ -1220,17 +1221,18 @@ public class TestHStoreFile {
   @Test
   public void testDataBlockSizeCompressed() throws Exception {
     conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, PreviousBlockCompressionRatePredicator.class.getName());
-    testDataBlockSizeWithCompressionRatePredicator(100, s -> s >= BLOCKSIZE_SMALL);
+    testDataBlockSizeWithCompressionRatePredicator(11, (s,c) ->
+      (c > 2 && c < 11) ? s >= BLOCKSIZE_SMALL*10 : true );
   }
 
   @Test
   public void testDataBlockSizeUnCompressed() throws Exception {
     conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, UncompressedBlockSizePredicator.class.getName());
-    testDataBlockSizeWithCompressionRatePredicator(200, s -> s < BLOCKSIZE_SMALL);
+    testDataBlockSizeWithCompressionRatePredicator(100, (s,c) -> s < BLOCKSIZE_SMALL*10);
   }
 
   private void testDataBlockSizeWithCompressionRatePredicator(int expectedBlockCount,
-      Function<Integer, Boolean> validation) throws Exception {
+      BiFunction<Integer, Integer, Boolean> validation) throws Exception {
     Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
     DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
@@ -1261,9 +1263,11 @@ public class TestHStoreFile {
         /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
       offset += block.getOnDiskSizeWithHeader();
       blockCount++;
-      assertTrue(validation.apply(block.getUncompressedSizeWithoutHeader()));
+      System.out.println(">>>> " + block.getUncompressedSizeWithoutHeader());
+      System.out.println(">>>> " + blockCount);
+      assertTrue(validation.apply(block.getUncompressedSizeWithoutHeader(), blockCount));
     }
-    assertEquals(blockCount, expectedBlockCount);
+    assertEquals(expectedBlockCount, blockCount);
   }
 
 }

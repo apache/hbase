@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
-import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
@@ -33,7 +31,8 @@ import java.io.IOException;
 @InterfaceAudience.Private
 public class PreviousBlockCompressionRatePredicator implements BlockCompressedSizePredicator {
   
-  int adjustedBlockSize;
+  private int adjustedBlockSize;
+  private int compressionRatio = 1;
 
   /**
    * Calculates an adjusted block size limit based on the compression rate of current block
@@ -41,23 +40,28 @@ public class PreviousBlockCompressionRatePredicator implements BlockCompressedSi
    * adjusted size from previous block has been reached by the current one.
    * @param context the meta file information for the current file.
    * @param uncompressedBlockSize the total uncompressed size read for the block so far.
-   * @param contents The byte array containing the block content so far.
    * @return the adjusted block size limit based on block compression rate.
    * @throws IOException
    */
   @Override 
-  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize, 
-      ByteArrayOutputStream contents) throws IOException {
+  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize)
+      throws IOException {
     // In order to avoid excessive compression size calculations, we do it only once when
     // the uncompressed size has reached BLOCKSIZE. We then use this compression size to
     // calculate the compression rate, and adjust the block size limit by this ratio.
-    if (adjustedBlockSize == 0 || uncompressedBlockSize >= adjustedBlockSize) {
-      int compressedSize = EncodedDataBlock.getCompressedSize(context.getCompression(),
-        context.getCompression().getCompressor(), contents.getBuffer(), 0,
-        contents.size());
-      adjustedBlockSize = uncompressedBlockSize / compressedSize;
-      adjustedBlockSize *= context.getBlocksize();
+    if (uncompressedBlockSize >= adjustedBlockSize) {
+      adjustedBlockSize = context.getBlocksize() * compressionRatio;
     }
     return adjustedBlockSize;
+  }
+
+  /**
+   * Recalculates compression rate for the last block.
+   * @param uncompressed the uncompressed size of last block written.
+   * @param compressed the compressed size of last block written.
+   */
+  @Override
+  public void updateLatestBlockSizes(int uncompressed, int compressed) {
+    compressionRatio = uncompressed/compressed;
   }
 }

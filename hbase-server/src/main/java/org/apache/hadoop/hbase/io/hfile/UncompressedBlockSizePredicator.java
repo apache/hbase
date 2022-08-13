@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
@@ -35,14 +34,22 @@ public class UncompressedBlockSizePredicator implements BlockCompressedSizePredi
    * rate adjustments.
    * @param context the meta file information for the current file.
    * @param uncompressedBlockSize the total uncompressed size read for the block so far.
-   * @param blockContent The byte array containing the block content so far.
    * @return the configured BLOCK_SIZE as the block size limit, without applying any compression
    * rate adjustments.
    * @throws IOException
    */
   @Override
-  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize,
-    ByteArrayOutputStream blockContent) throws IOException {
+  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize)
+    throws IOException {
     return context.getBlocksize();
   }
+
+  /**
+   * Empty implementation. Does nothing.
+   * @param uncompressed the uncompressed size of last block written.
+   * @param compressed the compressed size of last block written.
+   */
+  @Override
+  public void updateLatestBlockSizes(int uncompressed, int compressed) {}
+
 }
