@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.MemoryType;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -430,8 +431,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // If prefix is null||empty then just name it wal
-    this.walFilePrefix =
-      prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
+    this.walFilePrefix = prefix == null || prefix.isEmpty()
+      ? "wal"
+      : URLEncoder.encode(prefix, StandardCharsets.UTF_8.name());
     // we only correctly differentiate suffices when numeric ones start with '.'
     if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
       throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER
