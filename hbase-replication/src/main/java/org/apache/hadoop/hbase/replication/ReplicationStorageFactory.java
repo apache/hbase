@@ -17,17 +17,45 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to create replication storage(peer, queue) classes.
- * <p>
- * For now we only have zk based implementation.
  */
 @InterfaceAudience.Private
 public final class ReplicationStorageFactory {
+
+  public static final String REPLICATION_QUEUE_TABLE_NAME = "hbase.replication.queue.table.name";
+
+  public static final TableName REPLICATION_QUEUE_TABLE_NAME_DEFAULT =
+    TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "replication");
+
+  public static TableDescriptor createReplicationQueueTableDescriptor(TableName tableName)
+    throws IOException {
+    return TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TableReplicationQueueStorage.QUEUE_FAMILY))
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(TableReplicationQueueStorage.LAST_SEQUENCE_ID_FAMILY))
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.of(TableReplicationQueueStorage.HFILE_REF_FAMILY))
+      .setValue("hbase.regionserver.region.split_restriction.type", "DelimitedKeyPrefix")
+      .setValue("hbase.regionserver.region.split_restriction.delimiter", "-")
+      .setCoprocessor(CoprocessorDescriptorBuilder
+        .newBuilder("org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint")
+        .setPriority(Coprocessor.PRIORITY_SYSTEM).build())
+      .build();
+  }
 
   private ReplicationStorageFactory() {
   }
@@ -42,8 +70,17 @@ public final class ReplicationStorageFactory {
   /**
    * Create a new {@link ReplicationQueueStorage}.
    */
-  public static ReplicationQueueStorage getReplicationQueueStorage(ZKWatcher zk,
+  public static ReplicationQueueStorage getReplicationQueueStorage(Connection conn,
     Configuration conf) {
-    return new ZKReplicationQueueStorage(zk, conf);
+    return getReplicationQueueStorage(conn, TableName.valueOf(conf.get(REPLICATION_QUEUE_TABLE_NAME,
+      REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString())));
+  }
+
+  /**
+   * Create a new {@link ReplicationQueueStorage}.
+   */
+  public static ReplicationQueueStorage getReplicationQueueStorage(Connection conn,
+    TableName tableName) {
+    return new TableReplicationQueueStorage(conn, tableName);
   }
 }
