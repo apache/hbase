@@ -61,7 +61,7 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
       p.addLast(NettyHBaseSaslRpcServerHandler.DECODER_NAME, decoder);
       p.addLast(new NettyHBaseSaslRpcServerHandler(rpcServer, conn));
     } else {
-      conn.setupDecoder();
+      conn.setupHandler();
     }
     // add first and then remove, so the single decode decoder will pass the remaining bytes to the
     // handler above.
