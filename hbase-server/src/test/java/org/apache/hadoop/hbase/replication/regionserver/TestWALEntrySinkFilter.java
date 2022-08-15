@@ -25,7 +25,6 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -55,8 +53,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -72,30 +68,11 @@ public class TestWALEntrySinkFilter {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALEntrySinkFilter.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   @Rule
   public TestName name = new TestName();
   static final int BOUNDARY = 5;
   static final AtomicInteger UNFILTERED = new AtomicInteger();
   static final AtomicInteger FILTERED = new AtomicInteger();
-
-  /**
-   * Implemetentation of Stoppable to pass into ReplicationSink.
-   */
-  private static Stoppable STOPPABLE = new Stoppable() {
-    private final AtomicBoolean stop = new AtomicBoolean(false);
-
-    @Override
-    public boolean isStopped() {
-      return this.stop.get();
-    }
-
-    @Override
-    public void stop(String why) {
-      LOG.info("STOPPING BECAUSE: " + why);
-      this.stop.set(true);
-    }
-  };
 
   /**
    * Test filter. Filter will filter out any write time that is <= 5 (BOUNDARY). We count how many

@@ -41,12 +41,12 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.ReplicationQueueData;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.VerifyWALEntriesReplicationEndpoint;
@@ -100,11 +100,9 @@ public class TestAsyncReplicationAdminApi extends TestAsyncAdminBase {
     } catch (Exception e) {
     }
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
-      .getReplicationQueueStorage(TEST_UTIL.getZooKeeperWatcher(), TEST_UTIL.getConfiguration());
-    for (ServerName serverName : queueStorage.getListOfReplicators()) {
-      for (String queue : queueStorage.getAllQueues(serverName)) {
-        queueStorage.removeQueue(serverName, queue);
-      }
+      .getReplicationQueueStorage(TEST_UTIL.getConnection(), TEST_UTIL.getConfiguration());
+    for (ReplicationQueueData queueData : queueStorage.listAllQueues()) {
+      queueStorage.removeQueue(queueData.getId());
     }
   }
 

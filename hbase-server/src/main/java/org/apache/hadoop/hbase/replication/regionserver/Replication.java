@@ -95,7 +95,7 @@ public class Replication implements ReplicationSourceService {
 
     try {
       this.queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getConnection(), conf);
       this.replicationPeers =
         ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();

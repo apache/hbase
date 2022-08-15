@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
@@ -30,9 +31,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.C
 @InterfaceAudience.Private
 public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
 
-  private ServerName crashedServer;
-
-  private String queue;
+  private ReplicationQueueId queueId;
 
   @Override
   public EventType getEventType() {
@@ -42,14 +41,20 @@ public class ClaimReplicationQueueCallable extends BaseRSProcedureCallable {
   @Override
   protected void doCall() throws Exception {
     PeerProcedureHandler handler = rs.getReplicationSourceService().getPeerProcedureHandler();
-    handler.claimReplicationQueue(crashedServer, queue);
+    handler.claimReplicationQueue(queueId);
   }
 
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
     ClaimReplicationQueueRemoteParameter param =
       ClaimReplicationQueueRemoteParameter.parseFrom(parameter);
-    crashedServer = ProtobufUtil.toServerName(param.getCrashedServer());
-    queue = param.getQueue();
+    ServerName crashedServer = ProtobufUtil.toServerName(param.getCrashedServer());
+    String queue = param.getQueue();
+    if (param.hasSourceServer()) {
+      ServerName sourceServer = ProtobufUtil.toServerName(param.getSourceServer());
+      queueId = new ReplicationQueueId(crashedServer, queue, sourceServer);
+    } else {
+      queueId = new ReplicationQueueId(crashedServer, queue);
+    }
   }
 }

@@ -2558,7 +2558,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixReplication() throws ReplicationException {
-    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, errors);
+    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
     checker.checkUnDeletedQueues();
 
     if (checker.hasUnDeletedQueues() && this.fixReplication) {
@@ -3831,7 +3831,7 @@ public class HBaseFsck extends Configured implements Closeable {
       return;
     }
     ReplicationQueueStorage queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
+      ReplicationStorageFactory.getReplicationQueueStorage(connection, getConf());
     List<ReplicationPeerDescription> peerDescriptions = admin.listReplicationPeers();
     if (peerDescriptions != null && peerDescriptions.size() > 0) {
       List<String> peers = peerDescriptions.stream()
