@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.master.SplitWALManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
-import org.apache.hadoop.hbase.master.replication.ClaimReplicationQueuesProcedure;
+import org.apache.hadoop.hbase.master.replication.AssignReplicationQueuesProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -240,15 +240,33 @@ public class ServerCrashProcedure extends
             }
             assignRegions(env, regionsOnCrashedServer);
           }
-          setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
+          // If there is no replication peer, we do not need to enter the claim queues stage.
+          // This is also very important that now we will later initialize ReplicationQueueStorage
+          // so if there is no replication peer added yet, the storage can not be accessed.
+          // And there will be no race because:
+          // 1. For adding replication peer, if the peer storage has not been updated yet, the crash
+          // region server will not have any replication queues for this peer, so it is safe to skip
+          // claiming.
+          // 2. For removing replication peer, it it has already updated the peer storage, then
+          // there is no way to rollback and region servers are already started to close and delete
+          // replication queues, so it is also safe to skip claiming.
+          if (env.getReplicationPeerManager().listPeers(null).isEmpty()) {
+            setNextState(ServerCrashState.SERVER_CRASH_FINISH);
+          } else {
+            setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
+          }
           break;
         case SERVER_CRASH_HANDLE_RIT2:
           // Noop. Left in place because we used to call handleRIT here for a second time
           // but no longer necessary since HBASE-20634.
-          setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
+          if (env.getReplicationPeerManager().listPeers(null).isEmpty()) {
+            setNextState(ServerCrashState.SERVER_CRASH_FINISH);
+          } else {
+            setNextState(ServerCrashState.SERVER_CRASH_CLAIM_REPLICATION_QUEUES);
+          }
           break;
         case SERVER_CRASH_CLAIM_REPLICATION_QUEUES:
-          addChildProcedure(new ClaimReplicationQueuesProcedure(serverName));
+          addChildProcedure(new AssignReplicationQueuesProcedure(serverName));
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
         case SERVER_CRASH_FINISH:
