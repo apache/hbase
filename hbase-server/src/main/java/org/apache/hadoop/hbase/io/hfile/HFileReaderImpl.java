@@ -1510,7 +1510,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public String getKeyString() {
-      return CellUtil.toString(getKey(), true);
+      return CellUtil.toString(getKey(), false);
     }
 
     @Override
