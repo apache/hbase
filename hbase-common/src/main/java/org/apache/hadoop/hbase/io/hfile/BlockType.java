@@ -215,4 +215,13 @@ public enum BlockType {
     return this == DATA || this == ENCODED_DATA;
   }
 
+  /** Returns whether this block category is index */
+  public final boolean isIndex() {
+    return this.getCategory() == BlockCategory.INDEX;
+  }
+
+  /** Returns whether this block category is bloom filter */
+  public final boolean isBloom() {
+    return this.getCategory() == BlockCategory.BLOOM;
+  }
 }
