@@ -19,37 +19,31 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.IOException;
-
 /**
- * This BlockCompressedSizePredicator implementation doesn't actually performs any predicate
- * and simply return the configured BLOCK_SIZE value, without any adjustments. This is the default
- * implementation if <b>hbase.block.compressed.size.predicator</b> property is not defined.
+ * This BlockCompressedSizePredicator implementation doesn't actually performs any predicate and
+ * simply returns <b>true</b> on <code>shouldFinishBlock</code>. This is the default implementation
+ * if <b>hbase.block.compressed.size.predicator</b> property is not defined.
  */
 @InterfaceAudience.Private
 public class UncompressedBlockSizePredicator implements BlockCompressedSizePredicator {
 
   /**
-   * Returns the configured BLOCK_SIZE as the block size limit, without applying any compression
-   * rate adjustments.
-   * @param context the meta file information for the current file.
-   * @param uncompressedBlockSize the total uncompressed size read for the block so far.
-   * @return the configured BLOCK_SIZE as the block size limit, without applying any compression
-   * rate adjustments.
-   * @throws IOException
+   * Empty implementation. Does nothing.
+   * @param uncompressed the uncompressed size of last block written.
+   * @param compressed   the compressed size of last block written.
    */
   @Override
-  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize)
-    throws IOException {
-    return context.getBlocksize();
+  public void updateLatestBlockSizes(HFileContext context, int uncompressed, int compressed) {
   }
 
   /**
-   * Empty implementation. Does nothing.
-   * @param uncompressed the uncompressed size of last block written.
-   * @param compressed the compressed size of last block written.
+   * Dummy implementation that always returns true. This means, we will be only considering the
+   * block uncompressed size for deciding when to finish a block.
+   * @param uncompressed true if the block should be finished. n
    */
   @Override
-  public void updateLatestBlockSizes(int uncompressed, int compressed) {}
+  public boolean shouldFinishBlock(int uncompressed) {
+    return true;
+  }
 
 }

@@ -293,9 +293,9 @@ public class HFileWriterImpl implements HFile.Writer {
     if (blockWriter != null) {
       throw new IllegalStateException("finishInit called twice");
     }
-    blockWriter = new HFileBlock.Writer(conf, blockEncoder, hFileContext,
-      cacheConf.getByteBuffAllocator(),
-      conf.getInt(MAX_BLOCK_SIZE_UNCOMPRESSED, hFileContext.getBlocksize() * 10));
+    blockWriter =
+      new HFileBlock.Writer(conf, blockEncoder, hFileContext, cacheConf.getByteBuffAllocator(),
+        conf.getInt(MAX_BLOCK_SIZE_UNCOMPRESSED, hFileContext.getBlocksize() * 10));
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
@@ -322,7 +322,7 @@ public class HFileWriterImpl implements HFile.Writer {
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= hFileContext.getBlocksize()
         || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
     }
-    shouldFinishBlock &= blockWriter.shouldFinishBlock();
+    shouldFinishBlock &= blockWriter.checkBoundariesWithPredicate();
     if (shouldFinishBlock) {
       finishBlock();
       writeInlineBlocks(false);

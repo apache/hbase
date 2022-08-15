@@ -19,49 +19,44 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.io.IOException;
-
 /**
  * This BlockCompressedSizePredicator implementation adjusts the block size limit based on the
  * compression rate of the block contents read so far. For the first block, adjusted size would be
  * zero, so it performs a compression of current block contents and calculate compression rate and
- * adjusted size. For subsequent blocks, it only performs this calculation once the previous block
- * adjusted size has been reached, and the block is about to be closed.
+ * adjusted size. For subsequent blocks, decision whether the block should be finished or not will
+ * be based on the compression rate calculated for the previous block.
  */
 @InterfaceAudience.Private
 public class PreviousBlockCompressionRatePredicator implements BlockCompressedSizePredicator {
-  
+
   private int adjustedBlockSize;
   private int compressionRatio = 1;
+  private int configuredMaxBlockSize;
 
   /**
-   * Calculates an adjusted block size limit based on the compression rate of current block
-   * contents. This calculation is only performed if this is the first block, otherwise, if the
-   * adjusted size from previous block has been reached by the current one.
-   * @param context the meta file information for the current file.
-   * @param uncompressedBlockSize the total uncompressed size read for the block so far.
-   * @return the adjusted block size limit based on block compression rate.
-   * @throws IOException
+   * Recalculates compression rate for the last block and adjusts the block size limit as:
+   * BLOCK_SIZE * (uncompressed/compressed).
+   * @param context      HFIleContext containing the configured max block size.
+   * @param uncompressed the uncompressed size of last block written.
+   * @param compressed   the compressed size of last block written.
    */
-  @Override 
-  public int calculateCompressionSizeLimit(HFileContext context, int uncompressedBlockSize)
-      throws IOException {
-    // In order to avoid excessive compression size calculations, we do it only once when
-    // the uncompressed size has reached BLOCKSIZE. We then use this compression size to
-    // calculate the compression rate, and adjust the block size limit by this ratio.
-    if (uncompressedBlockSize >= adjustedBlockSize) {
-      adjustedBlockSize = context.getBlocksize() * compressionRatio;
-    }
-    return adjustedBlockSize;
+  @Override
+  public void updateLatestBlockSizes(HFileContext context, int uncompressed, int compressed) {
+    configuredMaxBlockSize = context.getBlocksize();
+    compressionRatio = uncompressed / compressed;
+    adjustedBlockSize = context.getBlocksize() * compressionRatio;
   }
 
   /**
-   * Recalculates compression rate for the last block.
-   * @param uncompressed the uncompressed size of last block written.
-   * @param compressed the compressed size of last block written.
+   * Returns <b>true</b> if the passed uncompressed size is larger than the limit calculated by
+   * <code>updateLatestBlockSizes</code>.
+   * @param uncompressed true if the block should be finished. n
    */
   @Override
-  public void updateLatestBlockSizes(int uncompressed, int compressed) {
-    compressionRatio = uncompressed/compressed;
+  public boolean shouldFinishBlock(int uncompressed) {
+    if (uncompressed >= configuredMaxBlockSize) {
+      return uncompressed >= adjustedBlockSize;
+    }
+    return false;
   }
 }
