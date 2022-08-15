@@ -332,7 +332,6 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     for (int i = 0; i < numRs; i++) {
       HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(i);
       Replication replicationService = (Replication) hrs.getReplicationSourceService();
-      replicationService.getReplicationManager().preLogRoll(emptyWalPaths.get(i));
       replicationService.getReplicationManager().postLogRoll(emptyWalPaths.get(i));
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();

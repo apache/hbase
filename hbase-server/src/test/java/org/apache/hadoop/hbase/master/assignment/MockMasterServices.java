@@ -151,7 +151,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     CommonFSUtils.setRootDir(getConfiguration(), rootdir);
     this.rpm = mock(ReplicationPeerManager.class);
     ReplicationQueueStorage rqs = mock(ReplicationQueueStorage.class);
-    when(rqs.getAllQueues(any())).thenReturn(Collections.emptyList());
+    when(rqs.listAllQueueIds(any(ServerName.class))).thenReturn(Collections.emptyList());
     when(rpm.getQueueStorage()).thenReturn(rqs);
   }
 
