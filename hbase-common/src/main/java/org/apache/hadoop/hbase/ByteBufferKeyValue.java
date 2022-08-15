@@ -294,7 +294,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public String toString() {
-    return CellUtil.toString(this, true);
+    return CellUtil.toString(this, false);
   }
 
   @Override
