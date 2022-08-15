@@ -154,7 +154,7 @@ public class HttpServer implements FilterContainer {
   public static final String APP_DIR = "webapps";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
-  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx,prometheus" };
+  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx" };
   private static final Map<String, ServletConfig> METRIC_SERVLETS =
     new HashMap<String, ServletConfig>() {
       {

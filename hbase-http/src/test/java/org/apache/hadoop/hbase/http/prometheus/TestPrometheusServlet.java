@@ -39,11 +39,11 @@ import org.junit.experimental.categories.Category;
  * Test prometheus Sink.
  */
 @Category({ SmallTests.class, MiscTests.class })
-public class TestPrometheus2Servlet {
+public class TestPrometheusServlet {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_TEST_RULE =
-    HBaseClassTestRule.forClass(TestPrometheus2Servlet.class);
+    HBaseClassTestRule.forClass(TestPrometheusServlet.class);
 
   @Test
   public void testPublish() throws IOException {
@@ -59,7 +59,7 @@ public class TestPrometheus2Servlet {
     OutputStreamWriter writer = new OutputStreamWriter(stream, UTF_8);
 
     // WHEN
-    PrometheusHadoop2Servlet prom2Servlet = new PrometheusHadoop2Servlet();
+    PrometheusHadoopServlet prom2Servlet = new PrometheusHadoopServlet();
     prom2Servlet.writeMetrics(writer);
 
     // THEN

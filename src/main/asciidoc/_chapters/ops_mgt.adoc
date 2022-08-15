@@ -1613,11 +1613,11 @@ Restart the region server for the changes to take effect.
 [[enabling.metrics.servlets]]
 === Enabling Metrics Servlets
 
-HBase exposes the metrics in many formats such as JSON, prometheus-format through different servlets (`/jmx`, `/metrics`, `/prometheus`, `/prometheus-hadoop2`). Any of these servlets can be enabled or disabled by the configuration property `hbase.http.metrics.servlets`. The value for the property should be a comma separated list of the servlet aliases which are `{jmx, metrics, prometheus, prometheus-hadoop2}`. `/jmx` and `/metrics` are enabled by default. To get metrics using these servlets access the URL `http://SERVER_HOSTNAME:SERVER_WEB_UI_PORT/endpoint`. Where endpoint is one of {`/jmx`, `/metrics`, `/prometheus`, `/prometheus-hadoop2`}. Eg. `http://my.rs.xyz.com:16030/prometheus-hadoop2`
+HBase exposes the metrics in many formats such as JSON, prometheus-format through different servlets (`/jmx`, `/metrics`, `/prometheus`). Any of these servlets can be enabled or disabled by the configuration property `hbase.http.metrics.servlets`. The value for the property should be a comma separated list of the servlet aliases which are `{jmx, metrics, prometheus}`. `/jmx` is enabled by default. To get metrics using these servlets access the URL `http://SERVER_HOSTNAME:SERVER_WEB_UI_PORT/endpoint`. Where endpoint is one of {`/jmx`, `/metrics`, `/prometheus`}. Eg. `http://my.rs.xyz.com:16030/prometheus`
 
 [[prometheus.format.metrics]]
 === Prometheus servlets
-HBase exposes the metrics in prometheus friendly format through two different servlets `/prometheus` and `/prometheus-hadoop2`. Currently `/prometheus-hadoop2` exposes all the available metrics. `/prometheus` is based on the HBase native metrics API and is incomplete till all the metric sources start using this native metrics API.
+HBase exposes the metrics in prometheus friendly format through a servlet, `/prometheus`. Currently `/prometheus` exposes all the available metrics.
 
 [[discovering.available.metrics]]
 === Discovering Available Metrics

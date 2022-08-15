@@ -34,7 +34,7 @@ import org.apache.hadoop.metrics2.impl.MetricsExportHelper;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class PrometheusHadoop2Servlet extends HttpServlet {
+public class PrometheusHadoopServlet extends HttpServlet {
 
   private static final Pattern SPLIT_PATTERN =
     Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=([A-Z][a-z]))|\\W|(_)+");
@@ -50,6 +50,11 @@ public class PrometheusHadoop2Servlet extends HttpServlet {
     return String.join("_", parts).toLowerCase();
   }
 
+  /*
+   * SimpleClient for Prometheus is not used, because the format is very easy to implement and this
+   * solution doesn't add any dependencies to the project. You can check the Prometheus format here:
+   * https://prometheus.io/docs/instrumenting/exposition_formats/
+   */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
   void writeMetrics(Writer writer) throws IOException {
