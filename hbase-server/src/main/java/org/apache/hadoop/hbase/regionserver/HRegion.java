@@ -8040,11 +8040,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     try {
       long txid = this.wal.appendData(this.getRegionInfo(), walKey, walEdit);
       WriteEntry writeEntry = walKey.getWriteEntry();
-      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit, writeEntry);
       // Call sync on our edit.
       if (txid != 0) {
         sync(txid, batchOp.durability);
       }
+      /**
+       * If above {@link HRegion#sync} throws Exception, the RegionServer should be aborted and
+       * following {@link BatchOperation#writeMiniBatchOperationsToMemStore} will not be executed,
+       * so there is no need to replicate to secondary replica, for this reason here we attach the
+       * region replication action after the {@link HRegion#sync} is successful.
+       */
+      this.attachRegionReplicationInWALAppend(batchOp, miniBatchOp, walKey, walEdit, writeEntry);
       return writeEntry;
     } catch (IOException ioe) {
       if (walKey.getWriteEntry() != null) {
