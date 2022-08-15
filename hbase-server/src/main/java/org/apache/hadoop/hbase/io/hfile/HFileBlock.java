@@ -465,7 +465,7 @@ public class HFileBlock implements Cacheable {
   }
 
   /** Returns the uncompressed size of data part (header and checksum excluded). */
-  public int getUncompressedSizeWithoutHeader() {
+  int getUncompressedSizeWithoutHeader() {
     return uncompressedSizeWithoutHeader;
   }
 
