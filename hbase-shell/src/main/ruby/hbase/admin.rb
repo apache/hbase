@@ -1610,7 +1610,7 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # clear dead region servers
+    # list dead region servers
     def list_deadservers
       @admin.listDeadServers.to_a
     end
