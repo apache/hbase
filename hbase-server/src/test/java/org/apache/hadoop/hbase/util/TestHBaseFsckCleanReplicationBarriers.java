@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,7 +44,9 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.replication.ReplicationBarrierFamilyFormat;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -78,13 +81,9 @@ public class TestHBaseFsckCleanReplicationBarriers {
   @BeforeClass
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
-    QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getZooKeeperWatcher(),
+    QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getConnection(),
       UTIL.getConfiguration());
     createPeer();
-    QUEUE_STORAGE.addWAL(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(), PEER_1,
-      WAL_FILE_NAME);
-    QUEUE_STORAGE.addWAL(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(), PEER_2,
-      WAL_FILE_NAME);
   }
 
   @AfterClass
@@ -205,9 +204,12 @@ public class TestHBaseFsckCleanReplicationBarriers {
   }
 
   private void updatePushedSeqId(RegionInfo region, long seqId) throws ReplicationException {
-    QUEUE_STORAGE.setWALPosition(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(),
-      PEER_1, WAL_FILE_NAME, 10, ImmutableMap.of(region.getEncodedName(), seqId));
-    QUEUE_STORAGE.setWALPosition(UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName(),
-      PEER_2, WAL_FILE_NAME, 10, ImmutableMap.of(region.getEncodedName(), seqId));
+    ServerName sn = UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
+    QUEUE_STORAGE.setOffset(new ReplicationQueueId(sn, PEER_1), "",
+      new ReplicationGroupOffset(WAL_FILE_NAME, 10),
+      ImmutableMap.of(region.getEncodedName(), seqId));
+    QUEUE_STORAGE.setOffset(new ReplicationQueueId(sn, PEER_2), "",
+      new ReplicationGroupOffset(WAL_FILE_NAME, 10),
+      ImmutableMap.of(region.getEncodedName(), seqId));
   }
 }
