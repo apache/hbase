@@ -190,6 +190,9 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte[] family, final long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     List<Cell> list = getCellList(family);
     list.add(new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamilyVersion));
     return this;
