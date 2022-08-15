@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +44,8 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKDump;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -59,6 +56,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AtomicLongMap;
 
 /**
+ * TODO: reimplement this tool
+ * <p/>
  * Provides information about the existing states of replication, replication peers and queues.
  * Usage: hbase org.apache.hadoop.hbase.replication.regionserver.DumpReplicationQueues [args]
  * Arguments: --distributed Polls each RS to dump information about the queue --hdfs Reports HDFS
@@ -299,32 +298,33 @@ public class DumpReplicationQueues extends Configured implements Tool {
     ReplicationQueueStorage queueStorage;
     StringBuilder sb = new StringBuilder();
 
-    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
-    Set<ServerName> liveRegionServers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode)
-      .stream().map(ServerName::parseServerName).collect(Collectors.toSet());
-
+    // queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
+    // Set<ServerName> liveRegionServers = ZKUtil.listChildrenNoWatch(zkw,
+    // zkw.getZNodePaths().rsZNode)
+    // .stream().map(ServerName::parseServerName).collect(Collectors.toSet());
+    //
     // Loops each peer on each RS and dumps the queues
-    List<ServerName> regionservers = queueStorage.getListOfReplicators();
-    if (regionservers == null || regionservers.isEmpty()) {
-      return sb.toString();
-    }
-    for (ServerName regionserver : regionservers) {
-      List<String> queueIds = queueStorage.getAllQueues(regionserver);
-      if (!liveRegionServers.contains(regionserver)) {
-        deadRegionServers.add(regionserver.getServerName());
-      }
-      for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        List<String> wals = queueStorage.getWALsInQueue(regionserver, queueId);
-        Collections.sort(wals);
-        if (!peerIds.contains(queueInfo.getPeerId())) {
-          deletedQueues.add(regionserver + "/" + queueId);
-          sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
-        } else {
-          sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, false, hdfs));
-        }
-      }
-    }
+    // List<ServerName> regionservers = queueStorage.getListOfReplicators();
+    // if (regionservers == null || regionservers.isEmpty()) {
+    // return sb.toString();
+    // }
+    // for (ServerName regionserver : regionservers) {
+    // List<String> queueIds = queueStorage.getAllQueues(regionserver);
+    // if (!liveRegionServers.contains(regionserver)) {
+    // deadRegionServers.add(regionserver.getServerName());
+    // }
+    // for (String queueId : queueIds) {
+    // ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
+    // List<String> wals = queueStorage.getWALsInQueue(regionserver, queueId);
+    // Collections.sort(wals);
+    // if (!peerIds.contains(queueInfo.getPeerId())) {
+    // deletedQueues.add(regionserver + "/" + queueId);
+    // sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, true, hdfs));
+    // } else {
+    // sb.append(formatQueue(regionserver, queueStorage, queueInfo, queueId, wals, false, hdfs));
+    // }
+    // }
+    // }
     return sb.toString();
   }
 
@@ -350,9 +350,9 @@ public class DumpReplicationQueues extends Configured implements Tool {
     peersQueueSize.addAndGet(queueInfo.getPeerId(), wals.size());
 
     for (String wal : wals) {
-      long position = queueStorage.getWALPosition(regionserver, queueInfo.getPeerId(), wal);
-      sb.append("    Replication position for " + wal + ": "
-        + (position > 0 ? position : "0" + " (not started or nothing to replicate)") + "\n");
+      // long position = queueStorage.getWALPosition(regionserver, queueInfo.getPeerId(), wal);
+      // sb.append(" Replication position for " + wal + ": "
+      // + (position > 0 ? position : "0" + " (not started or nothing to replicate)") + "\n");
     }
 
     if (hdfs) {

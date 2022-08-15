@@ -26,9 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
-import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -56,14 +54,15 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public void preClean() {
     readZKTimestamp = EnvironmentEdgeManager.currentTime();
-    try {
-      // The concurrently created new WALs may not be included in the return list,
-      // but they won't be deleted because they're not in the checking set.
-      wals = queueStorage.getAllWALs();
-    } catch (ReplicationException e) {
-      LOG.warn("Failed to read zookeeper, skipping checking deletable files");
-      wals = null;
-    }
+    // TODO: revisit the implementation
+    // try {
+    // // The concurrently created new WALs may not be included in the return list,
+    // // but they won't be deleted because they're not in the checking set.
+    // wals = queueStorage.getAllWALs();
+    // } catch (ReplicationException e) {
+    // LOG.warn("Failed to read zookeeper, skipping checking deletable files");
+    // wals = null;
+    // }
   }
 
   @Override
@@ -115,7 +114,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       if (zkw == null) {
         zkw = new ZKWatcher(getConf(), "replicationLogCleaner", null);
       }
-      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
+      // TODO: revisit the implementation
+      // this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
@@ -126,7 +126,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     super.setConf(conf);
     try {
       this.zkw = zk;
-      this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zk, conf);
+      // TODO: revisit the implementation
+      // this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zk, conf);
     } catch (Exception e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }

@@ -15,29 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.replication.regionserver;
+package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * Used by a {@link RecoveredReplicationSource}.
- */
 @InterfaceAudience.Private
-public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper {
+public class ReplicationGroupOffset {
 
-  private final Runnable tryFinish;
+  public static final ReplicationGroupOffset BEGIN = new ReplicationGroupOffset("", 0L);
 
-  public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-    ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
-    ReplicationQueueStorage queueStorage, Runnable tryFinish) {
-    super(conf, walGroupId, logQueue, source);
-    this.tryFinish = tryFinish;
+  private final String wal;
+
+  private final long offset;
+
+  public ReplicationGroupOffset(String wal, long offset) {
+    this.wal = wal;
+    this.offset = offset;
+  }
+
+  public String getWal() {
+    return wal;
+  }
+
+  /**
+   * A negative value means this file has already been fully replicated out
+   */
+  public long getOffset() {
+    return offset;
   }
 
   @Override
-  protected void postFinish() {
-    tryFinish.run();
+  public String toString() {
+    return wal + ":" + offset;
+  }
+
+  public static ReplicationGroupOffset parse(String str) {
+    int index = str.lastIndexOf(':');
+    return new ReplicationGroupOffset(str.substring(0, index),
+      Long.parseLong(str.substring(index + 1)));
   }
 }
