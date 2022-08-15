@@ -783,7 +783,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
-    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
+    this.replicationPeerManager = ReplicationPeerManager.create(this, clusterId);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();

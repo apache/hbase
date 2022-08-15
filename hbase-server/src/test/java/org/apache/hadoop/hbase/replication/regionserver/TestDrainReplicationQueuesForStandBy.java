@@ -35,9 +35,12 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+// TODO: revisit later
+@Ignore
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestDrainReplicationQueuesForStandBy extends SyncReplicationTestBase {
 
