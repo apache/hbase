@@ -628,7 +628,7 @@
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.22.2</spotless.version>
+    <spotless.version>2.24.1</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
@@ -2402,7 +2402,7 @@
                */
               to
               /** Returns blabla */
-              See https://errorprone.info/bugpattern/FutureReturnValueIgnored
+              See https://errorprone.info/bugpattern/EmptyBlockTag
             -->
             <replaceRegex>
               <name>Purge single returns tag multi line</name>
