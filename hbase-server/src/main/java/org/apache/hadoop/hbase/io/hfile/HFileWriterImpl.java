@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
+
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -292,7 +294,8 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IllegalStateException("finishInit called twice");
     }
     blockWriter =
-      new HFileBlock.Writer(conf, blockEncoder, hFileContext, cacheConf.getByteBuffAllocator());
+      new HFileBlock.Writer(conf, blockEncoder, hFileContext, cacheConf.getByteBuffAllocator(),
+        conf.getInt(MAX_BLOCK_SIZE_UNCOMPRESSED, hFileContext.getBlocksize() * 10));
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
@@ -319,6 +322,7 @@ public class HFileWriterImpl implements HFile.Writer {
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= hFileContext.getBlocksize()
         || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
     }
+    shouldFinishBlock &= blockWriter.checkBoundariesWithPredicate();
     if (shouldFinishBlock) {
       finishBlock();
       writeInlineBlocks(false);
