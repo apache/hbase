@@ -89,8 +89,8 @@ public class ReplicationLoad {
       rLoadSourceBuild.setOPsShipped(oPsShipped);
       if (source instanceof ReplicationSource) {
         ReplicationSource replSource = (ReplicationSource) source;
-        rLoadSourceBuild.setRecovered(replSource.getReplicationQueueInfo().isQueueRecovered());
-        rLoadSourceBuild.setQueueId(replSource.getReplicationQueueInfo().getQueueId());
+        rLoadSourceBuild.setRecovered(replSource.getQueueId().isRecovered());
+        rLoadSourceBuild.setQueueId(replSource.getQueueId().toString());
         rLoadSourceBuild.setRunning(replSource.isWorkerRunning());
         rLoadSourceBuild.setEditsSinceRestart(timeStampOfNextToReplicate > 0);
       }

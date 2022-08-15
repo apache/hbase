@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -336,6 +337,44 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       dirName.append(serverName);
     }
     return dirName.toString();
+  }
+
+  /**
+   * List all the old wal files for a dead region server.
+   * <p/>
+   * Initially added for supporting replication, where we need to get the wal files to replicate for
+   * a dead region server.
+   */
+  public static List<Path> getArchivedWALFiles(Configuration conf, ServerName serverName,
+    String logPrefix) throws IOException {
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    FileSystem fs = walRootDir.getFileSystem(conf);
+    List<Path> archivedWalFiles = new ArrayList<>();
+    // list both the root old wal dir and the separate old wal dir, so we will not miss any files if
+    // the SEPARATE_OLDLOGDIR config is changed
+    Path oldWalDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    try {
+      for (FileStatus status : fs.listStatus(oldWalDir, p -> p.getName().startsWith(logPrefix))) {
+        if (status.isFile()) {
+          archivedWalFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("Old WAL dir {} not exists", oldWalDir);
+      return Collections.emptyList();
+    }
+    Path separatedOldWalDir = new Path(oldWalDir, serverName.toString());
+    try {
+      for (FileStatus status : fs.listStatus(separatedOldWalDir,
+        p -> p.getName().startsWith(logPrefix))) {
+        if (status.isFile()) {
+          archivedWalFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("Seprated old WAL dir {} not exists", separatedOldWalDir);
+    }
+    return archivedWalFiles;
   }
 
   /**

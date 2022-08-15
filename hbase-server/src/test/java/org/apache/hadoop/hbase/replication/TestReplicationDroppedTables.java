@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.replication.regionserver.HBaseInterCluster
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -59,6 +60,8 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationDroppedTables.class);
   private static final int ROWS_COUNT = 1000;
 
+  private byte[] value;
+
   @Before
   public void setUpBase() throws Exception {
     // Starting and stopping replication can make us miss new logs,
@@ -95,12 +98,17 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
         break;
       }
     }
-    // Set the max request size to a tiny 10K for dividing the replication WAL entries into multiple
+    // Set the max request size to a tiny 64K for dividing the replication WAL entries into multiple
     // batches. the default max request size is 256M, so all replication entries are in a batch, but
     // when replicate at sink side, it'll apply to rs group by table name, so the WAL of test table
     // may apply first, and then test_dropped table, and we will believe that the replication is not
     // got stuck (HBASE-20475).
-    CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 10 * 1024);
+    // we used to use 10K but the regionServerReport is greater than this limit in this test which
+    // makes this test fail, increase to 64K
+    CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 64 * 1024);
+    // set a large value size to make sure we will split the replication to several batches
+    value = new byte[4096];
+    ThreadLocalRandom.current().nextBytes(value);
   }
 
   @Test
@@ -171,13 +179,13 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     try (Table droppedTable = connection1.getTable(tablename)) {
       byte[] rowKey = Bytes.toBytes(0 + " put on table to be dropped");
       Put put = new Put(rowKey);
-      put.addColumn(familyName, row, row);
+      put.addColumn(familyName, row, value);
       droppedTable.put(put);
     }
 
     try (Table table1 = connection1.getTable(tableName)) {
       for (int i = 0; i < ROWS_COUNT; i++) {
-        Put put = new Put(generateRowKey(i)).addColumn(famName, row, row);
+        Put put = new Put(generateRowKey(i)).addColumn(famName, row, value);
         table1.put(put);
       }
     }
@@ -243,13 +251,13 @@ public class TestReplicationDroppedTables extends TestReplicationBase {
     try (Table droppedTable = connection1.getTable(tablename)) {
       byte[] rowKey = Bytes.toBytes(0 + " put on table to be dropped");
       Put put = new Put(rowKey);
-      put.addColumn(familyName, row, row);
+      put.addColumn(familyName, row, value);
       droppedTable.put(put);
     }
 
     try (Table table1 = connection1.getTable(tableName)) {
       for (int i = 0; i < ROWS_COUNT; i++) {
-        Put put = new Put(generateRowKey(i)).addColumn(famName, row, row);
+        Put put = new Put(generateRowKey(i)).addColumn(famName, row, value);
         table1.put(put);
       }
     }
