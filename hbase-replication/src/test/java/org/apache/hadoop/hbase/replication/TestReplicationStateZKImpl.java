@@ -80,7 +80,6 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   @Before
   public void setUp() throws IOException {
     zkTimeoutCount = 0;
-    rqs = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
     rp =
       ReplicationFactory.getReplicationPeers(FileSystem.get(utility.getConfiguration()), zkw, conf);
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);

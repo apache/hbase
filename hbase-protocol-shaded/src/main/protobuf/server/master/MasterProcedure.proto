@@ -679,16 +679,13 @@ message ClaimReplicationQueueRemoteStateData {
   required ServerName crashed_server = 1;
   required string queue = 2;
   required ServerName target_server = 3;
+  optional ServerName source_server = 4;
 }
 
 message ClaimReplicationQueueRemoteParameter {
   required ServerName crashed_server = 1;
   required string queue = 2;
-}
-
-enum ClaimReplicationQueuesState {
-  CLAIM_REPLICATION_QUEUES_DISPATCH = 1;
-  CLAIM_REPLICATION_QUEUES_FINISH = 2;
+  optional ServerName source_server = 3;
 }
 
 enum ModifyTableDescriptorState {
@@ -714,4 +711,14 @@ message ModifyStoreFileTrackerStateData {
 
 message ModifyColumnFamilyStoreFileTrackerStateData {
   required bytes family = 1;
+}
+
+enum AssignReplicationQueuesState {
+  ASSIGN_REPLICATION_QUEUES_PRE_CHECK = 1;
+  ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES = 2;
+  ASSIGN_REPLICATION_QUEUES_CLAIM = 3;
+}
+
+message AssignReplicationQueuesStateData {
+  required ServerName crashed_server = 1;
 }

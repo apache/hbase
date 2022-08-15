@@ -36,12 +36,15 @@ import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Tests for DumpReplicationQueues tool
  */
+// TODO: reimplement
+@Ignore
 @Category({ ReplicationTests.class, SmallTests.class })
 public class TestDumpReplicationQueues {
 

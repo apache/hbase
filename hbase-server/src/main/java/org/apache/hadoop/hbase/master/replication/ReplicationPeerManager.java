@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -38,10 +40,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -50,11 +55,12 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
-import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -105,9 +111,20 @@ public class ReplicationPeerManager implements ConfigurationObserver {
 
   private final ZKWatcher zk;
 
+  @FunctionalInterface
+  private interface ReplicationQueueStorageInitializer {
+
+    void initialize() throws IOException;
+  }
+
+  private final ReplicationQueueStorageInitializer queueStorageInitializer;
+
+  // we will mock this class in UT so leave the constructor as package private and not mark the
+  // class as final, since mockito can not mock a final class
   ReplicationPeerManager(FileSystem fs, ZKWatcher zk, ReplicationPeerStorage peerStorage,
     ReplicationQueueStorage queueStorage, ConcurrentMap<String, ReplicationPeerDescription> peers,
-    Configuration conf, String clusterId) {
+    Configuration conf, String clusterId,
+    ReplicationQueueStorageInitializer queueStorageInitializer) {
     this.fs = fs;
     this.zk = zk;
     this.peerStorage = peerStorage;
@@ -115,19 +132,15 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     this.peers = peers;
     this.conf = conf;
     this.clusterId = clusterId;
+    this.queueStorageInitializer = queueStorageInitializer;
   }
 
   private void checkQueuesDeleted(String peerId)
     throws ReplicationException, DoNotRetryIOException {
-    for (ServerName replicator : queueStorage.getListOfReplicators()) {
-      List<String> queueIds = queueStorage.getAllQueues(replicator);
-      for (String queueId : queueIds) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (queueInfo.getPeerId().equals(peerId)) {
-          throw new DoNotRetryIOException("undeleted queue for peerId: " + peerId + ", replicator: "
-            + replicator + ", queueId: " + queueId);
-        }
-      }
+    List<ReplicationQueueId> queueIds = queueStorage.listAllQueueIds(peerId);
+    if (!queueIds.isEmpty()) {
+      throw new DoNotRetryIOException("There are still " + queueIds.size()
+        + " undeleted queue(s) for peerId: " + peerId + ", first is " + queueIds.get(0));
     }
     if (queueStorage.getAllPeersFromHFileRefsQueue().contains(peerId)) {
       throw new DoNotRetryIOException("Undeleted queue for peer " + peerId + " in hfile-refs");
@@ -135,7 +148,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
   }
 
   void preAddPeer(String peerId, ReplicationPeerConfig peerConfig)
-    throws DoNotRetryIOException, ReplicationException {
+    throws ReplicationException, IOException {
     if (peerId.contains("-")) {
       throw new DoNotRetryIOException("Found invalid peer name: " + peerId);
     }
@@ -146,6 +159,9 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     if (peers.containsKey(peerId)) {
       throw new DoNotRetryIOException("Replication peer " + peerId + " already exists");
     }
+
+    // lazy create table
+    queueStorageInitializer.initialize();
     // make sure that there is no queues with the same peer id. This may happen when we create a
     // peer with the same id with a old deleted peer. If the replication queues for the old peer
     // have not been cleaned up yet then we should not create the new peer, otherwise the old wal
@@ -365,8 +381,8 @@ public class ReplicationPeerManager implements ConfigurationObserver {
     // claimed once after the refresh peer procedure done(as the next claim queue will just delete
     // it), so we can make sure that a two pass scan will finally find the queue and remove it,
     // unless it has already been removed by others.
-    ReplicationUtils.removeAllQueues(queueStorage, peerId);
-    ReplicationUtils.removeAllQueues(queueStorage, peerId);
+    queueStorage.removeAllQueues(peerId);
+    queueStorage.removeAllQueues(peerId);
   }
 
   public void removeAllQueuesAndHFileRefs(String peerId) throws ReplicationException {
@@ -568,14 +584,69 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       .collect(Collectors.toList());
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ReplicationPeerStorage getPeerStorage() {
+    return peerStorage;
+  }
+
   public ReplicationQueueStorage getQueueStorage() {
     return queueStorage;
   }
 
-  public static ReplicationPeerManager create(FileSystem fs, ZKWatcher zk, Configuration conf,
-    String clusterId) throws ReplicationException {
+  private static Pair<ReplicationQueueStorage, ReplicationQueueStorageInitializer>
+    createReplicationQueueStorage(MasterServices services) throws IOException {
+    Configuration conf = services.getConfiguration();
+    TableName replicationQueueTableName =
+      TableName.valueOf(conf.get(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
+        ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
+    ReplicationQueueStorageInitializer initializer;
+    if (services.getTableDescriptors().exists(replicationQueueTableName)) {
+      // no need to create the table
+      initializer = () -> {
+      };
+    } else {
+      // lazy create the replication table.
+      initializer = new ReplicationQueueStorageInitializer() {
+
+        private volatile boolean created = false;
+
+        @Override
+        public void initialize() throws IOException {
+          if (created) {
+            return;
+          }
+          synchronized (this) {
+            if (created) {
+              return;
+            }
+            if (services.getTableDescriptors().exists(replicationQueueTableName)) {
+              created = true;
+              return;
+            }
+            long procId = services.createSystemTable(ReplicationStorageFactory
+              .createReplicationQueueTableDescriptor(replicationQueueTableName));
+            ProcedureExecutor<MasterProcedureEnv> procExec = services.getMasterProcedureExecutor();
+            ProcedureSyncWait.waitFor(procExec.getEnvironment(), TimeUnit.MINUTES.toMillis(1),
+              "Creating table " + replicationQueueTableName, () -> procExec.isFinished(procId));
+          }
+        }
+      };
+    }
+    return Pair.newPair(ReplicationStorageFactory.getReplicationQueueStorage(
+      services.getConnection(), replicationQueueTableName), initializer);
+  }
+
+  public static ReplicationPeerManager create(MasterServices services, String clusterId)
+    throws ReplicationException, IOException {
+    Configuration conf = services.getConfiguration();
+    FileSystem fs = services.getMasterFileSystem().getFileSystem();
+    ZKWatcher zk = services.getZooKeeper();
     ReplicationPeerStorage peerStorage =
       ReplicationStorageFactory.getReplicationPeerStorage(fs, zk, conf);
+    Pair<ReplicationQueueStorage, ReplicationQueueStorageInitializer> pair =
+      createReplicationQueueStorage(services);
+    ReplicationQueueStorage queueStorage = pair.getFirst();
     ConcurrentMap<String, ReplicationPeerDescription> peers = new ConcurrentHashMap<>();
     for (String peerId : peerStorage.listPeerIds()) {
       ReplicationPeerConfig peerConfig = peerStorage.getPeerConfig(peerId);
@@ -585,7 +656,24 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       ) {
         // we do not use this endpoint for region replication any more, see HBASE-26233
         LOG.info("Legacy region replication peer found, removing: {}", peerConfig);
-        peerStorage.removePeer(peerId);
+        // do it asynchronous to not block the start up of HMaster
+        new Thread("Remove legacy replication peer " + peerId) {
+
+          @Override
+          public void run() {
+            try {
+              // need to delete two times to make sure we delete all the queues, see the comments in
+              // above
+              // removeAllQueues method for more details.
+              queueStorage.removeAllQueues(peerId);
+              queueStorage.removeAllQueues(peerId);
+              // delete queue first and then peer, because we use peer as a flag.
+              peerStorage.removePeer(peerId);
+            } catch (Exception e) {
+              LOG.warn("Failed to delete legacy replication peer {}", peerId);
+            }
+          }
+        }.start();
         continue;
       }
       peerConfig = ReplicationPeerConfigUtil.updateReplicationBasePeerConfigs(conf, peerConfig);
@@ -594,8 +682,8 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       SyncReplicationState state = peerStorage.getPeerSyncReplicationState(peerId);
       peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig, state));
     }
-    return new ReplicationPeerManager(fs, zk, peerStorage,
-      ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers, conf, clusterId);
+    return new ReplicationPeerManager(fs, zk, peerStorage, queueStorage, peers, conf, clusterId,
+      pair.getSecond());
   }
 
   /**
