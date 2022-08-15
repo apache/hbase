@@ -788,8 +788,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
-    this.replicationPeerManager =
-      ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
+    this.replicationPeerManager = ReplicationPeerManager.create(this, clusterId);
     this.configurationManager.registerObserver(replicationPeerManager);
     this.replicationPeerModificationStateStore =
       new ReplicationPeerModificationStateStore(masterRegion);

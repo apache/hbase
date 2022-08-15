@@ -100,7 +100,7 @@ public class Replication implements ReplicationSourceService, PropagatingConfigu
 
     try {
       this.queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getConnection(), conf);
       this.replicationPeers = ReplicationFactory.getReplicationPeers(server.getFileSystem(),
         server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
