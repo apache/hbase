@@ -25,9 +25,11 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
-import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
+import org.apache.hadoop.hbase.replication.ReplicationQueueData;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.HbckErrorReporter;
@@ -46,16 +48,17 @@ public class ReplicationChecker {
 
   private final HbckErrorReporter errorReporter;
   // replicator with its queueIds for removed peers
-  private Map<ServerName, List<String>> undeletedQueueIds = new HashMap<>();
+  private Map<ServerName, List<ReplicationQueueId>> undeletedQueueIds = new HashMap<>();
   // replicator with its undeleted queueIds for removed peers in hfile-refs queue
   private Set<String> undeletedHFileRefsPeerIds = new HashSet<>();
 
   private final ReplicationPeerStorage peerStorage;
   private final ReplicationQueueStorage queueStorage;
 
-  public ReplicationChecker(Configuration conf, ZKWatcher zkw, HbckErrorReporter errorReporter) {
+  public ReplicationChecker(Configuration conf, ZKWatcher zkw, Connection conn,
+    HbckErrorReporter errorReporter) {
     this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zkw, conf);
-    this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
+    this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(conn, conf);
     this.errorReporter = errorReporter;
   }
 
@@ -64,19 +67,19 @@ public class ReplicationChecker {
       .contains(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE);
   }
 
-  private Map<ServerName, List<String>> getUnDeletedQueues() throws ReplicationException {
-    Map<ServerName, List<String>> undeletedQueues = new HashMap<>();
+  private Map<ServerName, List<ReplicationQueueId>> getUnDeletedQueues()
+    throws ReplicationException {
+    Map<ServerName, List<ReplicationQueueId>> undeletedQueues = new HashMap<>();
     Set<String> peerIds = new HashSet<>(peerStorage.listPeerIds());
-    for (ServerName replicator : queueStorage.getListOfReplicators()) {
-      for (String queueId : queueStorage.getAllQueues(replicator)) {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
-        if (!peerIds.contains(queueInfo.getPeerId())) {
-          undeletedQueues.computeIfAbsent(replicator, key -> new ArrayList<>()).add(queueId);
-          LOG.debug(
-            "Undeleted replication queue for removed peer found: "
-              + "[removedPeerId={}, replicator={}, queueId={}]",
-            queueInfo.getPeerId(), replicator, queueId);
-        }
+    for (ReplicationQueueData queueData : queueStorage.listAllQueues()) {
+      ReplicationQueueId queueId = queueData.getId();
+      if (!peerIds.contains(queueId.getPeerId())) {
+        undeletedQueues.computeIfAbsent(queueId.getServerName(), key -> new ArrayList<>())
+          .add(queueId);
+        LOG.debug(
+          "Undeleted replication queue for removed peer found: "
+            + "[removedPeerId={}, replicator={}, queueId={}]",
+          queueId.getPeerId(), queueId.getServerName(), queueId);
       }
     }
     return undeletedQueues;
@@ -99,9 +102,8 @@ public class ReplicationChecker {
     undeletedQueueIds = getUnDeletedQueues();
     undeletedQueueIds.forEach((replicator, queueIds) -> {
       queueIds.forEach(queueId -> {
-        ReplicationQueueInfo queueInfo = new ReplicationQueueInfo(queueId);
         String msg = "Undeleted replication queue for removed peer found: "
-          + String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueInfo.getPeerId(),
+          + String.format("[removedPeerId=%s, replicator=%s, queueId=%s]", queueId.getPeerId(),
             replicator, queueId);
         errorReporter.reportError(HbckErrorReporter.ERROR_CODE.UNDELETED_REPLICATION_QUEUE, msg);
       });
@@ -114,12 +116,12 @@ public class ReplicationChecker {
   }
 
   public void fixUnDeletedQueues() throws ReplicationException {
-    for (Map.Entry<ServerName, List<String>> replicatorAndQueueIds : undeletedQueueIds.entrySet()) {
+    for (Map.Entry<ServerName, List<ReplicationQueueId>> replicatorAndQueueIds : undeletedQueueIds
+      .entrySet()) {
       ServerName replicator = replicatorAndQueueIds.getKey();
-      for (String queueId : replicatorAndQueueIds.getValue()) {
-        queueStorage.removeQueue(replicator, queueId);
+      for (ReplicationQueueId queueId : replicatorAndQueueIds.getValue()) {
+        queueStorage.removeQueue(queueId);
       }
-      queueStorage.removeReplicatorIfQueueIsEmpty(replicator);
     }
     for (String peerId : undeletedHFileRefsPeerIds) {
       queueStorage.removePeerFromHFileRefs(peerId);
