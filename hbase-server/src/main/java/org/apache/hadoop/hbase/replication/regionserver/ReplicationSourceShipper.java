@@ -58,7 +58,7 @@ public class ReplicationSourceShipper extends Thread {
   private final Configuration conf;
   protected final String walGroupId;
   protected final ReplicationSourceLogQueue logQueue;
-  private final ReplicationSource source;
+  protected final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
   // It will be accessed by the stats thread so make it volatile
@@ -311,10 +311,6 @@ public class ReplicationSourceShipper extends Thread {
 
   void setWALReader(ReplicationSourceWALReader entryReader) {
     this.entryReader = entryReader;
-  }
-
-  long getStartPosition() {
-    return 0;
   }
 
   protected boolean isActive() {

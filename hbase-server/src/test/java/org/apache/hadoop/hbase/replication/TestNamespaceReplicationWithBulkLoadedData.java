@@ -259,8 +259,8 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     MiniZooKeeperCluster zkCluster = UTIL1.getZkCluster();
     ZKWatcher watcher = new ZKWatcher(UTIL1.getConfiguration(), "TestZnodeHFiles-refs", null);
     RecoverableZooKeeper zk = RecoverableZooKeeper.connect(UTIL1.getConfiguration(), watcher);
-    ZKReplicationQueueStorage replicationQueueStorage =
-      new ZKReplicationQueueStorage(watcher, UTIL1.getConfiguration());
+    ReplicationQueueStorage replicationQueueStorage = ReplicationStorageFactory
+      .getReplicationQueueStorage(UTIL1.getConnection(), UTIL1.getConfiguration());
     Set<String> hfiles = replicationQueueStorage.getAllHFileRefs();
     assertTrue(hfiles.isEmpty());
   }

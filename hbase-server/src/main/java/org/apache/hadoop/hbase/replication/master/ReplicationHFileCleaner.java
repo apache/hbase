@@ -19,23 +19,28 @@ package org.apache.hadoop.hbase.replication.master;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Predicate;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.MapUtils;
 
 /**
  * Implementation of a file cleaner that checks if a hfile is still scheduled for replication before
@@ -44,15 +49,20 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationHFileCleaner.class);
-  private ZKWatcher zkw;
+  private Connection conn;
+  private boolean shareConn;
   private ReplicationQueueStorage rqs;
   private boolean stopped = false;
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    // all members of this class are null if replication is disabled,
-    // so we cannot filter the files
-    if (this.getConf() == null) {
+    if (
+      !(getConf().getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
+        HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT))
+    ) {
+      LOG.warn(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is not enabled. Better to remove "
+        + ReplicationHFileCleaner.class + " from " + HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS
+        + " configuration.");
       return files;
     }
 
@@ -88,40 +98,23 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
   }
 
   @Override
-  public void setConf(Configuration config) {
-    // If either replication or replication of bulk load hfiles is disabled, keep all members null
-    if (
-      !(config.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
-        HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT))
-    ) {
-      LOG.warn(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is not enabled. Better to remove "
-        + ReplicationHFileCleaner.class + " from " + HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS
-        + " configuration.");
-      return;
-    }
-    // Make my own Configuration. Then I'll have my own connection to zk that
-    // I can close myself when time comes.
-    Configuration conf = new Configuration(config);
+  public void init(Map<String, Object> params) {
+    super.init(params);
     try {
-      setConf(conf, new ZKWatcher(conf, "replicationHFileCleaner", null));
+      if (MapUtils.isNotEmpty(params)) {
+        Object master = params.get(HMaster.MASTER);
+        if (master != null && master instanceof Server) {
+          conn = ((Server) master).getConnection();
+          shareConn = true;
+        }
+      }
+      if (conn == null) {
+        conn = ConnectionFactory.createConnection(getConf());
+      }
+      this.rqs = ReplicationStorageFactory.getReplicationQueueStorage(conn, getConf());
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     }
-  }
-
-  @InterfaceAudience.Private
-  public void setConf(Configuration conf, ZKWatcher zk) {
-    super.setConf(conf);
-    try {
-      initReplicationQueueStorage(conf, zk);
-    } catch (Exception e) {
-      LOG.error("Error while configuring " + this.getClass().getName(), e);
-    }
-  }
-
-  private void initReplicationQueueStorage(Configuration conf, ZKWatcher zk) {
-    this.zkw = zk;
-    this.rqs = ReplicationStorageFactory.getReplicationQueueStorage(zk, conf);
   }
 
   @Override
@@ -130,9 +123,9 @@ public class ReplicationHFileCleaner extends BaseHFileCleanerDelegate {
       return;
     }
     this.stopped = true;
-    if (this.zkw != null) {
-      LOG.info("Stopping " + this.zkw);
-      this.zkw.close();
+    if (!shareConn && this.conn != null) {
+      LOG.info("Stopping " + this.conn);
+      IOUtils.closeQuietly(conn);
     }
   }
 

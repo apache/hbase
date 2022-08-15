@@ -80,17 +80,18 @@ public class ReplicationSyncUp extends Configured implements Tool {
   // replication queues for the dead region servers first and then replicate the data out.
   private void claimReplicationQueues(ZKWatcher zkw, ReplicationSourceManager mgr)
     throws ReplicationException, KeeperException {
-    List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
-    Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
-    for (ServerName sn : replicators) {
-      if (!liveRegionServers.contains(sn)) {
-        List<String> replicationQueues = mgr.getQueueStorage().getAllQueues(sn);
-        System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
-        for (String queue : replicationQueues) {
-          mgr.claimQueue(sn, queue);
-        }
-      }
-    }
+    // TODO: reimplement this tool
+    // List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
+    // Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
+    // for (ServerName sn : replicators) {
+    // if (!liveRegionServers.contains(sn)) {
+    // List<String> replicationQueues = mgr.getQueueStorage().getAllQueues(sn);
+    // System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
+    // for (String queue : replicationQueues) {
+    // mgr.claimQueue(sn, queue);
+    // }
+    // }
+    // }
   }
 
   @Override
