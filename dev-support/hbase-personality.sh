@@ -588,9 +588,9 @@ function hadoopcheck_rebuild
   fi
   yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
   if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-    hbase_hadoop3_versions="3.1.4 3.2.3 3.3.2"
+    hbase_hadoop3_versions="3.2.3 3.3.4"
   else
-    hbase_hadoop3_versions="3.1.4 3.2.2 3.2.3 3.3.0 3.3.1 3.3.2"
+    hbase_hadoop3_versions="3.2.3 3.3.0 3.3.1 3.3.2 3.3.3 3.3.4"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
