@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,15 +55,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Performs coprocessor loads for various paths and malformed strings
  */
-@Category({SecurityTests.class, LargeTests.class})
+@Category({ SecurityTests.class, LargeTests.class })
 public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoprocessorWhitelistMasterObserver.class);
+    HBaseClassTestRule.forClass(TestCoprocessorWhitelistMasterObserver.class);
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
+    LoggerFactory.getLogger(TestCoprocessorWhitelistMasterObserver.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TEST_TABLE = TableName.valueOf("testTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("fam1");
@@ -87,24 +87,19 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is not whitelisted.
-   * @exception Exception should be thrown and caught
-   *         to show coprocessor is working as desired
-   * @param whitelistedPaths A String array of paths to add in
-   *         for the whitelisting configuration
-   * @param coprocessorPath A String to use as the
-   *         path for a mock coprocessor
+   * Test a table modification adding a coprocessor path which is not whitelisted.
+   * @exception Exception should be thrown and caught to show coprocessor is working as desired
+   * @param whitelistedPaths A String array of paths to add in for the whitelisting configuration
+   * @param coprocessorPath  A String to use as the path for a mock coprocessor
    */
-  private static void positiveTestCase(String[] whitelistedPaths,
-      String coprocessorPath) throws Exception {
+  private static void positiveTestCase(String[] whitelistedPaths, String coprocessorPath)
+    throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        CoprocessorWhitelistMasterObserver.class.getName());
-    conf.setStrings(
-        CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
-        whitelistedPaths);
+      CoprocessorWhitelistMasterObserver.class.getName());
+    conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
+      whitelistedPaths);
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
@@ -129,26 +124,22 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. The coprocessor should be added to
-   * the table descriptor successfully.
-   * @param whitelistedPaths A String array of paths to add in
-   *         for the whitelisting configuration
-   * @param coprocessorPath A String to use as the
-   *         path for a mock coprocessor
+   * Test a table modification adding a coprocessor path which is whitelisted. The coprocessor
+   * should be added to the table descriptor successfully.
+   * @param whitelistedPaths A String array of paths to add in for the whitelisting configuration
+   * @param coprocessorPath  A String to use as the path for a mock coprocessor
    */
-  private static void negativeTestCase(String[] whitelistedPaths,
-      String coprocessorPath) throws Exception {
+  private static void negativeTestCase(String[] whitelistedPaths, String coprocessorPath)
+    throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt("hbase.client.retries.number", 5);
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        CoprocessorWhitelistMasterObserver.class.getName());
+      CoprocessorWhitelistMasterObserver.class.getName());
     // set retries low to raise exception quickly
     // set a coprocessor whitelist path for test
-    conf.setStrings(
-        CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
-        whitelistedPaths);
+    conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
+      whitelistedPaths);
     UTIL.startMiniCluster();
     UTIL.createTable(TEST_TABLE, new byte[][] { TEST_FAMILY });
     UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
@@ -170,102 +161,91 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is not whitelisted.
-   * @exception Exception should be thrown and caught
-   *         to show coprocessor is working as desired
+   * Test a table modification adding a coprocessor path which is not whitelisted.
+   * @exception Exception should be thrown and caught to show coprocessor is working as desired
    */
   @Test
   public void testSubstringNonWhitelisted() throws Exception {
-    positiveTestCase(new String[]{"/permitted/*"},
-        "file:///notpermitted/couldnotpossiblyexist.jar");
+    positiveTestCase(new String[] { "/permitted/*" },
+      "file:///notpermitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table creation including a coprocessor path
-   * which is not whitelisted. Coprocessor should be added to
-   * table descriptor. Table is disabled to avoid an IOException due
-   * to the added coprocessor not actually existing on disk.
+   * Test a table creation including a coprocessor path which is not whitelisted. Coprocessor should
+   * be added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testDifferentFileSystemNonWhitelisted() throws Exception {
-    positiveTestCase(new String[]{"hdfs://foo/bar"},
-        "file:///notpermitted/couldnotpossiblyexist.jar");
+    positiveTestCase(new String[] { "hdfs://foo/bar" },
+      "file:///notpermitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. Coprocessor should be added to table
-   * descriptor. Table is disabled to avoid an IOException due to
-   * the added coprocessor not actually existing on disk.
+   * Test a table modification adding a coprocessor path which is whitelisted. Coprocessor should be
+   * added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testSchemeAndDirectorywhitelisted() throws Exception {
-    negativeTestCase(new String[]{"/tmp","file:///permitted/*"},
-        "file:///permitted/couldnotpossiblyexist.jar");
+    negativeTestCase(new String[] { "/tmp", "file:///permitted/*" },
+      "file:///permitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. Coprocessor should be added to table
-   * descriptor. Table is disabled to avoid an IOException due to
-   * the added coprocessor not actually existing on disk.
+   * Test a table modification adding a coprocessor path which is whitelisted. Coprocessor should be
+   * added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testSchemeWhitelisted() throws Exception {
-    negativeTestCase(new String[]{"file:///"},
-        "file:///permitted/couldnotpossiblyexist.jar");
+    negativeTestCase(new String[] { "file:///" }, "file:///permitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. Coprocessor should be added to table
-   * descriptor. Table is disabled to avoid an IOException due to
-   * the added coprocessor not actually existing on disk.
+   * Test a table modification adding a coprocessor path which is whitelisted. Coprocessor should be
+   * added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testDFSNameWhitelistedWorks() throws Exception {
-    negativeTestCase(new String[]{"hdfs://Your-FileSystem"},
-        "hdfs://Your-FileSystem/permitted/couldnotpossiblyexist.jar");
+    negativeTestCase(new String[] { "hdfs://Your-FileSystem" },
+      "hdfs://Your-FileSystem/permitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. Coprocessor should be added to table
-   * descriptor. Table is disabled to avoid an IOException due to
-   * the added coprocessor not actually existing on disk.
+   * Test a table modification adding a coprocessor path which is whitelisted. Coprocessor should be
+   * added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testDFSNameNotWhitelistedFails() throws Exception {
-    positiveTestCase(new String[]{"hdfs://Your-FileSystem"},
-        "hdfs://My-FileSystem/permitted/couldnotpossiblyexist.jar");
+    positiveTestCase(new String[] { "hdfs://Your-FileSystem" },
+      "hdfs://My-FileSystem/permitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table modification adding a coprocessor path
-   * which is whitelisted. Coprocessor should be added to table
-   * descriptor. Table is disabled to avoid an IOException due to
-   * the added coprocessor not actually existing on disk.
+   * Test a table modification adding a coprocessor path which is whitelisted. Coprocessor should be
+   * added to table descriptor. Table is disabled to avoid an IOException due to the added
+   * coprocessor not actually existing on disk.
    */
   @Test
   public void testBlanketWhitelist() throws Exception {
-    negativeTestCase(new String[]{"*"},
-        "hdfs:///permitted/couldnotpossiblyexist.jar");
+    negativeTestCase(new String[] { "*" }, "hdfs:///permitted/couldnotpossiblyexist.jar");
   }
 
   /**
-   * Test a table creation including a coprocessor path
-   * which is not whitelisted. Table will not be created due to the
-   * offending coprocessor.
+   * Test a table creation including a coprocessor path which is not whitelisted. Table will not be
+   * created due to the offending coprocessor.
    */
   @Test
   public void testCreationNonWhitelistedCoprocessorPath() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        CoprocessorWhitelistMasterObserver.class.getName());
+      CoprocessorWhitelistMasterObserver.class.getName());
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
-        new String[]{});
+      new String[] {});
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();
@@ -300,18 +280,17 @@ public class TestCoprocessorWhitelistMasterObserver extends SecureTestUtil {
   }
 
   /**
-   * Test a table creation including a coprocessor path
-   * which is on the classpath. Table will be created with the
-   * coprocessor.
+   * Test a table creation including a coprocessor path which is on the classpath. Table will be
+   * created with the coprocessor.
    */
   @Test
   public void testCreationClasspathCoprocessor() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // load coprocessor under test
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        CoprocessorWhitelistMasterObserver.class.getName());
+      CoprocessorWhitelistMasterObserver.class.getName());
     conf.setStrings(CoprocessorWhitelistMasterObserver.CP_COPROCESSOR_WHITELIST_PATHS_KEY,
-        new String[]{});
+      new String[] {});
     // set retries low to raise exception quickly
     conf.setInt("hbase.client.retries.number", 5);
     UTIL.startMiniCluster();

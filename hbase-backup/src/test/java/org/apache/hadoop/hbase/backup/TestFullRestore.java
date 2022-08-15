@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,13 +42,12 @@ public class TestFullRestore extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFullRestore.class);
+    HBaseClassTestRule.forClass(TestFullRestore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullRestore.class);
 
   /**
    * Verify that a single table is restored to a new table.
-   *
    * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
@@ -64,8 +63,8 @@ public class TestFullRestore extends TestBackupBase {
     TableName[] tableset = new TableName[] { table1 };
     TableName[] tablemap = new TableName[] { table1_restore };
     BackupAdmin client = getBackupAdmin();
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
-      tableset, tablemap, false));
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset,
+      tablemap, false));
     Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
@@ -81,9 +80,8 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, "-t", table1.getNameAsString(), "-m",
-            table1_restore.getNameAsString() };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId, "-t", table1.getNameAsString(), "-m",
+      table1_restore.getNameAsString() };
     // Run backup
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
@@ -103,20 +101,18 @@ public class TestFullRestore extends TestBackupBase {
     LOG.info("backup complete");
     assertTrue(checkSucceeded(backupId));
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, "-t", table1.getNameAsString(), "-m",
-            table1_restore.getNameAsString(), "-c" };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId, "-t", table1.getNameAsString(), "-m",
+      table1_restore.getNameAsString(), "-c" };
     // Run backup
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret == 0);
-    //Verify that table has not been restored
+    // Verify that table has not been restored
     Admin hba = TEST_UTIL.getAdmin();
     assertFalse(hba.tableExists(table1_restore));
   }
 
   /**
    * Verify that multiple tables are restored to new tables.
-   *
    * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
@@ -141,7 +137,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables.
-   *
    * @throws Exception if doing the backup, restoring it or an operation on the tables fails
    */
   @Test
@@ -155,9 +150,8 @@ public class TestFullRestore extends TestBackupBase {
     TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
 
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, "-t", StringUtils.join(restore_tableset, ","),
-          "-m", StringUtils.join(tablemap, ",") };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId, "-t",
+      StringUtils.join(restore_tableset, ","), "-m", StringUtils.join(tablemap, ",") };
     // Run backup
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
@@ -172,7 +166,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that a single table is restored using overwrite.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test
@@ -186,13 +179,12 @@ public class TestFullRestore extends TestBackupBase {
 
     TableName[] tableset = new TableName[] { table1 };
     BackupAdmin client = getBackupAdmin();
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
-      tableset, null, true));
+    client.restore(
+      BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset, null, true));
   }
 
   /**
    * Verify that a single table is restored using overwrite.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -205,7 +197,7 @@ public class TestFullRestore extends TestBackupBase {
     TableName[] tableset = new TableName[] { table1 };
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
     String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, "-t", StringUtils.join(tableset, ","), "-o" };
+      new String[] { BACKUP_ROOT_DIR, backupId, "-t", StringUtils.join(tableset, ","), "-o" };
     // Run restore
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret == 0);
@@ -217,7 +209,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables using overwrite.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test
@@ -236,7 +227,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that multiple tables are restored to new tables using overwrite.
-   *
    * @throws Exception if doing the backup or an operation on the tables fails
    */
   @Test
@@ -249,9 +239,8 @@ public class TestFullRestore extends TestBackupBase {
 
     TableName[] restore_tableset = new TableName[] { table2, table3 };
     // restore <backup_root_path> <backup_id> <tables> [tableMapping]
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, "-t",
-        StringUtils.join(restore_tableset, ","), "-o" };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId, "-t",
+      StringUtils.join(restore_tableset, ","), "-o" };
     // Run backup
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
 
@@ -264,7 +253,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on a single table that does not exist.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test(expected = IOException.class)
@@ -279,13 +267,12 @@ public class TestFullRestore extends TestBackupBase {
     TableName[] tableset = new TableName[] { TableName.valueOf("faketable") };
     TableName[] tablemap = new TableName[] { table1_restore };
     BackupAdmin client = getBackupAdmin();
-    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
-      tableset, tablemap, false));
+    client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tableset,
+      tablemap, false));
   }
 
   /**
    * Verify that restore fails on a single table that does not exist.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test
@@ -299,9 +286,8 @@ public class TestFullRestore extends TestBackupBase {
 
     TableName[] tableset = new TableName[] { TableName.valueOf("faketable") };
     TableName[] tablemap = new TableName[] { table1_restore };
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, StringUtils.join(tableset, ","), "-m",
-            StringUtils.join(tablemap, ",") };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId, StringUtils.join(tableset, ","), "-m",
+      StringUtils.join(tablemap, ",") };
     // Run restore
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret != 0);
@@ -309,7 +295,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on multiple tables that do not exist.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test(expected = IOException.class)
@@ -321,7 +306,7 @@ public class TestFullRestore extends TestBackupBase {
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset =
-        new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
+      new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
     TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
     BackupAdmin client = getBackupAdmin();
     client.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
@@ -330,7 +315,6 @@ public class TestFullRestore extends TestBackupBase {
 
   /**
    * Verify that restore fails on multiple tables that do not exist.
-   *
    * @throws Exception if doing the backup or restoring it fails
    */
   @Test
@@ -342,11 +326,10 @@ public class TestFullRestore extends TestBackupBase {
     assertTrue(checkSucceeded(backupId));
 
     TableName[] restore_tableset =
-        new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
+      new TableName[] { TableName.valueOf("faketable1"), TableName.valueOf("faketable2") };
     TableName[] tablemap = new TableName[] { table2_restore, table3_restore };
-    String[] args =
-        new String[] { BACKUP_ROOT_DIR, backupId, StringUtils.join(restore_tableset, ","), "-m",
-            StringUtils.join(tablemap, ",") };
+    String[] args = new String[] { BACKUP_ROOT_DIR, backupId,
+      StringUtils.join(restore_tableset, ","), "-m", StringUtils.join(tablemap, ",") };
     // Run restore
     int ret = ToolRunner.run(conf1, new RestoreDriver(), args);
     assertTrue(ret != 0);

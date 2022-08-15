@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -36,8 +34,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType;
 
 /**
- * This is a generic filter to be used to filter by comparison.  It takes an
- * operator (equal, greater, not equal, etc) and a byte [] comparator.
+ * This is a generic filter to be used to filter by comparison. It takes an operator (equal,
+ * greater, not equal, etc) and a byte [] comparator.
  * <p>
  * To filter by row key, use {@link RowFilter}.
  * <p>
@@ -47,8 +45,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.CompareType
  * <p>
  * To filter by value, use {@link ValueFilter}.
  * <p>
- * These filters can be wrapped with {@link SkipFilter} and {@link WhileMatchFilter}
- * to add more control.
+ * These filters can be wrapped with {@link SkipFilter} and {@link WhileMatchFilter} to add more
+ * control.
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  */
@@ -59,11 +57,10 @@ public abstract class CompareFilter extends FilterBase {
 
   /**
    * Constructor.
-   * @param op the compare op for row matching
+   * @param op         the compare op for row matching
    * @param comparator the comparator for row matching
    */
-  public CompareFilter(final CompareOperator op,
-                       final ByteArrayComparable comparator) {
+  public CompareFilter(final CompareOperator op, final ByteArrayComparable comparator) {
     this.op = op;
     this.comparator = comparator;
   }
@@ -72,9 +69,7 @@ public abstract class CompareFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
@@ -86,7 +81,7 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareRow(final CompareOperator op, final ByteArrayComparable comparator,
-                               final Cell cell) {
+    final Cell cell) {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
@@ -95,7 +90,7 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareFamily(final CompareOperator op, final ByteArrayComparable comparator,
-                                  final Cell cell) {
+    final Cell cell) {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
@@ -103,8 +98,8 @@ public abstract class CompareFilter extends FilterBase {
     return compare(op, compareResult);
   }
 
-  protected boolean compareQualifier(final CompareOperator op,
-                                     final ByteArrayComparable comparator, final Cell cell) {
+  protected boolean compareQualifier(final CompareOperator op, final ByteArrayComparable comparator,
+    final Cell cell) {
     // We do not call through to the non-deprecated method for perf reasons.
     if (op == CompareOperator.NO_OP) {
       return true;
@@ -114,7 +109,7 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareValue(final CompareOperator op, final ByteArrayComparable comparator,
-                                 final Cell cell) {
+    final Cell cell) {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
@@ -141,20 +136,18 @@ public abstract class CompareFilter extends FilterBase {
     }
   }
 
-  // returns an array of heterogeneous objects
-  public static ArrayList<Object> extractArguments(ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 2,
-                                "Expected 2 but got: %s", filterArguments.size());
+  /** Returns an array of heterogeneous objects */
+  public static ArrayList<Object> extractArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 2, "Expected 2 but got: %s",
+      filterArguments.size());
     CompareOperator op = ParseFilter.createCompareOperator(filterArguments.get(0));
-    ByteArrayComparable comparator = ParseFilter.createComparator(
-      ParseFilter.removeQuotesFromByteArray(filterArguments.get(1)));
+    ByteArrayComparable comparator =
+      ParseFilter.createComparator(ParseFilter.removeQuotesFromByteArray(filterArguments.get(1)));
 
-    if (comparator instanceof RegexStringComparator ||
-        comparator instanceof SubstringComparator) {
-      if (op != CompareOperator.EQUAL &&
-          op != CompareOperator.NOT_EQUAL) {
-        throw new IllegalArgumentException ("A regexstring comparator and substring comparator" +
-                                            " can only be used with EQUAL and NOT_EQUAL");
+    if (comparator instanceof RegexStringComparator || comparator instanceof SubstringComparator) {
+      if (op != CompareOperator.EQUAL && op != CompareOperator.NOT_EQUAL) {
+        throw new IllegalArgumentException("A regexstring comparator and substring comparator"
+          + " can only be used with EQUAL and NOT_EQUAL");
       }
     }
     ArrayList<Object> arguments = new ArrayList<>(2);
@@ -163,12 +156,9 @@ public abstract class CompareFilter extends FilterBase {
     return arguments;
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.CompareFilter convert() {
-    FilterProtos.CompareFilter.Builder builder =
-      FilterProtos.CompareFilter.newBuilder();
+    FilterProtos.CompareFilter.Builder builder = FilterProtos.CompareFilter.newBuilder();
     HBaseProtos.CompareType compareOp = CompareType.valueOf(this.op.name());
     builder.setCompareOp(compareOp);
     if (this.comparator != null) builder.setComparator(ProtobufUtil.toComparator(this.comparator));
@@ -176,27 +166,27 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   /**
-   *
-   * @param o
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof CompareFilter)) return false;
-    CompareFilter other = (CompareFilter)o;
-    return this.getCompareOperator().equals(other.getCompareOperator()) &&
-      (this.getComparator() == other.getComparator()
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof CompareFilter)) {
+      return false;
+    }
+    CompareFilter other = (CompareFilter) o;
+    return this.getCompareOperator().equals(other.getCompareOperator())
+      && (this.getComparator() == other.getComparator()
         || this.getComparator().areSerializedFieldsEqual(other.getComparator()));
   }
 
   @Override
   public String toString() {
-    return String.format("%s (%s, %s)",
-        this.getClass().getSimpleName(),
-        this.op.name(),
-        Bytes.toStringBinary(this.comparator.getValue()));
+    return String.format("%s (%s, %s)", this.getClass().getSimpleName(), this.op.name(),
+      Bytes.toStringBinary(this.comparator.getValue()));
   }
 
   @Override

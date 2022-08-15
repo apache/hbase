@@ -35,10 +35,8 @@ public final class RegionNormalizerFactory {
   private RegionNormalizerFactory() {
   }
 
-  public static RegionNormalizerManager createNormalizerManager(
-    final Configuration conf,
-    final ZKWatcher zkWatcher,
-    final HMaster master // TODO: consolidate this down to MasterServices
+  public static RegionNormalizerManager createNormalizerManager(final Configuration conf,
+    final ZKWatcher zkWatcher, final HMaster master // TODO: consolidate this down to MasterServices
   ) {
     final RegionNormalizer regionNormalizer = getRegionNormalizer(conf);
     regionNormalizer.setMasterServices(master);

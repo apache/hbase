@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,35 +27,57 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Longs;
 
 /**
- * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table
- * {@link KeyValue}s.
+ * A {@link CellComparatorImpl} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MetaCellComparator extends CellComparatorImpl {
 
   /**
-   * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table
-   * {@link KeyValue}s.
+   * A {@link MetaCellComparator} for <code>hbase:meta</code> catalog table {@link KeyValue}s.
    */
   public static final MetaCellComparator META_COMPARATOR = new MetaCellComparator();
 
-  // TODO: Do we need a ByteBufferKeyValue version of this?
   @Override
   public int compareRows(final Cell left, final Cell right) {
-    return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
-      right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return compareBBRows(bbLeft.getRowByteBuffer(), bbLeft.getRowPosition(),
+          left.getRowLength(), bbRight.getRowByteBuffer(), bbRight.getRowPosition(),
+          right.getRowLength());
+      } else {
+        return compareBBAndBytesRows(bbLeft.getRowByteBuffer(), bbLeft.getRowPosition(),
+          left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      }
+    } else {
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return -compareBBAndBytesRows(bbRight.getRowByteBuffer(), bbRight.getRowPosition(),
+          right.getRowLength(), left.getRowArray(), left.getRowOffset(), left.getRowLength());
+      } else {
+        return compareBytesRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+          right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      }
+    }
   }
 
   @Override
   public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
-    return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right, roffset,
-      rlength);
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+      return compareBBAndBytesRows(bbLeft.getRowByteBuffer(), bbLeft.getRowPosition(),
+        left.getRowLength(), right, roffset, rlength);
+    } else {
+      return compareBytesRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
+        roffset, rlength);
+    }
   }
 
   @Override
   public int compareRows(byte[] leftRow, byte[] rightRow) {
-    return compareRows(leftRow, 0, leftRow.length, rightRow, 0, rightRow.length);
+    return compareBytesRows(leftRow, 0, leftRow.length, rightRow, 0, rightRow.length);
   }
 
   @Override
@@ -76,14 +96,31 @@ public class MetaCellComparator extends CellComparatorImpl {
     return ignoreSequenceid ? diff : Longs.compare(b.getSequenceId(), a.getSequenceId());
   }
 
-  private static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
-      int rlength) {
-    int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
-    int rightDelimiter = Bytes.searchDelimiterIndex(right, roffset, rlength, HConstants.DELIMITER);
+  @FunctionalInterface
+  private interface SearchDelimiter<T> {
+    int search(T t, int offset, int length, int delimiter);
+  }
+
+  @FunctionalInterface
+  private interface SearchDelimiterInReverse<T> {
+    int search(T t, int offset, int length, int delimiter);
+  }
+
+  @FunctionalInterface
+  private interface Compare<L, R> {
+    int compareTo(L left, int loffset, int llength, R right, int roffset, int rlength);
+  }
+
+  private static <L, R> int compareRows(L left, int loffset, int llength, R right, int roffset,
+    int rlength, SearchDelimiter<L> searchLeft, SearchDelimiter<R> searchRight,
+    SearchDelimiterInReverse<L> searchInReverseLeft,
+    SearchDelimiterInReverse<R> searchInReverseRight, Compare<L, R> comparator) {
+    int leftDelimiter = searchLeft.search(left, loffset, llength, HConstants.DELIMITER);
+    int rightDelimiter = searchRight.search(right, roffset, rlength, HConstants.DELIMITER);
     // Compare up to the delimiter
     int lpart = (leftDelimiter < 0 ? llength : leftDelimiter - loffset);
     int rpart = (rightDelimiter < 0 ? rlength : rightDelimiter - roffset);
-    int result = Bytes.compareTo(left, loffset, lpart, right, roffset, rpart);
+    int result = comparator.compareTo(left, loffset, lpart, right, roffset, rpart);
     if (result != 0) {
       return result;
     } else {
@@ -99,16 +136,14 @@ public class MetaCellComparator extends CellComparatorImpl {
     // Move past delimiter
     leftDelimiter++;
     rightDelimiter++;
-    int leftFarDelimiter = Bytes
-      .searchDelimiterIndexInReverse(left, leftDelimiter, llength - (leftDelimiter - loffset),
-        HConstants.DELIMITER);
-    int rightFarDelimiter = Bytes
-      .searchDelimiterIndexInReverse(right, rightDelimiter, rlength - (rightDelimiter - roffset),
-        HConstants.DELIMITER);
+    int leftFarDelimiter = searchInReverseLeft.search(left, leftDelimiter,
+      llength - (leftDelimiter - loffset), HConstants.DELIMITER);
+    int rightFarDelimiter = searchInReverseRight.search(right, rightDelimiter,
+      rlength - (rightDelimiter - roffset), HConstants.DELIMITER);
     // Now compare middlesection of row.
     lpart = (leftFarDelimiter < 0 ? llength + loffset : leftFarDelimiter) - leftDelimiter;
     rpart = (rightFarDelimiter < 0 ? rlength + roffset : rightFarDelimiter) - rightDelimiter;
-    result = Bytes.compareTo(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
+    result = comparator.compareTo(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
     if (result != 0) {
       return result;
     } else {
@@ -123,28 +158,56 @@ public class MetaCellComparator extends CellComparatorImpl {
     // Compare last part of row, the rowid.
     leftFarDelimiter++;
     rightFarDelimiter++;
-    result = Bytes.compareTo(left, leftFarDelimiter, llength - (leftFarDelimiter - loffset), right,
-      rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+    result = comparator.compareTo(left, leftFarDelimiter, llength - (leftFarDelimiter - loffset),
+      right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
     return result;
+  }
+
+  private static int compareBBRows(ByteBuffer left, int loffset, int llength, ByteBuffer right,
+    int roffset, int rlength) {
+    if (left.hasArray()) {
+      return -compareBBAndBytesRows(right, roffset, rlength, left.array(),
+        left.arrayOffset() + loffset, llength);
+    }
+    if (right.hasArray()) {
+      return compareBBAndBytesRows(left, loffset, llength, right.array(),
+        right.arrayOffset() + roffset, rlength);
+    }
+    return compareRows(left, loffset, llength, right, roffset, rlength,
+      ByteBufferUtils::searchDelimiterIndex, ByteBufferUtils::searchDelimiterIndex,
+      ByteBufferUtils::searchDelimiterIndexInReverse,
+      ByteBufferUtils::searchDelimiterIndexInReverse, ByteBufferUtils::compareTo);
+  }
+
+  private static int compareBBAndBytesRows(ByteBuffer left, int loffset, int llength, byte[] right,
+    int roffset, int rlength) {
+    if (left.hasArray()) {
+      return compareBytesRows(left.array(), left.arrayOffset() + loffset, llength, right, roffset,
+        rlength);
+    }
+    return compareRows(left, loffset, llength, right, roffset, rlength,
+      ByteBufferUtils::searchDelimiterIndex, Bytes::searchDelimiterIndex,
+      ByteBufferUtils::searchDelimiterIndexInReverse, Bytes::searchDelimiterIndexInReverse,
+      ByteBufferUtils::compareTo);
+  }
+
+  private static int compareBytesRows(byte[] left, int loffset, int llength, byte[] right,
+    int roffset, int rlength) {
+    return compareRows(left, loffset, llength, right, roffset, rlength, Bytes::searchDelimiterIndex,
+      Bytes::searchDelimiterIndex, Bytes::searchDelimiterIndexInReverse,
+      Bytes::searchDelimiterIndexInReverse, Bytes::compareTo);
   }
 
   @Override
   public int compareRows(ByteBuffer row, Cell cell) {
-    byte[] array;
-    int offset;
-    int len = row.remaining();
-    if (row.hasArray()) {
-      array = row.array();
-      offset = row.position() + row.arrayOffset();
+    if (cell instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) cell;
+      return compareBBRows(row, row.position(), row.remaining(), bbCell.getRowByteBuffer(),
+        bbCell.getRowPosition(), cell.getRowLength());
     } else {
-      // We copy the row array if offheap just so we can do a compare. We do this elsewhere too
-      // in BBUtils when Cell is backed by an offheap ByteBuffer. Needs fixing so no copy. TODO.
-      array = new byte[len];
-      offset = 0;
-      ByteBufferUtils.copyFromBufferToArray(array, row, row.position(), 0, len);
+      return compareBBAndBytesRows(row, row.position(), row.remaining(), cell.getRowArray(),
+        cell.getRowOffset(), cell.getRowLength());
     }
-    // Reverse result since we swap the order of the params we pass below.
-    return -compareRows(cell, array, offset, len);
   }
 
   @Override

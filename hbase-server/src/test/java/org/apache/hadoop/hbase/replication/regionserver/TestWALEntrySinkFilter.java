@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -56,7 +57,9 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
@@ -98,19 +101,18 @@ public class TestWALEntrySinkFilter {
    * Test filter. Filter will filter out any write time that is <= 5 (BOUNDARY). We count how many
    * items we filter out and we count how many cells make it through for distribution way down below
    * in the Table#batch implementation. Puts in place a custom DevNullConnection so we can insert
-   * our counting Table.
-   * @throws IOException
+   * our counting Table. n
    */
   @Test
   public void testWALEntryFilter() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
     conf.setClass(DummyConnectionRegistry.REGISTRY_IMPL_CONF_KEY, DevNullConnectionRegistry.class,
-        DummyConnectionRegistry.class);
+      DummyConnectionRegistry.class);
     conf.setClass(WALEntrySinkFilter.WAL_ENTRY_FILTER_KEY,
-        IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
+      IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass(ClusterConnectionFactory.HBASE_SERVER_CLUSTER_CONNECTION_IMPL,
-        DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
+      DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
     ReplicationSink sink = new ReplicationSink(conf);
     // Create some dumb walentries.
     List<AdminProtos.WALEntry> entries = new ArrayList<>();
@@ -168,7 +170,7 @@ public class TestWALEntrySinkFilter {
    * Simple filter that will filter out any entry wholse writeTime is <= 5.
    */
   public static class IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl
-      implements WALEntrySinkFilter {
+    implements WALEntrySinkFilter {
     public IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl() {
     }
 
@@ -203,7 +205,7 @@ public class TestWALEntrySinkFilter {
     private final Configuration conf;
 
     public DevNullAsyncClusterConnection(Configuration conf, Object registry, String clusterId,
-        SocketAddress localAddress, User user) {
+      SocketAddress localAddress, User user) {
       this.conf = conf;
     }
 

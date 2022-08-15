@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -32,52 +30,44 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Single row result of a {@link Get} or {@link Scan} query.<p>
- *
- * This class is <b>NOT THREAD SAFE</b>.<p>
- *
- * Convenience methods are available that return various {@link Map}
- * structures and values directly.<p>
- *
- * To get a complete mapping of all cells in the Result, which can include
- * multiple families and multiple versions, use {@link #getMap()}.<p>
- *
- * To get a mapping of each family to its columns (qualifiers and values),
- * including only the latest version of each, use {@link #getNoVersionMap()}.
- *
- * To get a mapping of qualifiers to latest values for an individual family use
- * {@link #getFamilyMap(byte[])}.<p>
- *
+ * Single row result of a {@link Get} or {@link Scan} query.
+ * <p>
+ * This class is <b>NOT THREAD SAFE</b>.
+ * <p>
+ * Convenience methods are available that return various {@link Map} structures and values directly.
+ * <p>
+ * To get a complete mapping of all cells in the Result, which can include multiple families and
+ * multiple versions, use {@link #getMap()}.
+ * <p>
+ * To get a mapping of each family to its columns (qualifiers and values), including only the latest
+ * version of each, use {@link #getNoVersionMap()}. To get a mapping of qualifiers to latest values
+ * for an individual family use {@link #getFamilyMap(byte[])}.
+ * <p>
  * To get the latest value for a specific family and qualifier use
- * {@link #getValue(byte[], byte[])}.
- *
- * A Result is backed by an array of {@link Cell} objects, each representing
- * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
- *
- * The underlying {@link Cell} objects can be accessed through the method {@link #listCells()}.
- * This will create a List from the internal Cell []. Better is to exploit the fact that
- * a new Result instance is a primed {@link CellScanner}; just call {@link #advance()} and
- * {@link #current()} to iterate over Cells as you would any {@link CellScanner}.
- * Call {@link #cellScanner()} to reset should you need to iterate the same Result over again
- * ({@link CellScanner}s are one-shot).
- *
- * If you need to overwrite a Result with another Result instance -- as in the old 'mapred'
- * RecordReader next invocations -- then create an empty Result with the null constructor and
- * in then use {@link #copyFrom(Result)}
+ * {@link #getValue(byte[], byte[])}. A Result is backed by an array of {@link Cell} objects, each
+ * representing an HBase cell defined by the row, family, qualifier, timestamp, and value.
+ * <p>
+ * The underlying {@link Cell} objects can be accessed through the method {@link #listCells()}. This
+ * will create a List from the internal Cell []. Better is to exploit the fact that a new Result
+ * instance is a primed {@link CellScanner}; just call {@link #advance()} and {@link #current()} to
+ * iterate over Cells as you would any {@link CellScanner}. Call {@link #cellScanner()} to reset
+ * should you need to iterate the same Result over again ({@link CellScanner}s are one-shot). If you
+ * need to overwrite a Result with another Result instance -- as in the old 'mapred' RecordReader
+ * next invocations -- then create an empty Result with the null constructor and in then use
+ * {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
 public class Result implements CellScannable, CellScanner {
@@ -89,12 +79,12 @@ public class Result implements CellScannable, CellScanner {
    * See {@link #mayHaveMoreCellsInRow()}.
    */
   private boolean mayHaveMoreCellsInRow = false;
-  // We're not using java serialization.  Transient here is just a marker to say
+  // We're not using java serialization. Transient here is just a marker to say
   // that this is where we cache row if we're ever asked for it.
-  private transient byte [] row = null;
-  // Ditto for familyMap.  It can be composed on fly from passed in kvs.
-  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-      familyMap = null;
+  private transient byte[] row = null;
+  // Ditto for familyMap. It can be composed on fly from passed in kvs.
+  private transient NavigableMap<byte[],
+    NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
 
   private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<>();
   private static final int PAD_WIDTH = 128;
@@ -114,8 +104,8 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
-   * Use this to represent no results if {@code null} won't do or in old 'mapred' as opposed
-   * to 'mapreduce' package MapReduce where you need to overwrite a Result instance with a
+   * Use this to represent no results if {@code null} won't do or in old 'mapred' as opposed to
+   * 'mapreduce' package MapReduce where you need to overwrite a Result instance with a
    * {@link #copyFrom(Result)} call.
    */
   public Result() {
@@ -123,8 +113,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Allows to construct special purpose immutable Result objects,
-   * such as EMPTY_RESULT.
+   * Allows to construct special purpose immutable Result objects, such as EMPTY_RESULT.
    * @param readonly whether this Result instance is readonly
    */
   private Result(boolean readonly) {
@@ -132,8 +121,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Instantiate a Result with the specified List of KeyValues.
-   * <br><strong>Note:</strong> You must ensure that the keyvalues are already sorted.
+   * Instantiate a Result with the specified List of KeyValues. <br>
+   * <strong>Note:</strong> You must ensure that the keyvalues are already sorted.
    * @param cells List of cells
    */
   public static Result create(List<Cell> cells) {
@@ -149,16 +138,16 @@ public class Result implements CellScannable, CellScanner {
   }
 
   public static Result create(List<Cell> cells, Boolean exists, boolean stale,
-      boolean mayHaveMoreCellsInRow) {
-    if (exists != null){
+    boolean mayHaveMoreCellsInRow) {
+    if (exists != null) {
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
     return new Result(cells.toArray(new Cell[cells.size()]), null, stale, mayHaveMoreCellsInRow);
   }
 
   /**
-   * Instantiate a Result with the specified array of KeyValues.
-   * <br><strong>Note:</strong> You must ensure that the keyvalues are already sorted.
+   * Instantiate a Result with the specified array of KeyValues. <br>
+   * <strong>Note:</strong> You must ensure that the keyvalues are already sorted.
    * @param cells array of cells
    */
   public static Result create(Cell[] cells) {
@@ -170,7 +159,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   public static Result create(Cell[] cells, Boolean exists, boolean stale,
-      boolean mayHaveMoreCellsInRow) {
+    boolean mayHaveMoreCellsInRow) {
     if (exists != null) {
       return new Result(null, exists, stale, mayHaveMoreCellsInRow);
     }
@@ -196,37 +185,27 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Method for retrieving the row key that corresponds to
-   * the row from which this Result was created.
-   * @return row
+   * Method for retrieving the row key that corresponds to the row from which this Result was
+   * created. n
    */
-  public byte [] getRow() {
+  public byte[] getRow() {
     if (this.row == null) {
-      this.row = (this.cells == null || this.cells.length == 0) ?
-          null :
-          CellUtil.cloneRow(this.cells[0]);
+      this.row =
+        (this.cells == null || this.cells.length == 0) ? null : CellUtil.cloneRow(this.cells[0]);
     }
     return this.row;
   }
 
   /**
-   * Return the array of Cells backing this Result instance.
-   *
-   * The array is sorted from smallest -&gt; largest using the
-   * {@link CellComparator}.
-   *
-   * The array only contains what your Get or Scan specifies and no more.
-   * For example if you request column "A" 1 version you will have at most 1
-   * Cell in the array. If you request column "A" with 2 version you will
-   * have at most 2 Cells, with the first one being the newer timestamp and
-   * the second being the older timestamp (this is the sort order defined by
-   * {@link CellComparator}).  If columns don't exist, they won't be
-   * present in the result. Therefore if you ask for 1 version all columns,
-   * it is safe to iterate over this array and expect to see 1 Cell for
-   * each column and no more.
-   *
-   * This API is faster than using getFamilyMap() and getMap()
-   *
+   * Return the array of Cells backing this Result instance. The array is sorted from smallest -&gt;
+   * largest using the {@link CellComparator}. The array only contains what your Get or Scan
+   * specifies and no more. For example if you request column "A" 1 version you will have at most 1
+   * Cell in the array. If you request column "A" with 2 version you will have at most 2 Cells, with
+   * the first one being the newer timestamp and the second being the older timestamp (this is the
+   * sort order defined by {@link CellComparator}). If columns don't exist, they won't be present in
+   * the result. Therefore if you ask for 1 version all columns, it is safe to iterate over this
+   * array and expect to see 1 Cell for each column and no more. This API is faster than using
+   * getFamilyMap() and getMap()
    * @return array of Cells; can be null if nothing in the result
    */
   public Cell[] rawCells() {
@@ -234,35 +213,27 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Create a sorted list of the Cell's in this result.
-   *
-   * Since HBase 0.20.5 this is equivalent to raw().
-   *
+   * Create a sorted list of the Cell's in this result. Since HBase 0.20.5 this is equivalent to
+   * raw().
    * @return sorted List of Cells; can be null if no cells in the result
    */
   public List<Cell> listCells() {
-    return isEmpty()? null: Arrays.asList(rawCells());
+    return isEmpty() ? null : Arrays.asList(rawCells());
   }
 
   /**
-   * Return the Cells for the specific column.  The Cells are sorted in
-   * the {@link CellComparator} order.  That implies the first entry in
-   * the list is the most recent column.  If the query (Scan or Get) only
-   * requested 1 version the list will contain at most 1 entry.  If the column
-   * did not exist in the result set (either the column does not exist
-   * or the column was not selected in the query) the list will be empty.
-   *
-   * Also see getColumnLatest which returns just a Cell
-   *
-   * @param family the family
-   * @param qualifier
-   * @return a list of Cells for this column or empty list if the column
-   * did not exist in the result set
+   * Return the Cells for the specific column. The Cells are sorted in the {@link CellComparator}
+   * order. That implies the first entry in the list is the most recent column. If the query (Scan
+   * or Get) only requested 1 version the list will contain at most 1 entry. If the column did not
+   * exist in the result set (either the column does not exist or the column was not selected in the
+   * query) the list will be empty. Also see getColumnLatest which returns just a Cell
+   * @param family the family n * @return a list of Cells for this column or empty list if the
+   *               column did not exist in the result set
    */
-  public List<Cell> getColumnCells(byte [] family, byte [] qualifier) {
+  public List<Cell> getColumnCells(byte[] family, byte[] qualifier) {
     List<Cell> result = new ArrayList<>();
 
-    Cell [] kvs = rawCells();
+    Cell[] kvs = rawCells();
 
     if (kvs == null || kvs.length == 0) {
       return result;
@@ -273,7 +244,7 @@ public class Result implements CellScannable, CellScanner {
     }
 
     for (int i = pos; i < kvs.length; i++) {
-      if (CellUtil.matchingColumn(kvs[i], family,qualifier)) {
+      if (CellUtil.matchingColumn(kvs[i], family, qualifier)) {
         result.add(kvs[i]);
       } else {
         break;
@@ -291,22 +262,18 @@ public class Result implements CellScannable, CellScanner {
     }
   }
 
-  protected int binarySearch(final Cell [] kvs,
-                             final byte [] family,
-                             final byte [] qualifier) {
+  protected int binarySearch(final Cell[] kvs, final byte[] family, final byte[] qualifier) {
     byte[] familyNotNull = notNullBytes(family);
     byte[] qualifierNotNull = notNullBytes(qualifier);
-    Cell searchTerm =
-        PrivateCellUtil.createFirstOnRow(kvs[0].getRowArray(),
-            kvs[0].getRowOffset(), kvs[0].getRowLength(),
-            familyNotNull, 0, (byte)familyNotNull.length,
-            qualifierNotNull, 0, qualifierNotNull.length);
+    Cell searchTerm = PrivateCellUtil.createFirstOnRow(kvs[0].getRowArray(), kvs[0].getRowOffset(),
+      kvs[0].getRowLength(), familyNotNull, 0, (byte) familyNotNull.length, qualifierNotNull, 0,
+      qualifierNotNull.length);
 
     // pos === ( -(insertion point) - 1)
     int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
-      pos = (pos+1) * -1;
+      pos = (pos + 1) * -1;
       // pos is now insertion point
     }
     if (pos == kvs.length) {
@@ -317,23 +284,20 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Searches for the latest value for the specified column.
-   *
-   * @param kvs the array to search
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param kvs       the array to search
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return the index where the value was found, or -1 otherwise
    */
-  protected int binarySearch(final Cell [] kvs,
-      final byte [] family, final int foffset, final int flength,
-      final byte [] qualifier, final int qoffset, final int qlength) {
+  protected int binarySearch(final Cell[] kvs, final byte[] family, final int foffset,
+    final int flength, final byte[] qualifier, final int qoffset, final int qlength) {
 
-    double keyValueSize = (double)
-        KeyValue.getKeyValueDataStructureSize(kvs[0].getRowLength(), flength, qlength, 0);
+    double keyValueSize =
+      (double) KeyValue.getKeyValueDataStructureSize(kvs[0].getRowLength(), flength, qlength, 0);
 
     byte[] buffer = localBuffer.get();
     if (buffer == null || keyValueSize > buffer.length) {
@@ -342,16 +306,15 @@ public class Result implements CellScannable, CellScanner {
       localBuffer.set(buffer);
     }
 
-    Cell searchTerm = KeyValueUtil.createFirstOnRow(buffer, 0,
-        kvs[0].getRowArray(), kvs[0].getRowOffset(), kvs[0].getRowLength(),
-        family, foffset, flength,
-        qualifier, qoffset, qlength);
+    Cell searchTerm =
+      KeyValueUtil.createFirstOnRow(buffer, 0, kvs[0].getRowArray(), kvs[0].getRowOffset(),
+        kvs[0].getRowLength(), family, foffset, flength, qualifier, qoffset, qlength);
 
     // pos === ( -(insertion point) - 1)
     int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.getInstance());
     // never will exact match
     if (pos < 0) {
-      pos = (pos+1) * -1;
+      pos = (pos + 1) * -1;
       // pos is now insertion point
     }
     if (pos == kvs.length) {
@@ -361,16 +324,12 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * The Cell for the most recent timestamp for a given column.
-   *
-   * @param family
-   * @param qualifier
-   *
+   * The Cell for the most recent timestamp for a given column. nn *
    * @return the Cell for the column, or null if no value exists in the row or none have been
-   * selected in the query (Get/Scan)
+   *         selected in the query (Get/Scan)
    */
-  public Cell getColumnLatestCell(byte [] family, byte [] qualifier) {
-    Cell [] kvs = rawCells(); // side effect possibly.
+  public Cell getColumnLatestCell(byte[] family, byte[] qualifier) {
+    Cell[] kvs = rawCells(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
     }
@@ -386,21 +345,19 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * The Cell for the most recent timestamp for a given column.
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return the Cell for the column, or null if no value exists in the row or none have been
-   * selected in the query (Get/Scan)
+   *         selected in the query (Get/Scan)
    */
-  public Cell getColumnLatestCell(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
+  public Cell getColumnLatestCell(byte[] family, int foffset, int flength, byte[] qualifier,
+    int qoffset, int qlength) {
 
-    Cell [] kvs = rawCells(); // side effect possibly.
+    Cell[] kvs = rawCells(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
     }
@@ -408,23 +365,24 @@ public class Result implements CellScannable, CellScanner {
     if (pos == -1) {
       return null;
     }
-    if (PrivateCellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset,
-      qlength)) {
+    if (
+      PrivateCellUtil.matchingColumn(kvs[pos], family, foffset, flength, qualifier, qoffset,
+        qlength)
+    ) {
       return kvs[pos];
     }
     return null;
   }
 
   /**
-   * Get the latest version of the specified column.
-   * Note: this call clones the value content of the hosting Cell. See
-   * {@link #getValueAsByteBuffer(byte[], byte[])}, etc., or {@link #listCells()} if you would
-   * avoid the cloning.
-   * @param family family name
+   * Get the latest version of the specified column. Note: this call clones the value content of the
+   * hosting Cell. See {@link #getValueAsByteBuffer(byte[], byte[])}, etc., or {@link #listCells()}
+   * if you would avoid the cloning.
+   * @param family    family name
    * @param qualifier column qualifier
    * @return value of latest version of column, null if none found
    */
-  public byte[] getValue(byte [] family, byte [] qualifier) {
+  public byte[] getValue(byte[] family, byte[] qualifier) {
     Cell kv = getColumnLatestCell(family, qualifier);
     if (kv == null) {
       return null;
@@ -434,62 +392,55 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Returns the value wrapped in a new <code>ByteBuffer</code>.
-   *
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   *
    * @return the latest version of the column, or <code>null</code> if none found
    */
-  public ByteBuffer getValueAsByteBuffer(byte [] family, byte [] qualifier) {
+  public ByteBuffer getValueAsByteBuffer(byte[] family, byte[] qualifier) {
 
     Cell kv = getColumnLatestCell(family, 0, family.length, qualifier, 0, qualifier.length);
 
     if (kv == null) {
       return null;
     }
-    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()).
-      asReadOnlyBuffer();
+    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength())
+      .asReadOnlyBuffer();
   }
 
   /**
    * Returns the value wrapped in a new <code>ByteBuffer</code>.
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return the latest version of the column, or <code>null</code> if none found
    */
-  public ByteBuffer getValueAsByteBuffer(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
+  public ByteBuffer getValueAsByteBuffer(byte[] family, int foffset, int flength, byte[] qualifier,
+    int qoffset, int qlength) {
 
     Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     if (kv == null) {
       return null;
     }
-    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()).
-      asReadOnlyBuffer();
+    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength())
+      .asReadOnlyBuffer();
   }
 
   /**
    * Loads the latest version of the specified column into the provided <code>ByteBuffer</code>.
    * <p>
    * Does not clear or flip the buffer.
-   *
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   * @param dst the buffer where to write the value
-   *
+   * @param dst       the buffer where to write the value
    * @return <code>true</code> if a value was found, <code>false</code> otherwise
-   *
    * @throws BufferOverflowException there is insufficient space remaining in the buffer
    */
-  public boolean loadValue(byte [] family, byte [] qualifier, ByteBuffer dst)
-          throws BufferOverflowException {
+  public boolean loadValue(byte[] family, byte[] qualifier, ByteBuffer dst)
+    throws BufferOverflowException {
     return loadValue(family, 0, family.length, qualifier, 0, qualifier.length, dst);
   }
 
@@ -497,22 +448,18 @@ public class Result implements CellScannable, CellScanner {
    * Loads the latest version of the specified column into the provided <code>ByteBuffer</code>.
    * <p>
    * Does not clear or flip the buffer.
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   * @param dst the buffer where to write the value
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
+   * @param dst       the buffer where to write the value
    * @return <code>true</code> if a value was found, <code>false</code> otherwise
-   *
    * @throws BufferOverflowException there is insufficient space remaining in the buffer
    */
-  public boolean loadValue(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength, ByteBuffer dst)
-          throws BufferOverflowException {
+  public boolean loadValue(byte[] family, int foffset, int flength, byte[] qualifier, int qoffset,
+    int qlength, ByteBuffer dst) throws BufferOverflowException {
     Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     if (kv == null) {
@@ -524,31 +471,27 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Checks if the specified column contains a non-empty value (not a zero-length byte array).
-   *
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   *
    * @return whether or not a latest value exists and is not empty
    */
-  public boolean containsNonEmptyColumn(byte [] family, byte [] qualifier) {
+  public boolean containsNonEmptyColumn(byte[] family, byte[] qualifier) {
 
     return containsNonEmptyColumn(family, 0, family.length, qualifier, 0, qualifier.length);
   }
 
   /**
    * Checks if the specified column contains a non-empty value (not a zero-length byte array).
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return whether or not a latest value exists and is not empty
    */
-  public boolean containsNonEmptyColumn(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
+  public boolean containsNonEmptyColumn(byte[] family, int foffset, int flength, byte[] qualifier,
+    int qoffset, int qlength) {
 
     Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
@@ -557,31 +500,27 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Checks if the specified column contains an empty value (a zero-length byte array).
-   *
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   *
    * @return whether or not a latest value exists and is empty
    */
-  public boolean containsEmptyColumn(byte [] family, byte [] qualifier) {
+  public boolean containsEmptyColumn(byte[] family, byte[] qualifier) {
 
     return containsEmptyColumn(family, 0, family.length, qualifier, 0, qualifier.length);
   }
 
   /**
    * Checks if the specified column contains an empty value (a zero-length byte array).
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return whether or not a latest value exists and is empty
    */
-  public boolean containsEmptyColumn(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
+  public boolean containsEmptyColumn(byte[] family, int foffset, int flength, byte[] qualifier,
+    int qoffset, int qlength) {
     Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     return (kv != null) && (kv.getValueLength() == 0);
@@ -589,31 +528,27 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Checks for existence of a value for the specified column (empty or not).
-   *
-   * @param family family name
+   * @param family    family name
    * @param qualifier column qualifier
-   *
    * @return true if at least one value exists in the result, false if not
    */
-  public boolean containsColumn(byte [] family, byte [] qualifier) {
+  public boolean containsColumn(byte[] family, byte[] qualifier) {
     Cell kv = getColumnLatestCell(family, qualifier);
     return kv != null;
   }
 
   /**
    * Checks for existence of a value for the specified column (empty or not).
-   *
-   * @param family family name
-   * @param foffset family offset
-   * @param flength family length
+   * @param family    family name
+   * @param foffset   family offset
+   * @param flength   family length
    * @param qualifier column qualifier
-   * @param qoffset qualifier offset
-   * @param qlength qualifier length
-   *
+   * @param qoffset   qualifier offset
+   * @param qlength   qualifier length
    * @return true if at least one value exists in the result, false if not
    */
-  public boolean containsColumn(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
+  public boolean containsColumn(byte[] family, int foffset, int flength, byte[] qualifier,
+    int qoffset, int qlength) {
 
     return getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength) != null;
   }
@@ -631,20 +566,20 @@ public class Result implements CellScannable, CellScanner {
     if (this.familyMap != null) {
       return this.familyMap;
     }
-    if(isEmpty()) {
+    if (isEmpty()) {
       return null;
     }
     this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(Cell kv : this.cells) {
-      byte [] family = CellUtil.cloneFamily(kv);
+    for (Cell kv : this.cells) {
+      byte[] family = CellUtil.cloneFamily(kv);
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap = familyMap.get(family);
-      if(columnMap == null) {
+      if (columnMap == null) {
         columnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
-      byte [] qualifier = CellUtil.cloneQualifier(kv);
+      byte[] qualifier = CellUtil.cloneQualifier(kv);
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
-      if(versionMap == null) {
+      if (versionMap == null) {
         versionMap = new TreeMap<>(new Comparator<Long>() {
           @Override
           public int compare(Long l1, Long l2) {
@@ -654,7 +589,7 @@ public class Result implements CellScannable, CellScanner {
         columnMap.put(qualifier, versionMap);
       }
       Long timestamp = kv.getTimestamp();
-      byte [] value = CellUtil.cloneValue(kv);
+      byte[] value = CellUtil.cloneValue(kv);
 
       versionMap.put(timestamp, value);
     }
@@ -670,20 +605,20 @@ public class Result implements CellScannable, CellScanner {
    * @return map from families to qualifiers and value
    */
   public NavigableMap<byte[], NavigableMap<byte[], byte[]>> getNoVersionMap() {
-    if(this.familyMap == null) {
+    if (this.familyMap == null) {
       getMap();
     }
-    if(isEmpty()) {
+    if (isEmpty()) {
       return null;
     }
-    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    for(Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
-      familyEntry : familyMap.entrySet()) {
+    NavigableMap<byte[], NavigableMap<byte[], byte[]>> returnMap =
+      new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyEntry : familyMap
+      .entrySet()) {
       NavigableMap<byte[], byte[]> qualifierMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-      for(Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry :
-        familyEntry.getValue().entrySet()) {
-        byte [] value =
-          qualifierEntry.getValue().get(qualifierEntry.getValue().firstKey());
+      for (Map.Entry<byte[], NavigableMap<Long, byte[]>> qualifierEntry : familyEntry.getValue()
+        .entrySet()) {
+        byte[] value = qualifierEntry.getValue().get(qualifierEntry.getValue().firstKey());
         qualifierMap.put(qualifierEntry.getKey(), value);
       }
       returnMap.put(familyEntry.getKey(), qualifierMap);
@@ -698,23 +633,20 @@ public class Result implements CellScannable, CellScanner {
    * @param family column family to get
    * @return map of qualifiers to values
    */
-  public NavigableMap<byte[], byte[]> getFamilyMap(byte [] family) {
-    if(this.familyMap == null) {
+  public NavigableMap<byte[], byte[]> getFamilyMap(byte[] family) {
+    if (this.familyMap == null) {
       getMap();
     }
-    if(isEmpty()) {
+    if (isEmpty()) {
       return null;
     }
     NavigableMap<byte[], byte[]> returnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
-    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap =
-      familyMap.get(family);
-    if(qualifierMap == null) {
+    NavigableMap<byte[], NavigableMap<Long, byte[]>> qualifierMap = familyMap.get(family);
+    if (qualifierMap == null) {
       return returnMap;
     }
-    for(Map.Entry<byte[], NavigableMap<Long, byte[]>> entry :
-      qualifierMap.entrySet()) {
-      byte [] value =
-        entry.getValue().get(entry.getValue().firstKey());
+    for (Map.Entry<byte[], NavigableMap<Long, byte[]>> entry : qualifierMap.entrySet()) {
+      byte[] value = entry.getValue().get(entry.getValue().firstKey());
       returnMap.put(entry.getKey(), value);
     }
     return returnMap;
@@ -724,7 +656,7 @@ public class Result implements CellScannable, CellScanner {
    * Returns the value of the first column in the Result.
    * @return value of the first column
    */
-  public byte [] value() {
+  public byte[] value() {
     if (isEmpty()) {
       return null;
     }
@@ -739,28 +671,26 @@ public class Result implements CellScannable, CellScanner {
     return this.cells == null || this.cells.length == 0;
   }
 
-  /**
-   * @return the size of the underlying Cell []
-   */
+  /** Returns the size of the underlying Cell [] */
   public int size() {
-    return this.cells == null? 0: this.cells.length;
+    return this.cells == null ? 0 : this.cells.length;
   }
 
   /**
-   * @return String
+   * n
    */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("keyvalues=");
-    if(isEmpty()) {
+    if (isEmpty()) {
       sb.append("NONE");
       return sb.toString();
     }
     sb.append("{");
     boolean moreThanOne = false;
-    for(Cell kv : this.cells) {
-      if(moreThanOne) {
+    for (Cell kv : this.cells) {
+      if (moreThanOne) {
         sb.append(", ");
       } else {
         moreThanOne = true;
@@ -777,49 +707,45 @@ public class Result implements CellScannable, CellScanner {
    * @param res2 second result to compare
    * @throws Exception Every difference is throwing an exception
    */
-  public static void compareResults(Result res1, Result res2)
-    throws Exception{
+  public static void compareResults(Result res1, Result res2) throws Exception {
     compareResults(res1, res2, true);
   }
 
   /**
    * Does a deep comparison of two Results, down to the byte arrays.
-   * @param res1 first result to compare
-   * @param res2 second result to compare
-   * @param verbose includes string representation for all cells in the exception if true;
-   *                otherwise include rowkey only
+   * @param res1    first result to compare
+   * @param res2    second result to compare
+   * @param verbose includes string representation for all cells in the exception if true; otherwise
+   *                include rowkey only
    * @throws Exception Every difference is throwing an exception
    */
-  public static void compareResults(Result res1, Result res2, boolean verbose)
-      throws Exception {
+  public static void compareResults(Result res1, Result res2, boolean verbose) throws Exception {
     if (res2 == null) {
-      throw new Exception("There wasn't enough rows, we stopped at "
-          + Bytes.toStringBinary(res1.getRow()));
+      throw new Exception(
+        "There wasn't enough rows, we stopped at " + Bytes.toStringBinary(res1.getRow()));
     }
     if (res1.size() != res2.size()) {
       if (verbose) {
         throw new Exception(
-          "This row doesn't have the same number of KVs: "
-            + res1 + " compared to " + res2);
+          "This row doesn't have the same number of KVs: " + res1 + " compared to " + res2);
       } else {
         throw new Exception(
-          "This row doesn't have the same number of KVs: row="
-            + Bytes.toStringBinary(res1.getRow())
+          "This row doesn't have the same number of KVs: row=" + Bytes.toStringBinary(res1.getRow())
             + ", " + res1.size() + " cells are compared to " + res2.size() + " cells");
       }
     }
     Cell[] ourKVs = res1.rawCells();
     Cell[] replicatedKVs = res2.rawCells();
     for (int i = 0; i < res1.size(); i++) {
-      if (!ourKVs[i].equals(replicatedKVs[i]) ||
-          !CellUtil.matchingValue(ourKVs[i], replicatedKVs[i]) ||
-          !CellUtil.matchingTags(ourKVs[i], replicatedKVs[i])) {
+      if (
+        !ourKVs[i].equals(replicatedKVs[i]) || !CellUtil.matchingValue(ourKVs[i], replicatedKVs[i])
+          || !CellUtil.matchingTags(ourKVs[i], replicatedKVs[i])
+      ) {
         if (verbose) {
-          throw new Exception("This result was different: "
-            + res1 + " compared to " + res2);
+          throw new Exception("This result was different: " + res1 + " compared to " + res2);
         } else {
-          throw new Exception("This result was different: row="
-            + Bytes.toStringBinary(res1.getRow()));
+          throw new Exception(
+            "This result was different: row=" + Bytes.toStringBinary(res1.getRow()));
         }
       }
     }
@@ -831,10 +757,9 @@ public class Result implements CellScannable, CellScanner {
    * @param partialResults list of partial results
    * @return The complete result that is formed by combining all of the partial results together
    * @throws IOException A complete result cannot be formed because the results in the partial list
-   *           come from different rows
+   *                     come from different rows
    */
-  public static Result createCompleteResult(Iterable<Result> partialResults)
-      throws IOException {
+  public static Result createCompleteResult(Iterable<Result> partialResults) throws IOException {
     if (partialResults == null) {
       return Result.create(Collections.emptyList(), null, false);
     }
@@ -846,9 +771,8 @@ public class Result implements CellScannable, CellScanner {
       Result r = iter.next();
       currentRow = r.getRow();
       if (prevRow != null && !Bytes.equals(prevRow, currentRow)) {
-        throw new IOException(
-            "Cannot form complete result. Rows of partial results do not match." +
-                " Partial Results: " + partialResults);
+        throw new IOException("Cannot form complete result. Rows of partial results do not match."
+          + " Partial Results: " + partialResults);
       }
       // Ensure that all Results except the last one are marked as partials. The last result
       // may not be marked as a partial because Results are only marked as partials when
@@ -862,8 +786,8 @@ public class Result implements CellScannable, CellScanner {
       // Result2: -3- -4- (2 cells, size limit reached, mark as partial)
       // Result3: -5- (1 cell, size limit NOT reached, NOT marked as partial)
       if (iter.hasNext() && !r.mayHaveMoreCellsInRow()) {
-        throw new IOException("Cannot form complete result. Result is missing partial flag. " +
-            "Partial Results: " + partialResults);
+        throw new IOException("Cannot form complete result. Result is missing partial flag. "
+          + "Partial Results: " + partialResults);
       }
       prevRow = currentRow;
       stale = stale || r.isStale();
@@ -876,9 +800,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Get total size of raw cells
-   * @param result
-   * @return Total size.
+   * Get total size of raw cells n * @return Total size.
    */
   public static long getTotalSizeOfCells(Result result) {
     long size = 0;
@@ -893,9 +815,8 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Copy another Result into this one. Needed for the old Mapred framework
-   * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT
-   * (which is supposed to be immutable).
-   * @param other
+   * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT (which is supposed
+   *                                       to be immutable). n
    */
   public void copyFrom(Result other) {
     checkReadonly();
@@ -913,10 +834,9 @@ public class Result implements CellScannable, CellScanner {
 
   @Override
   public Cell current() {
-    if (isEmpty()
-            || cellScannerIndex == INITIAL_CELLSCANNER_INDEX
-            || cellScannerIndex >= cells.length)
-      return null;
+    if (
+      isEmpty() || cellScannerIndex == INITIAL_CELLSCANNER_INDEX || cellScannerIndex >= cells.length
+    ) return null;
     return this.cells[cellScannerIndex];
   }
 
@@ -944,8 +864,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Whether or not the results are coming from possibly stale data. Stale results
-   * might be returned if {@link Consistency} is not STRONG for the query.
+   * Whether or not the results are coming from possibly stale data. Stale results might be returned
+   * if {@link Consistency} is not STRONG for the query.
    * @return Whether or not the results are coming from possibly stale data.
    */
   public boolean isStale() {
@@ -953,12 +873,12 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM
-   * or timeout. This flag is used to tell you if the current Result is the last one of the current
+   * For scanning large rows, the RS may choose to return the cells chunk by chunk to prevent OOM or
+   * timeout. This flag is used to tell you if the current Result is the last one of the current
    * row. False means this Result is the last one. True means there MAY be more cells belonging to
-   * the current row.
-   * If you don't use {@link Scan#setAllowPartialResults(boolean)} or {@link Scan#setBatch(int)},
-   * this method will always return false because the Result must contains all cells in one Row.
+   * the current row. If you don't use {@link Scan#setAllowPartialResults(boolean)} or
+   * {@link Scan#setBatch(int)}, this method will always return false because the Result must
+   * contains all cells in one Row.
    */
   public boolean mayHaveMoreCellsInRow() {
     return mayHaveMoreCellsInRow;
@@ -974,7 +894,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @return the associated statistics about the region from which this was returned. Can be
+   * Returns the associated statistics about the region from which this was returned. Can be
    * <tt>null</tt> if stats are disabled.
    */
   public RegionLoadStats getStats() {
@@ -982,8 +902,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * All methods modifying state of Result object must call this method
-   * to ensure that special purpose immutable Results can't be accidentally modified.
+   * All methods modifying state of Result object must call this method to ensure that special
+   * purpose immutable Results can't be accidentally modified.
    */
   private void checkReadonly() {
     if (readonly == true) {
@@ -992,36 +912,23 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Return true if this Result is a cursor to tell users where the server has scanned.
-   * In this Result the only meaningful method is {@link #getCursor()}.
-   *
-   * {@code
+   * Return true if this Result is a cursor to tell users where the server has scanned. In this
+   * Result the only meaningful method is {@link #getCursor()}. {@code
    *  while (r = scanner.next() && r != null) {
    *    if(r.isCursor()){
    *    // scanning is not end, it is a cursor, save its row key and close scanner if you want, or
-   *    // just continue the loop to call next().
-   *    } else {
-   *    // just like before
-   *    }
-   *  }
-   *  // scanning is end
-   *
-   * }
-   * {@link Scan#setNeedCursorResult(boolean)}
-   * {@link Cursor}
-   * {@link #getCursor()}
+   * // just continue the loop to call next(). } else { // just like before } } // scanning is end }
+   * {@link Scan#setNeedCursorResult(boolean)} {@link Cursor} {@link #getCursor()}
    */
   public boolean isCursor() {
-    return cursor != null ;
+    return cursor != null;
   }
 
   /**
-   * Return the cursor if this Result is a cursor result.
-   * {@link Scan#setNeedCursorResult(boolean)}
-   * {@link Cursor}
-   * {@link #isCursor()}
+   * Return the cursor if this Result is a cursor result. {@link Scan#setNeedCursorResult(boolean)}
+   * {@link Cursor} {@link #isCursor()}
    */
-  public Cursor getCursor(){
+  public Cursor getCursor() {
     return cursor;
   }
 }

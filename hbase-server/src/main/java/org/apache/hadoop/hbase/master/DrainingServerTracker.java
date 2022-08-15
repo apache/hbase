@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,33 +21,30 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tracks the list of draining region servers via ZK.
- *
- * <p>This class is responsible for watching for changes to the draining
- * servers list.  It handles adds/deletes in the draining RS list and
- * watches each node.
- *
- * <p>If an RS gets deleted from draining list, we call
+ * <p>
+ * This class is responsible for watching for changes to the draining servers list. It handles
+ * adds/deletes in the draining RS list and watches each node.
+ * <p>
+ * If an RS gets deleted from draining list, we call
  * {@link ServerManager#removeServerFromDrainList(ServerName)}
- *
- * <p>If an RS gets added to the draining list, we add a watcher to it and call
+ * <p>
+ * If an RS gets added to the draining list, we add a watcher to it and call
  * {@link ServerManager#addServerToDrainList(ServerName)}
- *
- * <p>This class is deprecated in 2.0 because decommission/draining API goes through
- * master in 2.0. Can remove this class in 3.0.
- *
+ * <p>
+ * This class is deprecated in 2.0 because decommission/draining API goes through master in 2.0. Can
+ * remove this class in 3.0.
  */
 @InterfaceAudience.Private
 public class DrainingServerTracker extends ZKListener {
@@ -57,8 +54,8 @@ public class DrainingServerTracker extends ZKListener {
   private final NavigableSet<ServerName> drainingServers = new TreeSet<>();
   private Abortable abortable;
 
-  public DrainingServerTracker(ZKWatcher watcher,
-      Abortable abortable, ServerManager serverManager) {
+  public DrainingServerTracker(ZKWatcher watcher, Abortable abortable,
+    ServerManager serverManager) {
     super(watcher);
     this.abortable = abortable;
     this.serverManager = serverManager;
@@ -66,10 +63,8 @@ public class DrainingServerTracker extends ZKListener {
 
   /**
    * Starts the tracking of draining RegionServers.
-   *
-   * <p>All Draining RSs will be tracked after this method is called.
-   *
-   * @throws KeeperException
+   * <p>
+   * All Draining RSs will be tracked after this method is called. n
    */
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);
@@ -77,7 +72,7 @@ public class DrainingServerTracker extends ZKListener {
     serverManager.registerListener(new ServerListener() {
       @Override
       public void serverAdded(ServerName sn) {
-        if (drainingServers.contains(sn)){
+        if (drainingServers.contains(sn)) {
           serverManager.addServerToDrainList(sn);
         }
       }
@@ -88,21 +83,20 @@ public class DrainingServerTracker extends ZKListener {
   }
 
   private void add(final List<String> servers) throws IOException {
-    synchronized(this.drainingServers) {
+    synchronized (this.drainingServers) {
       this.drainingServers.clear();
-      for (String n: servers) {
+      for (String n : servers) {
         final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(n));
         this.drainingServers.add(sn);
         this.serverManager.addServerToDrainList(sn);
-        LOG.info("Draining RS node created, adding to list [" +
-            sn + "]");
+        LOG.info("Draining RS node created, adding to list [" + sn + "]");
 
       }
     }
   }
 
   private void remove(final ServerName sn) {
-    synchronized(this.drainingServers) {
+    synchronized (this.drainingServers) {
       this.drainingServers.remove(sn);
       this.serverManager.removeServerFromDrainList(sn);
     }
@@ -110,17 +104,16 @@ public class DrainingServerTracker extends ZKListener {
 
   @Override
   public void nodeDeleted(final String path) {
-    if(path.startsWith(watcher.getZNodePaths().drainingZNode)) {
+    if (path.startsWith(watcher.getZNodePaths().drainingZNode)) {
       final ServerName sn = ServerName.valueOf(ZKUtil.getNodeName(path));
-      LOG.info("Draining RS node deleted, removing from list [" +
-          sn + "]");
+      LOG.info("Draining RS node deleted, removing from list [" + sn + "]");
       remove(sn);
     }
   }
 
   @Override
   public void nodeChildrenChanged(final String path) {
-    if(path.equals(watcher.getZNodePaths().drainingZNode)) {
+    if (path.equals(watcher.getZNodePaths().drainingZNode)) {
       try {
         final List<String> newNodes =
           ZKUtil.listChildrenAndWatchThem(watcher, watcher.getZNodePaths().drainingZNode);

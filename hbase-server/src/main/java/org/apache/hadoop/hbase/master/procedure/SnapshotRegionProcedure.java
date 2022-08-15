@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.SnapshotRegionProcedureStateData;
@@ -50,14 +50,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- *  A remote procedure which is used to send region snapshot request to region server.
- *  The basic logic of SnapshotRegionProcedure is similar like {@link ServerRemoteProcedure},
- *  only with a little difference, when {@link FailedRemoteDispatchException} was thrown,
- *  SnapshotRegionProcedure will sleep some time and continue retrying until success.
+ * A remote procedure which is used to send region snapshot request to region server. The basic
+ * logic of SnapshotRegionProcedure is similar like {@link ServerRemoteProcedure}, only with a
+ * little difference, when {@link FailedRemoteDispatchException} was thrown, SnapshotRegionProcedure
+ * will sleep some time and continue retrying until success.
  */
 @InterfaceAudience.Private
 public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
-    implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
+  implements TableProcedureInterface, RemoteProcedure<MasterProcedureEnv, ServerName> {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotRegionProcedure.class);
 
   private SnapshotDescription snapshot;
@@ -97,7 +97,7 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
     return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
       SnapshotRegionCallable.class, MasterProcedureProtos.SnapshotRegionParameter.newBuilder()
-      .setRegion(ProtobufUtil.toRegionInfo(region)).setSnapshot(snapshot).build().toByteArray()));
+        .setRegion(ProtobufUtil.toRegionInfo(region)).setSnapshot(snapshot).build().toByteArray()));
   }
 
   @Override
@@ -171,8 +171,8 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
       }
       ServerName targetServer = regionNode.getRegionLocation();
       if (targetServer == null) {
-        setTimeoutForSuspend(env, String.format("target server of region %s is null",
-          region.getRegionNameAsString()));
+        setTimeoutForSuspend(env,
+          String.format("target server of region %s is null", region.getRegionNameAsString()));
         throw new ProcedureSuspendedException();
       }
       ServerState serverState = regionStates.getServerNode(targetServer).getState();
@@ -235,8 +235,8 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    SnapshotRegionProcedureStateData data = serializer.deserialize(
-      SnapshotRegionProcedureStateData.class);
+    SnapshotRegionProcedureStateData data =
+      serializer.deserialize(SnapshotRegionProcedureStateData.class);
     this.snapshot = data.getSnapshot();
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
   }
@@ -261,7 +261,7 @@ public class SnapshotRegionProcedure extends Procedure<MasterProcedureEnv>
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
-    allowedOnPath = ".*(/src/test/.*|TestSnapshotProcedure).java")
+      allowedOnPath = ".*(/src/test/.*|TestSnapshotProcedure).java")
   boolean inRetrying() {
     return retryCounter != null;
   }

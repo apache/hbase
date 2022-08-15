@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.coprocessor;
-
 
 import java.io.IOException;
 import java.util.Collections;
@@ -42,8 +41,9 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
  * service methods. For internal use by unit tests only.
  */
 public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobufRpcProto
-        implements MasterCoprocessor, RegionCoprocessor {
-  public ProtobufCoprocessorService() {}
+  implements MasterCoprocessor, RegionCoprocessor {
+  public ProtobufCoprocessorService() {
+  }
 
   @Override
   public Iterable<Service> getServices() {
@@ -52,36 +52,36 @@ public class ProtobufCoprocessorService extends TestRpcServiceProtos.TestProtobu
 
   @Override
   public void ping(RpcController controller, TestProtos.EmptyRequestProto request,
-          RpcCallback<TestProtos.EmptyResponseProto> done) {
+    RpcCallback<TestProtos.EmptyResponseProto> done) {
     done.run(TestProtos.EmptyResponseProto.getDefaultInstance());
   }
 
   @Override
   public void echo(RpcController controller, TestProtos.EchoRequestProto request,
-          RpcCallback<TestProtos.EchoResponseProto> done) {
+    RpcCallback<TestProtos.EchoResponseProto> done) {
     String message = request.getMessage();
     done.run(TestProtos.EchoResponseProto.newBuilder().setMessage(message).build());
   }
 
   @Override
   public void error(RpcController controller, TestProtos.EmptyRequestProto request,
-          RpcCallback<TestProtos.EmptyResponseProto> done) {
+    RpcCallback<TestProtos.EmptyResponseProto> done) {
     CoprocessorRpcUtils.setControllerException(controller, new IOException("Test exception"));
     done.run(null);
   }
 
   @Override
   public void pause(RpcController controller, PauseRequestProto request,
-          RpcCallback<EmptyResponseProto> done) {
+    RpcCallback<EmptyResponseProto> done) {
     Threads.sleepWithoutInterrupt(request.getMs());
     done.run(EmptyResponseProto.getDefaultInstance());
   }
 
   @Override
   public void addr(RpcController controller, EmptyRequestProto request,
-          RpcCallback<AddrResponseProto> done) {
+    RpcCallback<AddrResponseProto> done) {
     done.run(AddrResponseProto.newBuilder()
-        .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build());
+      .setAddr(RpcServer.getRemoteAddress().get().getHostAddress()).build());
   }
 
   @Override

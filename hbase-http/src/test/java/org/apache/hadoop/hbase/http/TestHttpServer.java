@@ -18,6 +18,11 @@
 package org.apache.hadoop.hbase.http;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -78,14 +84,15 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestHttpServer extends HttpServerFunctionalTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHttpServer.class);
+    HBaseClassTestRule.forClass(TestHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer server;
@@ -100,13 +107,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
       SortedSet<String> keys = new TreeSet<>(params.keySet());
-      for(String key: keys) {
+      for (String key : keys) {
         out.print(key);
         out.print(':');
         String[] values = params.get(key);
         if (values.length > 0) {
           out.print(values[0]);
-          for(int i=1; i < values.length; ++i) {
+          for (int i = 1; i < values.length; ++i) {
             out.print(',');
             out.print(values[i]);
           }
@@ -120,15 +127,14 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   @SuppressWarnings("serial")
   public static class EchoServlet extends HttpServlet {
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
       PrintWriter out = response.getWriter();
       SortedSet<String> sortedKeys = new TreeSet<>();
       Enumeration<String> keys = request.getParameterNames();
-      while(keys.hasMoreElements()) {
+      while (keys.hasMoreElements()) {
         sortedKeys.add(keys.nextElement());
       }
-      for(String key: sortedKeys) {
+      for (String key : sortedKeys) {
         out.print(key);
         out.print(':');
         out.print(request.getParameter(key));
@@ -158,7 +164,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  @BeforeClass public static void setup() throws Exception {
+  @BeforeClass
+  public static void setup() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
     server = createTestServer(conf);
@@ -166,14 +173,14 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addUnprivilegedServlet("echomap", "/echomap", EchoMapServlet.class);
     server.addUnprivilegedServlet("htmlcontent", "/htmlcontent", HtmlContentServlet.class);
     server.addUnprivilegedServlet("longheader", "/longheader", LongHeaderServlet.class);
-    server.addJerseyResourcePackage(
-        JerseyResource.class.getPackage().getName(), "/jersey/*");
+    server.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     baseUrl = getServerURL(server);
-    LOG.info("HTTP server started: "+ baseUrl);
+    LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass public static void cleanup() throws Exception {
+  @AfterClass
+  public static void cleanup() throws Exception {
     server.stop();
   }
 
@@ -192,13 +199,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         ready.countDown();
         try {
           start.await();
-          assertEquals("a:b\nc:d\n",
-                       readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
+          assertEquals("a:b\nc:d\n", readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
           int serverThreads = server.webServer.getThreadPool().getThreads();
-          assertTrue("More threads are started than expected, Server Threads count: "
-                  + serverThreads, serverThreads <= MAX_THREADS);
-          LOG.info("Number of threads = " + serverThreads +
-              " which is less or equal than the max = " + MAX_THREADS);
+          assertTrue(
+            "More threads are started than expected, Server Threads count: " + serverThreads,
+            serverThreads <= MAX_THREADS);
+          LOG.info("Number of threads = " + serverThreads
+            + " which is less or equal than the max = " + MAX_THREADS);
         } catch (Exception e) {
           // do nothing
         }
@@ -209,31 +216,30 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     start.countDown();
   }
 
-  @Test public void testEcho() throws Exception {
-    assertEquals("a:b\nc:d\n",
-                 readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
-    assertEquals("a:b\nc&lt;:d\ne:&gt;\n",
-                 readOutput(new URL(baseUrl, "/echo?a=b&c<=d&e=>")));
+  @Test
+  public void testEcho() throws Exception {
+    assertEquals("a:b\nc:d\n", readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
+    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOutput(new URL(baseUrl, "/echo?a=b&c<=d&e=>")));
   }
 
   /** Test the echo map servlet that uses getParameterMap. */
-  @Test public void testEchoMap() throws Exception {
-    assertEquals("a:b\nc:d\n",
-                 readOutput(new URL(baseUrl, "/echomap?a=b&c=d")));
-    assertEquals("a:b,&gt;\nc&lt;:d\n",
-                 readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
+  @Test
+  public void testEchoMap() throws Exception {
+    assertEquals("a:b\nc:d\n", readOutput(new URL(baseUrl, "/echomap?a=b&c=d")));
+    assertEquals("a:b,&gt;\nc&lt;:d\n", readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
   }
 
   /**
-   *  Test that verifies headers can be up to 64K long.
-   *  The test adds a 63K header leaving 1K for other headers.
-   *  This is because the header buffer setting is for ALL headers,
-   *  names and values included. */
-  @Test public void testLongHeader() throws Exception {
+   * Test that verifies headers can be up to 64K long. The test adds a 63K header leaving 1K for
+   * other headers. This is because the header buffer setting is for ALL headers, names and values
+   * included.
+   */
+  @Test
+  public void testLongHeader() throws Exception {
     URL url = new URL(baseUrl, "/longheader");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     StringBuilder sb = new StringBuilder();
-    for (int i = 0 ; i < 63 * 1024; i++) {
+    for (int i = 0; i < 63 * 1024; i++) {
       sb.append("a");
     }
     conn.setRequestProperty("longheader", sb.toString());
@@ -244,14 +250,14 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public void testContentTypes() throws Exception {
     // Static CSS files should have text/css
     URL cssUrl = new URL(baseUrl, "/static/test.css");
-    HttpURLConnection conn = (HttpURLConnection)cssUrl.openConnection();
+    HttpURLConnection conn = (HttpURLConnection) cssUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
     assertEquals("text/css", conn.getContentType());
 
     // Servlets should have text/plain with proper encoding by default
     URL servletUrl = new URL(baseUrl, "/echo?a=b");
-    conn = (HttpURLConnection)servletUrl.openConnection();
+    conn = (HttpURLConnection) servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
     assertEquals("text/plain;charset=utf-8", conn.getContentType());
@@ -259,14 +265,14 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     // We should ignore parameters for mime types - ie a parameter
     // ending in .css should not change mime type
     servletUrl = new URL(baseUrl, "/echo?a=b.css");
-    conn = (HttpURLConnection)servletUrl.openConnection();
+    conn = (HttpURLConnection) servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
     assertEquals("text/plain;charset=utf-8", conn.getContentType());
 
     // Servlets that specify text/html should get that content type
     servletUrl = new URL(baseUrl, "/htmlcontent");
-    conn = (HttpURLConnection)servletUrl.openConnection();
+    conn = (HttpURLConnection) servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
     assertEquals("text/html;charset=utf-8", conn.getContentType());
@@ -321,7 +327,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   private static String readFully(final InputStream input) throws IOException {
     // TODO: when the time comes, delete me and replace with a JDK11 IO helper API.
-    try (final BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+    try (final BufferedReader reader =
+      new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
       final StringBuilder sb = new StringBuilder();
       final CharBuffer buffer = CharBuffer.allocate(1024 * 2);
       while (reader.read(buffer) > 0) {
@@ -335,21 +342,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Dummy filter that mimics as an authentication filter. Obtains user identity
-   * from the request parameter user.name. Wraps around the request so that
-   * request.getRemoteUser() returns the user identity.
-   *
+   * Dummy filter that mimics as an authentication filter. Obtains user identity from the request
+   * parameter user.name. Wraps around the request so that request.getRemoteUser() returns the user
+   * identity.
    */
   public static class DummyServletFilter implements Filter {
     @Override
-    public void destroy() { }
+    public void destroy() {
+    }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response,
-        FilterChain filterChain) throws IOException, ServletException {
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+      throws IOException, ServletException {
       final String userName = request.getParameter("user.name");
-      ServletRequest requestModified =
-        new HttpServletRequestWrapper((HttpServletRequest) request) {
+      ServletRequest requestModified = new HttpServletRequestWrapper((HttpServletRequest) request) {
         @Override
         public String getRemoteUser() {
           return userName;
@@ -359,12 +365,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
 
     @Override
-    public void init(FilterConfig arg0) { }
+    public void init(FilterConfig arg0) {
+    }
   }
 
   /**
    * FilterInitializer that initialized the DummyFilter.
-   *
    */
   public static class DummyFilterInitializer extends FilterInitializer {
     public DummyFilterInitializer() {
@@ -377,19 +383,17 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Access a URL and get the corresponding return Http status code. The URL
-   * will be accessed as the passed user, by sending user.name request
-   * parameter.
-   *
+   * Access a URL and get the corresponding return Http status code. The URL will be accessed as the
+   * passed user, by sending user.name request parameter.
    * @param urlstring The url to access
-   * @param userName The user to perform access as
+   * @param userName  The user to perform access as
    * @return The HTTP response code
    * @throws IOException if there is a problem communicating with the server
    */
   private static int getHttpStatusCode(String urlstring, String userName) throws IOException {
     URL url = new URL(urlstring + "?user.name=" + userName);
     System.out.println("Accessing " + url + " as user " + userName);
-    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     connection.connect();
     return connection.getResponseCode();
   }
@@ -411,9 +415,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   /**
-   * Verify the access for /logs, /stacks, /conf, /logLevel and /metrics
-   * servlets, when authentication filters are set, but authorization is not
-   * enabled.
+   * Verify the access for /logs, /stacks, /conf, /logLevel and /metrics servlets, when
+   * authentication filters are set, but authorization is not enabled.
    */
   @Test
   @Ignore
@@ -421,46 +424,41 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
 
     // Authorization is disabled by default
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-        DummyFilterInitializer.class.getName());
+    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, DummyFilterInitializer.class.getName());
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        MyGroupsProvider.class.getName());
+      MyGroupsProvider.class.getName());
     Groups.getUserToGroupsMappingService(conf);
     MyGroupsProvider.clearMapping();
     MyGroupsProvider.mapping.put("userA", Collections.singletonList("groupA"));
     MyGroupsProvider.mapping.put("userB", Collections.singletonList("groupB"));
 
     HttpServer myServer = new HttpServer.Builder().setName("test")
-        .addEndpoint(new URI("http://localhost:0")).setFindPort(true).build();
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
-    String serverURL = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
+    String serverURL =
+      "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks", "logLevel", "metrics" }) {
       for (String user : new String[] { "userA", "userB" }) {
-        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
-            + servlet, user));
+        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL + servlet, user));
       }
     }
     myServer.stop();
   }
 
   /**
-   * Verify the administrator access for /logs, /stacks, /conf, /logLevel and
-   * /metrics servlets.
+   * Verify the administrator access for /logs, /stacks, /conf, /logLevel and /metrics servlets.
    */
   @Test
   @Ignore
   public void testAuthorizationOfDefaultServlets() throws Exception {
     Configuration conf = new Configuration();
-    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
-        true);
-    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN,
-        true);
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-        DummyFilterInitializer.class.getName());
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
+    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, DummyFilterInitializer.class.getName());
 
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        MyGroupsProvider.class.getName());
+      MyGroupsProvider.class.getName());
     Groups.getUserToGroupsMappingService(conf);
     MyGroupsProvider.clearMapping();
     MyGroupsProvider.mapping.put("userA", Collections.singletonList("groupA"));
@@ -470,20 +468,19 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     MyGroupsProvider.mapping.put("userE", Collections.singletonList("groupE"));
 
     HttpServer myServer = new HttpServer.Builder().setName("test")
-        .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf)
-        .setACL(new AccessControlList("userA,userB groupC,groupD")).build();
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf)
+      .setACL(new AccessControlList("userA,userB groupC,groupD")).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
 
-    String serverURL = "http://"
-        + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
+    String serverURL =
+      "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks", "logLevel", "metrics" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
-        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
-            + servlet, user));
+        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL + servlet, user));
       }
-      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getHttpStatusCode(
-          serverURL + servlet, "userE"));
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+        getHttpStatusCode(serverURL + servlet, "userE"));
     }
     myServer.stop();
   }
@@ -494,8 +491,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(null).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertNull("It should return null "
-            + "when there are no values for the parameter", parameterValues);
+    Assert.assertNull("It should return null " + "when there are no values for the parameter",
+      parameterValues);
   }
 
   @Test
@@ -505,16 +502,16 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(values).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertTrue("It should return Parameter Values", Arrays.equals(
-        values, parameterValues));
+    Assert.assertTrue("It should return Parameter Values", Arrays.equals(values, parameterValues));
   }
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>)JSON.parse(jsonString);
+    return (Map<String, Object>) JSON.parse(jsonString);
   }
 
-  @Test public void testJersey() throws Exception {
+  @Test
+  public void testJersey() throws Exception {
     LOG.info("BEGIN testJersey()");
     final String js = readOutput(new URL(baseUrl, "/jersey/foo?op=bar"));
     final Map<String, Object> m = parse(js);
@@ -535,33 +532,33 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(request.getRemoteUser()).thenReturn(null);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    //authorization OFF
+    // authorization OFF
     Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
-    //authorization ON & user NULL
+    // authorization ON & user NULL
     response = Mockito.mock(HttpServletResponse.class);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED),
-            Mockito.anyString());
+      Mockito.anyString());
 
-    //authorization ON & user NOT NULL & ACLs NULL
+    // authorization ON & user NOT NULL & ACLs NULL
     response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getRemoteUser()).thenReturn("foo");
     Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
-    //authorization ON & user NOT NULL & ACLs NOT NULL & user not in ACLs
+    // authorization ON & user NOT NULL & ACLs NOT NULL & user not in ACLs
     response = Mockito.mock(HttpServletResponse.class);
     AccessControlList acls = Mockito.mock(AccessControlList.class);
-    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
     Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN),
-            Mockito.anyString());
+      Mockito.anyString());
 
-    //authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
+    // authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
     response = Mockito.mock(HttpServletResponse.class);
-    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(true);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(true);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
     Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
@@ -575,14 +572,14 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    //requires admin access to instrumentation, FALSE by default
+    // requires admin access to instrumentation, FALSE by default
     Assert.assertTrue(HttpServer.isInstrumentationAccessAllowed(context, request, response));
 
-    //requires admin access to instrumentation, TRUE
+    // requires admin access to instrumentation, TRUE
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
     AccessControlList acls = Mockito.mock(AccessControlList.class);
-    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
     Assert.assertFalse(HttpServer.isInstrumentationAccessAllowed(context, request, response));
   }
@@ -611,8 +608,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  private HttpServer checkBindAddress(String host, int port, boolean findPort)
-      throws Exception {
+  private HttpServer checkBindAddress(String host, int port, boolean findPort) throws Exception {
     HttpServer server = createServer(host, port);
     try {
       // not bound, ephemeral should return requested port (0 for ephemeral)
@@ -645,14 +641,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conf.set("hbase.http.filter.xframeoptions.mode", "SAMEORIGIN");
 
     HttpServer myServer = new HttpServer.Builder().setName("test")
-            .addEndpoint(new URI("http://localhost:0"))
-            .setFindPort(true).setConf(conf).build();
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
     myServer.start();
 
-    String serverURL = "http://"
-            + NetUtils.getHostPortString(myServer.getConnectorAddress(0));
+    String serverURL = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0));
     URL url = new URL(new URL(serverURL), "/echo?a=b&c=d");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());

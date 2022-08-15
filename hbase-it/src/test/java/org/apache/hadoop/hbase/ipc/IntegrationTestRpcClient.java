@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.RpcClient.SPECIFIC_WRITE_THREAD;
@@ -40,9 +39,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Ignore;
@@ -50,7 +46,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoRequestProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos.EchoResponseProto;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestRpcClient {
@@ -68,7 +69,7 @@ public class IntegrationTestRpcClient {
   protected AbstractRpcClient<?> createRpcClient(Configuration conf, boolean isSyncClient) {
     return isSyncClient ? new BlockingRpcClient(conf) : new NettyRpcClient(conf) {
       @Override
-      Codec getCodec() {
+      protected Codec getCodec() {
         return null;
       }
     };
@@ -105,11 +106,9 @@ public class IntegrationTestRpcClient {
           return null;
         }
 
-        RpcServer rpcServer = RpcServerFactory.createRpcServer(null,
-            "testRpcServer", Lists
-                .newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
-            new InetSocketAddress("localhost", 0), conf, new FifoRpcScheduler(
-                conf, 1));
+        RpcServer rpcServer = RpcServerFactory.createRpcServer(null, "testRpcServer",
+          Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
+          new InetSocketAddress("localhost", 0), conf, new FifoRpcScheduler(conf, 1));
         rpcServer.start();
         InetSocketAddress address = rpcServer.getListenerAddress();
         if (address == null) {
@@ -183,7 +182,7 @@ public class IntegrationTestRpcClient {
   }
 
   static class MiniChaosMonkey extends Thread {
-    AtomicBoolean running = new  AtomicBoolean(true);
+    AtomicBoolean running = new AtomicBoolean(true);
     AtomicReference<Exception> exception = new AtomicReference<>(null);
     Cluster cluster;
 
@@ -195,7 +194,7 @@ public class IntegrationTestRpcClient {
     public void run() {
       while (running.get()) {
         if (ThreadLocalRandom.current().nextBoolean()) {
-          //start a server
+          // start a server
           try {
             cluster.startServer();
           } catch (Exception e) {
@@ -229,7 +228,7 @@ public class IntegrationTestRpcClient {
 
   static class SimpleClient extends Thread {
     AbstractRpcClient<?> rpcClient;
-    AtomicBoolean running = new  AtomicBoolean(true);
+    AtomicBoolean running = new AtomicBoolean(true);
     AtomicBoolean sending = new AtomicBoolean(false);
     AtomicReference<Throwable> exception = new AtomicReference<>(null);
     Cluster cluster;
@@ -274,6 +273,7 @@ public class IntegrationTestRpcClient {
     void stopRunning() {
       running.set(false);
     }
+
     boolean isSending() {
       return sending.get();
     }
@@ -286,8 +286,8 @@ public class IntegrationTestRpcClient {
   }
 
   /*
-  Test that not started connections are successfully removed from connection pool when
-  rpc client is closing.
+   * Test that not started connections are successfully removed from connection pool when rpc client
+   * is closing.
    */
   @Test
   public void testRpcWithWriteThread() throws IOException, InterruptedException {
@@ -295,18 +295,17 @@ public class IntegrationTestRpcClient {
     Cluster cluster = new Cluster(1, 1);
     cluster.startServer();
     conf.setBoolean(SPECIFIC_WRITE_THREAD, true);
-    for(int i = 0; i <1000; i++) {
+    for (int i = 0; i < 1000; i++) {
       AbstractRpcClient<?> rpcClient = createRpcClient(conf, true);
       SimpleClient client = new SimpleClient(cluster, rpcClient, "Client1");
       client.start();
-      while(!client.isSending()) {
+      while (!client.isSending()) {
         Thread.sleep(1);
       }
       client.stopRunning();
       rpcClient.close();
     }
   }
-
 
   @Test
   public void testRpcWithChaosMonkeyWithSyncClient() throws Throwable {
@@ -318,7 +317,7 @@ public class IntegrationTestRpcClient {
             testRpcWithChaosMonkey(true);
           } catch (Throwable e) {
             if (e instanceof Exception) {
-              throw (Exception)e;
+              throw (Exception) e;
             } else {
               throw new Exception(e);
             }
@@ -340,7 +339,7 @@ public class IntegrationTestRpcClient {
             testRpcWithChaosMonkey(false);
           } catch (Throwable e) {
             if (e instanceof Exception) {
-              throw (Exception)e;
+              throw (Exception) e;
             } else {
               throw new Exception(e);
             }
@@ -353,6 +352,7 @@ public class IntegrationTestRpcClient {
 
   static class TimeoutThread extends Thread {
     long timeout;
+
     public TimeoutThread(long timeout) {
       this.timeout = timeout;
     }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,72 +33,70 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Default StoreEngine creates the default compactor, policy, and store file manager, or
- * their derivatives.
+ * Default StoreEngine creates the default compactor, policy, and store file manager, or their
+ * derivatives.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher,
-  RatioBasedCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
+public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher, RatioBasedCompactionPolicy,
+  DefaultCompactor, DefaultStoreFileManager> {
 
   public static final String DEFAULT_STORE_FLUSHER_CLASS_KEY =
-      "hbase.hstore.defaultengine.storeflusher.class";
+    "hbase.hstore.defaultengine.storeflusher.class";
   public static final String DEFAULT_COMPACTOR_CLASS_KEY =
-      "hbase.hstore.defaultengine.compactor.class";
+    "hbase.hstore.defaultengine.compactor.class";
   public static final String DEFAULT_COMPACTION_POLICY_CLASS_KEY =
-      "hbase.hstore.defaultengine.compactionpolicy.class";
+    "hbase.hstore.defaultengine.compactionpolicy.class";
 
-  private static final Class<? extends DefaultStoreFlusher>
-    DEFAULT_STORE_FLUSHER_CLASS = DefaultStoreFlusher.class;
-  private static final Class<? extends DefaultCompactor>
-    DEFAULT_COMPACTOR_CLASS = DefaultCompactor.class;
-  private static final Class<? extends RatioBasedCompactionPolicy>
-    DEFAULT_COMPACTION_POLICY_CLASS = ExploringCompactionPolicy.class;
+  private static final Class<? extends DefaultStoreFlusher> DEFAULT_STORE_FLUSHER_CLASS =
+    DefaultStoreFlusher.class;
+  private static final Class<? extends DefaultCompactor> DEFAULT_COMPACTOR_CLASS =
+    DefaultCompactor.class;
+  private static final Class<? extends RatioBasedCompactionPolicy> DEFAULT_COMPACTION_POLICY_CLASS =
+    ExploringCompactionPolicy.class;
 
   @Override
   public boolean needsCompaction(List<HStoreFile> filesCompacting) {
-    return compactionPolicy.needsCompaction(
-        this.storeFileManager.getStorefiles(), filesCompacting);
+    return compactionPolicy.needsCompaction(this.storeFileManager.getStorefiles(), filesCompacting);
   }
 
   @Override
-  protected void createComponents(
-      Configuration conf, HStore store, CellComparator kvComparator) throws IOException {
+  protected void createComponents(Configuration conf, HStore store, CellComparator kvComparator)
+    throws IOException {
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
-    storeFileManager =
-        new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
-            compactionPolicy.getConf());
+    storeFileManager = new DefaultStoreFileManager(kvComparator, StoreFileComparators.SEQ_ID, conf,
+      compactionPolicy.getConf());
   }
 
   protected void createCompactor(Configuration conf, HStore store) throws IOException {
     String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
     } catch (Exception e) {
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
   }
 
   protected void createCompactionPolicy(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(
-        DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
+    String className =
+      conf.get(DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
     try {
       compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, StoreConfigInformation.class },
-          new Object[] { conf, store });
+        new Class[] { Configuration.class, StoreConfigInformation.class },
+        new Object[] { conf, store });
     } catch (Exception e) {
       throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
     }
   }
 
   protected void createStoreFlusher(Configuration conf, HStore store) throws IOException {
-    String className = conf.get(
-        DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
+    String className =
+      conf.get(DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
     try {
       storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
+        new Class[] { Configuration.class, HStore.class }, new Object[] { conf, store });
     } catch (Exception e) {
       throw new IOException("Unable to load configured store flusher '" + className + "'", e);
     }
@@ -113,22 +110,22 @@ public class DefaultStoreEngine extends StoreEngine<DefaultStoreFlusher,
   private class DefaultCompactionContext extends CompactionContext {
     @Override
     public boolean select(List<HStoreFile> filesCompacting, boolean isUserCompaction,
-        boolean mayUseOffPeak, boolean forceMajor) throws IOException {
-      request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(),
-          filesCompacting, isUserCompaction, mayUseOffPeak, forceMajor);
+      boolean mayUseOffPeak, boolean forceMajor) throws IOException {
+      request = compactionPolicy.selectCompaction(storeFileManager.getStorefiles(), filesCompacting,
+        isUserCompaction, mayUseOffPeak, forceMajor);
       return request != null;
     }
 
     @Override
     public List<Path> compact(ThroughputController throughputController, User user)
-        throws IOException {
+      throws IOException {
       return compactor.compact(request, throughputController, user);
     }
 
     @Override
     public List<HStoreFile> preSelect(List<HStoreFile> filesCompacting) {
-      return compactionPolicy.preSelectCompactionForCoprocessor(
-          storeFileManager.getStorefiles(), filesCompacting);
+      return compactionPolicy.preSelectCompactionForCoprocessor(storeFileManager.getStorefiles(),
+        filesCompacting);
     }
   }
 

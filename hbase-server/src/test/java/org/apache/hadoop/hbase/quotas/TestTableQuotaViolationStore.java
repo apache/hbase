@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -61,7 +61,7 @@ public class TestTableQuotaViolationStore {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestTableQuotaViolationStore.class);
+    HBaseClassTestRule.forClass(TestTableQuotaViolationStore.class);
 
   private static final long ONE_MEGABYTE = 1024L * 1024L;
 
@@ -87,22 +87,16 @@ public class TestTableQuotaViolationStore {
     assertEquals(0, size(store.filterBySubject(tn1)));
 
     for (int i = 0; i < 5; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     for (int i = 0; i < 3; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     for (int i = 0; i < 10; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 0L);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 0L);
     }
     assertEquals(18, regionReports.size());
     assertEquals(5, size(store.filterBySubject(tn1)));
@@ -116,54 +110,41 @@ public class TestTableQuotaViolationStore {
     TableName tn1 = TableName.valueOf("violation1");
     TableName tn2 = TableName.valueOf("observance1");
     TableName tn3 = TableName.valueOf("observance2");
-    SpaceQuota quota = SpaceQuota.newBuilder()
-        .setSoftLimit(1024L * 1024L)
-        .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(SpaceViolationPolicy.DISABLE))
-        .build();
+    SpaceQuota quota = SpaceQuota.newBuilder().setSoftLimit(1024L * 1024L)
+      .setViolationPolicy(ProtobufUtil.toProtoViolationPolicy(SpaceViolationPolicy.DISABLE))
+      .build();
 
     // Create some junk data to filter. Makes sure it's so large that it would
     // immediately violate the quota.
     for (int i = 0; i < 3; i++) {
-      regionReports.put(RegionInfoBuilder.newBuilder(tn2)
-              .setStartKey(Bytes.toBytes(i))
-              .setEndKey(Bytes.toBytes(i + 1))
-              .build(), 5L * ONE_MEGABYTE);
-      regionReports.put(RegionInfoBuilder.newBuilder(tn3)
-          .setStartKey(Bytes.toBytes(i))
-          .setEndKey(Bytes.toBytes(i + 1))
-          .build(), 5L * ONE_MEGABYTE);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn2).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 5L * ONE_MEGABYTE);
+      regionReports.put(RegionInfoBuilder.newBuilder(tn3).setStartKey(Bytes.toBytes(i))
+        .setEndKey(Bytes.toBytes(i + 1)).build(), 5L * ONE_MEGABYTE);
     }
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(0))
-        .setEndKey(Bytes.toBytes(1))
-        .build(), 1024L * 512L);
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(1))
-        .setEndKey(Bytes.toBytes(2))
-        .build(), 1024L * 256L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(0))
+      .setEndKey(Bytes.toBytes(1)).build(), 1024L * 512L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(1))
+      .setEndKey(Bytes.toBytes(2)).build(), 1024L * 256L);
 
-    SpaceQuotaSnapshot tn1Snapshot = new SpaceQuotaSnapshot(
-        SpaceQuotaStatus.notInViolation(), 1024L * 768L, 1024L * 1024L);
+    SpaceQuotaSnapshot tn1Snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 1024L * 768L, 1024L * 1024L);
 
     // Below the quota
     assertEquals(tn1Snapshot, store.getTargetState(tn1, quota));
 
-
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(2))
-        .setEndKey(Bytes.toBytes(3))
-        .build(), 1024L * 256L);
-    tn1Snapshot = new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 1024L * 1024L, 1024L * 1024L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(2))
+      .setEndKey(Bytes.toBytes(3)).build(), 1024L * 256L);
+    tn1Snapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 1024L * 1024L, 1024L * 1024L);
 
     // Equal to the quota is still in observance
     assertEquals(tn1Snapshot, store.getTargetState(tn1, quota));
 
-    regionReports.put(RegionInfoBuilder.newBuilder(tn1)
-        .setStartKey(Bytes.toBytes(3))
-        .setEndKey(Bytes.toBytes(4))
-        .build(), 1024L);
-    tn1Snapshot = new SpaceQuotaSnapshot(
-        new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 1024L * 1024L + 1024L, 1024L * 1024L);
+    regionReports.put(RegionInfoBuilder.newBuilder(tn1).setStartKey(Bytes.toBytes(3))
+      .setEndKey(Bytes.toBytes(4)).build(), 1024L);
+    tn1Snapshot = new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE),
+      1024L * 1024L + 1024L, 1024L * 1024L);
 
     // Exceeds the quota, should be in violation
     assertEquals(tn1Snapshot, store.getTargetState(tn1, quota));
@@ -174,12 +155,8 @@ public class TestTableQuotaViolationStore {
     TableQuotaSnapshotStore mockStore = mock(TableQuotaSnapshotStore.class);
     when(mockStore.getSpaceQuota(any())).thenCallRealMethod();
 
-    Quotas quotaWithSpace = Quotas.newBuilder().setSpace(
-        SpaceQuota.newBuilder()
-            .setSoftLimit(1024L)
-            .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE)
-            .build())
-        .build();
+    Quotas quotaWithSpace = Quotas.newBuilder().setSpace(SpaceQuota.newBuilder().setSoftLimit(1024L)
+      .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build()).build();
     Quotas quotaWithoutSpace = Quotas.newBuilder().build();
 
     AtomicReference<Quotas> quotaRef = new AtomicReference<>();

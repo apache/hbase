@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.util.Iterator;
 import java.util.ServiceLoader;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +36,8 @@ public class CompatibilityFactory {
   /**
    * This is a static only class don't let any instance be created.
    */
-  protected CompatibilityFactory() {}
+  protected CompatibilityFactory() {
+  }
 
   public static synchronized <T> T getInstance(Class<T> klass) {
     T instance = null;
@@ -48,10 +47,9 @@ public class CompatibilityFactory {
       instance = it.next();
       if (it.hasNext()) {
         StringBuilder msg = new StringBuilder();
-        msg.append("ServiceLoader provided more than one implementation for class: ")
-           .append(klass)
-           .append(", using implementation: ").append(instance.getClass())
-           .append(", other implementations: {");
+        msg.append("ServiceLoader provided more than one implementation for class: ").append(klass)
+          .append(", using implementation: ").append(instance.getClass())
+          .append(", other implementations: {");
         while (it.hasNext()) {
           msg.append(it.next()).append(" ");
         }

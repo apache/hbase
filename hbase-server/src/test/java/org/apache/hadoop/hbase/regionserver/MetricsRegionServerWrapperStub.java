@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collections;
@@ -64,8 +63,23 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getMaxStoreFiles() {
+    return 23;
+  }
+
+  @Override
   public long getMemStoreSize() {
     return 1025;
+  }
+
+  @Override
+  public long getOnHeapMemStoreSize() {
+    return 500;
+  }
+
+  @Override
+  public long getOffHeapMemStoreSize() {
+    return 600;
   }
 
   @Override
@@ -229,6 +243,21 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBloomFilterRequestsCount() {
+    return 411;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return 412;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return 413;
+  }
+
+  @Override
   public double getPercentFileLocal() {
     return 99;
   }
@@ -264,6 +293,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getOnHeapMemStoreLimit() {
+    return 311;
+  }
+
+  @Override
+  public long getOffHeapMemStoreLimit() {
+    return 419;
+  }
+
+  @Override
   public long getBlockCacheFreeSize() {
     return 413;
   }
@@ -271,6 +310,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getBlockCacheCount() {
     return 414;
+  }
+
+  @Override
+  public long getBlockCacheDataBlockCount() {
+    return 300;
   }
 
   @Override
@@ -304,7 +348,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-   public long getBlockCachePrimaryEvictedCount() {
+  public long getBlockCachePrimaryEvictedCount() {
     return 420;
   }
 
@@ -321,6 +365,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getBlockCacheFailedInsertions() {
     return 36;
+  }
+
+  @Override
+  public long getL1CacheSize() {
+    return 123;
+  }
+
+  @Override
+  public long getL1CacheFreeSize() {
+    return 100;
+  }
+
+  @Override
+  public long getL1CacheCount() {
+    return 50;
+  }
+
+  @Override
+  public long getL1CacheEvictedCount() {
+    return 1000;
   }
 
   @Override
@@ -341,6 +405,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public double getL1CacheMissRatio() {
     return 20;
+  }
+
+  @Override
+  public long getL2CacheSize() {
+    return 456;
+  }
+
+  @Override
+  public long getL2CacheFreeSize() {
+    return 200;
+  }
+
+  @Override
+  public long getL2CacheCount() {
+    return 75;
+  }
+
+  @Override
+  public long getL2CacheEvictedCount() {
+    return 2000;
   }
 
   @Override
@@ -370,7 +454,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public void forceRecompute() {
-    //IGNORED.
+    // IGNORED.
   }
 
   @Override
@@ -644,7 +728,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public  long getRpcFullScanRequestsCount() {
+  public long getRpcFullScanRequestsCount() {
     return 10;
   }
 }

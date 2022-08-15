@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,10 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
-public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
+public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper {
   @Override
   public long getTotalQueueSize() {
     return 101;
@@ -32,6 +31,11 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   @Override
   public int getReplicationQueueLength() {
     return 103;
+  }
+
+  @Override
+  public int getBulkLoadQueueLength() {
+    return 109;
   }
 
   @Override
@@ -62,6 +66,11 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper{
   @Override
   public int getActiveReplicationRpcHandlerCount() {
     return 203;
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    return 204;
   }
 
   @Override

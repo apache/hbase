@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 public class TestZKNodeTracker {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestZKNodeTracker.class);
+    HBaseClassTestRule.forClass(TestZKNodeTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKNodeTracker.class);
   private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
@@ -93,15 +93,14 @@ public class TestZKNodeTracker {
   @Test
   public void testNodeTracker() throws Exception {
     Abortable abortable = new StubAbortable();
-    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(),
-        "testNodeTracker", abortable);
+    ZKWatcher zk = new ZKWatcher(TEST_UTIL.getConfiguration(), "testNodeTracker", abortable);
     ZKUtil.createAndFailSilent(zk, zk.getZNodePaths().baseZNode);
 
     final String node = ZNodePaths.joinZNode(zk.getZNodePaths().baseZNode,
       Long.toString(ThreadLocalRandom.current().nextLong()));
 
-    final byte [] dataOne = Bytes.toBytes("dataOne");
-    final byte [] dataTwo = Bytes.toBytes("dataTwo");
+    final byte[] dataOne = Bytes.toBytes("dataOne");
+    final byte[] dataTwo = Bytes.toBytes("dataTwo");
 
     // Start a ZKNT with no node currently available
     TestTracker localTracker = new TestTracker(zk, node, abortable);
@@ -130,9 +129,8 @@ public class TestZKNodeTracker {
 
     // Create a completely separate zk connection for test triggers and avoid
     // any weird watcher interactions from the test
-    final ZooKeeper zkconn = ZooKeeperHelper.
-        getConnectedZooKeeper(ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()),
-            60000);
+    final ZooKeeper zkconn = ZooKeeperHelper.getConnectedZooKeeper(
+      ZKConfig.getZKQuorumServersString(TEST_UTIL.getConfiguration()), 60000);
 
     // Add the node with data one
     zkconn.create(node, dataOne, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -259,7 +257,7 @@ public class TestZKNodeTracker {
 
     @Override
     public void nodeDeleted(String path) {
-      if(path.equals(node)) {
+      if (path.equals(node)) {
         LOG.debug("nodeDeleted(" + path + ")");
         deletedLock.release();
       }
@@ -267,7 +265,7 @@ public class TestZKNodeTracker {
 
     @Override
     public void nodeCreated(String path) {
-      if(path.equals(node)) {
+      if (path.equals(node)) {
         LOG.debug("nodeCreated(" + path + ")");
         createdLock.release();
       }
@@ -275,7 +273,7 @@ public class TestZKNodeTracker {
 
     @Override
     public void nodeDataChanged(String path) {
-      if(path.equals(node)) {
+      if (path.equals(node)) {
         LOG.debug("nodeDataChanged(" + path + ")");
         changedLock.release();
       }
@@ -296,7 +294,8 @@ public class TestZKNodeTracker {
 
   public static class StubAbortable implements Abortable {
     @Override
-    public void abort(final String msg, final Throwable t) {}
+    public void abort(final String msg, final Throwable t) {
+    }
 
     @Override
     public boolean isAborted() {
@@ -306,16 +305,15 @@ public class TestZKNodeTracker {
 
   @Test
   public void testCleanZNode() throws Exception {
-    ZKWatcher zkw = new ZKWatcher(TEST_UTIL.getConfiguration(),
-        "testNodeTracker", new TestZKNodeTracker.StubAbortable());
+    ZKWatcher zkw = new ZKWatcher(TEST_UTIL.getConfiguration(), "testNodeTracker",
+      new TestZKNodeTracker.StubAbortable());
 
     final ServerName sn = ServerName.valueOf("127.0.0.1:52", 45L);
 
-    ZKUtil.createAndFailSilent(zkw,
-        TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT,
-            HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT));
+    ZKUtil.createAndFailSilent(zkw, TEST_UTIL.getConfiguration()
+      .get(HConstants.ZOOKEEPER_ZNODE_PARENT, HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT));
 
-    final String nodeName =  zkw.getZNodePaths().masterAddressZNode;
+    final String nodeName = zkw.getZNodePaths().masterAddressZNode;
 
     // Check that we manage the case when there is no data
     ZKUtil.createAndFailSilent(zkw, nodeName);
@@ -328,7 +326,7 @@ public class TestZKNodeTracker {
     assertNotNull(ZKUtil.getData(zkw, nodeName));
 
     // Check that we delete when we're supposed to
-    ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn, 0));
+    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
     assertNull(ZKUtil.getData(zkw, nodeName));
 

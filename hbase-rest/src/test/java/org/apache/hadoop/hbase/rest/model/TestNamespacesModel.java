@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,12 +29,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, SmallTests.class})
+@Category({ RestTests.class, SmallTests.class })
 public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespacesModel.class);
+    HBaseClassTestRule.forClass(TestNamespacesModel.class);
 
   public static final String NAMESPACE_NAME_1 = "testNamespace1";
   public static final String NAMESPACE_NAME_2 = "testNamespace2";
@@ -42,10 +42,9 @@ public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
   public TestNamespacesModel() throws Exception {
     super(NamespacesModel.class);
 
-    AS_XML =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
-      "<Namespaces><Namespace>testNamespace1</Namespace>" +
-      "<Namespace>testNamespace2</Namespace></Namespaces>";
+    AS_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+      + "<Namespaces><Namespace>testNamespace1</Namespace>"
+      + "<Namespace>testNamespace2</Namespace></Namespaces>";
 
     AS_PB = "Cg50ZXN0TmFtZXNwYWNlMQoOdGVzdE5hbWVzcGFjZTI=";
 
@@ -71,7 +70,7 @@ public class TestNamespacesModel extends TestModelBase<NamespacesModel> {
   public void checkModel(NamespacesModel model, String... namespaceName) {
     List<String> namespaces = model.getNamespaces();
     assertEquals(namespaceName.length, namespaces.size());
-    for(int i = 0; i < namespaceName.length; i++){
+    for (int i = 0; i < namespaceName.length; i++) {
       assertTrue(namespaces.contains(namespaceName[i]));
     }
   }

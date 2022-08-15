@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,7 +38,7 @@ public class TestRefCountingMap {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRefCountingMap.class);
+    HBaseClassTestRule.forClass(TestRefCountingMap.class);
 
   private RefCountingMap<String, String> map;
 
@@ -59,7 +59,7 @@ public class TestRefCountingMap {
   @Test
   public void testPutMulti() {
     String v1 = map.put("foo", () -> "foovalue");
-    String v2 =  map.put("foo", () -> "foovalue2");
+    String v2 = map.put("foo", () -> "foovalue2");
     String v3 = map.put("foo", () -> "foovalue3");
 
     String v = map.get("foo");
@@ -127,7 +127,6 @@ public class TestRefCountingMap {
     assertEquals(0, map.size());
   }
 
-
   @Test
   public void testKeySet() {
     map.put("foo", () -> "foovalue");
@@ -151,6 +150,6 @@ public class TestRefCountingMap {
     assertEquals(3, values.size());
 
     Lists.newArrayList("foovalue", "foovalue3", "foovalue4").stream()
-            .forEach(v -> assertTrue(values.contains(v)));
+      .forEach(v -> assertTrue(values.contains(v)));
   }
 }

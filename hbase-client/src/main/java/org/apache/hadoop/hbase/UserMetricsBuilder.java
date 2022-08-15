@@ -1,6 +1,4 @@
-/**
- * Copyright The Apache Software Foundation
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,24 +31,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 public final class UserMetricsBuilder {
 
   public static UserMetrics toUserMetrics(ClusterStatusProtos.UserLoad userLoad) {
-    UserMetricsBuilder builder = UserMetricsBuilder.newBuilder(userLoad.getUserName().getBytes());
-    userLoad.getClientMetricsList().stream().map(
-      clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
-            clientMetrics.getReadRequestsCount(), clientMetrics.getWriteRequestsCount(),
-            clientMetrics.getFilteredRequestsCount())).forEach(builder::addClientMetris);
+    UserMetricsBuilder builder =
+      UserMetricsBuilder.newBuilder(userLoad.getUserName().getBytes(StandardCharsets.UTF_8));
+    userLoad.getClientMetricsList().stream()
+      .map(clientMetrics -> new ClientMetricsImpl(clientMetrics.getHostName(),
+        clientMetrics.getReadRequestsCount(), clientMetrics.getWriteRequestsCount(),
+        clientMetrics.getFilteredRequestsCount()))
+      .forEach(builder::addClientMetris);
     return builder.build();
   }
 
   public static ClusterStatusProtos.UserLoad toUserMetrics(UserMetrics userMetrics) {
     ClusterStatusProtos.UserLoad.Builder builder =
-        ClusterStatusProtos.UserLoad.newBuilder().setUserName(userMetrics.getNameAsString());
-    userMetrics.getClientMetrics().values().stream().map(
-      clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
-            .setHostName(clientMetrics.getHostName())
-            .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
-            .setReadRequestsCount(clientMetrics.getReadRequestsCount())
-            .setFilteredRequestsCount(clientMetrics.getFilteredReadRequestsCount()).build())
-        .forEach(builder::addClientMetrics);
+      ClusterStatusProtos.UserLoad.newBuilder().setUserName(userMetrics.getNameAsString());
+    userMetrics.getClientMetrics().values().stream()
+      .map(clientMetrics -> ClusterStatusProtos.ClientMetrics.newBuilder()
+        .setHostName(clientMetrics.getHostName())
+        .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
+        .setReadRequestsCount(clientMetrics.getReadRequestsCount())
+        .setFilteredRequestsCount(clientMetrics.getFilteredReadRequestsCount()).build())
+      .forEach(builder::addClientMetrics);
     return builder.build();
   }
 
@@ -59,9 +58,9 @@ public final class UserMetricsBuilder {
     return new UserMetricsBuilder(name);
   }
 
-
   private final byte[] name;
   private Map<String, UserMetrics.ClientMetrics> clientMetricsMap = new HashMap<>();
+
   private UserMetricsBuilder(byte[] name) {
     this.name = name;
   }
@@ -82,26 +81,30 @@ public final class UserMetricsBuilder {
     private final long writeRequestCount;
 
     public ClientMetricsImpl(String hostName, long readRequest, long writeRequest,
-        long filteredReadRequestsCount) {
+      long filteredReadRequestsCount) {
       this.hostName = hostName;
       this.readRequestCount = readRequest;
       this.writeRequestCount = writeRequest;
       this.filteredReadRequestsCount = filteredReadRequestsCount;
     }
 
-    @Override public String getHostName() {
+    @Override
+    public String getHostName() {
       return hostName;
     }
 
-    @Override public long getReadRequestsCount() {
+    @Override
+    public long getReadRequestsCount() {
       return readRequestCount;
     }
 
-    @Override public long getWriteRequestsCount() {
+    @Override
+    public long getWriteRequestsCount() {
       return writeRequestCount;
     }
 
-    @Override public long getFilteredReadRequestsCount() {
+    @Override
+    public long getFilteredReadRequestsCount() {
       return filteredReadRequestsCount;
     }
   }
@@ -115,33 +118,38 @@ public final class UserMetricsBuilder {
       this.clientMetricsMap = clientMetricsMap;
     }
 
-    @Override public byte[] getUserName() {
+    @Override
+    public byte[] getUserName() {
       return name;
     }
 
-    @Override public long getReadRequestCount() {
-      return clientMetricsMap.values().stream().map(c -> c.getReadRequestsCount())
-          .reduce(0L, Long::sum);
+    @Override
+    public long getReadRequestCount() {
+      return clientMetricsMap.values().stream().map(c -> c.getReadRequestsCount()).reduce(0L,
+        Long::sum);
     }
 
-    @Override public long getWriteRequestCount() {
-      return clientMetricsMap.values().stream().map(c -> c.getWriteRequestsCount())
-          .reduce(0L, Long::sum);
+    @Override
+    public long getWriteRequestCount() {
+      return clientMetricsMap.values().stream().map(c -> c.getWriteRequestsCount()).reduce(0L,
+        Long::sum);
     }
 
-    @Override public Map<String, ClientMetrics> getClientMetrics() {
+    @Override
+    public Map<String, ClientMetrics> getClientMetrics() {
       return this.clientMetricsMap;
     }
 
-    @Override public long getFilteredReadRequests() {
+    @Override
+    public long getFilteredReadRequests() {
       return clientMetricsMap.values().stream().map(c -> c.getFilteredReadRequestsCount())
-          .reduce(0L, Long::sum);
+        .reduce(0L, Long::sum);
     }
 
     @Override
     public String toString() {
-      StringBuilder sb = Strings
-          .appendKeyValue(new StringBuilder(), "readRequestCount", this.getReadRequestCount());
+      StringBuilder sb =
+        Strings.appendKeyValue(new StringBuilder(), "readRequestCount", this.getReadRequestCount());
       Strings.appendKeyValue(sb, "writeRequestCount", this.getWriteRequestCount());
       Strings.appendKeyValue(sb, "filteredReadRequestCount", this.getFilteredReadRequests());
       return sb.toString();

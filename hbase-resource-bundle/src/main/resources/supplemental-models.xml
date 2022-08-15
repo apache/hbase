@@ -1278,6 +1278,20 @@ Copyright (c) 2011 FuseSource Corp. All rights reserved.
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>org.openlabtesting.leveldbjni</groupId>
+      <artifactId>leveldbjni-all</artifactId>
+
+      <licenses>
+        <license>
+          <name>BSD 3-Clause License</name>
+          <url>http://www.opensource.org/licenses/BSD-3-Clause</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 <!-- Category B licenses that need text in LICENSE and a NOTICE -->
   <supplement>
     <project>

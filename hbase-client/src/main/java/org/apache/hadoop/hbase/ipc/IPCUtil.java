@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,12 +40,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.FastThreadLocal;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -59,15 +61,15 @@ class IPCUtil {
 
   /**
    * Write out header, param, and cell block if there is one.
-   * @param dos Stream to write into
-   * @param header to write
-   * @param param to write
+   * @param dos       Stream to write into
+   * @param header    to write
+   * @param param     to write
    * @param cellBlock to write
    * @return Total number of bytes written.
    * @throws IOException if write action fails
    */
   public static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuf cellBlock) throws IOException {
+    final ByteBuf cellBlock) throws IOException {
     // Must calculate total size and write that first so other side can read it all in in one
     // swoop. This is dictated by how the server is currently written. Server needs to change
     // if we are to be able to write without the length prefixing.
@@ -79,7 +81,7 @@ class IPCUtil {
   }
 
   private static int write(final OutputStream dos, final Message header, final Message param,
-      final ByteBuf cellBlock, final int totalSize) throws IOException {
+    final ByteBuf cellBlock, final int totalSize) throws IOException {
     // I confirmed toBytes does same as DataOutputStream#writeInt.
     dos.write(Bytes.toBytes(totalSize));
     // This allocates a buffer that is the size of the message internally.
@@ -94,9 +96,7 @@ class IPCUtil {
     return totalSize;
   }
 
-  /**
-   * @return Size on the wire when the two messages are written with writeDelimitedTo
-   */
+  /** Returns Size on the wire when the two messages are written with writeDelimitedTo */
   public static int getTotalSizeWhenWrittenDelimited(Message... messages) {
     int totalSize = 0;
     for (Message m : messages) {
@@ -140,16 +140,14 @@ class IPCUtil {
     boolean doNotRetry = e.getDoNotRetry();
     boolean serverOverloaded = e.hasServerOverloaded() && e.getServerOverloaded();
     return e.hasHostname() ?
-      // If a hostname then add it to the RemoteWithExtrasException
+    // If a hostname then add it to the RemoteWithExtrasException
       new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), e.getHostname(),
-        e.getPort(), doNotRetry, serverOverloaded) :
-      new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry,
+        e.getPort(), doNotRetry, serverOverloaded)
+      : new RemoteWithExtrasException(innerExceptionClassName, e.getStackTrace(), doNotRetry,
         serverOverloaded);
   }
 
-  /**
-   * @return True if the exception is a fatal connection exception.
-   */
+  /** Returns True if the exception is a fatal connection exception. */
   static boolean isFatalConnectionException(final ExceptionResponse e) {
     return e.getExceptionClassName().equals(FatalConnectionException.class.getName());
   }
@@ -163,8 +161,8 @@ class IPCUtil {
   }
 
   private static String getCallTarget(Address addr, RegionInfo regionInfo) {
-    return "address=" + addr +
-      (regionInfo != null? ", region=" + regionInfo.getRegionNameAsString(): "");
+    return "address=" + addr
+      + (regionInfo != null ? ", region=" + regionInfo.getRegionNameAsString() : "");
   }
 
   /**
@@ -179,7 +177,7 @@ class IPCUtil {
    * deciding whether to retry. If it is not possible to create a new exception with the same type,
    * for example, the {@code error} is not an {@link IOException}, an {@link IOException} will be
    * created.
-   * @param addr target address
+   * @param addr  target address
    * @param error the relevant exception
    * @return an exception to throw
    * @see ClientExceptionsUtil#isConnectionException(Throwable)
@@ -187,14 +185,16 @@ class IPCUtil {
   static IOException wrapException(Address addr, RegionInfo regionInfo, Throwable error) {
     if (error instanceof ConnectException) {
       // connection refused; include the host:port in the error
-      return (IOException) new ConnectException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on connection exception: " + error).initCause(error);
+      return (IOException) new ConnectException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on connection exception: " + error)
+          .initCause(error);
     } else if (error instanceof SocketTimeoutException) {
       return (IOException) new SocketTimeoutException(
         "Call to " + getCallTarget(addr, regionInfo) + " failed because " + error).initCause(error);
     } else if (error instanceof ConnectionClosingException) {
-      return new ConnectionClosingException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new ConnectionClosingException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     } else if (error instanceof ServerTooBusyException) {
       // we already have address in the exception message
       return (IOException) error;
@@ -203,51 +203,57 @@ class IPCUtil {
       try {
         return (IOException) error.getClass().asSubclass(DoNotRetryIOException.class)
           .getConstructor(String.class)
-          .newInstance("Call to " + getCallTarget(addr, regionInfo) +
-            " failed on local exception: " + error).initCause(error);
+          .newInstance(
+            "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error)
+          .initCause(error);
       } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-          | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+        | InvocationTargetException | NoSuchMethodException | SecurityException e) {
         // just ignore, will just new a DoNotRetryIOException instead below
       }
-      return new DoNotRetryIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new DoNotRetryIOException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     } else if (error instanceof ConnectionClosedException) {
-      return new ConnectionClosedException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new ConnectionClosedException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     } else if (error instanceof CallTimeoutException) {
-      return new CallTimeoutException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new CallTimeoutException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     } else if (error instanceof ClosedChannelException) {
       // ClosedChannelException does not have a constructor which takes a String but it is a
       // connection exception so we keep its original type
       return (IOException) error;
     } else if (error instanceof TimeoutException) {
       // TimeoutException is not an IOException, let's convert it to TimeoutIOException.
-      return new TimeoutIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new TimeoutIOException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     } else {
       // try our best to keep the original exception type
       if (error instanceof IOException) {
         try {
           return (IOException) error.getClass().asSubclass(IOException.class)
             .getConstructor(String.class)
-            .newInstance("Call to " + getCallTarget(addr, regionInfo) +
-              " failed on local exception: " + error)
+            .newInstance(
+              "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error)
             .initCause(error);
         } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-            | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+          | InvocationTargetException | NoSuchMethodException | SecurityException e) {
           // just ignore, will just new an IOException instead below
         }
       }
-      return new HBaseIOException("Call to " + getCallTarget(addr, regionInfo) +
-        " failed on local exception: " + error, error);
+      return new HBaseIOException(
+        "Call to " + getCallTarget(addr, regionInfo) + " failed on local exception: " + error,
+        error);
     }
   }
 
   static void setCancelled(Call call) {
     call.setException(new CallCancelledException(call.toShortString() + ", waitTime="
-        + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
-        + call.timeout));
+      + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
+      + call.timeout));
   }
 
   private static final FastThreadLocal<MutableInt> DEPTH = new FastThreadLocal<MutableInt>() {

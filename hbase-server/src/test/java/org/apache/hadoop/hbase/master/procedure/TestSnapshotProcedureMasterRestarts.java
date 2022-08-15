@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.Assert.assertEquals;
@@ -56,8 +55,8 @@ public class TestSnapshotProcedureMasterRestarts extends TestSnapshotProcedure {
 
     long procId = procExec.submitProcedure(spySp);
 
-    TEST_UTIL.waitFor(2000, () -> env.getMasterServices().getProcedures()
-      .stream().map(Procedure::getProcId).collect(Collectors.toList()).contains(procId));
+    TEST_UTIL.waitFor(2000, () -> env.getMasterServices().getProcedures().stream()
+      .map(Procedure::getProcId).collect(Collectors.toList()).contains(procId));
     TEST_UTIL.getHBaseCluster().killMaster(master.getServerName());
     TEST_UTIL.getHBaseCluster().waitForMasterToStop(master.getServerName(), 30000);
     TEST_UTIL.getHBaseCluster().startMaster();
@@ -67,11 +66,9 @@ public class TestSnapshotProcedureMasterRestarts extends TestSnapshotProcedure {
     assertTrue(master.getSnapshotManager().isTakingAnySnapshot());
     assertTrue(master.getSnapshotManager().isTableTakingAnySnapshot(TABLE_NAME));
 
-    List<SnapshotProcedure> unfinishedProcedures = master
-      .getMasterProcedureExecutor().getProcedures().stream()
-      .filter(p -> p instanceof SnapshotProcedure)
-      .filter(p -> !p.isFinished()).map(p -> (SnapshotProcedure) p)
-      .collect(Collectors.toList());
+    List<SnapshotProcedure> unfinishedProcedures = master.getMasterProcedureExecutor()
+      .getProcedures().stream().filter(p -> p instanceof SnapshotProcedure)
+      .filter(p -> !p.isFinished()).map(p -> (SnapshotProcedure) p).collect(Collectors.toList());
     assertEquals(unfinishedProcedures.size(), 1);
     long newProcId = unfinishedProcedures.get(0).getProcId();
     assertEquals(procId, newProcId);
@@ -79,8 +76,8 @@ public class TestSnapshotProcedureMasterRestarts extends TestSnapshotProcedure {
     ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), newProcId);
     assertFalse(master.getSnapshotManager().isTableTakingAnySnapshot(TABLE_NAME));
 
-    List<SnapshotProtos.SnapshotDescription> snapshots
-      = master.getSnapshotManager().getCompletedSnapshots();
+    List<SnapshotProtos.SnapshotDescription> snapshots =
+      master.getSnapshotManager().getCompletedSnapshots();
     assertEquals(1, snapshots.size());
     assertEquals(SNAPSHOT_NAME, snapshots.get(0).getName());
     assertEquals(TABLE_NAME, TableName.valueOf(snapshots.get(0).getTable()));

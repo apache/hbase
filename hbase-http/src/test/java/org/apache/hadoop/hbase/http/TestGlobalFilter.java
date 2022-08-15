@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.http;
+
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
@@ -38,11 +40,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestGlobalFilter extends HttpServerFunctionalTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGlobalFilter.class);
+    HBaseClassTestRule.forClass(TestGlobalFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
   private static final Set<String> RECORDS = new TreeSet<>();
@@ -63,12 +65,12 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
+      throws IOException, ServletException {
       if (filterConfig == null) {
         return;
       }
 
-      String uri = ((HttpServletRequest)request).getRequestURI();
+      String uri = ((HttpServletRequest) request).getRequestURI();
       LOG.info("filtering " + uri);
       RECORDS.add(uri);
       chain.doFilter(request, response);
@@ -76,7 +78,8 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
 
     /** Configuration for RecordingFilter */
     static public class Initializer extends FilterInitializer {
-      public Initializer() {}
+      public Initializer() {
+      }
 
       @Override
       public void initFilter(FilterContainer container, Configuration conf) {
@@ -89,9 +92,8 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
 
-    //start an http server with CountingFilter
-    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY,
-        RecordingFilter.Initializer.class.getName());
+    // start an http server with CountingFilter
+    conf.set(HttpServer.FILTER_INITIALIZERS_PROPERTY, RecordingFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
     http.start();
 
@@ -106,14 +108,11 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
     final String outURL = "/static/a.out";
     final String logURL = "/logs/a.log";
 
-    final String[] urls = {
-      fsckURL, stacksURL, ajspURL, listPathsURL, dataURL, streamFile, rootURL, allURL,
-      outURL, logURL
-    };
+    final String[] urls = { fsckURL, stacksURL, ajspURL, listPathsURL, dataURL, streamFile, rootURL,
+      allURL, outURL, logURL };
 
-    //access the urls
-    final String prefix = "http://"
-        + NetUtils.getHostPortString(http.getConnectorAddress(0));
+    // access the urls
+    final String prefix = "http://" + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
       for (String url : urls) {
         access(prefix + url);
@@ -124,7 +123,7 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
 
     LOG.info("RECORDS = " + RECORDS);
 
-    //verify records
+    // verify records
     for (String url : urls) {
       assertTrue(RECORDS.remove(url));
     }

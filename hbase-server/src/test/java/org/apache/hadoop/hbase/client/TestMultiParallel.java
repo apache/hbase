@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,12 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class, FlakeyTests.class})
+@Category({ MediumTests.class, FlakeyTests.class })
 public class TestMultiParallel {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiParallel.class);
+    HBaseClassTestRule.forClass(TestMultiParallel.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
 
@@ -72,7 +72,7 @@ public class TestMultiParallel {
   private static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
-  private static final byte [][] KEYS = makeKeys();
+  private static final byte[][] KEYS = makeKeys();
 
   private static final int slaves = 5; // also used for testing HTable pool size
   private static Connection CONNECTION;
@@ -81,18 +81,18 @@ public class TestMultiParallel {
   public static void beforeClass() throws Exception {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    // ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.getConfiguration().set(HConstants.RPC_CODEC_CONF_KEY,
-        KeyValueCodec.class.getCanonicalName());
+      KeyValueCodec.class.getCanonicalName());
     // Disable table on master for now as the feature is broken
-    //UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
+    // UTIL.getConfiguration().setBoolean(LoadBalancer.TABLES_ON_MASTER, true);
     // We used to ask for system tables on Master exclusively but not needed by test and doesn't
     // work anyways -- so commented out.
     // UTIL.getConfiguration().setBoolean(LoadBalancer.SYSTEM_TABLES_ON_MASTER, true);
-    UTIL.getConfiguration()
-        .set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyMasterObserver.class.getName());
+    UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MyMasterObserver.class.getName());
     UTIL.startMiniCluster(slaves);
     Table t = UTIL.createMultiRegionTable(TEST_TABLE, Bytes.toBytes(FAMILY));
     UTIL.waitTableEnabled(TEST_TABLE);
@@ -118,9 +118,8 @@ public class TestMultiParallel {
       if (MyMasterObserver.postBalanceCount.get() > balanceCount) {
         // It is necessary to wait the move procedure to start.
         // Otherwise, the next wait may pass immediately.
-        UTIL.waitFor(3 * 1000, 100, false, () ->
-            UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().hasRegionsInTransition()
-        );
+        UTIL.waitFor(3 * 1000, 100, false, () -> UTIL.getMiniHBaseCluster().getMaster()
+          .getAssignmentManager().hasRegionsInTransition());
       }
 
       // Wait until completing balance
@@ -130,7 +129,7 @@ public class TestMultiParallel {
   }
 
   private static byte[][] makeKeys() {
-    byte [][] starterKeys = HBaseTestingUtil.KEYS;
+    byte[][] starterKeys = HBaseTestingUtil.KEYS;
     // Create a "non-uniform" test set with the following characteristics:
     // a) Unequal number of keys per region
 
@@ -160,7 +159,7 @@ public class TestMultiParallel {
       cp[k.length] = new Integer(i % 256).byteValue();
       keys.add(cp);
     }
-    return keys.toArray(new byte [][] {new byte [] {}});
+    return keys.toArray(new byte[][] { new byte[] {} });
   }
 
   @Test
@@ -195,8 +194,8 @@ public class TestMultiParallel {
       Cell[] multiKvs = multiRes[i].rawCells();
       for (int j = 0; j < singleKvs.length; j++) {
         Assert.assertEquals(singleKvs[j], multiKvs[j]);
-        Assert.assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]),
-            CellUtil.cloneValue(multiKvs[j])));
+        Assert.assertEquals(0,
+          Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]), CellUtil.cloneValue(multiKvs[j])));
       }
     }
     table.close();
@@ -237,8 +236,8 @@ public class TestMultiParallel {
   }
 
   /**
-   * Only run one Multi test with a forced RegionServer abort. Otherwise, the
-   * unit tests will take an unnecessarily long time to run.
+   * Only run one Multi test with a forced RegionServer abort. Otherwise, the unit tests will take
+   * an unnecessarily long time to run.
    */
   @Test
   public void testFlushCommitsWithAbort() throws Exception {
@@ -259,14 +258,12 @@ public class TestMultiParallel {
     List<Put> puts = constructPutRequests();
     table.put(puts);
     LOG.info("puts");
-    final int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
-        .size();
+    final int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size();
     assert liveRScount > 0;
-    JVMClusterUtil.RegionServerThread liveRS = UTIL.getMiniHBaseCluster()
-        .getLiveRegionServerThreads().get(0);
+    JVMClusterUtil.RegionServerThread liveRS =
+      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().get(0);
     if (doAbort) {
-      liveRS.getRegionServer().abort("Aborting for tests",
-          new Exception("doTestFlushCommits"));
+      liveRS.getRegionServer().abort("Aborting for tests", new Exception("doTestFlushCommits"));
       // If we wait for no regions being online after we abort the server, we
       // could ensure the master has re-assigned the regions on killed server
       // after writing successfully. It means the server we aborted is dead
@@ -284,23 +281,24 @@ public class TestMultiParallel {
     validateLoadedData(table);
 
     // Validate server and region count
-    List<JVMClusterUtil.RegionServerThread> liveRSs = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    List<JVMClusterUtil.RegionServerThread> liveRSs =
+      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
     int count = 0;
-    for (JVMClusterUtil.RegionServerThread t: liveRSs) {
+    for (JVMClusterUtil.RegionServerThread t : liveRSs) {
       count++;
       LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
     LOG.info("Count=" + count);
     Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
-        (doAbort ? (liveRScount - 1) : liveRScount), count);
+      (doAbort ? (liveRScount - 1) : liveRScount), count);
     if (doAbort) {
       UTIL.getMiniHBaseCluster().waitOnRegionServer(0);
       UTIL.waitFor(15 * 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           // We disable regions on master so the count should be liveRScount - 1
-          return UTIL.getMiniHBaseCluster().getMaster()
-              .getClusterMetrics().getLiveServerMetrics().size() == liveRScount - 1;
+          return UTIL.getMiniHBaseCluster().getMaster().getClusterMetrics().getLiveServerMetrics()
+            .size() == liveRScount - 1;
         }
       });
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
@@ -361,7 +359,7 @@ public class TestMultiParallel {
       delete.addFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
-    results= new Object[deletes.size()];
+    results = new Object[deletes.size()];
     table.batch(deletes, results);
     validateSizeAndEmpty(results, KEYS.length);
 
@@ -586,12 +584,12 @@ public class TestMultiParallel {
   }
 
   private void validateResult(Object r1, byte[] qual, byte[] val) {
-    Result r = (Result)r1;
+    Result r = (Result) r1;
     Assert.assertTrue(r.containsColumn(BYTES_FAMILY, qual));
     byte[] value = r.getValue(BYTES_FAMILY, qual);
     if (0 != Bytes.compareTo(val, value)) {
-      fail("Expected [" + Bytes.toStringBinary(val)
-          + "] but got [" + Bytes.toStringBinary(value) + "]");
+      fail("Expected [" + Bytes.toStringBinary(val) + "] but got [" + Bytes.toStringBinary(value)
+        + "]");
     }
   }
 
@@ -616,7 +614,7 @@ public class TestMultiParallel {
     }
     int retryNum = 10;
     Result[] results = null;
-    do  {
+    do {
       results = table.get(gets);
       boolean finished = true;
       for (Result result : results) {
@@ -641,8 +639,7 @@ public class TestMultiParallel {
       if (results != null) {
         for (Result r : results) {
           Assert.assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
-          Assert.assertEquals(0, Bytes.compareTo(VALUE, r
-            .getValue(BYTES_FAMILY, QUALIFIER)));
+          Assert.assertEquals(0, Bytes.compareTo(VALUE, r.getValue(BYTES_FAMILY, QUALIFIER)));
         }
         LOG.info("Validating data on " + table + " successfully!");
       }
@@ -650,7 +647,7 @@ public class TestMultiParallel {
   }
 
   private void validateEmpty(Object r1) {
-    Result result = (Result)r1;
+    Result result = (Result) r1;
     Assert.assertTrue(result != null);
     Assert.assertTrue(result.isEmpty());
   }
@@ -679,7 +676,7 @@ public class TestMultiParallel {
 
     @Override
     public void postBalance(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-        BalanceRequest request, List<RegionPlan> plans) throws IOException {
+      BalanceRequest request, List<RegionPlan> plans) throws IOException {
       if (!plans.isEmpty()) {
         postBalanceCount.incrementAndGet();
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,11 +37,11 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedureMetrics {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedureMetrics.class);
+    HBaseClassTestRule.forClass(TestProcedureMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureMetrics.class);
 
@@ -204,7 +204,7 @@ public class TestProcedureMetrics {
     }
 
     public ProcedureMetrics(boolean success, boolean yield, int yieldCount,
-                            ProcedureMetrics[] subprocs) {
+      ProcedureMetrics[] subprocs) {
       this.success = success;
       this.yield = yield;
       this.yieldCount = yieldCount;
@@ -218,8 +218,8 @@ public class TestProcedureMetrics {
     }
 
     @Override
-    protected Procedure[] execute(TestProcEnv env) throws ProcedureYieldException,
-        ProcedureSuspendedException, InterruptedException {
+    protected Procedure[] execute(TestProcEnv env)
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       if (this.yield) {
         if (yieldNum < yieldCount) {
           yieldNum++;

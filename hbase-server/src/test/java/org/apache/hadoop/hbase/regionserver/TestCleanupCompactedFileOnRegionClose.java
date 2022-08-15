@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,22 +44,22 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestCleanupCompactedFileOnRegionClose {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCleanupCompactedFileOnRegionClose.class);
+    HBaseClassTestRule.forClass(TestCleanupCompactedFileOnRegionClose.class);
 
   private static HBaseTestingUtil util;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     util = new HBaseTestingUtil();
-    util.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY,100);
+    util.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
     util.getConfiguration().set("dfs.blocksize", "64000");
     util.getConfiguration().set("dfs.namenode.fs-limits.min-block-size", "1024");
-    util.getConfiguration().set(TimeToLiveHFileCleaner.TTL_CONF_KEY,"0");
+    util.getConfiguration().set(TimeToLiveHFileCleaner.TTL_CONF_KEY, "0");
     util.startMiniCluster(2);
   }
 
@@ -91,27 +90,27 @@ public class TestCleanupCompactedFileOnRegionClose {
       }
       util.flush(tableName);
     }
-    assertEquals(refSFCount, region.getStoreFileList(new byte[][]{familyNameBytes}).size());
+    assertEquals(refSFCount, region.getStoreFileList(new byte[][] { familyNameBytes }).size());
 
-    //add a delete, to test wether we end up with an inconsistency post region close
-    Delete delete = new Delete(Bytes.toBytes(refSFCount-1));
+    // add a delete, to test wether we end up with an inconsistency post region close
+    Delete delete = new Delete(Bytes.toBytes(refSFCount - 1));
     table.delete(delete);
     util.flush(tableName);
-    assertFalse(table.exists(new Get(Bytes.toBytes(refSFCount-1))));
+    assertFalse(table.exists(new Get(Bytes.toBytes(refSFCount - 1))));
 
-    //Create a scanner and keep it open to add references to StoreFileReaders
+    // Create a scanner and keep it open to add references to StoreFileReaders
     Scan scan = new Scan();
-    scan.withStopRow(Bytes.toBytes(refSFCount-2));
+    scan.withStopRow(Bytes.toBytes(refSFCount - 2));
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
     Result res = scanner.next();
     assertNotNull(res);
     assertEquals(refSFCount, res.getFamilyMap(familyNameBytes).size());
 
-
-    //Verify the references
+    // Verify the references
     int count = 0;
-    for (HStoreFile sf : (Collection<HStoreFile>)region.getStore(familyNameBytes).getStorefiles()) {
+    for (HStoreFile sf : (Collection<HStoreFile>) region.getStore(familyNameBytes)
+      .getStorefiles()) {
       synchronized (sf) {
         if (count < refSFCount) {
           assertTrue(sf.isReferencedInReads());
@@ -122,27 +121,24 @@ public class TestCleanupCompactedFileOnRegionClose {
       count++;
     }
 
-    //Major compact to produce compacted storefiles that need to be cleaned up
+    // Major compact to produce compacted storefiles that need to be cleaned up
     util.compact(tableName, true);
-    assertEquals(1, region.getStoreFileList(new byte[][]{familyNameBytes}).size());
-    assertEquals(refSFCount+1,
-      ((HStore)region.getStore(familyNameBytes)).getStoreEngine().getStoreFileManager()
-          .getCompactedfiles().size());
+    assertEquals(1, region.getStoreFileList(new byte[][] { familyNameBytes }).size());
+    assertEquals(refSFCount + 1, ((HStore) region.getStore(familyNameBytes)).getStoreEngine()
+      .getStoreFileManager().getCompactedfiles().size());
 
-    //close then open the region to determine wether compacted storefiles get cleaned up on close
+    // close then open the region to determine wether compacted storefiles get cleaned up on close
     hBaseAdmin.unassign(region.getRegionInfo().getRegionName(), false);
     hBaseAdmin.assign(region.getRegionInfo().getRegionName());
     util.waitUntilNoRegionsInTransition(10000);
 
-
     assertFalse("Deleted row should not exist",
-        table.exists(new Get(Bytes.toBytes(refSFCount-1))));
+      table.exists(new Get(Bytes.toBytes(refSFCount - 1))));
 
     rs = util.getRSForFirstRegionInTable(tableName);
     region = rs.getRegions(tableName).get(0);
-    assertEquals(1, region.getStoreFileList(new byte[][]{familyNameBytes}).size());
-    assertEquals(0,
-        ((HStore)region.getStore(familyNameBytes)).getStoreEngine().getStoreFileManager()
-            .getCompactedfiles().size());
+    assertEquals(1, region.getStoreFileList(new byte[][] { familyNameBytes }).size());
+    assertEquals(0, ((HStore) region.getStore(familyNameBytes)).getStoreEngine()
+      .getStoreFileManager().getCompactedfiles().size());
   }
 }

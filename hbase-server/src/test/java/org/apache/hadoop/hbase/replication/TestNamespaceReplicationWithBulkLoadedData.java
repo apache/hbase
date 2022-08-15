@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -45,7 +44,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -63,9 +61,9 @@ import org.slf4j.LoggerFactory;
 public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLoadReplication {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNamespaceReplicationWithBulkLoadedData.class);
+    HBaseClassTestRule.forClass(TestNamespaceReplicationWithBulkLoadedData.class);
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestNamespaceReplicationWithBulkLoadedData.class);
+    LoggerFactory.getLogger(TestNamespaceReplicationWithBulkLoadedData.class);
 
   private static final HBaseTestingUtil UTIL4 = new HBaseTestingUtil();
   private static final String PEER4_CLUSTER_ID = "peer4";
@@ -94,9 +92,9 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     UTIL4.startMiniCluster(NUM_SLAVES1);
 
     TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
-            .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
     Connection connection4 = ConnectionFactory.createConnection(CONF4);
     try (Admin admin4 = connection4.getAdmin()) {
@@ -108,41 +106,26 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
   @Before
   @Override
   public void setUpBase() throws Exception {
-    /** "super.setUpBase()" already sets peer1 from 1 <-> 2 <-> 3
-     * and this test add the fourth cluster.
-     * So we have following topology:
-     *      1
-     *     / \
-     *    2   4
-     *   /
-     *  3
-     *
-     *  The 1 -> 4 has two peers,
-     *  ns_peer1:  ns1 -> ns1 (validate this peer hfile-refs)
-     *             ns_peer1 configuration is NAMESPACES => ["ns1"]
-     *
-     *  ns_peer2:  ns2:t2_syncup -> ns2:t2_syncup, this peers is
-     *             ns_peer2 configuration is NAMESPACES => ["ns2"],
-     *                       TABLE_CFS => { "ns2:t2_syncup" => []}
-     *
-     *  The 1 -> 2 has one peer, this peer configuration is
-     *             add_peer '2', CLUSTER_KEY => "server1.cie.com:2181:/hbase"
-     *
+    /**
+     * "super.setUpBase()" already sets peer1 from 1 <-> 2 <-> 3 and this test add the fourth
+     * cluster. So we have following topology: 1 / \ 2 4 / 3 The 1 -> 4 has two peers, ns_peer1: ns1
+     * -> ns1 (validate this peer hfile-refs) ns_peer1 configuration is NAMESPACES => ["ns1"]
+     * ns_peer2: ns2:t2_syncup -> ns2:t2_syncup, this peers is ns_peer2 configuration is NAMESPACES
+     * => ["ns2"], TABLE_CFS => { "ns2:t2_syncup" => []} The 1 -> 2 has one peer, this peer
+     * configuration is add_peer '2', CLUSTER_KEY => "server1.cie.com:2181:/hbase"
      */
     super.setUpBase();
 
     // Create tables
     TableDescriptor table1 = TableDescriptorBuilder.newBuilder(NS1_TABLE)
-        .setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(famName)
-                .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
     TableDescriptor table2 = TableDescriptorBuilder.newBuilder(NS2_TABLE)
-        .setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(famName)
-                .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
     Admin admin1 = UTIL1.getAdmin();
     admin1.createNamespace(NamespaceDescriptor.create(NS1).build());
@@ -169,29 +152,25 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     admin4.createTable(table2);
 
     /**
-     *  Set ns_peer1 1: ns1 -> 2: ns1
-     *
-     *  add_peer 'ns_peer1', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
-     *     NAMESPACES => ["ns1"]
+     * Set ns_peer1 1: ns1 -> 2: ns1 add_peer 'ns_peer1', CLUSTER_KEY =>
+     * "zk1,zk2,zk3:2182:/hbase-prod", NAMESPACES => ["ns1"]
      */
     Set<String> namespaces = new HashSet<>();
     namespaces.add(NS1);
     ReplicationPeerConfig rpc4_ns =
-        ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
-            .setReplicateAllUserTables(false).setNamespaces(namespaces).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
+        .setReplicateAllUserTables(false).setNamespaces(namespaces).build();
     admin1.addReplicationPeer(PEER4_NS, rpc4_ns);
 
     /**
-     * Set ns_peer2 1: ns2:t2_syncup -> 4: ns2:t2_syncup
-     *
-     * add_peer 'ns_peer2', CLUSTER_KEY => "zk1,zk2,zk3:2182:/hbase-prod",
-     *          NAMESPACES => ["ns2"], TABLE_CFS => { "ns2:t2_syncup" => [] }
+     * Set ns_peer2 1: ns2:t2_syncup -> 4: ns2:t2_syncup add_peer 'ns_peer2', CLUSTER_KEY =>
+     * "zk1,zk2,zk3:2182:/hbase-prod", NAMESPACES => ["ns2"], TABLE_CFS => { "ns2:t2_syncup" => [] }
      */
     Map<TableName, List<String>> tableCFsMap = new HashMap<>();
     tableCFsMap.put(NS2_TABLE, null);
     ReplicationPeerConfig rpc4_ns_table =
-        ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
-            .setReplicateAllUserTables(false).setTableCFsMap(tableCFsMap).build();
+      ReplicationPeerConfig.newBuilder().setClusterKey(UTIL4.getClusterKey())
+        .setReplicateAllUserTables(false).setTableCFsMap(tableCFsMap).build();
     admin1.addReplicationPeer(PEER4_NS_TABLE, rpc4_ns_table);
   }
 
@@ -200,16 +179,14 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
   public void tearDownBase() throws Exception {
     super.tearDownBase();
     TableDescriptor table1 = TableDescriptorBuilder.newBuilder(NS1_TABLE)
-        .setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(famName)
-                .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
 
     TableDescriptor table2 = TableDescriptorBuilder.newBuilder(NS2_TABLE)
-        .setColumnFamily(
-            ColumnFamilyDescriptorBuilder.newBuilder(famName)
-                .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
+        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
     Admin admin1 = UTIL1.getAdmin();
     admin1.disableTable(table1.getTableName());
     admin1.deleteTable(table1.getTableName());
@@ -271,11 +248,11 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     assertTableHasValue(ns2Table, row, value);
 
     // case3: The table test will be replicate to cluster1,cluster2,cluster3
-    //        not replicate to cluster4, because we not set other peer for that tables.
+    // not replicate to cluster4, because we not set other peer for that tables.
     row = Bytes.toBytes("001_nopeer");
     value = Bytes.toBytes("v1");
-    assertBulkLoadConditions(tableName, row, value, UTIL1, peer1TestTable,
-        peer2TestTable, peer3TestTable);
+    assertBulkLoadConditions(tableName, row, value, UTIL1, peer1TestTable, peer2TestTable,
+      peer3TestTable);
     assertTableNoValue(notPeerTable, row, value); // 1 -> 4, table is empty
 
     // Verify hfile-refs for 1:ns_peer1, expect is empty
@@ -283,7 +260,7 @@ public final class TestNamespaceReplicationWithBulkLoadedData extends TestBulkLo
     ZKWatcher watcher = new ZKWatcher(UTIL1.getConfiguration(), "TestZnodeHFiles-refs", null);
     RecoverableZooKeeper zk = RecoverableZooKeeper.connect(UTIL1.getConfiguration(), watcher);
     ZKReplicationQueueStorage replicationQueueStorage =
-        new ZKReplicationQueueStorage(watcher, UTIL1.getConfiguration());
+      new ZKReplicationQueueStorage(watcher, UTIL1.getConfiguration());
     Set<String> hfiles = replicationQueueStorage.getAllHFileRefs();
     assertTrue(hfiles.isEmpty());
   }

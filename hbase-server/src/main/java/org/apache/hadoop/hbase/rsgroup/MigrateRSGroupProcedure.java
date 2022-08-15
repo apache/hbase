@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,8 +56,8 @@ public class MigrateRSGroupProcedure extends ModifyTableDescriptorProcedure {
     RSGroupInfo group =
       env.getMasterServices().getRSGroupInfoManager().getRSGroupForTable(current.getTableName());
     if (group == null) {
-      LOG.debug("RSGroup for table {} is empty when migrating, usually this should not happen" +
-        " unless we have removed the RSGroup, ignore...", current.getTableName());
+      LOG.debug("RSGroup for table {} is empty when migrating, usually this should not happen"
+        + " unless we have removed the RSGroup, ignore...", current.getTableName());
       return Optional.empty();
     }
     return Optional

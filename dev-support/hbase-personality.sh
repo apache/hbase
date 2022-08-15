@@ -145,8 +145,6 @@ function personality_modules
   local repostatus=$1
   local testtype=$2
   local extra=""
-  local branch1jdk8=()
-  local jdk8module=""
   local MODULES=("${CHANGED_MODULES[@]}")
 
   yetus_info "Personality: ${repostatus} ${testtype}"
@@ -156,10 +154,14 @@ function personality_modules
   # At a few points, hbase modules can run build, test, etc. in parallel
   # Let it happen. Means we'll use more CPU but should be for short bursts.
   # https://cwiki.apache.org/confluence/display/MAVEN/Parallel+builds+in+Maven+3
-  if [[ -n "${BUILD_THREAD}" ]]; then
-    extra="--threads=${BUILD_THREAD}"
+  if [[ "${testtype}" == mvnsite ]]; then
+    yetus_debug "Skip specifying --threads since maven-site-plugin does not support building in parallel."
   else
-    extra="--threads=2"
+    if [[ -n "${BUILD_THREAD}" ]]; then
+      extra="--threads=${BUILD_THREAD}"
+    else
+      extra="--threads=2"
+    fi
   fi
 
   # Set java.io.tmpdir to avoid exhausting the /tmp space
@@ -168,10 +170,6 @@ function personality_modules
   # let's make it absolute
   tmpdir=$(realpath target)
   extra="${extra} -Djava.io.tmpdir=${tmpdir} -DHBasePatchProcess"
-
-  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    extra="${extra} -Dhttps.protocols=TLSv1.2"
-  fi
 
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
@@ -203,21 +201,6 @@ function personality_modules
     return
   fi
 
-  # This list should include any modules that require jdk8. Maven should be configured to only
-  # include them when a proper JDK is in use, but that doesn' work if we specifically ask for the
-  # module to build as yetus does if something changes in the module.  Rather than try to
-  # figure out what jdk is in use so we can duplicate the module activation logic, just
-  # build at the top level if anything changes in one of these modules and let maven sort it out.
-  branch1jdk8=(hbase-error-prone hbase-tinylfu-blockcache)
-  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    for jdk8module in "${branch1jdk8[@]}"; do
-      if [[ "${MODULES[*]}" =~ ${jdk8module} ]]; then
-        MODULES=(.)
-        break
-      fi
-    done
-  fi
-
   if [[ ${testtype} == spotbugs ]]; then
     # Run spotbugs on each module individually to diff pre-patch and post-patch results and
     # report new warnings for changed modules only.
@@ -237,8 +220,7 @@ function personality_modules
     return
   fi
 
-  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]] &&
-      [[ "${PATCH_BRANCH}" != branch-1* ]] ; then
+  if [[ ${testtype} == compile ]] && [[ "${SKIP_ERRORPRONE}" != "true" ]]; then
     extra="${extra} -PerrorProne"
   fi
 
@@ -389,10 +371,13 @@ function refguide_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ src/main/asciidoc ]] ||
-     [[ ${filename} =~ src/main/xslt ]] ||
-     [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
-    add_test refguide
+  # we only generate ref guide on master branch now
+  if [[ "${PATCH_BRANCH}" = master ]]; then
+    if [[ ${filename} =~ src/main/asciidoc ]] ||
+       [[ ${filename} =~ src/main/xslt ]] ||
+       [[ ${filename} =~ hbase-common/src/main/resources/hbase-default\.xml ]]; then
+      add_test refguide
+    fi
   fi
 }
 
@@ -438,11 +423,7 @@ function refguide_rebuild
     return 1
   fi
 
-  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    pdf_output="book.pdf"
-  else
-    pdf_output="apache_hbase_reference_guide.pdf"
-  fi
+  pdf_output="apache_hbase_reference_guide.pdf"
 
   if [[ ! -f "${PATCH_DIR}/${repostatus}-site/${pdf_output}" ]]; then
     add_vote_table -1 refguide "${repostatus} failed to produce the pdf version of the reference guide."
@@ -594,43 +575,8 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-1.4 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-1.4 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.7.7"
-    else
-      hbase_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-1 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-1 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.10.0"
-    else
-      hbase_hadoop2_versions="2.10.0"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.0 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.0 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.6.5 2.7.7 2.8.5"
-    else
-      hbase_hadoop2_versions="2.6.1 2.6.2 2.6.3 2.6.4 2.6.5 2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7 2.8.2 2.8.3 2.8.4 2.8.5"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.1 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.1 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.7.7 2.8.5"
-    else
-      hbase_hadoop2_versions="2.7.1 2.7.2 2.7.3 2.7.4 2.7.5 2.7.6 2.7.7 2.8.2 2.8.3 2.8.4 2.8.5"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.2 ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.2 rules."
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.8.5 2.9.2 2.10.0"
-    else
-      hbase_hadoop2_versions="2.8.5 2.9.2 2.10.0"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.3+ rules."
+  if [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.4+ rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
       hbase_hadoop2_versions="2.10.1"
     else
@@ -640,30 +586,11 @@ function hadoopcheck_rebuild
     yetus_info "Setting Hadoop 2 versions to null on master/feature branch rules since we do not support hadoop 2 for hbase 3.x any more."
     hbase_hadoop2_versions=""
   fi
-  if [[ "${PATCH_BRANCH}" = branch-1* ]]; then
-    yetus_info "Setting Hadoop 3 versions to test based on branch-1.x rules."
-    hbase_hadoop3_versions=""
-  elif [[ "${PATCH_BRANCH}" = branch-2.0 ]] || [[ "${PATCH_BRANCH}" = branch-2.1 ]]; then
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.0/branch-2.1 rules"
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.0.3 3.1.2"
-    else
-      hbase_hadoop3_versions="3.0.3 3.1.1 3.1.2"
-    fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.2 ]] || [[ "${PATCH_BRANCH}" = branch-2.3 ]]; then
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.2/branch-2.3 rules"
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.2 3.2.2"
-    else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2"
-    fi
+  yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
+  if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+    hbase_hadoop3_versions="3.1.2 3.2.2 3.3.1"
   else
-    yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
-    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop3_versions="3.1.2 3.2.2 3.3.1"
-    else
-      hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2 3.3.0 3.3.1"
-    fi
+    hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2 3.3.0 3.3.1"
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
@@ -864,6 +791,55 @@ function hbaseanti_patchfile
   add_vote_table +1 hbaseanti "" "Patch does not have any anti-patterns."
   return 0
 }
+
+######################################
+
+add_test_type spotless
+
+## @description  spotless file filter
+## @audience     private
+## @stability    evolving
+## @param        filename
+function spotless_filefilter
+{
+  # always add spotless check as it can format almost all types of files
+  add_test spotless
+}
+## @description run spotless:check to check format issues
+## @audience private
+## @stability evolving
+## @param repostatus
+function spotless_rebuild
+{
+  local repostatus=$1
+  local logfile="${PATCH_DIR}/${repostatus}-spotless.txt"
+
+  if ! verify_needed_test spotless; then
+    return 0
+  fi
+
+  big_console_header "Checking spotless on ${repostatus}"
+
+  start_clock
+
+  local -a maven_args=('spotless:check')
+
+  # disabled because "maven_executor" needs to return both command and args
+  # shellcheck disable=2046
+  echo_and_redirect "${logfile}" $(maven_executor) "${maven_args[@]}"
+
+  count=$(${GREP} -c '\[ERROR\]' "${logfile}")
+  if [[ ${count} -gt 0 ]]; then
+    add_vote_table -1 spotless "${repostatus} has ${count} errors when running spotless:check, run spotless:apply to fix."
+    add_footer_table spotless "@@BASE@@/${repostatus}-spotless.txt"
+    return 1
+  fi
+
+  add_vote_table +1 spotless "${repostatus} has no errors when running spotless:check."
+  return 0
+}
+
+######################################
 
 ## @description  process the javac output for generating WARNING/ERROR
 ## @audience     private

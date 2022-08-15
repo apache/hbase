@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,14 +18,16 @@
 package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Stack;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -52,9 +54,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * MapReduce implementation of {@link BackupMergeJob}
- * Must be initialized with configuration of a backup destination cluster
- *
+ * MapReduce implementation of {@link BackupMergeJob} Must be initialized with configuration of a
+ * backup destination cluster
  */
 @InterfaceAudience.Private
 public class MapReduceBackupMergeJob implements BackupMergeJob {
@@ -119,9 +120,8 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         Path[] dirPaths = findInputDirectories(fs, backupRoot, tableNames[i], backupIds);
         String dirs = StringUtils.join(dirPaths, ",");
 
-        Path bulkOutputPath =
-            BackupUtils.getBulkOutputDir(BackupUtils.getFileNameCompatibleString(tableNames[i]),
-              getConf(), false);
+        Path bulkOutputPath = BackupUtils.getBulkOutputDir(
+          BackupUtils.getFileNameCompatibleString(tableNames[i]), getConf(), false);
         // Delete content if exists
         if (fs.exists(bulkOutputPath)) {
           if (!fs.delete(bulkOutputPath, true)) {
@@ -136,7 +136,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         int result = player.run(playerArgs);
         if (!succeeded(result)) {
           throw new IOException("Can not merge backup images for " + dirs
-              + " (check Hadoop/MR and HBase logs). Player return code =" + result);
+            + " (check Hadoop/MR and HBase logs). Player return code =" + result);
         }
         // Add to processed table list
         processedTableList.add(new Pair<>(tableNames[i], bulkOutputPath));
@@ -149,14 +149,14 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       // PHASE 2 (modification of a backup file system)
       // Move existing mergedBackupId data into tmp directory
       // we will need it later in case of a failure
-      Path tmpBackupDir = HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot,
-        mergedBackupId);
+      Path tmpBackupDir =
+        HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot, mergedBackupId);
       Path backupDirPath = HBackupFileSystem.getBackupPath(backupRoot, mergedBackupId);
 
       if (!fs.rename(backupDirPath, tmpBackupDir)) {
-        throw new IOException("Failed to rename "+ backupDirPath +" to "+tmpBackupDir);
+        throw new IOException("Failed to rename " + backupDirPath + " to " + tmpBackupDir);
       } else {
-        LOG.debug("Renamed "+ backupDirPath +" to "+ tmpBackupDir);
+        LOG.debug("Renamed " + backupDirPath + " to " + tmpBackupDir);
       }
       // Move new data into backup dest
       for (Pair<TableName, Path> tn : processedTableList) {
@@ -170,7 +170,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       // Delete tmp dir (Rename back during repair)
       if (!fs.delete(tmpBackupDir, true)) {
         // WARN and ignore
-        LOG.warn("Could not delete tmp dir: "+ tmpBackupDir);
+        LOG.warn("Could not delete tmp dir: " + tmpBackupDir);
       }
       // Delete old data
       deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
@@ -193,8 +193,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       } else {
         // backup repair must be run
         throw new IOException(
-            "Backup merge operation failed, run backup repair tool to restore system's integrity",
-            e);
+          "Backup merge operation failed, run backup repair tool to restore system's integrity", e);
       }
     } finally {
       table.close();
@@ -204,13 +203,13 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   /**
    * Copy meta data to of a backup session
-   * @param fs file system
-   * @param tmpBackupDir temp backup directory, where meta is locaed
+   * @param fs            file system
+   * @param tmpBackupDir  temp backup directory, where meta is locaed
    * @param backupDirPath new path for backup
    * @throws IOException exception
    */
   protected void copyMetaData(FileSystem fs, Path tmpBackupDir, Path backupDirPath)
-      throws IOException {
+    throws IOException {
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(tmpBackupDir, true);
     List<Path> toKeep = new ArrayList<Path>();
     while (it.hasNext()) {
@@ -220,8 +219,10 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       }
       // Keep meta
       String fileName = p.toString();
-      if (fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
-          || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0) {
+      if (
+        fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
+          || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0
+      ) {
         toKeep.add(p);
       }
     }
@@ -234,8 +235,8 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   /**
    * Copy file in DFS from p to newPath
-   * @param fs file system
-   * @param p old path
+   * @param fs      file system
+   * @param p       old path
    * @param newPath new path
    * @throws IOException exception
    */
@@ -249,15 +250,15 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     }
   }
 
-/**
- * Converts path before copying
- * @param p path
- * @param backupDirPath backup root
- * @return converted path
- */
+  /**
+   * Converts path before copying
+   * @param p             path
+   * @param backupDirPath backup root
+   * @return converted path
+   */
   protected Path convertToDest(Path p, Path backupDirPath) {
     String backupId = backupDirPath.getName();
-    Stack<String> stack = new Stack<String>();
+    Deque<String> stack = new ArrayDeque<String>();
     String name = null;
     while (true) {
       name = p.getName();
@@ -300,16 +301,16 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected void updateBackupManifest(String backupRoot, String mergedBackupId,
-      List<String> backupsToDelete) throws IllegalArgumentException, IOException {
+    List<String> backupsToDelete) throws IllegalArgumentException, IOException {
     BackupManifest manifest =
-        HBackupFileSystem.getManifest(conf, new Path(backupRoot), mergedBackupId);
+      HBackupFileSystem.getManifest(conf, new Path(backupRoot), mergedBackupId);
     manifest.getBackupImage().removeAncestors(backupsToDelete);
     // save back
     manifest.store(conf);
   }
 
   protected void deleteBackupImages(List<String> backupIds, Connection conn, FileSystem fs,
-      String backupRoot) throws IOException {
+    String backupRoot) throws IOException {
     // Delete from backup system table
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
@@ -339,24 +340,24 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected void moveData(FileSystem fs, String backupRoot, Path bulkOutputPath,
-          TableName tableName, String mergedBackupId) throws IllegalArgumentException, IOException {
+    TableName tableName, String mergedBackupId) throws IllegalArgumentException, IOException {
     Path dest =
-        new Path(HBackupFileSystem.getTableBackupDir(backupRoot, mergedBackupId, tableName));
+      new Path(HBackupFileSystem.getTableBackupDir(backupRoot, mergedBackupId, tableName));
 
     FileStatus[] fsts = fs.listStatus(bulkOutputPath);
     for (FileStatus fst : fsts) {
       if (fst.isDirectory()) {
-        String family =  fst.getPath().getName();
+        String family = fst.getPath().getName();
         Path newDst = new Path(dest, family);
         if (fs.exists(newDst)) {
           if (!fs.delete(newDst, true)) {
-            throw new IOException("failed to delete :"+ newDst);
+            throw new IOException("failed to delete :" + newDst);
           }
         } else {
           fs.mkdirs(dest);
         }
         boolean result = fs.rename(fst.getPath(), dest);
-        LOG.debug("MoveData from "+ fst.getPath() +" to "+ dest+" result="+ result);
+        LOG.debug("MoveData from " + fst.getPath() + " to " + dest + " result=" + result);
       }
     }
   }
@@ -365,7 +366,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
     Set<TableName> allSet = new HashSet<>();
 
     try (Connection conn = ConnectionFactory.createConnection(conf);
-        BackupSystemTable table = new BackupSystemTable(conn)) {
+      BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
         BackupInfo bInfo = table.readBackupInfo(backupId);
 
@@ -378,12 +379,12 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   protected Path[] findInputDirectories(FileSystem fs, String backupRoot, TableName tableName,
-      String[] backupIds) throws IOException {
+    String[] backupIds) throws IOException {
     List<Path> dirs = new ArrayList<>();
 
     for (String backupId : backupIds) {
       Path fileBackupDirPath =
-          new Path(HBackupFileSystem.getTableBackupDir(backupRoot, backupId, tableName));
+        new Path(HBackupFileSystem.getTableBackupDir(backupRoot, backupId, tableName));
       if (fs.exists(fileBackupDirPath)) {
         dirs.add(fileBackupDirPath);
       } else {

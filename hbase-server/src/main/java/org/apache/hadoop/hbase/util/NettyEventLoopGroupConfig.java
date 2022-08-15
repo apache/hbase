@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.concurrent.ThreadFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
+import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
@@ -27,17 +33,19 @@ import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
-import java.util.concurrent.ThreadFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
-import org.apache.hadoop.hbase.wal.NettyAsyncFSWALConfigHelper;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Event loop group related config.
  */
 @InterfaceAudience.Private
 public class NettyEventLoopGroupConfig {
+
+  public static final String NETTY_WORKER_COUNT_KEY = "hbase.netty.worker.count";
+  public static final int DEFAULT_NETTY_WORKER_COUNT = 0;
+
+  public static final String NETTY_NATIVETRANSPORT_KEY = "hbase.netty.nativetransport";
+  public static final boolean DEFAULT_NETTY_NATIVETRANSPORT = true;
+
   private final EventLoopGroup group;
 
   private final Class<? extends ServerChannel> serverChannelClass;
@@ -46,16 +54,23 @@ public class NettyEventLoopGroupConfig {
 
   private static boolean useEpoll(Configuration conf) {
     // Config to enable native transport.
-    boolean epollEnabled = conf.getBoolean("hbase.netty.nativetransport", true);
-    // Use the faster native epoll transport mechanism on linux if enabled
-    return epollEnabled && JVM.isLinux() && JVM.isAmd64();
+    final boolean epollEnabled =
+      conf.getBoolean(NETTY_NATIVETRANSPORT_KEY, DEFAULT_NETTY_NATIVETRANSPORT);
+    // Use the faster native epoll transport mechanism on linux if enabled and the
+    // hardware architecture is either amd64 or aarch64. Netty is known to have native
+    // epoll support for these combinations.
+    return epollEnabled && JVM.isLinux() && (JVM.isAmd64() || JVM.isAarch64());
   }
 
   public NettyEventLoopGroupConfig(Configuration conf, String threadPoolName) {
-    boolean useEpoll = useEpoll(conf);
-    int workerCount = conf.getInt("hbase.netty.worker.count", 0);
+    final boolean useEpoll = useEpoll(conf);
+    final int workerCount = conf.getInt(NETTY_WORKER_COUNT_KEY,
+      // For backwards compatibility we also need to consider
+      // "hbase.netty.eventloop.rpcserver.thread.count"
+      // if it is defined in site configuration instead.
+      conf.getInt("hbase.netty.eventloop.rpcserver.thread.count", DEFAULT_NETTY_WORKER_COUNT));
     ThreadFactory eventLoopThreadFactory =
-        new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
+      new DefaultThreadFactory(threadPoolName, true, Thread.MAX_PRIORITY);
     if (useEpoll) {
       group = new EpollEventLoopGroup(workerCount, eventLoopThreadFactory);
       serverChannelClass = EpollServerSocketChannel.class;

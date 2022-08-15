@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Base class for exceptions thrown by an HBase server. May contain extra info about
- * the state of the server when the exception was thrown.
+ * Base class for exceptions thrown by an HBase server. May contain extra info about the state of
+ * the server when the exception was thrown.
  */
 @InterfaceAudience.Public
 public class HBaseServerException extends HBaseIOException {
@@ -44,10 +44,7 @@ public class HBaseServerException extends HBaseIOException {
     this.serverOverloaded = serverOverloaded;
   }
 
-  /**
-   * @param t throwable to check for server overloaded state
-   * @return True if the server was considered overloaded when the exception was thrown
-   */
+  /** Returns True if the server was considered overloaded when the exception was thrown */
   public static boolean isServerOverloaded(Throwable t) {
     if (t instanceof HBaseServerException) {
       return ((HBaseServerException) t).isServerOverloaded();
@@ -63,9 +60,7 @@ public class HBaseServerException extends HBaseIOException {
     this.serverOverloaded = serverOverloaded;
   }
 
-  /**
-   * @return True if server was considered overloaded when exception was thrown
-   */
+  /** Returns True if server was considered overloaded when exception was thrown */
   public boolean isServerOverloaded() {
     return serverOverloaded;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
@@ -25,7 +24,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -53,11 +51,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,11 +59,14 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * An integration test to detect regressions in HBASE-7912. Create
- * a table with many regions, load data, perform series backup/load operations,
- * then restore and verify data
+ * An integration test to detect regressions in HBASE-7912. Create a table with many regions, load
+ * data, perform series backup/load operations, then restore and verify data
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7912">HBASE-7912</a>
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-14123">HBASE-14123</a>
  */
@@ -111,8 +107,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     util = new IntegrationTestingUtility();
     Configuration conf = util.getConfiguration();
     regionsCountPerServer = conf.getInt(REGION_COUNT_KEY, DEFAULT_REGION_COUNT);
-    regionServerCount =
-        conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
+    regionServerCount = conf.getInt(REGIONSERVER_COUNT_KEY, DEFAULT_REGIONSERVER_COUNT);
     rowsInIteration = conf.getInt(ROWS_PER_ITERATION_KEY, DEFAULT_ROWS_IN_ITERATION);
     numIterations = conf.getInt(NUM_ITERATIONS_KEY, DEFAULT_NUM_ITERATIONS);
     numTables = conf.getInt(NUMBER_OF_TABLES_KEY, DEFAULT_NUMBER_OF_TABLES);
@@ -126,7 +121,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   @After
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
-    if(util.isDistributedCluster()) {
+    if (util.isDistributedCluster()) {
       deleteTablesIfAny();
       LOG.info("Cleaning up after test. Deleted tables");
       cleanUpBackupDir();
@@ -138,8 +133,8 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   @Override
   public void setUpMonkey() throws Exception {
-    Policy p = new PeriodicRandomActionPolicy(sleepTime,
-      new RestartRandomRsExceptMetaAction(sleepTime));
+    Policy p =
+      new PeriodicRandomActionPolicy(sleepTime, new RestartRandomRsExceptMetaAction(sleepTime));
     this.monkey = new PolicyBasedChaosMonkey(util, p);
     startMonkey();
   }
@@ -212,7 +207,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
     TableDescriptor desc = builder.build();
     ColumnFamilyDescriptorBuilder cbuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_NAME.getBytes(Charset.defaultCharset()));
+      ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_NAME.getBytes(Charset.defaultCharset()));
     ColumnFamilyDescriptor[] columns = new ColumnFamilyDescriptor[] { cbuilder.build() };
     LOG.info("Creating table {} with {} splits.", tableName,
       regionsCountPerServer * regionServerCount);
@@ -228,24 +223,21 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     Connection conn = util.getConnection();
     // #0- insert some data to a table
     Table t1 = conn.getTable(table);
-    util.loadRandomRows(t1, new byte[]{'f'}, 100, numRows);
+    util.loadRandomRows(t1, new byte[] { 'f' }, 100, numRows);
     // flush table
     conn.getAdmin().flush(TableName.valueOf(table.getName()));
   }
 
-  private String backup(BackupRequest request, BackupAdmin client)
-      throws IOException {
+  private String backup(BackupRequest request, BackupAdmin client) throws IOException {
     String backupId = client.backupTables(request);
     return backupId;
   }
 
-  private void restore(RestoreRequest request, BackupAdmin client)
-      throws IOException {
+  private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
     client.restore(request);
   }
 
-  private void merge(String[] backupIds, BackupAdmin client)
-      throws IOException {
+  private void merge(String[] backupIds, BackupAdmin client) throws IOException {
     client.mergeBackups(backupIds);
   }
 
@@ -254,9 +246,8 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     List<String> backupIds = new ArrayList<String>();
     List<Integer> tableSizes = new ArrayList<Integer>();
 
-    try (Connection conn = util.getConnection();
-        Admin admin = conn.getAdmin();
-        BackupAdmin client = new BackupAdminImpl(conn);) {
+    try (Connection conn = util.getConnection(); Admin admin = conn.getAdmin();
+      BackupAdmin client = new BackupAdminImpl(conn);) {
 
       // #0- insert some data to table 'table'
       loadData(table, rowsInIteration);
@@ -267,7 +258,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       List<TableName> tables = Lists.newArrayList(table);
       BackupRequest.Builder builder = new BackupRequest.Builder();
       BackupRequest request = builder.withBackupType(BackupType.FULL).withTableList(tables)
-          .withTargetRootDir(BACKUP_ROOT_DIR).build();
+        .withTargetRootDir(BACKUP_ROOT_DIR).build();
 
       String backupIdFull = backup(request, client);
       assertTrue(checkSucceeded(backupIdFull));
@@ -283,7 +274,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
         // Do incremental backup
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
-            .withTargetRootDir(BACKUP_ROOT_DIR).build();
+          .withTargetRootDir(BACKUP_ROOT_DIR).build();
         String backupId = backup(request, client);
         assertTrue(checkSucceeded(backupId));
         backupIds.add(backupId);
@@ -306,16 +297,17 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       Table hTable = conn.getTable(table);
       Assert.assertEquals(util.countRows(hTable), rowsInIteration * numIterations);
       hTable.close();
-      LOG.info("{} loop {} finished.", Thread.currentThread().getName(), (count-1));
+      LOG.info("{} loop {} finished.", Thread.currentThread().getName(), (count - 1));
     }
   }
 
   private void restoreVerifyTable(Connection conn, BackupAdmin client, TableName table,
-      String backupId, long expectedRows) throws IOException {
+    String backupId, long expectedRows) throws IOException {
 
     TableName[] tablesRestoreIncMultiple = new TableName[] { table };
-    restore(createRestoreRequest(BACKUP_ROOT_DIR, backupId, false,
-      tablesRestoreIncMultiple, null, true), client);
+    restore(
+      createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null, true),
+      client);
     Table hTable = conn.getTable(table);
     Assert.assertEquals(expectedRows, util.countRows(hTable));
     hTable.close();
@@ -330,7 +322,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   /**
-   *
    * @param backupId pass backup ID to check status of
    * @return status of backup
    */
@@ -350,39 +341,31 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
   /**
    * Get restore request.
-   *
    * @param backupRootDir directory where backup is located
-   * @param backupId backup ID
-   * @param check check the backup
-   * @param fromTables table names to restore from
-   * @param toTables new table names to restore to
-   * @param isOverwrite overwrite the table(s)
+   * @param backupId      backup ID
+   * @param check         check the backup
+   * @param fromTables    table names to restore from
+   * @param toTables      new table names to restore to
+   * @param isOverwrite   overwrite the table(s)
    * @return an instance of RestoreRequest
    */
   public RestoreRequest createRestoreRequest(String backupRootDir, String backupId, boolean check,
-      TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
+    TableName[] fromTables, TableName[] toTables, boolean isOverwrite) {
     RestoreRequest.Builder builder = new RestoreRequest.Builder();
-    return builder.withBackupRootDir(backupRootDir)
-        .withBackupId(backupId)
-        .withCheck(check)
-        .withFromTables(fromTables)
-        .withToTables(toTables)
-        .withOvewrite(isOverwrite).build();
+    return builder.withBackupRootDir(backupRootDir).withBackupId(backupId).withCheck(check)
+      .withFromTables(fromTables).withToTables(toTables).withOvewrite(isOverwrite).build();
   }
 
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
     enableBackup(getConf());
-    LOG.debug("Initializing/checking cluster has {} servers",regionServerCount);
+    LOG.debug("Initializing/checking cluster has {} servers", regionServerCount);
     util.initializeCluster(regionServerCount);
     LOG.debug("Done initializing/checking cluster");
   }
 
-  /**
-   *
-   * @return status of CLI execution
-   */
+  /** Returns status of CLI execution */
   @Override
   public int runTestFromCommandLine() throws Exception {
     // Check if backup is enabled
@@ -414,47 +397,38 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     addOptWithArg(REGION_COUNT_KEY, "Total number of regions. Default: " + DEFAULT_REGION_COUNT);
     addOptWithArg(ROWS_PER_ITERATION_KEY,
       "Total number of data rows to be loaded during one iteration." + " Default: "
-          + DEFAULT_ROWS_IN_ITERATION);
+        + DEFAULT_ROWS_IN_ITERATION);
     addOptWithArg(NUM_ITERATIONS_KEY,
       "Total number iterations." + " Default: " + DEFAULT_NUM_ITERATIONS);
     addOptWithArg(NUMBER_OF_TABLES_KEY,
       "Total number of tables in the test." + " Default: " + DEFAULT_NUMBER_OF_TABLES);
-    addOptWithArg(SLEEP_TIME_KEY, "Sleep time of chaos monkey in ms " +
-            "to restart random region server. Default: " + SLEEP_TIME_DEFAULT);
+    addOptWithArg(SLEEP_TIME_KEY, "Sleep time of chaos monkey in ms "
+      + "to restart random region server. Default: " + SLEEP_TIME_DEFAULT);
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
     super.processOptions(cmd);
-    regionsCountPerServer =
-        Integer.parseInt(cmd.getOptionValue(REGION_COUNT_KEY,
-          Integer.toString(DEFAULT_REGION_COUNT)));
-    regionServerCount =
-        Integer.parseInt(cmd.getOptionValue(REGIONSERVER_COUNT_KEY,
-          Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
-    rowsInIteration =
-        Integer.parseInt(cmd.getOptionValue(ROWS_PER_ITERATION_KEY,
-          Integer.toString(DEFAULT_ROWS_IN_ITERATION)));
-    numIterations = Integer.parseInt(cmd.getOptionValue(NUM_ITERATIONS_KEY,
-      Integer.toString(DEFAULT_NUM_ITERATIONS)));
-    numTables = Integer.parseInt(cmd.getOptionValue(NUMBER_OF_TABLES_KEY,
-      Integer.toString(DEFAULT_NUMBER_OF_TABLES)));
-    sleepTime = Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY,
-      Long.toString(SLEEP_TIME_DEFAULT)));
-
+    regionsCountPerServer = Integer
+      .parseInt(cmd.getOptionValue(REGION_COUNT_KEY, Integer.toString(DEFAULT_REGION_COUNT)));
+    regionServerCount = Integer.parseInt(
+      cmd.getOptionValue(REGIONSERVER_COUNT_KEY, Integer.toString(DEFAULT_REGIONSERVER_COUNT)));
+    rowsInIteration = Integer.parseInt(
+      cmd.getOptionValue(ROWS_PER_ITERATION_KEY, Integer.toString(DEFAULT_ROWS_IN_ITERATION)));
+    numIterations = Integer
+      .parseInt(cmd.getOptionValue(NUM_ITERATIONS_KEY, Integer.toString(DEFAULT_NUM_ITERATIONS)));
+    numTables = Integer.parseInt(
+      cmd.getOptionValue(NUMBER_OF_TABLES_KEY, Integer.toString(DEFAULT_NUMBER_OF_TABLES)));
+    sleepTime =
+      Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY, Long.toString(SLEEP_TIME_DEFAULT)));
 
     LOG.info(MoreObjects.toStringHelper("Parsed Options")
-      .add(REGION_COUNT_KEY, regionsCountPerServer)
-      .add(REGIONSERVER_COUNT_KEY, regionServerCount)
-      .add(ROWS_PER_ITERATION_KEY, rowsInIteration)
-      .add(NUM_ITERATIONS_KEY, numIterations)
-      .add(NUMBER_OF_TABLES_KEY, numTables)
-      .add(SLEEP_TIME_KEY, sleepTime)
-      .toString());
+      .add(REGION_COUNT_KEY, regionsCountPerServer).add(REGIONSERVER_COUNT_KEY, regionServerCount)
+      .add(ROWS_PER_ITERATION_KEY, rowsInIteration).add(NUM_ITERATIONS_KEY, numIterations)
+      .add(NUMBER_OF_TABLES_KEY, numTables).add(SLEEP_TIME_KEY, sleepTime).toString());
   }
 
   /**
-   *
    * @param args argument list
    */
   public static void main(String[] args) throws Exception {

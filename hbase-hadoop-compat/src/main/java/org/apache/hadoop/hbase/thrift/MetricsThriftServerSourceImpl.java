@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
@@ -26,13 +25,12 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop 2 version of {@link org.apache.hadoop.hbase.thrift.MetricsThriftServerSource}
- *
- * Implements BaseSource through BaseSourceImpl, following the pattern
+ * Hadoop 2 version of {@link org.apache.hadoop.hbase.thrift.MetricsThriftServerSource} Implements
+ * BaseSource through BaseSourceImpl, following the pattern
  */
 @InterfaceAudience.Private
-public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl implements
-    MetricsThriftServerSource {
+public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl
+  implements MetricsThriftServerSource {
 
   private MetricHistogram batchGetStat;
   private MetricHistogram batchMutateStat;
@@ -51,17 +49,15 @@ public class MetricsThriftServerSourceImpl extends ExceptionTrackingSourceImpl i
   private final MetricHistogram pausesWithGc;
   private final MetricHistogram pausesWithoutGc;
 
-  public MetricsThriftServerSourceImpl(String metricsName,
-                                       String metricsDescription,
-                                       String metricsContext,
-                                       String metricsJmxContext) {
+  public MetricsThriftServerSourceImpl(String metricsName, String metricsDescription,
+    String metricsContext, String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
 
     // pause monitor metrics
-    infoPauseThresholdExceeded = getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY,
-      INFO_THRESHOLD_COUNT_DESC, 0L);
-    warnPauseThresholdExceeded = getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY,
-      WARN_THRESHOLD_COUNT_DESC, 0L);
+    infoPauseThresholdExceeded =
+      getMetricsRegistry().newCounter(INFO_THRESHOLD_COUNT_KEY, INFO_THRESHOLD_COUNT_DESC, 0L);
+    warnPauseThresholdExceeded =
+      getMetricsRegistry().newCounter(WARN_THRESHOLD_COUNT_KEY, WARN_THRESHOLD_COUNT_DESC, 0L);
     pausesWithGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITH_GC_KEY);
     pausesWithoutGc = getMetricsRegistry().newTimeHistogram(PAUSE_TIME_WITHOUT_GC_KEY);
   }

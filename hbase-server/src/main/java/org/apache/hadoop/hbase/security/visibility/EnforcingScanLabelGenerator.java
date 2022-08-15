@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +21,16 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.security.User;
 
 /**
- * This ScanLabelGenerator enforces a set of predefined authorizations for a
- * given user, the set defined by the admin using the VisibilityClient admin
- * interface or the set_auths shell command. Any authorizations requested with
- * Scan#authorizations will be ignored.
+ * This ScanLabelGenerator enforces a set of predefined authorizations for a given user, the set
+ * defined by the admin using the VisibilityClient admin interface or the set_auths shell command.
+ * Any authorizations requested with Scan#authorizations will be ignored.
  */
 @InterfaceAudience.Private
 public class EnforcingScanLabelGenerator implements ScanLabelGenerator {

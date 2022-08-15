@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 public class BackupAdminImpl implements BackupAdmin {
   public final static String CHECK_OK = "Checking backup images: OK";
   public final static String CHECK_FAILED =
-      "Checking backup images: Failed. Some dependencies are missing for restore";
+    "Checking backup images: Failed. Some dependencies are missing for restore";
   private static final Logger LOG = LoggerFactory.getLogger(BackupAdminImpl.class);
 
   private final Connection conn;
@@ -107,8 +106,8 @@ public class BackupAdminImpl implements BackupAdmin {
         deleteSessionStarted = true;
       } catch (IOException e) {
         LOG.warn("You can not run delete command while active backup session is in progress. \n"
-            + "If there is no active backup session running, run backup repair utility to "
-            + "restore \nbackup system integrity.");
+          + "If there is no active backup session running, run backup repair utility to "
+          + "restore \nbackup system integrity.");
         return -1;
       }
 
@@ -158,7 +157,7 @@ public class BackupAdminImpl implements BackupAdmin {
             BackupSystemTable.deleteSnapshot(conn);
             // We still have record with unfinished delete operation
             LOG.error("Delete operation failed, please run backup repair utility to restore "
-                + "backup system integrity", e);
+              + "backup system integrity", e);
             throw e;
           } else {
             LOG.warn("Delete operation succeeded, there were some errors: ", e);
@@ -177,15 +176,15 @@ public class BackupAdminImpl implements BackupAdmin {
   /**
    * Updates incremental backup set for every backupRoot
    * @param tablesMap map [backupRoot: {@code Set<TableName>}]
-   * @param table backup system table
+   * @param table     backup system table
    * @throws IOException if a table operation fails
    */
   private void finalizeDelete(Map<String, HashSet<TableName>> tablesMap, BackupSystemTable table)
-      throws IOException {
+    throws IOException {
     for (String backupRoot : tablesMap.keySet()) {
       Set<TableName> incrTableSet = table.getIncrementalBackupTableSet(backupRoot);
       Map<TableName, ArrayList<BackupInfo>> tableMap =
-          table.getBackupHistoryForTableSet(incrTableSet, backupRoot);
+        table.getBackupHistoryForTableSet(incrTableSet, backupRoot);
       for (Map.Entry<TableName, ArrayList<BackupInfo>> entry : tableMap.entrySet()) {
         if (entry.getValue() == null) {
           // No more backups for a table
@@ -283,10 +282,10 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   private void removeTableFromBackupImage(BackupInfo info, TableName tn, BackupSystemTable sysTable)
-          throws IOException {
+    throws IOException {
     List<TableName> tables = info.getTableNames();
-    LOG.debug("Remove " + tn + " from " + info.getBackupId() + " tables="
-        + info.getTableListAsString());
+    LOG.debug(
+      "Remove " + tn + " from " + info.getBackupId() + " tables=" + info.getTableListAsString());
     if (tables.contains(tn)) {
       tables.remove(tn);
 
@@ -306,7 +305,7 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   private List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
-      BackupSystemTable table) throws IOException {
+    BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
     long ts = backupInfo.getStartTs();
     List<BackupInfo> list = new ArrayList<>();
@@ -325,7 +324,7 @@ public class BackupAdminImpl implements BackupAdmin {
           list.clear();
         } else {
           LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn
-              + " added " + info.getBackupId() + " tables=" + info.getTableListAsString());
+            + " added " + info.getBackupId() + " tables=" + info.getTableListAsString());
           list.add(info);
         }
       }
@@ -338,7 +337,7 @@ public class BackupAdminImpl implements BackupAdmin {
    * @throws IOException if cleaning up the backup directory fails
    */
   private void cleanupBackupDir(BackupInfo backupInfo, TableName table, Configuration conf)
-      throws IOException {
+    throws IOException {
     try {
       // clean up the data at target directory
       String targetDir = backupInfo.getBackupRootDir();
@@ -349,9 +348,8 @@ public class BackupAdminImpl implements BackupAdmin {
 
       FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
 
-      Path targetDirPath =
-          new Path(BackupUtils.getTableBackupDir(backupInfo.getBackupRootDir(),
-            backupInfo.getBackupId(), table));
+      Path targetDirPath = new Path(BackupUtils.getTableBackupDir(backupInfo.getBackupRootDir(),
+        backupInfo.getBackupId(), table));
       if (outputFs.delete(targetDirPath, true)) {
         LOG.info("Cleaning up backup data at " + targetDirPath.toString() + " done.");
       } else {
@@ -359,13 +357,13 @@ public class BackupAdminImpl implements BackupAdmin {
       }
     } catch (IOException e1) {
       LOG.error("Cleaning up backup data of " + backupInfo.getBackupId() + " for table " + table
-          + "at " + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");
+        + "at " + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");
       throw e1;
     }
   }
 
   private boolean isLastBackupSession(BackupSystemTable table, TableName tn, long startTime)
-      throws IOException {
+    throws IOException {
     List<BackupInfo> history = table.getBackupHistory();
     for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
@@ -466,7 +464,7 @@ public class BackupAdminImpl implements BackupAdmin {
   public void addToBackupSet(String name, TableName[] tables) throws IOException {
     String[] tableNames = new String[tables.length];
     try (final BackupSystemTable table = new BackupSystemTable(conn);
-        final Admin admin = conn.getAdmin()) {
+      final Admin admin = conn.getAdmin()) {
       for (int i = 0; i < tables.length; i++) {
         tableNames[i] = tables[i].getNameAsString();
         if (!admin.tableExists(TableName.valueOf(tableNames[i]))) {
@@ -474,8 +472,8 @@ public class BackupAdminImpl implements BackupAdmin {
         }
       }
       table.addToBackupSet(name, tableNames);
-      LOG.info("Added tables [" + StringUtils.join(tableNames, " ") + "] to '" + name
-          + "' backup set");
+      LOG.info(
+        "Added tables [" + StringUtils.join(tableNames, " ") + "] to '" + name + "' backup set");
     }
   }
 
@@ -484,8 +482,8 @@ public class BackupAdminImpl implements BackupAdmin {
     LOG.info("Removing tables [" + StringUtils.join(tables, " ") + "] from '" + name + "'");
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       table.removeFromBackupSet(name, toStringArray(tables));
-      LOG.info("Removing tables [" + StringUtils.join(tables, " ") + "] from '" + name
-          + "' completed.");
+      LOG.info(
+        "Removing tables [" + StringUtils.join(tables, " ") + "] from '" + name + "' completed.");
     }
   }
 
@@ -534,9 +532,9 @@ public class BackupAdminImpl implements BackupAdmin {
       }
 
       if (incrTableSet.isEmpty()) {
-        String msg = "Incremental backup table set contains no tables. "
-                + "You need to run full backup first "
-                + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
+        String msg =
+          "Incremental backup table set contains no tables. " + "You need to run full backup first "
+            + (tableList != null ? "on " + StringUtils.join(tableList, ",") : "");
 
         throw new IOException(msg);
       }
@@ -545,7 +543,7 @@ public class BackupAdminImpl implements BackupAdmin {
         if (!tableList.isEmpty()) {
           String extraTables = StringUtils.join(tableList, ",");
           String msg = "Some tables (" + extraTables + ") haven't gone through full backup. "
-                  + "Perform full backup on " + extraTables + " first, " + "then retry the command";
+            + "Perform full backup on " + extraTables + " first, " + "then retry the command";
           throw new IOException(msg);
         }
       }
@@ -554,13 +552,13 @@ public class BackupAdminImpl implements BackupAdmin {
     if (tableList != null && !tableList.isEmpty()) {
       for (TableName table : tableList) {
         String targetTableBackupDir =
-            HBackupFileSystem.getTableBackupDir(targetRootDir, backupId, table);
+          HBackupFileSystem.getTableBackupDir(targetRootDir, backupId, table);
         Path targetTableBackupDirPath = new Path(targetTableBackupDir);
         FileSystem outputFs =
-            FileSystem.get(targetTableBackupDirPath.toUri(), conn.getConfiguration());
+          FileSystem.get(targetTableBackupDirPath.toUri(), conn.getConfiguration());
         if (outputFs.exists(targetTableBackupDirPath)) {
-          throw new IOException("Target backup directory " + targetTableBackupDir
-              + " exists already.");
+          throw new IOException(
+            "Target backup directory " + targetTableBackupDir + " exists already.");
         }
         outputFs.mkdirs(targetTableBackupDirPath);
       }
@@ -581,8 +579,8 @@ public class BackupAdminImpl implements BackupAdmin {
           tableList = excludeNonExistingTables(tableList, nonExistingTableList);
         } else {
           // Throw exception only in full mode - we try to backup non-existing table
-          throw new IOException("Non-existing tables found in the table list: "
-              + nonExistingTableList);
+          throw new IOException(
+            "Non-existing tables found in the table list: " + nonExistingTableList);
         }
       }
     }
@@ -590,9 +588,9 @@ public class BackupAdminImpl implements BackupAdmin {
     // update table list
     BackupRequest.Builder builder = new BackupRequest.Builder();
     request = builder.withBackupType(request.getBackupType()).withTableList(tableList)
-            .withTargetRootDir(request.getTargetRootDir())
-            .withBackupSetName(request.getBackupSetName()).withTotalTasks(request.getTotalTasks())
-            .withBandwidthPerTasks((int) request.getBandwidth()).build();
+      .withTargetRootDir(request.getTargetRootDir()).withBackupSetName(request.getBackupSetName())
+      .withTotalTasks(request.getTotalTasks()).withBandwidthPerTasks((int) request.getBandwidth())
+      .build();
 
     TableBackupClient client;
     try {
@@ -608,7 +606,7 @@ public class BackupAdminImpl implements BackupAdmin {
   }
 
   private List<TableName> excludeNonExistingTables(List<TableName> tableList,
-      List<TableName> nonExistingTableList) {
+    List<TableName> nonExistingTableList) {
     for (TableName table : nonExistingTableList) {
       tableList.remove(table);
     }
@@ -619,7 +617,7 @@ public class BackupAdminImpl implements BackupAdmin {
   public void mergeBackups(String[] backupIds) throws IOException {
     try (final BackupSystemTable sysTable = new BackupSystemTable(conn)) {
       checkIfValidForMerge(backupIds, sysTable);
-      //TODO run job on remote cluster
+      // TODO run job on remote cluster
       BackupMergeJob job = BackupRestoreFactory.getBackupMergeJob(conn.getConfiguration());
       job.run(backupIds);
     }
@@ -627,7 +625,6 @@ public class BackupAdminImpl implements BackupAdmin {
 
   /**
    * Verifies that backup images are valid for merge.
-   *
    * <ul>
    * <li>All backups MUST be in the same destination
    * <li>No FULL backups are allowed - only INCREMENTAL
@@ -636,11 +633,11 @@ public class BackupAdminImpl implements BackupAdmin {
    * </ul>
    * <p>
    * @param backupIds list of backup ids
-   * @param table backup system table
+   * @param table     backup system table
    * @throws IOException if the backup image is not valid for merge
    */
   private void checkIfValidForMerge(String[] backupIds, BackupSystemTable table)
-          throws IOException {
+    throws IOException {
     String backupRoot = null;
 
     final Set<TableName> allTables = new HashSet<>();
@@ -656,7 +653,7 @@ public class BackupAdminImpl implements BackupAdmin {
         backupRoot = bInfo.getBackupRootDir();
       } else if (!bInfo.getBackupRootDir().equals(backupRoot)) {
         throw new IOException("Found different backup destinations in a list of a backup sessions "
-                + "\n1. " + backupRoot + "\n" + "2. " + bInfo.getBackupRootDir());
+          + "\n1. " + backupRoot + "\n" + "2. " + bInfo.getBackupRootDir());
       }
       if (bInfo.getType() == BackupType.FULL) {
         throw new IOException("FULL backup image can not be merged for: \n" + bInfo);
@@ -664,7 +661,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
       if (bInfo.getState() != BackupState.COMPLETE) {
         throw new IOException("Backup image " + backupId
-            + " can not be merged becuase of its state: " + bInfo.getState());
+          + " can not be merged becuase of its state: " + bInfo.getState());
       }
       allBackups.add(backupId);
       allTables.addAll(bInfo.getTableNames());
@@ -677,7 +674,7 @@ public class BackupAdminImpl implements BackupAdmin {
       }
     }
 
-    final long startRangeTime  = minTime;
+    final long startRangeTime = minTime;
     final long endRangeTime = maxTime;
     final String backupDest = backupRoot;
     // Check we have no 'holes' in backup id list
@@ -688,7 +685,7 @@ public class BackupAdminImpl implements BackupAdmin {
 
     BackupInfo.Filter timeRangeFilter = info -> {
       long time = info.getStartTs();
-      return time >= startRangeTime && time <= endRangeTime ;
+      return time >= startRangeTime && time <= endRangeTime;
     };
 
     BackupInfo.Filter tableFilter = info -> {
@@ -699,20 +696,20 @@ public class BackupAdminImpl implements BackupAdmin {
     BackupInfo.Filter typeFilter = info -> info.getType() == BackupType.INCREMENTAL;
     BackupInfo.Filter stateFilter = info -> info.getState() == BackupState.COMPLETE;
 
-    List<BackupInfo> allInfos = table.getBackupHistory(-1, destinationFilter,
-          timeRangeFilter, tableFilter, typeFilter, stateFilter);
+    List<BackupInfo> allInfos = table.getBackupHistory(-1, destinationFilter, timeRangeFilter,
+      tableFilter, typeFilter, stateFilter);
     if (allInfos.size() != allBackups.size()) {
-      // Yes we have at least one  hole in backup image sequence
+      // Yes we have at least one hole in backup image sequence
       List<String> missingIds = new ArrayList<>();
-      for(BackupInfo info: allInfos) {
-        if(allBackups.contains(info.getBackupId())) {
+      for (BackupInfo info : allInfos) {
+        if (allBackups.contains(info.getBackupId())) {
           continue;
         }
         missingIds.add(info.getBackupId());
       }
       String errMsg =
-          "Sequence of backup ids has 'holes'. The following backup images must be added:" +
-           org.apache.hadoop.util.StringUtils.join(",", missingIds);
+        "Sequence of backup ids has 'holes'. The following backup images must be added:"
+          + org.apache.hadoop.util.StringUtils.join(",", missingIds);
       throw new IOException(errMsg);
     }
   }

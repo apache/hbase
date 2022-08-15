@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
+
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,32 +39,34 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
- * <p>CatalogReplicaLoadBalanceReplicaSimpleSelector implements a simple catalog replica load
- * balancing algorithm. It maintains a stale location cache for each table. Whenever client looks
- * up location, it first check if the row is the stale location cache. If yes, the location from
- * catalog replica is stale, it will go to the primary region to look up update-to-date location;
- * otherwise, it will randomly pick up a replica region or primary region for lookup. When clients
- * receive RegionNotServedException from region servers, it will add these region locations to the
- * stale location cache. The stale cache will be cleaned up periodically by a chore.</p>
- *
+ * <p>
+ * CatalogReplicaLoadBalanceReplicaSimpleSelector implements a simple catalog replica load balancing
+ * algorithm. It maintains a stale location cache for each table. Whenever client looks up location,
+ * it first check if the row is the stale location cache. If yes, the location from catalog replica
+ * is stale, it will go to the primary region to look up update-to-date location; otherwise, it will
+ * randomly pick up a replica region or primary region for lookup. When clients receive
+ * RegionNotServedException from region servers, it will add these region locations to the stale
+ * location cache. The stale cache will be cleaned up periodically by a chore.
+ * </p>
  * It follows a simple algorithm to choose a meta replica region (including primary meta) to go:
- *
  * <ol>
- *  <li>If there is no stale location entry for rows it looks up, it will randomly
- *     pick a meta replica region (including primary meta) to do lookup. </li>
- *  <li>If the location from the replica region is stale, client gets RegionNotServedException
- *     from region server, in this case, it will create StaleLocationCacheEntry in
- *     CatalogReplicaLoadBalanceReplicaSimpleSelector.</li>
- *  <li>When client tries to do location lookup, it checks StaleLocationCache first for rows it
- *     tries to lookup, if entry exists, it will go with primary meta region to do lookup;
- *     otherwise, it will follow step 1.</li>
- *  <li>A chore will periodically run to clean up cache entries in the StaleLocationCache.</li>
+ * <li>If there is no stale location entry for rows it looks up, it will randomly pick a meta
+ * replica region (including primary meta) to do lookup.</li>
+ * <li>If the location from the replica region is stale, client gets RegionNotServedException from
+ * region server, in this case, it will create StaleLocationCacheEntry in
+ * CatalogReplicaLoadBalanceReplicaSimpleSelector.</li>
+ * <li>When client tries to do location lookup, it checks StaleLocationCache first for rows it tries
+ * to lookup, if entry exists, it will go with primary meta region to do lookup; otherwise, it will
+ * follow step 1.</li>
+ * <li>A chore will periodically run to clean up cache entries in the StaleLocationCache.</li>
  * </ol>
  */
-class CatalogReplicaLoadBalanceSimpleSelector implements
-  CatalogReplicaLoadBalanceSelector, Stoppable {
+class CatalogReplicaLoadBalanceSimpleSelector
+  implements CatalogReplicaLoadBalanceSelector, Stoppable {
   private static final Logger LOG =
     LoggerFactory.getLogger(CatalogReplicaLoadBalanceSimpleSelector.class);
   private final long STALE_CACHE_TIMEOUT_IN_MILLISECONDS = 3000; // 3 seconds
@@ -94,10 +97,8 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
 
     @Override
     public String toString() {
-      return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-        .append("endKey", endKey)
-        .append("timestamp", timestamp)
-        .toString();
+      return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("endKey", endKey)
+        .append("timestamp", timestamp).toString();
     }
   }
 
@@ -123,24 +124,23 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   }
 
   /**
-   * When a client runs into RegionNotServingException, it will call this method to
-   * update Selector's internal state.
+   * When a client runs into RegionNotServingException, it will call this method to update
+   * Selector's internal state.
    * @param loc the location which causes exception.
    */
+  @Override
   public void onError(HRegionLocation loc) {
-    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache =
-      computeIfAbsent(staleCache, loc.getRegion().getTable(),
-        () -> new ConcurrentSkipListMap<>(BYTES_COMPARATOR));
+    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = computeIfAbsent(staleCache,
+      loc.getRegion().getTable(), () -> new ConcurrentSkipListMap<>(BYTES_COMPARATOR));
     byte[] startKey = loc.getRegion().getStartKey();
-    tableCache.putIfAbsent(startKey,
-      new StaleLocationCacheEntry(loc.getRegion().getEndKey()));
+    tableCache.putIfAbsent(startKey, new StaleLocationCacheEntry(loc.getRegion().getEndKey()));
     LOG.debug("Add entry to stale cache for table {} with startKey {}, {}",
       loc.getRegion().getTable(), startKey, loc.getRegion().getEndKey());
   }
 
   /**
-   * Select an random replica id (including the primary replica id). In case there is no replica region configured, return
-   * the primary replica id.
+   * Select an random replica id (including the primary replica id). In case there is no replica
+   * region configured, return the primary replica id.
    * @return Replica id
    */
   private int getRandomReplicaId() {
@@ -157,23 +157,22 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   }
 
   /**
-   * When it looks up a location, it will call this method to find a replica region to go.
-   * For a normal case, > 99% of region locations from catalog/meta replica will be up to date.
-   * In extreme cases such as region server crashes, it will depends on how fast replication
-   * catches up.
-   *
-   * @param tablename table name it looks up
-   * @param row key it looks up.
+   * When it looks up a location, it will call this method to find a replica region to go. For a
+   * normal case, > 99% of region locations from catalog/meta replica will be up to date. In extreme
+   * cases such as region server crashes, it will depends on how fast replication catches up.
+   * @param tableName  table name it looks up
+   * @param row        key it looks up.
    * @param locateType locateType, Only BEFORE and CURRENT will be passed in.
    * @return catalog replica id
    */
-  public int select(final TableName tablename, final byte[] row,
+  @Override
+  public int select(final TableName tableName, final byte[] row,
     final RegionLocateType locateType) {
-    Preconditions.checkArgument(locateType == RegionLocateType.BEFORE ||
-        locateType == RegionLocateType.CURRENT,
+    Preconditions.checkArgument(
+      locateType == RegionLocateType.BEFORE || locateType == RegionLocateType.CURRENT,
       "Expected type BEFORE or CURRENT but got: %s", locateType);
 
-    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = staleCache.get(tablename);
+    ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache = staleCache.get(tableName);
 
     // If there is no entry in StaleCache, select a random replica id.
     if (tableCache == null) {
@@ -198,15 +197,17 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     // long comparing is faster than comparing byte arrays(in most cases). It could remove
     // stale entries faster. If the possible match entry does not time out, it will check if
     // the entry is a match for the row passed in and select the replica id accordingly.
-    if ((EnvironmentEdgeManager.currentTime() - entry.getValue().getTimestamp()) >=
-      STALE_CACHE_TIMEOUT_IN_MILLISECONDS) {
-      LOG.debug("Entry for table {} with startKey {}, {} times out", tablename, entry.getKey(),
+    if (
+      (EnvironmentEdgeManager.currentTime() - entry.getValue().getTimestamp())
+          >= STALE_CACHE_TIMEOUT_IN_MILLISECONDS
+    ) {
+      LOG.debug("Entry for table {} with startKey {}, {} times out", tableName, entry.getKey(),
         entry);
       tableCache.remove(entry.getKey());
       return getRandomReplicaId();
     }
 
-    byte[] endKey =  entry.getValue().getEndKey();
+    byte[] endKey = entry.getValue().getEndKey();
 
     // The following logic is borrowed from AsyncNonMetaRegionLocator.
     if (isEmptyStopRow(endKey)) {
@@ -245,12 +246,12 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
   private void cleanupReplicaReplicaStaleCache() {
     long curTimeInMills = EnvironmentEdgeManager.currentTime();
     for (ConcurrentNavigableMap<byte[], StaleLocationCacheEntry> tableCache : staleCache.values()) {
-      Iterator<Map.Entry<byte[], StaleLocationCacheEntry>> it =
-        tableCache.entrySet().iterator();
+      Iterator<Map.Entry<byte[], StaleLocationCacheEntry>> it = tableCache.entrySet().iterator();
       while (it.hasNext()) {
         Map.Entry<byte[], StaleLocationCacheEntry> entry = it.next();
-        if (curTimeInMills - entry.getValue().getTimestamp() >=
-          STALE_CACHE_TIMEOUT_IN_MILLISECONDS) {
+        if (
+          curTimeInMills - entry.getValue().getTimestamp() >= STALE_CACHE_TIMEOUT_IN_MILLISECONDS
+        ) {
           LOG.debug("clean entry {}, {} from stale cache", entry.getKey(), entry.getValue());
           it.remove();
         }
@@ -269,15 +270,17 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     }
 
     int cachedNumOfReplicas = this.numOfReplicas;
-    if ((cachedNumOfReplicas == UNINITIALIZED_NUM_OF_REPLICAS) ||
-      (cachedNumOfReplicas != newNumOfReplicas)) {
+    if (
+      (cachedNumOfReplicas == UNINITIALIZED_NUM_OF_REPLICAS)
+        || (cachedNumOfReplicas != newNumOfReplicas)
+    ) {
       this.numOfReplicas = newNumOfReplicas;
     }
     return newNumOfReplicas;
   }
 
-  private ScheduledChore getCacheCleanupChore(
-    final CatalogReplicaLoadBalanceSimpleSelector selector) {
+  private ScheduledChore
+    getCacheCleanupChore(final CatalogReplicaLoadBalanceSimpleSelector selector) {
     return new ScheduledChore("CleanupCatalogReplicaStaleCache", this,
       STALE_CACHE_CLEAN_CHORE_INTERVAL_IN_MILLISECONDS) {
       @Override
@@ -287,8 +290,8 @@ class CatalogReplicaLoadBalanceSimpleSelector implements
     };
   }
 
-  private ScheduledChore getRefreshReplicaCountChore(
-    final CatalogReplicaLoadBalanceSimpleSelector selector) {
+  private ScheduledChore
+    getRefreshReplicaCountChore(final CatalogReplicaLoadBalanceSimpleSelector selector) {
     return new ScheduledChore("RefreshReplicaCountChore", this,
       REFRESH_REPLICA_COUNT_CHORE_INTERVAL_IN_MILLISECONDS) {
       @Override

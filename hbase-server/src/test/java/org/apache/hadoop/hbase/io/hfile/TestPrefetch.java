@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +17,23 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -31,25 +41,32 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({IOTests.class, MediumTests.class})
+@Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestPrefetch.class);
+    HBaseClassTestRule.forClass(TestPrefetch.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -61,6 +78,9 @@ public class TestPrefetch {
   private CacheConfig cacheConf;
   private FileSystem fs;
   private BlockCache blockCache;
+
+  @Rule
+  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
   public void setUp() throws IOException {
@@ -74,18 +94,32 @@ public class TestPrefetch {
   @Test
   public void testPrefetchSetInHCDWorks() {
     ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true).build();
+      .newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true).build();
     Configuration c = HBaseConfiguration.create();
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
-    CacheConfig cc =
-        new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 
   @Test
   public void testPrefetch() throws Exception {
-    Path storeFile = writeStoreFile("TestPrefetch");
-    readStoreFile(storeFile);
+    TraceUtil.trace(() -> {
+      Path storeFile = writeStoreFile("TestPrefetch");
+      readStoreFile(storeFile);
+    }, "testPrefetch");
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<>(otelRule::getSpans,
+      hasItems(hasName("testPrefetch"), hasName("PrefetchExecutor.request"))));
+    final List<SpanData> spans = otelRule.getSpans();
+    if (LOG.isDebugEnabled()) {
+      StringTraceRenderer renderer = new StringTraceRenderer(spans);
+      renderer.render(LOG::debug);
+    }
+
+    final SpanData testSpan = spans.stream().filter(hasName("testPrefetch")::matches).findFirst()
+      .orElseThrow(AssertionError::new);
+    assertThat("prefetch spans happen on their own threads, detached from file open.", spans,
+      hasItem(allOf(hasName("PrefetchExecutor.request"), not(hasParentSpanId(testSpan)))));
   }
 
   @Test
@@ -97,8 +131,8 @@ public class TestPrefetch {
   }
 
   /**
-   * Read a storefile in the same manner as a scanner -- using non-positional reads and
-   * without waiting for prefetch to complete.
+   * Read a storefile in the same manner as a scanner -- using non-positional reads and without
+   * waiting for prefetch to complete.
    */
   private void readStoreFileLikeScanner(Path storeFilePath) throws Exception {
     // Open the file
@@ -106,8 +140,8 @@ public class TestPrefetch {
     do {
       long offset = 0;
       while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-        HFileBlock block = reader.readBlock(offset, -1, false, /*pread=*/false,
-            false, true, null, null);
+        HFileBlock block =
+          reader.readBlock(offset, -1, false, /* pread= */false, false, true, null, null);
         offset += block.getOnDiskSizeWithHeader();
       }
     } while (!reader.prefetchComplete());
@@ -129,8 +163,10 @@ public class TestPrefetch {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true, false, true) != null;
-      if (block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX) {
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
         assertTrue(isCached);
       }
       offset += block.getOnDiskSizeWithHeader();
@@ -139,26 +175,17 @@ public class TestPrefetch {
 
   private Path writeStoreFile(String fname) throws IOException {
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
-    HFileContext meta = new HFileContextBuilder()
-      .withBlockSize(DATA_BLOCK_SIZE)
-      .build();
+    HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeFileParentDir)
-      .withFileContext(meta)
-      .build();
+      .withOutputDir(storeFileParentDir).withFileContext(meta).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
       byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
       byte[] v = RandomKeyValueUtil.randomValue(rand);
       int cfLen = rand.nextInt(k.length - rowLen + 1);
-      KeyValue kv = new KeyValue(
-          k, 0, rowLen,
-          k, rowLen, cfLen,
-          k, rowLen + cfLen, k.length - rowLen - cfLen,
-          rand.nextLong(),
-          generateKeyType(rand),
-          v, 0, v.length);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
     }
 
@@ -171,12 +198,10 @@ public class TestPrefetch {
       // Let's make half of KVs puts.
       return KeyValue.Type.Put;
     } else {
-      KeyValue.Type keyType =
-          KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
-      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum)
-      {
-        throw new RuntimeException("Generated an invalid key type: " + keyType
-            + ". " + "Probably the layout of KeyValue.Type has changed.");
+      KeyValue.Type keyType = KeyValue.Type.values()[1 + rand.nextInt(NUM_VALID_KEY_TYPES)];
+      if (keyType == KeyValue.Type.Minimum || keyType == KeyValue.Type.Maximum) {
+        throw new RuntimeException("Generated an invalid key type: " + keyType + ". "
+          + "Probably the layout of KeyValue.Type has changed.");
       }
       return keyType;
     }

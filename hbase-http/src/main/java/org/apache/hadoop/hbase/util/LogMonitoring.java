@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -36,8 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public abstract class LogMonitoring {
 
-  public static void dumpTailOfLogs(
-      PrintWriter out, long tailKb) throws IOException {
+  public static void dumpTailOfLogs(PrintWriter out, long tailKb) throws IOException {
     Set<File> logs = Log4jUtils.getActiveLogFiles();
     for (File f : logs) {
       out.println("+++++++++++++++++++++++++++++++");
@@ -59,7 +58,7 @@ public abstract class LogMonitoring {
     try {
       FileChannel channel = fis.getChannel();
       channel.position(Math.max(0, channel.size() - tailKb * 1024));
-      r = new BufferedReader(new InputStreamReader(fis));
+      r = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
       r.readLine(); // skip the first partial line
       String line;
       while ((line = r.readLine()) != null) {

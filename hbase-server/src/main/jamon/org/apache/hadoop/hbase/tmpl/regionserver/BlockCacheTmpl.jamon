@@ -30,6 +30,7 @@ BlockCache bc;
 </%java>
 <%import>
 java.util.Map;
+org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile;
 org.apache.hadoop.hbase.io.hfile.AgeSnapshot;
 org.apache.hadoop.hbase.io.hfile.CachedBlock;
@@ -211,7 +212,7 @@ org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
     </tr>
     <tr>
         <td>Misses Caching</td>
-        <td><% String.format("%,d", bc.getStats().getMissCount()) %></td>
+        <td><% String.format("%,d", bc.getStats().getMissCachingCount()) %></td>
         <td>Block requests that were cache misses but only requests set to use block cache</td>
     </tr>
     <tr>
@@ -282,9 +283,7 @@ are combined counts. Request count is sum of hits and misses.</p>
 <%java>
   String bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
   String bcName = bc.getClass().getSimpleName();
-  org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile cbsbf =
-    org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.getLoadedCachedBlocksByFile(config, bc);
-  AgeSnapshot cbsbfSnapshot = cbsbf.getAgeInCacheSnapshot();
+  int maxCachedBlocksByFile = BlockCacheUtil.getMaxCachedBlocksByFile(config);
 
   boolean lru = bc instanceof LruBlockCache;
 
@@ -297,13 +296,6 @@ are combined counts. Request count is sum of hits and misses.</p>
     bucketAllocator = ((BucketCache)bc).getAllocator();
   }
 </%java>
-<%if cbsbf.isFull() %>
-<p>
-<div class="alert alert-danger">
-<strong>The stats below are incomplete!</strong> We ran into our accounting limit of <% cbsbf.getCount() %> blocks. Up the configuration <i>hbase.ui.blockcache.by.file.max</i>.
-</div>
-</p> 
-</%if>
 <table id="blocks_summary" class="table table-striped">
     <tr>
         <th>Attribute</th>
@@ -392,9 +384,13 @@ are combined counts. Request count is sum of hits and misses.</p>
 </%if>
 </table>
 <%doc>Call through to block cache Detail rendering template</%doc>
-<p>View block cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a></p>
-<%java>
-cbsbf = null;
-</%java>
+<p>
+View block cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a>
+<%if bc.getBlockCount() > maxCachedBlocksByFile %>
+<br>
+<b>Note</b>: JSON view of block cache will be incomplete, because block count <% bc.getBlockCount() %> is greater than <i>hbase.ui.blockcache.by.file.max</i> value of <% maxCachedBlocksByFile %>.
+Increase that value to get a complete picture.
+</%if>
+</p>
 </%def>
 

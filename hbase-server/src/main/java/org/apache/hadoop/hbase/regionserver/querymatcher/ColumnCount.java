@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,7 +42,7 @@ class ColumnCount {
   /**
    * Constructor
    * @param column the qualifier to count the versions for
-   * @param count initial count
+   * @param count  initial count
    */
   public ColumnCount(byte[] column, int count) {
     this(column, 0, column.length, count);
@@ -54,7 +53,7 @@ class ColumnCount {
    * @param column the qualifier to count the versions for
    * @param offset in the passed buffer where to start the qualifier from
    * @param length of the qualifier
-   * @param count initial count
+   * @param count  initial count
    */
   public ColumnCount(byte[] column, int offset, int length, int count) {
     this.bytes = column;
@@ -63,23 +62,17 @@ class ColumnCount {
     this.count = count;
   }
 
-  /**
-   * @return the buffer
-   */
+  /** Returns the buffer */
   public byte[] getBuffer() {
     return this.bytes;
   }
 
-  /**
-   * @return the offset
-   */
+  /** Returns the offset */
   public int getOffset() {
     return this.offset;
   }
 
-  /**
-   * @return the length
-   */
+  /** Returns the length */
   public int getLength() {
     return this.length;
   }

@@ -15,16 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.util.Objects;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * UserPermission consists of a user name and a permission.
- * Permission can be one of [Global, Namespace, Table] permission.
+ * UserPermission consists of a user name and a permission. Permission can be one of [Global,
+ * Namespace, Table] permission.
  */
 @InterfaceAudience.Public
 public class UserPermission {
@@ -34,7 +32,7 @@ public class UserPermission {
 
   /**
    * Construct a user permission given permission.
-   * @param user user name
+   * @param user       user name
    * @param permission one of [Global, Namespace, Table] permission
    */
   public UserPermission(String user, Permission permission) {
@@ -87,9 +85,8 @@ public class UserPermission {
 
   @Override
   public String toString() {
-    StringBuilder str = new StringBuilder("UserPermission: ")
-        .append("user=").append(user)
-        .append(", ").append(permission.toString());
+    StringBuilder str = new StringBuilder("UserPermission: ").append("user=").append(user)
+      .append(", ").append(permission.toString());
     return str.toString();
   }
 }

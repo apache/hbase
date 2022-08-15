@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,12 +41,12 @@ import org.junit.experimental.categories.Category;
 /**
  * Demonstrate how Procedure handles single members, multiple members, and errors semantics
  */
-@Category({MasterTests.class, SmallTests.class})
+@Category({ MasterTests.class, SmallTests.class })
 public class TestProcedure {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestProcedure.class);
+    HBaseClassTestRule.forClass(TestProcedure.class);
 
   ProcedureCoordinator coord;
 
@@ -63,8 +63,7 @@ public class TestProcedure {
     CountDownLatch completedProcedure = new CountDownLatch(1);
 
     public LatchedProcedure(ProcedureCoordinator coord, ForeignExceptionDispatcher monitor,
-        long wakeFreq, long timeout, String opName, byte[] data,
-        List<String> expectedMembers) {
+      long wakeFreq, long timeout, String opName, byte[] data, List<String> expectedMembers) {
       super(coord, monitor, wakeFreq, timeout, opName, data, expectedMembers);
     }
 
@@ -85,16 +84,16 @@ public class TestProcedure {
   }
 
   /**
-   * With a single member, verify ordered execution.  The Coordinator side is run in a separate
+   * With a single member, verify ordered execution. The Coordinator side is run in a separate
    * thread so we can only trigger from members and wait for particular state latches.
    */
   @Test
   public void testSingleMember() throws Exception {
     // The member
-    List<String> members =  new ArrayList<>();
+    List<String> members = new ArrayList<>();
     members.add("member");
     LatchedProcedure proc = new LatchedProcedure(coord, new ForeignExceptionDispatcher(), 100,
-        Integer.MAX_VALUE, "op", null, members);
+      Integer.MAX_VALUE, "op", null, members);
     final LatchedProcedure procspy = spy(proc);
     // coordinator: start the barrier procedure
     new Thread() {
@@ -136,12 +135,12 @@ public class TestProcedure {
   @Test
   public void testMultipleMember() throws Exception {
     // 2 members
-    List<String> members =  new ArrayList<>();
+    List<String> members = new ArrayList<>();
     members.add("member1");
     members.add("member2");
 
     LatchedProcedure proc = new LatchedProcedure(coord, new ForeignExceptionDispatcher(), 100,
-        Integer.MAX_VALUE, "op", null, members);
+      Integer.MAX_VALUE, "op", null, members);
     final LatchedProcedure procspy = spy(proc);
     // start the barrier procedure
     new Thread() {
@@ -188,10 +187,10 @@ public class TestProcedure {
 
   @Test
   public void testErrorPropagation() throws Exception {
-    List<String> members =  new ArrayList<>();
+    List<String> members = new ArrayList<>();
     members.add("member");
-    Procedure proc = new Procedure(coord, new ForeignExceptionDispatcher(), 100,
-        Integer.MAX_VALUE, "op", null, members);
+    Procedure proc = new Procedure(coord, new ForeignExceptionDispatcher(), 100, Integer.MAX_VALUE,
+      "op", null, members);
     final Procedure procspy = spy(proc);
 
     ForeignException cause = new ForeignException("SRC", "External Exception");
@@ -214,10 +213,10 @@ public class TestProcedure {
 
   @Test
   public void testBarrieredErrorPropagation() throws Exception {
-    List<String> members =  new ArrayList<>();
+    List<String> members = new ArrayList<>();
     members.add("member");
     LatchedProcedure proc = new LatchedProcedure(coord, new ForeignExceptionDispatcher(), 100,
-        Integer.MAX_VALUE, "op", null, members);
+      Integer.MAX_VALUE, "op", null, members);
     final LatchedProcedure procspy = spy(proc);
 
     // start the barrier procedure

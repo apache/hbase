@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -54,7 +54,7 @@ public class TestMobFileCache {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobFileCache.class);
+    HBaseClassTestRule.forClass(TestMobFileCache.class);
 
   private HBaseTestingUtil UTIL;
   private HRegion region;
@@ -91,29 +91,20 @@ public class TestMobFileCache {
       TableDescriptorBuilder.newBuilder(UTIL.createTableDescriptor(
         TableName.valueOf("testMobFileCache"), ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS,
         3, HConstants.FOREVER, ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED));
-    ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY1))
-        .setMobEnabled(true)
-        .setMobThreshold(0)
-        .build();
+    ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(FAMILY1)).setMobEnabled(true).setMobThreshold(0).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY2))
-        .setMobEnabled(true)
-        .setMobThreshold(0)
-        .build();
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY2))
+      .setMobEnabled(true).setMobThreshold(0).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY3))
-        .setMobEnabled(true)
-        .setMobThreshold(0)
-        .build();
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY3))
+      .setMobEnabled(true).setMobThreshold(0).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     mobFileCache = new MobFileCache(conf);
-    region = HBaseTestingUtil
-      .createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf, tableDescriptor, mobFileCache);
+    region = HBaseTestingUtil.createRegionAndWAL(regionInfo, UTIL.getDataTestDir(), conf,
+      tableDescriptor, mobFileCache);
   }
 
   @After
@@ -133,11 +124,8 @@ public class TestMobFileCache {
    * Create the mob store file
    */
   private Path createMobStoreFile(Configuration conf, String family) throws IOException {
-    ColumnFamilyDescriptor columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder
-        .newBuilder(Bytes.toBytes(family))
-        .setMaxVersions(4)
-        .setMobEnabled(true).build();
+    ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
+      .newBuilder(Bytes.toBytes(family)).setMaxVersions(4).setMobEnabled(true).build();
     return createMobStoreFile(columnFamilyDescriptor);
   }
 
@@ -145,11 +133,10 @@ public class TestMobFileCache {
    * Create the mob store file
    */
   private Path createMobStoreFile(ColumnFamilyDescriptor columnFamilyDescriptor)
-      throws IOException {
+    throws IOException {
     // Setting up a Store
     TableName tn = TableName.valueOf(TABLE);
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(tn);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tn);
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     HMobStore mobStore = (HMobStore) region.getStore(columnFamilyDescriptor.getName());
     KeyValue key1 = new KeyValue(ROW, columnFamilyDescriptor.getName(), QF1, 1, VALUE);
@@ -158,9 +145,8 @@ public class TestMobFileCache {
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tn).build();
-    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate,
-      maxKeyCount, columnFamilyDescriptor.getCompactionCompressionType(),
-      regionInfo.getStartKey(), false);
+    StoreFileWriter mobWriter = mobStore.createWriterInTmp(currentDate, maxKeyCount,
+      columnFamilyDescriptor.getCompactionCompressionType(), regionInfo.getStartKey(), false);
     Path mobFilePath = mobWriter.getPath();
     String fileName = mobFilePath.getName();
     mobWriter.append(key1);
@@ -184,8 +170,7 @@ public class TestMobFileCache {
     // Before open one file by the MobFileCache
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     // Open one file by the MobFileCache
-    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    CachedMobFile cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertNotNull(cachedMobFile1);
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
@@ -193,25 +178,22 @@ public class TestMobFileCache {
     // The evict is also managed by a schedule thread pool.
     // And its check period is set as 3600 seconds by default.
     // This evict should get the lock at the most time
-    mobFileCache.evict();  // Cache not full, evict it
+    mobFileCache.evict(); // Cache not full, evict it
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
 
-    mobFileCache.evictFile(file1Path.getName());  // Evict one file
+    mobFileCache.evictFile(file1Path.getName()); // Evict one file
     assertEquals(EXPECTED_CACHE_SIZE_ZERO, mobFileCache.getCacheSize());
     assertEquals(EXPECTED_REFERENCE_ONE, cachedMobFile1.getReferenceCount());
 
-    cachedMobFile1.close();  // Close the cached mob file
+    cachedMobFile1.close(); // Close the cached mob file
 
     // Reopen three cached file
-    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(
-        fs, file1Path, cacheConf);
+    cachedMobFile1 = (CachedMobFile) mobFileCache.openFile(fs, file1Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_ONE, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(
-        fs, file2Path, cacheConf);
+    CachedMobFile cachedMobFile2 = (CachedMobFile) mobFileCache.openFile(fs, file2Path, cacheConf);
     assertEquals(EXPECTED_CACHE_SIZE_TWO, mobFileCache.getCacheSize());
-    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(
-        fs, file3Path, cacheConf);
+    CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(fs, file3Path, cacheConf);
     // Before the evict
     // Evict the cache, should close the first file 1
     assertEquals(EXPECTED_CACHE_SIZE_THREE, mobFileCache.getCacheSize());

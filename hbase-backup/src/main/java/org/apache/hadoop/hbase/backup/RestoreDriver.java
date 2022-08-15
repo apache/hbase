@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -59,9 +59,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 
 /**
- *
  * Command-line entry point for restore operation
- *
  */
 @InterfaceAudience.Private
 public class RestoreDriver extends AbstractHBaseTool {
@@ -69,10 +67,10 @@ public class RestoreDriver extends AbstractHBaseTool {
   private CommandLine cmd;
 
   private static final String USAGE_STRING =
-      "Usage: hbase restore <backup_path> <backup_id> [options]\n"
-          + "  backup_path     Path to a backup destination root\n"
-          + "  backup_id       Backup image ID to restore\n"
-          + "  table(s)        Comma-separated list of tables to restore\n";
+    "Usage: hbase restore <backup_path> <backup_id> [options]\n"
+      + "  backup_path     Path to a backup destination root\n"
+      + "  backup_id       Backup image ID to restore\n"
+      + "  table(s)        Comma-separated list of tables to restore\n";
 
   private static final String USAGE_FOOTER = "";
 
@@ -85,7 +83,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     Log4jUtils.disableZkAndClientLoggers();
   }
 
-  private int parseAndRun(String[] args) throws IOException {
+  private int parseAndRun() throws IOException {
     // Check if backup is enabled
     if (!BackupManager.isBackupEnabled(getConf())) {
       System.err.println(BackupRestoreConstants.ENABLE_BACKUP);
@@ -101,19 +99,19 @@ public class RestoreDriver extends AbstractHBaseTool {
     boolean overwrite = cmd.hasOption(OPTION_OVERWRITE);
     if (overwrite) {
       LOG.debug("Found -overwrite option in restore command, "
-          + "will overwrite to existing table if any in the restore target");
+        + "will overwrite to existing table if any in the restore target");
     }
 
     // whether to only check the dependencies, false by default
     boolean check = cmd.hasOption(OPTION_CHECK);
     if (check) {
-      LOG.debug("Found -check option in restore command, "
-          + "will check and verify the dependencies");
+      LOG.debug(
+        "Found -check option in restore command, " + "will check and verify the dependencies");
     }
 
     if (cmd.hasOption(OPTION_SET) && cmd.hasOption(OPTION_TABLE)) {
-      System.err.println("Options -s and -t are mutaully exclusive,"+
-          " you can not specify both of them.");
+      System.err.println(
+        "Options -s and -t are mutaully exclusive," + " you can not specify both of them.");
       printToolUsage();
       return -1;
     }
@@ -141,22 +139,22 @@ public class RestoreDriver extends AbstractHBaseTool {
     String backupId = remainArgs[1];
     String tables;
     String tableMapping =
-        cmd.hasOption(OPTION_TABLE_MAPPING) ? cmd.getOptionValue(OPTION_TABLE_MAPPING) : null;
+      cmd.hasOption(OPTION_TABLE_MAPPING) ? cmd.getOptionValue(OPTION_TABLE_MAPPING) : null;
     try (final Connection conn = ConnectionFactory.createConnection(conf);
-        BackupAdmin client = new BackupAdminImpl(conn)) {
+      BackupAdmin client = new BackupAdminImpl(conn)) {
       // Check backup set
       if (cmd.hasOption(OPTION_SET)) {
         String setName = cmd.getOptionValue(OPTION_SET);
         try {
-          tables = getTablesForSet(conn, setName, conf);
+          tables = getTablesForSet(conn, setName);
         } catch (IOException e) {
           System.out.println("ERROR: " + e.getMessage() + " for setName=" + setName);
           printToolUsage();
           return -2;
         }
         if (tables == null) {
-          System.out.println("ERROR: Backup set '" + setName
-              + "' is either empty or does not exist");
+          System.out
+            .println("ERROR: Backup set '" + setName + "' is either empty or does not exist");
           printToolUsage();
           return -3;
         }
@@ -167,15 +165,16 @@ public class RestoreDriver extends AbstractHBaseTool {
       TableName[] sTableArray = BackupUtils.parseTableNames(tables);
       TableName[] tTableArray = BackupUtils.parseTableNames(tableMapping);
 
-      if (sTableArray != null && tTableArray != null &&
-          (sTableArray.length != tTableArray.length)) {
+      if (
+        sTableArray != null && tTableArray != null && (sTableArray.length != tTableArray.length)
+      ) {
         System.out.println("ERROR: table mapping mismatch: " + tables + " : " + tableMapping);
         printToolUsage();
         return -4;
       }
 
-      client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check,
-        sTableArray, tTableArray, overwrite));
+      client.restore(BackupUtils.createRestoreRequest(backupRootDir, backupId, check, sTableArray,
+        tTableArray, overwrite));
     } catch (Exception e) {
       LOG.error("Error while running restore backup", e);
       return -5;
@@ -183,8 +182,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     return 0;
   }
 
-  private String getTablesForSet(Connection conn, String name, Configuration conf)
-      throws IOException {
+  private String getTablesForSet(Connection conn, String name) throws IOException {
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       List<TableName> tables = table.describeBackupSet(name);
 
@@ -215,7 +213,7 @@ public class RestoreDriver extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    return parseAndRun(cmd.getArgs());
+    return parseAndRun();
   }
 
   public static void main(String[] args) throws Exception {

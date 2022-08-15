@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
@@ -53,9 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Incremental backup implementation.
- * See the {@link #execute() execute} method.
- *
+ * Incremental backup implementation. See the {@link #execute() execute} method.
  */
 @InterfaceAudience.Private
 public class IncrementalTableBackupClient extends TableBackupClient {
@@ -65,7 +62,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   public IncrementalTableBackupClient(final Connection conn, final String backupId,
-      BackupRequest request) throws IOException {
+    BackupRequest request) throws IOException {
     super(conn, backupId, request);
   }
 
@@ -105,19 +102,19 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   /*
-   * Reads bulk load records from backup table, iterates through the records and forms the paths
-   * for bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination
+   * Reads bulk load records from backup table, iterates through the records and forms the paths for
+   * bulk loaded hfiles. Copies the bulk loaded hfiles to backup destination
    * @param sTableList list of tables to be backed up
    * @return map of table to List of files
    */
   @SuppressWarnings("unchecked")
   protected Map<byte[], List<Path>>[] handleBulkLoad(List<TableName> sTableList)
-          throws IOException {
+    throws IOException {
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList.size()];
     List<String> activeFiles = new ArrayList<>();
     List<String> archiveFiles = new ArrayList<>();
     Pair<Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>>, List<byte[]>> pair =
-            backupManager.readBulkloadRows(sTableList);
+      backupManager.readBulkloadRows(sTableList);
     Map<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> map = pair.getFirst();
     FileSystem tgtFs;
     try {
@@ -128,8 +125,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     Path rootdir = CommonFSUtils.getRootDir(conf);
     Path tgtRoot = new Path(new Path(backupInfo.getBackupRootDir()), backupId);
 
-    for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry :
-      map.entrySet()) {
+    for (Map.Entry<TableName, Map<String, Map<String, List<Pair<String, Boolean>>>>> tblEntry : map
+      .entrySet()) {
       TableName srcTable = tblEntry.getKey();
 
       int srcIdx = getIndex(srcTable, sTableList);
@@ -142,14 +139,14 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       }
       Path tblDir = CommonFSUtils.getTableDir(rootdir, srcTable);
       Path tgtTable = new Path(new Path(tgtRoot, srcTable.getNamespaceAsString()),
-          srcTable.getQualifierAsString());
-      for (Map.Entry<String,Map<String,List<Pair<String, Boolean>>>> regionEntry :
-        tblEntry.getValue().entrySet()){
+        srcTable.getQualifierAsString());
+      for (Map.Entry<String, Map<String, List<Pair<String, Boolean>>>> regionEntry : tblEntry
+        .getValue().entrySet()) {
         String regionName = regionEntry.getKey();
         Path regionDir = new Path(tblDir, regionName);
         // map from family to List of hfiles
-        for (Map.Entry<String,List<Pair<String, Boolean>>> famEntry :
-          regionEntry.getValue().entrySet()) {
+        for (Map.Entry<String, List<Pair<String, Boolean>>> famEntry : regionEntry.getValue()
+          .entrySet()) {
           String fam = famEntry.getKey();
           Path famDir = new Path(regionDir, fam);
           List<Path> files;
@@ -170,7 +167,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
             int idx = file.lastIndexOf("/");
             String filename = file;
             if (idx > 0) {
-              filename = file.substring(idx+1);
+              filename = file.substring(idx + 1);
             }
             Path p = new Path(famDir, filename);
             Path tgt = new Path(tgtFam, filename);
@@ -183,7 +180,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
                 LOG.trace("copying " + p + " to " + tgt);
               }
               activeFiles.add(p.toString());
-            } else if (fs.exists(archive)){
+            } else if (fs.exists(archive)) {
               LOG.debug("copying archive " + archive + " to " + tgt);
               archiveFiles.add(archive.toString());
             }
@@ -199,7 +196,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   private void copyBulkLoadedFiles(List<String> activeFiles, List<String> archiveFiles)
-      throws IOException {
+    throws IOException {
     try {
       // Enable special mode of BackupDistCp
       conf.setInt(MapReduceBackupCopyJob.NUMBER_OF_LEVELS_TO_PRESERVE_KEY, 5);
@@ -207,8 +204,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       String tgtDest = backupInfo.getBackupRootDir() + Path.SEPARATOR + backupInfo.getBackupId();
       int attempt = 1;
       while (activeFiles.size() > 0) {
-        LOG.info("Copy "+ activeFiles.size() +
-          " active bulk loaded files. Attempt ="+ (attempt++));
+        LOG.info("Copy " + activeFiles.size() + " active bulk loaded files. Attempt =" + attempt++);
         String[] toCopy = new String[activeFiles.size()];
         activeFiles.toArray(toCopy);
         // Active file can be archived during copy operation,
@@ -245,7 +241,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   }
 
   private void updateFileLists(List<String> activeFiles, List<String> archiveFiles)
-      throws IOException {
+    throws IOException {
     List<String> newlyArchived = new ArrayList<>();
 
     for (String spath : activeFiles) {
@@ -269,9 +265,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       beginBackup(backupManager, backupInfo);
       backupInfo.setPhase(BackupPhase.PREPARE_INCREMENTAL);
       LOG.debug("For incremental backup, current table set is "
-          + backupManager.getIncrementalBackupTableSet());
-      newTimestamps =
-          ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
+        + backupManager.getIncrementalBackupTableSet());
+      newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
     } catch (Exception e) {
       // fail the overall backup and return
       failBackup(conn, backupInfo, backupManager, e, "Unexpected Exception : ",
@@ -285,8 +280,8 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
       // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
       convertWALsToHFiles();
-      incrementalCopyHFiles(new String[] {getBulkOutputDir().toString()},
-              backupInfo.getBackupRootDir());
+      incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
+        backupInfo.getBackupRootDir());
     } catch (Exception e) {
       String msg = "Unexpected exception in incremental-backup: incremental copy " + backupId;
       // fail the overall backup and return
@@ -298,8 +293,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // After this checkpoint, even if entering cancel process, will let the backup finished
     try {
       // Set the previousTimestampMap which is before this current log roll to the manifest.
-      Map<TableName, Map<String, Long>> previousTimestampMap =
-          backupManager.readLogTimestampMap();
+      Map<TableName, Map<String, Long>> previousTimestampMap = backupManager.readLogTimestampMap();
       backupInfo.setIncrTimestampMap(previousTimestampMap);
 
       // The table list in backupInfo is good for both full backup and incremental backup.
@@ -307,11 +301,11 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       backupManager.writeRegionServerLogTimestamp(backupInfo.getTables(), newTimestamps);
 
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
-          backupManager.readLogTimestampMap();
+        backupManager.readLogTimestampMap();
 
       backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
+        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
       backupManager.writeBackupStartCode(newStartCode);
 
       handleBulkLoad(backupInfo.getTableNames());
@@ -345,11 +339,11 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       int res = copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
       if (res != 0) {
         LOG.error("Copy incremental HFile files failed with return code: " + res + ".");
-        throw new IOException("Failed copy from " + StringUtils.join(files, ',')
-            + " to " + backupDest);
+        throw new IOException(
+          "Failed copy from " + StringUtils.join(files, ',') + " to " + backupDest);
       }
-      LOG.debug("Incremental copy HFiles from " + StringUtils.join(files, ',')
-          + " to " + backupDest + " finished.");
+      LOG.debug("Incremental copy HFiles from " + StringUtils.join(files, ',') + " to " + backupDest
+        + " finished.");
     } finally {
       deleteBulkLoadDirectory();
     }
@@ -398,7 +392,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     // a Map task for each file. We use ';' as separator
     // because WAL file names contains ','
     String dirs = StringUtils.join(dirPaths, ';');
-    String jobname = "Incremental_Backup-" + backupId ;
+    String jobname = "Incremental_Backup-" + backupId;
 
     Path bulkOutputPath = getBulkOutputDir();
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
@@ -410,7 +404,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     try {
       player.setConf(conf);
       int result = player.run(playerArgs);
-      if(result != 0) {
+      if (result != 0) {
         throw new IOException("WAL Player failed");
       }
       conf.unset(WALPlayer.INPUT_FILES_SEPARATOR_KEY);
@@ -419,7 +413,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       throw e;
     } catch (Exception ee) {
       throw new IOException("Can not convert from directory " + dirs
-          + " (check Hadoop, HBase and WALPlayer M/R job logs) ", ee);
+        + " (check Hadoop, HBase and WALPlayer M/R job logs) ", ee);
     }
   }
 

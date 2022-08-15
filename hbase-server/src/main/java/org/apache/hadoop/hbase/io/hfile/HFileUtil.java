@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,21 +18,18 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 class HFileUtil {
 
-  /** guards against NullPointer
-   * utility which tries to seek on the DFSIS and will try an alternative source
-   * if the FSDataInputStream throws an NPE HBASE-17501
-   * @param istream
-   * @param offset
-   * @throws IOException
+  /**
+   * guards against NullPointer utility which tries to seek on the DFSIS and will try an alternative
+   * source if the FSDataInputStream throws an NPE HBASE-17501 nnn
    */
-  static public void seekOnMultipleSources(FSDataInputStream istream, long offset) throws IOException {
+  static public void seekOnMultipleSources(FSDataInputStream istream, long offset)
+    throws IOException {
     try {
       // attempt to seek inside of current blockReader
       istream.seek(offset);

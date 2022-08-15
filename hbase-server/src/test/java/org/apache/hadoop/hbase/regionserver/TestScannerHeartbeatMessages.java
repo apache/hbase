@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.RSRpcServices.DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,8 +55,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
@@ -64,6 +69,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -85,7 +91,7 @@ public class TestScannerHeartbeatMessages {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScannerHeartbeatMessages.class);
+    HBaseClassTestRule.forClass(TestScannerHeartbeatMessages.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -149,8 +155,42 @@ public class TestScannerHeartbeatMessages {
     CONN = ConnectionFactory.createAsyncConnection(newConf).get();
   }
 
+  @Test
+  public void testTimeLimitAccountsForQueueTime() throws IOException, InterruptedException {
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    RSRpcServices services = new RSRpcServices(rs);
+    RpcCall mockRpcCall = Mockito.mock(RpcCall.class);
+    // first return 180 (minimal queuing), then 120 (more queueing), then 101 (heavy queueing)
+    // finally, 25 is fatal levels of queueing -- exceeding timeout
+    when(mockRpcCall.getReceiveTime()).thenReturn(180L, 120L, 101L, 25L);
+
+    // assume timeout of 100ms
+    HBaseRpcController mockController = Mockito.mock(HBaseRpcController.class);
+    when(mockController.getCallTimeout()).thenReturn(100);
+
+    // current time is 100, which we'll subtract from 90 and 50 to generate some time deltas
+    EnvironmentEdgeManager.injectEdge(() -> 200L);
+
+    try {
+      // we queued for 20ms, leaving 80ms of timeout, which we divide by 2
+      assertEquals(200 + (100 - 20) / 2, services.getTimeLimit(mockRpcCall, mockController, true));
+      // we queued for 80ms, leaving 20ms of timeout, which we divide by 2
+      assertEquals(200 + (100 - 80) / 2, services.getTimeLimit(mockRpcCall, mockController, true));
+      // we queued for 99ms of 100ms timeout, leaving only 1ms. we fall back to default minimum
+      assertEquals(200 + DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
+        services.getTimeLimit(mockRpcCall, mockController, true));
+      // lastly, we queue for 175ms of 100ms timeout. this should be very rare since we drop
+      // timed out calls in the queue. in this case we still fallback on default minimum for now.
+      assertEquals(200 + DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
+        services.getTimeLimit(mockRpcCall, mockController, true));
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+
+  }
+
   static void createTestTable(TableName name, byte[][] rows, byte[][] families, byte[][] qualifiers,
-      byte[] cellValue) throws IOException {
+    byte[] cellValue) throws IOException {
     Table ht = TEST_UTIL.createTable(name, families);
     List<Put> puts = createPuts(rows, families, qualifiers, cellValue);
     ht.put(puts);
@@ -160,7 +200,7 @@ public class TestScannerHeartbeatMessages {
    * Make puts to put the input value into each combination of row, family, and qualifier
    */
   static ArrayList<Put> createPuts(byte[][] rows, byte[][] families, byte[][] qualifiers,
-      byte[] value) throws IOException {
+    byte[] value) throws IOException {
     Put put;
     ArrayList<Put> puts = new ArrayList<>();
 
@@ -206,7 +246,7 @@ public class TestScannerHeartbeatMessages {
       testCallable.call();
     } catch (Exception e) {
       fail("Heartbeat messages are enabled, exceptions should NOT be thrown. Exception trace:"
-          + ExceptionUtils.getStackTrace(e));
+        + ExceptionUtils.getStackTrace(e));
     }
 
     HeartbeatRPCServices.heartbeatsEnabled = false;
@@ -218,7 +258,7 @@ public class TestScannerHeartbeatMessages {
       HeartbeatRPCServices.heartbeatsEnabled = true;
     }
     fail("Heartbeats messages are disabled, an exception should be thrown. If an exception "
-        + " is not thrown, the test case is not testing the importance of heartbeat messages");
+      + " is not thrown, the test case is not testing the importance of heartbeat messages");
   }
 
   /**
@@ -277,8 +317,9 @@ public class TestScannerHeartbeatMessages {
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
-      return Bytes.equals(CellUtil.cloneRow(v), ROWS[NUM_ROWS - 1]) ? ReturnCode.INCLUDE
-          : ReturnCode.SKIP;
+      return Bytes.equals(CellUtil.cloneRow(v), ROWS[NUM_ROWS - 1])
+        ? ReturnCode.INCLUDE
+        : ReturnCode.SKIP;
     }
 
     public static Filter parseFrom(final byte[] pbBytes) {
@@ -372,14 +413,14 @@ public class TestScannerHeartbeatMessages {
   /**
    * Test the equivalence of a scan versus the same scan executed when heartbeat messages are
    * necessary
-   * @param scan The scan configuration being tested
-   * @param rowSleepTime The time to sleep between fetches of row cells
-   * @param cfSleepTime The time to sleep between fetches of column family cells
+   * @param scan          The scan configuration being tested
+   * @param rowSleepTime  The time to sleep between fetches of row cells
+   * @param cfSleepTime   The time to sleep between fetches of column family cells
    * @param sleepBeforeCf set to true when column family sleeps should occur before the cells for
-   *          that column family are fetched
+   *                      that column family are fetched
    */
   private void testEquivalenceOfScanWithHeartbeats(final Scan scan, int rowSleepTime,
-      int cfSleepTime, boolean sleepBeforeCf) throws Exception {
+    int cfSleepTime, boolean sleepBeforeCf) throws Exception {
     disableSleeping();
     AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
     final ResultScanner scanner = new ScanPerNextResultScanner(table, scan);
@@ -455,7 +496,7 @@ public class TestScannerHeartbeatMessages {
 
     @Override
     public ScanResponse scan(RpcController controller, ScanRequest request)
-        throws ServiceException {
+      throws ServiceException {
       ScanRequest.Builder builder = ScanRequest.newBuilder(request);
       builder.setClientHandlesHeartbeats(heartbeatsEnabled);
       return super.scan(controller, builder.build());
@@ -482,12 +523,12 @@ public class TestScannerHeartbeatMessages {
     private static volatile boolean sleepBetweenColumnFamilies = false;
 
     public HeartbeatHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
+      RegionInfo regionInfo, TableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
     }
 
     public HeartbeatHRegion(HRegionFileSystem fs, WAL wal, Configuration confParam,
-        TableDescriptor htd, RegionServerServices rsServices) {
+      TableDescriptor htd, RegionServerServices rsServices) {
       super(fs, wal, confParam, htd, rsServices);
     }
 
@@ -506,7 +547,7 @@ public class TestScannerHeartbeatMessages {
     // Instantiate the custom heartbeat region scanners
     @Override
     protected RegionScannerImpl instantiateRegionScanner(Scan scan,
-        List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
+      List<KeyValueScanner> additionalScanners, long nonceGroup, long nonce) throws IOException {
       if (scan.isReversed()) {
         if (scan.getFilter() != null) {
           scan.getFilter().setReversed(true);
@@ -523,7 +564,7 @@ public class TestScannerHeartbeatMessages {
    */
   private static class HeartbeatReversedRegionScanner extends ReversedRegionScannerImpl {
     HeartbeatReversedRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners,
-        HRegion region) throws IOException {
+      HRegion region) throws IOException {
       super(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
 
@@ -536,12 +577,12 @@ public class TestScannerHeartbeatMessages {
 
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
-        List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
+      List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
       this.storeHeap =
-          new HeartbeatReversedKVHeap(scanners, (CellComparatorImpl) region.getCellComparator());
+        new HeartbeatReversedKVHeap(scanners, (CellComparatorImpl) region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
         this.joinedHeap = new HeartbeatReversedKVHeap(joinedScanners,
-            (CellComparatorImpl) region.getCellComparator());
+          (CellComparatorImpl) region.getCellComparator());
       }
     }
   }
@@ -552,7 +593,7 @@ public class TestScannerHeartbeatMessages {
    */
   private static class HeartbeatRegionScanner extends RegionScannerImpl {
     HeartbeatRegionScanner(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
-        throws IOException {
+      throws IOException {
       super(scan, additionalScanners, region, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
 
@@ -565,12 +606,10 @@ public class TestScannerHeartbeatMessages {
 
     @Override
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
-        List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-      this.storeHeap =
-          new HeartbeatKVHeap(scanners, region.getCellComparator());
+      List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
+      this.storeHeap = new HeartbeatKVHeap(scanners, region.getCellComparator());
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap =
-            new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
+        this.joinedHeap = new HeartbeatKVHeap(joinedScanners, region.getCellComparator());
       }
     }
   }
@@ -581,12 +620,12 @@ public class TestScannerHeartbeatMessages {
    */
   private static final class HeartbeatKVHeap extends KeyValueHeap {
     public HeartbeatKVHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator)
-        throws IOException {
+      throws IOException {
       super(scanners, comparator);
     }
 
     HeartbeatKVHeap(List<? extends KeyValueScanner> scanners, KVScannerComparator comparator)
-        throws IOException {
+      throws IOException {
       super(scanners, comparator);
     }
 
@@ -605,7 +644,7 @@ public class TestScannerHeartbeatMessages {
    */
   private static final class HeartbeatReversedKVHeap extends ReversedKeyValueHeap {
     public HeartbeatReversedKVHeap(List<? extends KeyValueScanner> scanners,
-        CellComparatorImpl comparator) throws IOException {
+      CellComparatorImpl comparator) throws IOException {
       super(scanners, comparator);
     }
 

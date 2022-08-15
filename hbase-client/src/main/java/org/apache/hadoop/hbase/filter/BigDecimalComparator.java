@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ComparatorProtos;
 
 /**
  * A BigDecimal comparator which numerical compares against the specified byte array
@@ -74,40 +72,39 @@ public class BigDecimalComparator extends ByteArrayComparable {
     return this.bigDecimal.compareTo(that);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BigDecimalComparator.Builder builder =
-        ComparatorProtos.BigDecimalComparator.newBuilder();
+      ComparatorProtos.BigDecimalComparator.newBuilder();
     builder.setComparable(ProtobufUtil.toByteArrayComparable(this.value));
     return builder.build().toByteArray();
   }
 
   /**
+   * Parse a serialized representation of {@link BigDecimalComparator}
    * @param pbBytes A pb serialized {@link BigDecimalComparator} instance
    * @return An instance of {@link BigDecimalComparator} made from <code>bytes</code>
-   * @throws DeserializationException A deserialization exception
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static BigDecimalComparator parseFrom(final byte[] pbBytes)
-      throws DeserializationException {
+    throws DeserializationException {
     ComparatorProtos.BigDecimalComparator proto;
     try {
       proto = ComparatorProtos.BigDecimalComparator.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    return new BigDecimalComparator(Bytes.toBigDecimal(proto.getComparable().getValue()
-        .toByteArray()));
+    return new BigDecimalComparator(
+      Bytes.toBigDecimal(proto.getComparable().getValue().toByteArray()));
   }
 
   /**
-   * @param other the other comparator
-   * @return true if and only if the fields of the comparator that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
+  @SuppressWarnings("ReferenceEquality")
   boolean areSerializedFieldsEqual(BigDecimalComparator other) {
     if (other == this) {
       return true;

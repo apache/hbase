@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,36 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.Serializable;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Simple representation of the version of the storage cluster
- * 
+ *
  * <pre>
  * &lt;complexType name="StorageClusterVersion"&gt;
  *   &lt;attribute name="version" type="string"&gt;&lt;/attribute&gt;
  * &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="ClusterVersion")
+@XmlRootElement(name = "ClusterVersion")
 @InterfaceAudience.Private
 public class StorageClusterVersionModel implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private String version;
 
-  /**
-   * @return the storage cluster version
-   */
-  @XmlAttribute(name="Version")
+  /** Returns the storage cluster version */
+  @XmlAttribute(name = "Version")
   public String getVersion() {
     return version;
   }
@@ -57,7 +51,8 @@ public class StorageClusterVersionModel implements Serializable {
     this.version = version;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override
@@ -65,10 +60,9 @@ public class StorageClusterVersionModel implements Serializable {
     return version;
   }
 
-  //needed for jackson deserialization
+  // needed for jackson deserialization
   private static StorageClusterVersionModel valueOf(String value) {
-    StorageClusterVersionModel versionModel
-        = new StorageClusterVersionModel();
+    StorageClusterVersionModel versionModel = new StorageClusterVersionModel();
     versionModel.setVersion(value);
     return versionModel;
   }

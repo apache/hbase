@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -24,7 +23,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.StringTokenizer;
-
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -33,9 +31,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
@@ -58,27 +54,27 @@ public class GzipFilter implements Filter {
   }
 
   @Override
-  public void doFilter(ServletRequest req, ServletResponse rsp,
-      FilterChain chain) throws IOException, ServletException {
-    HttpServletRequest request = (HttpServletRequest)req;
-    HttpServletResponse response = (HttpServletResponse)rsp;
+  public void doFilter(ServletRequest req, ServletResponse rsp, FilterChain chain)
+    throws IOException, ServletException {
+    HttpServletRequest request = (HttpServletRequest) req;
+    HttpServletResponse response = (HttpServletResponse) rsp;
     String contentEncoding = request.getHeader("content-encoding");
     String acceptEncoding = request.getHeader("accept-encoding");
     String contentType = request.getHeader("content-type");
-    if ((contentEncoding != null) &&
-        (contentEncoding.toLowerCase(Locale.ROOT).contains("gzip"))) {
+    if ((contentEncoding != null) && (contentEncoding.toLowerCase(Locale.ROOT).contains("gzip"))) {
       request = new GZIPRequestWrapper(request);
     }
-    if (((acceptEncoding != null) &&
-          (acceptEncoding.toLowerCase(Locale.ROOT).contains("gzip"))) ||
-        ((contentType != null) && mimeTypes.contains(contentType))) {
+    if (
+      ((acceptEncoding != null) && (acceptEncoding.toLowerCase(Locale.ROOT).contains("gzip")))
+        || ((contentType != null) && mimeTypes.contains(contentType))
+    ) {
       response = new GZIPResponseWrapper(response);
     }
     chain.doFilter(request, response);
     if (response instanceof GZIPResponseWrapper) {
       OutputStream os = response.getOutputStream();
       if (os instanceof GZIPResponseStream) {
-        ((GZIPResponseStream)os).finish();
+        ((GZIPResponseStream) os).finish();
       }
     }
   }

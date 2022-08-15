@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -60,7 +60,7 @@ public class TestAsyncAdminBuilder {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAsyncAdminBuilder.class);
+    HBaseClassTestRule.forClass(TestAsyncAdminBuilder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncAdminBuilder.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -112,7 +112,7 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get().setRpcTimeout(DEFAULT_RPC_TIMEOUT / 2, TimeUnit.MILLISECONDS).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
       fail("We expect an exception here");
     } catch (Exception e) {
       // expected
@@ -120,7 +120,7 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get().setRpcTimeout(DEFAULT_RPC_TIMEOUT * 2, TimeUnit.MILLISECONDS).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
     } catch (Exception e) {
       fail("The Operation should succeed, unexpected exception: " + e.getMessage());
     }
@@ -137,8 +137,8 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get()
-          .setOperationTimeout(DEFAULT_OPERATION_TIMEOUT / 2, TimeUnit.MILLISECONDS).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .setOperationTimeout(DEFAULT_OPERATION_TIMEOUT / 2, TimeUnit.MILLISECONDS).build()
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
       fail("We expect an exception here");
     } catch (Exception e) {
       // expected
@@ -146,8 +146,8 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get()
-          .setOperationTimeout(DEFAULT_OPERATION_TIMEOUT * 2, TimeUnit.MILLISECONDS).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .setOperationTimeout(DEFAULT_OPERATION_TIMEOUT * 2, TimeUnit.MILLISECONDS).build()
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
     } catch (Exception e) {
       fail("The Operation should succeed, unexpected exception: " + e.getMessage());
     }
@@ -164,7 +164,7 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get().setMaxRetries(DEFAULT_RETRIES_NUMBER / 2).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
       fail("We expect an exception here");
     } catch (Exception e) {
       // expected
@@ -172,7 +172,7 @@ public class TestAsyncAdminBuilder {
 
     try {
       getAdminBuilder.get().setMaxRetries(DEFAULT_RETRIES_NUMBER * 2).build()
-          .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
+        .getNamespaceDescriptor(DEFAULT_NAMESPACE_NAME_STR).get();
     } catch (Exception e) {
       fail("The Operation should succeed, unexpected exception: " + e.getMessage());
     }
@@ -182,14 +182,14 @@ public class TestAsyncAdminBuilder {
     public TestRpcTimeoutCoprocessor() {
     }
 
-
     @Override
     public Optional<MasterObserver> getMasterObserver() {
       return Optional.of(this);
     }
+
     @Override
     public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String namespace) throws IOException {
+      String namespace) throws IOException {
       Threads.sleep(DEFAULT_RPC_TIMEOUT);
     }
   }
@@ -207,7 +207,7 @@ public class TestAsyncAdminBuilder {
 
     @Override
     public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String namespace) throws IOException {
+      String namespace) throws IOException {
       Threads.sleep(DEFAULT_RPC_TIMEOUT / 2);
       if (sleepTime.addAndGet(DEFAULT_RPC_TIMEOUT / 2) < DEFAULT_OPERATION_TIMEOUT) {
         throw new IOException("call fail");
@@ -228,7 +228,7 @@ public class TestAsyncAdminBuilder {
 
     @Override
     public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        String namespace) throws IOException {
+      String namespace) throws IOException {
       if (retryNum.getAndIncrement() < DEFAULT_RETRIES_NUMBER) {
         throw new IOException("call fail");
       }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,31 +21,29 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
 @InterfaceAudience.Public
-public class TableInputFormat extends TableInputFormatBase
-implements Configurable {
+public class TableInputFormat extends TableInputFormatBase implements Configurable {
 
   @SuppressWarnings("hiding")
   private static final Logger LOG = LoggerFactory.getLogger(TableInputFormat.class);
@@ -54,12 +51,13 @@ implements Configurable {
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
   /**
-   * If specified, use start keys of this table to split.
-   * This is useful when you are preparing data for bulkload.
+   * If specified, use start keys of this table to split. This is useful when you are preparing data
+   * for bulkload.
    */
   private static final String SPLIT_TABLE = "hbase.mapreduce.splittable";
-  /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified.
-   * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
+  /**
+   * Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified. See
+   * {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
    */
   public static final String SCAN = "hbase.mapreduce.scan";
   /** Scan start row */
@@ -92,7 +90,6 @@ implements Configurable {
 
   /**
    * Returns the current configuration.
-   *
    * @return The current configuration.
    * @see org.apache.hadoop.conf.Configurable#getConf()
    */
@@ -102,16 +99,13 @@ implements Configurable {
   }
 
   /**
-   * Sets the configuration. This is used to set the details for the table to
-   * be scanned.
-   *
-   * @param configuration  The configuration to set.
-   * @see org.apache.hadoop.conf.Configurable#setConf(
-   *   org.apache.hadoop.conf.Configuration)
+   * Sets the configuration. This is used to set the details for the table to be scanned.
+   * @param configuration The configuration to set.
+   * @see org.apache.hadoop.conf.Configurable#setConf( org.apache.hadoop.conf.Configuration)
    */
   @Override
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION",
-    justification="Intentional")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "REC_CATCH_EXCEPTION",
+      justification = "Intentional")
   public void setConf(Configuration configuration) {
     this.conf = configuration;
 
@@ -127,7 +121,7 @@ implements Configurable {
       try {
         scan = createScanFromConfiguration(conf);
       } catch (Exception e) {
-          LOG.error(StringUtils.stringifyException(e));
+        LOG.error(StringUtils.stringifyException(e));
       }
     }
 
@@ -135,13 +129,13 @@ implements Configurable {
   }
 
   /**
-   * Sets up a {@link Scan} instance, applying settings from the configuration property
-   * constants defined in {@code TableInputFormat}.  This allows specifying things such as:
+   * Sets up a {@link Scan} instance, applying settings from the configuration property constants
+   * defined in {@code TableInputFormat}. This allows specifying things such as:
    * <ul>
-   *   <li>start and stop rows</li>
-   *   <li>column qualifiers or families</li>
-   *   <li>timestamps or timerange</li>
-   *   <li>scanner caching and batch size</li>
+   * <li>start and stop rows</li>
+   * <li>column qualifiers or families</li>
+   * <li>timestamps or timerange</li>
+   * <li>scanner caching and batch size</li>
    * </ul>
    */
   public static Scan createScanFromConfiguration(Configuration conf) throws IOException {
@@ -168,9 +162,8 @@ implements Configurable {
     }
 
     if (conf.get(SCAN_TIMERANGE_START) != null && conf.get(SCAN_TIMERANGE_END) != null) {
-      scan.setTimeRange(
-          Long.parseLong(conf.get(SCAN_TIMERANGE_START)),
-          Long.parseLong(conf.get(SCAN_TIMERANGE_END)));
+      scan.setTimeRange(Long.parseLong(conf.get(SCAN_TIMERANGE_START)),
+        Long.parseLong(conf.get(SCAN_TIMERANGE_END)));
     }
 
     if (conf.get(SCAN_MAXVERSIONS) != null) {
@@ -204,16 +197,14 @@ implements Configurable {
   }
 
   /**
-   * Parses a combined family and qualifier and adds either both or just the
-   * family in case there is no qualifier. This assumes the older colon
-   * divided notation, e.g. "family:qualifier".
-   *
-   * @param scan The Scan to update.
+   * Parses a combined family and qualifier and adds either both or just the family in case there is
+   * no qualifier. This assumes the older colon divided notation, e.g. "family:qualifier".
+   * @param scan               The Scan to update.
    * @param familyAndQualifier family and qualifier
    * @throws IllegalArgumentException When familyAndQualifier is invalid.
    */
   private static void addColumn(Scan scan, byte[] familyAndQualifier) {
-    byte [][] fq = CellUtil.parseColumn(familyAndQualifier);
+    byte[][] fq = CellUtil.parseColumn(familyAndQualifier);
     if (fq.length == 1) {
       scan.addFamily(fq[0]);
     } else if (fq.length == 2) {
@@ -228,31 +219,31 @@ implements Configurable {
    * <p>
    * Overrides previous calls to {@link Scan#addColumn(byte[], byte[])}for any families in the
    * input.
-   *
-   * @param scan The Scan to update.
+   * @param scan    The Scan to update.
    * @param columns array of columns, formatted as <code>family:qualifier</code>
    * @see Scan#addColumn(byte[], byte[])
    */
-  public static void addColumns(Scan scan, byte [][] columns) {
+  public static void addColumns(Scan scan, byte[][] columns) {
     for (byte[] column : columns) {
       addColumn(scan, column);
     }
   }
 
   /**
-   * Calculates the splits that will serve as input for the map tasks. The
-   * number of splits matches the number of regions in a table. Splits are shuffled if
-   * required.
-   * @param context  The current job context.
+   * Calculates the splits that will serve as input for the map tasks. The number of splits matches
+   * the number of regions in a table. Splits are shuffled if required.
+   * @param context The current job context.
    * @return The list of input splits.
    * @throws IOException When creating the list of splits fails.
-   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(
-   *   org.apache.hadoop.mapreduce.JobContext)
+   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits( org.apache.hadoop.mapreduce.JobContext)
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
     List<InputSplit> splits = super.getSplits(context);
-    if ((conf.get(SHUFFLE_MAPS) != null) && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase(Locale.ROOT))) {
+    if (
+      (conf.get(SHUFFLE_MAPS) != null)
+        && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase(Locale.ROOT))
+    ) {
       Collections.shuffle(splits);
     }
     return splits;
@@ -260,9 +251,8 @@ implements Configurable {
 
   /**
    * Convenience method to parse a string representation of an array of column specifiers.
-   *
-   * @param scan The Scan to update.
-   * @param columns  The columns to parse.
+   * @param scan    The Scan to update.
+   * @param columns The columns to parse.
    */
   private static void addColumns(Scan scan, String columns) {
     String[] cols = columns.split(" ");

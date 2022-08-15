@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
@@ -36,7 +35,8 @@ public class ChangeEncodingAction extends Action {
     this.tableName = tableName;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -44,7 +44,7 @@ public class ChangeEncodingAction extends Action {
   public void perform() throws IOException {
     getLogger().debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
-    final int[] possibleIds = {0, 2, 3, 4, 7};
+    final int[] possibleIds = { 0, 2, 3, 4, 7 };
     modifyAllTableColumns(tableName, (columnName, columnBuilder) -> {
       short id = (short) possibleIds[ThreadLocalRandom.current().nextInt(possibleIds.length)];
       DataBlockEncoding encoding = DataBlockEncoding.getEncodingById(id);

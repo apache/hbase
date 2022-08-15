@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -37,30 +36,33 @@ class MetricsInfoImpl implements MetricsInfo {
     this.description = Preconditions.checkNotNull(description, "description");
   }
 
-  @Override public String name() {
+  @Override
+  public String name() {
     return name;
   }
 
-  @Override public String description() {
+  @Override
+  public String description() {
     return description;
   }
 
-  @Override public boolean equals(Object obj) {
+  @Override
+  public boolean equals(Object obj) {
     if (obj instanceof MetricsInfo) {
       MetricsInfo other = (MetricsInfo) obj;
-      return Objects.equal(name, other.name()) &&
-          Objects.equal(description, other.description());
+      return Objects.equal(name, other.name()) && Objects.equal(description, other.description());
     }
     return false;
   }
 
-  @Override public int hashCode() {
+  @Override
+  public int hashCode() {
     return Objects.hashCode(name, description);
   }
 
-  @Override public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("name", name).add("description", description)
-        .toString();
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this).add("name", name).add("description", description)
+      .toString();
   }
 }

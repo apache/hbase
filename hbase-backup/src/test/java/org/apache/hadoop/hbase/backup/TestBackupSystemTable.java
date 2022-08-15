@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +61,7 @@ public class TestBackupSystemTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupSystemTable.class);
+    HBaseClassTestRule.forClass(TestBackupSystemTable.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected static Configuration conf = UTIL.getConfiguration();
@@ -108,10 +109,10 @@ public class TestBackupSystemTable {
 
   @Test
   public void testWriteReadBackupStartCode() throws IOException {
-    Long code = 100L;
+    long code = 100L;
     table.writeBackupStartCode(code, "root");
     String readCode = table.readBackupStartCode("root");
-    assertEquals(code, new Long(Long.parseLong(readCode)));
+    assertEquals(code, Long.parseLong(readCode));
     cleanBackupTable();
   }
 
@@ -125,7 +126,7 @@ public class TestBackupSystemTable {
   }
 
   @Test
-  public void testBackupHistory() throws IOException {
+  public void testBackupHistory() throws Exception {
     int n = 10;
     List<BackupInfo> list = createBackupInfoList(n);
 
@@ -152,7 +153,7 @@ public class TestBackupSystemTable {
   }
 
   @Test
-  public void testBackupDelete() throws IOException {
+  public void testBackupDelete() throws Exception {
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       int n = 10;
       List<BackupInfo> list = createBackupInfoList(n);
@@ -225,29 +226,29 @@ public class TestBackupSystemTable {
     tables2.add(TableName.valueOf("t5"));
 
     table.addIncrementalBackupTableSet(tables1, "root");
-    BackupSystemTable table = new BackupSystemTable(conn);
-    TreeSet<TableName> res1 = (TreeSet<TableName>) table.getIncrementalBackupTableSet("root");
-    assertTrue(tables1.size() == res1.size());
-    Iterator<TableName> desc1 = tables1.descendingIterator();
-    Iterator<TableName> desc2 = res1.descendingIterator();
-    while (desc1.hasNext()) {
-      assertEquals(desc1.next(), desc2.next());
+
+    try (BackupSystemTable systemTable = new BackupSystemTable(conn)) {
+      TreeSet<TableName> res1 =
+        (TreeSet<TableName>) systemTable.getIncrementalBackupTableSet("root");
+      assertTrue(tables1.size() == res1.size());
+      Iterator<TableName> desc1 = tables1.descendingIterator();
+      Iterator<TableName> desc2 = res1.descendingIterator();
+      while (desc1.hasNext()) {
+        assertEquals(desc1.next(), desc2.next());
+      }
+      systemTable.addIncrementalBackupTableSet(tables2, "root");
+      TreeSet<TableName> res2 =
+        (TreeSet<TableName>) systemTable.getIncrementalBackupTableSet("root");
+      assertTrue((tables2.size() + tables1.size() - 1) == res2.size());
+      tables1.addAll(tables2);
+      desc1 = tables1.descendingIterator();
+      desc2 = res2.descendingIterator();
+      while (desc1.hasNext()) {
+        assertEquals(desc1.next(), desc2.next());
+      }
     }
 
-    table.addIncrementalBackupTableSet(tables2, "root");
-    TreeSet<TableName> res2 = (TreeSet<TableName>) table.getIncrementalBackupTableSet("root");
-    assertTrue((tables2.size() + tables1.size() - 1) == res2.size());
-
-    tables1.addAll(tables2);
-
-    desc1 = tables1.descendingIterator();
-    desc2 = res2.descendingIterator();
-
-    while (desc1.hasNext()) {
-      assertEquals(desc1.next(), desc2.next());
-    }
     cleanBackupTable();
-
   }
 
   @Test
@@ -273,9 +274,9 @@ public class TestBackupSystemTable {
     for (TableName t : tables) {
       Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
-      assertEquals(rstm.get("rs1:100"), new Long(100L));
-      assertEquals(rstm.get("rs2:100"), new Long(101L));
-      assertEquals(rstm.get("rs3:100"), new Long(103L));
+      assertEquals(rstm.get("rs1:100"), Long.valueOf(100L));
+      assertEquals(rstm.get("rs2:100"), Long.valueOf(101L));
+      assertEquals(rstm.get("rs3:100"), Long.valueOf(103L));
     }
 
     Set<TableName> tables1 = new TreeSet<>();
@@ -300,22 +301,22 @@ public class TestBackupSystemTable {
       Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
       if (t.equals(TableName.valueOf("t3")) == false) {
-        assertEquals(rstm.get("rs1:100"), new Long(100L));
-        assertEquals(rstm.get("rs2:100"), new Long(101L));
-        assertEquals(rstm.get("rs3:100"), new Long(103L));
+        assertEquals(rstm.get("rs1:100"), Long.valueOf(100L));
+        assertEquals(rstm.get("rs2:100"), Long.valueOf(101L));
+        assertEquals(rstm.get("rs3:100"), Long.valueOf(103L));
       } else {
-        assertEquals(rstm.get("rs1:100"), new Long(200L));
-        assertEquals(rstm.get("rs2:100"), new Long(201L));
-        assertEquals(rstm.get("rs3:100"), new Long(203L));
+        assertEquals(rstm.get("rs1:100"), Long.valueOf(200L));
+        assertEquals(rstm.get("rs2:100"), Long.valueOf(201L));
+        assertEquals(rstm.get("rs3:100"), Long.valueOf(203L));
       }
     }
 
     for (TableName t : tables1) {
       Map<String, Long> rstm = result.get(t);
       assertNotNull(rstm);
-      assertEquals(rstm.get("rs1:100"), new Long(200L));
-      assertEquals(rstm.get("rs2:100"), new Long(201L));
-      assertEquals(rstm.get("rs3:100"), new Long(203L));
+      assertEquals(rstm.get("rs1:100"), Long.valueOf(200L));
+      assertEquals(rstm.get("rs2:100"), Long.valueOf(201L));
+      assertEquals(rstm.get("rs3:100"), Long.valueOf(203L));
     }
 
     cleanBackupTable();
@@ -354,8 +355,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+        new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -377,8 +378,8 @@ public class TestBackupSystemTable {
       String[] addTables = new String[] { "table3", "table4", "table5", "table6" };
       table.addToBackupSet(setName, addTables);
 
-      Set<String> expectedTables = new HashSet<>(Arrays.asList("table1", "table2", "table3",
-        "table4", "table5", "table6"));
+      Set<String> expectedTables =
+        new HashSet<>(Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6"));
 
       List<TableName> tnames = table.describeBackupSet(setName);
       assertTrue(tnames != null);
@@ -471,29 +472,25 @@ public class TestBackupSystemTable {
 
   private boolean compare(BackupInfo one, BackupInfo two) {
     return one.getBackupId().equals(two.getBackupId()) && one.getType().equals(two.getType())
-        && one.getBackupRootDir().equals(two.getBackupRootDir())
-        && one.getStartTs() == two.getStartTs() && one.getCompleteTs() == two.getCompleteTs();
+      && one.getBackupRootDir().equals(two.getBackupRootDir())
+      && one.getStartTs() == two.getStartTs() && one.getCompleteTs() == two.getCompleteTs();
   }
 
   private BackupInfo createBackupInfo() {
-    BackupInfo ctxt =
-        new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL, new TableName[] {
-            TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
-            "/hbase/backup");
+    BackupInfo ctxt = new BackupInfo("backup_" + System.nanoTime(), BackupType.FULL,
+      new TableName[] { TableName.valueOf("t1"), TableName.valueOf("t2"), TableName.valueOf("t3") },
+      "/hbase/backup");
     ctxt.setStartTs(EnvironmentEdgeManager.currentTime());
     ctxt.setCompleteTs(EnvironmentEdgeManager.currentTime() + 1);
     return ctxt;
   }
 
-  private List<BackupInfo> createBackupInfoList(int size) {
+  private List<BackupInfo> createBackupInfoList(int size) throws InterruptedException {
     List<BackupInfo> list = new ArrayList<>();
     for (int i = 0; i < size; i++) {
       list.add(createBackupInfo());
-      try {
-        Thread.sleep(10);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+      // XXX Why do we need this sleep?
+      Thread.sleep(10);
     }
     return list;
   }

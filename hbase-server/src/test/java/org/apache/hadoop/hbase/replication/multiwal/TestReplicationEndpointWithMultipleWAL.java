@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ public class TestReplicationEndpointWithMultipleWAL extends TestReplicationEndpo
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationEndpointWithMultipleWAL.class);
+    HBaseClassTestRule.forClass(TestReplicationEndpointWithMultipleWAL.class);
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

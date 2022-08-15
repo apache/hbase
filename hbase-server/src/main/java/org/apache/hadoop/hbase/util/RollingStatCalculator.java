@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class maintains mean and variation for any sequence of input provided to it.
- * It is initialized with number of rolling periods which basically means the number of past
- * inputs whose data will be considered to maintain mean and variation.
- * It will use O(N) memory to maintain these statistics, where N is number of look up periods it
- * was initialized with.
- * If zero is passed during initialization then it will maintain mean and variance from the
- * start. It will use O(1) memory only. But note that since it will maintain mean / variance
- * from the start the statistics may behave like constants and may ignore short trends.
- * All operations are O(1) except the initialization which is O(N).
+ * This class maintains mean and variation for any sequence of input provided to it. It is
+ * initialized with number of rolling periods which basically means the number of past inputs whose
+ * data will be considered to maintain mean and variation. It will use O(N) memory to maintain these
+ * statistics, where N is number of look up periods it was initialized with. If zero is passed
+ * during initialization then it will maintain mean and variance from the start. It will use O(1)
+ * memory only. But note that since it will maintain mean / variance from the start the statistics
+ * may behave like constants and may ignore short trends. All operations are O(1) except the
+ * initialization which is O(N).
  */
 @InterfaceAudience.Private
 public class RollingStatCalculator {
@@ -41,11 +38,10 @@ public class RollingStatCalculator {
   private int rollingPeriod;
   private int currentIndexPosition;
   // to be used only if we have non-zero rolling period
-  private long [] dataValues;
+  private long[] dataValues;
 
   /**
-   * Creates a RollingStatCalculator with given number of rolling periods.
-   * @param rollingPeriod
+   * Creates a RollingStatCalculator with given number of rolling periods. n
    */
   public RollingStatCalculator(int rollingPeriod) {
     this.rollingPeriod = rollingPeriod;
@@ -57,58 +53,50 @@ public class RollingStatCalculator {
   }
 
   /**
-   * Inserts given data value to array of data values to be considered for statistics calculation
-   * @param data
+   * Inserts given data value to array of data values to be considered for statistics calculation n
    */
   public void insertDataValue(long data) {
     // if current number of data points already equals rolling period and rolling period is
     // non-zero then remove one data and update the statistics
-    if(numberOfDataValues >= rollingPeriod && rollingPeriod > 0) {
+    if (numberOfDataValues >= rollingPeriod && rollingPeriod > 0) {
       this.removeData(dataValues[currentIndexPosition]);
     }
     numberOfDataValues++;
-    currentSum = currentSum + (double)data;
-    currentSqrSum = currentSqrSum + ((double)data * data);
-    if (rollingPeriod >0)
-    {
+    currentSum = currentSum + (double) data;
+    currentSqrSum = currentSqrSum + ((double) data * data);
+    if (rollingPeriod > 0) {
       dataValues[currentIndexPosition] = data;
       currentIndexPosition = (currentIndexPosition + 1) % rollingPeriod;
     }
   }
 
   /**
-   * Update the statistics after removing the given data value
-   * @param data
+   * Update the statistics after removing the given data value n
    */
   private void removeData(long data) {
-    currentSum = currentSum - (double)data;
-    currentSqrSum = currentSqrSum - ((double)data * data);
+    currentSum = currentSum - (double) data;
+    currentSqrSum = currentSqrSum - ((double) data * data);
     numberOfDataValues--;
   }
 
-  /**
-   * @return mean of the data values that are in the current list of data values
-   */
+  /** Returns mean of the data values that are in the current list of data values */
   public double getMean() {
-    return this.currentSum / (double)numberOfDataValues;
+    return this.currentSum / (double) numberOfDataValues;
   }
 
-  /**
-   * @return deviation of the data values that are in the current list of data values
-   */
+  /** Returns deviation of the data values that are in the current list of data values */
   public double getDeviation() {
-    double variance = (currentSqrSum - (currentSum*currentSum)/(double)(numberOfDataValues))/
-        numberOfDataValues;
+    double variance = (currentSqrSum - (currentSum * currentSum) / (double) (numberOfDataValues))
+      / numberOfDataValues;
     return Math.sqrt(variance);
   }
 
   /**
-   * @param size
-   * @return an array of given size initialized with zeros
+   * n * @return an array of given size initialized with zeros
    */
-  private long [] fillWithZeros(int size) {
-    long [] zeros = new long [size];
-    for (int i=0; i<size; i++) {
+  private long[] fillWithZeros(int size) {
+    long[] zeros = new long[size];
+    for (int i = 0; i < size; i++) {
       zeros[i] = 0L;
     }
     return zeros;

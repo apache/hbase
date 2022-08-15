@@ -132,8 +132,8 @@ public abstract class AbstractTestDLS {
     conf.setInt(HBASE_SPLIT_WAL_MAX_SPLITTER, 3);
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     conf.set("hbase.wal.provider", getWalProvider());
-    StartTestingClusterOption option = StartTestingClusterOption.builder()
-        .numMasters(NUM_MASTERS).numRegionServers(numRS).build();
+    StartTestingClusterOption option =
+      StartTestingClusterOption.builder().numMasters(NUM_MASTERS).numRegionServers(numRS).build();
     TEST_UTIL.startMiniHBaseCluster(option);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
@@ -199,13 +199,12 @@ public abstract class AbstractTestDLS {
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return (HBaseTestingUtil.getAllOnlineRegions(cluster)
-              .size() >= (numRegionsToCreate + 1));
+          return (HBaseTestingUtil.getAllOnlineRegions(cluster).size() >= (numRegionsToCreate + 1));
         }
       });
 
-      LOG.info("Current Open Regions After Master Node Starts Up:" +
-          HBaseTestingUtil.getAllOnlineRegions(cluster).size());
+      LOG.info("Current Open Regions After Master Node Starts Up:"
+        + HBaseTestingUtil.getAllOnlineRegions(cluster).size());
 
       assertEquals(numLogLines, TEST_UTIL.countRows(ht));
     }
@@ -254,10 +253,12 @@ public abstract class AbstractTestDLS {
 
   @Test
   public void testDelayedDeleteOnFailure() throws Exception {
-    if (!this.conf.getBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
-        HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)) {
+    if (
+      !this.conf.getBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK,
+        HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK)
+    ) {
       // This test depends on zk coordination....
-     return;
+      return;
     }
     LOG.info("testDelayedDeleteOnFailure");
     startCluster(1);
@@ -276,8 +277,8 @@ public abstract class AbstractTestDLS {
       out.write(Bytes.toBytes("corrupted bytes"));
       out.close();
       ZKSplitLogManagerCoordination coordination =
-          (ZKSplitLogManagerCoordination) (master.getCoordinatedStateManager())
-              .getSplitLogManagerCoordination();
+        (ZKSplitLogManagerCoordination) (master.getCoordinatedStateManager())
+          .getSplitLogManagerCoordination();
       coordination.setIgnoreDeleteForTesting(true);
       executor = Executors.newSingleThreadExecutor();
       Runnable runnable = new Runnable() {
@@ -388,12 +389,12 @@ public abstract class AbstractTestDLS {
   }
 
   public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int num_edits, int edit_size)
-      throws IOException {
+    throws IOException {
     makeWAL(hrs, regions, num_edits, edit_size, true);
   }
 
   public void makeWAL(HRegionServer hrs, List<RegionInfo> regions, int numEdits, int editSize,
-      boolean cleanShutdown) throws IOException {
+    boolean cleanShutdown) throws IOException {
     // remove root and meta region
     regions.remove(RegionInfoBuilder.FIRST_META_REGIONINFO);
 
@@ -434,8 +435,8 @@ public abstract class AbstractTestDLS {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
         // HBaseTestingUtility.createMultiRegions use 5 bytes key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-        e.add(new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(),
-          value));
+        e.add(
+          new KeyValue(row, COLUMN_FAMILY, qualifier, EnvironmentEdgeManager.currentTime(), value));
         log.appendData(curRegionInfo, new WALKeyImpl(curRegionInfo.getEncodedNameAsBytes(),
           tableName, EnvironmentEdgeManager.currentTime(), mvcc), e);
         if (0 == i % syncEvery) {
@@ -480,7 +481,7 @@ public abstract class AbstractTestDLS {
   }
 
   private void putData(Region region, byte[] startRow, int numRows, byte[] qf, byte[]... families)
-      throws IOException {
+    throws IOException {
     for (int i = 0; i < numRows; i++) {
       Put put = new Put(Bytes.add(startRow, Bytes.toBytes(i)));
       for (byte[] family : families) {
@@ -491,7 +492,7 @@ public abstract class AbstractTestDLS {
   }
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
-      throws InterruptedException {
+    throws InterruptedException {
     long curt = EnvironmentEdgeManager.currentTime();
     long endt = curt + timems;
     while (curt < endt) {
@@ -558,7 +559,7 @@ public abstract class AbstractTestDLS {
           TEST_UTIL.getAdmin().move(hri.getEncodedNameAsBytes(), destRS.getServerName());
           // wait for region move completes
           RegionStates regionStates =
-              TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+            TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
           TEST_UTIL.waitFor(45000, 200, new Waiter.Predicate<Exception>() {
             @Override
             public boolean evaluate() throws Exception {

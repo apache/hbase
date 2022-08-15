@@ -1,6 +1,4 @@
 /*
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,18 +26,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class Classes {
 
   /**
-   * Equivalent of {@link Class#forName(String)} which also returns classes for
-   * primitives like <code>boolean</code>, etc.
-   *
-   * @param className
-   *          The name of the class to retrieve. Can be either a normal class or
-   *          a primitive class.
-   * @return The class specified by <code>className</code>
-   * @throws ClassNotFoundException
-   *           If the requested class can not be found.
+   * Equivalent of {@link Class#forName(String)} which also returns classes for primitives like
+   * <code>boolean</code>, etc. n * The name of the class to retrieve. Can be either a normal class
+   * or a primitive class.
+   * @return The class specified by <code>className</code> n * If the requested class can not be
+   *         found.
    */
-  public static Class<?> extendedForName(String className)
-      throws ClassNotFoundException {
+  public static Class<?> extendedForName(String className) throws ClassNotFoundException {
     Class<?> valueType;
     if (className.equals("boolean")) {
       valueType = boolean.class;

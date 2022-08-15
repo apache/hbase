@@ -33,19 +33,12 @@ public final class ClusterMetrics {
   private final List<ServerName> backupMasterNames;
 
   public static ClusterMetrics from(org.apache.hadoop.hbase.ClusterMetrics clusterMetrics) {
-    return new ClusterMetrics(
-      clusterMetrics.getHBaseVersion(),
-      clusterMetrics.getClusterId(),
-      clusterMetrics.getMasterName(),
-      clusterMetrics.getBackupMasterNames());
+    return new ClusterMetrics(clusterMetrics.getHBaseVersion(), clusterMetrics.getClusterId(),
+      clusterMetrics.getMasterName(), clusterMetrics.getBackupMasterNames());
   }
 
-  private ClusterMetrics(
-    String hbaseVersion,
-    String clusterId,
-    ServerName masterName,
-    List<ServerName> backupMasterNames
-  ) {
+  private ClusterMetrics(String hbaseVersion, String clusterId, ServerName masterName,
+    List<ServerName> backupMasterNames) {
     this.hbaseVersion = hbaseVersion;
     this.clusterId = clusterId;
     this.masterName = masterName;

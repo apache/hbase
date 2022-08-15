@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -95,8 +95,8 @@ public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBas
       UTIL1.waitFor(30000, () -> {
         for (Procedure<?> proc : UTIL1.getMiniHBaseCluster().getMaster().getProcedures()) {
           if (proc instanceof DisablePeerProcedure) {
-            return ((DisablePeerProcedure) proc)
-              .getCurrentStateId() == PeerModificationState.POST_PEER_MODIFICATION_VALUE;
+            return ((DisablePeerProcedure) proc).getCurrentStateId()
+                == PeerModificationState.POST_PEER_MODIFICATION_VALUE;
           }
         }
         return false;

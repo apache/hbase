@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +20,15 @@ package org.apache.hadoop.hbase.util;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Computes the optimal (minimal cost) assignment of jobs to workers (or other
- * analogous) concepts given a cost matrix of each pair of job and worker, using
- * the algorithm by James Munkres in "Algorithms for the Assignment and
- * Transportation Problems", with additional optimizations as described by Jin
- * Kue Wong in "A New Implementation of an Algorithm for the Optimal Assignment
- * Problem: An Improved Version of Munkres' Algorithm". The algorithm runs in
- * O(n^3) time and need O(n^2) auxiliary space where n is the number of jobs or
- * workers, whichever is greater.
+ * Computes the optimal (minimal cost) assignment of jobs to workers (or other analogous) concepts
+ * given a cost matrix of each pair of job and worker, using the algorithm by James Munkres in
+ * "Algorithms for the Assignment and Transportation Problems", with additional optimizations as
+ * described by Jin Kue Wong in "A New Implementation of an Algorithm for the Optimal Assignment
+ * Problem: An Improved Version of Munkres' Algorithm". The algorithm runs in O(n^3) time and need
+ * O(n^2) auxiliary space where n is the number of jobs or workers, whichever is greater.
  */
 @InterfaceAudience.Private
 public class MunkresAssignment {
@@ -88,11 +84,10 @@ public class MunkresAssignment {
   private float[] colAdjust;
 
   /**
-   * Construct a new problem instance with the specified cost matrix. The cost
-   * matrix must be rectangular, though not necessarily square. If one dimension
-   * is greater than the other, some elements in the greater dimension will not
-   * be assigned. The input cost matrix will not be modified.
-   * @param costMatrix
+   * Construct a new problem instance with the specified cost matrix. The cost matrix must be
+   * rectangular, though not necessarily square. If one dimension is greater than the other, some
+   * elements in the greater dimension will not be assigned. The input cost matrix will not be
+   * modified. n
    */
   public MunkresAssignment(float[][] costMatrix) {
     // The algorithm assumes that the number of columns is at least as great as
@@ -146,11 +141,10 @@ public class MunkresAssignment {
   }
 
   /**
-   * Get the optimal assignments. The returned array will have the same number
-   * of elements as the number of elements as the number of rows in the input
-   * cost matrix. Each element will indicate which column should be assigned to
-   * that row or -1 if no column should be assigned, i.e. if result[i] = j then
-   * row i should be assigned to column j. Subsequent invocations of this method
+   * Get the optimal assignments. The returned array will have the same number of elements as the
+   * number of elements as the number of rows in the input cost matrix. Each element will indicate
+   * which column should be assigned to that row or -1 if no column should be assigned, i.e. if
+   * result[i] = j then row i should be assigned to column j. Subsequent invocations of this method
    * will simply return the same object without additional computation.
    * @return an array with the optimal assignments
    */
@@ -174,8 +168,7 @@ public class MunkresAssignment {
     // Extract the assignments from the mask matrix.
     if (transposed) {
       assignments = new int[cols];
-      outer:
-      for (int c = 0; c < cols; c++) {
+      outer: for (int c = 0; c < cols; c++) {
         for (int r = 0; r < rows; r++) {
           if (mask[r][c] == STAR) {
             assignments[c] = r;
@@ -187,8 +180,7 @@ public class MunkresAssignment {
       }
     } else {
       assignments = new int[rows];
-      outer:
-      for (int r = 0; r < rows; r++) {
+      outer: for (int r = 0; r < rows; r++) {
         for (int c = 0; c < cols; c++) {
           if (mask[r][c] == STAR) {
             assignments[r] = c;
@@ -215,9 +207,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Corresponds to the "preliminaries" step of the original algorithm.
-   * Guarantees that the matrix is an equivalent non-negative matrix with at
-   * least one zero in each row.
+   * Corresponds to the "preliminaries" step of the original algorithm. Guarantees that the matrix
+   * is an equivalent non-negative matrix with at least one zero in each row.
    */
   private void preliminaries() {
     for (int r = 0; r < rows; r++) {
@@ -250,8 +241,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Test whether the algorithm is done, i.e. we have the optimal assignment.
-   * This occurs when there is exactly one starred zero in each row.
+   * Test whether the algorithm is done, i.e. we have the optimal assignment. This occurs when there
+   * is exactly one starred zero in each row.
    * @return true if the algorithm is done
    */
   private boolean testIsDone() {
@@ -431,8 +422,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Find a zero cost assignment which is not covered. If there are no zero cost
-   * assignments which are uncovered, then null will be returned.
+   * Find a zero cost assignment which is not covered. If there are no zero cost assignments which
+   * are uncovered, then null will be returned.
    * @return pair of row and column indices of an uncovered zero or null
    */
   private Pair<Integer, Integer> findUncoveredZero() {
@@ -445,8 +436,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * A specified row has become covered, and a specified column has become
-   * uncovered. The least value per row may need to be updated.
+   * A specified row has become covered, and a specified column has become uncovered. The least
+   * value per row may need to be updated.
    * @param row the index of the row which was just covered
    * @param col the index of the column which was just uncovered
    */
@@ -467,8 +458,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Find a starred zero in a specified row. If there are no starred zeroes in
-   * the specified row, then null will be returned.
+   * Find a starred zero in a specified row. If there are no starred zeroes in the specified row,
+   * then null will be returned.
    * @param r the index of the row to be searched
    * @return pair of row and column indices of starred zero or null
    */
@@ -482,8 +473,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Find a starred zero in the specified column. If there are no starred zeroes
-   * in the specified row, then null will be returned.
+   * Find a starred zero in the specified column. If there are no starred zeroes in the specified
+   * row, then null will be returned.
    * @param c the index of the column to be searched
    * @return pair of row and column indices of starred zero or null
    */
@@ -497,8 +488,8 @@ public class MunkresAssignment {
   }
 
   /**
-   * Find a primed zero in the specified row. If there are no primed zeroes in
-   * the specified row, then null will be returned.
+   * Find a primed zero in the specified row. If there are no primed zeroes in the specified row,
+   * then null will be returned.
    * @param r the index of the row to be searched
    * @return pair of row and column indices of primed zero or null
    */

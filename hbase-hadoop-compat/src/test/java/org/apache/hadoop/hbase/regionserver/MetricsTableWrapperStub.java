@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.HashMap;
@@ -84,6 +83,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
+  public long getMaxStoreFiles(String table) {
+    return 8;
+  }
+
+  @Override
   public long getMaxStoreFileAge(String table) {
     return 44;
   }
@@ -111,6 +115,30 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   @Override
   public long getCpRequestsCount(String table) {
     return 99;
+  }
+
+  public long getStaticIndexSize(String table) {
+    return 101;
+  }
+
+  @Override
+  public long getStaticBloomSize(String table) {
+    return 111;
+  }
+
+  @Override
+  public long getBloomFilterRequestsCount(String table) {
+    return 222;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount(String table) {
+    return 333;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount(String table) {
+    return 444;
   }
 
   @Override

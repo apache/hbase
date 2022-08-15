@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -50,11 +49,11 @@ public final class TableDescriptorChecker {
   public static final String TABLE_SANITY_CHECKS = "hbase.table.sanity.checks";
   public static final boolean DEFAULT_TABLE_SANITY_CHECKS = true;
 
-  //should we check the compression codec type at master side, default true, HBASE-6370
+  // should we check the compression codec type at master side, default true, HBASE-6370
   public static final String MASTER_CHECK_COMPRESSION = "hbase.master.check.compression";
   public static final boolean DEFAULT_MASTER_CHECK_COMPRESSION = true;
 
-  //should we check encryption settings at master side, default true
+  // should we check encryption settings at master side, default true
   public static final String MASTER_CHECK_ENCRYPTION = "hbase.master.check.encryption";
   public static final boolean DEFAULT_MASTER_CHECK_ENCRYPTION = true;
 
@@ -62,14 +61,12 @@ public final class TableDescriptorChecker {
   }
 
   /**
-   * Checks whether the table conforms to some sane limits, and configured
-   * values (compression, etc) work. Throws an exception if something is wrong.
+   * Checks whether the table conforms to some sane limits, and configured values (compression, etc)
+   * work. Throws an exception if something is wrong.
    */
   public static void sanityCheck(final Configuration c, final TableDescriptor td)
-      throws IOException {
-    CompoundConfiguration conf = new CompoundConfiguration()
-      .add(c)
-      .addBytesMap(td.getValues());
+    throws IOException {
+    CompoundConfiguration conf = new CompoundConfiguration().add(c).addBytesMap(td.getValues());
 
     // Setting this to true logs the warning instead of throwing exception
     boolean logWarn = false;
@@ -85,14 +82,13 @@ public final class TableDescriptorChecker {
     long maxFileSizeLowerLimit = 2 * 1024 * 1024L; // 2M is the default lower limit
     // if not set MAX_FILESIZE in TableDescriptor, and not set HREGION_MAX_FILESIZE in
     // hbase-site.xml, use maxFileSizeLowerLimit instead to skip this check
-    long maxFileSize = td.getValue(TableDescriptorBuilder.MAX_FILESIZE) == null ?
-      conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit) :
-      Long.parseLong(td.getValue(TableDescriptorBuilder.MAX_FILESIZE));
+    long maxFileSize = td.getValue(TableDescriptorBuilder.MAX_FILESIZE) == null
+      ? conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit)
+      : Long.parseLong(td.getValue(TableDescriptorBuilder.MAX_FILESIZE));
     if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
-      String message =
-          "MAX_FILESIZE for table descriptor or " + "\"hbase.hregion.max.filesize\" (" +
-              maxFileSize + ") is too small, which might cause over splitting into unmanageable " +
-              "number of regions.";
+      String message = "MAX_FILESIZE for table descriptor or " + "\"hbase.hregion.max.filesize\" ("
+        + maxFileSize + ") is too small, which might cause over splitting into unmanageable "
+        + "number of regions.";
       warnOrThrowExceptionForFailure(logWarn, message, null);
     }
 
@@ -100,13 +96,13 @@ public final class TableDescriptorChecker {
     long flushSizeLowerLimit = 1024 * 1024L; // 1M is the default lower limit
     // if not set MEMSTORE_FLUSHSIZE in TableDescriptor, and not set HREGION_MEMSTORE_FLUSH_SIZE in
     // hbase-site.xml, use flushSizeLowerLimit instead to skip this check
-    long flushSize = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE) == null ?
-      conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit) :
-      Long.parseLong(td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE));
+    long flushSize = td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE) == null
+      ? conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit)
+      : Long.parseLong(td.getValue(TableDescriptorBuilder.MEMSTORE_FLUSHSIZE));
     if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
-      String message = "MEMSTORE_FLUSHSIZE for table descriptor or " +
-          "\"hbase.hregion.memstore.flush.size\" (" + flushSize +
-          ") is too small, which might cause" + " very frequent flushing.";
+      String message =
+        "MEMSTORE_FLUSHSIZE for table descriptor or " + "\"hbase.hregion.memstore.flush.size\" ("
+          + flushSize + ") is too small, which might cause" + " very frequent flushing.";
       warnOrThrowExceptionForFailure(logWarn, message, null);
     }
 
@@ -167,25 +163,25 @@ public final class TableDescriptorChecker {
 
       // check blockSize
       if (hcd.getBlocksize() < 1024 || hcd.getBlocksize() > 16 * 1024 * 1024) {
-        String message = "Block size for column family " + hcd.getNameAsString() +
-            "  must be between 1K and 16MB.";
+        String message = "Block size for column family " + hcd.getNameAsString()
+          + "  must be between 1K and 16MB.";
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
 
       // check versions
       if (hcd.getMinVersions() < 0) {
         String message =
-            "Min versions for column family " + hcd.getNameAsString() + "  must be positive.";
+          "Min versions for column family " + hcd.getNameAsString() + "  must be positive.";
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
       // max versions already being checked
 
       // HBASE-13776 Setting illegal versions for ColumnFamilyDescriptor
-      //  does not throw IllegalArgumentException
+      // does not throw IllegalArgumentException
       // check minVersions <= maxVerions
       if (hcd.getMinVersions() > hcd.getMaxVersions()) {
-        String message = "Min versions for column family " + hcd.getNameAsString() +
-            " must be less than the Max versions.";
+        String message = "Min versions for column family " + hcd.getNameAsString()
+          + " must be less than the Max versions.";
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
 
@@ -197,8 +193,8 @@ public final class TableDescriptorChecker {
       // check data replication factor, it can be 0(default value) when user has not explicitly
       // set the value, in this case we use default replication factor set in the file system.
       if (hcd.getDFSReplication() < 0) {
-        String message = "HFile Replication for column family " + hcd.getNameAsString() +
-            "  must be greater than zero.";
+        String message = "HFile Replication for column family " + hcd.getNameAsString()
+          + "  must be greater than zero.";
         warnOrThrowExceptionForFailure(logWarn, message, null);
       }
 
@@ -215,9 +211,8 @@ public final class TableDescriptorChecker {
     // check replication scope
     WALProtos.ScopeType scop = WALProtos.ScopeType.valueOf(cfd.getScope());
     if (scop == null) {
-      String message =
-          "Replication scope for column family " + cfd.getNameAsString() + " is " + cfd.getScope() +
-              " which is invalid.";
+      String message = "Replication scope for column family " + cfd.getNameAsString() + " is "
+        + cfd.getScope() + " which is invalid.";
 
       LOG.error(message);
       throw new DoNotRetryIOException(message);
@@ -225,13 +220,13 @@ public final class TableDescriptorChecker {
   }
 
   private static void checkCompactionPolicy(Configuration conf, TableDescriptor td)
-      throws IOException {
+    throws IOException {
     // FIFO compaction has some requirements
     // Actually FCP ignores periodic major compactions
     String className = td.getValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
     if (className == null) {
       className = conf.get(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
-          ExploringCompactionPolicy.class.getName());
+        ExploringCompactionPolicy.class.getName());
     }
 
     int blockingFileCount = HStore.DEFAULT_BLOCKING_STOREFILE_COUNT;
@@ -244,7 +239,7 @@ public final class TableDescriptorChecker {
 
     for (ColumnFamilyDescriptor hcd : td.getColumnFamilies()) {
       String compactionPolicy =
-          hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
+        hcd.getConfigurationValue(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY);
       if (compactionPolicy == null) {
         compactionPolicy = className;
       }
@@ -273,8 +268,8 @@ public final class TableDescriptorChecker {
       }
       if (blockingFileCount < 1000) {
         message =
-            "Blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount +
-                " is below recommended minimum of 1000 for column family " + hcd.getNameAsString();
+          "Blocking file count '" + HStore.BLOCKING_STOREFILES_KEY + "' " + blockingFileCount
+            + " is below recommended minimum of 1000 for column family " + hcd.getNameAsString();
         throw new IOException(message);
       }
     }
@@ -299,24 +294,24 @@ public final class TableDescriptorChecker {
   }
 
   public static void checkEncryption(final Configuration conf, final TableDescriptor td)
-      throws IOException {
+    throws IOException {
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
       EncryptionTest.testEncryption(conf, cfd.getEncryptionType(), cfd.getEncryptionKey());
     }
   }
 
   public static void checkClassLoading(final Configuration conf, final TableDescriptor td)
-      throws IOException {
+    throws IOException {
     RegionSplitPolicy.getSplitPolicyClass(td, conf);
     RegionCoprocessorHost.testTableCoprocessorAttrs(conf, td);
   }
 
   // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
   private static void warnOrThrowExceptionForFailure(boolean logWarn, String message,
-      Exception cause) throws IOException {
+    Exception cause) throws IOException {
     if (!logWarn) {
-      throw new DoNotRetryIOException(message + " Set " + TABLE_SANITY_CHECKS +
-          " to false at conf or table descriptor if you want to bypass sanity checks", cause);
+      throw new DoNotRetryIOException(message + " Set " + TABLE_SANITY_CHECKS
+        + " to false at conf or table descriptor if you want to bypass sanity checks", cause);
     }
     LOG.warn(message);
   }

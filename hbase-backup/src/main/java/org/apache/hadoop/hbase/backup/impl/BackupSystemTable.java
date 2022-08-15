@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +19,8 @@ package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,6 +70,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -232,11 +237,12 @@ public final class BackupSystemTable implements Closeable {
     long TIMEOUT = 60000;
     long startTime = EnvironmentEdgeManager.currentTime();
     LOG.debug("Backup table {} is not present and available, waiting for it to become so",
-        tableName);
+      tableName);
     while (!admin.tableExists(tableName) || !admin.isTableAvailable(tableName)) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
       }
       if (EnvironmentEdgeManager.currentTime() - startTime > TIMEOUT) {
         throw new IOException(
@@ -274,15 +280,17 @@ public final class BackupSystemTable implements Closeable {
   Map<byte[], String> readBulkLoadedFiles(String backupId) throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
     try (Table table = connection.getTable(bulkLoadTableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       Result res = null;
       Map<byte[], String> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       while ((res = scanner.next()) != null) {
         res.advance();
         byte[] row = CellUtil.cloneRow(res.listCells().get(0));
         for (Cell cell : res.listCells()) {
-          if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-            BackupSystemTable.PATH_COL.length) == 0) {
+          if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0
+          ) {
             map.put(row, Bytes.toString(CellUtil.cloneValue(cell)));
           }
         }
@@ -298,11 +306,12 @@ public final class BackupSystemTable implements Closeable {
    * @return array of Map of family to List of Paths
    */
   public Map<byte[], List<Path>>[] readBulkLoadedFiles(String backupId, List<TableName> sTableList)
-      throws IOException {
+    throws IOException {
     Scan scan = BackupSystemTable.createScanForBulkLoadedFiles(backupId);
+    @SuppressWarnings("unchecked")
     Map<byte[], List<Path>>[] mapForSrc = new Map[sTableList == null ? 1 : sTableList.size()];
     try (Table table = connection.getTable(bulkLoadTableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       Result res = null;
       while ((res = scanner.next()) != null) {
         res.advance();
@@ -310,14 +319,20 @@ public final class BackupSystemTable implements Closeable {
         byte[] fam = null;
         String path = null;
         for (Cell cell : res.listCells()) {
-          if (CellUtil.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
-            BackupSystemTable.TBL_COL.length) == 0) {
+          if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.TBL_COL, 0,
+              BackupSystemTable.TBL_COL.length) == 0
+          ) {
             tbl = TableName.valueOf(CellUtil.cloneValue(cell));
-          } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
-            BackupSystemTable.FAM_COL.length) == 0) {
+          } else if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+              BackupSystemTable.FAM_COL.length) == 0
+          ) {
             fam = CellUtil.cloneValue(cell);
-          } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-            BackupSystemTable.PATH_COL.length) == 0) {
+          } else if (
+            CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+              BackupSystemTable.PATH_COL.length) == 0
+          ) {
             path = Bytes.toString(CellUtil.cloneValue(cell));
           }
         }
@@ -368,7 +383,7 @@ public final class BackupSystemTable implements Closeable {
    * @param finalPaths family and associated hfiles
    */
   public void writePathsPostBulkLoad(TableName tabName, byte[] region,
-      Map<byte[], List<Path>> finalPaths) throws IOException {
+    Map<byte[], List<Path>> finalPaths) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("write bulk load descriptor to backup " + tabName + " with " + finalPaths.size()
         + " entries");
@@ -388,14 +403,14 @@ public final class BackupSystemTable implements Closeable {
    * @param pairs list of paths for hfiles
    */
   public void writeFilesForBulkLoadPreCommit(TableName tabName, byte[] region, final byte[] family,
-      final List<Pair<Path, Path>> pairs) throws IOException {
+    final List<Pair<Path, Path>> pairs) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "write bulk load descriptor to backup " + tabName + " with " + pairs.size() + " entries");
     }
     try (Table table = connection.getTable(bulkLoadTableName)) {
       List<Put> puts =
-          BackupSystemTable.createPutForPreparedBulkload(tabName, region, family, pairs);
+        BackupSystemTable.createPutForPreparedBulkload(tabName, region, family, pairs);
       table.put(puts);
       LOG.debug("written " + puts.size() + " rows for bulk load of " + tabName);
     }
@@ -434,7 +449,7 @@ public final class BackupSystemTable implements Closeable {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(tTable);
       Map<String, Map<String, List<Pair<String, Boolean>>>> tblMap = map.get(tTable);
       try (Table table = connection.getTable(bulkLoadTableName);
-          ResultScanner scanner = table.getScanner(scan)) {
+        ResultScanner scanner = table.getScanner(scan)) {
         Result res = null;
         while ((res = scanner.next()) != null) {
           res.advance();
@@ -448,14 +463,20 @@ public final class BackupSystemTable implements Closeable {
             rows.add(row);
             String rowStr = Bytes.toString(row);
             region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
-            if (CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
-              BackupSystemTable.FAM_COL.length) == 0) {
+            if (
+              CellUtil.compareQualifiers(cell, BackupSystemTable.FAM_COL, 0,
+                BackupSystemTable.FAM_COL.length) == 0
+            ) {
               fam = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
-              BackupSystemTable.PATH_COL.length) == 0) {
+            } else if (
+              CellUtil.compareQualifiers(cell, BackupSystemTable.PATH_COL, 0,
+                BackupSystemTable.PATH_COL.length) == 0
+            ) {
               path = Bytes.toString(CellUtil.cloneValue(cell));
-            } else if (CellUtil.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
-              BackupSystemTable.STATE_COL.length) == 0) {
+            } else if (
+              CellUtil.compareQualifiers(cell, BackupSystemTable.STATE_COL, 0,
+                BackupSystemTable.STATE_COL.length) == 0
+            ) {
               byte[] state = CellUtil.cloneValue(cell);
               if (Bytes.equals(BackupSystemTable.BL_PREPARE, state)) {
                 raw = true;
@@ -489,7 +510,7 @@ public final class BackupSystemTable implements Closeable {
    * @param backupId the backup Id
    */
   public void writeBulkLoadedFiles(List<TableName> sTableList, Map<byte[], List<Path>>[] maps,
-      String backupId) throws IOException {
+    String backupId) throws IOException {
     try (Table table = connection.getTable(bulkLoadTableName)) {
       long ts = EnvironmentEdgeManager.currentTime();
       int cnt = 0;
@@ -560,13 +581,13 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val);
+      return new String(val, StandardCharsets.UTF_8);
     }
   }
 
   /**
    * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode start code
+   * @param startCode  start code
    * @param backupRoot root directory path to backup
    * @throws IOException exception
    */
@@ -583,7 +604,7 @@ public final class BackupSystemTable implements Closeable {
   /**
    * Exclusive operations are: create, delete, merge
    * @throws IOException if a table operation fails or an active backup exclusive operation is
-   *           already underway
+   *                     already underway
    */
   public void startBackupExclusiveOperation() throws IOException {
     LOG.debug("Start new backup exclusive operation");
@@ -591,11 +612,15 @@ public final class BackupSystemTable implements Closeable {
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForStartBackupSession();
       // First try to put if row does not exist
-      if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-          .ifNotExists().thenPut(put)) {
+      if (
+        !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+          .ifNotExists().thenPut(put)
+      ) {
         // Row exists, try to put if value == ACTIVE_SESSION_NO
-        if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-            .ifEquals(ACTIVE_SESSION_NO).thenPut(put)) {
+        if (
+          !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+            .ifEquals(ACTIVE_SESSION_NO).thenPut(put)
+        ) {
           throw new ExclusiveOperationException();
         }
       }
@@ -613,8 +638,10 @@ public final class BackupSystemTable implements Closeable {
 
     try (Table table = connection.getTable(tableName)) {
       Put put = createPutForStopBackupSession();
-      if (!table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
-          .ifEquals(ACTIVE_SESSION_YES).thenPut(put)) {
+      if (
+        !table.checkAndMutate(ACTIVE_SESSION_ROW, SESSIONS_FAMILY).qualifier(ACTIVE_SESSION_COL)
+          .ifEquals(ACTIVE_SESSION_YES).thenPut(put)
+      ) {
         throw new IOException("There is no active backup exclusive operation");
       }
     }
@@ -633,13 +660,13 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public HashMap<String, Long> readRegionServerLastLogRollResult(String backupRoot)
-      throws IOException {
+    throws IOException {
     LOG.trace("read region server last roll log result to backup system table");
 
     Scan scan = createScanForReadRegionServerLastLogRollResult(backupRoot);
 
     try (Table table = connection.getTable(tableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       Result res;
       HashMap<String, Long> rsTimestampMap = new HashMap<>();
       while ((res = scanner.next()) != null) {
@@ -656,13 +683,13 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Writes Region Server last roll log result (timestamp) to backup system table table
-   * @param server Region Server name
-   * @param ts last log timestamp
+   * @param server     Region Server name
+   * @param ts         last log timestamp
    * @param backupRoot root directory path to backup
    * @throws IOException exception
    */
   public void writeRegionServerLastLogRollResult(String server, Long ts, String backupRoot)
-      throws IOException {
+    throws IOException {
     LOG.trace("write region server last roll log result to backup system table");
 
     try (Table table = connection.getTable(tableName)) {
@@ -710,7 +737,7 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Get backup history records filtered by list of filters.
-   * @param n max number of records, if n == -1 , then max number is ignored
+   * @param n       max number of records, if n == -1 , then max number is ignored
    * @param filters list of filters
    * @return backup records
    * @throws IOException if getting the backup history fails
@@ -793,7 +820,7 @@ public final class BackupSystemTable implements Closeable {
   }
 
   public Map<TableName, ArrayList<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
-      String backupRoot) throws IOException {
+    String backupRoot) throws IOException {
     List<BackupInfo> history = getBackupHistory(backupRoot);
     Map<TableName, ArrayList<BackupInfo>> tableHistoryMap = new HashMap<>();
     for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
@@ -829,7 +856,7 @@ public final class BackupSystemTable implements Closeable {
     ArrayList<BackupInfo> list = new ArrayList<>();
 
     try (Table table = connection.getTable(tableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       Result res;
       while ((res = scanner.next()) != null) {
         res.advance();
@@ -847,16 +874,16 @@ public final class BackupSystemTable implements Closeable {
    * Write the current timestamps for each regionserver to backup system table after a successful
    * full or incremental backup. The saved timestamp is of the last log file that was backed up
    * already.
-   * @param tables tables
+   * @param tables        tables
    * @param newTimestamps timestamps
-   * @param backupRoot root directory path to backup
+   * @param backupRoot    root directory path to backup
    * @throws IOException exception
    */
-  public void writeRegionServerLogTimestamp(Set<TableName> tables,
-      Map<String, Long> newTimestamps, String backupRoot) throws IOException {
+  public void writeRegionServerLogTimestamp(Set<TableName> tables, Map<String, Long> newTimestamps,
+    String backupRoot) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("write RS log time stamps to backup system table for tables ["
-          + StringUtils.join(tables, ",") + "]");
+        + StringUtils.join(tables, ",") + "]");
     }
     List<Put> puts = new ArrayList<>();
     for (TableName table : tables) {
@@ -879,7 +906,7 @@ public final class BackupSystemTable implements Closeable {
    * @throws IOException exception
    */
   public Map<TableName, Map<String, Long>> readLogTimestampMap(String backupRoot)
-      throws IOException {
+    throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("read RS log ts from backup system table for root=" + backupRoot);
     }
@@ -888,7 +915,7 @@ public final class BackupSystemTable implements Closeable {
 
     Scan scan = createScanForReadLogTimestampMap(backupRoot);
     try (Table table = connection.getTable(tableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       Result res;
       while ((res = scanner.next()) != null) {
         res.advance();
@@ -899,11 +926,11 @@ public final class BackupSystemTable implements Closeable {
         byte[] data = CellUtil.cloneValue(cell);
         if (data == null) {
           throw new IOException("Data of last backup data from backup system table "
-              + "is empty. Create a backup first.");
+            + "is empty. Create a backup first.");
         }
         if (data != null && data.length > 0) {
           HashMap<String, Long> lastBackup =
-              fromTableServerTimestampProto(BackupProtos.TableServerTimestamp.parseFrom(data));
+            fromTableServerTimestampProto(BackupProtos.TableServerTimestamp.parseFrom(data));
           tableTimestampMap.put(tn, lastBackup);
         }
       }
@@ -912,11 +939,11 @@ public final class BackupSystemTable implements Closeable {
   }
 
   private BackupProtos.TableServerTimestamp toTableServerTimestampProto(TableName table,
-      Map<String, Long> map) {
+    Map<String, Long> map) {
     BackupProtos.TableServerTimestamp.Builder tstBuilder =
-        BackupProtos.TableServerTimestamp.newBuilder();
+      BackupProtos.TableServerTimestamp.newBuilder();
     tstBuilder
-    .setTableName(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toProtoTableName(table));
+      .setTableName(org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toProtoTableName(table));
 
     for (Entry<String, Long> entry : map.entrySet()) {
       BackupProtos.ServerTimestamp.Builder builder = BackupProtos.ServerTimestamp.newBuilder();
@@ -939,7 +966,7 @@ public final class BackupSystemTable implements Closeable {
     List<BackupProtos.ServerTimestamp> list = proto.getServerTimestampList();
     for (BackupProtos.ServerTimestamp st : list) {
       ServerName sn =
-          org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(st.getServerName());
+        org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(st.getServerName());
       map.put(sn.getHostname() + ":" + sn.getPort(), st.getTimestamp());
     }
     return map;
@@ -973,12 +1000,12 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Add tables to global incremental backup set
-   * @param tables set of tables
+   * @param tables     set of tables
    * @param backupRoot root directory path to backup
    * @throws IOException exception
    */
   public void addIncrementalBackupTableSet(Set<TableName> tables, String backupRoot)
-      throws IOException {
+    throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Add incremental backup table set to backup system table. ROOT=" + backupRoot
         + " tables [" + StringUtils.join(tables, " ") + "]");
@@ -1019,7 +1046,7 @@ public final class BackupSystemTable implements Closeable {
     Scan scan = createScanForBackupHistory();
     scan.setCaching(1);
     try (Table table = connection.getTable(tableName);
-        ResultScanner scanner = table.getScanner(scan)) {
+      ResultScanner scanner = table.getScanner(scan)) {
       if (scanner.next() != null) {
         result = true;
       }
@@ -1073,13 +1100,13 @@ public final class BackupSystemTable implements Closeable {
       res.advance();
       String[] tables = cellValueToBackupSet(res.current());
       return Arrays.asList(tables).stream().map(item -> TableName.valueOf(item))
-          .collect(Collectors.toList());
+        .collect(Collectors.toList());
     }
   }
 
   /**
    * Add backup set (list of tables)
-   * @param name set name
+   * @param name      set name
    * @param newTables list of tables, comma-separated
    * @throws IOException if a table operation fails
    */
@@ -1105,7 +1132,7 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Remove tables from backup set (list of tables)
-   * @param name set name
+   * @param name     set name
    * @param toRemove list of tables
    * @throws IOException if a table operation or deleting the backup set fails
    */
@@ -1132,7 +1159,7 @@ public final class BackupSystemTable implements Closeable {
         table.put(put);
       } else if (disjoint.length == tables.length) {
         LOG.warn("Backup set '" + name + "' does not contain tables ["
-            + StringUtils.join(toRemove, " ") + "]");
+          + StringUtils.join(toRemove, " ") + "]");
       } else { // disjoint.length == 0 and tables.length >0
         // Delete backup set
         LOG.info("Backup set '" + name + "' is empty. Deleting.");
@@ -1176,7 +1203,7 @@ public final class BackupSystemTable implements Closeable {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(conf));
 
     ColumnFamilyDescriptorBuilder colBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
+      ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
 
     colBuilder.setMaxVersions(1);
     Configuration config = HBaseConfiguration.create();
@@ -1213,10 +1240,10 @@ public final class BackupSystemTable implements Closeable {
    */
   public static TableDescriptor getSystemTableForBulkLoadedDataDescriptor(Configuration conf) {
     TableDescriptorBuilder builder =
-        TableDescriptorBuilder.newBuilder(getTableNameForBulkLoadedData(conf));
+      TableDescriptorBuilder.newBuilder(getTableNameForBulkLoadedData(conf));
 
     ColumnFamilyDescriptorBuilder colBuilder =
-        ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
+      ColumnFamilyDescriptorBuilder.newBuilder(SESSIONS_FAMILY);
     colBuilder.setMaxVersions(1);
     Configuration config = HBaseConfiguration.create();
     int ttl = config.getInt(BackupRestoreConstants.BACKUP_SYSTEM_TTL_KEY,
@@ -1375,11 +1402,11 @@ public final class BackupSystemTable implements Closeable {
   /**
    * Creates Put to write RS last roll log timestamp map
    * @param table table
-   * @param smap map, containing RS:ts
+   * @param smap  map, containing RS:ts
    * @return put operation
    */
   private Put createPutForWriteRegionServerLogTimestamp(TableName table, byte[] smap,
-      String backupRoot) {
+    String backupRoot) {
     Put put = new Put(rowkey(TABLE_RS_LOG_MAP_PREFIX, backupRoot, NULL, table.getNameAsString()));
     put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("log-roll-map"), smap);
     return put;
@@ -1414,12 +1441,12 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Creates Put to store RS last log result
-   * @param server server name
+   * @param server    server name
    * @param timestamp log roll result (timestamp)
    * @return put operation
    */
   private Put createPutForRegionServerLastLogRollResult(String server, Long timestamp,
-      String backupRoot) {
+    String backupRoot) {
     Put put = new Put(rowkey(RS_LOG_TS_PREFIX, backupRoot, NULL, server));
     put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("rs-log-ts"),
       Bytes.toBytes(timestamp));
@@ -1458,7 +1485,7 @@ public final class BackupSystemTable implements Closeable {
    * Creates Put's for bulk load resulting from running LoadIncrementalHFiles
    */
   static List<Put> createPutForCommittedBulkload(TableName table, byte[] region,
-      Map<byte[], List<Path>> finalPaths) {
+    Map<byte[], List<Path>> finalPaths) {
     List<Put> puts = new ArrayList<>();
     for (Map.Entry<byte[], List<Path>> entry : finalPaths.entrySet()) {
       for (Path path : entry.getValue()) {
@@ -1472,8 +1499,8 @@ public final class BackupSystemTable implements Closeable {
         put.addColumn(BackupSystemTable.META_FAMILY, PATH_COL, Bytes.toBytes(file));
         put.addColumn(BackupSystemTable.META_FAMILY, STATE_COL, BL_COMMIT);
         puts.add(put);
-        LOG.debug(
-          "writing done bulk path " + file + " for " + table + " " + Bytes.toString(region));
+        LOG
+          .debug("writing done bulk path " + file + " for " + table + " " + Bytes.toString(region));
       }
     }
     return puts;
@@ -1538,7 +1565,7 @@ public final class BackupSystemTable implements Closeable {
    * Creates Put's for bulk load resulting from running LoadIncrementalHFiles
    */
   static List<Put> createPutForPreparedBulkload(TableName table, byte[] region, final byte[] family,
-      final List<Pair<Path, Path>> pairs) {
+    final List<Pair<Path, Path>> pairs) {
     List<Put> puts = new ArrayList<>(pairs.size());
     for (Pair<Path, Path> pair : pairs) {
       Path path = pair.getSecond();
@@ -1619,7 +1646,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val).split(",");
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
@@ -1634,7 +1662,7 @@ public final class BackupSystemTable implements Closeable {
     Get get = new Get(MERGE_OP_ROW);
     try (Table table = connection.getTable(tableName)) {
       Result res = table.get(get);
-      return (!res.isEmpty());
+      return !res.isEmpty();
     }
   }
 
@@ -1700,7 +1728,8 @@ public final class BackupSystemTable implements Closeable {
       if (val.length == 0) {
         return null;
       }
-      return new String(val).split(",");
+      return Splitter.on(',').splitToStream(new String(val, StandardCharsets.UTF_8))
+        .toArray(String[]::new);
     }
   }
 
@@ -1717,20 +1746,22 @@ public final class BackupSystemTable implements Closeable {
   }
 
   static String getTableNameFromOrigBulkLoadRow(String rowStr) {
-    String[] parts = rowStr.split(BLK_LD_DELIM);
-    return parts[1];
+    // format is bulk : namespace : table : region : file
+    return Iterators.get(Splitter.onPattern(BLK_LD_DELIM).split(rowStr).iterator(), 1);
   }
 
   static String getRegionNameFromOrigBulkLoadRow(String rowStr) {
     // format is bulk : namespace : table : region : file
-    String[] parts = rowStr.split(BLK_LD_DELIM);
+    List<String> parts = Splitter.onPattern(BLK_LD_DELIM).splitToList(rowStr);
+    Iterator<String> i = parts.iterator();
     int idx = 3;
-    if (parts.length == 4) {
+    if (parts.size() == 4) {
       // the table is in default namespace
       idx = 2;
     }
-    LOG.debug("bulk row string " + rowStr + " region " + parts[idx]);
-    return parts[idx];
+    String region = Iterators.get(i, idx);
+    LOG.debug("bulk row string " + rowStr + " region " + region);
+    return region;
   }
 
   /*
@@ -1740,8 +1771,8 @@ public final class BackupSystemTable implements Closeable {
    */
   static Scan createScanForBulkLoadedFiles(String backupId) {
     Scan scan = new Scan();
-    byte[] startRow = backupId == null ? BULK_LOAD_PREFIX_BYTES
-        : rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM);
+    byte[] startRow =
+      backupId == null ? BULK_LOAD_PREFIX_BYTES : rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM);
     byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
     stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
     scan.withStartRow(startRow);
@@ -1752,7 +1783,7 @@ public final class BackupSystemTable implements Closeable {
   }
 
   static Put createPutForBulkLoadedFile(TableName tn, byte[] fam, String p, String backupId,
-      long ts, int idx) {
+    long ts, int idx) {
     Put put = new Put(rowkey(BULK_LOAD_PREFIX, backupId + BLK_LD_DELIM + ts + BLK_LD_DELIM + idx));
     put.addColumn(BackupSystemTable.META_FAMILY, TBL_COL, tn.getName());
     put.addColumn(BackupSystemTable.META_FAMILY, FAM_COL, fam);
@@ -1798,7 +1829,7 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Creates Put operation to update backup set content
-   * @param name backup set's name
+   * @param name   backup set's name
    * @param tables list of tables
    * @return put operation
    */

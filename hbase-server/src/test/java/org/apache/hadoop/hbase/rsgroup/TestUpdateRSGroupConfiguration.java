@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.util.stream.Collectors;
+import static org.junit.Assert.assertThrows;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
@@ -36,7 +35,9 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({MediumTests.class})
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
+@Category({ MediumTests.class })
 public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
   protected static final Logger LOG = LoggerFactory.getLogger(TestUpdateRSGroupConfiguration.class);
 
@@ -69,23 +70,14 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
   }
 
   @Test
-  public void testOnlineConfigChangeInRSGroup() throws Exception {
-    addGroup(TEST_GROUP, 1);
-    ADMIN.updateConfiguration(TEST_GROUP);
-  }
-
-  @Test
   public void testNonexistentRSGroup() throws Exception {
-    try {
-      ADMIN.updateConfiguration(TEST2_GROUP);
-      fail("Group does not exist: test2");
-    } catch (IllegalArgumentException iae) {
-      // expected
-    }
+    assertThrows(IllegalArgumentException.class, () -> ADMIN.updateConfiguration(TEST2_GROUP));
   }
 
   @Test
   public void testCustomOnlineConfigChangeInRSGroup() throws Exception {
+    RSGroupInfo testRSGroup = addGroup(TEST_GROUP, 1);
+    RSGroupInfo test2RSGroup = addGroup(TEST2_GROUP, 1);
     // Check the default configuration of the RegionServers
     TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().forEach(thread -> {
       Configuration conf = thread.getRegionServer().getConfiguration();
@@ -93,30 +85,27 @@ public class TestUpdateRSGroupConfiguration extends TestRSGroupsBase {
     });
 
     replaceHBaseSiteXML();
-    RSGroupInfo testRSGroup = addGroup(TEST_GROUP, 1);
-    RSGroupInfo test2RSGroup = addGroup(TEST2_GROUP, 1);
-    ADMIN.updateConfiguration(TEST_GROUP);
+    try {
+      ADMIN.updateConfiguration(TEST_GROUP);
 
-    // Check the configuration of the RegionServer in test rsgroup, should be update
-    Configuration regionServerConfiguration =
-      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .filter(regionServer ->
-          (regionServer.getServerName().getAddress().equals(testRSGroup.getServers().first())))
-        .collect(Collectors.toList()).get(0).getConfiguration();
-    int custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(1000, custom);
+      Address testServerAddr = Iterables.getOnlyElement(testRSGroup.getServers());
+      LOG.info("Check hbase.custom.config for " + testServerAddr);
+      Configuration testRsConf = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+        .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(rs -> rs.getServerName().getAddress().equals(testServerAddr)).findFirst().get()
+        .getConfiguration();
+      assertEquals(1000, testRsConf.getInt("hbase.custom.config", 0));
 
-    // Check the configuration of the RegionServer in test2 rsgroup, should not be update
-    regionServerConfiguration =
-      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().stream()
-        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .filter(regionServer ->
-          (regionServer.getServerName().getAddress().equals(test2RSGroup.getServers().first())))
-        .collect(Collectors.toList()).get(0).getConfiguration();
-    custom = regionServerConfiguration.getInt("hbase.custom.config", 0);
-    assertEquals(0, custom);
-
-    restoreHBaseSiteXML();
+      Address test2ServerAddr = Iterables.getOnlyElement(test2RSGroup.getServers());
+      LOG.info("Check hbase.custom.config for " + test2ServerAddr);
+      // Check the configuration of the RegionServer in test2 rsgroup, should not be update
+      Configuration test2RsConf = TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
+        .stream().map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(rs -> rs.getServerName().getAddress().equals(test2ServerAddr)).findFirst().get()
+        .getConfiguration();
+      assertEquals(0, test2RsConf.getInt("hbase.custom.config", 0));
+    } finally {
+      restoreHBaseSiteXML();
+    }
   }
 }

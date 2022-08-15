@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client.trace;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NET_PEER_NAME;
@@ -23,6 +22,7 @@ import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.NET_PEER_POR
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_METHOD;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SERVICE;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RPC_SYSTEM;
+
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -34,12 +34,14 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.RpcSystem;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 
 /**
  * Construct {@link Span} instances originating from the client side of an IPC.
- *
- * @see <a href="https://github.com/open-telemetry/opentelemetry-specification/blob/3e380e249f60c3a5f68746f5e84d10195ba41a79/specification/trace/semantic_conventions/rpc.md">Semantic conventions for RPC spans</a>
+ * @see <a href=
+ *      "https://github.com/open-telemetry/opentelemetry-specification/blob/3e380e249f60c3a5f68746f5e84d10195ba41a79/specification/trace/semantic_conventions/rpc.md">Semantic
+ *      conventions for RPC spans</a>
  */
 @InterfaceAudience.Private
 public class IpcClientSpanBuilder implements Supplier<Span> {
@@ -68,8 +70,7 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
 
   @SuppressWarnings("unchecked")
   public Span build() {
-    final SpanBuilder builder = TraceUtil.getGlobalTracer()
-      .spanBuilder(name)
+    final SpanBuilder builder = TraceUtil.getGlobalTracer().spanBuilder(name)
       // TODO: what about clients embedded in Master/RegionServer/Gateways/&c?
       .setSpanKind(SpanKind.CLIENT);
     attributes.forEach((k, v) -> builder.setAttribute((AttributeKey<? super Object>) k, v));
@@ -80,12 +81,10 @@ public class IpcClientSpanBuilder implements Supplier<Span> {
    * Static utility method that performs the primary logic of this builder. It is visible to other
    * classes in this package so that other builders can use this functionality as a mix-in.
    * @param attributes the attributes map to be populated.
-   * @param md the source of the RPC attribute values.
+   * @param md         the source of the RPC attribute values.
    */
-  static void populateMethodDescriptorAttributes(
-    final Map<AttributeKey<?>, Object> attributes,
-    final Descriptors.MethodDescriptor md
-  ) {
+  static void populateMethodDescriptorAttributes(final Map<AttributeKey<?>, Object> attributes,
+    final Descriptors.MethodDescriptor md) {
     final String packageAndService = getRpcPackageAndService(md.getService());
     final String method = getRpcName(md);
     attributes.put(RPC_SYSTEM, RpcSystem.HBASE_RPC.name());

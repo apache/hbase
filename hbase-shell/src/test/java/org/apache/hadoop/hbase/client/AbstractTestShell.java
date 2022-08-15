@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,7 +31,6 @@ import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,16 +70,12 @@ public abstract class AbstractTestShell {
     System.setProperty("jruby.native.verbose", "true");
   }
 
-  /**
-   * @return comma separated list of ruby script names for tests
-   */
+  /** Returns comma separated list of ruby script names for tests */
   protected String getIncludeList() {
     return "";
   }
 
-  /**
-   * @return comma separated list of ruby script names for tests to skip
-   */
+  /** Returns comma separated list of ruby script names for tests to skip */
   protected String getExcludeList() {
     return "";
   }

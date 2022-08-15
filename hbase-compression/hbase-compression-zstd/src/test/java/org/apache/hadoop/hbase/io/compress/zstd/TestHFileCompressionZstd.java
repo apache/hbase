@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,12 +32,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({IOTests.class, SmallTests.class})
+@Category({ IOTests.class, SmallTests.class })
 public class TestHFileCompressionZstd extends HFileTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHFileCompressionZstd.class);
+    HBaseClassTestRule.forClass(TestHFileCompressionZstd.class);
 
   private static Configuration conf;
 
@@ -51,8 +51,8 @@ public class TestHFileCompressionZstd extends HFileTestBase {
 
   @Test
   public void test() throws Exception {
-    Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
+    Path path =
+      new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.ZSTD);
   }
 

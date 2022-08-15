@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,10 +43,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -68,7 +66,9 @@ import org.junit.rules.TestName;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
@@ -134,10 +134,11 @@ public class TestAsyncTableRpcPriority {
           case INCREMENT:
             ColumnValue value = req.getColumnValue(0);
             QualifierValue qvalue = value.getQualifierValue(0);
-            Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Type.Put)
-              .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
-              .setQualifier(qvalue.getQualifier().toByteArray())
-              .setValue(qvalue.getValue().toByteArray()).build();
+            Cell cell =
+              CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+                .setRow(req.getRow().toByteArray()).setFamily(value.getFamily().toByteArray())
+                .setQualifier(qvalue.getQualifier().toByteArray())
+                .setValue(qvalue.getValue().toByteArray()).build();
             resp = MutateResponse.newBuilder()
               .setResult(ProtobufUtil.toResult(Result.create(Arrays.asList(cell)))).build();
             break;
@@ -170,7 +171,7 @@ public class TestAsyncTableRpcPriority {
 
             @Override
             public CompletableFuture<HRegionLocation> answer(InvocationOnMock invocation)
-                throws Throwable {
+              throws Throwable {
               TableName tableName = invocation.getArgument(0);
               RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
               ServerName serverName = ServerName.valueOf("rs", 16010, 12345);
@@ -485,28 +486,24 @@ public class TestAsyncTableRpcPriority {
           ScanRequest req = invocation.getArgument(1);
           RpcCallback<ScanResponse> done = invocation.getArgument(2);
           if (!req.hasScannerId()) {
-            done.run(ScanResponse.newBuilder()
-                .setScannerId(scannerId).setTtl(800)
-                .setMoreResultsInRegion(true).setMoreResults(true)
-                .build());
+            done.run(ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800)
+              .setMoreResultsInRegion(true).setMoreResults(true).build());
           } else {
             if (req.hasRenew() && req.getRenew()) {
               future.complete(null);
             }
 
             assertFalse("close scanner should not come in with scan priority " + scanPriority,
-                req.hasCloseScanner() && req.getCloseScanner());
+              req.hasCloseScanner() && req.getCloseScanner());
 
             Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-                .setType(Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
-                .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
-                .setValue(Bytes.toBytes("v")).build();
+              .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
+              .setFamily(Bytes.toBytes("cf")).setQualifier(Bytes.toBytes("cq"))
+              .setValue(Bytes.toBytes("v")).build();
             Result result = Result.create(Arrays.asList(cell));
-            done.run(
-                ScanResponse.newBuilder()
-                    .setScannerId(scannerId).setTtl(800).setMoreResultsInRegion(true)
-                    .setMoreResults(true).addResults(ProtobufUtil.toResult(result))
-                    .build());
+            done.run(ScanResponse.newBuilder().setScannerId(scannerId).setTtl(800)
+              .setMoreResultsInRegion(true).setMoreResults(true)
+              .addResults(ProtobufUtil.toResult(result)).build());
           }
         });
         return null;
@@ -518,13 +515,13 @@ public class TestAsyncTableRpcPriority {
       @SuppressWarnings("FutureReturnValueIgnored")
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        threadPool.submit(() ->{
+        threadPool.submit(() -> {
           ScanRequest req = invocation.getArgument(1);
           RpcCallback<ScanResponse> done = invocation.getArgument(2);
           assertTrue("close request should have scannerId", req.hasScannerId());
           assertEquals("close request's scannerId should match", scannerId, req.getScannerId());
           assertTrue("close request should have closerScanner set",
-              req.hasCloseScanner() && req.getCloseScanner());
+            req.hasCloseScanner() && req.getCloseScanner());
 
           done.run(ScanResponse.getDefaultInstance());
         });
@@ -549,8 +546,8 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testScanSystemTable() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
-    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()),
-        renewFuture, Optional.empty());
+    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()), renewFuture,
+      Optional.empty());
   }
 
   @Test
@@ -560,7 +557,7 @@ public class TestAsyncTableRpcPriority {
   }
 
   private void testForTable(TableName tableName, CompletableFuture<Void> renewFuture,
-                            Optional<Integer> priority) throws Exception {
+    Optional<Integer> priority) throws Exception {
     Scan scan = new Scan().setCaching(1).setMaxResultSize(1);
     priority.ifPresent(scan::setPriority);
 

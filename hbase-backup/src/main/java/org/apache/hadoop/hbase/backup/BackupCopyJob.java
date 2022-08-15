@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
@@ -34,16 +32,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface BackupCopyJob extends Configurable {
   /**
    * Copy backup data to destination
-   * @param backupInfo context object
+   * @param backupInfo    context object
    * @param backupManager backup manager
-   * @param conf configuration
-   * @param backupType backup type (FULL or INCREMENTAL)
-   * @param options array of options (implementation-specific)
+   * @param conf          configuration
+   * @param backupType    backup type (FULL or INCREMENTAL)
+   * @param options       array of options (implementation-specific)
    * @return result (0 - success, -1 failure )
    * @throws IOException exception
    */
   int copy(BackupInfo backupInfo, BackupManager backupManager, Configuration conf,
-      BackupType backupType, String[] options) throws IOException;
+    BackupType backupType, String[] options) throws IOException;
 
   /**
    * Cancel copy job

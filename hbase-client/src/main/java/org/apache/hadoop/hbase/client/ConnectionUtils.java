@@ -24,8 +24,6 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
@@ -111,11 +109,11 @@ public final class ConnectionUtils {
   /**
    * Changes the configuration to set the number of retries needed when using Connection internally,
    * e.g. for updating catalog tables, etc. Call this method before we create any Connections.
-   * @param c The Configuration instance to set the retries into.
+   * @param c   The Configuration instance to set the retries into.
    * @param log Used to log what we set in here.
    */
   public static void setServerSideHConnectionRetriesConfig(final Configuration c, final String sn,
-      final Logger log) {
+    final Logger log) {
     // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -308,11 +306,6 @@ public final class ConnectionUtils {
     return Bytes.compareTo(info.getStartKey(), scan.getStopRow()) <= 0;
   }
 
-  static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
-    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
-  }
-
   public static ScanResultCache createScanResultCache(Scan scan) {
     if (scan.getAllowPartialResults()) {
       return new AllowPartialScanResultCache();
@@ -359,7 +352,7 @@ public final class ConnectionUtils {
   }
 
   static void updateResultsMetrics(ScanMetrics scanMetrics, Result[] rrs,
-      boolean isRegionServerRemote) {
+    boolean isRegionServerRemote) {
     if (scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
@@ -402,7 +395,7 @@ public final class ConnectionUtils {
    * increase the hedge read related metrics.
    */
   private static <T> void connect(CompletableFuture<T> srcFuture, CompletableFuture<T> dstFuture,
-      Optional<MetricsConnection> metrics) {
+    Optional<MetricsConnection> metrics) {
     addListener(srcFuture, (r, e) -> {
       if (e != null) {
         dstFuture.completeExceptionally(e);
@@ -421,8 +414,8 @@ public final class ConnectionUtils {
   }
 
   private static <T> void sendRequestsToSecondaryReplicas(
-      Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
-      CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
+    Function<Integer, CompletableFuture<T>> requestReplica, RegionLocations locs,
+    CompletableFuture<T> future, Optional<MetricsConnection> metrics) {
     if (future.isDone()) {
       // do not send requests to secondary replicas if the future is done, i.e, the primary request
       // has already been finished.
@@ -436,9 +429,9 @@ public final class ConnectionUtils {
   }
 
   static <T> CompletableFuture<T> timelineConsistentRead(AsyncRegionLocator locator,
-      TableName tableName, Query query, byte[] row, RegionLocateType locateType,
-      Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
-      long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
+    TableName tableName, Query query, byte[] row, RegionLocateType locateType,
+    Function<Integer, CompletableFuture<T>> requestReplica, long rpcTimeoutNs,
+    long primaryCallTimeoutNs, Timer retryTimer, Optional<MetricsConnection> metrics) {
     if (query.getConsistency() != Consistency.TIMELINE) {
       return requestReplica.apply(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
@@ -458,8 +451,8 @@ public final class ConnectionUtils {
       (locs, error) -> {
         if (error != null) {
           LOG.warn(
-            "Failed to locate all the replicas for table={}, row='{}', locateType={}" +
-              " give up timeline consistent read",
+            "Failed to locate all the replicas for table={}, row='{}', locateType={}"
+              + " give up timeline consistent read",
             tableName, Bytes.toStringBinary(row), locateType, error);
           return;
         }
@@ -514,7 +507,7 @@ public final class ConnectionUtils {
    * <li>For system table, use {@link HConstants#SYSTEMTABLE_QOS}.</li>
    * <li>For other tables, use {@link HConstants#NORMAL_QOS}.</li>
    * </ol>
-   * @param priority the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
+   * @param priority  the priority set by user, can be {@link HConstants#PRIORITY_UNSET}.
    * @param tableName the table we operate on
    */
   static int calcPriority(int priority, TableName tableName) {
@@ -534,8 +527,8 @@ public final class ConnectionUtils {
   }
 
   static <T> CompletableFuture<T> getOrFetch(AtomicReference<T> cacheRef,
-      AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
-      Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
+    AtomicReference<CompletableFuture<T>> futureRef, boolean reload,
+    Supplier<CompletableFuture<T>> fetch, Predicate<T> validator, String type) {
     for (;;) {
       if (!reload) {
         T value = cacheRef.get();
@@ -578,7 +571,7 @@ public final class ConnectionUtils {
   }
 
   static void updateStats(Optional<ServerStatisticTracker> optStats,
-      Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
+    Optional<MetricsConnection> optMetrics, ServerName serverName, MultiResponse resp) {
     if (!optStats.isPresent() && !optMetrics.isPresent()) {
       // ServerStatisticTracker and MetricsConnection are both not present, just return
       return;
@@ -606,13 +599,13 @@ public final class ConnectionUtils {
   @FunctionalInterface
   interface RpcCall<RESP, REQ> {
     void call(ClientService.Interface stub, HBaseRpcController controller, REQ req,
-        RpcCallback<RESP> done);
+      RpcCallback<RESP> done);
   }
 
   static <REQ, PREQ, PRESP, RESP> CompletableFuture<RESP> call(HBaseRpcController controller,
-      HRegionLocation loc, ClientService.Interface stub, REQ req,
-      Converter<PREQ, byte[], REQ> reqConvert, RpcCall<PRESP, PREQ> rpcCall,
-      Converter<RESP, HBaseRpcController, PRESP> respConverter) {
+    HRegionLocation loc, ClientService.Interface stub, REQ req,
+    Converter<PREQ, byte[], REQ> reqConvert, RpcCall<PRESP, PREQ> rpcCall,
+    Converter<RESP, HBaseRpcController, PRESP> respConverter) {
     CompletableFuture<RESP> future = new CompletableFuture<>();
     try {
       rpcCall.call(stub, controller, reqConvert.convert(loc.getRegion().getRegionName(), req),

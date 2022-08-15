@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -103,7 +103,7 @@ public class TestForceUpdateProcedure {
 
     @Override
     protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       EXCHANGER.exchange(Boolean.TRUE);
       setState(ProcedureState.WAITING_TIMEOUT);
       setTimeout(Integer.MAX_VALUE);
@@ -116,7 +116,7 @@ public class TestForceUpdateProcedure {
     @SuppressWarnings("unchecked")
     @Override
     protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       return new Procedure[] { new NoopProcedure<>(), new WaitingProcedure() };
     }
   }
@@ -126,7 +126,7 @@ public class TestForceUpdateProcedure {
     @SuppressWarnings("unchecked")
     @Override
     protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       if (EXCHANGER.exchange(Boolean.TRUE)) {
         return new Procedure[] { this };
       } else {

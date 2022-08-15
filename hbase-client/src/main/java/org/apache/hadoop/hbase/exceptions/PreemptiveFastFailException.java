@@ -1,34 +1,29 @@
-/**
-  *
-  * Licensed to the Apache Software Foundation (ASF) under one
-  * or more contributor license agreements.  See the NOTICE file
-  * distributed with this work for additional information
-  * regarding copyright ownership.  The ASF licenses this file
-  * to you under the Apache License, Version 2.0 (the
-  * "License"); you may not use this file except in compliance
-  * with the License.  You may obtain a copy of the License at
-  *
-  *     http://www.apache.org/licenses/LICENSE-2.0
-  *
-  * Unless required by applicable law or agreed to in writing, software
-  * distributed under the License is distributed on an "AS IS" BASIS,
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
-*/
-
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.exceptions;
 
 import java.net.ConnectException;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Thrown when the client believes that we are trying to communicate to has
- * been repeatedly unresponsive for a while.
- *
- * On receiving such an exception. The ConnectionManager will skip all
+ * Thrown when the client believes that we are trying to communicate to has been repeatedly
+ * unresponsive for a while. On receiving such an exception. The ConnectionManager will skip all
  * retries and fast fail the operation.
  * @deprecated since 2.3.0, and will be removed in 4.0.0.
  */
@@ -42,13 +37,13 @@ public class PreemptiveFastFailException extends ConnectException {
   private boolean guaranteedClientSideOnly;
 
   /**
-   * @param count num of consecutive failures
-   * @param timeOfFirstFailureMilliSec when first failure happened
+   * @param count                       num of consecutive failures
+   * @param timeOfFirstFailureMilliSec  when first failure happened
    * @param timeOfLatestAttemptMilliSec when last attempt happened
-   * @param serverName server we failed to connect to
+   * @param serverName                  server we failed to connect to
    */
   public PreemptiveFastFailException(long count, long timeOfFirstFailureMilliSec,
-      long timeOfLatestAttemptMilliSec, ServerName serverName) {
+    long timeOfLatestAttemptMilliSec, ServerName serverName) {
     super("Exception happened " + count + " times. to" + serverName);
     this.failureCount = count;
     this.timeOfFirstFailureMilliSec = timeOfFirstFailureMilliSec;
@@ -56,16 +51,15 @@ public class PreemptiveFastFailException extends ConnectException {
   }
 
   /**
-   * @param count num of consecutive failures
-   * @param timeOfFirstFailureMilliSec when first failure happened
+   * @param count                       num of consecutive failures
+   * @param timeOfFirstFailureMilliSec  when first failure happened
    * @param timeOfLatestAttemptMilliSec when last attempt happened
-   * @param serverName server we failed to connect to
-   * @param guaranteedClientSideOnly if true, guarantees that no mutations
-   *   have been applied on the server
+   * @param serverName                  server we failed to connect to
+   * @param guaranteedClientSideOnly    if true, guarantees that no mutations have been applied on
+   *                                    the server
    */
   public PreemptiveFastFailException(long count, long timeOfFirstFailureMilliSec,
-                                     long timeOfLatestAttemptMilliSec, ServerName serverName,
-                                     boolean guaranteedClientSideOnly) {
+    long timeOfLatestAttemptMilliSec, ServerName serverName, boolean guaranteedClientSideOnly) {
     super("Exception happened " + count + " times. to" + serverName);
     this.failureCount = count;
     this.timeOfFirstFailureMilliSec = timeOfFirstFailureMilliSec;
@@ -73,37 +67,27 @@ public class PreemptiveFastFailException extends ConnectException {
     this.guaranteedClientSideOnly = guaranteedClientSideOnly;
   }
 
-  /**
-   * @return time of the fist failure
-   */
+  /** Returns time of the fist failure */
   public long getFirstFailureAt() {
     return timeOfFirstFailureMilliSec;
   }
 
-  /**
-   * @return time of the latest attempt
-   */
+  /** Returns time of the latest attempt */
   public long getLastAttemptAt() {
     return timeOfLatestAttemptMilliSec;
   }
 
-  /**
-   * @return failure count
-   */
+  /** Returns failure count */
   public long getFailureCount() {
     return failureCount;
   }
 
-  /**
-   * @return true if operation was attempted by server, false otherwise.
-   */
+  /** Returns true if operation was attempted by server, false otherwise. */
   public boolean wasOperationAttemptedByServer() {
     return false;
   }
 
-  /**
-   * @return true if we know no mutation made it to the server, false otherwise.
-   */
+  /** Returns true if we know no mutation made it to the server, false otherwise. */
   public boolean isGuaranteedClientSideOnly() {
     return guaranteedClientSideOnly;
   }

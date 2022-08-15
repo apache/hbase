@@ -19,21 +19,16 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.Serializable;
 import java.util.Comparator;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Stores the plan for the move of an individual region.
- *
- * Contains info for the region being moved, info for the server the region
- * should be moved from, and info for the server the region should be moved
- * to.
- *
- * The comparable implementation of this class compares only the region
- * information and not the source/dest server info.
+ * Stores the plan for the move of an individual region. Contains info for the region being moved,
+ * info for the server the region should be moved from, and info for the server the region should be
+ * moved to. The comparable implementation of this class compares only the region information and
+ * not the source/dest server info.
  */
 @InterfaceAudience.LimitedPrivate("Coprocessors")
 @InterfaceStability.Evolving
@@ -52,15 +47,12 @@ public class RegionPlan implements Comparable<RegionPlan> {
   }
 
   /**
-   * Instantiate a plan for a region move, moving the specified region from
-   * the specified source server to the specified destination server.
-   *
-   * Destination server can be instantiated as null and later set
-   * with {@link #setDestination(ServerName)}.
-   *
-   * @param hri region to be moved
+   * Instantiate a plan for a region move, moving the specified region from the specified source
+   * server to the specified destination server. Destination server can be instantiated as null and
+   * later set with {@link #setDestination(ServerName)}.
+   * @param hri    region to be moved
    * @param source regionserver region should be moved from
-   * @param dest regionserver region should be moved to
+   * @param dest   regionserver region should be moved to
    */
   public RegionPlan(final RegionInfo hri, ServerName source, ServerName dest) {
     this.hri = hri;
@@ -134,7 +126,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
 
   private static int compareServerName(ServerName left, ServerName right) {
     if (left == null) {
-      return right == null? 0: -1;
+      return right == null ? 0 : -1;
     } else if (right == null) {
       return +1;
     }
@@ -156,10 +148,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
+    if (!(obj instanceof RegionPlan)) {
       return false;
     }
     RegionPlan other = (RegionPlan) obj;
@@ -189,8 +178,8 @@ public class RegionPlan implements Comparable<RegionPlan> {
 
   @Override
   public String toString() {
-    return "hri=" + this.hri.getEncodedName() + ", source=" +
-      (this.source == null? "": this.source.toString()) +
-      ", destination=" + (this.dest == null? "": this.dest.toString());
+    return "hri=" + this.hri.getEncodedName() + ", source="
+      + (this.source == null ? "" : this.source.toString()) + ", destination="
+      + (this.dest == null ? "" : this.dest.toString());
   }
 }

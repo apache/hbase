@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,12 +39,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Ignore // SimpleLoadBalancer seems borked whether AMv2 or not. Disabling till gets attention.
-@Category({MasterTests.class, MediumTests.class})
+@Category({ MasterTests.class, MediumTests.class })
 public class TestMasterBalanceThrottling {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterBalanceThrottling.class);
+    HBaseClassTestRule.forClass(TestMasterBalanceThrottling.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
@@ -52,7 +52,7 @@ public class TestMasterBalanceThrottling {
   @Before
   public void setupConfiguration() {
     TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        "org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer");
+      "org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer");
   }
 
   @After
@@ -116,19 +116,18 @@ public class TestMasterBalanceThrottling {
     TableName tableName = TableName.valueOf(table);
     byte[] startKey = new byte[] { 0x00 };
     byte[] stopKey = new byte[] { 0x7f };
-    TEST_UTIL.createTable(tableName, new byte[][] { FAMILYNAME }, 1, startKey, stopKey,
-      100);
+    TEST_UTIL.createTable(tableName, new byte[][] { FAMILYNAME }, 1, startKey, stopKey, 100);
     return tableName;
   }
 
   private Thread startBalancerChecker(final HMaster master, final AtomicInteger maxCount,
-      final AtomicBoolean stop) {
+    final AtomicBoolean stop) {
     Runnable checker = new Runnable() {
       @Override
       public void run() {
         while (!stop.get()) {
           maxCount.set(Math.max(maxCount.get(),
-              master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount()));
+            master.getAssignmentManager().getRegionStates().getRegionsInTransitionCount()));
           try {
             Thread.sleep(10);
           } catch (InterruptedException e) {

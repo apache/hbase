@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Objects;
-
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -78,19 +77,13 @@ public class SaslAuthMethod {
       return false;
     }
     SaslAuthMethod other = (SaslAuthMethod) o;
-    return Objects.equals(name, other.name) &&
-        code == other.code &&
-        Objects.equals(saslMech, other.saslMech) &&
-        Objects.equals(method, other.method);
+    return Objects.equals(name, other.name) && code == other.code
+      && Objects.equals(saslMech, other.saslMech) && Objects.equals(method, other.method);
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder()
-        .append(name)
-        .append(code)
-        .append(saslMech)
-        .append(method)
-        .toHashCode();
+    return new HashCodeBuilder().append(name).append(code).append(saslMech).append(method)
+      .toHashCode();
   }
 }

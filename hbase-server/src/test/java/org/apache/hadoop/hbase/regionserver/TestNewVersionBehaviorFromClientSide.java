@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ public class TestNewVersionBehaviorFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestNewVersionBehaviorFromClientSide.class);
+    HBaseClassTestRule.forClass(TestNewVersionBehaviorFromClientSide.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -365,7 +365,7 @@ public class TestNewVersionBehaviorFromClientSide {
       Delete del = new Delete(ROW);
       del.addColumn(FAMILY, null);
       t.delete(del);
-      Result r = t.get(new Get(ROW)); //NPE
+      Result r = t.get(new Get(ROW)); // NPE
       assertTrue(r.isEmpty());
     }
   }

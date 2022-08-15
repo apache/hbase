@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.provider.producer;
 
 import java.io.IOException;
@@ -35,35 +33,32 @@ import org.apache.hbase.thirdparty.javax.ws.rs.ext.MessageBodyWriter;
 import org.apache.hbase.thirdparty.javax.ws.rs.ext.Provider;
 
 /**
- * An adapter between Jersey and ProtobufMessageHandler implementors. Hooks up
- * protobuf output producing methods to the Jersey content handling framework.
- * Jersey will first call getSize() to learn the number of bytes that will be
- * sent, then writeTo to perform the actual I/O.
+ * An adapter between Jersey and ProtobufMessageHandler implementors. Hooks up protobuf output
+ * producing methods to the Jersey content handling framework. Jersey will first call getSize() to
+ * learn the number of bytes that will be sent, then writeTo to perform the actual I/O.
  */
 @Provider
-@Produces({Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF})
+@Produces({ Constants.MIMETYPE_PROTOBUF, Constants.MIMETYPE_PROTOBUF_IETF })
 @InterfaceAudience.Private
-public class ProtobufMessageBodyProducer
-  implements MessageBodyWriter<ProtobufMessageHandler> {
+public class ProtobufMessageBodyProducer implements MessageBodyWriter<ProtobufMessageHandler> {
 
   @Override
-  public boolean isWriteable(Class<?> type, Type genericType, 
-      Annotation[] annotations, MediaType mediaType) {
+  public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations,
+    MediaType mediaType) {
     return ProtobufMessageHandler.class.isAssignableFrom(type);
   }
 
   @Override
   public long getSize(ProtobufMessageHandler m, Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType) {
+    Annotation[] annotations, MediaType mediaType) {
     // deprecated by JAX-RS 2.0 and ignored by Jersey runtime
     return -1;
   }
 
   @Override
   public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
-      Annotation[] annotations, MediaType mediaType, 
-      MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
-      throws IOException, WebApplicationException {
+    Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders,
+    OutputStream entityStream) throws IOException, WebApplicationException {
     entityStream.write(m.createProtobufOutput());
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -51,7 +51,6 @@ public class TestProcedureCleanup {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestProcedureCleanup.class);
 
-
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureCleanup.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 2;
@@ -95,8 +94,7 @@ public class TestProcedureCleanup {
     LOG.info("Begin to execute " + rootProc);
     // wait until the child procedure arrival
     htu.waitFor(10000, () -> procExecutor.getProcedures().size() >= 2);
-    SuspendProcedure suspendProcedure = (SuspendProcedure) procExecutor
-        .getProcedures().get(1);
+    SuspendProcedure suspendProcedure = (SuspendProcedure) procExecutor.getProcedures().get(1);
     // wait until the suspendProcedure executed
     suspendProcedure.latch.countDown();
     Thread.sleep(100);
@@ -188,7 +186,6 @@ public class TestProcedureCleanup {
     fs.rename(tmpFile, file.getPath());
   }
 
-
   public static final class ExchangeProcedure extends ProcedureTestingUtility.NoopProcedure<Void> {
 
     private final Exchanger<Boolean> exchanger = new Exchanger<>();
@@ -196,7 +193,7 @@ public class TestProcedureCleanup {
     @SuppressWarnings("unchecked")
     @Override
     protected Procedure<Void>[] execute(Void env)
-        throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+      throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
       if (exchanger.exchange(Boolean.TRUE)) {
         return new Procedure[] { this };
       } else {

@@ -33,18 +33,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@link TestRule} that clears all user namespaces and tables
- * {@link ExternalResource#before() before} the test executes. Can be used in either the
- * {@link Rule} or {@link ClassRule} positions. Lazily realizes the provided
- * {@link AsyncConnection} so as to avoid initialization races with other {@link Rule Rules}.
- * <b>Does not</b> {@link AsyncConnection#close() close()} provided connection instance when
- * finished.
+ * A {@link TestRule} that clears all user namespaces and tables {@link ExternalResource#before()
+ * before} the test executes. Can be used in either the {@link Rule} or {@link ClassRule} positions.
+ * Lazily realizes the provided {@link AsyncConnection} so as to avoid initialization races with
+ * other {@link Rule Rules}. <b>Does not</b> {@link AsyncConnection#close() close()} provided
+ * connection instance when finished.
  * </p>
  * Use in combination with {@link MiniClusterRule} and {@link ConnectionRule}, for example:
  *
- * <pre>{@code
+ * <pre>
+ * {
+ *   &#64;code
  *   public class TestMyClass {
- *     @ClassRule
+ *     &#64;ClassRule
  *     public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
  *
  *     private final ConnectionRule connectionRule =
@@ -52,12 +53,12 @@ import org.slf4j.LoggerFactory;
  *     private final ClearUserNamespacesAndTablesRule clearUserNamespacesAndTablesRule =
  *       new ClearUserNamespacesAndTablesRule(connectionRule::getConnection);
  *
- *     @Rule
- *     public TestRule rule = RuleChain
- *       .outerRule(connectionRule)
- *       .around(clearUserNamespacesAndTablesRule);
+ *     &#64;Rule
+ *     public TestRule rule =
+ *       RuleChain.outerRule(connectionRule).around(clearUserNamespacesAndTablesRule);
  *   }
- * }</pre>
+ * }
+ * </pre>
  */
 public class ClearUserNamespacesAndTablesRule extends ExternalResource {
   private static final Logger logger =
@@ -83,18 +84,14 @@ public class ClearUserNamespacesAndTablesRule extends ExternalResource {
   }
 
   private CompletableFuture<Void> deleteUserTables() {
-    return listTableNames()
-      .thenApply(tableNames -> tableNames.stream()
-        .map(tableName -> disableIfEnabled(tableName).thenCompose(_void -> deleteTable(tableName)))
-        .toArray(CompletableFuture[]::new))
-      .thenCompose(CompletableFuture::allOf);
+    return listTableNames().thenApply(tableNames -> tableNames.stream()
+      .map(tableName -> disableIfEnabled(tableName).thenCompose(_void -> deleteTable(tableName)))
+      .toArray(CompletableFuture[]::new)).thenCompose(CompletableFuture::allOf);
   }
 
   private CompletableFuture<List<TableName>> listTableNames() {
-    return CompletableFuture
-      .runAsync(() -> logger.trace("listing tables"))
-      .thenCompose(_void -> admin.listTableNames(false))
-      .thenApply(tableNames -> {
+    return CompletableFuture.runAsync(() -> logger.trace("listing tables"))
+      .thenCompose(_void -> admin.listTableNames(false)).thenApply(tableNames -> {
         if (logger.isTraceEnabled()) {
           final StringJoiner joiner = new StringJoiner(", ", "[", "]");
           tableNames.stream().map(TableName::getNameAsString).forEach(joiner::add);
@@ -105,63 +102,51 @@ public class ClearUserNamespacesAndTablesRule extends ExternalResource {
   }
 
   private CompletableFuture<Boolean> isTableEnabled(final TableName tableName) {
-    return admin.isTableEnabled(tableName)
-      .thenApply(isEnabled -> {
-        logger.trace("table {} is enabled.", tableName);
-        return isEnabled;
-      });
+    return admin.isTableEnabled(tableName).thenApply(isEnabled -> {
+      logger.trace("table {} is enabled.", tableName);
+      return isEnabled;
+    });
   }
 
   private CompletableFuture<Void> disableIfEnabled(final TableName tableName) {
-    return isTableEnabled(tableName)
-      .thenCompose(isEnabled -> isEnabled
-        ? disableTable(tableName)
-        : CompletableFuture.completedFuture(null));
+    return isTableEnabled(tableName).thenCompose(
+      isEnabled -> isEnabled ? disableTable(tableName) : CompletableFuture.completedFuture(null));
   }
 
   private CompletableFuture<Void> disableTable(final TableName tableName) {
-    return CompletableFuture
-      .runAsync(() -> logger.trace("disabling enabled table {}", tableName))
+    return CompletableFuture.runAsync(() -> logger.trace("disabling enabled table {}", tableName))
       .thenCompose(_void -> admin.disableTable(tableName));
   }
 
   private CompletableFuture<Void> deleteTable(final TableName tableName) {
-    return CompletableFuture
-      .runAsync(() -> logger.trace("deleting disabled table {}", tableName))
+    return CompletableFuture.runAsync(() -> logger.trace("deleting disabled table {}", tableName))
       .thenCompose(_void -> admin.deleteTable(tableName));
   }
 
   private CompletableFuture<List<String>> listUserNamespaces() {
-    return CompletableFuture
-      .runAsync(() -> logger.trace("listing namespaces"))
-      .thenCompose(_void -> admin.listNamespaceDescriptors())
-      .thenApply(namespaceDescriptors -> {
+    return CompletableFuture.runAsync(() -> logger.trace("listing namespaces"))
+      .thenCompose(_void -> admin.listNamespaceDescriptors()).thenApply(namespaceDescriptors -> {
         final StringJoiner joiner = new StringJoiner(", ", "[", "]");
-        final List<String> names = namespaceDescriptors.stream()
-          .map(NamespaceDescriptor::getName)
-          .peek(joiner::add)
-          .collect(Collectors.toList());
+        final List<String> names = namespaceDescriptors.stream().map(NamespaceDescriptor::getName)
+          .peek(joiner::add).collect(Collectors.toList());
         logger.trace("found existing namespaces {}", joiner);
         return names;
       })
       .thenApply(namespaces -> namespaces.stream()
-        .filter(namespace -> !Objects.equals(
-          namespace, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()))
-        .filter(namespace -> !Objects.equals(
-          namespace, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()))
+        .filter(
+          namespace -> !Objects.equals(namespace, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()))
+        .filter(
+          namespace -> !Objects.equals(namespace, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()))
         .collect(Collectors.toList()));
   }
 
   private CompletableFuture<Void> deleteNamespace(final String namespace) {
-    return CompletableFuture
-      .runAsync(() -> logger.trace("deleting namespace {}", namespace))
+    return CompletableFuture.runAsync(() -> logger.trace("deleting namespace {}", namespace))
       .thenCompose(_void -> admin.deleteNamespace(namespace));
   }
 
   private CompletableFuture<Void> deleteUserNamespaces() {
-    return listUserNamespaces()
-      .thenCompose(namespaces -> CompletableFuture.allOf(namespaces.stream()
-        .map(this::deleteNamespace)
-        .toArray(CompletableFuture[]::new)));
+    return listUserNamespaces().thenCompose(namespaces -> CompletableFuture
+      .allOf(namespaces.stream().map(this::deleteNamespace).toArray(CompletableFuture[]::new)));
   }
 }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.Serializable;
@@ -28,9 +26,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Representation of a region of a table and its current location on the
- * storage cluster.
- * 
+ * Representation of a region of a table and its current location on the storage cluster.
+ *
  * <pre>
  * &lt;complexType name="TableRegion"&gt;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
@@ -41,7 +38,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  *  &lt;/complexType&gt;
  * </pre>
  */
-@XmlRootElement(name="Region")
+@XmlRootElement(name = "Region")
 @InterfaceAudience.Private
 public class TableRegionModel implements Serializable {
 
@@ -49,37 +46,36 @@ public class TableRegionModel implements Serializable {
 
   private String table;
   private long id;
-  private byte[] startKey; 
+  private byte[] startKey;
   private byte[] endKey;
   private String location;
 
   /**
    * Constructor
    */
-  public TableRegionModel() {}
+  public TableRegionModel() {
+  }
 
   /**
    * Constructor
-   * @param table the table name
-   * @param id the encoded id of the region
+   * @param table    the table name
+   * @param id       the encoded id of the region
    * @param startKey the start key of the region
-   * @param endKey the end key of the region
+   * @param endKey   the end key of the region
    */
-  public TableRegionModel(String table, long id, byte[] startKey,
-      byte[] endKey) {
+  public TableRegionModel(String table, long id, byte[] startKey, byte[] endKey) {
     this(table, id, startKey, endKey, null);
   }
 
   /**
    * Constructor
-   * @param table the table name
-   * @param id the encoded id of the region
+   * @param table    the table name
+   * @param id       the encoded id of the region
    * @param startKey the start key of the region
-   * @param endKey the end key of the region
+   * @param endKey   the end key of the region
    * @param location the name and port of the region server hosting the region
    */
-  public TableRegionModel(String table, long id, byte[] startKey,
-      byte[] endKey, String location) {
+  public TableRegionModel(String table, long id, byte[] startKey, byte[] endKey, String location) {
     this.table = table;
     this.id = id;
     this.startKey = startKey;
@@ -87,46 +83,36 @@ public class TableRegionModel implements Serializable {
     this.location = location;
   }
 
-  /**
-   * @return the region name
-   */
+  /** Returns the region name */
   @XmlAttribute
   public String getName() {
-    byte [] tableNameAsBytes = Bytes.toBytes(this.table);
+    byte[] tableNameAsBytes = Bytes.toBytes(this.table);
     TableName tableName = TableName.valueOf(tableNameAsBytes);
-    byte [] nameAsBytes = RegionInfo.createRegionName(
-      tableName, this.startKey, this.id, !tableName.isSystemTable());
+    byte[] nameAsBytes =
+      RegionInfo.createRegionName(tableName, this.startKey, this.id, !tableName.isSystemTable());
     return Bytes.toString(nameAsBytes);
   }
 
-  /**
-   * @return the encoded region id
-   */
-  @XmlAttribute 
+  /** Returns the encoded region id */
+  @XmlAttribute
   public long getId() {
     return id;
   }
 
-  /**
-   * @return the start key
-   */
-  @XmlAttribute 
+  /** Returns the start key */
+  @XmlAttribute
   public byte[] getStartKey() {
     return startKey;
   }
 
-  /**
-   * @return the end key
-   */
-  @XmlAttribute 
+  /** Returns the end key */
+  @XmlAttribute
   public byte[] getEndKey() {
     return endKey;
   }
 
-  /**
-   * @return the name and port of the region server hosting the region
-   */
-  @XmlAttribute 
+  /** Returns the name and port of the region server hosting the region */
+  @XmlAttribute
   public String getLocation() {
     return location;
   }
@@ -171,7 +157,8 @@ public class TableRegionModel implements Serializable {
     this.location = location;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   @Override

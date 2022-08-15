@@ -73,11 +73,11 @@ class BalancerClusterState {
   int[][] regionsPerHost; // hostIndex -> list of regions
   int[][] regionsPerRack; // rackIndex -> region list
   Int2IntCounterMap[] colocatedReplicaCountsPerServer; // serverIndex -> counts of colocated
-                                       // replicas by primary region index
+  // replicas by primary region index
   Int2IntCounterMap[] colocatedReplicaCountsPerHost; // hostIndex -> counts of colocated replicas by
-                                      // primary region index
+  // primary region index
   Int2IntCounterMap[] colocatedReplicaCountsPerRack; // rackIndex -> counts of colocated replicas by
-                                      // primary region index
+  // primary region index
 
   int[][] serversPerHost; // hostIndex -> list of server indexes
   int[][] serversPerRack; // rackIndex -> list of server indexes
@@ -156,8 +156,8 @@ class BalancerClusterState {
     // a matching hostname and port to have the same index.
     for (ServerName sn : clusterState.keySet()) {
       if (sn == null) {
-        LOG.warn("TODO: Enable TRACE on BaseLoadBalancer. Empty servername); " +
-          "skipping; unassigned regions?");
+        LOG.warn("TODO: Enable TRACE on BaseLoadBalancer. Empty servername); "
+          + "skipping; unassigned regions?");
         if (LOG.isTraceEnabled()) {
           LOG.trace("EMPTY SERVERNAME " + clusterState.toString());
         }
@@ -218,7 +218,7 @@ class BalancerClusterState {
     colocatedReplicaCountsPerHost = new Int2IntCounterMap[numHosts];
     colocatedReplicaCountsPerRack = new Int2IntCounterMap[numRacks];
 
-    int tableIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
+    int regionIndex = 0, regionPerServerIndex = 0;
 
     for (Map.Entry<ServerName, List<RegionInfo>> entry : clusterState.entrySet()) {
       if (entry.getKey() == null) {
@@ -229,8 +229,10 @@ class BalancerClusterState {
 
       // keep the servername if this is the first server name for this hostname
       // or this servername has the newest startcode.
-      if (servers[serverIndex] == null ||
-        servers[serverIndex].getStartcode() < entry.getKey().getStartcode()) {
+      if (
+        servers[serverIndex] == null
+          || servers[serverIndex].getStartcode() < entry.getKey().getStartcode()
+      ) {
         servers[serverIndex] = entry.getKey();
       }
 
@@ -242,8 +244,8 @@ class BalancerClusterState {
       } else {
         regionsPerServer[serverIndex] = new int[entry.getValue().size()];
       }
-      colocatedReplicaCountsPerServer[serverIndex] = new Int2IntCounterMap(
-        regionsPerServer[serverIndex].length, Hashing.DEFAULT_LOAD_FACTOR, 0);
+      colocatedReplicaCountsPerServer[serverIndex] =
+        new Int2IntCounterMap(regionsPerServer[serverIndex].length, Hashing.DEFAULT_LOAD_FACTOR, 0);
       serverIndicesSortedByRegionCount[serverIndex] = serverIndex;
       serverIndicesSortedByLocality[serverIndex] = serverIndex;
     }
@@ -289,7 +291,7 @@ class BalancerClusterState {
       serversPerHost[i] = new int[serversPerHostList.get(i).size()];
       for (int j = 0; j < serversPerHost[i].length; j++) {
         serversPerHost[i][j] = serversPerHostList.get(i).get(j);
-        LOG.debug("server {} is on host {}",serversPerHostList.get(i).get(j), i);
+        LOG.debug("server {} is on host {}", serversPerHostList.get(i).get(j), i);
       }
       if (serversPerHost[i].length > 1) {
         multiServersPerHost = true;
@@ -300,13 +302,13 @@ class BalancerClusterState {
       serversPerRack[i] = new int[serversPerRackList.get(i).size()];
       for (int j = 0; j < serversPerRack[i].length; j++) {
         serversPerRack[i][j] = serversPerRackList.get(i).get(j);
-        LOG.info("server {} is on rack {}",serversPerRackList.get(i).get(j), i);
+        LOG.info("server {} is on rack {}", serversPerRackList.get(i).get(j), i);
       }
     }
 
     numTables = tables.size();
-    LOG.debug("Number of tables={}, number of hosts={}, number of racks={}", numTables,
-      numHosts, numRacks);
+    LOG.debug("Number of tables={}, number of hosts={}, number of racks={}", numTables, numHosts,
+      numRacks);
     numRegionsPerServerPerTable = new int[numTables][numServers];
     numRegionsPerTable = new int[numTables];
 
@@ -342,8 +344,8 @@ class BalancerClusterState {
     }
 
     for (int i = 0; i < regionsPerServer.length; i++) {
-      colocatedReplicaCountsPerServer[i] = new Int2IntCounterMap(
-        regionsPerServer[i].length, Hashing.DEFAULT_LOAD_FACTOR, 0);
+      colocatedReplicaCountsPerServer[i] =
+        new Int2IntCounterMap(regionsPerServer[i].length, Hashing.DEFAULT_LOAD_FACTOR, 0);
       for (int j = 0; j < regionsPerServer[i].length; j++) {
         int primaryIndex = regionIndexToPrimaryIndex[regionsPerServer[i][j]];
         colocatedReplicaCountsPerServer[i].getAndIncrement(primaryIndex);
@@ -363,16 +365,15 @@ class BalancerClusterState {
   }
 
   private void populateRegionPerLocationFromServer(int[][] regionsPerLocation,
-    Int2IntCounterMap[] colocatedReplicaCountsPerLocation,
-    int[][] serversPerLocation) {
+    Int2IntCounterMap[] colocatedReplicaCountsPerLocation, int[][] serversPerLocation) {
     for (int i = 0; i < serversPerLocation.length; i++) {
       int numRegionsPerLocation = 0;
       for (int j = 0; j < serversPerLocation[i].length; j++) {
         numRegionsPerLocation += regionsPerServer[serversPerLocation[i][j]].length;
       }
       regionsPerLocation[i] = new int[numRegionsPerLocation];
-      colocatedReplicaCountsPerLocation[i] = new Int2IntCounterMap(numRegionsPerLocation,
-        Hashing.DEFAULT_LOAD_FACTOR, 0);
+      colocatedReplicaCountsPerLocation[i] =
+        new Int2IntCounterMap(numRegionsPerLocation, Hashing.DEFAULT_LOAD_FACTOR, 0);
     }
 
     for (int i = 0; i < serversPerLocation.length; i++) {
@@ -422,9 +423,11 @@ class BalancerClusterState {
       List<ServerName> loc = regionFinder.getTopBlockLocations(region);
       regionLocations[regionIndex] = new int[loc.size()];
       for (int i = 0; i < loc.size(); i++) {
-        regionLocations[regionIndex][i] = loc.get(i) == null ? -1 :
-          (serversToIndex.get(loc.get(i).getAddress()) == null ? -1 :
-            serversToIndex.get(loc.get(i).getAddress()));
+        regionLocations[regionIndex][i] = loc.get(i) == null
+          ? -1
+          : (serversToIndex.get(loc.get(i).getAddress()) == null
+            ? -1
+            : serversToIndex.get(loc.get(i).getAddress()));
       }
     }
   }
@@ -546,7 +549,8 @@ class BalancerClusterState {
   }
 
   enum LocalityType {
-    SERVER, RACK
+    SERVER,
+    RACK
   }
 
   public void doAction(BalanceAction action) {
@@ -698,17 +702,17 @@ class BalancerClusterState {
         oldServer, newServer, primary, region);
     }
   }
+
   /**
    * Common method for per host and per Location region index updates when a region is moved.
-   * @param serverIndexToLocation serverIndexToHostIndex or serverIndexToLocationIndex
-   * @param regionsPerLocation regionsPerHost or regionsPerLocation
+   * @param serverIndexToLocation             serverIndexToHostIndex or serverIndexToLocationIndex
+   * @param regionsPerLocation                regionsPerHost or regionsPerLocation
    * @param colocatedReplicaCountsPerLocation colocatedReplicaCountsPerHost or
    *                                          colocatedReplicaCountsPerRack
    */
-  private void updateForLocation(int[] serverIndexToLocation,
-    int[][] regionsPerLocation,
-    Int2IntCounterMap[] colocatedReplicaCountsPerLocation,
-    int oldServer, int newServer, int primary, int region) {
+  private void updateForLocation(int[] serverIndexToLocation, int[][] regionsPerLocation,
+    Int2IntCounterMap[] colocatedReplicaCountsPerLocation, int oldServer, int newServer,
+    int primary, int region) {
     int oldLocation = oldServer >= 0 ? serverIndexToLocation[oldServer] : -1;
     int newLocation = serverIndexToLocation[newServer];
     if (newLocation != oldLocation) {
@@ -721,6 +725,7 @@ class BalancerClusterState {
     }
 
   }
+
   int[] removeRegion(int[] regions, int regionIndex) {
     // TODO: this maybe costly. Consider using linked lists
     int[] newRegions = new int[regions.length - 1];
@@ -812,11 +817,11 @@ class BalancerClusterState {
         return -1;
       }
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Lowest locality region is " +
-          regions[regionsPerServer[serverIndex][lowestLocalityRegionIndex]]
-            .getRegionNameAsString() +
-          " with locality " + lowestLocality + " and its region server contains " +
-          regionsPerServer[serverIndex].length + " regions");
+        LOG.trace("Lowest locality region is "
+          + regions[regionsPerServer[serverIndex][lowestLocalityRegionIndex]]
+            .getRegionNameAsString()
+          + " with locality " + lowestLocality + " and its region server contains "
+          + regionsPerServer[serverIndex].length + " regions");
       }
       return regionsPerServer[serverIndex][lowestLocalityRegionIndex];
     } else {

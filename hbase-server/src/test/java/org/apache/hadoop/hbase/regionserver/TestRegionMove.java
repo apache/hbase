@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,12 +48,12 @@ import org.junit.rules.TestName;
 /**
  * Test move fails when table disabled
  */
-@Category({MediumTests.class})
+@Category({ MediumTests.class })
 public class TestRegionMove {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionMove.class);
+    HBaseClassTestRule.forClass(TestRegionMove.class);
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -61,7 +61,7 @@ public class TestRegionMove {
   @Rule
   public TestName name = new TestName();
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  public static Configuration CONF ;
+  public static Configuration CONF;
   protected static final String F1 = "f1";
 
   // Test names
@@ -98,8 +98,8 @@ public class TestRegionMove {
       byte[] startKey = regionInfo.getStartKey();
       // The startKey of the first region is "empty", which would throw an error if we try to
       // Put that.
-      byte[] rowKey = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes.concat(
-          startKey, Bytes.toBytes("1"));
+      byte[] rowKey = org.apache.hbase.thirdparty.com.google.common.primitives.Bytes
+        .concat(startKey, Bytes.toBytes("1"));
       Put p = new Put(rowKey);
       p.addColumn(Bytes.toBytes(F1), Bytes.toBytes("q1"), Bytes.toBytes("value"));
       t.put(p);
@@ -109,11 +109,9 @@ public class TestRegionMove {
     HRegionServer rs1 = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     HRegionServer rs2 = TEST_UTIL.getOtherRegionServer(rs1);
     List<RegionInfo> regionsOnRS1ForTable = admin.getRegions(rs1.getServerName()).stream()
-        .filter((regionInfo) -> regionInfo.getTable().equals(tableName))
-        .collect(Collectors.toList());
-    assertTrue(
-        "Expected to find at least one region for " + tableName + " on " + rs1.getServerName()
-        + ", but found none", !regionsOnRS1ForTable.isEmpty());
+      .filter((regionInfo) -> regionInfo.getTable().equals(tableName)).collect(Collectors.toList());
+    assertTrue("Expected to find at least one region for " + tableName + " on "
+      + rs1.getServerName() + ", but found none", !regionsOnRS1ForTable.isEmpty());
     final RegionInfo regionToMove = regionsOnRS1ForTable.get(0);
 
     // Offline the region and then try to move it. Should fail.

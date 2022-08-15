@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +60,7 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
 public class MockNoopMasterServices implements MasterServices {
@@ -76,15 +78,12 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public void checkTableModifiable(TableName tableName) throws IOException {
-    //no-op
+    // no-op
   }
 
   @Override
-  public long createTable(
-      final TableDescriptor desc,
-      final byte[][] splitKeys,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long createTable(final TableDescriptor desc, final byte[][] splitKeys,
+    final long nonceGroup, final long nonce) throws IOException {
     // no-op
     return -1;
   }
@@ -134,7 +133,8 @@ public class MockNoopMasterServices implements MasterServices {
     return null;
   }
 
-  @Override public RegionNormalizerManager getRegionNormalizerManager() {
+  @Override
+  public RegionNormalizerManager getRegionNormalizerManager() {
     return null;
   }
 
@@ -180,7 +180,7 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public void abort(String why, Throwable e) {
-    //no-op
+    // no-op
   }
 
   @Override
@@ -217,13 +217,13 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
-      throws IOException {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    throws IOException {
+    return false; // To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
   public List<Procedure<?>> getProcedures() throws IOException {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    return null; // To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
@@ -233,7 +233,7 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    return null; // To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
@@ -242,81 +242,62 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public long deleteTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
     return -1;
   }
 
   @Override
-  public long truncateTable(
-      final TableName tableName,
-      final boolean preserveSplits,
-      final long nonceGroup,
-      final long nonce) throws IOException {
-    return -1;
-  }
-
-
-  @Override
-  public long modifyTable(
-      final TableName tableName,
-      final TableDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long truncateTable(final TableName tableName, final boolean preserveSplits,
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
-  public long enableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
-  public long disableTable(
-      TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
+    return -1;
+  }
+
+  @Override
+  public long disableTable(TableName tableName, final long nonceGroup, final long nonce)
+    throws IOException {
     return -1;
   }
 
   @Override
   public long addColumn(final TableName tableName, final ColumnFamilyDescriptor columnDescriptor,
-      final long nonceGroup, final long nonce) throws IOException {
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
   public long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
-      final long nonceGroup, final long nonce) throws IOException {
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
   public long deleteColumn(final TableName tableName, final byte[] columnName,
-      final long nonceGroup, final long nonce) throws IOException {
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
-  public long mergeRegions(
-      final RegionInfo[] regionsToMerge,
-      final boolean forcible,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long mergeRegions(final RegionInfo[] regionsToMerge, final boolean forcible,
+    final long nonceGroup, final long nonce) throws IOException {
     return -1;
   }
 
   @Override
-  public long splitRegion(
-      final RegionInfo regionInfo,
-      final byte[] splitRow,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long splitRegion(final RegionInfo regionInfo, final byte[] splitRow, final long nonceGroup,
+    final long nonce) throws IOException {
     return -1;
   }
 
@@ -340,7 +321,8 @@ public class MockNoopMasterServices implements MasterServices {
     return false;
   }
 
-  @Override public boolean skipRegionManagementAction(String action) {
+  @Override
+  public boolean skipRegionManagementAction(String action) {
     return false;
   }
 
@@ -386,7 +368,7 @@ public class MockNoopMasterServices implements MasterServices {
 
   @Override
   public long addReplicationPeer(String peerId, ReplicationPeerConfig peerConfig, boolean enabled)
-      throws ReplicationException {
+    throws ReplicationException {
     return 0;
   }
 
@@ -406,20 +388,20 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException,
-      IOException {
+  public ReplicationPeerConfig getReplicationPeerConfig(String peerId)
+    throws ReplicationException, IOException {
     return null;
   }
 
   @Override
   public long updateReplicationPeerConfig(String peerId, ReplicationPeerConfig peerConfig)
-      throws ReplicationException, IOException {
+    throws ReplicationException, IOException {
     return 0;
   }
 
   @Override
   public List<ReplicationPeerDescription> listReplicationPeers(String regex)
-      throws ReplicationException, IOException {
+    throws ReplicationException, IOException {
     return null;
   }
 
@@ -519,6 +501,10 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public MetaLocationSyncer getMetaLocationSyncer() {
     return null;
+  }
+
+  @Override
+  public void flushMasterStore() {
   }
 
   @Override

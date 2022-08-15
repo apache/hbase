@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,15 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
@@ -32,6 +27,9 @@ import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
@@ -54,29 +52,24 @@ public class RESTServlet implements Constants {
     return realUser;
   }
 
-  /**
-   * @return the RESTServlet singleton instance
-   */
+  /** Returns the RESTServlet singleton instance */
   public synchronized static RESTServlet getInstance() {
-    assert(INSTANCE != null);
+    assert (INSTANCE != null);
     return INSTANCE;
   }
 
-  /**
-   * @return the ConnectionCache instance
-   */
+  /** Returns the ConnectionCache instance */
   public ConnectionCache getConnectionCache() {
     return connectionCache;
   }
 
   /**
-   * @param conf Existing configuration to use in rest servlet
+   * @param conf         Existing configuration to use in rest servlet
    * @param userProvider the login user provider
-   * @return the RESTServlet singleton instance
-   * @throws IOException
+   * @return the RESTServlet singleton instance n
    */
-  public synchronized static RESTServlet getInstance(Configuration conf,
-      UserProvider userProvider) throws IOException {
+  public synchronized static RESTServlet getInstance(Configuration conf, UserProvider userProvider)
+    throws IOException {
     if (INSTANCE == null) {
       INSTANCE = new RESTServlet(conf, userProvider);
     }
@@ -92,20 +85,17 @@ public class RESTServlet implements Constants {
 
   /**
    * Constructor with existing configuration
-   * @param conf existing configuration
-   * @param userProvider the login user provider
-   * @throws IOException
+   * @param conf         existing configuration
+   * @param userProvider the login user provider n
    */
-  RESTServlet(final Configuration conf,
-      final UserProvider userProvider) throws IOException {
+  RESTServlet(final Configuration conf, final UserProvider userProvider) throws IOException {
     this.realUser = userProvider.getCurrent().getUGI();
     this.conf = conf;
     registerCustomFilter(conf);
 
     int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
     int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
-    connectionCache = new ConnectionCache(
-      conf, userProvider, cleanInterval, maxIdleTime);
+    connectionCache = new ConnectionCache(conf, userProvider, cleanInterval, maxIdleTime);
     if (supportsProxyuser()) {
       ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     }
@@ -136,8 +126,7 @@ public class RESTServlet implements Constants {
   }
 
   /**
-   * Helper method to determine if server should
-   * only respond to GET HTTP method requests.
+   * Helper method to determine if server should only respond to GET HTTP method requests.
    * @return boolean for server read-only state
    */
   boolean isReadOnly() {
@@ -166,8 +155,7 @@ public class RESTServlet implements Constants {
       for (String filterClass : filterList) {
         String[] filterPart = filterClass.split(":");
         if (filterPart.length != 2) {
-          LOG.warn(
-            "Invalid filter specification " + filterClass + " - skipping");
+          LOG.warn("Invalid filter specification " + filterClass + " - skipping");
         } else {
           ParseFilter.registerFilter(filterPart[0], filterPart[1]);
         }

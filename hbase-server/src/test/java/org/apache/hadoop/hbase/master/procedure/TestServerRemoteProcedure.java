@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -72,7 +71,7 @@ public class TestServerRemoteProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(TestServerRemoteProcedure.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestServerRemoteProcedure.class);
+    HBaseClassTestRule.forClass(TestServerRemoteProcedure.class);
   @Rule
   public TestName name = new TestName();
   @Rule
@@ -82,7 +81,7 @@ public class TestServerRemoteProcedure {
   protected MockMasterServices master;
   protected AssignmentManager am;
   protected NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers =
-      new ConcurrentSkipListMap<>();
+    new ConcurrentSkipListMap<>();
   // Simple executor to run some simple tasks.
   protected ScheduledExecutorService executor;
 
@@ -90,14 +89,14 @@ public class TestServerRemoteProcedure {
   public void setUp() throws Exception {
     util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
-        .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
+      .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
     master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
     rsDispatcher = new MockRSProcedureDispatcher(master);
     rsDispatcher.setMockRsExecutor(new NoopRSExecutor());
     master.start(2, rsDispatcher);
     am = master.getAssignmentManager();
     master.getServerManager().getOnlineServersList().stream()
-        .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
+      .forEach(serverName -> am.getRegionStates().getOrCreateServer(serverName));
   }
 
   @After
@@ -111,7 +110,7 @@ public class TestServerRemoteProcedure {
     ServerName worker = master.getServerManager().getOnlineServersList().get(0);
     ServerName crashedWorker = master.getServerManager().getOnlineServersList().get(1);
     ServerRemoteProcedure splitWALRemoteProcedure =
-        new SplitWALRemoteProcedure(worker, crashedWorker, "test");
+      new SplitWALRemoteProcedure(worker, crashedWorker, "test");
     Future<byte[]> future = submitProcedure(splitWALRemoteProcedure);
     Thread.sleep(2000);
     master.getServerManager().expireServer(worker);
@@ -129,7 +128,7 @@ public class TestServerRemoteProcedure {
     // complete the process and fail the process at the same time
     ExecutorService threadPool = Executors.newFixedThreadPool(2);
     threadPool.execute(() -> noopServerRemoteProcedure
-        .remoteOperationDone(master.getMasterProcedureExecutor().getEnvironment(), null));
+      .remoteOperationDone(master.getMasterProcedureExecutor().getEnvironment(), null));
     threadPool.execute(() -> noopServerRemoteProcedure.remoteCallFailed(
       master.getMasterProcedureExecutor().getEnvironment(), worker, new IOException()));
     future.get(2000, TimeUnit.MILLISECONDS);
@@ -163,7 +162,7 @@ public class TestServerRemoteProcedure {
   }
 
   private static class NoopServerRemoteProcedure extends ServerRemoteProcedure
-      implements ServerProcedureInterface {
+    implements ServerProcedureInterface {
 
     public NoopServerRemoteProcedure(ServerName targetServer) {
       this.targetServer = targetServer;
@@ -190,10 +189,10 @@ public class TestServerRemoteProcedure {
     }
 
     @Override
-    public Optional<RemoteProcedureDispatcher.RemoteOperation> remoteCallBuild(
-        MasterProcedureEnv env, ServerName serverName) {
+    public Optional<RemoteProcedureDispatcher.RemoteOperation>
+      remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
       return Optional
-          .of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]));
+        .of(new RSProcedureDispatcher.ServerOperation(null, 0L, this.getClass(), new byte[0]));
     }
 
     @Override
@@ -203,7 +202,7 @@ public class TestServerRemoteProcedure {
 
     @Override
     public synchronized void remoteOperationFailed(MasterProcedureEnv env,
-        RemoteProcedureException error) {
+      RemoteProcedureException error) {
       complete(env, error);
     }
 
@@ -232,13 +231,13 @@ public class TestServerRemoteProcedure {
 
   protected interface MockRSExecutor {
     AdminProtos.ExecuteProceduresResponse sendRequest(ServerName server,
-        AdminProtos.ExecuteProceduresRequest req) throws IOException;
+      AdminProtos.ExecuteProceduresRequest req) throws IOException;
   }
 
   protected static class NoopRSExecutor implements MockRSExecutor {
     @Override
     public AdminProtos.ExecuteProceduresResponse sendRequest(ServerName server,
-        AdminProtos.ExecuteProceduresRequest req) throws IOException {
+      AdminProtos.ExecuteProceduresRequest req) throws IOException {
       if (req.getOpenRegionCount() > 0) {
         for (AdminProtos.OpenRegionRequest request : req.getOpenRegionList()) {
           for (AdminProtos.OpenRegionRequest.RegionOpenInfo openReq : request.getOpenInfoList()) {
@@ -250,7 +249,7 @@ public class TestServerRemoteProcedure {
     }
 
     protected AdminProtos.OpenRegionResponse.RegionOpeningState execOpenRegion(ServerName server,
-        AdminProtos.OpenRegionRequest.RegionOpenInfo regionInfo) throws IOException {
+      AdminProtos.OpenRegionRequest.RegionOpenInfo regionInfo) throws IOException {
       return null;
     }
   }
@@ -268,19 +267,19 @@ public class TestServerRemoteProcedure {
 
     @Override
     protected void remoteDispatch(ServerName serverName,
-        @SuppressWarnings("rawtypes") Set<RemoteProcedure> remoteProcedures) {
+      @SuppressWarnings("rawtypes") Set<RemoteProcedure> remoteProcedures) {
       submitTask(new MockRSProcedureDispatcher.MockRemoteCall(serverName, remoteProcedures));
     }
 
     private class MockRemoteCall extends ExecuteProceduresRemoteCall {
       public MockRemoteCall(final ServerName serverName,
-          @SuppressWarnings("rawtypes") final Set<RemoteProcedure> operations) {
+        @SuppressWarnings("rawtypes") final Set<RemoteProcedure> operations) {
         super(serverName, operations);
       }
 
       @Override
       protected AdminProtos.ExecuteProceduresResponse sendRequest(final ServerName serverName,
-          final AdminProtos.ExecuteProceduresRequest request) throws IOException {
+        final AdminProtos.ExecuteProceduresRequest request) throws IOException {
         return mockRsExec.sendRequest(serverName, request);
       }
     }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -96,7 +95,7 @@ public class RemoteHTable implements Table {
 
   @SuppressWarnings("rawtypes")
   protected String buildRowSpec(final byte[] row, final Map familyMap, final long startTime,
-      final long endTime, final int maxVersions) {
+    final long endTime, final int maxVersions) {
     StringBuffer sb = new StringBuffer();
     sb.append('/');
     sb.append(Bytes.toString(name));
@@ -665,7 +664,7 @@ public class RemoteHTable implements Table {
   }
 
   private boolean doCheckAndPut(byte[] row, byte[] family, byte[] qualifier, byte[] value, Put put)
-      throws IOException {
+    throws IOException {
     // column to check-the-value
     put.add(new KeyValue(row, family, qualifier, value));
 
@@ -701,7 +700,7 @@ public class RemoteHTable implements Table {
   }
 
   private boolean doCheckAndDelete(byte[] row, byte[] family, byte[] qualifier, byte[] value,
-      Delete delete) throws IOException {
+    Delete delete) throws IOException {
     Put put = new Put(row, HConstants.LATEST_TIMESTAMP, delete.getFamilyCellMap());
     // column to check-the-value
     put.add(new KeyValue(row, family, qualifier, value));
@@ -768,13 +767,13 @@ public class RemoteHTable implements Table {
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount)
-      throws IOException {
+    throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 
   @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier, long amount,
-      Durability durability) throws IOException {
+    Durability durability) throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 
@@ -785,7 +784,7 @@ public class RemoteHTable implements Table {
 
   @Override
   public <R> void batchCallback(List<? extends Row> actions, Object[] results,
-      Batch.Callback<R> callback) throws IOException, InterruptedException {
+    Batch.Callback<R> callback) throws IOException, InterruptedException {
     throw new IOException("batchCallback not supported");
   }
 
@@ -796,14 +795,14 @@ public class RemoteHTable implements Table {
 
   @Override
   public <T extends Service, R> Map<byte[], R> coprocessorService(Class<T> service, byte[] startKey,
-      byte[] endKey, Batch.Call<T, R> callable) throws ServiceException, Throwable {
+    byte[] endKey, Batch.Call<T, R> callable) throws ServiceException, Throwable {
     throw new UnsupportedOperationException("coprocessorService not implemented");
   }
 
   @Override
   public <T extends Service, R> void coprocessorService(Class<T> service, byte[] startKey,
-      byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
-      throws ServiceException, Throwable {
+    byte[] endKey, Batch.Call<T, R> callable, Batch.Callback<R> callback)
+    throws ServiceException, Throwable {
     throw new UnsupportedOperationException("coprocessorService not implemented");
   }
 
@@ -814,15 +813,15 @@ public class RemoteHTable implements Table {
 
   @Override
   public <R extends Message> Map<byte[], R> batchCoprocessorService(
-      Descriptors.MethodDescriptor method, Message request, byte[] startKey, byte[] endKey,
-      R responsePrototype) throws ServiceException, Throwable {
+    Descriptors.MethodDescriptor method, Message request, byte[] startKey, byte[] endKey,
+    R responsePrototype) throws ServiceException, Throwable {
     throw new UnsupportedOperationException("batchCoprocessorService not implemented");
   }
 
   @Override
   public <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor method,
-      Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
-      throws ServiceException, Throwable {
+    Message request, byte[] startKey, byte[] endKey, R responsePrototype, Callback<R> callback)
+    throws ServiceException, Throwable {
     throw new UnsupportedOperationException("batchCoprocessorService not implemented");
   }
 
@@ -873,8 +872,8 @@ public class RemoteHTable implements Table {
 
     @Override
     public CheckAndMutateBuilder qualifier(byte[] qualifier) {
-      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using" +
-        " an empty byte array, or just do not call this method if you want a null qualifier");
+      this.qualifier = Preconditions.checkNotNull(qualifier, "qualifier is null. Consider using"
+        + " an empty byte array, or just do not call this method if you want a null qualifier");
       return this;
     }
 

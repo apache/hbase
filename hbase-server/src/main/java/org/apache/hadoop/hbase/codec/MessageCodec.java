@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,22 +20,23 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
+import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBuffInputStream;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.ExtendedCellBuilder;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 
 /**
- * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
- * Use a different codec if you want that in the stream.
+ * Codec that just writes out Cell as a protobuf Cell Message. Does not write the mvcc stamp. Use a
+ * different codec if you want that in the stream.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class MessageCodec implements Codec {
@@ -48,26 +49,27 @@ public class MessageCodec implements Codec {
     public void write(Cell cell) throws IOException {
       checkFlushed();
       CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
-      // This copies bytes from Cell to ByteString.  I don't see anyway around the copy.
+      // This copies bytes from Cell to ByteString. I don't see anyway around the copy.
       // ByteString is final.
       builder.setRow(UnsafeByteOperations.unsafeWrap(cell.getRowArray(), cell.getRowOffset(),
-          cell.getRowLength()));
+        cell.getRowLength()));
       builder.setFamily(UnsafeByteOperations.unsafeWrap(cell.getFamilyArray(),
-          cell.getFamilyOffset(),
-          cell.getFamilyLength()));
+        cell.getFamilyOffset(), cell.getFamilyLength()));
       builder.setQualifier(UnsafeByteOperations.unsafeWrap(cell.getQualifierArray(),
-          cell.getQualifierOffset(), cell.getQualifierLength()));
+        cell.getQualifierOffset(), cell.getQualifierLength()));
       builder.setTimestamp(cell.getTimestamp());
       builder.setCellType(CellProtos.CellType.valueOf(cell.getTypeByte()));
       builder.setValue(UnsafeByteOperations.unsafeWrap(cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength()));
+        cell.getValueLength()));
       CellProtos.Cell pbcell = builder.build();
       pbcell.writeDelimitedTo(this.out);
     }
   }
 
   static class MessageDecoder extends BaseDecoder {
-    private final ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+    private final ExtendedCellBuilder cellBuilder =
+      ExtendedCellBuilderFactory.create(CellBuilderType.SHALLOW_COPY);
+
     MessageDecoder(final InputStream in) {
       super(in);
     }

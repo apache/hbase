@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,8 +21,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Configurable policy for the amount of time a client should wait for a new request to the
- * server when given the server load statistics.
+ * Configurable policy for the amount of time a client should wait for a new request to the server
+ * when given the server load statistics.
  * <p>
  * Must have a single-argument constructor that takes a {@link org.apache.hadoop.conf.Configuration}
  * </p>
@@ -30,11 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface ClientBackoffPolicy {
 
-  public static final String BACKOFF_POLICY_CLASS =
-      "hbase.client.statistics.backoff-policy";
+  public static final String BACKOFF_POLICY_CLASS = "hbase.client.statistics.backoff-policy";
 
-  /**
-   * @return the number of ms to wait on the client based on the
-   */
+  /** Returns the number of ms to wait on the client based on the */
   public long getBackoffTime(ServerName serverName, byte[] region, ServerStatistics stats);
 }

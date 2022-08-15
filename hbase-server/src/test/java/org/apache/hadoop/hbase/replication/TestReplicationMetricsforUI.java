@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ import org.junit.experimental.categories.Category;
 public class TestReplicationMetricsforUI extends TestReplicationBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestReplicationMetricsforUI.class);
+    HBaseClassTestRule.forClass(TestReplicationMetricsforUI.class);
   private static final byte[] qualName = Bytes.toBytes("q");
 
   @Test
@@ -68,8 +68,9 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
         p.addColumn(famName, qualName, Bytes.toBytes("value help to test replication delay " + i));
         htable1.put(p);
       }
-      while (htable2.get(new Get(Bytes.toBytes("" + Integer.toString(NB_ROWS_IN_BATCH - 1))))
-          .size() == 0) {
+      while (
+        htable2.get(new Get(Bytes.toBytes("" + Integer.toString(NB_ROWS_IN_BATCH - 1)))).size() == 0
+      ) {
         Thread.sleep(500);
       }
       rs = UTIL1.getRSForFirstRegionInTable(tableName);

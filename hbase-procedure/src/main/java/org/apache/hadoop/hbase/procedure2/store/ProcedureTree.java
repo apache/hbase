@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -167,8 +167,8 @@ public final class ProcedureTree {
           rootEntry);
         valid = false;
       } else if (entries.size() > 1) {
-        LOG.error("Multiple procedures {} have the same stack id {}, max stack id is {}," +
-          " root procedure is {}", entries, i, maxStackId, rootEntry);
+        LOG.error("Multiple procedures {} have the same stack id {}, max stack id is {},"
+          + " root procedure is {}", entries, i, maxStackId, rootEntry);
         valid = false;
       }
     }

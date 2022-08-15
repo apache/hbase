@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -35,7 +33,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
@@ -73,7 +70,7 @@ public class TestMetaTableMetrics {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMetaTableMetrics.class);
+    HBaseClassTestRule.forClass(TestMetaTableMetrics.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableMetrics.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -81,12 +78,12 @@ public class TestMetaTableMetrics {
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final ColumnFamilyDescriptor CFD =
-      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
+    ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build();
   private static final int NUM_ROWS = 5;
   private static final String value = "foo";
   private static final String METRICS_ATTRIBUTE_NAME_PREFIX = "MetaTable_";
   private static final List<String> METRICS_ATTRIBUTE_NAME_POSTFIXES =
-      Arrays.asList("_count", "_mean_rate", "_1min_rate", "_5min_rate", "_15min_rate");
+    Arrays.asList("_count", "_mean_rate", "_1min_rate", "_5min_rate", "_15min_rate");
   private static int connectorPort = 61120;
 
   private final byte[] cf = Bytes.toBytes("info");
@@ -141,24 +138,24 @@ public class TestMetaTableMetrics {
   @Test
   public void testMetaTableMetricsInJmx() throws Exception {
     UTIL.getAdmin()
-        .createTable(TableDescriptorBuilder.newBuilder(NAME1).setColumnFamily(CFD).build());
+      .createTable(TableDescriptorBuilder.newBuilder(NAME1).setColumnFamily(CFD).build());
     assertTrue(UTIL.getAdmin().isTableEnabled(NAME1));
     readWriteData(NAME1);
     UTIL.deleteTable(NAME1);
 
     UTIL.waitFor(30000, 2000, true, () -> {
       Map<String, Double> jmxMetrics = readMetaTableJmxMetrics();
-      boolean allMetricsFound = AllOf.allOf(
-        containsPositiveJmxAttributesFor("MetaTable_get_request"),
-        containsPositiveJmxAttributesFor("MetaTable_put_request"),
-        containsPositiveJmxAttributesFor("MetaTable_delete_request"),
-        containsPositiveJmxAttributesFor("MetaTable_region_.+_lossy_request"),
-        containsPositiveJmxAttributesFor("MetaTable_table_" + NAME1 + "_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_put_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_get_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_delete_request"),
-        containsPositiveJmxAttributesFor("MetaTable_client_.+_lossy_request")
-      ).matches(jmxMetrics);
+      boolean allMetricsFound = AllOf
+        .allOf(containsPositiveJmxAttributesFor("MetaTable_get_request"),
+          containsPositiveJmxAttributesFor("MetaTable_put_request"),
+          containsPositiveJmxAttributesFor("MetaTable_delete_request"),
+          containsPositiveJmxAttributesFor("MetaTable_region_.+_lossy_request"),
+          containsPositiveJmxAttributesFor("MetaTable_table_" + NAME1 + "_request"),
+          containsPositiveJmxAttributesFor("MetaTable_client_.+_put_request"),
+          containsPositiveJmxAttributesFor("MetaTable_client_.+_get_request"),
+          containsPositiveJmxAttributesFor("MetaTable_client_.+_delete_request"),
+          containsPositiveJmxAttributesFor("MetaTable_client_.+_lossy_request"))
+        .matches(jmxMetrics);
 
       if (allMetricsFound) {
         LOG.info("all the meta table metrics found with positive values: {}", jmxMetrics);
@@ -207,7 +204,7 @@ public class TestMetaTableMetrics {
 
   private Matcher<Map<String, Double>> containsPositiveJmxAttributesFor(final String regexp) {
     return new CustomTypeSafeMatcher<Map<String, Double>>(
-        "failed to find all the 5 positive JMX attributes for: " + regexp) {
+      "failed to find all the 5 positive JMX attributes for: " + regexp) {
 
       @Override
       protected boolean matchesSafely(final Map<String, Double> values) {
@@ -233,7 +230,7 @@ public class TestMetaTableMetrics {
     MBeanServerConnection mb = null;
     try {
       connector =
-          JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
+        JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
       mb = connector.getMBeanServerConnection();
 
       @SuppressWarnings("JdkObsolete")
@@ -248,8 +245,9 @@ public class TestMetaTableMetrics {
       Map<String, Double> existingAttrs = new HashMap<>();
       for (MBeanAttributeInfo attrInfo : beanInfo.getAttributes()) {
         Object value = mb.getAttribute(target, attrInfo.getName());
-        if (attrInfo.getName().startsWith(METRICS_ATTRIBUTE_NAME_PREFIX)
-            && value instanceof Number) {
+        if (
+          attrInfo.getName().startsWith(METRICS_ATTRIBUTE_NAME_PREFIX) && value instanceof Number
+        ) {
           existingAttrs.put(attrInfo.getName(), Double.parseDouble(value.toString()));
         }
       }
@@ -264,7 +262,7 @@ public class TestMetaTableMetrics {
         while (iterator.hasNext()) {
           ObjectInstance instance = iterator.next();
           LOG.debug("Class and object name: {} [{}]", instance.getClassName(),
-                    instance.getObjectName());
+            instance.getObjectName());
         }
       }
     } finally {

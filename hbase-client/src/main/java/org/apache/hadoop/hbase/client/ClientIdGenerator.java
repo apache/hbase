@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,27 +19,31 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
 /**
- * The class that is able to determine some unique strings for the client,
- * such as an IP address, PID, and composite deterministic ID.
+ * The class that is able to determine some unique strings for the client, such as an IP address,
+ * PID, and composite deterministic ID.
  */
 @InterfaceAudience.Private
 final class ClientIdGenerator {
   private static final Logger LOG = LoggerFactory.getLogger(ClientIdGenerator.class);
 
-  private ClientIdGenerator() {}
+  private ClientIdGenerator() {
+  }
 
   /**
-   * @return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill...
-   * Note though that new UUID in java by default is just a random number.
+   * Returns a unique ID incorporating IP address, PID, TID and timer. Might be an overkill... Note
+   * though that new UUID in java by default is just a random number.
    */
   public static byte[] generateClientId() {
     byte[] selfBytes = getIpAddressBytes();
@@ -59,15 +62,13 @@ final class ClientIdGenerator {
     return id;
   }
 
-  /**
-   * @return PID of the current process, if it can be extracted from JVM name, or null.
-   */
+  /** Returns PID of the current process, if it can be extracted from JVM name, or null. */
   public static Long getPid() {
     String name = ManagementFactory.getRuntimeMXBean().getName();
-    String[] nameParts = name.split("@");
-    if (nameParts.length == 2) { // 12345@somewhere
+    List<String> nameParts = Splitter.on('@').splitToList(name);
+    if (nameParts.size() == 2) { // 12345@somewhere
       try {
-        return Long.parseLong(nameParts[0]);
+        return Long.parseLong(Iterators.get(nameParts.iterator(), 0));
       } catch (NumberFormatException ex) {
         LOG.warn("Failed to get PID from [" + name + "]", ex);
       }
@@ -78,8 +79,8 @@ final class ClientIdGenerator {
   }
 
   /**
-   * @return Some IPv4/IPv6 address available on the current machine that is up, not virtual
-   *         and not a loopback address. Empty array if none can be found or error occurred.
+   * Returns Some IPv4/IPv6 address available on the current machine that is up, not virtual and not
+   * a loopback address. Empty array if none can be found or error occurred.
    */
   public static byte[] getIpAddressBytes() {
     try {

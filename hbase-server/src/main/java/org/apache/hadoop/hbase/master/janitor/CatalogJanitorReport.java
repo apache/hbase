@@ -34,7 +34,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Report made by ReportMakingVisitor
  */
 @InterfaceAudience.Private
-public class Report {
+public class CatalogJanitorReport {
   private final long now = EnvironmentEdgeManager.currentTime();
 
   // Keep Map of found split parents. These are candidates for cleanup.
@@ -85,12 +85,10 @@ public class Report {
     return emptyRegionInfo;
   }
 
-  /**
-   * @return True if an 'empty' lastReport -- no problems found.
-   */
+  /** Returns True if an 'empty' lastReport -- no problems found. */
   public boolean isEmpty() {
-    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty() &&
-      this.emptyRegionInfo.isEmpty();
+    return this.holes.isEmpty() && this.overlaps.isEmpty() && this.unknownServers.isEmpty()
+      && this.emptyRegionInfo.isEmpty();
   }
 
   @Override

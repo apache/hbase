@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.http;
 
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -29,6 +28,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Unstable
 public class HttpConfig {
   private Policy policy;
+
   public enum Policy {
     HTTP_ONLY,
     HTTPS_ONLY,
@@ -53,8 +53,7 @@ public class HttpConfig {
   }
 
   public HttpConfig(final Configuration conf) {
-    boolean sslEnabled = conf.getBoolean(
-      ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY,
+    boolean sslEnabled = conf.getBoolean(ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY,
       ServerConfigurationKeys.HBASE_SSL_ENABLED_DEFAULT);
     policy = sslEnabled ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY;
     if (sslEnabled) {
@@ -72,7 +71,7 @@ public class HttpConfig {
   }
 
   public String getSchemePrefix() {
-    return (isSecure()) ? "https://" : "http://";
+    return isSecure() ? "https://" : "http://";
   }
 
   public String getScheme(Policy policy) {

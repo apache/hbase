@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,14 +44,14 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 public class TestGetAndPutResource extends RowResourceBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGetAndPutResource.class);
+    HBaseClassTestRule.forClass(TestGetAndPutResource.class);
 
   private static final MetricsAssertHelper METRICS_ASSERT =
-      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   @Test
   public void testForbidden() throws IOException, JAXBException {
@@ -146,8 +146,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<>();
-    otherCells.put(COLUMN_2,VALUE_3);
+    HashMap<String, String> otherCells = new HashMap<>();
+    otherCells.put(COLUMN_2, VALUE_3);
 
     // On Success update both the cells
     response = checkAndPutValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
@@ -179,8 +179,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_2, VALUE_2);
 
-    HashMap<String,String> otherCells = new HashMap<>();
-    otherCells.put(COLUMN_2,VALUE_3);
+    HashMap<String, String> otherCells = new HashMap<>();
+    otherCells.put(COLUMN_2, VALUE_3);
 
     // On Success update both the cells
     response = checkAndPutValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1, VALUE_3, otherCells);
@@ -217,9 +217,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     checkValuePB(TABLE, ROW_1, COLUMN_3, VALUE_3);
 
     // Deletes the following columns based on Column1 check
-    HashMap<String,String> cellsToDelete = new HashMap<>();
-    cellsToDelete.put(COLUMN_2,VALUE_2); // Value does not matter
-    cellsToDelete.put(COLUMN_3,VALUE_3); // Value does not matter
+    HashMap<String, String> cellsToDelete = new HashMap<>();
+    cellsToDelete.put(COLUMN_2, VALUE_2); // Value does not matter
+    cellsToDelete.put(COLUMN_3, VALUE_3); // Value does not matter
 
     // On Success update both the cells
     response = checkAndDeletePB(TABLE, ROW_1, COLUMN_1, VALUE_1, cellsToDelete);
@@ -265,7 +265,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(Constants.MIMETYPE_BINARY, response.getHeader("content-type"));
     assertTrue(Bytes.equals(response.getBody(), body));
     boolean foundTimestampHeader = false;
-    for (Header header: response.getHeaders()) {
+    for (Header header : response.getHeaders()) {
       if (header.getName().equals("X-Timestamp")) {
         foundTimestampHeader = true;
         break;
@@ -280,8 +280,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   @Test
   public void testSingleCellGetJSON() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
-    Response response = client.put(path, Constants.MIMETYPE_BINARY,
-      Bytes.toBytes(VALUE_4));
+    Response response = client.put(path, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_4));
     assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
@@ -296,16 +295,13 @@ public class TestGetAndPutResource extends RowResourceBase {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_4);
-    CellModel cellOne = new CellModel(Bytes.toBytes(COLUMN_1), 1L,
-      Bytes.toBytes(VALUE_1));
-    CellModel cellTwo = new CellModel(Bytes.toBytes(COLUMN_1), 2L,
-      Bytes.toBytes(VALUE_2));
+    CellModel cellOne = new CellModel(Bytes.toBytes(COLUMN_1), 1L, Bytes.toBytes(VALUE_1));
+    CellModel cellTwo = new CellModel(Bytes.toBytes(COLUMN_1), 2L, Bytes.toBytes(VALUE_2));
     rowModel.addCell(cellOne);
     rowModel.addCell(cellTwo);
     cellSetModel.addRow(rowModel);
     String jsonString = jsonMapper.writeValueAsString(cellSetModel);
-    Response response = client.put(path, Constants.MIMETYPE_JSON,
-      Bytes.toBytes(jsonString));
+    Response response = client.put(path, Constants.MIMETYPE_JSON, Bytes.toBytes(jsonString));
     assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
@@ -315,8 +311,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertTrue(cellSet.getRows().size() == 1);
     assertTrue(cellSet.getRows().get(0).getCells().size() == 1);
     CellModel cell = cellSet.getRows().get(0).getCells().get(0);
-    assertEquals(VALUE_2 , Bytes.toString(cell.getValue()));
-    assertEquals(2L , cell.getTimestamp());
+    assertEquals(VALUE_2, Bytes.toString(cell.getValue()));
+    assertEquals(2L, cell.getTimestamp());
     response = deleteRow(TABLE, ROW_4);
     assertEquals(200, response.getCode());
   }
@@ -332,18 +328,16 @@ public class TestGetAndPutResource extends RowResourceBase {
     path.append('/');
     path.append(COLUMN_1);
     Response response;
-    response = putValueXML(path.toString(), TABLE, urlKey, COLUMN_1,
-      VALUE_1);
+    response = putValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
   }
 
   @Test
   public void testNoSuchCF() throws IOException {
-    final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA+":";
+    final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA + ":";
     final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
-    Response response = client.post(goodPath, Constants.MIMETYPE_BINARY,
-      Bytes.toBytes(VALUE_1));
+    Response response = client.post(goodPath, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_1));
     assertEquals(200, response.getCode());
     assertEquals(200, client.get(goodPath, Constants.MIMETYPE_BINARY).getCode());
     assertEquals(404, client.get(badPath, Constants.MIMETYPE_BINARY).getCode());
@@ -352,25 +346,20 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testMultiCellGetPutXML() throws IOException, JAXBException {
-    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+    String path = "/" + TABLE + "/fakerow"; // deliberate nonexistent row
 
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
     cellSetModel.addRow(rowModel);
     rowModel = new RowModel(ROW_2);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_3)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_4)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_4)));
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     xmlMarshaller.marshal(cellSetModel, writer);
-    Response response = client.put(path, Constants.MIMETYPE_XML,
-      Bytes.toBytes(writer.toString()));
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
     Thread.yield();
 
     // make sure the fake row was not actually created
@@ -391,23 +380,19 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testMultiCellGetPutPB() throws IOException {
-    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+    String path = "/" + TABLE + "/fakerow"; // deliberate nonexistent row
 
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
     cellSetModel.addRow(rowModel);
     rowModel = new RowModel(ROW_2);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_3)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_4)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_4)));
     cellSetModel.addRow(rowModel);
-    Response response = client.put(path, Constants.MIMETYPE_PROTOBUF,
-      cellSetModel.createProtobufOutput());
+    Response response =
+      client.put(path, Constants.MIMETYPE_PROTOBUF, cellSetModel.createProtobufOutput());
     Thread.yield();
 
     // make sure the fake row was not actually created
@@ -438,12 +423,12 @@ public class TestGetAndPutResource extends RowResourceBase {
     }
     response = getValueXML(TABLE, rows[0], rows[2], COLUMN_1);
     assertEquals(200, response.getCode());
-    CellSetModel cellSet = (CellSetModel)
-      xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertEquals(2, cellSet.getRows().size());
-    for (int i = 0; i < cellSet.getRows().size()-1; i++) {
+    for (int i = 0; i < cellSet.getRows().size() - 1; i++) {
       RowModel rowModel = cellSet.getRows().get(i);
-      for (CellModel cell: rowModel.getCells()) {
+      for (CellModel cell : rowModel.getCells()) {
         assertEquals(COLUMN_1, Bytes.toString(cell.getColumn()));
         assertEquals(values[i], Bytes.toString(cell.getValue()));
       }
@@ -458,16 +443,14 @@ public class TestGetAndPutResource extends RowResourceBase {
   public void testInvalidCheckParam() throws IOException, JAXBException {
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     xmlMarshaller.marshal(cellSetModel, writer);
 
     final String path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1 + "?check=blah";
 
-    Response response = client.put(path, Constants.MIMETYPE_XML,
-      Bytes.toBytes(writer.toString()));
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
     assertEquals(400, response.getCode());
   }
 
@@ -476,40 +459,33 @@ public class TestGetAndPutResource extends RowResourceBase {
     String dummyColumn = "doesnot:exist";
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(dummyColumn),
-      Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(dummyColumn), Bytes.toBytes(VALUE_1)));
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     xmlMarshaller.marshal(cellSetModel, writer);
 
     final String path = "/" + TABLE + "/" + ROW_1 + "/" + dummyColumn;
 
-    Response response = client.put(path, Constants.MIMETYPE_XML,
-      Bytes.toBytes(writer.toString()));
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
     assertEquals(404, response.getCode());
   }
 
   @Test
   public void testMultiCellGetJson() throws IOException, JAXBException {
-    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+    String path = "/" + TABLE + "/fakerow"; // deliberate nonexistent row
 
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
     cellSetModel.addRow(rowModel);
     rowModel = new RowModel(ROW_2);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_3)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_4)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_4)));
     cellSetModel.addRow(rowModel);
     String jsonString = jsonMapper.writeValueAsString(cellSetModel);
 
-    Response response = client.put(path, Constants.MIMETYPE_JSON,
-      Bytes.toBytes(jsonString));
+    Response response = client.put(path, Constants.MIMETYPE_JSON, Bytes.toBytes(jsonString));
     Thread.yield();
 
     // make sure the fake row was not actually created
@@ -531,8 +507,7 @@ public class TestGetAndPutResource extends RowResourceBase {
   @Test
   public void testMetrics() throws IOException {
     final String path = "/" + TABLE + "/" + ROW_4 + "/" + COLUMN_1;
-    Response response = client.put(path, Constants.MIMETYPE_BINARY,
-        Bytes.toBytes(VALUE_4));
+    Response response = client.put(path, Constants.MIMETYPE_BINARY, Bytes.toBytes(VALUE_4));
     assertEquals(200, response.getCode());
     Thread.yield();
     response = client.get(path, Constants.MIMETYPE_JSON);
@@ -579,7 +554,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = client.get(path, Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     CellSetModel cellSet =
-        (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertTrue(cellSet.getRows().size() == 1);
     assertTrue(cellSet.getRows().get(0).getCells().size() == 3);
     List<CellModel> cells = cellSet.getRows().get(0).getCells();
@@ -594,8 +569,10 @@ public class TestGetAndPutResource extends RowResourceBase {
   private boolean containsCellModel(List<CellModel> cells, String column, String value) {
     boolean contains = false;
     for (CellModel cell : cells) {
-      if (Bytes.toString(cell.getColumn()).equals(column)
-          && Bytes.toString(cell.getValue()).equals(value)) {
+      if (
+        Bytes.toString(cell.getColumn()).equals(column)
+          && Bytes.toString(cell.getValue()).equals(value)
+      ) {
         contains = true;
         return contains;
       }
@@ -605,25 +582,20 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testSuffixGlobbingXMLWithNewScanner() throws IOException, JAXBException {
-    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+    String path = "/" + TABLE + "/fakerow"; // deliberate nonexistent row
 
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
     cellSetModel.addRow(rowModel);
     rowModel = new RowModel(ROW_2);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_3)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_4)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_4)));
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     xmlMarshaller.marshal(cellSetModel, writer);
-    Response response = client.put(path, Constants.MIMETYPE_XML,
-      Bytes.toBytes(writer.toString()));
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
     Thread.yield();
 
     // make sure the fake row was not actually created
@@ -639,8 +611,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = client.get(query.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    CellSetModel cellSet = (CellSetModel)
-      xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     assertTrue(cellSet.getRows().size() == 2);
 
     response = deleteRow(TABLE, ROW_1);
@@ -651,25 +623,20 @@ public class TestGetAndPutResource extends RowResourceBase {
 
   @Test
   public void testSuffixGlobbingXML() throws IOException, JAXBException {
-    String path = "/" + TABLE + "/fakerow";  // deliberate nonexistent row
+    String path = "/" + TABLE + "/fakerow"; // deliberate nonexistent row
 
     CellSetModel cellSetModel = new CellSetModel();
     RowModel rowModel = new RowModel(ROW_1);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_1)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
     cellSetModel.addRow(rowModel);
     rowModel = new RowModel(ROW_2);
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
-      Bytes.toBytes(VALUE_3)));
-    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2),
-      Bytes.toBytes(VALUE_4)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_3)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_4)));
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     xmlMarshaller.marshal(cellSetModel, writer);
-    Response response = client.put(path, Constants.MIMETYPE_XML,
-      Bytes.toBytes(writer.toString()));
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
     Thread.yield();
 
     // make sure the fake row was not actually created
@@ -687,8 +654,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = client.get(query.toString(), Constants.MIMETYPE_XML);
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
-    CellSetModel cellSet = (CellSetModel)
-      xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    CellSetModel cellSet =
+      (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     List<RowModel> rows = cellSet.getRows();
     assertTrue(rows.size() == 2);
     for (RowModel row : rows) {
@@ -706,7 +673,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append cell
+    // append cell
     response = appendValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -723,7 +690,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append cell
+    // append cell
     response = appendValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -740,7 +707,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append cell
+    // append cell
     response = appendValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
     assertEquals(200, response.getCode());
     putValueJson(TABLE, ROW_1, COLUMN_1, VALUE_1);
@@ -757,14 +724,14 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append single cell
+    // append single cell
     response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_5);
     assertEquals(200, response.getCode());
     checkIncrementValueXML(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValueXML(TABLE, ROW_1, COLUMN_1, VALUE_6);
     assertEquals(200, response.getCode());
     checkIncrementValueXML(TABLE, ROW_1, COLUMN_1,
-        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+      Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(200, response.getCode());
@@ -775,14 +742,14 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValuePB(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append cell
+    // append cell
     response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_5);
     assertEquals(200, response.getCode());
     checkIncrementValuePB(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValuePB(TABLE, ROW_1, COLUMN_1, VALUE_6);
     assertEquals(200, response.getCode());
     checkIncrementValuePB(TABLE, ROW_1, COLUMN_1,
-        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+      Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(200, response.getCode());
@@ -793,14 +760,14 @@ public class TestGetAndPutResource extends RowResourceBase {
     Response response = getValueJson(TABLE, ROW_1, COLUMN_1);
     assertEquals(404, response.getCode());
 
-    //append cell
+    // append cell
     response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_5);
     assertEquals(200, response.getCode());
     checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1, Long.parseLong(VALUE_5));
     response = incrementValueJson(TABLE, ROW_1, COLUMN_1, VALUE_6);
     assertEquals(200, response.getCode());
     checkIncrementValueJSON(TABLE, ROW_1, COLUMN_1,
-        Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
+      Long.parseLong(VALUE_5) + Long.parseLong(VALUE_6));
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(200, response.getCode());

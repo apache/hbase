@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -90,11 +91,19 @@ public class TestMetricsTableAggregate {
     HELPER.assertGauge(pre + "regionCount", 11, agg);
     HELPER.assertGauge(pre + "storeCount", 22, agg);
     HELPER.assertGauge(pre + "storeFileCount", 33, agg);
+    HELPER.assertGauge(pre + "maxStoreFileCount", 8, agg);
     HELPER.assertGauge(pre + "maxStoreFileAge", 44, agg);
     HELPER.assertGauge(pre + "minStoreFileAge", 55, agg);
     HELPER.assertGauge(pre + "avgStoreFileAge", 66, agg);
     HELPER.assertGauge(pre + "numReferenceFiles", 77, agg);
     HELPER.assertGauge(pre + "averageRegionSize", 88, agg);
+
+    HELPER.assertGauge(pre + "staticIndexSize", 101, agg);
+    HELPER.assertGauge(pre + "staticBloomSize", 111, agg);
+
+    HELPER.assertCounter(pre + "bloomFilterRequestsCount", 222, agg);
+    HELPER.assertCounter(pre + "bloomFilterNegativeResultsCount", 333, agg);
+    HELPER.assertCounter(pre + "bloomFilterEligibleRequestsCount", 444, agg);
   }
 
   @Test

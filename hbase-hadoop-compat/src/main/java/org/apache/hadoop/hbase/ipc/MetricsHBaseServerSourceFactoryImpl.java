@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,19 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.HashMap;
 import java.util.Locale;
-
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum SourceStorage {
     INSTANCE;
-    HashMap<String, MetricsHBaseServerSource> sources = new HashMap<>();
+
+    private final HashMap<String, MetricsHBaseServerSource> sources = new HashMap<>();
   }
 
   @Override
@@ -37,19 +37,16 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
   }
 
   private static synchronized MetricsHBaseServerSource getSource(String serverName,
-                                                                 MetricsHBaseServerWrapper wrap) {
+    MetricsHBaseServerWrapper wrap) {
     String context = createContextName(serverName);
     MetricsHBaseServerSource source = SourceStorage.INSTANCE.sources.get(context);
 
     if (source == null) {
-      //Create the source.
-      source = new MetricsHBaseServerSourceImpl(
-          context,
-          METRICS_DESCRIPTION,
-          context.toLowerCase(Locale.ROOT),
-          context + METRICS_JMX_CONTEXT_SUFFIX, wrap);
+      // Create the source.
+      source = new MetricsHBaseServerSourceImpl(context, METRICS_DESCRIPTION,
+        context.toLowerCase(Locale.ROOT), context + METRICS_JMX_CONTEXT_SUFFIX, wrap);
 
-      //Store back in storage
+      // Store back in storage
       SourceStorage.INSTANCE.sources.put(context, source);
     }
 

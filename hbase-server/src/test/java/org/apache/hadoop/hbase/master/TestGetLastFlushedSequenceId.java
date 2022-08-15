@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -53,7 +53,7 @@ public class TestGetLastFlushedSequenceId {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGetLastFlushedSequenceId.class);
+    HBaseClassTestRule.forClass(TestGetLastFlushedSequenceId.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
@@ -76,11 +76,11 @@ public class TestGetLastFlushedSequenceId {
 
   @Test
   public void test() throws IOException, InterruptedException {
-    testUtil.getAdmin().createNamespace(
-      NamespaceDescriptor.create(tableName.getNamespaceAsString()).build());
+    testUtil.getAdmin()
+      .createNamespace(NamespaceDescriptor.create(tableName.getNamespaceAsString()).build());
     Table table = testUtil.createTable(tableName, families);
-    table.put(new Put(Bytes.toBytes("k"))
-            .addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
+    table
+      .put(new Put(Bytes.toBytes("k")).addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
     SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     Region region = null;

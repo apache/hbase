@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,10 +40,9 @@ public class TestBackupRepair extends TestBackupBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupRepair.class);
+    HBaseClassTestRule.forClass(TestBackupRepair.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupRepair.class);
-
 
   @Test
   public void testFullBackupWithFailuresAndRestore() throws Exception {
@@ -52,7 +51,7 @@ public class TestBackupRepair extends TestBackupBase {
 
     conf1.set(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS,
       FullTableBackupClientForTest.class.getName());
-    int maxStage = Stage.values().length -1;
+    int maxStage = Stage.values().length - 1;
     // Fail stage in loop between 0 and 4 inclusive
     for (int stage = 0; stage < maxStage; stage++) {
       LOG.info("Running stage " + stage);
@@ -65,23 +64,22 @@ public class TestBackupRepair extends TestBackupBase {
     conf1.setInt(FullTableBackupClientForTest.BACKUP_TEST_MODE_STAGE, stage);
     try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
       int before = table.getBackupHistory().size();
-      String[] args =
-          new String[] { "create", "full", BACKUP_ROOT_DIR, "-t",
-              table1.getNameAsString() + "," + table2.getNameAsString() };
+      String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-t",
+        table1.getNameAsString() + "," + table2.getNameAsString() };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertFalse(ret == 0);
 
       // Now run restore
-      args = new String[] {"repair"};
+      args = new String[] { "repair" };
 
-      ret  = ToolRunner.run(conf1, new BackupDriver(), args);
+      ret = ToolRunner.run(conf1, new BackupDriver(), args);
       assertTrue(ret == 0);
 
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertTrue(after ==  before +1);
+      assertTrue(after == before + 1);
       for (BackupInfo data : backups) {
         String backupId = data.getBackupId();
         assertFalse(checkSucceeded(backupId));
@@ -90,6 +88,5 @@ public class TestBackupRepair extends TestBackupBase {
       assertTrue(tables.size() == 0);
     }
   }
-
 
 }

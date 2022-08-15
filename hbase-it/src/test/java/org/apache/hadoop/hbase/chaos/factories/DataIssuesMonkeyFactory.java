@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.factories;
 
 import org.apache.hadoop.hbase.chaos.actions.Action;
@@ -27,9 +26,8 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 
 /**
- * A chaos monkey to delete and corrupt regionserver data, requires a user with
- * passwordless ssh access to the cluster and sudo privileges.
- * Highly destructive
+ * A chaos monkey to delete and corrupt regionserver data, requires a user with passwordless ssh
+ * access to the cluster and sudo privileges. Highly destructive
  */
 public class DataIssuesMonkeyFactory extends MonkeyFactory {
 
@@ -43,15 +41,11 @@ public class DataIssuesMonkeyFactory extends MonkeyFactory {
     loadProperties();
 
     // Highly destructive actions to mess things around.
-    Action[] actions1 = new Action[] {
-      new DeleteDataFilesAction(chanceToAct),
-      new CorruptDataFilesAction(chanceToAct)
-    };
+    Action[] actions1 = new Action[] { new DeleteDataFilesAction(chanceToAct),
+      new CorruptDataFilesAction(chanceToAct) };
 
     // Action to log more info for debugging
-    Action[] actions2 = new Action[] {
-      new DumpClusterStatusAction()
-    };
+    Action[] actions2 = new Action[] { new DumpClusterStatusAction() };
 
     return new PolicyBasedChaosMonkey(properties, util,
       new PeriodicRandomActionPolicy(action1Period, actions1),
@@ -59,14 +53,13 @@ public class DataIssuesMonkeyFactory extends MonkeyFactory {
   }
 
   private void loadProperties() {
-    action1Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-      MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-    action2Period = Long.parseLong(this.properties.getProperty(
-      MonkeyConstants.PERIODIC_ACTION2_PERIOD,
-      MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-    chanceToAct = Float.parseFloat(this.properties.getProperty(
-        MonkeyConstants.DATA_ISSUE_CHANCE,
-        MonkeyConstants.DEFAULT_DATA_ISSUE_CHANCE+ ""));
+    action1Period =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
+    action2Period =
+      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION2_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
+    chanceToAct = Float.parseFloat(this.properties.getProperty(MonkeyConstants.DATA_ISSUE_CHANCE,
+      MonkeyConstants.DEFAULT_DATA_ISSUE_CHANCE + ""));
   }
 }

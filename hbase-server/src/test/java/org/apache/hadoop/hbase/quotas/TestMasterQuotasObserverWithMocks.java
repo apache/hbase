@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class TestMasterQuotasObserverWithMocks {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMasterQuotasObserverWithMocks.class);
+    HBaseClassTestRule.forClass(TestMasterQuotasObserverWithMocks.class);
 
   private HMaster master;
   private Configuration conf;
@@ -56,8 +56,7 @@ public class TestMasterQuotasObserverWithMocks {
   public void setup() {
     conf = HBaseConfiguration.create();
     master = mock(HMaster.class);
-    doCallRealMethod().when(master).updateConfigurationForQuotasObserver(
-        any());
+    doCallRealMethod().when(master).updateConfigurationForQuotasObserver(any());
   }
 
   @Test
@@ -80,11 +79,9 @@ public class TestMasterQuotasObserverWithMocks {
     master.updateConfigurationForQuotasObserver(conf);
     Set<String> coprocs = new HashSet<>(conf.getStringCollection(MASTER_COPROCESSOR_CONF_KEY));
     assertEquals(2, coprocs.size());
-    assertTrue(
-        "Observed coprocessors were: " + coprocs,
-        coprocs.contains(AccessController.class.getName()));
-    assertTrue(
-        "Observed coprocessors were: " + coprocs,
-        coprocs.contains(MasterQuotasObserver.class.getName()));
+    assertTrue("Observed coprocessors were: " + coprocs,
+      coprocs.contains(AccessController.class.getName()));
+    assertTrue("Observed coprocessors were: " + coprocs,
+      coprocs.contains(MasterQuotasObserver.class.getName()));
   }
 }

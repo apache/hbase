@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,7 +28,6 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuo
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,13 +50,15 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Disabled because flakey. Fails ~30% on a resource constrained GCE though not on Apache.
-@Category({RegionServerTests.class, MediumTests.class})
+// This tests breaks monotonic WAL numbering after HBASE-20746 because of how it
+// manipulates the EnvironmentEdge.
+@Ignore("See HBASE-27243")
+@Category({ RegionServerTests.class, MediumTests.class })
 public class TestQuotaThrottle {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestQuotaThrottle.class);
+    HBaseClassTestRule.forClass(TestQuotaThrottle.class);
 
   private final static Logger LOG = LoggerFactory.getLogger(TestQuotaThrottle.class);
 
@@ -67,11 +68,9 @@ public class TestQuotaThrottle {
   private final static byte[] FAMILY = Bytes.toBytes("cf");
   private final static byte[] QUALIFIER = Bytes.toBytes("q");
 
-  private final static TableName[] TABLE_NAMES = new TableName[] {
-    TableName.valueOf("TestQuotaAdmin0"),
-    TableName.valueOf("TestQuotaAdmin1"),
-    TableName.valueOf("TestQuotaAdmin2")
-  };
+  private final static TableName[] TABLE_NAMES =
+    new TableName[] { TableName.valueOf("TestQuotaAdmin0"), TableName.valueOf("TestQuotaAdmin1"),
+      TableName.valueOf("TestQuotaAdmin2") };
 
   private static Table[] tables;
 

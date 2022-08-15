@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,17 +38,18 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test CoreCoprocessor Annotation works giving access to facility not usually available.
- * Test RegionServerCoprocessor.
+ * Test CoreCoprocessor Annotation works giving access to facility not usually available. Test
+ * RegionServerCoprocessor.
  */
-@Category({CoprocessorTests.class, SmallTests.class})
+@Category({ CoprocessorTests.class, SmallTests.class })
 public class TestCoreRegionServerCoprocessor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCoreRegionServerCoprocessor.class);
+    HBaseClassTestRule.forClass(TestCoreRegionServerCoprocessor.class);
 
-  @Rule public TestName name = new TestName();
+  @Rule
+  public TestName name = new TestName();
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private RegionServerServices rss;
   private RegionServerCoprocessorHost rsch;
@@ -70,7 +71,8 @@ public class TestCoreRegionServerCoprocessor {
    * RegionServerServices instance after some gymnastics.
    */
   public static class NotCoreRegionServerCoprocessor implements RegionServerCoprocessor {
-    public NotCoreRegionServerCoprocessor() {}
+    public NotCoreRegionServerCoprocessor() {
+    }
   }
 
   /**
@@ -79,22 +81,21 @@ public class TestCoreRegionServerCoprocessor {
    */
   @CoreCoprocessor
   public static class CoreRegionServerCoprocessor implements RegionServerCoprocessor {
-    public CoreRegionServerCoprocessor() {}
+    public CoreRegionServerCoprocessor() {
+    }
   }
 
   /**
-   * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to
-   * access a RegionServerServices instance. Assert the opposite too.
-   * Do it to RegionServerCoprocessors.
-   * @throws IOException
+   * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to access
+   * a RegionServerServices instance. Assert the opposite too. Do it to RegionServerCoprocessors. n
    */
   @Test
   public void testCoreRegionCoprocessor() throws IOException {
     RegionServerCoprocessorEnvironment env =
-        rsch.load(null, NotCoreRegionServerCoprocessor.class.getName(), 0, HTU.getConfiguration());
+      rsch.load(null, NotCoreRegionServerCoprocessor.class.getName(), 0, HTU.getConfiguration());
     assertFalse(env instanceof HasRegionServerServices);
     env = rsch.load(null, CoreRegionServerCoprocessor.class.getName(), 1, HTU.getConfiguration());
     assertTrue(env instanceof HasRegionServerServices);
-    assertEquals(this.rss, ((HasRegionServerServices)env).getRegionServerServices());
+    assertEquals(this.rss, ((HasRegionServerServices) env).getRegionServerServices());
   }
 }

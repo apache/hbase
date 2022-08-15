@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
+
 import java.util.concurrent.locks.Lock;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -30,17 +31,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 /**
  * This callable is used to do the real split WAL task. It is called by
  * {@link org.apache.hadoop.hbase.master.procedure.SplitWALRemoteProcedure} from master and executed
- * by executor service which is in charge of executing the events of EventType.RS_LOG_REPLAY
- *
- * When execute this callable, it will call SplitLogWorker.splitLog() to split the WAL.
- * If the return value is SplitLogWorker.TaskExecutor.Status.DONE, it means the task is successful
- * and it will return null to end the call. Otherwise it will throw an exception and let
+ * by executor service which is in charge of executing the events of EventType.RS_LOG_REPLAY When
+ * execute this callable, it will call SplitLogWorker.splitLog() to split the WAL. If the return
+ * value is SplitLogWorker.TaskExecutor.Status.DONE, it means the task is successful and it will
+ * return null to end the call. Otherwise it will throw an exception and let
  * {@link org.apache.hadoop.hbase.master.procedure.SplitWALRemoteProcedure} to handle this problem.
- *
  * This class is to replace the zk-based WAL splitting related code, {@link SplitLogWorker},
  * {@link org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination} and
- * {@link org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination} can be removed after
- * we switch to procedure-based WAL splitting.
+ * {@link org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination} can be removed after we
+ * switch to procedure-based WAL splitting.
  */
 @InterfaceAudience.Private
 public class SplitWALCallable extends BaseRSProcedureCallable {
@@ -48,7 +47,6 @@ public class SplitWALCallable extends BaseRSProcedureCallable {
   private String walPath;
   private final KeyLocker<String> splitWALLocks = new KeyLocker<>();
   private volatile Lock splitWALLock = null;
-
 
   @Override
   protected void initParameter(byte[] parameter) throws InvalidProtocolBufferException {
@@ -82,10 +80,11 @@ public class SplitWALCallable extends BaseRSProcedureCallable {
 
   @Override
   protected void doCall() throws Exception {
-    //grab a lock
+    // grab a lock
     splitWALLock = splitWALLocks.acquireLock(walPath);
     try {
-      switch (SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs, rs.getWalFactory())) {
+      switch (SplitLogWorker.splitLog(walPath, null, rs.getConfiguration(), rs, rs,
+        rs.getWalFactory())) {
         case DONE:
           break;
         case PREEMPTED:

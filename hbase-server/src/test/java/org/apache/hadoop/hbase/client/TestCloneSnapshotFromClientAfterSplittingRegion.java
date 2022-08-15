@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,7 +32,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 @Category({ LargeTests.class, ClientTests.class })
 public class TestCloneSnapshotFromClientAfterSplittingRegion
-    extends CloneSnapshotFromClientAfterSplittingRegionTestBase {
+  extends CloneSnapshotFromClientAfterSplittingRegionTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,15 +19,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Collection;
 import java.util.HashSet;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A {@link FlushPolicy} that only flushes store larger than a given threshold. If no store is large
- * enough, then all stores will be flushed.
- * Gives priority to selecting regular stores first, and only if no other
- * option, selects sloppy stores which normaly require more memory.
+ * enough, then all stores will be flushed. Gives priority to selecting regular stores first, and
+ * only if no other option, selects sloppy stores which normaly require more memory.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
@@ -35,9 +33,7 @@ public class FlushNonSloppyStoresFirstPolicy extends FlushLargeStoresPolicy {
   private Collection<HStore> regularStores = new HashSet<>();
   private Collection<HStore> sloppyStores = new HashSet<>();
 
-  /**
-   * @return the stores need to be flushed.
-   */
+  /** Returns the stores need to be flushed. */
   @Override
   public Collection<HStore> selectStoresToFlush() {
     Collection<HStore> specificStoresToFlush = new HashSet<>();

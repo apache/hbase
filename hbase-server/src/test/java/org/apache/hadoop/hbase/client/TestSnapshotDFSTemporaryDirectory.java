@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -38,16 +38,14 @@ import org.junit.experimental.categories.Category;
  * This is an end-to-end test for the snapshot utility
  */
 @Category(LargeTests.class)
-public class TestSnapshotDFSTemporaryDirectory
-    extends TestSnapshotTemporaryDirectory {
+public class TestSnapshotDFSTemporaryDirectory extends TestSnapshotTemporaryDirectory {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotDFSTemporaryDirectory.class);
+    HBaseClassTestRule.forClass(TestSnapshotDFSTemporaryDirectory.class);
 
   /**
    * Setup the config for the cluster
-   *
    * @throws Exception on failure
    */
   @BeforeClass
@@ -71,10 +69,11 @@ public class TestSnapshotDFSTemporaryDirectory
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-        ConstantSizeRegionSplitPolicy.class.getName());
+      ConstantSizeRegionSplitPolicy.class.getName());
 
-    String snapshotPath = UTIL.getDefaultRootDirPath().toString() + Path.SEPARATOR +
-        UUID.randomUUID().toString() + Path.SEPARATOR + ".tmpdir" + Path.SEPARATOR;
-    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR, "file://" + new Path(snapshotPath).toUri());
+    String snapshotPath = UTIL.getDefaultRootDirPath().toString() + Path.SEPARATOR
+      + UUID.randomUUID().toString() + Path.SEPARATOR + ".tmpdir" + Path.SEPARATOR;
+    conf.set(SnapshotDescriptionUtils.SNAPSHOT_WORKING_DIR,
+      "file://" + new Path(snapshotPath).toUri());
   }
 }

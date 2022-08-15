@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.http;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,18 +32,16 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.http.HttpServer.Builder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is a base class for functional tests of the {@link HttpServer}.
- * The methods are static for other classes to import statically.
+ * This is a base class for functional tests of the {@link HttpServer}. The methods are static for
+ * other classes to import statically.
  */
-public class HttpServerFunctionalTest extends Assert {
+public class HttpServerFunctionalTest {
   private static final Logger LOG = LoggerFactory.getLogger(HttpServerFunctionalTest.class);
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
@@ -52,12 +52,10 @@ public class HttpServerFunctionalTest extends Assert {
   private static final String TEST = "test";
 
   /**
-   * Create but do not start the test webapp server. The test webapp dir is
-   * prepared/checked in advance.
-   *
+   * Create but do not start the test webapp server. The test webapp dir is prepared/checked in
+   * advance.
    * @return the server instance
-   *
-   * @throws IOException if a problem occurs
+   * @throws IOException    if a problem occurs
    * @throws AssertionError if a condition was not met
    */
   public static HttpServer createTestServer() throws IOException {
@@ -66,76 +64,67 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   /**
-   * Create but do not start the test webapp server. The test webapp dir is
-   * prepared/checked in advance.
+   * Create but do not start the test webapp server. The test webapp dir is prepared/checked in
+   * advance.
    * @param conf the server configuration to use
    * @return the server instance
-   *
-   * @throws IOException if a problem occurs
+   * @throws IOException    if a problem occurs
    * @throws AssertionError if a condition was not met
    */
-  public static HttpServer createTestServer(Configuration conf)
-      throws IOException {
+  public static HttpServer createTestServer(Configuration conf) throws IOException {
     prepareTestWebapp();
     return createServer(TEST, conf);
   }
 
   public static HttpServer createTestServer(Configuration conf, AccessControlList adminsAcl)
-      throws IOException {
+    throws IOException {
     prepareTestWebapp();
     return createServer(TEST, conf, adminsAcl);
   }
 
   /**
-   * Create but do not start the test webapp server. The test webapp dir is
-   * prepared/checked in advance.
+   * Create but do not start the test webapp server. The test webapp dir is prepared/checked in
+   * advance.
    * @param conf the server configuration to use
    * @return the server instance
-   *
-   * @throws IOException if a problem occurs
+   * @throws IOException    if a problem occurs
    * @throws AssertionError if a condition was not met
    */
-  public static HttpServer createTestServer(Configuration conf,
-      String[] pathSpecs) throws IOException {
+  public static HttpServer createTestServer(Configuration conf, String[] pathSpecs)
+    throws IOException {
     prepareTestWebapp();
     return createServer(TEST, conf, pathSpecs);
   }
 
   public static HttpServer createTestServerWithSecurity(Configuration conf) throws IOException {
-      prepareTestWebapp();
-      return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
-          // InfoServer normally sets these for us
-          .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
-          .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
-          .build();
-    }
-
-  public static HttpServer createTestServerWithSecurityAndAcl(Configuration conf, AccessControlList acl) throws IOException {
     prepareTestWebapp();
     return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
-        // InfoServer normally sets these for us
-        .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
-        .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY)
-        .setSecurityEnabled(true)
-        .setACL(acl)
-        .build();
+      // InfoServer normally sets these for us
+      .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
+      .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY).build();
+  }
+
+  public static HttpServer createTestServerWithSecurityAndAcl(Configuration conf,
+    AccessControlList acl) throws IOException {
+    prepareTestWebapp();
+    return localServerBuilder(TEST).setFindPort(true).setConf(conf).setSecurityEnabled(true)
+      // InfoServer normally sets these for us
+      .setUsernameConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_PRINCIPAL_KEY)
+      .setKeytabConfKey(HttpServer.HTTP_SPNEGO_AUTHENTICATION_KEYTAB_KEY).setSecurityEnabled(true)
+      .setACL(acl).build();
   }
 
   /**
-   * Prepare the test webapp by creating the directory from the test properties
-   * fail if the directory cannot be created.
+   * Prepare the test webapp by creating the directory from the test properties fail if the
+   * directory cannot be created.
+   * @throws IOException    if an error occurred
    * @throws AssertionError if a condition was not met
    */
-  protected static void prepareTestWebapp() {
+  protected static void prepareTestWebapp() throws IOException {
     String webapps = System.getProperty(TEST_BUILD_WEBAPPS, BUILD_WEBAPPS_DIR);
-    File testWebappDir = new File(webapps +
-        File.separatorChar + TEST);
-    try {
-      if (!testWebappDir.exists()) {
-        fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
-      }
-    }
-    catch (IOException e) {
+    File testWebappDir = new File(webapps + File.separatorChar + TEST);
+    if (!testWebappDir.exists()) {
+      fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
     }
   }
 
@@ -146,12 +135,10 @@ public class HttpServerFunctionalTest extends Assert {
    * @return the server
    * @throws IOException if it could not be created
    */
-  public static HttpServer createServer(String host, int port)
-      throws IOException {
+  public static HttpServer createServer(String host, int port) throws IOException {
     prepareTestWebapp();
     return new HttpServer.Builder().setName(TEST)
-        .addEndpoint(URI.create("http://" + host + ":" + port))
-        .setFindPort(true).build();
+      .addEndpoint(URI.create("http://" + host + ":" + port)).setFindPort(true).build();
   }
 
   /**
@@ -163,48 +150,45 @@ public class HttpServerFunctionalTest extends Assert {
   public static HttpServer createServer(String webapp) throws IOException {
     return localServerBuilder(webapp).setFindPort(true).build();
   }
+
   /**
    * Create an HttpServer instance for the given webapp
    * @param webapp the webapp to work with
-   * @param conf the configuration to use for the server
+   * @param conf   the configuration to use for the server
    * @return the server
    * @throws IOException if it could not be created
    */
-  public static HttpServer createServer(String webapp, Configuration conf)
-      throws IOException {
+  public static HttpServer createServer(String webapp, Configuration conf) throws IOException {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).build();
   }
 
   public static HttpServer createServer(String webapp, Configuration conf,
-      AccessControlList adminsAcl) throws IOException {
+    AccessControlList adminsAcl) throws IOException {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
   }
 
-  private static Builder localServerBuilder(String webapp) {
-    return new HttpServer.Builder().setName(webapp).addEndpoint(
-        URI.create("http://localhost:0"));
+  private static HttpServer.Builder localServerBuilder(String webapp) {
+    return new HttpServer.Builder().setName(webapp).addEndpoint(URI.create("http://localhost:0"));
   }
 
   /**
    * Create an HttpServer instance for the given webapp
-   * @param webapp the webapp to work with
-   * @param conf the configuration to use for the server
+   * @param webapp    the webapp to work with
+   * @param conf      the configuration to use for the server
    * @param pathSpecs the paths specifications the server will service
    * @return the server
    * @throws IOException if it could not be created
    */
-  public static HttpServer createServer(String webapp, Configuration conf,
-      String[] pathSpecs) throws IOException {
+  public static HttpServer createServer(String webapp, Configuration conf, String[] pathSpecs)
+    throws IOException {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).setPathSpec(pathSpecs)
-            .build();
+      .build();
   }
 
   /**
    * Create and start a server with the test webapp
-   *
    * @return the newly started server
-   *
-   * @throws IOException on any failure
+   * @throws IOException    on any failure
    * @throws AssertionError if a condition was not met
    */
   public static HttpServer createAndStartTestServer() throws IOException {
@@ -230,11 +214,9 @@ public class HttpServerFunctionalTest extends Assert {
    * @return a URL bonded to the base of the server
    * @throws MalformedURLException if the URL cannot be created.
    */
-  public static URL getServerURL(HttpServer server)
-      throws MalformedURLException {
+  public static URL getServerURL(HttpServer server) throws MalformedURLException {
     assertNotNull("No server", server);
-    return new URL("http://"
-        + NetUtils.getHostPortString(server.getConnectorAddress(0)));
+    return new URL("http://" + NetUtils.getHostPortString(server.getConnectorAddress(0)));
   }
 
   /**
@@ -249,7 +231,7 @@ public class HttpServerFunctionalTest extends Assert {
     byte[] buffer = new byte[64 * 1024];
     int len = in.read(buffer);
     while (len > 0) {
-      out.append(new String(buffer, 0, len));
+      out.append(new String(buffer, 0, len, StandardCharsets.UTF_8));
       len = in.read(buffer);
     }
     return out.toString();
@@ -297,15 +279,14 @@ public class HttpServerFunctionalTest extends Assert {
     URLConnection connection = url.openConnection();
     connection.connect();
 
-    try (BufferedReader in = new BufferedReader(new InputStreamReader(
-        connection.getInputStream(), StandardCharsets.UTF_8))){
-      for(; in.readLine() != null;) {
+    try (BufferedReader in = new BufferedReader(
+      new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+      for (; in.readLine() != null;) {
         continue;
       }
-    } catch(IOException ioe) {
+    } catch (IOException ioe) {
       LOG.info("Got exception: ", ioe);
     }
   }
-
 
 }

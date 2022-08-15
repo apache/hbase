@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -40,7 +40,7 @@ public class TestFSWALEntry {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFSWALEntry.class);
+    HBaseClassTestRule.forClass(TestFSWALEntry.class);
 
   @Test
   public void testCollectFamilies() {
@@ -51,52 +51,33 @@ public class TestFSWALEntry {
     List<Cell> cells = new ArrayList<>();
     assertEquals(0, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(family0).setFamily(family0).setQualifier(family0)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family0)
+      .setFamily(family0).setQualifier(family0).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     assertEquals(1, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(family1).setFamily(family1).setQualifier(family1)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family1)
+      .setFamily(family1).setQualifier(family1).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     assertEquals(2, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(family0).setFamily(family0).setQualifier(family0)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
-    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(family1).setFamily(family1).setQualifier(family1)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family0)
+      .setFamily(family0).setQualifier(family0).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family1)
+      .setFamily(family1).setQualifier(family1).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     assertEquals(2, FSWALEntry.collectFamilies(cells).size());
 
-    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(family2).setFamily(family2).setQualifier(family2)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
+    cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(family2)
+      .setFamily(family2).setQualifier(family2).setTimestamp(HConstants.LATEST_TIMESTAMP)
+      .setType(KeyValue.Type.Maximum.getCode()).setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     assertEquals(3, FSWALEntry.collectFamilies(cells).size());
 
     cells.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(WALEdit.METAFAMILY).setFamily(WALEdit.METAFAMILY)
-      .setQualifier(WALEdit.METAFAMILY)
-      .setTimestamp(HConstants.LATEST_TIMESTAMP)
-      .setType(KeyValue.Type.Maximum.getCode())
-      .setValue(HConstants.EMPTY_BYTE_ARRAY)
-      .build());
+      .setRow(WALEdit.METAFAMILY).setFamily(WALEdit.METAFAMILY).setQualifier(WALEdit.METAFAMILY)
+      .setTimestamp(HConstants.LATEST_TIMESTAMP).setType(KeyValue.Type.Maximum.getCode())
+      .setValue(HConstants.EMPTY_BYTE_ARRAY).build());
     assertEquals(3, FSWALEntry.collectFamilies(cells).size());
   }
 }
-

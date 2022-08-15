@@ -42,7 +42,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category({SecurityTests.class, SmallTests.class})
+@Category({ SecurityTests.class, SmallTests.class })
 public class TestFsDelegationToken {
   private UserProvider userProvider = Mockito.mock(UserProvider.class);
   private User user = Mockito.mock(User.class);
@@ -56,7 +56,7 @@ public class TestFsDelegationToken {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestFsDelegationToken.class);
+    HBaseClassTestRule.forClass(TestFsDelegationToken.class);
 
   @Before
   public void setup() throws IOException, URISyntaxException {
@@ -68,16 +68,13 @@ public class TestFsDelegationToken {
     when(webHdfsFileSystem.getUri()).thenReturn(new URI("webhdfs://someUri"));
     when(swebHdfsFileSystem.getCanonicalServiceName()).thenReturn("swebhdfs://");
     when(swebHdfsFileSystem.getUri()).thenReturn(new URI("swebhdfs://someUri"));
-    when(user.getToken(
-        HDFS_DELEGATION_KIND.toString(),
-        fileSystem.getCanonicalServiceName()))
-        .thenReturn(hdfsToken);
-    when(user.getToken(
-        WEBHDFS_TOKEN_KIND.toString(),
-        webHdfsFileSystem.getCanonicalServiceName())).thenReturn(webhdfsToken);
-    when(user.getToken(
-        SWEBHDFS_TOKEN_KIND.toString(),
-        swebHdfsFileSystem.getCanonicalServiceName())).thenReturn(swebhdfsToken);
+    when(user.getToken(HDFS_DELEGATION_KIND.toString(), fileSystem.getCanonicalServiceName()))
+      .thenReturn(hdfsToken);
+    when(user.getToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem.getCanonicalServiceName()))
+      .thenReturn(webhdfsToken);
+    when(
+      user.getToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem.getCanonicalServiceName()))
+        .thenReturn(swebhdfsToken);
     when(hdfsToken.getKind()).thenReturn(new Text("HDFS_DELEGATION_TOKEN"));
     when(webhdfsToken.getKind()).thenReturn(WEBHDFS_TOKEN_KIND);
     when(swebhdfsToken.getKind()).thenReturn(SWEBHDFS_TOKEN_KIND);
@@ -86,22 +83,19 @@ public class TestFsDelegationToken {
   @Test
   public void acquireDelegationToken_defaults_to_hdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(fileSystem);
-    assertEquals(
-        fsDelegationToken.getUserToken().getKind(), HDFS_DELEGATION_KIND);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), HDFS_DELEGATION_KIND);
   }
 
   @Test
   public void acquireDelegationToken_webhdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(webHdfsFileSystem);
-    assertEquals(
-        fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
   }
 
   @Test
   public void acquireDelegationToken_swebhdfsFileSystem() throws IOException {
     fsDelegationToken.acquireDelegationToken(swebHdfsFileSystem);
-    assertEquals(
-        fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
+    assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
   }
 
   @Test(expected = NullPointerException.class)
@@ -111,16 +105,13 @@ public class TestFsDelegationToken {
 
   @Test
   public void acquireDelegationTokenByTokenKind_webhdfsFileSystem() throws IOException {
-    fsDelegationToken
-        .acquireDelegationToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem);
+    fsDelegationToken.acquireDelegationToken(WEBHDFS_TOKEN_KIND.toString(), webHdfsFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), WEBHDFS_TOKEN_KIND);
   }
 
   @Test
   public void acquireDelegationTokenByTokenKind_swebhdfsFileSystem() throws IOException {
-    fsDelegationToken
-        .acquireDelegationToken(
-            SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem);
+    fsDelegationToken.acquireDelegationToken(SWEBHDFS_TOKEN_KIND.toString(), swebHdfsFileSystem);
     assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
   }
 }

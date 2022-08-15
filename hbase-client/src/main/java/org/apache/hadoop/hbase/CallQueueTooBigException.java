@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Returned to clients when their request was dropped because the call queue was too big to
- * accept a new call. Clients should retry upon receiving it.
+ * Returned to clients when their request was dropped because the call queue was too big to accept a
+ * new call. Clients should retry upon receiving it.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public

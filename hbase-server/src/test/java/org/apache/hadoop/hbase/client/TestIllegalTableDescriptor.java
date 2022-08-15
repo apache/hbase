@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -44,19 +44,19 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 
-@Category({LargeTests.class, ClientTests.class})
+@Category({ LargeTests.class, ClientTests.class })
 public class TestIllegalTableDescriptor {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestIllegalTableDescriptor.class);
+    HBaseClassTestRule.forClass(TestIllegalTableDescriptor.class);
 
   // NOTE: Increment tests were moved to their own class, TestIncrementsFromClientSide.
   private static final Logger LOGGER;
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
   @Rule
   public TestName name = new TestName();
@@ -142,7 +142,7 @@ public class TestIllegalTableDescriptor {
     checkTableIsLegal(builder.modifyColumnFamily(cfBuilder.build()).build());
 
     // HBASE-13776 Setting illegal versions for HColumnDescriptor
-    //  does not throw IllegalArgumentException
+    // does not throw IllegalArgumentException
     // finally, minVersions must be less than or equal to maxVersions
     cfBuilder.setMaxVersions(4);
     cfBuilder.setMinVersions(5);
@@ -183,8 +183,8 @@ public class TestIllegalTableDescriptor {
     checkTableIsLegal(builder.build());
 
     verify(LOGGER).warn(contains("MEMSTORE_FLUSHSIZE for table "
-        + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
-        + "cause very frequent flushing."));
+      + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
+      + "cause very frequent flushing."));
   }
 
   private void checkTableIsLegal(TableDescriptor tableDescriptor) throws IOException {
@@ -199,7 +199,7 @@ public class TestIllegalTableDescriptor {
     try {
       admin.createTable(tableDescriptor);
       fail();
-    } catch(Exception ex) {
+    } catch (Exception ex) {
       // should throw ex
     }
     assertFalse(admin.tableExists(tableDescriptor.getTableName()));

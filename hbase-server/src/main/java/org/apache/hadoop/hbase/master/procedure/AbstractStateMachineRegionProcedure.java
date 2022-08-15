@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,12 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,13 +27,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 /**
- * Base class for all the Region procedures that want to use a StateMachine.
- * It provides some basic helpers like basic locking, sync latch, and toStringClassDetails().
- * Defaults to holding the lock for the life of the procedure.
+ * Base class for all the Region procedures that want to use a StateMachine. It provides some basic
+ * helpers like basic locking, sync latch, and toStringClassDetails(). Defaults to holding the lock
+ * for the life of the procedure.
  */
 @InterfaceAudience.Private
 public abstract class AbstractStateMachineRegionProcedure<TState>
-    extends AbstractStateMachineTableProcedure<TState> {
+  extends AbstractStateMachineTableProcedure<TState> {
   private RegionInfo hri;
 
   protected AbstractStateMachineRegionProcedure(MasterProcedureEnv env, RegionInfo hri) {
@@ -48,9 +46,7 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
     super();
   }
 
-  /**
-   * @return The RegionInfo of the region we are operating on.
-   */
+  /** Returns The RegionInfo of the region we are operating on. */
   public RegionInfo getRegion() {
     return this.hri;
   }
@@ -99,15 +95,13 @@ public abstract class AbstractStateMachineRegionProcedure<TState>
   }
 
   @Override
-  protected void serializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     serializer.serialize(ProtobufUtil.toRegionInfo(getRegion()));
   }
 
   @Override
-  protected void deserializeStateData(ProcedureStateSerializer serializer)
-      throws IOException {
+  protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.deserializeStateData(serializer);
     this.hri = ProtobufUtil.toRegionInfo(serializer.deserialize(HBaseProtos.RegionInfo.class));
   }

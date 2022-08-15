@@ -1,39 +1,37 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.compress.aircompressor;
 
+import io.airlift.compress.Compressor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.compress.CanReinit;
 import org.apache.hadoop.hbase.io.compress.CompressionUtil;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import io.airlift.compress.Compressor;
 
 /**
  * Hadoop compressor glue for aircompressor compressors.
  */
 @InterfaceAudience.Private
 public abstract class HadoopCompressor<T extends Compressor>
-    implements CanReinit, org.apache.hadoop.io.compress.Compressor {
+  implements CanReinit, org.apache.hadoop.io.compress.Compressor {
 
-  protected static final Logger LOG = LoggerFactory.getLogger(HadoopCompressor.class);
   protected T compressor;
   protected ByteBuffer inBuf, outBuf;
   protected int bufferSize;
@@ -55,7 +53,6 @@ public abstract class HadoopCompressor<T extends Compressor>
     if (outBuf.hasRemaining()) {
       int remaining = outBuf.remaining(), n = Math.min(remaining, len);
       outBuf.get(b, off, n);
-      LOG.trace("compress: read {} remaining bytes from outBuf", n);
       return n;
     }
     // We don't actually begin compression until our caller calls finish().
@@ -76,7 +73,6 @@ public abstract class HadoopCompressor<T extends Compressor>
         } else {
           if (outBuf.capacity() < needed) {
             needed = CompressionUtil.roundInt2(needed);
-            LOG.trace("compress: resize outBuf {}", needed);
             outBuf = ByteBuffer.allocate(needed);
           } else {
             outBuf.clear();
@@ -88,42 +84,34 @@ public abstract class HadoopCompressor<T extends Compressor>
         final int written = writeBuffer.position() - oldPos;
         bytesWritten += written;
         inBuf.clear();
-        LOG.trace("compress: compressed {} -> {}", uncompressed, written);
         finished = true;
         if (!direct) {
           outBuf.flip();
           int n = Math.min(written, len);
           outBuf.get(b, off, n);
-          LOG.trace("compress: {} bytes", n);
           return n;
         } else {
-          LOG.trace("compress: {} bytes direct", written);
           return written;
         }
       } else {
         finished = true;
       }
     }
-    LOG.trace("No output");
     return 0;
   }
 
   @Override
   public void end() {
-    LOG.trace("end");
   }
 
   @Override
   public void finish() {
-    LOG.trace("finish");
     finish = true;
   }
 
   @Override
   public boolean finished() {
-    boolean b = finished && !outBuf.hasRemaining();
-    LOG.trace("finished: {}", b);
-    return b;
+    return finished && !outBuf.hasRemaining();
   }
 
   @Override
@@ -138,14 +126,11 @@ public abstract class HadoopCompressor<T extends Compressor>
 
   @Override
   public boolean needsInput() {
-    boolean b = !finished();
-    LOG.trace("needsInput: {}", b);
-    return b;
+    return !finished();
   }
 
   @Override
   public void reinit(Configuration conf) {
-    LOG.trace("reinit");
     if (conf != null) {
       // Buffer size might have changed
       int newBufferSize = getBufferSize(conf);
@@ -158,15 +143,8 @@ public abstract class HadoopCompressor<T extends Compressor>
     reset();
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void reset() {
-    LOG.trace("reset");
-    try {
-      compressor = (T)compressor.getClass().getDeclaredConstructor().newInstance();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
     inBuf.clear();
     outBuf.clear();
     outBuf.position(outBuf.capacity());
@@ -183,13 +161,11 @@ public abstract class HadoopCompressor<T extends Compressor>
 
   @Override
   public void setInput(byte[] b, int off, int len) {
-    LOG.trace("setInput: off={} len={}", off, len);
     if (inBuf.remaining() < len) {
       // Get a new buffer that can accomodate the accumulated input plus the additional
       // input that would cause a buffer overflow without reallocation.
       // This condition should be fortunately rare, because it is expensive.
       int needed = CompressionUtil.roundInt2(inBuf.capacity() + len);
-      LOG.trace("setInput: resize inBuf {}", needed);
       ByteBuffer newBuf = ByteBuffer.allocate(needed);
       inBuf.flip();
       newBuf.put(inBuf);

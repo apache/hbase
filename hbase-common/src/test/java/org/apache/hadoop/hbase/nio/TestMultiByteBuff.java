@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public class TestMultiByteBuff {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiByteBuff.class);
+    HBaseClassTestRule.forClass(TestMultiByteBuff.class);
 
   /**
    * Test right answer though we span many sub-buffers.
@@ -50,13 +50,13 @@ public class TestMultiByteBuff {
   @Test
   public void testGetShort() {
     ByteBuffer bb1 = ByteBuffer.allocate(1);
-    bb1.put((byte)1);
+    bb1.put((byte) 1);
     ByteBuffer bb2 = ByteBuffer.allocate(1);
-    bb2.put((byte)0);
+    bb2.put((byte) 0);
     ByteBuffer bb3 = ByteBuffer.allocate(1);
-    bb3.put((byte)2);
+    bb3.put((byte) 2);
     ByteBuffer bb4 = ByteBuffer.allocate(1);
-    bb4.put((byte)3);
+    bb4.put((byte) 3);
     MultiByteBuff mbb = new MultiByteBuff(bb1, bb2, bb3, bb4);
     assertEquals(256, mbb.getShortAfterPosition(0));
     assertEquals(2, mbb.getShortAfterPosition(1));
@@ -383,24 +383,21 @@ public class TestMultiByteBuff {
 
     // Test 1 Offset hitting exclusive second element
     byte[] actual = mbb1.toBytes(6, 4);
-    assertTrue(Bytes.equals(actual, 0, actual.length,
-            b1, 2, 4));
+    assertTrue(Bytes.equals(actual, 0, actual.length, b1, 2, 4));
     // Test 2 offset hitting exclusive second element
     // but continuing to the end of the second one
     actual = mbb1.toBytes(5, 7);
-    assertTrue(Bytes.equals(actual, 0, actual.length,
-            b1, 1, 7));
+    assertTrue(Bytes.equals(actual, 0, actual.length, b1, 1, 7));
     // Test 3 with offset hitting in first element,
     // continuing to next
     actual = mbb1.toBytes(2, 7);
     byte[] expected = new byte[7];
-    System.arraycopy(b, 2, expected, 0,  2);
+    System.arraycopy(b, 2, expected, 0, 2);
     System.arraycopy(b1, 0, expected, 2, 5);
     assertTrue(Bytes.equals(actual, expected));
     // Test 4 hitting only in first exclusively
     actual = mbb1.toBytes(1, 3);
-    assertTrue(Bytes.equals(actual, 0, actual.length,
-            b, 1, 3));
+    assertTrue(Bytes.equals(actual, 0, actual.length, b, 1, 3));
   }
 
   @Test

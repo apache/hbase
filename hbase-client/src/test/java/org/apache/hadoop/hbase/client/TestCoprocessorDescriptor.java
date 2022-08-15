@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,8 +33,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestCoprocessorDescriptor {
@@ -42,8 +40,6 @@ public class TestCoprocessorDescriptor {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCoprocessorDescriptor.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorDescriptor.class);
 
   @Rule
   public TestName name = new TestName();
@@ -55,9 +51,8 @@ public class TestCoprocessorDescriptor {
     int priority = 100;
     String propertyKey = "propertyKey";
     String propertyValue = "propertyValue";
-    CoprocessorDescriptor cp =
-      CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path).setPriority(priority)
-        .setProperty(propertyKey, propertyValue).build();
+    CoprocessorDescriptor cp = CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path)
+      .setPriority(priority).setProperty(propertyKey, propertyValue).build();
     assertEquals(className, cp.getClassName());
     assertEquals(path, cp.getJarPath().get());
     assertEquals(priority, cp.getPriority());
@@ -73,13 +68,11 @@ public class TestCoprocessorDescriptor {
       String path = "path";
       int priority = Math.abs(className.hashCode());
       String propertyValue = "propertyValue";
-      cps.add(
-        CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path).setPriority(priority)
-          .setProperty(propertyKey, propertyValue).build());
+      cps.add(CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path)
+        .setPriority(priority).setProperty(propertyKey, propertyValue).build());
     }
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setCoprocessors(cps).build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(name.getMethodName())).setCoprocessors(cps).build();
     for (CoprocessorDescriptor cp : cps) {
       boolean match = false;
       for (CoprocessorDescriptor that : tableDescriptor.getCoprocessorDescriptors()) {

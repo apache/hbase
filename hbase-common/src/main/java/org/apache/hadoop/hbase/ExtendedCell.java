@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -34,16 +33,15 @@ public interface ExtendedCell extends RawCell, HeapSize {
   int CELL_NOT_BASED_ON_CHUNK = -1;
 
   /**
-   * Write this cell to an OutputStream in a {@link KeyValue} format.
-   * <br> KeyValue format <br>
+   * Write this cell to an OutputStream in a {@link KeyValue} format. <br>
+   * KeyValue format <br>
    * <code>&lt;4 bytes keylength&gt; &lt;4 bytes valuelength&gt; &lt;2 bytes rowlength&gt;
    * &lt;row&gt; &lt;1 byte columnfamilylength&gt; &lt;columnfamily&gt; &lt;columnqualifier&gt;
    * &lt;8 bytes timestamp&gt; &lt;1 byte keytype&gt; &lt;value&gt; &lt;2 bytes tagslength&gt;
    * &lt;tags&gt;</code>
-   * @param out Stream to which cell has to be written
+   * @param out      Stream to which cell has to be written
    * @param withTags Whether to write tags.
-   * @return how many bytes are written.
-   * @throws IOException
+   * @return how many bytes are written. n
    */
   // TODO remove the boolean param once HBASE-16706 is done.
   default int write(OutputStream out, boolean withTags) throws IOException {
@@ -62,8 +60,8 @@ public interface ExtendedCell extends RawCell, HeapSize {
     // Tags length and tags byte array
     if (withTags && getTagsLength() > 0) {
       // Tags length
-      out.write((byte)(0xff & (getTagsLength() >> 8)));
-      out.write((byte)(0xff & getTagsLength()));
+      out.write((byte) (0xff & (getTagsLength() >> 8)));
+      out.write((byte) (0xff & getTagsLength()));
 
       // Tags byte array
       out.write(getTagsArray(), getTagsOffset(), getTagsLength());
@@ -85,12 +83,10 @@ public interface ExtendedCell extends RawCell, HeapSize {
   // TODO remove the boolean param once HBASE-16706 is done.
   default int getSerializedSize(boolean withTags) {
     return KeyValueUtil.length(getRowLength(), getFamilyLength(), getQualifierLength(),
-        getValueLength(), getTagsLength(), withTags);
+      getValueLength(), getTagsLength(), withTags);
   }
 
-  /**
-   * @return Serialized size (defaults to include tag length).
-   */
+  /** Returns Serialized size (defaults to include tag length). */
   @Override
   default int getSerializedSize() {
     return getSerializedSize(true);
@@ -98,7 +94,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
 
   /**
    * Write this Cell into the given buf's offset in a {@link KeyValue} format.
-   * @param buf The buffer where to write the Cell.
+   * @param buf    The buffer where to write the Cell.
    * @param offset The offset within buffer, to write the Cell.
    */
   default void write(ByteBuffer buf, int offset) {
@@ -118,7 +114,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
    * Extracts the id of the backing bytebuffer of this cell if it was obtained from fixed sized
    * chunks as in case of MemstoreLAB
    * @return the chunk id if the cell is backed by fixed sized Chunks, else return
-   * {@link #CELL_NOT_BASED_ON_CHUNK}; i.e. -1.
+   *         {@link #CELL_NOT_BASED_ON_CHUNK}; i.e. -1.
    */
   default int getChunkId() {
     return CELL_NOT_BASED_ON_CHUNK;
@@ -157,9 +153,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
    */
   byte[] getTagsArray();
 
-  /**
-   * @return the first offset where the tags start in the Cell
-   */
+  /** Returns the first offset where the tags start in the Cell */
   int getTagsOffset();
 
   /**
@@ -172,8 +166,6 @@ public interface ExtendedCell extends RawCell, HeapSize {
    */
   int getTagsLength();
 
-  /**
-   * @return The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc
-   */
+  /** Returns The byte representation of the KeyValue.TYPE of this cell: one of Put, Delete, etc */
   byte getTypeByte();
 }

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,15 +21,11 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -39,12 +34,14 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A utility to store user specific HConnections in memory.
- * There is a chore to clean up connections idle for too long.
- * This class is used by REST server and Thrift server to
- * support authentication and impersonation.
+ * A utility to store user specific HConnections in memory. There is a chore to clean up connections
+ * idle for too long. This class is used by REST server and Thrift server to support authentication
+ * and impersonation.
  */
 @InterfaceAudience.Private
 public class ConnectionCache {
@@ -58,27 +55,33 @@ public class ConnectionCache {
   private final Configuration conf;
   private final ChoreService choreService;
 
-  private final ThreadLocal<String> effectiveUserNames =
-      new ThreadLocal<String>() {
+  private final ThreadLocal<String> effectiveUserNames = new ThreadLocal<String>() {
     @Override
     protected String initialValue() {
       return realUserName;
     }
   };
 
-  public ConnectionCache(final Configuration conf,
-      final UserProvider userProvider,
-      final int cleanInterval, final int maxIdleTime) throws IOException {
+  public ConnectionCache(final Configuration conf, final UserProvider userProvider,
+    final int cleanInterval, final int maxIdleTime) throws IOException {
     Stoppable stoppable = new Stoppable() {
       private volatile boolean isStopped = false;
-      @Override public void stop(String why) { isStopped = true;}
-      @Override public boolean isStopped() {return isStopped;}
+
+      @Override
+      public void stop(String why) {
+        isStopped = true;
+      }
+
+      @Override
+      public boolean isStopped() {
+        return isStopped;
+      }
     };
     this.choreService = new ChoreService("ConnectionCache");
     ScheduledChore cleaner = new ScheduledChore("ConnectionCleaner", stoppable, cleanInterval) {
       @Override
       protected void chore() {
-        for (Map.Entry<String, ConnectionInfo> entry: connections.entrySet()) {
+        for (Map.Entry<String, ConnectionInfo> entry : connections.entrySet()) {
           ConnectionInfo connInfo = entry.getValue();
           if (connInfo.timedOut(maxIdleTime)) {
             if (connInfo.admin != null) {
@@ -127,8 +130,7 @@ public class ConnectionCache {
   }
 
   /**
-   * Caller doesn't close the admin afterwards.
-   * We need to manage it and close it properly.
+   * Caller doesn't close the admin afterwards. We need to manage it and close it properly.
    */
   public Admin getAdmin() throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
@@ -161,8 +163,7 @@ public class ConnectionCache {
   }
 
   /**
-   * Get the cached connection for the current user.
-   * If none or timed out, create a new one.
+   * Get the cached connection for the current user. If none or timed out, create a new one.
    */
   ConnectionInfo getCurrentConnection() throws IOException {
     String userName = getEffectiveUser();
@@ -202,9 +203,7 @@ public class ConnectionCache {
     return false;
   }
 
-  /**
-   * @return Cluster ID for the HBase cluster or null if there is an err making the connection.
-   */
+  /** Returns Cluster ID for the HBase cluster or null if there is an err making the connection. */
   public String getClusterId() {
     try {
       ConnectionInfo connInfo = getCurrentConnection();

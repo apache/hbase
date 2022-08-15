@@ -39,10 +39,9 @@ interface CatalogReplicaLoadBalanceSelector {
 
   /**
    * Select a catalog replica region where client go to loop up the input row key.
-   *
-   * @param tablename table name
-   * @param row  key to look up
-   * @param locateType  locate type
+   * @param tablename  table name
+   * @param row        key to look up
+   * @param locateType locate type
    * @return replica id
    */
   int select(TableName tablename, byte[] row, RegionLocateType locateType);

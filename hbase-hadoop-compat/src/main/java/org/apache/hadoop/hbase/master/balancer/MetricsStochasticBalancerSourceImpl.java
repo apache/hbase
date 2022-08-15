@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceImpl implements
-    MetricsStochasticBalancerSource {
+public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceImpl
+  implements MetricsStochasticBalancerSource {
   private static final String TABLE_FUNCTION_SEP = "_";
 
   // Most Recently Used(MRU) cache
@@ -38,14 +36,14 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
   private int mruCap = calcMruCap(metricsSize);
 
   private final Map<String, Map<String, Double>> stochasticCosts =
-          new LinkedHashMap<String, Map<String, Double>>(mruCap, MRU_LOAD_FACTOR, true) {
-    private static final long serialVersionUID = 8204713453436906599L;
+    new LinkedHashMap<String, Map<String, Double>>(mruCap, MRU_LOAD_FACTOR, true) {
+      private static final long serialVersionUID = 8204713453436906599L;
 
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<String, Map<String, Double>> eldest) {
-      return size() > mruCap;
-    }
-  };
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<String, Map<String, Double>> eldest) {
+        return size() > mruCap;
+      }
+    };
   private Map<String, String> costFunctionDescs = new ConcurrentHashMap<>();
 
   /**
@@ -66,8 +64,9 @@ public class MetricsStochasticBalancerSourceImpl extends MetricsBalancerSourceIm
   /**
    * Reports stochastic load balancer costs to JMX
    */
+  @Override
   public void updateStochasticCost(String tableName, String costFunctionName, String functionDesc,
-      Double cost) {
+    Double cost) {
     if (tableName == null || costFunctionName == null || cost == null) {
       return;
     }

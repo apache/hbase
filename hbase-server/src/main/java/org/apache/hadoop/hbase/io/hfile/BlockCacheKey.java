@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Cache Key for use with implementations of {@link BlockCache}
@@ -35,14 +35,14 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   /**
    * Construct a new BlockCacheKey
    * @param hfileName The name of the HFile this block belongs to.
-   * @param offset Offset of the block into the file
+   * @param offset    Offset of the block into the file
    */
   public BlockCacheKey(String hfileName, long offset) {
     this(hfileName, offset, true, BlockType.DATA);
   }
 
   public BlockCacheKey(String hfileName, long offset, boolean isPrimaryReplica,
-      BlockType blockType) {
+    BlockType blockType) {
     this.isPrimaryReplicaBlock = isPrimaryReplica;
     this.hfileName = hfileName;
     this.offset = offset;
@@ -59,8 +59,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
     if (o instanceof BlockCacheKey) {
       BlockCacheKey k = (BlockCacheKey) o;
       return offset == k.offset
-          && (hfileName == null ? k.hfileName == null : hfileName
-              .equals(k.hfileName));
+        && (hfileName == null ? k.hfileName == null : hfileName.equals(k.hfileName));
     } else {
       return false;
     }
@@ -74,19 +73,16 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(BlockCacheKey.class, false);
 
   /**
-   * Strings have two bytes per character due to default Java Unicode encoding
-   * (hence length times 2).
+   * Strings have two bytes per character due to default Java Unicode encoding (hence length times
+   * 2).
    */
   @Override
   public long heapSize() {
-    return ClassSize.align(FIXED_OVERHEAD + ClassSize.STRING +
-            2 * hfileName.length());
+    return ClassSize.align(FIXED_OVERHEAD + ClassSize.STRING + 2 * hfileName.length());
   }
 
   // can't avoid this unfortunately
-  /**
-   * @return The hfileName portion of this cache key
-   */
+  /** Returns The hfileName portion of this cache key */
   public String getHfileName() {
     return hfileName;
   }

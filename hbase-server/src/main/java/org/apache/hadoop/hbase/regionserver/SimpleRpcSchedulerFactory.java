@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,32 +21,29 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.yetus.audience.InterfaceStability;
 
-/** Constructs a {@link SimpleRpcScheduler}.
+/**
+ * Constructs a {@link SimpleRpcScheduler}.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
 public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
   @Override
   public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-    return new SimpleRpcScheduler(
-      conf,
-      handlerCount,
+      HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    return new SimpleRpcScheduler(conf, handlerCount,
       conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
         HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
       conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
-        conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
-            HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
-      priority,
-      server,
-      HConstants.QOS_THRESHOLD);
+        HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
+      conf.getInt(HConstants.MASTER_META_TRANSITION_HANDLER_COUNT,
+        HConstants.MASTER__META_TRANSITION_HANDLER_COUNT_DEFAULT),
+      priority, server, HConstants.QOS_THRESHOLD);
   }
 }

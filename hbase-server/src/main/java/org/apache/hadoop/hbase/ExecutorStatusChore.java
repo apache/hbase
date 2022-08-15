@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The Class ExecutorStatusChore for collect Executor status info periodically
- * and report to metrics system
+ * The Class ExecutorStatusChore for collect Executor status info periodically and report to metrics
+ * system
  */
 @InterfaceAudience.Private
 public class ExecutorStatusChore extends ScheduledChore {
@@ -43,7 +43,7 @@ public class ExecutorStatusChore extends ScheduledChore {
   private DynamicMetricsRegistry metricsRegistry;
 
   public ExecutorStatusChore(int sleepTime, Stoppable stopper, ExecutorService service,
-      MetricsRegionServerSource metrics) {
+    MetricsRegionServerSource metrics) {
     super("ExecutorStatusChore", stopper, sleepTime);
     LOG.info("ExecutorStatusChore runs every {} ", StringUtils.formatTime(sleepTime));
     this.service = service;
@@ -52,7 +52,7 @@ public class ExecutorStatusChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-    try{
+    try {
       // thread pool monitor
       Map<String, ExecutorStatus> statuses = service.getAllExecutorStatuses();
       for (Map.Entry<String, ExecutorStatus> statusEntry : statuses.entrySet()) {
@@ -71,7 +71,7 @@ public class ExecutorStatusChore extends ScheduledChore {
         queued.set(queueSize);
         running.set(runningSize);
       }
-    } catch(Throwable e) {
+    } catch (Throwable e) {
       LOG.error(e.getMessage(), e);
     }
   }

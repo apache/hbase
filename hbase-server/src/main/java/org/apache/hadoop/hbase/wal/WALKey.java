@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -24,19 +30,11 @@ import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-
 /**
  * Key for WAL Entry.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.REPLICATION,
-    HBaseInterfaceAudience.COPROC})
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
+  HBaseInterfaceAudience.COPROC })
 public interface WALKey extends SequenceId, Comparable<WALKey> {
   /**
    * Unmodifiable empty list of UUIDs.
@@ -47,31 +45,21 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
     return 0;
   }
 
-  /**
-   * @return encoded region name
-   */
+  /** Returns encoded region name */
   byte[] getEncodedRegionName();
 
-  /**
-   * @return table name
-   */
+  /** Returns table name */
   TableName getTableName();
 
-  /**
-   * @return the write time
-   */
+  /** Returns the write time */
   long getWriteTime();
 
-  /**
-   * @return The nonce group
-   */
+  /** Returns The nonce group */
   default long getNonceGroup() {
     return HConstants.NO_NONCE;
   }
 
-  /**
-   * @return The nonce
-   */
+  /** Returns The nonce */
   default long getNonce() {
     return HConstants.NO_NONCE;
   }
@@ -87,31 +75,30 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
 
   /**
    * Add a named String value to this WALKey to be persisted into the WAL
-   * @param attributeKey Name of the attribute
+   * @param attributeKey   Name of the attribute
    * @param attributeValue Value of the attribute
    */
   void addExtendedAttribute(String attributeKey, byte[] attributeValue);
 
-    /**
-     * Return a named String value injected into the WALKey during processing, such as by a
-     * coprocessor
-     * @param attributeKey The key of a key / value pair
-     */
-  default byte[] getExtendedAttribute(String attributeKey){
+  /**
+   * Return a named String value injected into the WALKey during processing, such as by a
+   * coprocessor
+   * @param attributeKey The key of a key / value pair
+   */
+  default byte[] getExtendedAttribute(String attributeKey) {
     return null;
   }
 
-    /**
-     * Returns a map of all extended attributes injected into this WAL key.
-     */
+  /**
+   * Returns a map of all extended attributes injected into this WAL key.
+   */
   default Map<String, byte[]> getExtendedAttributes() {
     return new HashMap<>();
   }
+
   /**
-   * Produces a string map for this key. Useful for programmatic use and
-   * manipulation of the data stored in an WALKeyImpl, for example, printing
-   * as JSON.
-   *
+   * Produces a string map for this key. Useful for programmatic use and manipulation of the data
+   * stored in an WALKeyImpl, for example, printing as JSON.
    * @return a Map containing data from this key
    */
   default Map<String, Object> toStringMap() {
@@ -120,8 +107,8 @@ public interface WALKey extends SequenceId, Comparable<WALKey> {
     stringMap.put("region", Bytes.toStringBinary(getEncodedRegionName()));
     stringMap.put("sequence", getSequenceId());
     Map<String, byte[]> extendedAttributes = getExtendedAttributes();
-    if (extendedAttributes != null){
-      for (Map.Entry<String, byte[]> entry : extendedAttributes.entrySet()){
+    if (extendedAttributes != null) {
+      for (Map.Entry<String, byte[]> entry : extendedAttributes.entrySet()) {
         stringMap.put(entry.getKey(), Bytes.toStringBinary(entry.getValue()));
       }
     }

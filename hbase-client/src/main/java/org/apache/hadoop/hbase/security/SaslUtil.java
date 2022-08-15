@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,16 +20,16 @@ package org.apache.hadoop.hbase.security;
 import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
-
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 @InterfaceAudience.Private
 public class SaslUtil {
@@ -56,7 +55,7 @@ public class SaslUtil {
     public boolean matches(String stringQop) {
       if (saslQop.equals(stringQop)) {
         LOG.warn("Use authentication/integrity/privacy as value for rpc protection "
-            + "configurations instead of auth/auth-int/auth-conf.");
+          + "configurations instead of auth/auth-int/auth-conf.");
         return true;
       }
       return name().equalsIgnoreCase(stringQop);
@@ -65,7 +64,7 @@ public class SaslUtil {
 
   /** Splitting fully qualified Kerberos name into parts */
   public static String[] splitKerberosName(String fullName) {
-    return fullName.split("[/@]");
+    return Splitter.onPattern("[/@]").splitToStream(fullName).toArray(String[]::new);
   }
 
   public static String encodeIdentifier(byte[] identifier) {
@@ -81,8 +80,8 @@ public class SaslUtil {
   }
 
   /**
-   * Returns {@link org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection}
-   * corresponding to the given {@code stringQop} value.
+   * Returns {@link org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection} corresponding to
+   * the given {@code stringQop} value.
    * @throws IllegalArgumentException If stringQop doesn't match any QOP.
    */
   public static QualityOfProtection getQop(String stringQop) {
@@ -91,11 +90,12 @@ public class SaslUtil {
         return qop;
       }
     }
-    throw new IllegalArgumentException("Invalid qop: " +  stringQop
-        + ". It must be one of 'authentication', 'integrity', 'privacy'.");
+    throw new IllegalArgumentException("Invalid qop: " + stringQop
+      + ". It must be one of 'authentication', 'integrity', 'privacy'.");
   }
 
   /**
+   * Initialize SASL properties for a given RPC protection level.
    * @param rpcProtection Value of 'hbase.rpc.protection' configuration.
    * @return Map with values for SASL properties.
    */
@@ -104,13 +104,12 @@ public class SaslUtil {
     if (rpcProtection.isEmpty()) {
       saslQop = QualityOfProtection.AUTHENTICATION.getSaslQop();
     } else {
-      String[] qops = rpcProtection.split(",");
       StringBuilder saslQopBuilder = new StringBuilder();
-      for (int i = 0; i < qops.length; ++i) {
-        QualityOfProtection qop = getQop(qops[i]);
+      for (String s : Splitter.on(',').split(rpcProtection)) {
+        QualityOfProtection qop = getQop(s);
         saslQopBuilder.append(",").append(qop.getSaslQop());
       }
-      saslQop = saslQopBuilder.substring(1);  // remove first ','
+      saslQop = saslQopBuilder.substring(1); // remove first ','
     }
     Map<String, String> saslProps = new TreeMap<>();
     saslProps.put(Sasl.QOP, saslQop);

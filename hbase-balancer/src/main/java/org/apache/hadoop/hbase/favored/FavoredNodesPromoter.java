@@ -19,10 +19,9 @@ package org.apache.hadoop.hbase.favored;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface FavoredNodesPromoter {
@@ -30,11 +29,11 @@ public interface FavoredNodesPromoter {
   /* Try and assign regions even if favored nodes are dead */
   String FAVORED_ALWAYS_ASSIGN_REGIONS = "hbase.favored.assignment.always.assign";
 
-  void generateFavoredNodesForDaughter(List<ServerName> servers,
-      RegionInfo parent, RegionInfo hriA, RegionInfo hriB) throws IOException;
+  void generateFavoredNodesForDaughter(List<ServerName> servers, RegionInfo parent, RegionInfo hriA,
+    RegionInfo hriB) throws IOException;
 
-  void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo [] mergeParents)
-      throws IOException;
+  void generateFavoredNodesForMergedRegion(RegionInfo merged, RegionInfo[] mergeParents)
+    throws IOException;
 
   List<ServerName> getFavoredNodes(RegionInfo regionInfo);
 

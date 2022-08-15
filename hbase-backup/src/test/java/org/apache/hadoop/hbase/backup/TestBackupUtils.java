@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public class TestBackupUtils {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBackupUtils.class);
+    HBaseClassTestRule.forClass(TestBackupUtils.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupUtils.class);
 
   protected static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -50,11 +49,12 @@ public class TestBackupUtils {
     // Create a user who is not the current user
     String fooUserName = "foo1234";
     String fooGroupName = "group1";
-    UserGroupInformation
-        ugi = UserGroupInformation.createUserForTesting(fooUserName, new String[]{fooGroupName});
+    UserGroupInformation ugi =
+      UserGroupInformation.createUserForTesting(fooUserName, new String[] { fooGroupName });
     // Get user's home directory
     Path fooHomeDirectory = ugi.doAs(new PrivilegedAction<Path>() {
-      @Override public Path run() {
+      @Override
+      public Path run() {
         try (FileSystem fs = FileSystem.get(conf)) {
           return fs.getHomeDirectory();
         } catch (IOException ioe) {
@@ -65,7 +65,8 @@ public class TestBackupUtils {
     });
 
     Path bulkOutputDir = ugi.doAs(new PrivilegedAction<Path>() {
-      @Override public Path run() {
+      @Override
+      public Path run() {
         try {
           return BackupUtils.getBulkOutputDir("test", conf, false);
         } catch (IOException ioe) {

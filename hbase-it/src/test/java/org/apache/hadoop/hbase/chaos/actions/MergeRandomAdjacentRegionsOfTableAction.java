@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.List;
@@ -32,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MergeRandomAdjacentRegionsOfTableAction extends Action {
   private static final Logger LOG =
-      LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
+    LoggerFactory.getLogger(MergeRandomAdjacentRegionsOfTableAction.class);
   private final TableName tableName;
   private final long sleepTime;
 
@@ -45,7 +44,8 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     this.sleepTime = sleepTime;
   }
 
-  @Override protected Logger getLogger() {
+  @Override
+  protected Logger getLogger() {
     return LOG;
   }
 
@@ -72,7 +72,7 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     }
 
     try {
-      admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+      admin.mergeRegionsAsync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false).get();
     } catch (Exception ex) {
       getLogger().warn("Merge failed, might be caused by other chaos: " + ex.getMessage());
     }

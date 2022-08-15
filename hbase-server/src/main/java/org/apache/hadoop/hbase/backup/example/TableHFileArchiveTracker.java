@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.backup.example;
 
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
@@ -49,8 +48,8 @@ public final class TableHFileArchiveTracker extends ZKListener {
     super(watcher);
     watcher.registerListener(this);
     this.monitor = monitor;
-    this.archiveHFileZNode = ZKTableArchiveClient.getArchiveZNode(watcher.getConfiguration(),
-      watcher);
+    this.archiveHFileZNode =
+      ZKTableArchiveClient.getArchiveZNode(watcher.getConfiguration(), watcher);
   }
 
   /**
@@ -84,8 +83,8 @@ public final class TableHFileArchiveTracker extends ZKListener {
     try {
       addAndReWatchTable(path);
     } catch (KeeperException e) {
-      LOG.warn("Couldn't read zookeeper data for table for path:" + path
-          + ", not preserving a table.", e);
+      LOG.warn(
+        "Couldn't read zookeeper data for table for path:" + path + ", not preserving a table.", e);
     }
   }
 
@@ -223,9 +222,7 @@ public final class TableHFileArchiveTracker extends ZKListener {
     return getMonitor().shouldArchiveTable(tableName);
   }
 
-  /**
-   * @return the tracker for which tables should be archived.
-   */
+  /** Returns the tracker for which tables should be archived. */
   public final HFileArchiveTableMonitor getMonitor() {
     return this.monitor;
   }
@@ -235,11 +232,11 @@ public final class TableHFileArchiveTracker extends ZKListener {
    * @param conf to read for zookeeper connection information
    * @return ZooKeeper tracker to monitor for this server if this server should archive hfiles for a
    *         given table
-   * @throws IOException If a unexpected exception occurs
+   * @throws IOException                  If a unexpected exception occurs
    * @throws ZooKeeperConnectionException if we can't reach zookeeper
    */
   public static TableHFileArchiveTracker create(Configuration conf)
-      throws ZooKeeperConnectionException, IOException {
+    throws ZooKeeperConnectionException, IOException {
     ZKWatcher zkw = new ZKWatcher(conf, "hfileArchiveCleaner", null);
     return create(zkw, new HFileArchiveTableMonitor());
   }
@@ -247,13 +244,12 @@ public final class TableHFileArchiveTracker extends ZKListener {
   /**
    * Create an archive tracker with the special passed in table monitor. Should only be used in
    * special cases (e.g. testing)
-   * @param zkw Watcher for the ZooKeeper cluster that we should track
+   * @param zkw     Watcher for the ZooKeeper cluster that we should track
    * @param monitor Monitor for which tables need hfile archiving
    * @return ZooKeeper tracker to monitor for this server if this server should archive hfiles for a
    *         given table
    */
-  private static TableHFileArchiveTracker create(ZKWatcher zkw,
-      HFileArchiveTableMonitor monitor) {
+  private static TableHFileArchiveTracker create(ZKWatcher zkw, HFileArchiveTableMonitor monitor) {
     return new TableHFileArchiveTracker(zkw, monitor);
   }
 

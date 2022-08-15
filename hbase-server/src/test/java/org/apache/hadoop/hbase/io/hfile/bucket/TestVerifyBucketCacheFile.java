@@ -1,26 +1,26 @@
 /*
- * Copyright The Apache Software Foundation
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements. See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership. The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
@@ -54,7 +54,8 @@ public class TestVerifyBucketCacheFile {
 
   @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null }, { 16 * 1024,
+    return Arrays.asList(new Object[][] { { 8192, null },
+      { 16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
           128 * 1024 + 1024 } } });
@@ -71,15 +72,13 @@ public class TestVerifyBucketCacheFile {
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
 
   /**
-   * Test cache file or persistence file does not exist whether BucketCache starts normally
-   * (1) Start BucketCache and add some blocks, then shutdown BucketCache and persist cache
-   * to file. Restart BucketCache and it can restore cache from file.
-   * (2) Delete bucket cache file after shutdown BucketCache. Restart BucketCache and it can't
-   * restore cache from file, the cache file and persistence file would be deleted before
-   * BucketCache start normally.
-   * (3) Delete persistence file after shutdown BucketCache. Restart BucketCache and it can't
-   * restore cache from file, the cache file and persistence file would be deleted before
-   * BucketCache start normally.
+   * Test cache file or persistence file does not exist whether BucketCache starts normally (1)
+   * Start BucketCache and add some blocks, then shutdown BucketCache and persist cache to file.
+   * Restart BucketCache and it can restore cache from file. (2) Delete bucket cache file after
+   * shutdown BucketCache. Restart BucketCache and it can't restore cache from file, the cache file
+   * and persistence file would be deleted before BucketCache start normally. (3) Delete persistence
+   * file after shutdown BucketCache. Restart BucketCache and it can't restore cache from file, the
+   * cache file and persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
   @Test
@@ -145,10 +144,10 @@ public class TestVerifyBucketCacheFile {
   }
 
   /**
-   * Test whether BucketCache is started normally after modifying the cache file.
-   * Start BucketCache and add some blocks, then shutdown BucketCache and persist cache to file.
-   * Restart BucketCache after modify cache file's data, and it can't restore cache from file,
-   * the cache file and persistence file would be deleted before BucketCache start normally.
+   * Test whether BucketCache is started normally after modifying the cache file. Start BucketCache
+   * and add some blocks, then shutdown BucketCache and persist cache to file. Restart BucketCache
+   * after modify cache file's data, and it can't restore cache from file, the cache file and
+   * persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
   @Test
@@ -176,8 +175,8 @@ public class TestVerifyBucketCacheFile {
 
     // modified bucket cache file
     String file = testDir + "/bucket.cache";
-    try(BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
-      new FileOutputStream(file, false)))) {
+    try (BufferedWriter out =
+      new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, false)))) {
       out.write("test bucket cache");
     }
     // can't restore cache from file
@@ -192,10 +191,10 @@ public class TestVerifyBucketCacheFile {
 
   /**
    * Test whether BucketCache is started normally after modifying the cache file's last modified
-   * time. First Start BucketCache and add some blocks, then shutdown BucketCache and persist
-   * cache to file. Then Restart BucketCache after modify cache file's last modified time, and
-   * it can't restore cache from file, the cache file and persistence file would be deleted
-   * before BucketCache start normally.
+   * time. First Start BucketCache and add some blocks, then shutdown BucketCache and persist cache
+   * to file. Then Restart BucketCache after modify cache file's last modified time, and it can't
+   * restore cache from file, the cache file and persistence file would be deleted before
+   * BucketCache start normally.
    * @throws Exception the exception
    */
   @Test

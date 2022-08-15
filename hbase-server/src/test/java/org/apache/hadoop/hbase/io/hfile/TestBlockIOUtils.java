@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers.containsEntry;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.EventMatchers.hasAttributes;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEnded;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasEvents;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -28,40 +38,68 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.client.trace.hamcrest.AttributesMatchers;
+import org.apache.hadoop.hbase.client.trace.hamcrest.EventMatchers;
+import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.util.BlockIOUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.TestName;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestBlockIOUtils {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestBlockIOUtils.class);
+    HBaseClassTestRule.forClass(TestBlockIOUtils.class);
+
+  @Rule
+  public TestName testName = new TestName();
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
+  @Rule
+  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
+  private static final int NUM_TEST_BLOCKS = 2;
+  private static final Compression.Algorithm COMPRESSION_ALGO = Compression.Algorithm.GZ;
 
   @Test
   public void testIsByteBufferReadable() throws IOException {
@@ -77,20 +115,126 @@ public class TestBlockIOUtils {
 
   @Test
   public void testReadFully() throws IOException {
+    TraceUtil.trace(() -> {
+      FileSystem fs = TEST_UTIL.getTestFileSystem();
+      Path p = new Path(TEST_UTIL.getDataTestDirOnTestFS(), "testReadFully");
+      String s = "hello world";
+      try (FSDataOutputStream out = fs.create(p)) {
+        out.writeBytes(s);
+      }
+      ByteBuff buf = new SingleByteBuff(ByteBuffer.allocate(11));
+      try (FSDataInputStream in = fs.open(p)) {
+        BlockIOUtils.readFully(buf, in, 11);
+      }
+      buf.rewind();
+      byte[] heapBuf = new byte[s.length()];
+      buf.get(heapBuf, 0, heapBuf.length);
+      assertArrayEquals(Bytes.toBytes(s), heapBuf);
+    }, testName.getMethodName());
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.readFully"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", 11))))))));
+  }
+
+  @Test
+  public void testPreadWithReadFullBytes() throws IOException {
+    testPreadReadFullBytesInternal(true, EnvironmentEdgeManager.currentTime());
+  }
+
+  @Test
+  public void testPreadWithoutReadFullBytes() throws IOException {
+    testPreadReadFullBytesInternal(false, EnvironmentEdgeManager.currentTime());
+  }
+
+  private void testPreadReadFullBytesInternal(boolean readAllBytes, long randomSeed)
+    throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(HConstants.HFILE_PREAD_ALL_BYTES_ENABLED_KEY, readAllBytes);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path p = new Path(TEST_UTIL.getDataTestDirOnTestFS(), "testReadFully");
-    String s = "hello world";
-    try (FSDataOutputStream out = fs.create(p)) {
-      out.writeBytes(s);
+    Path path = new Path(TEST_UTIL.getDataTestDirOnTestFS(), testName.getMethodName());
+    // give a fixed seed such we can see failure easily.
+    Random rand = new Random(randomSeed);
+    long totalDataBlockBytes =
+      writeBlocks(TEST_UTIL.getConfiguration(), rand, COMPRESSION_ALGO, path);
+    readDataBlocksAndVerify(fs, path, COMPRESSION_ALGO, totalDataBlockBytes);
+  }
+
+  private long writeBlocks(Configuration conf, Random rand, Compression.Algorithm compressAlgo,
+    Path path) throws IOException {
+    FileSystem fs = HFileSystem.get(conf);
+    FSDataOutputStream os = fs.create(path);
+    HFileContext meta =
+      new HFileContextBuilder().withHBaseCheckSum(true).withCompression(compressAlgo).build();
+    HFileBlock.Writer hbw = new HFileBlock.Writer(conf, null, meta);
+    long totalDataBlockBytes = 0;
+    for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
+      int blockTypeOrdinal = rand.nextInt(BlockType.values().length);
+      if (blockTypeOrdinal == BlockType.ENCODED_DATA.ordinal()) {
+        blockTypeOrdinal = BlockType.DATA.ordinal();
+      }
+      BlockType bt = BlockType.values()[blockTypeOrdinal];
+      DataOutputStream dos = hbw.startWriting(bt);
+      int size = rand.nextInt(500);
+      for (int j = 0; j < size; ++j) {
+        dos.writeShort(i + 1);
+        dos.writeInt(j + 1);
+      }
+
+      hbw.writeHeaderAndData(os);
+      totalDataBlockBytes += hbw.getOnDiskSizeWithHeader();
     }
-    ByteBuff buf = new SingleByteBuff(ByteBuffer.allocate(11));
-    try (FSDataInputStream in = fs.open(p)) {
-      BlockIOUtils.readFully(buf, in, 11);
+    // append a dummy trailer and in a actual HFile it should have more data.
+    FixedFileTrailer trailer = new FixedFileTrailer(3, 3);
+    trailer.setFirstDataBlockOffset(0);
+    trailer.setLastDataBlockOffset(totalDataBlockBytes);
+    trailer.setComparatorClass(meta.getCellComparator().getClass());
+    trailer.setDataIndexCount(NUM_TEST_BLOCKS);
+    trailer.setCompressionCodec(compressAlgo);
+    trailer.serialize(os);
+    // close the stream
+    os.close();
+    return totalDataBlockBytes;
+  }
+
+  private void readDataBlocksAndVerify(FileSystem fs, Path path, Compression.Algorithm compressAlgo,
+    long totalDataBlockBytes) throws IOException {
+    FSDataInputStream is = fs.open(path);
+    HFileContext fileContext =
+      new HFileContextBuilder().withHBaseCheckSum(true).withCompression(compressAlgo).build();
+    ReaderContext context =
+      new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(is))
+        .withReaderType(ReaderContext.ReaderType.PREAD).withFileSize(totalDataBlockBytes)
+        .withFilePath(path).withFileSystem(fs).build();
+    HFileBlock.FSReader hbr =
+      new HFileBlock.FSReaderImpl(context, fileContext, ByteBuffAllocator.HEAP, fs.getConf());
+
+    long onDiskSizeOfNextBlock = -1;
+    long offset = 0;
+    int numOfReadBlock = 0;
+    // offset and totalBytes shares the same logic in the HFilePreadReader
+    while (offset < totalDataBlockBytes) {
+      HFileBlock block = hbr.readBlockData(offset, onDiskSizeOfNextBlock, true, false, false);
+      numOfReadBlock++;
+      try {
+        onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
+        offset += block.getOnDiskSizeWithHeader();
+      } finally {
+        block.release();
+      }
     }
-    buf.rewind();
-    byte[] heapBuf = new byte[s.length()];
-    buf.get(heapBuf, 0, heapBuf.length);
-    assertArrayEquals(Bytes.toBytes(s), heapBuf);
+    assertEquals(totalDataBlockBytes, offset);
+    assertEquals(NUM_TEST_BLOCKS, numOfReadBlock);
+    deleteFile(fs, path);
+  }
+
+  private void deleteFile(FileSystem fs, Path path) throws IOException {
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
   }
 
   @Test
@@ -101,33 +245,69 @@ public class TestBlockIOUtils {
     try (FSDataOutputStream out = fs.create(p)) {
       out.writeBytes(s);
     }
-    ByteBuff buf = new SingleByteBuff(ByteBuffer.allocate(8));
-    try (FSDataInputStream in = fs.open(p)) {
-      assertTrue(BlockIOUtils.readWithExtra(buf, in, 6, 2));
-    }
-    buf.rewind();
-    byte[] heapBuf = new byte[buf.capacity()];
-    buf.get(heapBuf, 0, heapBuf.length);
-    assertArrayEquals(Bytes.toBytes("hello wo"), heapBuf);
 
-    buf = new MultiByteBuff(ByteBuffer.allocate(4), ByteBuffer.allocate(4), ByteBuffer.allocate(4));
-    try (FSDataInputStream in = fs.open(p)) {
-      assertTrue(BlockIOUtils.readWithExtra(buf, in, 8, 3));
+    Span span = TraceUtil.createSpan(testName.getMethodName());
+    try (Scope ignored = span.makeCurrent()) {
+      ByteBuff buf = new SingleByteBuff(ByteBuffer.allocate(8));
+      try (FSDataInputStream in = fs.open(p)) {
+        assertTrue(BlockIOUtils.readWithExtra(buf, in, 6, 2));
+      }
+      buf.rewind();
+      byte[] heapBuf = new byte[buf.capacity()];
+      buf.get(heapBuf, 0, heapBuf.length);
+      assertArrayEquals(Bytes.toBytes("hello wo"), heapBuf);
+    } finally {
+      span.end();
     }
-    buf.rewind();
-    heapBuf = new byte[11];
-    buf.get(heapBuf, 0, heapBuf.length);
-    assertArrayEquals(Bytes.toBytes("hello world"), heapBuf);
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.readWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", 8L))))))));
 
-    buf.position(0).limit(12);
-    try (FSDataInputStream in = fs.open(p)) {
-      try {
+    otelRule.clearSpans();
+    span = TraceUtil.createSpan(testName.getMethodName());
+    try (Scope ignored = span.makeCurrent()) {
+      ByteBuff buf =
+        new MultiByteBuff(ByteBuffer.allocate(4), ByteBuffer.allocate(4), ByteBuffer.allocate(4));
+      try (FSDataInputStream in = fs.open(p)) {
+        assertTrue(BlockIOUtils.readWithExtra(buf, in, 8, 3));
+      }
+      buf.rewind();
+      byte[] heapBuf = new byte[11];
+      buf.get(heapBuf, 0, heapBuf.length);
+      assertArrayEquals(Bytes.toBytes("hello world"), heapBuf);
+    } finally {
+      span.end();
+    }
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.readWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", 11L))))))));
+
+    otelRule.clearSpans();
+    span = TraceUtil.createSpan(testName.getMethodName());
+    try (Scope ignored = span.makeCurrent()) {
+      ByteBuff buf =
+        new MultiByteBuff(ByteBuffer.allocate(4), ByteBuffer.allocate(4), ByteBuffer.allocate(4));
+      buf.position(0).limit(12);
+      exception.expect(IOException.class);
+      try (FSDataInputStream in = fs.open(p)) {
         BlockIOUtils.readWithExtra(buf, in, 12, 0);
         fail("Should only read 11 bytes");
-      } catch (IOException e) {
-
       }
+    } finally {
+      span.end();
     }
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.readWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", 11L))))))));
   }
 
   @Test
@@ -142,11 +322,20 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(totalLen);
     when(in.hasCapability(anyString())).thenReturn(false);
-    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    boolean ret =
+      TraceUtil.trace(() -> BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen),
+        testName.getMethodName());
     assertFalse("Expect false return when no extra bytes requested", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", totalLen))))))));
   }
 
   @Test
@@ -162,12 +351,21 @@ public class TestBlockIOUtils {
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(5);
     when(in.read(5, buf, 5, 5)).thenReturn(5);
     when(in.hasCapability(anyString())).thenReturn(false);
-    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    boolean ret =
+      TraceUtil.trace(() -> BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen),
+        testName.getMethodName());
     assertFalse("Expect false return when no extra bytes requested", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).read(5, buf, 5, 5);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", totalLen))))))));
   }
 
   @Test
@@ -182,11 +380,20 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(totalLen);
     when(in.hasCapability(anyString())).thenReturn(false);
-    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    boolean ret =
+      TraceUtil.trace(() -> BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen),
+        testName.getMethodName());
     assertTrue("Expect true return when reading extra bytes succeeds", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", totalLen))))))));
   }
 
   @Test
@@ -201,16 +408,24 @@ public class TestBlockIOUtils {
     FSDataInputStream in = mock(FSDataInputStream.class);
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(necessaryLen);
     when(in.hasCapability(anyString())).thenReturn(false);
-    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    boolean ret =
+      TraceUtil.trace(() -> BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen),
+        testName.getMethodName());
     assertFalse("Expect false return when reading extra bytes fails", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", necessaryLen))))))));
   }
 
   @Test
-  public void testPositionalReadShortReadCompletesNecessaryAndExtraBytes()
-      throws IOException {
+  public void testPositionalReadShortReadCompletesNecessaryAndExtraBytes() throws IOException {
     long position = 0;
     int bufOffset = 0;
     int necessaryLen = 10;
@@ -222,12 +437,21 @@ public class TestBlockIOUtils {
     when(in.read(position, buf, bufOffset, totalLen)).thenReturn(5);
     when(in.read(5, buf, 5, 10)).thenReturn(10);
     when(in.hasCapability(anyString())).thenReturn(false);
-    boolean ret = BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    boolean ret =
+      TraceUtil.trace(() -> BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen),
+        testName.getMethodName());
     assertTrue("Expect true return when reading extra bytes succeeds", ret);
     verify(in).read(position, buf, bufOffset, totalLen);
     verify(in).read(5, buf, 5, 10);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+      otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+    assertThat(otelRule.getSpans(),
+      hasItems(allOf(hasName(testName.getMethodName()),
+        hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+          hasAttributes(containsEntry("db.hbase.io.heap_bytes_read", totalLen))))))));
   }
 
   @Test
@@ -245,17 +469,32 @@ public class TestBlockIOUtils {
     when(in.hasCapability(anyString())).thenReturn(false);
     exception.expect(IOException.class);
     exception.expectMessage("EOF");
-    BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+    Span span = TraceUtil.createSpan(testName.getMethodName());
+    try (Scope ignored = span.makeCurrent()) {
+      BlockIOUtils.preadWithExtra(bb, in, position, necessaryLen, extraLen);
+      span.setStatus(StatusCode.OK);
+    } catch (IOException e) {
+      TraceUtil.setError(span, e);
+      throw e;
+    } finally {
+      span.end();
+
+      TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<Iterable<SpanData>>(
+        otelRule::getSpans, hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+      assertThat(otelRule.getSpans(),
+        hasItems(allOf(hasName(testName.getMethodName()),
+          hasEvents(hasItem(allOf(EventMatchers.hasName("BlockIOUtils.preadWithExtra"),
+            hasAttributes(AttributesMatchers.isEmpty())))))));
+    }
   }
 
   /**
-   * Determine if ByteBufferPositionedReadable API is available
-   * .
+   * Determine if ByteBufferPositionedReadable API is available .
    * @return true if FSDataInputStream implements ByteBufferPositionedReadable API.
    */
   private boolean isByteBufferPositionedReadable() {
     try {
-      //long position, ByteBuffer buf
+      // long position, ByteBuffer buf
       FSDataInputStream.class.getMethod("read", long.class, ByteBuffer.class);
     } catch (NoSuchMethodException e) {
       return false;

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import org.apache.commons.lang3.StringUtils;
@@ -26,8 +24,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * SlowLog params object that contains detailed info as params and region name : to be used
- * for filter purpose
+ * SlowLog params object that contains detailed info as params and region name : to be used for
+ * filter purpose
  */
 @InterfaceAudience.Private
 public class SlowLogParams {
@@ -55,9 +53,7 @@ public class SlowLogParams {
 
   @Override
   public String toString() {
-    return new ToStringBuilder(this)
-      .append("regionName", regionName)
-      .append("params", params)
+    return new ToStringBuilder(this).append("regionName", regionName).append("params", params)
       .toString();
   }
 
@@ -66,24 +62,16 @@ public class SlowLogParams {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof SlowLogParams)) {
       return false;
     }
-
     SlowLogParams that = (SlowLogParams) o;
-
-    return new EqualsBuilder()
-      .append(regionName, that.regionName)
-      .append(params, that.params)
+    return new EqualsBuilder().append(regionName, that.regionName).append(params, that.params)
       .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37)
-      .append(regionName)
-      .append(params)
-      .toHashCode();
+    return new HashCodeBuilder(17, 37).append(regionName).append(params).toHashCode();
   }
 }

@@ -141,7 +141,7 @@ Interactions with Jira:
 
 This invocation will build a "simple" database, correlating commits to
 branches. It omits gathering the detailed release tag data, so it runs pretty
-quickly. 
+quickly.
 
 Example Run:
 

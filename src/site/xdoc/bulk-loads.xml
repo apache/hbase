@@ -21,12 +21,12 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title> 
+    <title>
       Bulk Loads in Apache HBase (TM)
     </title>
   </properties>
   <body>
-       <p>This page has been retired.  The contents have been moved to the 
+       <p>This page has been retired.  The contents have been moved to the
       <a href="http://hbase.apache.org/book.html#arch.bulk.load">Bulk Loading</a> section
  in the Reference Guide.
  </p>

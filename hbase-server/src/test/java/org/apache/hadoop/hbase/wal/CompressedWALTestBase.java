@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,25 +42,26 @@ public class CompressedWALTestBase {
   static final byte[] VALUE;
   static {
     // 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597
-    VALUE = new byte[1+1+2+3+5+8+13+21+34+55+89+144+233+377+610+987+1597];
+    VALUE =
+      new byte[1 + 1 + 2 + 3 + 5 + 8 + 13 + 21 + 34 + 55 + 89 + 144 + 233 + 377 + 610 + 987 + 1597];
     int off = 0;
-    Arrays.fill(VALUE, off, (off+=1), (byte)'A');
-    Arrays.fill(VALUE, off, (off+=1), (byte)'B');
-    Arrays.fill(VALUE, off, (off+=2), (byte)'C');
-    Arrays.fill(VALUE, off, (off+=3), (byte)'D');
-    Arrays.fill(VALUE, off, (off+=5), (byte)'E');
-    Arrays.fill(VALUE, off, (off+=8), (byte)'F');
-    Arrays.fill(VALUE, off, (off+=13), (byte)'G');
-    Arrays.fill(VALUE, off, (off+=21), (byte)'H');
-    Arrays.fill(VALUE, off, (off+=34), (byte)'I');
-    Arrays.fill(VALUE, off, (off+=55), (byte)'J');
-    Arrays.fill(VALUE, off, (off+=89), (byte)'K');
-    Arrays.fill(VALUE, off, (off+=144), (byte)'L');
-    Arrays.fill(VALUE, off, (off+=233), (byte)'M');
-    Arrays.fill(VALUE, off, (off+=377), (byte)'N');
-    Arrays.fill(VALUE, off, (off+=610), (byte)'O');
-    Arrays.fill(VALUE, off, (off+=987), (byte)'P');
-    Arrays.fill(VALUE, off, (off+=1597), (byte)'Q');
+    Arrays.fill(VALUE, off, (off += 1), (byte) 'A');
+    Arrays.fill(VALUE, off, (off += 1), (byte) 'B');
+    Arrays.fill(VALUE, off, (off += 2), (byte) 'C');
+    Arrays.fill(VALUE, off, (off += 3), (byte) 'D');
+    Arrays.fill(VALUE, off, (off += 5), (byte) 'E');
+    Arrays.fill(VALUE, off, (off += 8), (byte) 'F');
+    Arrays.fill(VALUE, off, (off += 13), (byte) 'G');
+    Arrays.fill(VALUE, off, (off += 21), (byte) 'H');
+    Arrays.fill(VALUE, off, (off += 34), (byte) 'I');
+    Arrays.fill(VALUE, off, (off += 55), (byte) 'J');
+    Arrays.fill(VALUE, off, (off += 89), (byte) 'K');
+    Arrays.fill(VALUE, off, (off += 144), (byte) 'L');
+    Arrays.fill(VALUE, off, (off += 233), (byte) 'M');
+    Arrays.fill(VALUE, off, (off += 377), (byte) 'N');
+    Arrays.fill(VALUE, off, (off += 610), (byte) 'O');
+    Arrays.fill(VALUE, off, (off += 987), (byte) 'P');
+    Arrays.fill(VALUE, off, (off += 1597), (byte) 'Q');
   }
 
   public void doTest(TableName tableName) throws Exception {
@@ -97,7 +98,7 @@ public class CompressedWALTestBase {
       count++;
       List<Cell> cells = entry.getEdit().getCells();
       assertTrue("Should be one KV per WALEdit", cells.size() == 1);
-      for (Cell cell: cells) {
+      for (Cell cell : cells) {
         assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength(), row, 0, row.length));
         assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),

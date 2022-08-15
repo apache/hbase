@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.DataInput;
@@ -27,20 +26,17 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.VersionedWritable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.VersionedWritable;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
- * Base permissions instance representing the ability to perform a given set
- * of actions.
- *
+ * Base permissions instance representing the ability to perform a given set of actions.
  * @see TablePermission
  */
 @InterfaceAudience.Public
@@ -49,21 +45,32 @@ public class Permission extends VersionedWritable {
 
   @InterfaceAudience.Public
   public enum Action {
-    READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
+    READ('R'),
+    WRITE('W'),
+    EXEC('X'),
+    CREATE('C'),
+    ADMIN('A');
 
     private final byte code;
+
     Action(char code) {
       this.code = (byte) code;
     }
 
-    public byte code() { return code; }
+    public byte code() {
+      return code;
+    }
   }
 
   @InterfaceAudience.Private
   protected enum Scope {
-    GLOBAL('G'), NAMESPACE('N'), TABLE('T'), EMPTY('E');
+    GLOBAL('G'),
+    NAMESPACE('N'),
+    TABLE('T'),
+    EMPTY('E');
 
     private final byte code;
+
     Scope(char code) {
       this.code = (byte) code;
     }
@@ -82,23 +89,15 @@ public class Permission extends VersionedWritable {
   protected Scope scope = Scope.EMPTY;
 
   static {
-    ACTION_BY_CODE = ImmutableMap.of(
-      Action.READ.code, Action.READ,
-      Action.WRITE.code, Action.WRITE,
-      Action.EXEC.code, Action.EXEC,
-      Action.CREATE.code, Action.CREATE,
-      Action.ADMIN.code, Action.ADMIN
-    );
+    ACTION_BY_CODE = ImmutableMap.of(Action.READ.code, Action.READ, Action.WRITE.code, Action.WRITE,
+      Action.EXEC.code, Action.EXEC, Action.CREATE.code, Action.CREATE, Action.ADMIN.code,
+      Action.ADMIN);
 
-    SCOPE_BY_CODE = ImmutableMap.of(
-      Scope.GLOBAL.code, Scope.GLOBAL,
-      Scope.NAMESPACE.code, Scope.NAMESPACE,
-      Scope.TABLE.code, Scope.TABLE,
-      Scope.EMPTY.code, Scope.EMPTY
-    );
+    SCOPE_BY_CODE = ImmutableMap.of(Scope.GLOBAL.code, Scope.GLOBAL, Scope.NAMESPACE.code,
+      Scope.NAMESPACE, Scope.TABLE.code, Scope.TABLE, Scope.EMPTY.code, Scope.EMPTY);
   }
 
-  /** Empty constructor for Writable implementation.  <b>Do not use.</b> */
+  /** Empty constructor for Writable implementation. <b>Do not use.</b> */
   public Permission() {
     super();
   }
@@ -114,8 +113,8 @@ public class Permission extends VersionedWritable {
       for (byte code : actionCodes) {
         Action action = ACTION_BY_CODE.get(code);
         if (action == null) {
-          LOG.error("Ignoring unknown action code '" +
-            Bytes.toStringBinary(new byte[] { code }) + "'");
+          LOG.error(
+            "Ignoring unknown action code '" + Bytes.toStringBinary(new byte[] { code }) + "'");
           continue;
         }
         actions.add(action);
@@ -146,9 +145,8 @@ public class Permission extends VersionedWritable {
   }
 
   /**
-   * Check if two permission equals regardless of actions. It is useful when
-   * merging a new permission with an existed permission which needs to check two permissions's
-   * fields.
+   * Check if two permission equals regardless of actions. It is useful when merging a new
+   * permission with an existed permission which needs to check two permissions's fields.
    * @param obj instance
    * @return true if equals, false otherwise
    */
@@ -205,7 +203,7 @@ public class Permission extends VersionedWritable {
     return raw.toString();
   }
 
-  /** @return the object version number */
+  /** Returns the object version number */
   @Override
   public byte getVersion() {
     return VERSION;
@@ -221,8 +219,8 @@ public class Permission extends VersionedWritable {
         byte b = in.readByte();
         Action action = ACTION_BY_CODE.get(b);
         if (action == null) {
-          throw new IOException("Unknown action code '" +
-            Bytes.toStringBinary(new byte[] { b }) + "' in input");
+          throw new IOException(
+            "Unknown action code '" + Bytes.toStringBinary(new byte[] { b }) + "' in input");
         }
         actions.add(action);
       }
@@ -235,7 +233,7 @@ public class Permission extends VersionedWritable {
     super.write(out);
     out.writeByte(actions != null ? actions.size() : 0);
     if (actions != null) {
-      for (Action a: actions) {
+      for (Action a : actions) {
         out.writeByte(a.code());
       }
     }

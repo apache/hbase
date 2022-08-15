@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods to interact with a job.
@@ -35,7 +31,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class JobUtil {
-  private static final Logger LOG = LoggerFactory.getLogger(JobUtil.class);
 
   protected JobUtil() {
     super();
@@ -43,23 +38,20 @@ public abstract class JobUtil {
 
   /**
    * Initializes the staging directory and returns the path.
-   *
    * @param conf system configuration
    * @return staging directory path
-   * @throws IOException if the ownership on the staging directory is not as expected
+   * @throws IOException          if the ownership on the staging directory is not as expected
    * @throws InterruptedException if the thread getting the staging directory is interrupted
    */
-  public static Path getStagingDir(Configuration conf)
-      throws IOException, InterruptedException {
+  public static Path getStagingDir(Configuration conf) throws IOException, InterruptedException {
     return JobSubmissionFiles.getStagingDir(new Cluster(conf), conf);
   }
 
   /**
    * Initializes the staging directory and returns the qualified path.
-   *
    * @param conf conf system configuration
    * @return qualified staging directory path
-   * @throws IOException if the ownership on the staging directory is not as expected
+   * @throws IOException          if the ownership on the staging directory is not as expected
    * @throws InterruptedException if the thread getting the staging directory is interrupted
    */
   public static Path getQualifiedStagingDir(Configuration conf)

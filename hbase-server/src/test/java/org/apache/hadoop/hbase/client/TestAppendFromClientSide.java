@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -45,14 +46,15 @@ public class TestAppendFromClientSide {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestAppendFromClientSide.class);
+    HBaseClassTestRule.forClass(TestAppendFromClientSide.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static byte [] ROW = Bytes.toBytes("testRow");
-  private static byte [] FAMILY = Bytes.toBytes("testFamily");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static byte[] ROW = Bytes.toBytes("testRow");
+  private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   @Rule
   public TestName name = new TestName();
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -70,14 +72,9 @@ public class TestAppendFromClientSide {
     Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     long timestamp = 999;
     Append append = new Append(ROW);
-    append.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(ROW)
-      .setFamily(FAMILY)
-      .setQualifier(QUALIFIER)
-      .setTimestamp(timestamp)
-      .setType(KeyValue.Type.Put.getCode())
-      .setValue(Bytes.toBytes(100L))
-      .build());
+    append.add(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY).setRow(ROW)
+      .setFamily(FAMILY).setQualifier(QUALIFIER).setTimestamp(timestamp)
+      .setType(KeyValue.Type.Put.getCode()).setValue(Bytes.toBytes(100L)).build());
     Result r = table.append(append);
     assertEquals(1, r.size());
     assertEquals(timestamp, r.rawCells()[0].getTimestamp());

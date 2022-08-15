@@ -24,20 +24,20 @@
   <property>
     <name>security.client.protocol.acl</name>
     <value>*</value>
-    <description>ACL for ClientProtocol and AdminProtocol implementations (ie. 
+    <description>ACL for ClientProtocol and AdminProtocol implementations (ie.
     clients talking to HRegionServers)
-    The ACL is a comma-separated list of user and group names. The user and 
-    group list is separated by a blank. For e.g. "alice,bob users,wheel". 
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
 
   <property>
     <name>security.admin.protocol.acl</name>
     <value>*</value>
-    <description>ACL for HMasterInterface protocol implementation (ie. 
+    <description>ACL for HMasterInterface protocol implementation (ie.
     clients talking to HMaster for admin operations).
-    The ACL is a comma-separated list of user and group names. The user and 
-    group list is separated by a blank. For e.g. "alice,bob users,wheel". 
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
 
@@ -46,8 +46,8 @@
     <value>*</value>
     <description>ACL for HMasterRegionInterface protocol implementations
     (for HRegionServers communicating with HMaster)
-    The ACL is a comma-separated list of user and group names. The user and 
-    group list is separated by a blank. For e.g. "alice,bob users,wheel". 
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
     A special value of "*" means all users are allowed.</description>
   </property>
 </configuration>

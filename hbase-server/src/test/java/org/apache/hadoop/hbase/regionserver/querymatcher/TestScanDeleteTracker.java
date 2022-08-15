@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -36,7 +36,7 @@ public class TestScanDeleteTracker {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestScanDeleteTracker.class);
+    HBaseClassTestRule.forClass(TestScanDeleteTracker.class);
 
   private ScanDeleteTracker sdt;
 
@@ -50,7 +50,7 @@ public class TestScanDeleteTracker {
   @Test
   public void testDeletedByDelete() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("qualifier"),
-        timestamp, KeyValue.Type.Delete);
+      timestamp, KeyValue.Type.Delete);
     sdt.add(kv);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.VERSION_DELETED, ret);
@@ -59,11 +59,11 @@ public class TestScanDeleteTracker {
   @Test
   public void testDeletedByDeleteColumn() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("qualifier"),
-        timestamp, KeyValue.Type.DeleteColumn);
+      timestamp, KeyValue.Type.DeleteColumn);
     sdt.add(kv);
     timestamp -= 5;
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("qualifier"),
-        timestamp, KeyValue.Type.DeleteColumn);
+      timestamp, KeyValue.Type.DeleteColumn);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.COLUMN_DELETED, ret);
   }
@@ -71,11 +71,11 @@ public class TestScanDeleteTracker {
   @Test
   public void testDeletedByDeleteFamily() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("qualifier"),
-        timestamp, KeyValue.Type.DeleteFamily);
+      timestamp, KeyValue.Type.DeleteFamily);
     sdt.add(kv);
     timestamp -= 5;
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), Bytes.toBytes("qualifier"),
-        timestamp, KeyValue.Type.DeleteColumn);
+      timestamp, KeyValue.Type.DeleteColumn);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.FAMILY_DELETED, ret);
   }
@@ -87,38 +87,38 @@ public class TestScanDeleteTracker {
     byte[] qualifier3 = Bytes.toBytes("qualifier3");
     byte[] qualifier4 = Bytes.toBytes("qualifier4");
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), null, timestamp,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     sdt.add(kv);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier1, timestamp,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.FAMILY_VERSION_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier2, timestamp,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.FAMILY_VERSION_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier3, timestamp,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.FAMILY_VERSION_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier4, timestamp,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.FAMILY_VERSION_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier1, timestamp + 3,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.NOT_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier2, timestamp - 2,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.NOT_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier3, timestamp - 5,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.NOT_DELETED, ret);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier4, timestamp + 8,
-        KeyValue.Type.DeleteFamilyVersion);
+      KeyValue.Type.DeleteFamilyVersion);
     ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.NOT_DELETED, ret);
   }
@@ -127,17 +127,17 @@ public class TestScanDeleteTracker {
   public void testDeleteDeleteColumn() {
     byte[] qualifier = Bytes.toBytes("qualifier");
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.Delete);
+      KeyValue.Type.Delete);
     sdt.add(kv);
 
     timestamp -= 5;
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.DeleteColumn);
+      KeyValue.Type.DeleteColumn);
     sdt.add(kv);
 
     timestamp -= 5;
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.DeleteColumn);
+      KeyValue.Type.DeleteColumn);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.COLUMN_DELETED, ret);
   }
@@ -146,12 +146,12 @@ public class TestScanDeleteTracker {
   public void testDeleteColumnDelete() {
     byte[] qualifier = Bytes.toBytes("qualifier");
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.DeleteColumn);
+      KeyValue.Type.DeleteColumn);
     sdt.add(kv);
 
     qualifier = Bytes.toBytes("qualifier1");
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.Delete);
+      KeyValue.Type.Delete);
     sdt.add(kv);
 
     DeleteResult ret = sdt.isDeleted(kv);
@@ -165,7 +165,7 @@ public class TestScanDeleteTracker {
   public void testDeleteKeepDelete() {
     byte[] qualifier = Bytes.toBytes("qualifier");
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, timestamp,
-        KeyValue.Type.Delete);
+      KeyValue.Type.Delete);
     sdt.add(kv);
     sdt.isDeleted(kv);
     assertEquals(false, sdt.isEmpty());
@@ -180,10 +180,10 @@ public class TestScanDeleteTracker {
 
     sdt.reset();
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, deleteTimestamp,
-        KeyValue.Type.Delete);
+      KeyValue.Type.Delete);
     sdt.add(kv);
     kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"), qualifier, valueTimestamp,
-        KeyValue.Type.Delete);
+      KeyValue.Type.Delete);
     DeleteResult ret = sdt.isDeleted(kv);
     assertEquals(DeleteResult.NOT_DELETED, ret);
   }

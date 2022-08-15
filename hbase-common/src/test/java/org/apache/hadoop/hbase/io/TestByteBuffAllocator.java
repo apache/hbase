@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.getHeapAllocationRatio;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -45,7 +44,22 @@ public class TestByteBuffAllocator {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestByteBuffAllocator.class);
+    HBaseClassTestRule.forClass(TestByteBuffAllocator.class);
+
+  @Test
+  public void testRecycleOnlyPooledBuffers() {
+    int maxBuffersInPool = 10;
+    int bufSize = 1024;
+    int minSize = bufSize / 8;
+    ByteBuffAllocator alloc = new ByteBuffAllocator(true, maxBuffersInPool, bufSize, minSize);
+
+    ByteBuff buff = alloc.allocate(minSize - 1);
+    assertSame(ByteBuffAllocator.NONE, buff.getRefCnt().getRecycler());
+
+    alloc = new ByteBuffAllocator(true, 0, bufSize, minSize);
+    buff = alloc.allocate(minSize * 2);
+    assertSame(ByteBuffAllocator.NONE, buff.getRefCnt().getRecycler());
+  }
 
   @Test
   public void testAllocateByteBuffToReadInto() {
@@ -331,8 +345,6 @@ public class TestByteBuffAllocator {
     ByteBuff buf = alloc.allocate(bufSize);
     assertException(() -> buf.retain(2));
     assertException(() -> buf.release(2));
-    assertException(() -> buf.touch());
-    assertException(() -> buf.touch(new Object()));
   }
 
   private void assertException(Runnable r) {

@@ -19,17 +19,15 @@ package org.apache.hadoop.hbase.security.provider;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-
 import javax.security.sasl.SaslServer;
-
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Wrapper around a SaslServer which provides the last user attempting to authenticate via SASL,
- * if the server/mechanism allow figuring that out.
+ * Wrapper around a SaslServer which provides the last user attempting to authenticate via SASL, if
+ * the server/mechanism allow figuring that out.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.AUTHENTICATION)
 @InterfaceStability.Evolving
@@ -37,8 +35,8 @@ public class AttemptingUserProvidingSaslServer {
   private final Supplier<UserGroupInformation> producer;
   private final SaslServer saslServer;
 
-  public AttemptingUserProvidingSaslServer(
-      SaslServer saslServer, Supplier<UserGroupInformation> producer) {
+  public AttemptingUserProvidingSaslServer(SaslServer saslServer,
+    Supplier<UserGroupInformation> producer) {
     this.saslServer = saslServer;
     this.producer = producer;
   }

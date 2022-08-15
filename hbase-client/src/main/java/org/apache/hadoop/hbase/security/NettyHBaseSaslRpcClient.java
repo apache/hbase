@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,9 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
-import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-
 import java.io.IOException;
 import java.net.InetAddress;
-
 import javax.security.sasl.Sasl;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.security.token.Token;
@@ -32,6 +27,9 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
+import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 /**
  * Implement SASL logic for netty rpc client.
@@ -42,8 +40,8 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
   private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClient.class);
 
   public NettyHBaseSaslRpcClient(Configuration conf, SaslClientAuthenticationProvider provider,
-      Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
-      boolean fallbackAllowed, String rpcProtection) throws IOException {
+    Token<? extends TokenIdentifier> token, InetAddress serverAddr, SecurityInfo securityInfo,
+    boolean fallbackAllowed, String rpcProtection) throws IOException {
     super(conf, provider, token, serverAddr, securityInfo, fallbackAllowed, rpcProtection);
   }
 
@@ -54,9 +52,9 @@ public class NettyHBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
       return;
     }
     // add wrap and unwrap handlers to pipeline.
-    p.addFirst(new SaslWrapHandler(saslClient),
+    p.addFirst(new SaslWrapHandler(saslClient::wrap),
       new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
-      new SaslUnwrapHandler(saslClient));
+      new SaslUnwrapHandler(saslClient::unwrap));
   }
 
   public String getSaslQOP() {

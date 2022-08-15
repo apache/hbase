@@ -1,5 +1,4 @@
-/**
-
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,8 +27,6 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Stable
 public interface QueueBalancer {
-  /**
-   * @return the index of the next queue to which a request should be inserted
-   */
+  /** Returns the index of the next queue to which a request should be inserted */
   int getNextQueue(CallRunner callRunner);
 }

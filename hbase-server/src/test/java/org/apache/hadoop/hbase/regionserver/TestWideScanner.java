@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -157,8 +157,7 @@ public class TestWideScanner {
         results.clear();
 
         // trigger ChangedReadersObservers
-        Iterator<KeyValueScanner> scanners =
-          ((RegionScannerImpl) s).storeHeap.getHeap().iterator();
+        Iterator<KeyValueScanner> scanners = ((RegionScannerImpl) s).storeHeap.getHeap().iterator();
         while (scanners.hasNext()) {
           StoreScanner ss = (StoreScanner) scanners.next();
           ss.updateReaders(Collections.emptyList(), Collections.emptyList());

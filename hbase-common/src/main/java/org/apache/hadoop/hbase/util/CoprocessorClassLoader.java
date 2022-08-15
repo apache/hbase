@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,7 +33,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,29 +49,24 @@ import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 /**
  * ClassLoader used to load classes for Coprocessor instances.
  * <p>
- * This ClassLoader always tries to load classes from the specified coprocessor
- * jar first actually using URLClassLoader logic before delegating to the parent
- * ClassLoader, thus avoiding dependency conflicts between HBase's classpath and
- * classes in the coprocessor jar.
+ * This ClassLoader always tries to load classes from the specified coprocessor jar first actually
+ * using URLClassLoader logic before delegating to the parent ClassLoader, thus avoiding dependency
+ * conflicts between HBase's classpath and classes in the coprocessor jar.
  * <p>
- * Certain classes are exempt from being loaded by this ClassLoader because it
- * would prevent them from being cast to the equivalent classes in the region
- * server.  For example, the Coprocessor interface needs to be loaded by the
- * region server's ClassLoader to prevent a ClassCastException when casting the
- * coprocessor implementation.
+ * Certain classes are exempt from being loaded by this ClassLoader because it would prevent them
+ * from being cast to the equivalent classes in the region server. For example, the Coprocessor
+ * interface needs to be loaded by the region server's ClassLoader to prevent a ClassCastException
+ * when casting the coprocessor implementation.
  * <p>
- * A HDFS path can be used to specify the coprocessor jar. In this case, the jar
- * will be copied to local at first under some folder under ${hbase.local.dir}/jars/tmp/.
- * The local copy will be removed automatically when the HBase server instance is
- * stopped.
+ * A HDFS path can be used to specify the coprocessor jar. In this case, the jar will be copied to
+ * local at first under some folder under ${hbase.local.dir}/jars/tmp/. The local copy will be
+ * removed automatically when the HBase server instance is stopped.
  * <p>
- * This ClassLoader also handles resource loading.  In most cases this
- * ClassLoader will attempt to load resources from the coprocessor jar first
- * before delegating to the parent.  However, like in class loading,
- * some resources need to be handled differently.  For all of the Hadoop
- * default configurations (e.g. hbase-default.xml) we will check the parent
- * ClassLoader first to prevent issues such as failing the HBase default
- * configuration version check.
+ * This ClassLoader also handles resource loading. In most cases this ClassLoader will attempt to
+ * load resources from the coprocessor jar first before delegating to the parent. However, like in
+ * class loading, some resources need to be handled differently. For all of the Hadoop default
+ * configurations (e.g. hbase-default.xml) we will check the parent ClassLoader first to prevent
+ * issues such as failing the HBase default configuration version check.
  */
 @InterfaceAudience.Private
 public class CoprocessorClassLoader extends ClassLoaderBase {
@@ -80,50 +74,35 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
 
   // A temporary place ${hbase.local.dir}/jars/tmp/ to store the local
   // copy of the jar file and the libraries contained in the jar.
-  private static final String TMP_JARS_DIR = File.separator
-     + "jars" + File.separator + "tmp" + File.separator;
+  private static final String TMP_JARS_DIR =
+    File.separator + "jars" + File.separator + "tmp" + File.separator;
 
   /**
-   * External class loaders cache keyed by external jar path.
-   * ClassLoader instance is stored as a weak-reference
-   * to allow GC'ing when it is not used
-   * (@see HBASE-7205)
+   * External class loaders cache keyed by external jar path. ClassLoader instance is stored as a
+   * weak-reference to allow GC'ing when it is not used (@see HBASE-7205)
    */
   private static final ConcurrentMap<Path, CoprocessorClassLoader> classLoadersCache =
     new MapMaker().concurrencyLevel(3).weakValues().makeMap();
 
   /**
-   * If the class being loaded starts with any of these strings, we will skip
-   * trying to load it from the coprocessor jar and instead delegate
-   * directly to the parent ClassLoader.
+   * If the class being loaded starts with any of these strings, we will skip trying to load it from
+   * the coprocessor jar and instead delegate directly to the parent ClassLoader.
    */
   private static final String[] CLASS_PREFIX_EXEMPTIONS = new String[] {
     // Java standard library:
-    "com.sun.",
-    "java.",
-    "javax.",
-    "org.ietf",
-    "org.omg",
-    "org.w3c",
-    "org.xml",
-    "sunw.",
+    "com.sun.", "java.", "javax.", "org.ietf", "org.omg", "org.w3c", "org.xml", "sunw.",
     // logging
-    "org.slf4j",
-    "org.apache.log4j",
-    "com.hadoop",
+    "org.slf4j", "org.apache.log4j", "com.hadoop",
     // HBase:
-    "org.apache.hadoop.hbase",
-  };
+    "org.apache.hadoop.hbase", };
 
   /**
-   * If the resource being loaded matches any of these patterns, we will first
-   * attempt to load the resource with the parent ClassLoader.  Only if the
-   * resource is not found by the parent do we attempt to load it from the coprocessor jar.
+   * If the resource being loaded matches any of these patterns, we will first attempt to load the
+   * resource with the parent ClassLoader. Only if the resource is not found by the parent do we
+   * attempt to load it from the coprocessor jar.
    */
   private static final Pattern[] RESOURCE_LOAD_PARENT_FIRST_PATTERNS =
-      new Pattern[] {
-    Pattern.compile("^[^-]+-default\\.xml$")
-  };
+    new Pattern[] { Pattern.compile("^[^-]+-default\\.xml$") };
 
   private static final Pattern libJarPattern = Pattern.compile("[/]?lib/([^/]+\\.jar)");
 
@@ -133,8 +112,8 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   private static final KeyLocker<String> locker = new KeyLocker<>();
 
   /**
-   * A set used to synchronized parent path clean up.  Generally, there
-   * should be only one parent path, but using a set so that we can support more.
+   * A set used to synchronized parent path clean up. Generally, there should be only one parent
+   * path, but using a set so that we can support more.
    */
   static final HashSet<String> parentDirLockSet = new HashSet<>();
 
@@ -145,11 +124,9 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     super(parent);
   }
 
-  private void init(Path pathPattern, String pathPrefix,
-      Configuration conf) throws IOException {
+  private void init(Path pathPattern, String pathPrefix, Configuration conf) throws IOException {
     // Copy the jar to the local filesystem
-    String parentDirStr =
-      conf.get(LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + TMP_JARS_DIR;
+    String parentDirStr = conf.get(LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + TMP_JARS_DIR;
     synchronized (parentDirLockSet) {
       if (!parentDirLockSet.contains(parentDirStr)) {
         Path parentDir = new Path(parentDirStr);
@@ -177,9 +154,8 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       for (Path path : FileUtil.stat2Paths(fileStatuses)) {
         if (fs.isFile(path)) {
           // only process files, skip for directories
-          File dst = new File(parentDirStr,
-            "." + pathPrefix + "." + path.getName() + "." + EnvironmentEdgeManager.currentTime()
-              + ".jar");
+          File dst = new File(parentDirStr, "." + pathPrefix + "." + path.getName() + "."
+            + EnvironmentEdgeManager.currentTime() + ".jar");
           fs.copyToLocalFile(path, new Path(dst.toString()));
           dst.deleteOnExit();
 
@@ -193,11 +169,10 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
               JarEntry entry = entries.nextElement();
               Matcher m = libJarPattern.matcher(entry.getName());
               if (m.matches()) {
-                File file = new File(parentDirStr, "." + pathPrefix + "."
-                  + path.getName() + "." + EnvironmentEdgeManager.currentTime() + "." + m.group(1));
+                File file = new File(parentDirStr, "." + pathPrefix + "." + path.getName() + "."
+                  + EnvironmentEdgeManager.currentTime() + "." + m.group(1));
                 try (FileOutputStream outStream = new FileOutputStream(file)) {
-                  IOUtils.copyBytes(jarFile.getInputStream(entry),
-                    outStream, conf, true);
+                  IOUtils.copyBytes(jarFile.getInputStream(entry), outStream, conf, true);
                 }
                 file.deleteOnExit();
                 addURL(file.toURI().toURL());
@@ -234,23 +209,20 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   }
 
   /**
-   * Get a CoprocessorClassLoader for a coprocessor jar path from cache.
-   * If not in cache, create one.
-   *
-   * @param path the path to the coprocessor jar file to load classes from
-   * @param parent the parent class loader for exempted classes
+   * Get a CoprocessorClassLoader for a coprocessor jar path from cache. If not in cache, create
+   * one.
+   * @param path       the path to the coprocessor jar file to load classes from
+   * @param parent     the parent class loader for exempted classes
    * @param pathPrefix a prefix used in temp path name to store the jar file locally
-   * @param conf the configuration used to create the class loader, if needed
-   * @return a CoprocessorClassLoader for the coprocessor jar path
-   * @throws IOException
+   * @param conf       the configuration used to create the class loader, if needed
+   * @return a CoprocessorClassLoader for the coprocessor jar path n
    */
-  public static CoprocessorClassLoader getClassLoader(final Path path,
-      final ClassLoader parent, final String pathPrefix,
-      final Configuration conf) throws IOException {
+  public static CoprocessorClassLoader getClassLoader(final Path path, final ClassLoader parent,
+    final String pathPrefix, final Configuration conf) throws IOException {
     CoprocessorClassLoader cl = getIfCached(path);
     String pathStr = path.toString();
     if (cl != null) {
-      LOG.debug("Found classloader "+ cl + " for "+ pathStr);
+      LOG.debug("Found classloader " + cl + " for " + pathStr);
       return cl;
     }
 
@@ -262,12 +234,11 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     try {
       cl = getIfCached(path);
       if (cl != null) {
-        LOG.debug("Found classloader "+ cl + " for "+ pathStr);
+        LOG.debug("Found classloader " + cl + " for " + pathStr);
         return cl;
       }
 
-      cl = AccessController.doPrivileged(
-          new PrivilegedAction<CoprocessorClassLoader>() {
+      cl = AccessController.doPrivileged(new PrivilegedAction<CoprocessorClassLoader>() {
         @Override
         public CoprocessorClassLoader run() {
           return new CoprocessorClassLoader(parent);
@@ -280,8 +251,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       CoprocessorClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
       if (prev != null) {
         // Lost update race, use already added class loader
-        LOG.warn("THIS SHOULD NOT HAPPEN, a class loader"
-          +" is already cached for " + pathStr);
+        LOG.warn("THIS SHOULD NOT HAPPEN, a class loader" + " is already cached for " + pathStr);
         cl = prev;
       }
       return cl;
@@ -291,18 +261,16 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   }
 
   @Override
-  public Class<?> loadClass(String name)
-      throws ClassNotFoundException {
+  public Class<?> loadClass(String name) throws ClassNotFoundException {
     return loadClass(name, null);
   }
 
   public Class<?> loadClass(String name, String[] includedClassPrefixes)
-      throws ClassNotFoundException {
+    throws ClassNotFoundException {
     // Delegate to the parent immediately if this class is exempt
     if (isClassExempt(name, includedClassPrefixes)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Skipping exempt class " + name +
-            " - delegating directly to parent");
+        LOG.debug("Skipping exempt class " + name + " - delegating directly to parent");
       }
       return parent.loadClass(name);
     }
@@ -314,8 +282,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Class " + name + " already loaded");
         }
-      }
-      else {
+      } else {
         try {
           // Try to find this class using the URLs passed to this ClassLoader
           if (LOG.isDebugEnabled()) {
@@ -372,11 +339,9 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   }
 
   /**
-   * Determines whether the given class should be exempt from being loaded
-   * by this ClassLoader.
+   * Determines whether the given class should be exempt from being loaded by this ClassLoader.
    * @param name the name of the class to test.
-   * @return true if the class should *not* be loaded by this ClassLoader;
-   * false otherwise.
+   * @return true if the class should *not* be loaded by this ClassLoader; false otherwise.
    */
   protected boolean isClassExempt(String name, String[] includedClassPrefixes) {
     if (includedClassPrefixes != null) {
@@ -395,12 +360,11 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   }
 
   /**
-   * Determines whether we should attempt to load the given resource using the
-   * parent first before attempting to load the resource using this ClassLoader.
+   * Determines whether we should attempt to load the given resource using the parent first before
+   * attempting to load the resource using this ClassLoader.
    * @param name the name of the resource to test.
-   * @return true if we should attempt to load the resource using the parent
-   * first; false if we should attempt to load the resource using this
-   * ClassLoader first.
+   * @return true if we should attempt to load the resource using the parent first; false if we
+   *         should attempt to load the resource using this ClassLoader first.
    */
   protected boolean loadResourceUsingParentFirst(String name) {
     for (Pattern resourcePattern : RESOURCE_LOAD_PARENT_FIRST_PATTERNS) {

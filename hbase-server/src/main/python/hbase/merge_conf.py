@@ -150,4 +150,3 @@ class MergeConfTool:
 
 if __name__ == '__main__':
     MergeConfTool().main()
-

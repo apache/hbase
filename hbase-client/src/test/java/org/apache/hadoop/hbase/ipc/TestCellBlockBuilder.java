@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
 public class TestCellBlockBuilder {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestCellBlockBuilder.class);
+    HBaseClassTestRule.forClass(TestCellBlockBuilder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCellBlockBuilder.class);
 
@@ -71,19 +71,20 @@ public class TestCellBlockBuilder {
   }
 
   static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder builder, final Codec codec,
-      final CompressionCodec compressor) throws IOException {
+    final CompressionCodec compressor) throws IOException {
     doBuildCellBlockUndoCellBlock(builder, codec, compressor, 10, 1, false);
   }
 
   static void doBuildCellBlockUndoCellBlock(final CellBlockBuilder builder, final Codec codec,
-      final CompressionCodec compressor, final int count, final int size, final boolean sized)
-      throws IOException {
+    final CompressionCodec compressor, final int count, final int size, final boolean sized)
+    throws IOException {
     Cell[] cells = getCells(count, size);
-    CellScanner cellScanner = sized ? getSizedCellScanner(cells)
-        : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
+    CellScanner cellScanner = sized
+      ? getSizedCellScanner(cells)
+      : CellUtil.createCellScanner(Arrays.asList(cells).iterator());
     ByteBuffer bb = builder.buildCellBlock(codec, compressor, cellScanner);
-    cellScanner = builder.createCellScannerReusingBuffers(codec, compressor,
-        new SingleByteBuff(bb));
+    cellScanner =
+      builder.createCellScannerReusingBuffers(codec, compressor, new SingleByteBuff(bb));
     int i = 0;
     while (cellScanner.advance()) {
       i++;
@@ -148,35 +149,33 @@ public class TestCellBlockBuilder {
   }
 
   private static void timerTests(final CellBlockBuilder builder, final int count, final int size,
-      final Codec codec, final CompressionCodec compressor) throws IOException {
+    final Codec codec, final CompressionCodec compressor) throws IOException {
     final int cycles = 1000;
     StopWatch timer = new StopWatch();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(builder, timer, count, size, codec, compressor, false);
+      timerTest(builder, count, size, codec, compressor, false);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + false + ", count="
-        + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
+      + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
     timer.reset();
     timer.start();
     for (int i = 0; i < cycles; i++) {
-      timerTest(builder, timer, count, size, codec, compressor, true);
+      timerTest(builder, count, size, codec, compressor, true);
     }
     timer.stop();
     LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + true + ", count="
-        + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
+      + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
   }
 
-  private static void timerTest(final CellBlockBuilder builder, final StopWatch timer,
-      final int count, final int size, final Codec codec, final CompressionCodec compressor,
-      final boolean sized) throws IOException {
+  private static void timerTest(final CellBlockBuilder builder, final int count, final int size,
+    final Codec codec, final CompressionCodec compressor, final boolean sized) throws IOException {
     doBuildCellBlockUndoCellBlock(builder, codec, compressor, count, size, sized);
   }
 
   /**
    * For running a few tests of methods herein.
-   *
    * @param args the arguments to use for the timer test
    * @throws IOException if creating the build fails
    */

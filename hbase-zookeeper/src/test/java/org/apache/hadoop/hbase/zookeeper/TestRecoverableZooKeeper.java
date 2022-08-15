@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 public class TestRecoverableZooKeeper {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRecoverableZooKeeper.class);
+    HBaseClassTestRule.forClass(TestRecoverableZooKeeper.class);
 
   private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
 
@@ -74,8 +74,7 @@ public class TestRecoverableZooKeeper {
   public void testSetDataVersionMismatchInLoop() throws Exception {
     String znode = "/hbase/splitWAL/9af7cfc9b15910a0b3d714bf40a3248f";
     Configuration conf = TEST_UTIL.getConfiguration();
-    ZKWatcher zkw = new ZKWatcher(conf, "testSetDataVersionMismatchInLoop",
-        abortable, true);
+    ZKWatcher zkw = new ZKWatcher(conf, "testSetDataVersionMismatchInLoop", abortable, true);
     String ensemble = ZKConfig.getZKQuorumServersString(conf);
     RecoverableZooKeeper rzk = RecoverableZooKeeper.connect(conf, ensemble, zkw);
     rzk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
@@ -95,8 +94,7 @@ public class TestRecoverableZooKeeper {
   static class ZookeeperStub extends ZooKeeper {
     private int throwExceptionInNumOperations;
 
-    ZookeeperStub(String connectString, int sessionTimeout, Watcher watcher)
-        throws IOException {
+    ZookeeperStub(String connectString, int sessionTimeout, Watcher watcher) throws IOException {
       super(connectString, sessionTimeout, watcher);
     }
 
@@ -115,8 +113,8 @@ public class TestRecoverableZooKeeper {
     }
 
     @Override
-    public Stat setData(String path, byte[] data, int version) throws KeeperException,
-        InterruptedException {
+    public Stat setData(String path, byte[] data, int version)
+      throws KeeperException, InterruptedException {
       Stat stat = super.setData(path, data, version);
       checkThrowKeeperException();
       return stat;

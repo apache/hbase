@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.DataInput;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
@@ -39,138 +39,114 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public final class BloomFilterFactory {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(BloomFilterFactory.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(BloomFilterFactory.class.getName());
 
   /** This class should not be instantiated. */
-  private BloomFilterFactory() {}
+  private BloomFilterFactory() {
+  }
 
   /**
-   * Specifies the target error rate to use when selecting the number of keys
-   * per Bloom filter.
+   * Specifies the target error rate to use when selecting the number of keys per Bloom filter.
    */
-  public static final String IO_STOREFILE_BLOOM_ERROR_RATE =
-      "io.storefile.bloom.error.rate";
+  public static final String IO_STOREFILE_BLOOM_ERROR_RATE = "io.storefile.bloom.error.rate";
 
   /**
-   * Maximum folding factor allowed. The Bloom filter will be shrunk by
-   * the factor of up to 2 ** this times if we oversize it initially.
+   * Maximum folding factor allowed. The Bloom filter will be shrunk by the factor of up to 2 **
+   * this times if we oversize it initially.
    */
-  public static final String IO_STOREFILE_BLOOM_MAX_FOLD =
-      "io.storefile.bloom.max.fold";
+  public static final String IO_STOREFILE_BLOOM_MAX_FOLD = "io.storefile.bloom.max.fold";
 
   /**
-   * For default (single-block) Bloom filters this specifies the maximum number
-   * of keys.
+   * For default (single-block) Bloom filters this specifies the maximum number of keys.
    */
-  public static final String IO_STOREFILE_BLOOM_MAX_KEYS =
-      "io.storefile.bloom.max.keys";
+  public static final String IO_STOREFILE_BLOOM_MAX_KEYS = "io.storefile.bloom.max.keys";
 
   /** Master switch to enable Bloom filters */
-  public static final String IO_STOREFILE_BLOOM_ENABLED =
-      "io.storefile.bloom.enabled";
+  public static final String IO_STOREFILE_BLOOM_ENABLED = "io.storefile.bloom.enabled";
 
   /** Master switch to enable Delete Family Bloom filters */
   public static final String IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED =
-      "io.storefile.delete.family.bloom.enabled";
+    "io.storefile.delete.family.bloom.enabled";
 
   /**
-   * Target Bloom block size. Bloom filter blocks of approximately this size
-   * are interleaved with data blocks.
+   * Target Bloom block size. Bloom filter blocks of approximately this size are interleaved with
+   * data blocks.
    */
-  public static final String IO_STOREFILE_BLOOM_BLOCK_SIZE =
-      "io.storefile.bloom.block.size";
+  public static final String IO_STOREFILE_BLOOM_BLOCK_SIZE = "io.storefile.bloom.block.size";
 
   /** Maximum number of times a Bloom filter can be "folded" if oversized */
   private static final int MAX_ALLOWED_FOLD_FACTOR = 7;
 
   /**
-   * Instantiates the correct Bloom filter class based on the version provided
-   * in the meta block data.
-   *
-   * @param meta the byte array holding the Bloom filter's metadata, including
-   *          version information
-   * @param reader the {@link HFile} reader to use to lazily load Bloom filter
-   *          blocks
-   * @return an instance of the correct type of Bloom filter
-   * @throws IllegalArgumentException
+   * Instantiates the correct Bloom filter class based on the version provided in the meta block
+   * data.
+   * @param meta   the byte array holding the Bloom filter's metadata, including version information
+   * @param reader the {@link HFile} reader to use to lazily load Bloom filter blocks
+   * @return an instance of the correct type of Bloom filter n
    */
-  public static BloomFilter
-      createFromMeta(DataInput meta, HFile.Reader reader)
-      throws IllegalArgumentException, IOException {
+  public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader)
+    throws IllegalArgumentException, IOException {
+    return createFromMeta(meta, reader, null);
+  }
+
+  public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader,
+    BloomFilterMetrics metrics) throws IllegalArgumentException, IOException {
     int version = meta.readInt();
     switch (version) {
       case CompoundBloomFilterBase.VERSION:
-        return new CompoundBloomFilter(meta, reader);
+        return new CompoundBloomFilter(meta, reader, metrics);
 
       default:
-        throw new IllegalArgumentException(
-          "Bad bloom filter format version " + version
-        );
+        throw new IllegalArgumentException("Bad bloom filter format version " + version);
     }
   }
 
   /**
-   * @return true if general Bloom (Row or RowCol) filters are enabled in the
-   * given configuration
+   * Returns true if general Bloom (Row or RowCol) filters are enabled in the given configuration
    */
   public static boolean isGeneralBloomEnabled(Configuration conf) {
     return conf.getBoolean(IO_STOREFILE_BLOOM_ENABLED, true);
   }
 
-  /**
-   * @return true if Delete Family Bloom filters are enabled in the given configuration
-   */
+  /** Returns true if Delete Family Bloom filters are enabled in the given configuration */
   public static boolean isDeleteFamilyBloomEnabled(Configuration conf) {
     return conf.getBoolean(IO_STOREFILE_DELETEFAMILY_BLOOM_ENABLED, true);
   }
 
-  /**
-   * @return the Bloom filter error rate in the given configuration
-   */
+  /** Returns the Bloom filter error rate in the given configuration */
   public static float getErrorRate(Configuration conf) {
     return conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
   }
 
-  /**
-   * @return the value for Bloom filter max fold in the given configuration
-   */
+  /** Returns the value for Bloom filter max fold in the given configuration */
   public static int getMaxFold(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
   }
 
-  /** @return the compound Bloom filter block size from the configuration */
+  /** Returns the compound Bloom filter block size from the configuration */
   public static int getBloomBlockSize(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_BLOCK_SIZE, 128 * 1024);
   }
 
-  /**
-  * @return max key for the Bloom filter from the configuration
-  */
+  /** Returns max key for the Bloom filter from the configuration */
   public static int getMaxKeys(Configuration conf) {
     return conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS, 128 * 1000 * 1000);
   }
 
   /**
    * Creates a new general (Row or RowCol) Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
-   *
-   * @param conf
-   * @param cacheConf
-   * @param bloomType
-   * @param maxKeys an estimate of the number of keys we expect to insert.
-   *        Irrelevant if compound Bloom filters are enabled.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nnn * @param maxKeys an
+   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
+   * enabled.
    * @param writer the HFile writer
-   * @return the new Bloom filter, or null in case Bloom filters are disabled
-   *         or when failed to create one.
+   * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
+   *         create one.
    */
   public static BloomFilterWriter createGeneralBloomAtWrite(Configuration conf,
-      CacheConfig cacheConf, BloomType bloomType, int maxKeys,
-      HFile.Writer writer) {
+    CacheConfig cacheConf, BloomType bloomType, int maxKeys, HFile.Writer writer) {
     if (!isGeneralBloomEnabled(conf)) {
-      LOG.trace("Bloom filters are disabled by configuration for "
-          + writer.getPath()
-          + (conf == null ? " (configuration is null)" : ""));
+      LOG.trace("Bloom filters are disabled by configuration for " + writer.getPath()
+        + (conf == null ? " (configuration is null)" : ""));
       return null;
     } else if (bloomType == BloomType.NONE) {
       LOG.trace("Bloom filter is turned off for the column family");
@@ -187,35 +163,31 @@ public final class BloomFilterFactory {
       err = (float) (1 - Math.sqrt(1 - err));
     }
 
-    int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD,
-        MAX_ALLOWED_FOLD_FACTOR);
+    int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, MAX_ALLOWED_FOLD_FACTOR);
 
     // Do we support compound bloom filters?
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
-        err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        bloomType == BloomType.ROWCOL ? CellComparatorImpl.COMPARATOR : null, bloomType);
+      err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
+      bloomType == BloomType.ROWCOL ? CellComparatorImpl.COMPARATOR : null, bloomType);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
 
   /**
    * Creates a new Delete Family Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
-   * @param conf
-   * @param cacheConf
-   * @param maxKeys an estimate of the number of keys we expect to insert.
-   *        Irrelevant if compound Bloom filters are enabled.
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nn * @param maxKeys an
+   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
+   * enabled.
    * @param writer the HFile writer
-   * @return the new Bloom filter, or null in case Bloom filters are disabled
-   *         or when failed to create one.
+   * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
+   *         create one.
    */
   public static BloomFilterWriter createDeleteBloomAtWrite(Configuration conf,
-      CacheConfig cacheConf, int maxKeys, HFile.Writer writer) {
+    CacheConfig cacheConf, int maxKeys, HFile.Writer writer) {
     if (!isDeleteFamilyBloomEnabled(conf)) {
-      LOG.info("Delete Bloom filters are disabled by configuration for "
-          + writer.getPath()
-          + (conf == null ? " (configuration is null)" : ""));
+      LOG.info("Delete Bloom filters are disabled by configuration for " + writer.getPath()
+        + (conf == null ? " (configuration is null)" : ""));
       return null;
     }
 
@@ -223,9 +195,9 @@ public final class BloomFilterFactory {
 
     int maxFold = getMaxFold(conf);
     // In case of compound Bloom filters we ignore the maxKeys hint.
-    CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
-        err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        null, BloomType.ROW);
+    CompoundBloomFilterWriter bloomWriter =
+      new CompoundBloomFilterWriter(getBloomBlockSize(conf), err, Hash.getHashType(conf), maxFold,
+        cacheConf.shouldCacheBloomsOnWrite(), null, BloomType.ROW);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }

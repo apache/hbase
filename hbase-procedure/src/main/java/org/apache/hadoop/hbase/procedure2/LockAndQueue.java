@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.procedure2;
 
 import java.util.function.Function;
@@ -106,9 +105,7 @@ public class LockAndQueue implements LockStatus {
   // try/release Shared/Exclusive lock
   // ======================================================================
 
-  /**
-   * @return whether we have succesfully acquired the shared lock.
-   */
+  /** Returns whether we have succesfully acquired the shared lock. */
   public boolean trySharedLock(Procedure<?> proc) {
     if (hasExclusiveLock() && !hasLockAccess(proc)) {
       return false;
@@ -120,9 +117,7 @@ public class LockAndQueue implements LockStatus {
     return true;
   }
 
-  /**
-   * @return whether we should wake the procedures waiting on the lock here.
-   */
+  /** Returns whether we should wake the procedures waiting on the lock here. */
   public boolean releaseSharedLock() {
     // hasExclusiveLock could be true, it usually means we acquire shared lock while we or our
     // parent have held the xlock. And since there is still an exclusive lock, we do not need to
@@ -138,12 +133,12 @@ public class LockAndQueue implements LockStatus {
     return true;
   }
 
-  /**
-   * @return whether we should wake the procedures waiting on the lock here.
-   */
+  /** Returns whether we should wake the procedures waiting on the lock here. */
   public boolean releaseExclusiveLock(Procedure<?> proc) {
-    if (exclusiveLockOwnerProcedure == null ||
-      exclusiveLockOwnerProcedure.getProcId() != proc.getProcId()) {
+    if (
+      exclusiveLockOwnerProcedure == null
+        || exclusiveLockOwnerProcedure.getProcId() != proc.getProcId()
+    ) {
       // We are not the lock owner, it is probably inherited from the parent procedures.
       return false;
     }
@@ -187,7 +182,7 @@ public class LockAndQueue implements LockStatus {
 
   @Override
   public String toString() {
-    return "exclusiveLockOwner=" + (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE") +
-      ", sharedLockCount=" + getSharedLockCount() + ", waitingProcCount=" + queue.size();
+    return "exclusiveLockOwner=" + (hasExclusiveLock() ? getExclusiveLockProcIdOwner() : "NONE")
+      + ", sharedLockCount=" + getSharedLockCount() + ", waitingProcCount=" + queue.size();
   }
 }

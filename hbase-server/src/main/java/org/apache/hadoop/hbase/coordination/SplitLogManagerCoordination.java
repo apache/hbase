@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.coordination;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
@@ -39,7 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@link #checkTaskStillAvailable(String)} Check that task is still there <BR>
  * {@link #checkTasks()} check for unassigned tasks and resubmit them
  * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
- *   distributed WAL splitter, see SplitWALManager
+ *             distributed WAL splitter, see SplitWALManager
  */
 @InterfaceAudience.Private
 @Deprecated
@@ -53,36 +50,28 @@ public interface SplitLogManagerCoordination {
     final private Set<String> failedDeletions;
 
     public SplitLogManagerDetails(ConcurrentMap<String, Task> tasks, MasterServices master,
-        Set<String> failedDeletions) {
+      Set<String> failedDeletions) {
       this.tasks = tasks;
       this.master = master;
       this.failedDeletions = failedDeletions;
     }
 
-    /**
-     * @return the master value
-     */
+    /** Returns the master value */
     public MasterServices getMaster() {
       return master;
     }
 
-    /**
-     * @return map of tasks
-     */
+    /** Returns map of tasks */
     public ConcurrentMap<String, Task> getTasks() {
       return tasks;
     }
 
-    /**
-     * @return a set of failed deletions
-     */
+    /** Returns a set of failed deletions */
     public Set<String> getFailedDeletions() {
       return failedDeletions;
     }
 
-    /**
-     * @return server name
-     */
+    /** Returns server name */
     public ServerName getServerName() {
       return master.getServerName();
     }
@@ -124,8 +113,8 @@ public interface SplitLogManagerCoordination {
   /**
    * Resubmit the task in case if found unassigned or failed
    * @param taskName path related to task
-   * @param task to resubmit
-   * @param force whether it should be forced
+   * @param task     to resubmit
+   * @param force    whether it should be forced
    * @return whether it was successful
    */
 
@@ -142,8 +131,7 @@ public interface SplitLogManagerCoordination {
   void deleteTask(String taskName);
 
   /**
-   * Support method to init constants such as timeout. Mostly required for UTs.
-   * @throws IOException
+   * Support method to init constants such as timeout. Mostly required for UTs. n
    */
   void init() throws IOException;
 }

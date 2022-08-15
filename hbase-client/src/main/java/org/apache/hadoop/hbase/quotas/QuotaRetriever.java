@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Scanner to iterate over the quota settings.
@@ -45,11 +43,11 @@ import org.apache.hadoop.util.StringUtils;
 public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
   private static final Logger LOG = LoggerFactory.getLogger(QuotaRetriever.class);
 
-  private final Queue<QuotaSettings> cache = new LinkedList<>();
+  private final Queue<QuotaSettings> cache = new ArrayDeque<>();
   private ResultScanner scanner;
   /**
-   * Connection to use.
-   * Could pass one in and have this class use it but this class wants to be standalone.
+   * Connection to use. Could pass one in and have this class use it but this class wants to be
+   * standalone.
    */
   private Connection connection;
   private Table table;
@@ -104,8 +102,10 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
     if (cache.isEmpty()) {
       Result result = scanner.next();
       // Skip exceedThrottleQuota row key because this is not a QuotaSettings
-      if (result != null
-          && Bytes.equals(result.getRow(), QuotaTableUtil.getExceedThrottleQuotaRowKey())) {
+      if (
+        result != null
+          && Bytes.equals(result.getRow(), QuotaTableUtil.getExceedThrottleQuotaRowKey())
+      ) {
         result = scanner.next();
       }
       if (result == null) {
@@ -166,13 +166,13 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
 
   /**
    * Open a QuotaRetriever with the specified filter.
-   * @param conf Configuration object to use.
+   * @param conf   Configuration object to use.
    * @param filter the QuotaFilter
    * @return the QuotaRetriever
    * @throws IOException if a remote or network exception occurs
    */
   public static QuotaRetriever open(final Configuration conf, final QuotaFilter filter)
-      throws IOException {
+    throws IOException {
     Scan scan = QuotaTableUtil.makeScan(filter);
     QuotaRetriever scanner = new QuotaRetriever();
     scanner.init(conf, scan);

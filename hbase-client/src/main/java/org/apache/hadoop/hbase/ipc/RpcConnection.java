@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
@@ -43,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
@@ -85,8 +85,8 @@ abstract class RpcConnection {
   protected SaslClientAuthenticationProvider provider;
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
-      String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
-      MetricsConnection metrics) throws IOException {
+    String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
+    MetricsConnection metrics) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
@@ -98,14 +98,14 @@ abstract class RpcConnection {
 
     // Choose the correct Token and AuthenticationProvider for this client to use
     SaslClientAuthenticationProviders providers =
-        SaslClientAuthenticationProviders.getInstance(conf);
+      SaslClientAuthenticationProviders.getInstance(conf);
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair;
     if (useSasl && securityInfo != null) {
       pair = providers.selectProvider(clusterId, ticket);
       if (pair == null) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Found no valid authentication method from providers={} with tokens={}",
-              providers.toString(), ticket.getTokens());
+            providers.toString(), ticket.getTokens());
         }
         throw new RuntimeException("Found no valid authentication method from options");
       }
@@ -120,7 +120,7 @@ abstract class RpcConnection {
     this.token = pair.getSecond();
 
     LOG.debug("Using {} authentication for service={}, sasl={}",
-        provider.getSaslAuthMethod().getName(), remoteId.serviceName, useSasl);
+      provider.getSaslAuthMethod().getName(), remoteId.serviceName, useSasl);
     reloginMaxBackoff = conf.getInt("hbase.security.relogin.maxbackoff", 5000);
     this.remoteId = remoteId;
   }
@@ -132,8 +132,8 @@ abstract class RpcConnection {
         @Override
         public void run(Timeout timeout) throws Exception {
           call.setTimeout(new CallTimeoutException(call.toShortString() + ", waitTime="
-              + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + "ms, rpcTimeout="
-              + call.timeout + "ms"));
+            + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + "ms, rpcTimeout="
+            + call.timeout + "ms"));
           callTimeout(call);
         }
       }, call.timeout, TimeUnit.MILLISECONDS);
@@ -159,7 +159,7 @@ abstract class RpcConnection {
   protected final ConnectionHeader getConnectionHeader() {
     final ConnectionHeader.Builder builder = ConnectionHeader.newBuilder();
     builder.setServiceName(remoteId.getServiceName());
-    final UserInformation userInfoPB  = provider.getUserInfo(remoteId.ticket);
+    final UserInformation userInfoPB = provider.getUserInfo(remoteId.ticket);
     if (userInfoPB != null) {
       builder.setUserInfo(userInfoPB);
     }
@@ -174,7 +174,7 @@ abstract class RpcConnection {
     // if Crypto AES enable, setup Cipher transformation
     if (isCryptoAESEnable) {
       builder.setRpcCryptoCipherTransformation(
-          conf.get("hbase.rpc.crypto.encryption.aes.cipher.transform", "AES/CTR/NoPadding"));
+        conf.get("hbase.rpc.crypto.encryption.aes.cipher.transform", "AES/CTR/NoPadding"));
     }
     return builder.build();
   }

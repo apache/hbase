@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.impl;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -50,9 +48,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 /**
  * Backup manifest contains all the meta data of a backup image. The manifest info will be bundled
  * as manifest file together with data. So that each backup image will contain all the info needed
- * for restore. BackupManifest is a storage container for BackupImage.
- * It is responsible for storing/reading backup image data and has some additional utility methods.
- *
+ * for restore. BackupManifest is a storage container for BackupImage. It is responsible for
+ * storing/reading backup image data and has some additional utility methods.
  */
 @InterfaceAudience.Private
 public class BackupManifest {
@@ -126,8 +123,8 @@ public class BackupManifest {
       super();
     }
 
-    private BackupImage(String backupId, BackupType type, String rootDir,
-        List<TableName> tableList, long startTs, long completeTs) {
+    private BackupImage(String backupId, BackupType type, String rootDir, List<TableName> tableList,
+      long startTs, long completeTs) {
       this.backupId = backupId;
       this.type = type;
       this.rootDir = rootDir;
@@ -149,9 +146,9 @@ public class BackupManifest {
 
       List<BackupProtos.BackupImage> ancestorList = im.getAncestorsList();
 
-      BackupType type =
-          im.getBackupType() == BackupProtos.BackupType.FULL ? BackupType.FULL
-              : BackupType.INCREMENTAL;
+      BackupType type = im.getBackupType() == BackupProtos.BackupType.FULL
+        ? BackupType.FULL
+        : BackupType.INCREMENTAL;
 
       BackupImage image = new BackupImage(backupId, type, rootDir, tableList, startTs, completeTs);
       for (BackupProtos.BackupImage img : ancestorList) {
@@ -187,8 +184,8 @@ public class BackupManifest {
       return builder.build();
     }
 
-    private static Map<TableName, Map<String, Long>> loadIncrementalTimestampMap(
-        BackupProtos.BackupImage proto) {
+    private static Map<TableName, Map<String, Long>>
+      loadIncrementalTimestampMap(BackupProtos.BackupImage proto) {
       List<BackupProtos.TableServerTimestamp> list = proto.getTstMapList();
 
       Map<TableName, Map<String, Long>> incrTimeRanges = new HashMap<>();
@@ -221,13 +218,13 @@ public class BackupManifest {
         TableName key = entry.getKey();
         Map<String, Long> value = entry.getValue();
         BackupProtos.TableServerTimestamp.Builder tstBuilder =
-            BackupProtos.TableServerTimestamp.newBuilder();
+          BackupProtos.TableServerTimestamp.newBuilder();
         tstBuilder.setTableName(ProtobufUtil.toProtoTableName(key));
 
         for (Map.Entry<String, Long> entry2 : value.entrySet()) {
           String s = entry2.getKey();
           BackupProtos.ServerTimestamp.Builder stBuilder =
-              BackupProtos.ServerTimestamp.newBuilder();
+            BackupProtos.ServerTimestamp.newBuilder();
           HBaseProtos.ServerName.Builder snBuilder = HBaseProtos.ServerName.newBuilder();
           ServerName sn = ServerName.parseServerName(s);
           snBuilder.setHostName(sn.getHostname());
@@ -369,7 +366,6 @@ public class BackupManifest {
   }
 
   // backup image directory
-  private String tableBackupDir = null;
   private BackupImage backupImage;
 
   /**
@@ -378,10 +374,9 @@ public class BackupManifest {
    */
   public BackupManifest(BackupInfo backup) {
     BackupImage.Builder builder = BackupImage.newBuilder();
-    this.backupImage =
-        builder.withBackupId(backup.getBackupId()).withType(backup.getType())
-            .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
-            .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
+    this.backupImage = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
+      .withRootDir(backup.getBackupRootDir()).withTableList(backup.getTableNames())
+      .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
   }
 
   /**
@@ -389,20 +384,17 @@ public class BackupManifest {
    * @param backup The ongoing backup session info
    */
   public BackupManifest(BackupInfo backup, TableName table) {
-    this.tableBackupDir = backup.getTableBackupDir(table);
     List<TableName> tables = new ArrayList<TableName>();
     tables.add(table);
     BackupImage.Builder builder = BackupImage.newBuilder();
-    this.backupImage =
-        builder.withBackupId(backup.getBackupId()).withType(backup.getType())
-            .withRootDir(backup.getBackupRootDir()).withTableList(tables)
-            .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
+    this.backupImage = builder.withBackupId(backup.getBackupId()).withType(backup.getType())
+      .withRootDir(backup.getBackupRootDir()).withTableList(tables)
+      .withStartTime(backup.getStartTs()).withCompleteTime(backup.getCompleteTs()).build();
   }
 
   /**
    * Construct manifest from a backup directory.
-   *
-   * @param conf configuration
+   * @param conf       configuration
    * @param backupPath backup path
    * @throws IOException if constructing the manifest from the backup directory fails
    */
@@ -412,7 +404,7 @@ public class BackupManifest {
 
   /**
    * Construct manifest from a backup directory.
-   * @param fs the FileSystem
+   * @param fs         the FileSystem
    * @param backupPath backup path
    * @throws BackupException exception
    */
@@ -449,7 +441,7 @@ public class BackupManifest {
           }
           this.backupImage = BackupImage.fromProto(proto);
           LOG.debug("Loaded manifest instance from manifest file: "
-              + BackupUtils.getPath(subFile.getPath()));
+            + BackupUtils.getPath(subFile.getPath()));
           return;
         }
       }
@@ -474,16 +466,16 @@ public class BackupManifest {
 
   /**
    * TODO: fix it. Persist the manifest file.
-   * @throws IOException IOException when storing the manifest file.
+   * @throws BackupException if an error occurred while storing the manifest file.
    */
   public void store(Configuration conf) throws BackupException {
     byte[] data = backupImage.toProto().toByteArray();
     // write the file, overwrite if already exist
     Path manifestFilePath =
-        new Path(HBackupFileSystem.getBackupPath(backupImage.getRootDir(),
-          backupImage.getBackupId()), MANIFEST_FILE_NAME);
+      new Path(HBackupFileSystem.getBackupPath(backupImage.getRootDir(), backupImage.getBackupId()),
+        MANIFEST_FILE_NAME);
     try (FSDataOutputStream out =
-        manifestFilePath.getFileSystem(conf).create(manifestFilePath, true)) {
+      manifestFilePath.getFileSystem(conf).create(manifestFilePath, true)) {
       out.write(data);
     } catch (IOException e) {
       throw new BackupException(e.getMessage());
@@ -531,8 +523,8 @@ public class BackupManifest {
     for (BackupImage image : backupImage.getAncestors()) {
       restoreImages.put(Long.valueOf(image.startTs), image);
     }
-    return new ArrayList<>(reverse ? (restoreImages.descendingMap().values())
-        : (restoreImages.values()));
+    return new ArrayList<>(
+      reverse ? restoreImages.descendingMap().values() : restoreImages.values());
   }
 
   /**
@@ -614,7 +606,7 @@ public class BackupManifest {
   /**
    * Check whether backup image set could cover a backup image or not.
    * @param fullImages The backup image set
-   * @param image The target backup image
+   * @param image      The target backup image
    * @return true if fullImages can cover image, otherwise false
    */
   public static boolean canCoverImage(ArrayList<BackupImage> fullImages, BackupImage image) {
@@ -664,8 +656,8 @@ public class BackupManifest {
     info.setStartTs(backupImage.getStartTs());
     info.setBackupRootDir(backupImage.getRootDir());
     if (backupImage.getType() == BackupType.INCREMENTAL) {
-      info.setHLogTargetDir(BackupUtils.getLogBackupDir(backupImage.getRootDir(),
-        backupImage.getBackupId()));
+      info.setHLogTargetDir(
+        BackupUtils.getLogBackupDir(backupImage.getRootDir(), backupImage.getBackupId()));
     }
     return info;
   }

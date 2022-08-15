@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -46,34 +46,31 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
   private final byte[] value;
   private final int vOffset;
   private final int vLength;
-  private final byte[] tags;  // A byte array, rather than an array of org.apache.hadoop.hbase.Tag
+  private final byte[] tags; // A byte array, rather than an array of org.apache.hadoop.hbase.Tag
   private final int tagsOffset;
   private final int tagsLength;
 
   // Other fields
   private long timestamp;
-  private final byte type;  // A byte, rather than org.apache.hadoop.hbase.KeyValue.Type
+  private final byte type; // A byte, rather than org.apache.hadoop.hbase.KeyValue.Type
   private long seqId;
 
   public IndividualBytesFieldCell(byte[] row, byte[] family, byte[] qualifier, long timestamp,
-      KeyValue.Type type, long seqId, byte[] value, byte[] tags) {
-    this(row, 0, ArrayUtils.getLength(row),
-            family, 0, ArrayUtils.getLength(family),
-            qualifier, 0, ArrayUtils.getLength(qualifier),
-            timestamp, type, seqId,
-            value, 0, ArrayUtils.getLength(value),
-            tags, 0, ArrayUtils.getLength(tags));
+    KeyValue.Type type, long seqId, byte[] value, byte[] tags) {
+    this(row, 0, ArrayUtils.getLength(row), family, 0, ArrayUtils.getLength(family), qualifier, 0,
+      ArrayUtils.getLength(qualifier), timestamp, type, seqId, value, 0,
+      ArrayUtils.getLength(value), tags, 0, ArrayUtils.getLength(tags));
   }
 
   public IndividualBytesFieldCell(byte[] row, int rOffset, int rLength, byte[] family, int fOffset,
-      int fLength, byte[] qualifier, int qOffset, int qLength, long timestamp, KeyValue.Type type,
-      long seqId, byte[] value, int vOffset, int vLength, byte[] tags, int tagsOffset,
-      int tagsLength) {
+    int fLength, byte[] qualifier, int qOffset, int qLength, long timestamp, KeyValue.Type type,
+    long seqId, byte[] value, int vOffset, int vLength, byte[] tags, int tagsOffset,
+    int tagsLength) {
     // Check row, family, qualifier and value
-    KeyValue.checkParameters(row, rLength,     // row and row length
-                             family, fLength,  // family and family length
-                             qLength,          // qualifier length
-                             vLength);         // value length
+    KeyValue.checkParameters(row, rLength, // row and row length
+      family, fLength, // family and family length
+      qLength, // qualifier length
+      vLength); // value length
 
     // Check timestamp
     if (timestamp < 0) {
@@ -88,50 +85,49 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
     checkArrayBounds(value, vOffset, vLength);
     checkArrayBounds(tags, tagsOffset, tagsLength);
     // No local copy is made, but reference to the input directly
-    this.row        = row;
-    this.rOffset    = rOffset;
-    this.rLength    = rLength;
-    this.family     = family;
-    this.fOffset    = fOffset;
-    this.fLength    = fLength;
-    this.qualifier  = qualifier;
-    this.qOffset    = qOffset;
-    this.qLength    = qLength;
-    this.value      = value;
-    this.vOffset    = vOffset;
-    this.vLength    = vLength;
-    this.tags       = tags;
+    this.row = row;
+    this.rOffset = rOffset;
+    this.rLength = rLength;
+    this.family = family;
+    this.fOffset = fOffset;
+    this.fLength = fLength;
+    this.qualifier = qualifier;
+    this.qOffset = qOffset;
+    this.qLength = qLength;
+    this.value = value;
+    this.vOffset = vOffset;
+    this.vLength = vLength;
+    this.tags = tags;
     this.tagsOffset = tagsOffset;
     this.tagsLength = tagsLength;
 
     // Set others
-    this.timestamp  = timestamp;
-    this.type       = type.getCode();
-    this.seqId      = seqId;
+    this.timestamp = timestamp;
+    this.type = type.getCode();
+    this.seqId = seqId;
   }
 
   private void checkArrayBounds(byte[] bytes, int offset, int length) {
     if (offset < 0 || length < 0) {
-      throw new IllegalArgumentException("Negative number! offset=" + offset + "and length="
-        + length);
+      throw new IllegalArgumentException(
+        "Negative number! offset=" + offset + "and length=" + length);
     }
     if (bytes == null && (offset != 0 || length != 0)) {
-      throw new IllegalArgumentException("Null bytes array but offset=" + offset + "and length="
-        + length);
+      throw new IllegalArgumentException(
+        "Null bytes array but offset=" + offset + "and length=" + length);
     }
     if (bytes != null && bytes.length < offset + length) {
-      throw new IllegalArgumentException("Out of bounds! bytes.length=" + bytes.length
-        + ", offset=" + offset + ", length=" + length);
+      throw new IllegalArgumentException("Out of bounds! bytes.length=" + bytes.length + ", offset="
+        + offset + ", length=" + length);
     }
   }
 
   private long heapOverhead() {
-    return FIXED_OVERHEAD
-           + ClassSize.ARRAY                               // row      , can not be null
-           + ((family    == null) ? 0 : ClassSize.ARRAY)   // family   , can be null
-           + ((qualifier == null) ? 0 : ClassSize.ARRAY)   // qualifier, can be null
-           + ((value     == null) ? 0 : ClassSize.ARRAY)   // value    , can be null
-           + ((tags      == null) ? 0 : ClassSize.ARRAY);  // tags     , can be null
+    return FIXED_OVERHEAD + ClassSize.ARRAY // row , can not be null
+      + ((family == null) ? 0 : ClassSize.ARRAY) // family , can be null
+      + ((qualifier == null) ? 0 : ClassSize.ARRAY) // qualifier, can be null
+      + ((value == null) ? 0 : ClassSize.ARRAY) // value , can be null
+      + ((tags == null) ? 0 : ClassSize.ARRAY); // tags , can be null
   }
 
   /**
@@ -155,7 +151,7 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
     // If row is null or rLength is invalid, the constructor will reject it, by
     // {@link KeyValue#checkParameters()}, so it is safe to call rLength and make the type
     // conversion.
-    return (short)(rLength);
+    return (short) (rLength);
   }
 
   // 2) Family
@@ -174,7 +170,7 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
   public byte getFamilyLength() {
     // If fLength is invalid, the constructor will reject it, by {@link KeyValue#checkParameters()},
     // so it is safe to make the type conversion.
-    return (byte)(fLength);
+    return (byte) (fLength);
   }
 
   // 3) Qualifier
@@ -200,19 +196,19 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
     return timestamp;
   }
 
-  //5) Type
+  // 5) Type
   @Override
   public byte getTypeByte() {
     return type;
   }
 
-  //6) Sequence id
+  // 6) Sequence id
   @Override
   public long getSequenceId() {
     return seqId;
   }
 
-  //7) Value
+  // 7) Value
   @Override
   public byte[] getValueArray() {
     // Value could be null
@@ -253,12 +249,12 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
   public long heapSize() {
     // Size of array headers are already included into overhead, so do not need to include it for
     // each byte array
-    return   heapOverhead()                         // overhead, with array headers included
-           + ClassSize.align(getRowLength())        // row
-           + ClassSize.align(getFamilyLength())     // family
-           + ClassSize.align(getQualifierLength())  // qualifier
-           + ClassSize.align(getValueLength())      // value
-           + ClassSize.align(getTagsLength());      // tags
+    return heapOverhead() // overhead, with array headers included
+      + ClassSize.align(getRowLength()) // row
+      + ClassSize.align(getFamilyLength()) // family
+      + ClassSize.align(getQualifierLength()) // qualifier
+      + ClassSize.align(getValueLength()) // value
+      + ClassSize.align(getTagsLength()); // tags
   }
 
   /**
@@ -266,7 +262,7 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
    */
   @Override
   public Object clone() throws CloneNotSupportedException {
-    return super.clone();  // only a shadow copy
+    return super.clone(); // only a shadow copy
   }
 
   @Override
@@ -292,6 +288,6 @@ public class IndividualBytesFieldCell implements ExtendedCell, Cloneable {
 
   @Override
   public String toString() {
-    return CellUtil.toString(this, true);
+    return CellUtil.toString(this, false);
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.junit.ClassRule;
@@ -51,13 +50,14 @@ public class HBaseClassTestRuleChecker extends RunListener {
       }
     }
     for (Field field : description.getTestClass().getFields()) {
-      if (Modifier.isStatic(field.getModifiers()) && field.getType() == HBaseClassTestRule.class &&
-        field.isAnnotationPresent(ClassRule.class)) {
+      if (
+        Modifier.isStatic(field.getModifiers()) && field.getType() == HBaseClassTestRule.class
+          && field.isAnnotationPresent(ClassRule.class)
+      ) {
         HBaseClassTestRule timeout = (HBaseClassTestRule) field.get(null);
-        assertEquals(
-          "The HBaseClassTestRule ClassRule in " + description.getTestClass().getName() +
-            " is for " + timeout.getClazz().getName(),
-          description.getTestClass(), timeout.getClazz());
+        assertEquals("The HBaseClassTestRule ClassRule in " + description.getTestClass().getName()
+          + " is for " + timeout.getClazz().getName(), description.getTestClass(),
+          timeout.getClazz());
         return;
       }
     }

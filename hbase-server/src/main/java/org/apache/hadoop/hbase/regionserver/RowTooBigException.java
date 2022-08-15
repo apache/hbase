@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +20,16 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Gets or Scans throw this exception if running without in-row scan flag
- * set and row size appears to exceed max configured size (configurable via
- * hbase.table.max.rowsize).
- *
+ * Gets or Scans throw this exception if running without in-row scan flag set and row size appears
+ * to exceed max configured size (configurable via hbase.table.max.rowsize).
  * @deprecated since 0.99.0. Use {@link org.apache.hadoop.hbase.client.RowTooBigException} instead.
  * @see org.apache.hadoop.hbase.client.RowTooBigException
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-11893">HBASE-11893</a>
  */
 @InterfaceAudience.Public
 @Deprecated
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS",
-  justification="Temporary glue. To be removed")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NM_SAME_SIMPLE_NAME_AS_SUPERCLASS",
+    justification = "Temporary glue. To be removed")
 public class RowTooBigException extends org.apache.hadoop.hbase.client.RowTooBigException {
   public RowTooBigException(String message) {
     super(message);

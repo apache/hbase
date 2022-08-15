@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,9 +29,8 @@ public class WorksConstraint extends BaseConstraint {
   }
 
   /**
-   * Constraint to check that the naming of constraints doesn't mess up the
-   * pattern matching.(that constraint $___Constraint$NameConstraint isn't a
-   * problem)
+   * Constraint to check that the naming of constraints doesn't mess up the pattern matching.(that
+   * constraint $___Constraint$NameConstraint isn't a problem)
    */
   public static class NameConstraint extends WorksConstraint {
   }

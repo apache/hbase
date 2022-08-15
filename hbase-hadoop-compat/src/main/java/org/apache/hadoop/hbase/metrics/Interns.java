@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,25 +37,27 @@ import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
 public final class Interns {
 
   private static LoadingCache<String, ConcurrentHashMap<String, MetricsInfo>> infoCache =
-      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
-          .build(new CacheLoader<String, ConcurrentHashMap<String, MetricsInfo>>() {
-            public ConcurrentHashMap<String, MetricsInfo> load(String key) {
-              return new ConcurrentHashMap<>();
-            }
-          });
+    CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
+      .build(new CacheLoader<String, ConcurrentHashMap<String, MetricsInfo>>() {
+        @Override
+        public ConcurrentHashMap<String, MetricsInfo> load(String key) {
+          return new ConcurrentHashMap<>();
+        }
+      });
   private static LoadingCache<MetricsInfo, ConcurrentHashMap<String, MetricsTag>> tagCache =
-      CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
-          .build(new CacheLoader<MetricsInfo, ConcurrentHashMap<String, MetricsTag>>() {
-            public ConcurrentHashMap<String, MetricsTag> load(MetricsInfo key) {
-              return new ConcurrentHashMap<>();
-            }
-          });
+    CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.DAYS)
+      .build(new CacheLoader<MetricsInfo, ConcurrentHashMap<String, MetricsTag>>() {
+        @Override
+        public ConcurrentHashMap<String, MetricsTag> load(MetricsInfo key) {
+          return new ConcurrentHashMap<>();
+        }
+      });
 
-  private Interns(){}
+  private Interns() {
+  }
 
   /**
    * Get a metric info object
-   *
    * @return an interned metric info object
    */
   public static MetricsInfo info(String name, String description) {
@@ -72,7 +72,6 @@ public final class Interns {
 
   /**
    * Get a metrics tag
-   *
    * @param info  of the tag
    * @param value of the tag
    * @return an interned metrics tag
@@ -89,7 +88,6 @@ public final class Interns {
 
   /**
    * Get a metrics tag
-   *
    * @param name        of the tag
    * @param description of the tag
    * @param value       of the tag

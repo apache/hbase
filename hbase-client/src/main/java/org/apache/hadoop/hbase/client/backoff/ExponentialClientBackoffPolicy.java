@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,18 +21,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * Simple exponential backoff policy on for the client that uses a  percent^4 times the
- * max backoff to generate the backoff time.
+ * Simple exponential backoff policy on for the client that uses a percent^4 times the max backoff
+ * to generate the backoff time.
  */
 @InterfaceAudience.Public
 public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ExponentialClientBackoffPolicy.class);
 
   private static final long ONE_MINUTE = 60 * 1000;
   public static final long DEFAULT_MAX_BACKOFF = 5 * ONE_MINUTE;
@@ -77,8 +74,7 @@ public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
         heapOccupancy = heapOccupancyHighWatermark;
       }
       percent = Math.max(percent,
-          scale(heapOccupancy, heapOccupancyLowWatermark, heapOccupancyHighWatermark,
-              0.1, 1.0));
+        scale(heapOccupancy, heapOccupancyLowWatermark, heapOccupancyHighWatermark, 0.1, 1.0));
     }
     percent = Math.max(percent, compactionPressure);
     // square the percent as a value less than 1. Closer we move to 100 percent,
@@ -92,13 +88,13 @@ public class ExponentialClientBackoffPolicy implements ClientBackoffPolicy {
 
   /** Scale valueIn in the range [baseMin,baseMax] to the range [limitMin,limitMax] */
   private static double scale(double valueIn, double baseMin, double baseMax, double limitMin,
-      double limitMax) {
-    Preconditions.checkArgument(baseMin <= baseMax, "Illegal source range [%s,%s]",
-        baseMin, baseMax);
-    Preconditions.checkArgument(limitMin <= limitMax, "Illegal target range [%s,%s]",
-        limitMin, limitMax);
+    double limitMax) {
+    Preconditions.checkArgument(baseMin <= baseMax, "Illegal source range [%s,%s]", baseMin,
+      baseMax);
+    Preconditions.checkArgument(limitMin <= limitMax, "Illegal target range [%s,%s]", limitMin,
+      limitMax);
     Preconditions.checkArgument(valueIn >= baseMin && valueIn <= baseMax,
-        "Value %s must be within the range [%s,%s]", valueIn, baseMin, baseMax);
+      "Value %s must be within the range [%s,%s]", valueIn, baseMin, baseMax);
     return ((limitMax - limitMin) * (valueIn - baseMin) / (baseMax - baseMin)) + limitMin;
   }
 }

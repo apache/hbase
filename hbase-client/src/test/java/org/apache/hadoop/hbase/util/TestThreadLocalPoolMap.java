@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -37,7 +37,7 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestThreadLocalPoolMap.class);
+    HBaseClassTestRule.forClass(TestThreadLocalPoolMap.class);
 
   @Override
   protected PoolType getPoolType() {
@@ -95,10 +95,10 @@ public class TestThreadLocalPoolMap extends PoolMapTestBase {
         for (int i = 0; i < 3; i++) {
           String result = poolMap.getOrCreate(key, () -> myId);
           assertEquals(myId, result);
-
-          Thread.yield();
+          // Sleep for a short period of time to yield. Thread#yield is platform dependent.
+          Thread.sleep(10);
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
         throw new CompletionException(e);
       }
     };

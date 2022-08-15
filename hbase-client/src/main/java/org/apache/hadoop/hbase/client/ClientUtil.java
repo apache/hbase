@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,7 +25,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ClientUtil {
 
-
   public static boolean areScanStartRowAndStopRowEqual(byte[] startRow, byte[] stopRow) {
     return startRow != null && startRow.length > 0 && Bytes.equals(startRow, stopRow);
   }
@@ -35,19 +34,23 @@ public class ClientUtil {
   }
 
   /**
-   * <p>When scanning for a prefix the scan should stop immediately after the the last row that
-   * has the specified prefix. This method calculates the closest next rowKey immediately following
-   * the given rowKeyPrefix.</p>
-   * <p><b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.</p>
-   * <p>If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can
-   * simply increment the last byte of the array.
-   * But if your application uses real binary rowids you may run into the scenario that your
-   * prefix is something like:</p>
+   * <p>
+   * When scanning for a prefix the scan should stop immediately after the the last row that has the
+   * specified prefix. This method calculates the closest next rowKey immediately following the
+   * given rowKeyPrefix.
+   * </p>
+   * <p>
+   * <b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.
+   * </p>
+   * <p>
+   * If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can simply
+   * increment the last byte of the array. But if your application uses real binary rowids you may
+   * run into the scenario that your prefix is something like:
+   * </p>
    * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x23, 0xFF, 0xFF }</b><br/>
    * Then this stopRow needs to be fed into the actual scan<br/>
    * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x24 }</b> (Notice that it is shorter now)<br/>
    * This method calculates the correct stop row value for this usecase.
-   *
    * @param rowKeyPrefix the rowKey<u>Prefix</u>.
    * @return the closest next rowKey immediately following the given rowKeyPrefix.
    */

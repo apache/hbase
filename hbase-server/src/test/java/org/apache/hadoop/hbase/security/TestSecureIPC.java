@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,11 +21,12 @@ import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
-import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getSecuredConfiguration;
+import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConfiguration;
 import static org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders.SELECTOR_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -73,10 +74,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -96,33 +95,30 @@ public class TestSecureIPC {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSecureIPC.class);
+    HBaseClassTestRule.forClass(TestSecureIPC.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static final File KEYTAB_FILE = new File(
-      TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static final File KEYTAB_FILE =
+    new File(TEST_UTIL.getDataTestDir("keytab").toUri().getPath());
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
   private static String PRINCIPAL;
 
-  String krbKeytab;
-  String krbPrincipal;
-  UserGroupInformation ugi;
-  Configuration clientConf;
-  Configuration serverConf;
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  private String krbKeytab;
+  private String krbPrincipal;
+  private UserGroupInformation ugi;
+  private Configuration clientConf;
+  private Configuration serverConf;
 
   @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
   public static Collection<Object[]> parameters() {
     List<Object[]> params = new ArrayList<>();
-    List<String> rpcClientImpls = Arrays.asList(
-        BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
-    List<String> rpcServerImpls = Arrays.asList(
-        SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
+    List<String> rpcClientImpls =
+      Arrays.asList(BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
+    List<String> rpcServerImpls =
+      Arrays.asList(SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
         params.add(new Object[] { rpcClientImpl, rpcServerImpl });
@@ -143,6 +139,9 @@ public class TestSecureIPC {
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
+    // set a smaller timeout and retry to speed up tests
+    TEST_UTIL.getConfiguration().setInt(RpcClient.SOCKET_TIMEOUT_READ, 2000);
+    TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxretries", 1);
   }
 
   @AfterClass
@@ -158,11 +157,12 @@ public class TestSecureIPC {
     krbKeytab = getKeytabFileForTesting();
     krbPrincipal = getPrincipalForTesting();
     ugi = loginKerberosPrincipal(krbKeytab, krbPrincipal);
-    clientConf = getSecuredConfiguration();
+    clientConf = new Configuration(TEST_UTIL.getConfiguration());
+    setSecuredConfiguration(clientConf);
     clientConf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl);
-    serverConf = getSecuredConfiguration();
-    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        rpcServerImpl);
+    serverConf = new Configuration(TEST_UTIL.getConfiguration());
+    setSecuredConfiguration(serverConf);
+    serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
   }
 
   @Test
@@ -204,47 +204,46 @@ public class TestSecureIPC {
     assertEquals(krbPrincipal, ugi.getUserName());
 
     enableCanonicalHostnameTesting(clientConf, "127.0.0.1");
-    clientConf.setBoolean(
-      SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, true);
+    clientConf
+      .setBoolean(SecurityConstants.UNSAFE_HBASE_CLIENT_KERBEROS_HOSTNAME_DISABLE_REVERSEDNS, true);
     clientConf.set(HBaseKerberosUtils.KRB_PRINCIPAL, "hbase/_HOST@" + KDC.getRealm());
 
     callRpcService(User.create(ugi2));
   }
 
   private static void enableCanonicalHostnameTesting(Configuration conf, String canonicalHostname) {
-    conf.setClass(SELECTOR_KEY,
-      CanonicalHostnameTestingAuthenticationProviderSelector.class,
+    conf.setClass(SELECTOR_KEY, CanonicalHostnameTestingAuthenticationProviderSelector.class,
       AuthenticationProviderSelector.class);
     conf.set(CanonicalHostnameTestingAuthenticationProviderSelector.CANONICAL_HOST_NAME_KEY,
       canonicalHostname);
   }
 
-  public static class CanonicalHostnameTestingAuthenticationProviderSelector extends
-    BuiltInProviderSelector {
+  public static class CanonicalHostnameTestingAuthenticationProviderSelector
+    extends BuiltInProviderSelector {
     private static final String CANONICAL_HOST_NAME_KEY =
       "CanonicalHostnameTestingAuthenticationProviderSelector.canonicalHostName";
 
     @Override
-    public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-      String clusterId, User user) {
+    public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+      selectProvider(String clusterId, User user) {
       final Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
         super.selectProvider(clusterId, user);
       pair.setFirst(createCanonicalHostNameTestingProvider(pair.getFirst()));
       return pair;
     }
 
-    SaslClientAuthenticationProvider createCanonicalHostNameTestingProvider(
-      SaslClientAuthenticationProvider delegate) {
+    SaslClientAuthenticationProvider
+      createCanonicalHostNameTestingProvider(SaslClientAuthenticationProvider delegate) {
       return new SaslClientAuthenticationProvider() {
         @Override
         public SaslClient createClient(Configuration conf, InetAddress serverAddr,
           SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
           boolean fallbackAllowed, Map<String, String> saslProps) throws IOException {
-          final String s =
-            conf.get(CANONICAL_HOST_NAME_KEY);
+          final String s = conf.get(CANONICAL_HOST_NAME_KEY);
           if (s != null) {
             try {
-              final Field canonicalHostName = InetAddress.class.getDeclaredField("canonicalHostName");
+              final Field canonicalHostName =
+                InetAddress.class.getDeclaredField("canonicalHostName");
               canonicalHostName.setAccessible(true);
               canonicalHostName.set(serverAddr, s);
             } catch (NoSuchFieldException | IllegalAccessException e) {
@@ -252,7 +251,8 @@ public class TestSecureIPC {
             }
           }
 
-          return delegate.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed, saslProps);
+          return delegate.createClient(conf, serverAddr, securityInfo, token, fallbackAllowed,
+            saslProps);
         }
 
         @Override
@@ -291,8 +291,8 @@ public class TestSecureIPC {
   @Test
   public void testRpcFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
-    UserGroupInformation clientUgi = UserGroupInformation.createUserForTesting(clientUsername,
-      new String[] { clientUsername });
+    UserGroupInformation clientUgi =
+      UserGroupInformation.createUserForTesting(clientUsername, new String[] { clientUsername });
 
     // check that the client user is insecure
     assertNotSame(ugi, clientUgi);
@@ -304,14 +304,13 @@ public class TestSecureIPC {
     callRpcService(User.create(clientUgi));
   }
 
-  void setRpcProtection(String clientProtection, String serverProtection) {
+  private void setRpcProtection(String clientProtection, String serverProtection) {
     clientConf.set("hbase.rpc.protection", clientProtection);
     serverConf.set("hbase.rpc.protection", serverProtection);
   }
 
   /**
-   * Test various combinations of Server and Client qops.
-   * @throws Exception
+   * Test various combinations of Server and Client qops. n
    */
   @Test
   public void testSaslWithCommonQop() throws Exception {
@@ -333,15 +332,13 @@ public class TestSecureIPC {
 
   @Test
   public void testSaslNoCommonQop() throws Exception {
-    exception.expect(SaslException.class);
-    exception.expectMessage("No common protection layer between client and server");
     setRpcProtection("integrity", "privacy");
-    callRpcService(User.create(ugi));
+    SaslException se = assertThrows(SaslException.class, () -> callRpcService(User.create(ugi)));
+    assertEquals("No common protection layer between client and server", se.getMessage());
   }
 
   /**
-   * Test sasl encryption with Crypto AES.
-   * @throws Exception
+   * Test sasl encryption with Crypto AES. n
    */
   @Test
   public void testSaslWithCryptoAES() throws Exception {
@@ -351,8 +348,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client configuration for Crypto AES.
-   * @throws Exception
+   * Test various combinations of Server and Client configuration for Crypto AES. n
    */
   @Test
   public void testDifferentConfWithCryptoAES() throws Exception {
@@ -376,7 +372,7 @@ public class TestSecureIPC {
   }
 
   private UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
-      throws Exception {
+    throws Exception {
     Configuration cnf = new Configuration();
     cnf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(cnf);
@@ -391,19 +387,20 @@ public class TestSecureIPC {
   private void callRpcService(User clientUser) throws Exception {
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
-        .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
+      .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
     InetSocketAddress isa = new InetSocketAddress(HOST, 0);
 
     RpcServerInterface rpcServer = RpcServerFactory.createRpcServer(null, "AbstractTestSecureIPC",
-        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)), isa,
-        serverConf, new FifoRpcScheduler(serverConf, 1));
+      Lists
+        .newArrayList(new RpcServer.BlockingServiceAndInterface((BlockingService) SERVICE, null)),
+      isa, serverConf, new FifoRpcScheduler(serverConf, 1));
     rpcServer.start();
-    try (RpcClient rpcClient = RpcClientFactory.createClient(clientConf,
-      HConstants.DEFAULT_CLUSTER_ID.toString())) {
-      BlockingInterface stub = newBlockingStub(rpcClient, rpcServer.getListenerAddress(),
-        clientUser);
+    try (RpcClient rpcClient =
+      RpcClientFactory.createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString())) {
+      BlockingInterface stub =
+        newBlockingStub(rpcClient, rpcServer.getListenerAddress(), clientUser);
       TestThread th1 = new TestThread(stub);
       final Throwable exception[] = new Throwable[1];
       Collections.synchronizedList(new ArrayList<Throwable>());
@@ -441,8 +438,8 @@ public class TestSecureIPC {
         int[] messageSize = new int[] { 100, 1000, 10000 };
         for (int i = 0; i < messageSize.length; i++) {
           String input = RandomStringUtils.random(messageSize[i]);
-          String result = stub
-              .echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
+          String result =
+            stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage(input).build())
               .getMessage();
           assertEquals(input, result);
         }

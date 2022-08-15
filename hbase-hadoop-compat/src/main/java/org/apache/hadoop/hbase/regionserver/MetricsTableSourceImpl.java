@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -64,7 +64,6 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPL
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -74,6 +73,9 @@ import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
@@ -126,19 +128,18 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   private MutableFastCounter majorCompactedInputBytes;
   private MutableFastCounter majorCompactedOutputBytes;
 
-  public MetricsTableSourceImpl(String tblName,
-      MetricsTableAggregateSourceImpl aggregate, MetricsTableWrapperAggregate tblWrapperAgg) {
+  public MetricsTableSourceImpl(String tblName, MetricsTableAggregateSourceImpl aggregate,
+    MetricsTableWrapperAggregate tblWrapperAgg) {
     LOG.debug("Creating new MetricsTableSourceImpl for table '{}'", tblName);
     this.tableName = TableName.valueOf(tblName);
     this.agg = aggregate;
 
     this.tableWrapperAgg = tblWrapperAgg;
     this.registry = agg.getMetricsRegistry();
-    this.tableNamePrefixPart1 = "Namespace_" + this.tableName.getNamespaceAsString() +
-            "_table_" + this.tableName.getQualifierAsString();
+    this.tableNamePrefixPart1 = "Namespace_" + this.tableName.getNamespaceAsString() + "_table_"
+      + this.tableName.getQualifierAsString();
     this.tableNamePrefixPart2 = "_metric_";
-    this.tableNamePrefix = tableNamePrefixPart1 +
-        tableNamePrefixPart2;
+    this.tableNamePrefix = tableNamePrefixPart1 + tableNamePrefixPart2;
     this.hashCode = this.tableName.hashCode();
   }
 
@@ -146,16 +147,16 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   public synchronized void registerMetrics() {
     flushTimeHisto = registry.newTimeHistogram(tableNamePrefix + FLUSH_TIME, FLUSH_TIME_DESC);
     flushMemstoreSizeHisto =
-        registry.newSizeHistogram(tableNamePrefix + FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
+      registry.newSizeHistogram(tableNamePrefix + FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
     flushOutputSizeHisto =
-        registry.newSizeHistogram(tableNamePrefix + FLUSH_OUTPUT_SIZE, FLUSH_OUTPUT_SIZE_DESC);
+      registry.newSizeHistogram(tableNamePrefix + FLUSH_OUTPUT_SIZE, FLUSH_OUTPUT_SIZE_DESC);
     flushedOutputBytes =
-        registry.newCounter(tableNamePrefix + FLUSHED_OUTPUT_BYTES, FLUSHED_OUTPUT_BYTES_DESC, 0L);
+      registry.newCounter(tableNamePrefix + FLUSHED_OUTPUT_BYTES, FLUSHED_OUTPUT_BYTES_DESC, 0L);
     flushedMemstoreBytes = registry.newCounter(tableNamePrefix + FLUSHED_MEMSTORE_BYTES,
       FLUSHED_MEMSTORE_BYTES_DESC, 0L);
 
     compactionTimeHisto =
-        registry.newTimeHistogram(tableNamePrefix + COMPACTION_TIME, COMPACTION_TIME_DESC);
+      registry.newTimeHistogram(tableNamePrefix + COMPACTION_TIME, COMPACTION_TIME_DESC);
     compactionInputFileCountHisto = registry.newHistogram(
       tableNamePrefix + COMPACTION_INPUT_FILE_COUNT, COMPACTION_INPUT_FILE_COUNT_DESC);
     compactionInputSizeHisto = registry.newSizeHistogram(tableNamePrefix + COMPACTION_INPUT_SIZE,
@@ -164,8 +165,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       tableNamePrefix + COMPACTION_OUTPUT_FILE_COUNT, COMPACTION_OUTPUT_FILE_COUNT_DESC);
     compactionOutputSizeHisto = registry.newSizeHistogram(tableNamePrefix + COMPACTION_OUTPUT_SIZE,
       COMPACTION_OUTPUT_SIZE_DESC);
-    compactedInputBytes = registry.newCounter(tableNamePrefix + COMPACTED_INPUT_BYTES,
-      COMPACTED_INPUT_BYTES_DESC, 0L);
+    compactedInputBytes =
+      registry.newCounter(tableNamePrefix + COMPACTED_INPUT_BYTES, COMPACTED_INPUT_BYTES_DESC, 0L);
     compactedOutputBytes = registry.newCounter(tableNamePrefix + COMPACTED_OUTPUT_BYTES,
       COMPACTED_OUTPUT_BYTES_DESC, 0L);
 
@@ -176,8 +177,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     majorCompactionInputSizeHisto = registry.newSizeHistogram(
       tableNamePrefix + MAJOR_COMPACTION_INPUT_SIZE, MAJOR_COMPACTION_INPUT_SIZE_DESC);
     majorCompactionOutputFileCountHisto =
-        registry.newHistogram(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_FILE_COUNT,
-          MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
+      registry.newHistogram(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_FILE_COUNT,
+        MAJOR_COMPACTION_OUTPUT_FILE_COUNT_DESC);
     majorCompactionOutputSizeHisto = registry.newSizeHistogram(
       tableNamePrefix + MAJOR_COMPACTION_OUTPUT_SIZE, MAJOR_COMPACTION_OUTPUT_SIZE_DESC);
     majorCompactedInputBytes = registry.newCounter(tableNamePrefix + MAJOR_COMPACTED_INPUT_BYTES,
@@ -238,6 +239,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       tableWrapperAgg = null;
     }
   }
+
   @Override
   public MetricsTableAggregateSource getAggregateSource() {
     return agg;
@@ -272,74 +274,114 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       }
 
       if (this.tableWrapperAgg != null) {
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.CP_REQUEST_COUNT,
             MetricsRegionServerSource.CP_REQUEST_COUNT_DESC),
           tableWrapperAgg.getCpRequestsCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
-            MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getReadRequestCount(tableName.getNameAsString()));
         mrb.addCounter(
-            Interns.info(tableNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
-                MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getFilteredReadRequestCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
+            MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
+          tableWrapperAgg.getReadRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT,
+            MetricsRegionServerSource.FILTERED_READ_REQUEST_COUNT_DESC),
+          tableWrapperAgg.getFilteredReadRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
             MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getWriteRequestCount(tableName.getNameAsString()));
-        mrb.addCounter(Interns.info(tableNamePrefix + MetricsRegionServerSource.TOTAL_REQUEST_COUNT,
+          tableWrapperAgg.getWriteRequestCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.TOTAL_REQUEST_COUNT,
             MetricsRegionServerSource.TOTAL_REQUEST_COUNT_DESC),
-            tableWrapperAgg.getTotalRequestsCount(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
+          tableWrapperAgg.getTotalRequestsCount(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
             MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
-            tableWrapperAgg.getMemStoreSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
+          tableWrapperAgg.getMemStoreSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
             MetricsRegionServerSource.STOREFILE_COUNT_DESC),
-            tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
+          tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MAX_STOREFILE_COUNT,
+            MetricsRegionServerSource.MAX_STOREFILE_COUNT_DESC),
+          tableWrapperAgg.getMaxStoreFiles(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
             MetricsRegionServerSource.STOREFILE_SIZE_DESC),
-            tableWrapperAgg.getStoreFileSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsTableSource.TABLE_SIZE,
-          MetricsTableSource.TABLE_SIZE_DESC),
+          tableWrapperAgg.getStoreFileSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsTableSource.TABLE_SIZE,
+            MetricsTableSource.TABLE_SIZE_DESC),
           tableWrapperAgg.getTableSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.AVERAGE_REGION_SIZE,
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.AVERAGE_REGION_SIZE,
             MetricsRegionServerSource.AVERAGE_REGION_SIZE_DESC),
-            tableWrapperAgg.getAvgRegionSize(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.REGION_COUNT,
+          tableWrapperAgg.getAvgRegionSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.REGION_COUNT,
             MetricsRegionServerSource.REGION_COUNT_DESC),
-            tableWrapperAgg.getNumRegions(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.STORE_COUNT,
+          tableWrapperAgg.getNumRegions(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STORE_COUNT,
             MetricsRegionServerSource.STORE_COUNT_DESC),
-            tableWrapperAgg.getNumStores(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
+          tableWrapperAgg.getNumStores(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
             MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
-            tableWrapperAgg.getMaxStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
+          tableWrapperAgg.getMaxStoreFileAge(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MIN_STORE_FILE_AGE,
             MetricsRegionServerSource.MIN_STORE_FILE_AGE_DESC),
-            tableWrapperAgg.getMinStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
+          tableWrapperAgg.getMinStoreFileAge(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.AVG_STORE_FILE_AGE,
             MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
-            tableWrapperAgg.getAvgStoreFileAge(tableName.getNameAsString()));
-        mrb.addGauge(Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
+          tableWrapperAgg.getAvgStoreFileAge(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STATIC_BLOOM_SIZE,
+            MetricsRegionServerSource.STATIC_BLOOM_SIZE_DESC),
+          tableWrapperAgg.getStaticBloomSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STATIC_INDEX_SIZE,
+            MetricsRegionServerSource.STATIC_INDEX_SIZE),
+          tableWrapperAgg.getStaticIndexSize(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterRequestsCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(
+            tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_NEGATIVE_RESULTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterNegativeResultsCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(
+            tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterEligibleRequestsCount(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
-            tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
+          tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
         addGauge(mrb, tableWrapperAgg.getMemstoreOnlyRowReadsCount(tableName.getNameAsString()),
           MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE,
           MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
         addGauge(mrb, tableWrapperAgg.getMixedRowReadsCount(tableName.getNameAsString()),
-          MetricsRegionSource.MIXED_ROW_READS,
-          MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+          MetricsRegionSource.MIXED_ROW_READS, MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
       }
     }
   }
 
   private void addGauge(MetricsRecordBuilder mrb, Map<String, Long> metricMap, String metricName,
-      String metricDesc) {
+    String metricDesc) {
     if (metricMap != null) {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
-            + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1]
-            + this.tableNamePrefixPart2 + metricName,
-          metricDesc), entry.getValue());
+          + Iterables
+            .get(Splitter.onPattern(MetricsTableWrapperAggregate.HASH).split(entry.getKey()), 1)
+          + this.tableNamePrefixPart2 + metricName, metricDesc), entry.getValue());
       }
     }
   }
@@ -359,11 +401,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof MetricsTableSourceImpl)) {
       return false;
     }
-
     return (compareTo((MetricsTableSourceImpl) o) == 0);
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,7 +47,7 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   public OpenRegionProcedure(TransitRegionStateProcedure parent, RegionInfo region,
-      ServerName targetServer) {
+    ServerName targetServer) {
     super(parent, region, targetServer);
   }
 
@@ -79,11 +79,11 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   private void regionOpenedWithoutPersistingToMeta(AssignmentManager am, RegionStateNode regionNode,
-      TransitionCode transitionCode, long openSeqNum) throws IOException {
+    TransitionCode transitionCode, long openSeqNum) throws IOException {
     if (openSeqNum < regionNode.getOpenSeqNum()) {
       LOG.warn(
-        "Received report {} transition from {} for {}, pid={} but the new openSeqNum {}" +
-          " is less than the current one {}, ignoring...",
+        "Received report {} transition from {} for {}, pid={} but the new openSeqNum {}"
+          + " is less than the current one {}, ignoring...",
         transitionCode, targetServer, regionNode, getProcId(), openSeqNum,
         regionNode.getOpenSeqNum());
     } else {
@@ -94,27 +94,26 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   protected void checkTransition(RegionStateNode regionNode, TransitionCode transitionCode,
-      long openSeqNum) throws UnexpectedStateException {
+    long openSeqNum) throws UnexpectedStateException {
     switch (transitionCode) {
       case OPENED:
         if (openSeqNum < 0) {
-          throw new UnexpectedStateException("Received report unexpected " + TransitionCode.OPENED +
-            " transition openSeqNum=" + openSeqNum + ", " + regionNode + ", proc=" + this);
+          throw new UnexpectedStateException("Received report unexpected " + TransitionCode.OPENED
+            + " transition openSeqNum=" + openSeqNum + ", " + regionNode + ", proc=" + this);
         }
         break;
       case FAILED_OPEN:
         break;
       default:
         throw new UnexpectedStateException(
-          "Received report unexpected " + transitionCode + " transition, " +
-            regionNode.toShortString() + ", " + this + ", expected OPENED or FAILED_OPEN.");
+          "Received report unexpected " + transitionCode + " transition, "
+            + regionNode.toShortString() + ", " + this + ", expected OPENED or FAILED_OPEN.");
     }
   }
 
   @Override
   protected void updateTransitionWithoutPersistingToMeta(MasterProcedureEnv env,
-      RegionStateNode regionNode, TransitionCode transitionCode, long openSeqNum)
-      throws IOException {
+    RegionStateNode regionNode, TransitionCode transitionCode, long openSeqNum) throws IOException {
     if (transitionCode == TransitionCode.OPENED) {
       regionOpenedWithoutPersistingToMeta(env.getAssignmentManager(), regionNode, transitionCode,
         openSeqNum);
@@ -127,7 +126,7 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
-      long openSeqNum) throws IOException {
+    long openSeqNum) throws IOException {
     if (regionNode.getState() == State.OPEN) {
       // should have already been persisted, ignore
       return;

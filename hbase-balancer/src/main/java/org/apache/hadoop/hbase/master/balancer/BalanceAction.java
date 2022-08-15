@@ -25,7 +25,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 abstract class BalanceAction {
   enum Type {
-    ASSIGN_REGION, MOVE_REGION, SWAP_REGIONS, NULL,
+    ASSIGN_REGION,
+    MOVE_REGION,
+    SWAP_REGIONS,
+    NULL,
   }
 
   static final BalanceAction NULL_ACTION = new BalanceAction(Type.NULL) {

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
 /**
  * A container for Result objects, grouped by regionName.
@@ -37,46 +35,35 @@ public class MultiResponse extends AbstractResponse {
   private Map<byte[], RegionResult> results = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
-   * The server can send us a failure for the region itself, instead of individual failure.
-   * It's a part of the protobuf definition.
+   * The server can send us a failure for the region itself, instead of individual failure. It's a
+   * part of the protobuf definition.
    */
-  private Map<byte[], Throwable> exceptions =
-      new TreeMap<>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], Throwable> exceptions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   public MultiResponse() {
     super();
   }
 
-  /**
-   * @return Number of pairs in this container
-   */
+  /** Returns Number of pairs in this container */
   public int size() {
     int size = 0;
-    for (RegionResult result: results.values()) {
+    for (RegionResult result : results.values()) {
       size += result.size();
     }
     return size;
   }
 
-  /**
-   * Add the pair to the container, grouped by the regionName
-   *
-   * @param regionName
-   * @param originalIndex the original index of the Action (request).
-   * @param resOrEx the result or error; will be empty for successful Put and Delete actions.
-   */
+  /** Add the pair to the container, grouped by the regionName. */
   public void add(byte[] regionName, int originalIndex, Object resOrEx) {
     getResult(regionName).addResult(originalIndex, resOrEx);
   }
 
-  public void addException(byte []regionName, Throwable ie){
+  public void addException(byte[] regionName, Throwable ie) {
     exceptions.put(regionName, ie);
   }
 
-  /**
-   * @return the exception for the region, if any. Null otherwise.
-   */
-  public Throwable getException(byte []regionName){
+  /** Returns the exception for the region, if any. Null otherwise. */
+  public Throwable getException(byte[] regionName) {
     return exceptions.get(regionName);
   }
 
@@ -88,7 +75,7 @@ public class MultiResponse extends AbstractResponse {
     getResult(regionName).setStat(stat);
   }
 
-  private RegionResult getResult(byte[] region){
+  private RegionResult getResult(byte[] region) {
     RegionResult rs = results.get(region);
     if (rs == null) {
       rs = new RegionResult();
@@ -97,7 +84,7 @@ public class MultiResponse extends AbstractResponse {
     return rs;
   }
 
-  public Map<byte[], RegionResult> getResults(){
+  public Map<byte[], RegionResult> getResults() {
     return this.results;
   }
 
@@ -106,15 +93,15 @@ public class MultiResponse extends AbstractResponse {
     return ResponseType.MULTI;
   }
 
-  static class RegionResult{
+  static class RegionResult {
     Map<Integer, Object> result = new HashMap<>();
     ClientProtos.RegionLoadStats stat;
 
-    public void addResult(int index, Object result){
+    public void addResult(int index, Object result) {
       this.result.put(index, result);
     }
 
-    public void setStat(ClientProtos.RegionLoadStats stat){
+    public void setStat(ClientProtos.RegionLoadStats stat) {
       this.stat = stat;
     }
 

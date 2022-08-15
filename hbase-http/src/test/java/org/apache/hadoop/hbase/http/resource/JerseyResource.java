@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -34,9 +34,8 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.Response;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
 
 /**
- * A simple Jersey resource class TestHttpServer.
- * The servlet simply puts the path and the op parameter in a map
- * and return it in JSON format in the response.
+ * A simple Jersey resource class TestHttpServer. The servlet simply puts the path and the op
+ * parameter in a map and return it in JSON format in the response.
  */
 @Path("")
 public class JerseyResource {
@@ -47,11 +46,9 @@ public class JerseyResource {
 
   @GET
   @Path("{" + PATH + ":.*}")
-  @Produces({MediaType.APPLICATION_JSON})
-  public Response get(
-      @PathParam(PATH) @DefaultValue("UNKNOWN_" + PATH) final String path,
-      @QueryParam(OP) @DefaultValue("UNKNOWN_" + OP) final String op
-  ) throws IOException {
+  @Produces({ MediaType.APPLICATION_JSON })
+  public Response get(@PathParam(PATH) @DefaultValue("UNKNOWN_" + PATH) final String path,
+    @QueryParam(OP) @DefaultValue("UNKNOWN_" + OP) final String op) throws IOException {
     LOG.info("get: " + PATH + "=" + path + ", " + OP + "=" + op);
 
     final Map<String, Object> m = new TreeMap<>();

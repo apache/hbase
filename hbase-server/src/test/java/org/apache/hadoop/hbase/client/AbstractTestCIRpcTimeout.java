@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,7 +42,7 @@ public abstract class AbstractTestCIRpcTimeout extends AbstractTestCITimeout {
     tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor htd =
       TableDescriptorBuilder.newBuilder(tableName).setCoprocessor(SleepCoprocessor.class.getName())
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();
     TEST_UTIL.getAdmin().createTable(htd);
   }
 
@@ -52,10 +52,10 @@ public abstract class AbstractTestCIRpcTimeout extends AbstractTestCITimeout {
   public void testRpcTimeout() throws IOException {
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     try (Table table = TEST_UTIL.getConnection().getTableBuilder(tableName, null)
-        .setRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
-        .setReadRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
-        .setWriteRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
-        .setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100).build()) {
+      .setRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
+      .setReadRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
+      .setWriteRpcTimeout(SleepCoprocessor.SLEEP_TIME / 2)
+      .setOperationTimeout(SleepCoprocessor.SLEEP_TIME * 100).build()) {
       execute(table);
       fail("Get should not have succeeded");
     } catch (RetriesExhaustedException e) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -71,7 +71,7 @@ public class TestRpcClientLeaks {
     }
 
     public MyRpcClientImpl(Configuration conf, String clusterId, SocketAddress address,
-        MetricsConnection metrics) {
+      MetricsConnection metrics) {
       super(conf, clusterId, address, metrics);
     }
 
@@ -84,7 +84,7 @@ public class TestRpcClientLeaks {
           if (throwException) {
             SAVED_SOCKETS.add(socket);
             throw new IOException(
-                "Sample exception for verifying socket closure in case of exceptions.");
+              "Sample exception for verifying socket closure in case of exceptions.");
           }
         }
       };

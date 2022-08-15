@@ -53,8 +53,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class Replication implements ReplicationSourceService {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(Replication.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
@@ -78,25 +77,27 @@ public class Replication implements ReplicationSourceService {
 
   @Override
   public void initialize(Server server, FileSystem fs, Path logDir, Path oldLogDir,
-      WALFactory walFactory) throws IOException {
+    WALFactory walFactory) throws IOException {
     this.server = server;
     this.conf = this.server.getConfiguration();
     this.isReplicationForBulkLoadDataEnabled =
       ReplicationUtils.isReplicationForBulkLoadDataEnabled(this.conf);
     if (this.isReplicationForBulkLoadDataEnabled) {
-      if (conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
-          || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()) {
-        throw new IllegalArgumentException(HConstants.REPLICATION_CLUSTER_ID
-            + " cannot be null/empty when " + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY
-            + " is set to true.");
+      if (
+        conf.get(HConstants.REPLICATION_CLUSTER_ID) == null
+          || conf.get(HConstants.REPLICATION_CLUSTER_ID).isEmpty()
+      ) {
+        throw new IllegalArgumentException(
+          HConstants.REPLICATION_CLUSTER_ID + " cannot be null/empty when "
+            + HConstants.REPLICATION_BULKLOAD_ENABLE_KEY + " is set to true.");
       }
     }
 
     try {
       this.queueStorage =
-          ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
       this.replicationPeers =
-          ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
+        ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
@@ -109,14 +110,14 @@ public class Replication implements ReplicationSourceService {
     }
     SyncReplicationPeerMappingManager mapping = new SyncReplicationPeerMappingManager();
     this.globalMetricsSource = CompatibilitySingletonFactory
-        .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
+      .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
     this.replicationManager = new ReplicationSourceManager(queueStorage, replicationPeers, conf,
       this.server, fs, logDir, oldLogDir, clusterId, walFactory, mapping, globalMetricsSource);
     this.syncReplicationPeerInfoProvider =
-        new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
+      new SyncReplicationPeerInfoProviderImpl(replicationPeers, mapping);
     PeerActionListener peerActionListener = PeerActionListener.DUMMY;
     // Get the user-space WAL provider
-    WALProvider walProvider = walFactory != null? walFactory.getWALProvider(): null;
+    WALProvider walProvider = walFactory != null ? walFactory.getWALProvider() : null;
     if (walProvider != null) {
       walProvider
         .addWALActionsListener(new ReplicationSourceWALActionListener(conf, replicationManager));
@@ -130,14 +131,13 @@ public class Replication implements ReplicationSourceService {
         // repeat the action we have done in the first refresh, otherwise when the second refresh
         // comes we will be in trouble, such as NPE.
         replicationPeers.getAllPeerIds().stream().map(replicationPeers::getPeer)
-            .filter(p -> p.getPeerConfig().isSyncReplication())
-            .filter(p -> p.getNewSyncReplicationState() != SyncReplicationState.NONE)
-            .forEach(p -> syncWALProvider.peerSyncReplicationStateChange(p.getId(),
-              p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
+          .filter(p -> p.getPeerConfig().isSyncReplication())
+          .filter(p -> p.getNewSyncReplicationState() != SyncReplicationState.NONE)
+          .forEach(p -> syncWALProvider.peerSyncReplicationStateChange(p.getId(),
+            p.getSyncReplicationState(), p.getNewSyncReplicationState(), 0));
       }
     }
-    this.statsPeriodInSecond =
-        this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
+    this.statsPeriodInSecond = this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
     this.replicationLoad = new ReplicationLoad();
 
     this.peerProcedureHandler =
@@ -158,15 +158,13 @@ public class Replication implements ReplicationSourceService {
   }
 
   /**
-   * If replication is enabled and this cluster is a master,
-   * it starts
+   * If replication is enabled and this cluster is a master, it starts
    */
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.server.getChoreService().scheduleChore(
-      new ReplicationStatisticsChore("ReplicationSourceStatistics", server,
-          (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
+    this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
+      "ReplicationSourceStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
     LOG.info("{} started", this.server.toString());
   }
 
@@ -179,7 +177,7 @@ public class Replication implements ReplicationSourceService {
   }
 
   void addHFileRefsToQueue(TableName tableName, byte[] family, List<Pair<Path, Path>> pairs)
-      throws IOException {
+    throws IOException {
     try {
       this.replicationManager.addHFileRefs(tableName, family, pairs);
     } catch (IOException e) {

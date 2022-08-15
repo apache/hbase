@@ -38,7 +38,7 @@
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
-  <version>3.0.0-alpha-3-SNAPSHOT</version>
+  <version>3.0.0-alpha-4-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
   <description>Apache HBase is the Hadoop database. Use it when you need
@@ -771,7 +771,7 @@
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.1.2</hadoop-three.version>
+    <hadoop-three.version>3.2.4</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -781,7 +781,7 @@
     <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.5.0</audience-annotations.version>
-    <avro.version>1.7.7</avro.version>
+    <avro.version>1.11.0</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.13</commons-codec.version>
     <commons-validator.version>1.6</commons-validator.version>
@@ -792,18 +792,18 @@
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.13.1</jackson.version>
-    <jackson.databind.version>2.13.1</jackson.databind.version>
+    <jackson.version>2.13.3</jackson.version>
+    <jackson.databind.version>2.13.3</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.2.13.0</jruby.version>
+    <jruby.version>9.3.4.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
-    <opentelemetry.version>1.0.1</opentelemetry.version>
-    <opentelemetry-javaagent.version>1.0.1</opentelemetry-javaagent.version>
+    <opentelemetry.version>1.15.0</opentelemetry.version>
+    <opentelemetry-javaagent.version>1.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
     <mockito-core.version>2.28.2</mockito-core.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
@@ -816,16 +816,16 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.8</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.31</joni.version>
-    <jcodings.version>1.0.55</jcodings.version>
+    <joni.version>2.1.42</joni.version>
+    <jcodings.version>1.0.56</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.67</bouncycastle.version>
     <kerby.version>1.0.1</kerby.version>
-    <commons-crypto.version>1.0.0</commons-crypto.version>
+    <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>2.1.0</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>1.5.3</asciidoctorj.pdf.version>
+    <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
+    <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
@@ -841,7 +841,7 @@
     <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
-    <maven.javadoc.version>3.2.0</maven.javadoc.version>
+    <maven.javadoc.version>3.4.0</maven.javadoc.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
@@ -851,7 +851,8 @@
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.21.0</spotless.version>
+    <spotless.version>2.22.2</spotless.version>
+    <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
     <brotli4j.version>1.7.1</brotli4j.version>
@@ -859,7 +860,7 @@
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.1.0</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.1</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -1545,7 +1546,6 @@
         <groupId>io.opentelemetry.javaagent</groupId>
         <artifactId>opentelemetry-javaagent</artifactId>
         <version>${opentelemetry-javaagent.version}</version>
-        <classifier>all</classifier>
       </dependency>
       <dependency>
         <groupId>com.lmax</groupId>
@@ -1561,6 +1561,12 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1784,6 +1790,7 @@
           <configuration>
             <groups>${surefire.firstPartGroups}</groups>
             <failIfNoTests>false</failIfNoTests>
+            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
@@ -2528,6 +2535,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
+        <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
           <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
@@ -2563,11 +2571,6 @@
             <groupId>org.asciidoctor</groupId>
             <artifactId>asciidoctorj-pdf</artifactId>
             <version>${asciidoctorj.pdf.version}</version>
-          </dependency>
-          <dependency>
-            <groupId>org.jruby</groupId>
-            <artifactId>jruby-complete</artifactId>
-            <version>${jruby.version}</version>
           </dependency>
         </dependencies>
         <executions>
@@ -2699,10 +2702,46 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>${spotless.version}</version>
         <configuration>
-          <!-- optional: limit format enforcement to just the files changed from this point -->
-          <ratchetFrom>620e5c6d0af57ddb67e18bb97725e1d87ffb5fe5</ratchetFrom>
           <!-- define a language-specific format -->
           <java>
+            <excludes>
+              <exclude>**/generated/*</exclude>
+              <exclude>**/package-info.java</exclude>
+            </excludes>
+            <!--
+              e.g., remove the following lines:
+              "* @param paramName"
+              "* @throws ExceptionType"
+              "* @return returnType"'
+              Multiline to allow anchors on newlines
+            -->
+            <replaceRegex>
+              <name>Remove unhelpful javadoc stubs</name>
+              <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
+              <!-- spotless manve plugin does not allow empty here, so use \n -->
+              <replacement>\n</replacement>
+            </replaceRegex>
+            <!--
+              e.g., rewrite
+              /** @return blabla */
+              or
+              /**
+               * @return blabla
+               */
+              to
+              /** Returns blabla */
+              See https://errorprone.info/bugpattern/FutureReturnValueIgnored
+            -->
+            <replaceRegex>
+              <name>Purge single returns tag multi line</name>
+              <searchRegex>(?m)^ */\*\*\n *\* *@return *(.*) *\n *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
+            <replaceRegex>
+              <name>Purge single returns tag single line</name>
+              <searchRegex>^ */\*\* *@return *(.*) *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
             <!-- apply a specific flavor -->
             <eclipse>
               <file>${session.executionRootDirectory}/dev-support/hbase_eclipse_formatter.xml</file>
@@ -2710,19 +2749,70 @@
             <importOrder>
               <file>${session.executionRootDirectory}/dev-support/eclipse.importorder</file>
             </importOrder>
-            <!-- make sure every file has the following copyright header.
-              optionally, Spotless can set copyright years by digging
-              through git history (see "license" section below) -->
-            <licenseHeader>
-              <file>${session.executionRootDirectory}/dev-support/license-header</file>
-            </licenseHeader>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+            <removeUnusedImports/>
           </java>
           <pom>
             <sortPom>
               <expandEmptyElements>false</expandEmptyElements>
             </sortPom>
           </pom>
-          <removeUnusedImports/>
+          <formats>
+            <!-- you can define as many formats as you want, each is independent -->
+            <format>
+              <!-- define the files to apply to -->
+              <includes>
+                <include>**/*.xml</include>
+                <include>**/*.sh</include>
+                <include>**/*.py</include>
+                <include>**/Jenkinsfile*</include>
+                <include>**/*.md</include>
+                <include>*.md</include>
+                <include>**/*.txt</include>
+                <include>*.txt</include>
+              </includes>
+              <excludes>
+                <exclude>**/target/**</exclude>
+                <exclude>**/dependency-reduced-pom.xml</exclude>
+              </excludes>
+              <!-- define the steps to apply to those files -->
+              <trimTrailingWhitespace/>
+              <endWithNewline/>
+            </format>
+            <format>
+              <!--
+                We have some files which have special license header which must be kept, so
+                here we add a special format section to apply license header, and leave the
+                java section above only used for formatting code style
+              -->
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+              </includes>
+              <excludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/package-info.java</exclude>
+                <!-- ByteRange, from Google protobuf -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/AbstractByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimpleMutableByteRange.java</exclude>
+                <exclude>src/main/java/org/apache/hadoop/hbase/util/SimplePositionedMutableByteRange.java</exclude>
+                <!-- Metrics, from Josh Elser -->
+                <exclude>src/main/java/org/apache/hadoop/hbase/metrics/impl/HBaseMetrics2HadoopMetricsAdapter.java</exclude>
+                <!-- https://github.com/ept/warc-hadoop, from Martin Kleppmann -->
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileReader.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCFileWriter.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCInputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
+                <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+              </excludes>
+              <licenseHeader>
+                <file>${session.executionRootDirectory}/dev-support/license-header</file>
+                <delimiter>package</delimiter>
+              </licenseHeader>
+            </format>
+          </formats>
         </configuration>
       </plugin>
     </plugins>
@@ -3055,7 +3145,6 @@
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
         <argLine>-Dio.netty.tryReflectionSetAccessible=true
-          --illegal-access=permit
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
@@ -3063,9 +3152,8 @@
           --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
           --add-opens java.base/java.lang.reflect=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
           ${hbase-surefire.argLine}</argLine>
-        <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
-        <hadoop-three.version>3.2.0</hadoop-three.version>
         <!--
           Value to use for surefire when running jdk11.
           TODO: replicate logic for windows
@@ -3281,12 +3369,16 @@
                 <artifactId>jersey-core</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-jaxrs</artifactId>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-xc</artifactId>
+                <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>io.netty</groupId>
@@ -3305,14 +3397,6 @@
                 <artifactId>javax.inject</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
               </exclusion>
@@ -3324,6 +3408,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3334,19 +3426,7 @@
             <exclusions>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-jaxrs</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-xc</artifactId>
+                <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>javax.xml.bind</groupId>
@@ -3363,6 +3443,14 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3390,6 +3478,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3419,6 +3515,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3453,11 +3557,7 @@
               </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
+                <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>com.google.guava</groupId>
@@ -3470,6 +3570,22 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.fusesource.leveldbjni</groupId>
+                <artifactId>leveldbjni-all</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.openlabtesting.leveldbjni</groupId>
+                <artifactId>leveldbjni-all</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3498,11 +3614,7 @@
               </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
+                <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>com.google.guava</groupId>
@@ -3520,6 +3632,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3533,6 +3653,22 @@
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3556,6 +3692,14 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3612,12 +3756,8 @@
                 <artifactId>junit</artifactId>
               </exclusion>
               <exclusion>
-                <groupId>org.codehause.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.codehause.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>*</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.slf4j</groupId>
@@ -3626,6 +3766,14 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>io.netty</groupId>
@@ -3670,12 +3818,41 @@
                 <artifactId>log4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <!--
+              Needed in test context when hadoop-3.3 runs.
+              <exclusion>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
+              </exclusion>
+              -->
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>jsp-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
           <dependency>
+            <!-- Is this needed? Seems a duplicate of the above dependency but for the
+            classifier-->
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-three.version}</version>
@@ -3740,6 +3917,14 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3751,6 +3936,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>ch.qos.reload4j</groupId>
+                <artifactId>reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

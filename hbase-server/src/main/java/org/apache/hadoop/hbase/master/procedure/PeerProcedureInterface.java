@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,8 +23,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface PeerProcedureInterface {
 
   enum PeerOperationType {
-    ADD, REMOVE, ENABLE, DISABLE, UPDATE_CONFIG, REFRESH, TRANSIT_SYNC_REPLICATION_STATE,
-    RECOVER_STANDBY, SYNC_REPLICATION_REPLAY_WAL, SYNC_REPLICATION_REPLAY_WAL_REMOTE
+    ADD,
+    REMOVE,
+    ENABLE,
+    DISABLE,
+    UPDATE_CONFIG,
+    REFRESH,
+    TRANSIT_SYNC_REPLICATION_STATE,
+    RECOVER_STANDBY,
+    SYNC_REPLICATION_REPLAY_WAL,
+    SYNC_REPLICATION_REPLAY_WAL_REMOTE
   }
 
   String getPeerId();

@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,45 +16,45 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.mob;
-import java.io.IOException;
 
+import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
-  * Mob file compaction chore in a regular batch mode test.
-  * 1. Enables batch mode for regular MOB compaction,
-  *    Sets batch size to 7 regions.
-  * 2. Disables periodic MOB compactions, sets minimum age to archive to 10 sec
-  * 3. Creates MOB table with 20 regions
-  * 4. Loads MOB data (randomized keys, 1000 rows), flushes data.
-  * 5. Repeats 4. two more times
-  * 6. Verifies that we have 20 *3 = 60 mob files (equals to number of regions x 3)
-  * 7. Runs major MOB compaction.
-  * 8. Verifies that number of MOB files in a mob directory is 20 x4 = 80
-  * 9. Waits for a period of time larger than minimum age to archive
-  * 10. Runs Mob cleaner chore
-  * 11 Verifies that number of MOB files in a mob directory is 20.
-  * 12 Runs scanner and checks all 3 * 1000 rows.
+ * Mob file compaction chore in a regular batch mode test. 1. Enables batch mode for regular MOB
+ * compaction, Sets batch size to 7 regions. 2. Disables periodic MOB compactions, sets minimum age
+ * to archive to 10 sec 3. Creates MOB table with 20 regions 4. Loads MOB data (randomized keys,
+ * 1000 rows), flushes data. 5. Repeats 4. two more times 6. Verifies that we have 20 *3 = 60 mob
+ * files (equals to number of regions x 3) 7. Runs major MOB compaction. 8. Verifies that number of
+ * MOB files in a mob directory is 20 x4 = 80 9. Waits for a period of time larger than minimum age
+ * to archive 10. Runs Mob cleaner chore 11 Verifies that number of MOB files in a mob directory is
+ * 20. 12 Runs scanner and checks all 3 * 1000 rows.
  */
+@RunWith(Parameterized.class)
 @Category(LargeTests.class)
 public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionWithDefaults {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestMobCompactionRegularRegionBatchMode.class);
+    LoggerFactory.getLogger(TestMobCompactionRegularRegionBatchMode.class);
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMobCompactionRegularRegionBatchMode.class);
+    HBaseClassTestRule.forClass(TestMobCompactionRegularRegionBatchMode.class);
 
   private static final int batchSize = 7;
   private MobFileCompactionChore compactionChore;
+
+  public TestMobCompactionRegularRegionBatchMode(Boolean useFileBasedSFT) {
+    super(useFileBasedSFT);
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -63,16 +62,13 @@ public class TestMobCompactionRegularRegionBatchMode extends TestMobCompactionWi
     compactionChore = new MobFileCompactionChore(conf, batchSize);
   }
 
-  @BeforeClass
-  public static void configureCompactionBatches() throws InterruptedException, IOException {
-    HTU.shutdownMiniHBaseCluster();
+  protected void additonalConfigSetup() {
     conf.setInt(MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, batchSize);
-    HTU.startMiniHBaseCluster();
   }
 
   @Override
   protected void mobCompactImpl(TableDescriptor tableDescriptor,
-      ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
+    ColumnFamilyDescriptor familyDescriptor) throws IOException, InterruptedException {
     LOG.debug("compacting {} in batch mode.", tableDescriptor.getTableName());
     compactionChore.performMajorCompactionInBatches(admin, tableDescriptor, familyDescriptor);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -57,7 +60,7 @@ public final class FutureUtils {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public static <T> void addListener(CompletableFuture<T> future,
-      BiConsumer<? super T, ? super Throwable> action) {
+    BiConsumer<? super T, ? super Throwable> action) {
     future.whenComplete((resp, error) -> {
       try {
         // See this post on stack overflow(shorten since the url is too long),
@@ -80,7 +83,7 @@ public final class FutureUtils {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   public static <T> void addListener(CompletableFuture<T> future,
-      BiConsumer<? super T, ? super Throwable> action, Executor executor) {
+    BiConsumer<? super T, ? super Throwable> action, Executor executor) {
     future.whenCompleteAsync((resp, error) -> {
       try {
         action.accept(resp, unwrapCompletionException(error));
@@ -91,11 +94,22 @@ public final class FutureUtils {
   }
 
   /**
+   * Log the error if the future indicates any failure.
+   */
+  public static void consume(CompletableFuture<?> future) {
+    addListener(future, (r, e) -> {
+      if (e != null) {
+        LOG.warn("Async operation fails", e);
+      }
+    });
+  }
+
+  /**
    * Return a {@link CompletableFuture} which is same with the given {@code future}, but execute all
    * the callbacks in the given {@code executor}.
    */
   public static <T> CompletableFuture<T> wrapFuture(CompletableFuture<T> future,
-      Executor executor) {
+    Executor executor) {
     CompletableFuture<T> wrappedFuture = new CompletableFuture<>();
     addListener(future, (r, e) -> {
       if (e != null) {
@@ -196,5 +210,17 @@ public final class FutureUtils {
     CompletableFuture<T> future = new CompletableFuture<>();
     future.completeExceptionally(e);
     return future;
+  }
+
+  /**
+   * Returns a new CompletableFuture that is completed when all of the given CompletableFutures
+   * complete. If any of the given CompletableFutures complete exceptionally, then the returned
+   * CompletableFuture also does so, with a CompletionException holding this exception as its cause.
+   * Otherwise, the results of all given CompletableFutures could be obtained by the new returned
+   * CompletableFuture.
+   */
+  public static <T> CompletableFuture<List<T>> allOf(List<CompletableFuture<T>> futures) {
+    return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> futures.stream().map(f -> f.getNow(null)).collect(toList()));
   }
 }

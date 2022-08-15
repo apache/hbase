@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,13 +26,11 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
- * Implementation of the PluggableBlockingQueue abstract class.
- *
- * Used to verify that the pluggable call queue type for the RpcExecutor can load correctly
- * via the FQCN reflection semantics.
+ * Implementation of the PluggableBlockingQueue abstract class. Used to verify that the pluggable
+ * call queue type for the RpcExecutor can load correctly via the FQCN reflection semantics.
  */
-public class TestPluggableQueueImpl extends PluggableBlockingQueue implements
-  ConfigurationObserver {
+public class TestPluggableQueueImpl extends PluggableBlockingQueue
+  implements ConfigurationObserver {
 
   private final BoundedPriorityBlockingQueue<CallRunner> inner;
   private static boolean configurationRecentlyChanged = false;
@@ -44,104 +42,129 @@ public class TestPluggableQueueImpl extends PluggableBlockingQueue implements
     configurationRecentlyChanged = false;
   }
 
-  @Override public boolean add(CallRunner callRunner) {
+  @Override
+  public boolean add(CallRunner callRunner) {
     return inner.add(callRunner);
   }
 
-  @Override public boolean offer(CallRunner callRunner) {
+  @Override
+  public boolean offer(CallRunner callRunner) {
     return inner.offer(callRunner);
   }
 
-  @Override public CallRunner remove() {
+  @Override
+  public CallRunner remove() {
     return inner.remove();
   }
 
-  @Override public CallRunner poll() {
+  @Override
+  public CallRunner poll() {
     return inner.poll();
   }
 
-  @Override public CallRunner element() {
+  @Override
+  public CallRunner element() {
     return inner.element();
   }
 
-  @Override public CallRunner peek() {
+  @Override
+  public CallRunner peek() {
     return inner.peek();
   }
 
-  @Override public void put(CallRunner callRunner) throws InterruptedException {
+  @Override
+  public void put(CallRunner callRunner) throws InterruptedException {
     inner.put(callRunner);
   }
 
-  @Override public boolean offer(CallRunner callRunner, long timeout, TimeUnit unit)
+  @Override
+  public boolean offer(CallRunner callRunner, long timeout, TimeUnit unit)
     throws InterruptedException {
     return inner.offer(callRunner, timeout, unit);
   }
 
-  @Override public CallRunner take() throws InterruptedException {
+  @Override
+  public CallRunner take() throws InterruptedException {
     return inner.take();
   }
 
-  @Override public CallRunner poll(long timeout, TimeUnit unit) throws InterruptedException {
+  @Override
+  public CallRunner poll(long timeout, TimeUnit unit) throws InterruptedException {
     return inner.poll(timeout, unit);
   }
 
-  @Override public int remainingCapacity() {
+  @Override
+  public int remainingCapacity() {
     return inner.remainingCapacity();
   }
 
-  @Override public boolean remove(Object o) {
+  @Override
+  public boolean remove(Object o) {
     return inner.remove(o);
   }
 
-  @Override public boolean containsAll(Collection<?> c) {
+  @Override
+  public boolean containsAll(Collection<?> c) {
     return inner.containsAll(c);
   }
 
-  @Override public boolean addAll(Collection<? extends CallRunner> c) {
+  @Override
+  public boolean addAll(Collection<? extends CallRunner> c) {
     return inner.addAll(c);
   }
 
-  @Override public boolean removeAll(Collection<?> c) {
+  @Override
+  public boolean removeAll(Collection<?> c) {
     return inner.removeAll(c);
   }
 
-  @Override public boolean retainAll(Collection<?> c) {
+  @Override
+  public boolean retainAll(Collection<?> c) {
     return inner.retainAll(c);
   }
 
-  @Override public void clear() {
+  @Override
+  public void clear() {
     inner.clear();
   }
 
-  @Override public int size() {
+  @Override
+  public int size() {
     return inner.size();
   }
 
-  @Override public boolean isEmpty() {
+  @Override
+  public boolean isEmpty() {
     return inner.isEmpty();
   }
 
-  @Override public boolean contains(Object o) {
+  @Override
+  public boolean contains(Object o) {
     return inner.contains(o);
   }
 
-  @Override public Iterator<CallRunner> iterator() {
+  @Override
+  public Iterator<CallRunner> iterator() {
     return inner.iterator();
   }
 
-  @Override public Object[] toArray() {
+  @Override
+  public Object[] toArray() {
     return inner.toArray();
   }
 
-  @Override public <T> T[] toArray(T[] a) {
+  @Override
+  public <T> T[] toArray(T[] a) {
     return inner.toArray(a);
   }
 
-  @Override public int drainTo(Collection<? super CallRunner> c) {
+  @Override
+  public int drainTo(Collection<? super CallRunner> c) {
     return inner.drainTo(c);
   }
 
-  @Override public int drainTo(Collection<? super CallRunner> c, int maxElements) {
+  @Override
+  public int drainTo(Collection<? super CallRunner> c, int maxElements) {
     return inner.drainTo(c, maxElements);
   }
 
@@ -149,7 +172,8 @@ public class TestPluggableQueueImpl extends PluggableBlockingQueue implements
     return configurationRecentlyChanged;
   }
 
-  @Override public void onConfigurationChange(Configuration conf) {
+  @Override
+  public void onConfigurationChange(Configuration conf) {
     configurationRecentlyChanged = true;
   }
 }

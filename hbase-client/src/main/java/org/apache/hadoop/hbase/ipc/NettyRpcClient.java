@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
+import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -30,6 +34,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
@@ -44,19 +49,19 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   final Class<? extends Channel> channelClass;
 
   private final boolean shutdownGroupWhenClose;
+  private final AtomicReference<SslContext> sslContextForClient = new AtomicReference<>();
 
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
-      MetricsConnection metrics) {
+    MetricsConnection metrics) {
     super(configuration, clusterId, localAddress, metrics);
     Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass =
       NettyRpcClientConfigHelper.getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
       // Use our own EventLoopGroup.
-      int threadCount = conf.getInt(
-        NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
+      int threadCount =
+        conf.getInt(NettyRpcClientConfigHelper.HBASE_NETTY_EVENTLOOP_RPCCLIENT_THREADCOUNT_KEY, 0);
       this.group = new NioEventLoopGroup(threadCount,
-          new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true,
-            Thread.NORM_PRIORITY));
+        new DefaultThreadFactory("RPCClient(own)-NioEventLoopGroup", true, Thread.NORM_PRIORITY));
       this.channelClass = NioSocketChannel.class;
       this.shutdownGroupWhenClose = true;
     } else {
@@ -67,7 +72,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   }
 
   /** Used in test only. */
-  NettyRpcClient(Configuration configuration) {
+  public NettyRpcClient(Configuration configuration) {
     this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null);
   }
 
@@ -81,5 +86,17 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
     if (shutdownGroupWhenClose) {
       group.shutdownGracefully();
     }
+  }
+
+  SslContext getSslContext() throws X509Exception, SSLException {
+    SslContext result = sslContextForClient.get();
+    if (result == null) {
+      result = X509Util.createSslContextForClient(conf);
+      if (!sslContextForClient.compareAndSet(null, result)) {
+        // lost the race, another thread already set the value
+        result = sslContextForClient.get();
+      }
+    }
+    return result;
   }
 }

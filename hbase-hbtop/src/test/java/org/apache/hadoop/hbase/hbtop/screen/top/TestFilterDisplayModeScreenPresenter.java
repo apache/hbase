@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -39,7 +39,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-
 @Category(SmallTests.class)
 @RunWith(MockitoJUnitRunner.class)
 public class TestFilterDisplayModeScreenPresenter {
@@ -58,24 +57,23 @@ public class TestFilterDisplayModeScreenPresenter {
 
   @Before
   public void setup() {
-    List<Field> fields = Mode.REGION.getFieldInfos().stream()
-      .map(FieldInfo::getField)
-      .collect(Collectors.toList());
+    List<Field> fields =
+      Mode.REGION.getFieldInfos().stream().map(FieldInfo::getField).collect(Collectors.toList());
 
-    List<RecordFilter>  filters = new ArrayList<>();
+    List<RecordFilter> filters = new ArrayList<>();
     filters.add(RecordFilter.parse("NAMESPACE==namespace", fields, true));
     filters.add(RecordFilter.parse("TABLE==table", fields, true));
 
-    filterDisplayModeScreenPresenter = new FilterDisplayModeScreenPresenter(
-      filterDisplayModeScreenView, filters, topScreenView);
+    filterDisplayModeScreenPresenter =
+      new FilterDisplayModeScreenPresenter(filterDisplayModeScreenView, filters, topScreenView);
   }
 
   @Test
   public void testInit() {
     filterDisplayModeScreenPresenter.init();
-    verify(filterDisplayModeScreenView).showFilters(argThat(filters -> filters.size() == 2
-      && filters.get(0).toString().equals("NAMESPACE==namespace")
-      && filters.get(1).toString().equals("TABLE==table")));
+    verify(filterDisplayModeScreenView).showFilters(argThat(
+      filters -> filters.size() == 2 && filters.get(0).toString().equals("NAMESPACE==namespace")
+        && filters.get(1).toString().equals("TABLE==table")));
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -49,12 +49,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({SecurityTests.class, MediumTests.class})
+@Category({ SecurityTests.class, MediumTests.class })
 public class TestDefaultScanLabelGeneratorStack {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDefaultScanLabelGeneratorStack.class);
+    HBaseClassTestRule.forClass(TestDefaultScanLabelGeneratorStack.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -83,7 +83,7 @@ public class TestDefaultScanLabelGeneratorStack {
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(1);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    TESTUSER = User.createUserForTesting(conf, "test", new String[] { });
+    TESTUSER = User.createUserForTesting(conf, "test", new String[] {});
 
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
@@ -111,7 +111,7 @@ public class TestDefaultScanLabelGeneratorStack {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = TEST_UTIL.createTable(tableName, CF)) {
+          Table table = TEST_UTIL.createTable(tableName, CF)) {
           Put put = new Put(ROW_1);
           put.addColumn(CF, Q1, HConstants.LATEST_TIMESTAMP, value1);
           put.setCellVisibility(new CellVisibility(SECRET));
@@ -133,7 +133,7 @@ public class TestDefaultScanLabelGeneratorStack {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           Result[] next = getResult(table, new Scan());
 
           // Test that super user can see all the cells.
@@ -141,7 +141,7 @@ public class TestDefaultScanLabelGeneratorStack {
           cellScanner.advance();
           Cell current = cellScanner.current();
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q1, 0, Q1.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -172,7 +172,7 @@ public class TestDefaultScanLabelGeneratorStack {
       @Override
       public Void run() throws Exception {
         try (Connection connection = ConnectionFactory.createConnection(conf);
-             Table table = connection.getTable(tableName)) {
+          Table table = connection.getTable(tableName)) {
           // Test scan with no auth attribute
           Result[] next = getResult(table, new Scan());
           CellScanner cellScanner = next[0].cellScanner();
@@ -180,7 +180,7 @@ public class TestDefaultScanLabelGeneratorStack {
           Cell current = cellScanner.current();
           // test user can see value2 (CONFIDENTIAL) and value3 (no label)
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q2, 0, Q2.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -189,7 +189,7 @@ public class TestDefaultScanLabelGeneratorStack {
           current = cellScanner.current();
           // test user can see value2 (CONFIDENTIAL) and value3 (no label)
           assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
-              current.getRowLength(), ROW_1, 0, ROW_1.length));
+            current.getRowLength(), ROW_1, 0, ROW_1.length));
           assertTrue(Bytes.equals(current.getQualifierArray(), current.getQualifierOffset(),
             current.getQualifierLength(), Q3, 0, Q3.length));
           assertTrue(Bytes.equals(current.getValueArray(), current.getValueOffset(),
@@ -251,7 +251,7 @@ public class TestDefaultScanLabelGeneratorStack {
 
   }
 
-  private static Result [] getResult(Table table, Scan scan) throws IOException {
+  private static Result[] getResult(Table table, Scan scan) throws IOException {
     ResultScanner scanner = table.getScanner(scan);
     Result[] next = scanner.next(1);
     assertTrue(next.length == 1);

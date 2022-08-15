@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -54,7 +53,7 @@ public class TestDeleteMobTable {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeleteMobTable.class);
+    HBaseClassTestRule.forClass(TestDeleteMobTable.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static byte[] FAMILY = Bytes.toBytes("family");
@@ -74,10 +73,7 @@ public class TestDeleteMobTable {
   }
 
   /**
-   * Generate the mob value.
-   *
-   * @param size
-   *          the size of the value
+   * Generate the mob value. n * the size of the value
    * @return the mob value generated
    */
   private static byte[] generateMobValue(int size) {
@@ -202,11 +198,10 @@ public class TestDeleteMobTable {
     return 0;
   }
 
-  private int countArchiveMobFiles(TableName tn, String familyName)
-      throws IOException {
+  private int countArchiveMobFiles(TableName tn, String familyName) throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path storePath = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(), tn,
-        MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
+      MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
     if (fs.exists(storePath)) {
       return fs.listStatus(storePath).length;
     }
@@ -227,23 +222,23 @@ public class TestDeleteMobTable {
   }
 
   private boolean mobArchiveExist(TableName tn, String familyName, String fileName)
-      throws IOException {
+    throws IOException {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path storePath = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(), tn,
-        MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
+      MobUtils.getMobRegionInfo(tn).getEncodedName(), familyName);
     return fs.exists(new Path(storePath, fileName));
   }
 
   private String assertHasOneMobRow(Table table, TableName tn, String familyName)
-      throws IOException {
+    throws IOException {
     Scan scan = new Scan();
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     ResultScanner rs = table.getScanner(scan);
     Result r = rs.next();
     Assert.assertNotNull(r);
     String fileName = MobUtils.getMobFileName(r.getColumnLatestCell(FAMILY, QF));
-    Path filePath = new Path(
-        MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
+    Path filePath =
+      new Path(MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Assert.assertTrue(fs.exists(filePath));
     r = rs.next();

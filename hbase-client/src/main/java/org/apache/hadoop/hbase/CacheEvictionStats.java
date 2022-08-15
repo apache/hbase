@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -56,9 +54,8 @@ public final class CacheEvictionStats {
 
   private String getFailedRegions() {
     return exceptions.keySet().stream()
-        .map(regionName -> RegionInfo.prettyPrint(RegionInfo.encodeRegionName(regionName)))
-        .collect(Collectors.toList())
-        .toString();
+      .map(regionName -> RegionInfo.prettyPrint(RegionInfo.encodeRegionName(regionName)))
+      .collect(Collectors.toList()).toString();
   }
 
   @InterfaceAudience.Private
@@ -68,11 +65,8 @@ public final class CacheEvictionStats {
 
   @Override
   public String toString() {
-    return "CacheEvictionStats{" +
-        "evictedBlocks=" + evictedBlocks +
-        ", maxCacheSize=" + maxCacheSize +
-        ", failedRegionsSize=" + getExceptionCount() +
-        ", failedRegions=" + getFailedRegions() +
-        '}';
+    return "CacheEvictionStats{" + "evictedBlocks=" + evictedBlocks + ", maxCacheSize="
+      + maxCacheSize + ", failedRegionsSize=" + getExceptionCount() + ", failedRegions="
+      + getFailedRegions() + '}';
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,12 +35,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MapReduceTests.class, SmallTests.class})
+@Category({ MapReduceTests.class, SmallTests.class })
 public class TestGroupingTableMapper {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestGroupingTableMapper.class);
+    HBaseClassTestRule.forClass(TestGroupingTableMapper.class);
 
   /**
    * Test GroupingTableMapper class
@@ -56,14 +56,14 @@ public class TestGroupingTableMapper {
     Result result = mock(Result.class);
     @SuppressWarnings("unchecked")
     Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context =
-        mock(Mapper.Context.class);
+      mock(Mapper.Context.class);
     context.write(any(), any());
     List<Cell> keyValue = new ArrayList<>();
     byte[] row = {};
-    keyValue.add(new KeyValue(row, Bytes.toBytes("family2"), Bytes.toBytes("clm"), Bytes
-        .toBytes("value1")));
-    keyValue.add(new KeyValue(row, Bytes.toBytes("family1"), Bytes.toBytes("clm"), Bytes
-        .toBytes("value2")));
+    keyValue.add(
+      new KeyValue(row, Bytes.toBytes("family2"), Bytes.toBytes("clm"), Bytes.toBytes("value1")));
+    keyValue.add(
+      new KeyValue(row, Bytes.toBytes("family1"), Bytes.toBytes("clm"), Bytes.toBytes("value2")));
     when(result.listCells()).thenReturn(keyValue);
     mapper.map(null, result, context);
     // template data

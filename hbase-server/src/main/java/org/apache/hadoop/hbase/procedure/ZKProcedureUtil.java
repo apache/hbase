@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,37 +20,25 @@ package org.apache.hadoop.hbase.procedure;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is a shared ZooKeeper-based znode management utils for distributed procedure.  All znode
- * operations should go through the provided methods in coordinators and members.
- *
- * Layout of nodes in ZK is
- * /hbase/[op name]/acquired/
- *                    [op instance] - op data/
- *                        /[nodes that have acquired]
- *                 /reached/
- *                    [op instance]/
- *                        /[nodes that have completed]
- *                 /abort/
- *                    [op instance] - failure data
- *
- * NOTE: while acquired and completed are znode dirs, abort is actually just a znode.
- *
- * Assumption here that procedure names are unique
+ * This is a shared ZooKeeper-based znode management utils for distributed procedure. All znode
+ * operations should go through the provided methods in coordinators and members. Layout of nodes in
+ * ZK is /hbase/[op name]/acquired/ [op instance] - op data/ /[nodes that have acquired] /reached/
+ * [op instance]/ /[nodes that have completed] /abort/ [op instance] - failure data NOTE: while
+ * acquired and completed are znode dirs, abort is actually just a znode. Assumption here that
+ * procedure names are unique
  */
 @InterfaceAudience.Private
-public abstract class ZKProcedureUtil
-    extends ZKListener implements Closeable {
+public abstract class ZKProcedureUtil extends ZKListener implements Closeable {
 
   private static final Logger LOG = LoggerFactory.getLogger(ZKProcedureUtil.class);
 
@@ -66,15 +54,14 @@ public abstract class ZKProcedureUtil
   /**
    * Top-level watcher/controller for procedures across the cluster.
    * <p>
-   * On instantiation, this ensures the procedure znodes exist.  This however requires the passed in
-   *  watcher has been started.
-   * @param watcher watcher for the cluster ZK. Owned by <tt>this</tt> and closed via
-   *          {@link #close()}
+   * On instantiation, this ensures the procedure znodes exist. This however requires the passed in
+   * watcher has been started.
+   * @param watcher         watcher for the cluster ZK. Owned by <tt>this</tt> and closed via
+   *                        {@link #close()}
    * @param procDescription name of the znode describing the procedure to run
    * @throws KeeperException when the procedure znodes cannot be created
    */
-  public ZKProcedureUtil(ZKWatcher watcher, String procDescription)
-      throws KeeperException {
+  public ZKProcedureUtil(ZKWatcher watcher, String procDescription) throws KeeperException {
     super(watcher);
     // make sure we are listening for events
     watcher.registerListener(this);
@@ -125,31 +112,29 @@ public abstract class ZKProcedureUtil
   /**
    * Get the full znode path for the node used by the coordinator to trigger a global barrier
    * acquire on each subprocedure.
-   * @param controller controller running the procedure
+   * @param controller     controller running the procedure
    * @param opInstanceName name of the running procedure instance (not the procedure description).
    * @return full znode path to the prepare barrier/start node
    */
-  public static String getAcquireBarrierNode(ZKProcedureUtil controller,
-      String opInstanceName) {
+  public static String getAcquireBarrierNode(ZKProcedureUtil controller, String opInstanceName) {
     return ZNodePaths.joinZNode(controller.acquiredZnode, opInstanceName);
   }
 
   /**
    * Get the full znode path for the node used by the coordinator to trigger a global barrier
    * execution and release on each subprocedure.
-   * @param controller controller running the procedure
+   * @param controller     controller running the procedure
    * @param opInstanceName name of the running procedure instance (not the procedure description).
    * @return full znode path to the commit barrier
    */
-  public static String getReachedBarrierNode(ZKProcedureUtil controller,
-      String opInstanceName) {
+  public static String getReachedBarrierNode(ZKProcedureUtil controller, String opInstanceName) {
     return ZNodePaths.joinZNode(controller.reachedZnode, opInstanceName);
   }
 
   /**
-   * Get the full znode path for the node used by the coordinator or member to trigger an abort
-   * of the global barrier acquisition or execution in subprocedures.
-   * @param controller controller running the procedure
+   * Get the full znode path for the node used by the coordinator or member to trigger an abort of
+   * the global barrier acquisition or execution in subprocedures.
+   * @param controller     controller running the procedure
    * @param opInstanceName name of the running procedure instance (not the procedure description).
    * @return full znode path to the abort znode
    */
@@ -163,11 +148,8 @@ public abstract class ZKProcedureUtil
   }
 
   /**
-   * Is this a procedure related znode path?
-   *
-   * TODO: this is not strict, can return true if had name just starts with same prefix but is
-   * different zdir.
-   *
+   * Is this a procedure related znode path? TODO: this is not strict, can return true if had name
+   * just starts with same prefix but is different zdir.
    * @return true if starts with baseZnode
    */
   boolean isInProcedurePath(String path) {
@@ -181,13 +163,12 @@ public abstract class ZKProcedureUtil
     return path.equals(acquiredZnode);
   }
 
-
   /**
    * Is this in the procedure barrier acquired znode path
    */
   boolean isAcquiredPathNode(String path) {
-    return path.startsWith(this.acquiredZnode) && !path.equals(acquiredZnode) &&
-      isMemberNode(path, acquiredZnode);
+    return path.startsWith(this.acquiredZnode) && !path.equals(acquiredZnode)
+      && isMemberNode(path, acquiredZnode);
   }
 
   /**
@@ -201,15 +182,14 @@ public abstract class ZKProcedureUtil
    * Is this in the procedure barrier reached znode path
    */
   boolean isReachedPathNode(String path) {
-    return path.startsWith(this.reachedZnode) && !path.equals(reachedZnode) &&
-      isMemberNode(path, reachedZnode);
+    return path.startsWith(this.reachedZnode) && !path.equals(reachedZnode)
+      && isMemberNode(path, reachedZnode);
   }
 
   /*
    * Returns true if the specified path is a member of the "statePath"
-   *      /hbase/<ProcName>/<state>/<instance>/member
-   *      |------ state path -----|
-   *      |------------------ path ------------------|
+   * /hbase/<ProcName>/<state>/<instance>/member |------ state path -----| |------------------ path
+   * ------------------|
    */
   private boolean isMemberNode(final String path, final String statePath) {
     int count = 0;
@@ -238,8 +218,7 @@ public abstract class ZKProcedureUtil
   // --------------------------------------------------------------------------
   /**
    * Recursively print the current state of ZK (non-transactional)
-   * @param root name of the root directory in zk to print
-   * @throws KeeperException
+   * @param root name of the root directory in zk to print n
    */
   void logZKTree(String root) {
     if (!LOG.isDebugEnabled()) return;
@@ -283,8 +262,8 @@ public abstract class ZKProcedureUtil
   }
 
   public void clearZNodes(String procedureName) throws KeeperException {
-    LOG.info("Clearing all znodes for procedure " + procedureName + "including nodes "
-        + acquiredZnode + " " + reachedZnode + " " + abortZnode);
+    LOG.info("Clearing all znodes for procedure " + procedureName + " including nodes "
+      + acquiredZnode + " " + reachedZnode + " " + abortZnode);
 
     // Make sure we trigger the watches on these nodes by creating them. (HBASE-13885)
     String acquiredBarrierNode = getAcquiredBarrierNode(procedureName);

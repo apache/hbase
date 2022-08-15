@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,7 +19,6 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +41,7 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
   }
 
   public static CachedMobFile create(FileSystem fs, Path path, Configuration conf,
-      CacheConfig cacheConf) throws IOException {
+    CacheConfig cacheConf) throws IOException {
     // XXX: primaryReplica is only used for constructing the key of block cache so it is not a
     // critical problem if we pass the wrong value, so here we always pass true. Need to fix later.
     HStoreFile sf = new HStoreFile(fs, path, conf, cacheConf, BloomType.NONE, true);
@@ -76,16 +74,14 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
 
   @Override
   public int hashCode() {
-    return (int)(accessCount ^ (accessCount >>> 32));
+    return (int) (accessCount ^ (accessCount >>> 32));
   }
 
   /**
-   * Opens the mob file if it's not opened yet and increases the reference.
-   * It's not thread-safe. Use MobFileCache.openFile() instead.
-   * The reader of the mob file is just opened when it's not opened no matter how many times
-   * this open() method is invoked.
-   * The reference is a counter that how many times this reader is referenced. When the
-   * reference is 0, this reader is closed.
+   * Opens the mob file if it's not opened yet and increases the reference. It's not thread-safe.
+   * Use MobFileCache.openFile() instead. The reader of the mob file is just opened when it's not
+   * opened no matter how many times this open() method is invoked. The reference is a counter that
+   * how many times this reader is referenced. When the reference is 0, this reader is closed.
    */
   @Override
   public void open() throws IOException {
@@ -94,9 +90,8 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
   }
 
   /**
-   * Decreases the reference of the underlying reader for the mob file.
-   * It's not thread-safe. Use MobFileCache.closeFile() instead.
-   * This underlying reader isn't closed until the reference is 0.
+   * Decreases the reference of the underlying reader for the mob file. It's not thread-safe. Use
+   * MobFileCache.closeFile() instead. This underlying reader isn't closed until the reference is 0.
    */
   @Override
   public void close() throws IOException {
@@ -107,8 +102,7 @@ public class CachedMobFile extends MobFile implements Comparable<CachedMobFile> 
   }
 
   /**
-   * Gets the reference of the current mob file.
-   * Internal usage, currently it's for testing.
+   * Gets the reference of the current mob file. Internal usage, currently it's for testing.
    * @return The reference of the current mob file.
    */
   public long getReferenceCount() {

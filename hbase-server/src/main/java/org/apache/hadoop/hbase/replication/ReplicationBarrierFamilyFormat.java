@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -154,10 +154,10 @@ public final class ReplicationBarrierFamilyFormat {
 
     @Override
     public String toString() {
-      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" +
-        state + ", parentRegionNames=" +
-        parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")) +
-        "]";
+      return "ReplicationBarrierResult [barriers=" + Arrays.toString(barriers) + ", state=" + state
+        + ", parentRegionNames="
+        + parentRegionNames.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", "))
+        + "]";
     }
   }
 
@@ -203,8 +203,9 @@ public final class ReplicationBarrierFamilyFormat {
         // TODO: we may look up a region which has already been split or merged so we need to check
         // whether the encoded name matches. Need to find a way to quit earlier when there is no
         // record for the given region, for now it will scan to the end of the table.
-        if (!Bytes.equals(encodedRegionName,
-          Bytes.toBytes(RegionInfo.encodeRegionName(regionName)))) {
+        if (
+          !Bytes.equals(encodedRegionName, Bytes.toBytes(RegionInfo.encodeRegionName(regionName)))
+        ) {
           continue;
         }
         return getReplicationBarrierResult(result);

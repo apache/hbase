@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -32,8 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
- * single function call and turn it into multiple manipulations of the hadoop metrics system.
+ * Class used to push numbers about the WAL into the metrics subsystem. This will take a single
+ * function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
 public class MetricsWAL implements WALActionsListener {
@@ -51,12 +48,12 @@ public class MetricsWAL implements WALActionsListener {
 
   @Override
   public void postSync(final long timeInNanos, final int handlerSyncs) {
-    source.incrementSyncTime(timeInNanos/1000000L);
+    source.incrementSyncTime(timeInNanos / 1000000L);
   }
 
   @Override
   public void postAppend(final long size, final long time, final WALKey logkey,
-      final WALEdit logEdit) throws IOException {
+    final WALEdit logEdit) throws IOException {
     TableName tableName = logkey.getTableName();
     source.incrementAppendCount(tableName);
     source.incrementAppendTime(time);
@@ -66,9 +63,7 @@ public class MetricsWAL implements WALActionsListener {
     if (time > 1000) {
       source.incrementSlowAppendCount();
       LOG.warn(String.format("%s took %d ms appending an edit to wal; len~=%s",
-          Thread.currentThread().getName(),
-          time,
-          StringUtils.humanReadableInt(size)));
+        Thread.currentThread().getName(), time, StringUtils.humanReadableInt(size)));
     }
   }
 

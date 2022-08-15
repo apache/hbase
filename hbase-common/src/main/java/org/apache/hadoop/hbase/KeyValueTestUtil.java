@@ -15,53 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 
 @InterfaceAudience.Private
 public class KeyValueTestUtil {
 
-  public static KeyValue create(
-      String row,
-      String family,
-      String qualifier,
-      long timestamp,
-      String value)
-  {
+  public static KeyValue create(String row, String family, String qualifier, long timestamp,
+    String value) {
     return create(row, family, qualifier, timestamp, KeyValue.Type.Put, value);
   }
 
-  public static KeyValue create(
-      String row,
-      String family,
-      String qualifier,
-      long timestamp,
-      KeyValue.Type type,
-      String value)
-  {
-      return new KeyValue(
-          Bytes.toBytes(row),
-          Bytes.toBytes(family),
-          Bytes.toBytes(qualifier),
-          timestamp,
-          type,
-          Bytes.toBytes(value)
-      );
+  public static KeyValue create(String row, String family, String qualifier, long timestamp,
+    KeyValue.Type type, String value) {
+    return new KeyValue(Bytes.toBytes(row), Bytes.toBytes(family), Bytes.toBytes(qualifier),
+      timestamp, type, Bytes.toBytes(value));
   }
 
   public static ByteBuffer toByteBufferAndRewind(final Iterable<? extends KeyValue> kvs,
-      boolean includeMemstoreTS) {
+    boolean includeMemstoreTS) {
     int totalBytes = KeyValueUtil.totalLengthWithMvccVersion(kvs, includeMemstoreTS);
     ByteBuffer bb = ByteBuffer.allocate(totalBytes);
     for (KeyValue kv : IterableUtils.emptyIfNull(kvs)) {
@@ -72,16 +54,12 @@ public class KeyValueTestUtil {
   }
 
   /**
-   * Checks whether KeyValues from kvCollection2 are contained in kvCollection1.
-   *
-   * The comparison is made without distinguishing MVCC version of the KeyValues
-   *
-   * @param kvCollection1
-   * @param kvCollection2
-   * @return true if KeyValues from kvCollection2 are contained in kvCollection1
+   * Checks whether KeyValues from kvCollection2 are contained in kvCollection1. The comparison is
+   * made without distinguishing MVCC version of the KeyValues nn * @return true if KeyValues from
+   * kvCollection2 are contained in kvCollection1
    */
   public static boolean containsIgnoreMvccVersion(Collection<? extends Cell> kvCollection1,
-      Collection<? extends Cell> kvCollection2) {
+    Collection<? extends Cell> kvCollection2) {
     for (Cell kv1 : kvCollection1) {
       boolean found = false;
       for (Cell kv2 : kvCollection2) {
@@ -93,7 +71,7 @@ public class KeyValueTestUtil {
   }
 
   public static List<KeyValue> rewindThenToList(final ByteBuffer bb,
-      final boolean includesMemstoreTS, final boolean useTags) {
+    final boolean includesMemstoreTS, final boolean useTags) {
     bb.rewind();
     List<KeyValue> kvs = Lists.newArrayList();
     KeyValue kv = null;
@@ -107,11 +85,10 @@ public class KeyValueTestUtil {
     return kvs;
   }
 
-
   /********************* toString ************************************/
 
   public static String toStringWithPadding(final Collection<? extends KeyValue> kvs,
-      final boolean includeMeta) {
+    final boolean includeMeta) {
     int maxRowStringLength = 0;
     int maxFamilyStringLength = 0;
     int maxQualifierStringLength = 0;
@@ -119,10 +96,10 @@ public class KeyValueTestUtil {
     for (KeyValue kv : kvs) {
       maxRowStringLength = Math.max(maxRowStringLength, getRowString(kv).length());
       maxFamilyStringLength = Math.max(maxFamilyStringLength, getFamilyString(kv).length());
-      maxQualifierStringLength = Math.max(maxQualifierStringLength, getQualifierString(kv)
-        .length());
-      maxTimestampLength = Math.max(maxTimestampLength, Long.valueOf(kv.getTimestamp()).toString()
-        .length());
+      maxQualifierStringLength =
+        Math.max(maxQualifierStringLength, getQualifierString(kv).length());
+      maxTimestampLength =
+        Math.max(maxTimestampLength, Long.valueOf(kv.getTimestamp()).toString().length());
     }
     StringBuilder sb = new StringBuilder();
     for (KeyValue kv : kvs) {
@@ -137,7 +114,7 @@ public class KeyValueTestUtil {
   }
 
   protected static String toStringWithPadding(final KeyValue kv, final int maxRowLength,
-      int maxFamilyLength, int maxQualifierLength, int maxTimestampLength, boolean includeMeta) {
+    int maxFamilyLength, int maxQualifierLength, int maxTimestampLength, boolean includeMeta) {
     String leadingLengths = "";
     String familyLength = kv.getFamilyLength() + " ";
     if (includeMeta) {
@@ -151,13 +128,13 @@ public class KeyValueTestUtil {
     int spacesAfterRow = maxRowLength - getRowString(kv).length() + 2;
     int spacesAfterFamily = maxFamilyLength - getFamilyString(kv).length() + 2;
     int spacesAfterQualifier = maxQualifierLength - getQualifierString(kv).length() + 1;
-    int spacesAfterTimestamp = maxTimestampLength
-        - Long.valueOf(kv.getTimestamp()).toString().length() + 1;
+    int spacesAfterTimestamp =
+      maxTimestampLength - Long.valueOf(kv.getTimestamp()).toString().length() + 1;
     return leadingLengths + getRowString(kv) + StringUtils.repeat(' ', spacesAfterRow)
-        + familyLength + getFamilyString(kv) + StringUtils.repeat(' ', spacesAfterFamily)
-        + getQualifierString(kv) + StringUtils.repeat(' ', spacesAfterQualifier)
-        + getTimestampString(kv) + StringUtils.repeat(' ', spacesAfterTimestamp)
-        + getTypeString(kv) + " " + getValueString(kv);
+      + familyLength + getFamilyString(kv) + StringUtils.repeat(' ', spacesAfterFamily)
+      + getQualifierString(kv) + StringUtils.repeat(' ', spacesAfterQualifier)
+      + getTimestampString(kv) + StringUtils.repeat(' ', spacesAfterTimestamp) + getTypeString(kv)
+      + " " + getValueString(kv);
   }
 
   protected static String getRowString(final KeyValue kv) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in
- * off heap/ on heap ByteBuffer
+ * This Cell is an implementation of {@link ByteBufferExtendedCell} where the data resides in off
+ * heap/ on heap ByteBuffer
  */
 @InterfaceAudience.Private
 public class ByteBufferKeyValue extends ByteBufferExtendedCell {
@@ -37,8 +37,8 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
   protected final int length;
   private long seqId = 0;
 
-  public static final int FIXED_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-      + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG;
+  public static final int FIXED_OVERHEAD =
+    ClassSize.OBJECT + ClassSize.REFERENCE + (2 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_LONG;
 
   public ByteBufferKeyValue(ByteBuffer buf, int offset, int length, long seqId) {
     this.buf = buf;
@@ -186,8 +186,8 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public int getTagsLength() {
-    int tagsLen = this.length - (getKeyLength() + getValueLength()
-        + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+    int tagsLen =
+      this.length - (getKeyLength() + getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
     if (tagsLen > 0) {
       // There are some Tag bytes in the byte[]. So reduce 2 bytes which is
       // added to denote the tags
@@ -294,7 +294,7 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
 
   @Override
   public String toString() {
-    return CellUtil.toString(this, true);
+    return CellUtil.toString(this, false);
   }
 
   @Override
@@ -304,14 +304,14 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
   }
 
   private int getTimestampOffset() {
-    return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE
-        + getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE;
+    return this.offset + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + getKeyLength()
+      - KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   @Override
   public void setTimestamp(byte[] ts) throws IOException {
     ByteBufferUtils.copyFromArrayToBuffer(this.buf, this.getTimestampOffset(), ts, 0,
-        Bytes.SIZEOF_LONG);
+      Bytes.SIZEOF_LONG);
   }
 
   @Override
@@ -343,8 +343,8 @@ public class ByteBufferKeyValue extends ByteBufferExtendedCell {
   }
 
   private int calculateHashForKey(ByteBufferExtendedCell cell) {
-    int rowHash = ByteBufferUtils.hashCode(cell.getRowByteBuffer(), cell.getRowPosition(),
-      cell.getRowLength());
+    int rowHash =
+      ByteBufferUtils.hashCode(cell.getRowByteBuffer(), cell.getRowPosition(), cell.getRowLength());
     int familyHash = ByteBufferUtils.hashCode(cell.getFamilyByteBuffer(), cell.getFamilyPosition(),
       cell.getFamilyLength());
     int qualifierHash = ByteBufferUtils.hashCode(cell.getQualifierByteBuffer(),

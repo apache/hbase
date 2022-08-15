@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,13 +29,13 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public class MetaRWQueueRpcExecutor extends RWQueueRpcExecutor {
   public static final String META_CALL_QUEUE_READ_SHARE_CONF_KEY =
-      "hbase.ipc.server.metacallqueue.read.ratio";
+    "hbase.ipc.server.metacallqueue.read.ratio";
   public static final String META_CALL_QUEUE_SCAN_SHARE_CONF_KEY =
-      "hbase.ipc.server.metacallqueue.scan.ratio";
+    "hbase.ipc.server.metacallqueue.scan.ratio";
   public static final float DEFAULT_META_CALL_QUEUE_READ_SHARE = 0.9f;
 
   public MetaRWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
-      final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
+    final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
   }
 

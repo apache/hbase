@@ -1,5 +1,4 @@
 /*
-/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,17 +20,15 @@ package org.apache.hadoop.hbase.exceptions;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Subclass if the server knows the region is now on another server.
- * This allows the client to call the new region server without calling the master.
+ * Subclass if the server knows the region is now on another server. This allows the client to call
+ * the new region server without calling the master.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RegionOpeningException extends NotServingRegionException {
-  private static final Logger LOG = LoggerFactory.getLogger(RegionOpeningException.class);
+
   private static final long serialVersionUID = -7232903522310558395L;
 
   public RegionOpeningException(String message) {

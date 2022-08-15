@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,27 +41,24 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Tests unhandled exceptions thrown by coprocessors running on regionserver.
- * Expected result is that the region server will remove the buggy coprocessor from
- * its set of coprocessors and throw a org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
- * back to the client.
- * (HBASE-4014).
+ * Tests unhandled exceptions thrown by coprocessors running on regionserver. Expected result is
+ * that the region server will remove the buggy coprocessor from its set of coprocessors and throw a
+ * org.apache.hadoop.hbase.exceptions.DoNotRetryIOException back to the client. (HBASE-4014).
  */
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({ CoprocessorTests.class, MediumTests.class })
 public class TestRegionServerCoprocessorExceptionWithRemove {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithRemove.class);
+    HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithRemove.class);
 
   public static class BuggyRegionObserver extends SimpleRegionObserver {
     @SuppressWarnings("null")
     @Override
-    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
-                       final Put put, final WALEdit edit,
-                       final Durability durability) {
+    public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
+      final WALEdit edit, final Durability durability) {
       String tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
+        c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
         // Trigger a NPE to fail the coprocessor
         Integer i = null;
@@ -76,8 +73,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        BuggyRegionObserver.class.getName());
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, BuggyRegionObserver.class.getName());
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
     TEST_UTIL.startMiniCluster();
   }
@@ -88,8 +84,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
   }
 
   @Test
-  public void testExceptionFromCoprocessorDuringPut()
-      throws IOException, InterruptedException {
+  public void testExceptionFromCoprocessorDuringPut() throws IOException, InterruptedException {
     // Set watches on the zookeeper nodes for all of the regionservers in the
     // cluster. When we try to write to TEST_TABLE, the buggy coprocessor will
     // cause a NullPointerException, which will cause the regionserver (which
@@ -105,8 +100,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     // Note which regionServer that should survive the buggy coprocessor's
     // prePut().
-    HRegionServer regionServer =
-        TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
+    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
 
     boolean threwIOE = false;
     try {
@@ -129,12 +123,10 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
-        fail("InterruptedException while waiting for regionserver " +
-            "zk node to be deleted.");
+        fail("InterruptedException while waiting for regionserver " + "zk node to be deleted.");
       }
     }
     table.close();
   }
 
 }
-

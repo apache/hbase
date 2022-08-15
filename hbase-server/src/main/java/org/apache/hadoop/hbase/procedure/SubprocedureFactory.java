@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -28,11 +28,11 @@ public interface SubprocedureFactory {
   /**
    * Build {@link Subprocedure} when requested.
    * @param procName name of the procedure associated with this subprocedure
-   * @param procArgs  arguments passed from the coordinator about the procedure
+   * @param procArgs arguments passed from the coordinator about the procedure
    * @return {@link Subprocedure} to run or <tt>null</tt> if the no operation should be run
    * @throws IllegalArgumentException if the operation could not be run because of errors in the
-   *           request
-   * @throws IllegalStateException if the current runner cannot accept any more new requests
+   *                                  request
+   * @throws IllegalStateException    if the current runner cannot accept any more new requests
    */
   Subprocedure buildSubprocedure(String procName, byte[] procArgs);
 }

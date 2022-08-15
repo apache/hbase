@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,19 +22,20 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage;
 
 /**
- * Helper to convert Exceptions and StackTraces from/to protobuf.
- * (see ErrorHandling.proto for the internal of the proto messages)
+ * Helper to convert Exceptions and StackTraces from/to protobuf. (see ErrorHandling.proto for the
+ * internal of the proto messages)
  */
 @InterfaceAudience.Private
 public final class ForeignExceptionUtil {
-  private ForeignExceptionUtil() { }
+  private ForeignExceptionUtil() {
+  }
 
   public static Exception toException(final ForeignExceptionMessage eem) {
     Exception re;
@@ -57,8 +58,8 @@ public final class ForeignExceptionUtil {
   }
 
   private static <T extends Exception> T createException(final Class<T> clazz,
-      final ForeignExceptionMessage eem) throws ClassNotFoundException, NoSuchMethodException,
-        InstantiationException, IllegalAccessException, InvocationTargetException {
+    final ForeignExceptionMessage eem) throws ClassNotFoundException, NoSuchMethodException,
+    InstantiationException, IllegalAccessException, InvocationTargetException {
     final GenericExceptionMessage gem = eem.getGenericException();
     final Class<?> realClass = Class.forName(gem.getClassName());
     final Class<? extends T> cls = realClass.asSubclass(clazz);
@@ -68,7 +69,7 @@ public final class ForeignExceptionUtil {
   }
 
   private static <T extends Exception> T setExceptionDetails(final T exception,
-      final ForeignExceptionMessage eem) {
+    final ForeignExceptionMessage eem) {
     final GenericExceptionMessage gem = eem.getGenericException();
     final StackTraceElement[] trace = toStackTrace(gem.getTraceList());
     exception.setStackTrace(trace);
@@ -127,8 +128,7 @@ public final class ForeignExceptionUtil {
   }
 
   /**
-   * Unwind a serialized array of {@link StackTraceElementMessage}s to a
-   * {@link StackTraceElement}s.
+   * Unwind a serialized array of {@link StackTraceElementMessage}s to a {@link StackTraceElement}s.
    * @param traceList list that was serialized
    * @return the deserialized list or <tt>null</tt> if it couldn't be unwound (e.g. wasn't set on
    *         the sender).
@@ -140,10 +140,8 @@ public final class ForeignExceptionUtil {
     StackTraceElement[] trace = new StackTraceElement[traceList.size()];
     for (int i = 0; i < traceList.size(); i++) {
       StackTraceElementMessage elem = traceList.get(i);
-      trace[i] = new StackTraceElement(
-          elem.getDeclaringClass(), elem.getMethodName(),
-          elem.hasFileName() ? elem.getFileName() : null,
-          elem.getLineNumber());
+      trace[i] = new StackTraceElement(elem.getDeclaringClass(), elem.getMethodName(),
+        elem.hasFileName() ? elem.getFileName() : null, elem.getLineNumber());
     }
     return trace;
   }

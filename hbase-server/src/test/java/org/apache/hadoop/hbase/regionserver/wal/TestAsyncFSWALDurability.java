@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -52,8 +52,8 @@ public class TestAsyncFSWALDurability extends WALDurabilityTestBase<CustomAsyncF
   }
 
   @AfterClass
-  public static void tearDownAfterClass() {
-    GROUP.shutdownGracefully();
+  public static void tearDownAfterClass() throws Exception {
+    GROUP.shutdownGracefully().get();
   }
 
   @Override

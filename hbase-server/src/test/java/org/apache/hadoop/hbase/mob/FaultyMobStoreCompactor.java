@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.compactions.CloseChecker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputControlUtil;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -54,22 +54,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class is used for testing only. The main purpose is to emulate
- * random failures during MOB compaction process.
- * Example of usage:
- * <pre>{@code
- * public class SomeTest {
+ * This class is used for testing only. The main purpose is to emulate random failures during MOB
+ * compaction process. Example of usage:
  *
- *   public void initConfiguration(Configuration conf){
- *     conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
-         FaultyMobStoreCompactor.class.getName());
-       conf.setDouble("hbase.mob.compaction.fault.probability", 0.1);
+ * <pre>
+ * {
+ *   &#64;code
+ *   public class SomeTest {
+ *
+ *     public void initConfiguration(Configuration conf) {
+ *       conf.set(MobStoreEngine.DEFAULT_MOB_COMPACTOR_CLASS_KEY,
+ *         FaultyMobStoreCompactor.class.getName());
+ *       conf.setDouble("hbase.mob.compaction.fault.probability", 0.1);
+ *     }
  *   }
  * }
- * }</pre>
- * @see org.apache.hadoop.hbase.mob.MobStressToolRunner on how to use and configure
- *   this class.
+ * </pre>
  *
+ * @see org.apache.hadoop.hbase.mob.MobStressToolRunner on how to use and configure this class.
  */
 @InterfaceAudience.Private
 public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
@@ -90,9 +92,10 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
 
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
-      boolean major, int numofFilesToCompact, CompactionProgress progress) throws IOException {
+    long smallestReadPoint, boolean cleanSeqId, ThroughputController throughputController,
+    CompactionRequestImpl request, CompactionProgress progress) throws IOException {
 
+    boolean major = request.isAllFiles();
     totalCompactions.incrementAndGet();
     if (major) {
       totalMajorCompactions.incrementAndGet();
@@ -140,11 +143,11 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     boolean finished = false;
 
     ScannerContext scannerContext =
-        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+      ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
     long shippedCallSizeLimit =
-        (long) numofFilesToCompact * this.store.getColumnFamilyDescriptor().getBlocksize();
+      (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
 
     Cell mobCell = null;
 
@@ -194,8 +197,10 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               try {
                 mobCell = mobStore.resolve(c, true, false).getCell();
               } catch (DoNotRetryIOException e) {
-                if (discardMobMiss && e.getCause() != null
-                  && e.getCause() instanceof FileNotFoundException) {
+                if (
+                  discardMobMiss && e.getCause() != null
+                    && e.getCause() instanceof FileNotFoundException
+                ) {
                   LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);
                   continue;
                 } else {
@@ -228,7 +233,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               if (size > mobSizeThreshold) {
                 mobFileWriter.append(c);
                 writer
-                    .append(MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags()));
+                  .append(MobUtils.createMobRefCell(c, fileName, this.mobStore.getRefCellTags()));
                 mobCells++;
                 cellsCountCompactedToMob++;
                 cellsSizeCompactedToMob += c.getValueLength();
@@ -253,9 +258,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                   mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
                   writer.append(c);
                 } else {
-                  throw new IOException(String.format("MOB cell did not contain a tablename " +
-                      "tag. should not be possible. see ref guide on mob troubleshooting. " +
-                      "store=%s cell=%s", getStoreInfo(), c));
+                  throw new IOException(String.format("MOB cell did not contain a tablename "
+                    + "tag. should not be possible. see ref guide on mob troubleshooting. "
+                    + "store=%s cell=%s", getStoreInfo(), c));
                 }
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
@@ -277,9 +282,9 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
                     mobRefSet.get().put(refTable.get(), MobUtils.getMobFileName(c));
                     writer.append(c);
                   } else {
-                    throw new IOException(String.format("MOB cell did not contain a tablename " +
-                        "tag. should not be possible. see ref guide on mob troubleshooting. " +
-                        "store=%s cell=%s", getStoreInfo(), c));
+                    throw new IOException(String.format("MOB cell did not contain a tablename "
+                      + "tag. should not be possible. see ref guide on mob troubleshooting. "
+                      + "store=%s cell=%s", getStoreInfo(), c));
                   }
                 }
               }
@@ -342,7 +347,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
     } catch (InterruptedException e) {
       progress.cancel();
       throw new InterruptedIOException(
-          "Interrupted while control throughput of compacting " + compactionName);
+        "Interrupted while control throughput of compacting " + compactionName);
     } catch (FileNotFoundException e) {
       LOG.error("MOB Stress Test FAILED, region: " + store.getRegionInfo().getEncodedName(), e);
       System.exit(-1);

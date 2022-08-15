@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
 public class DelegatingRpcScheduler extends RpcScheduler {
@@ -29,17 +28,25 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   public void stop() {
     delegate.stop();
   }
+
   @Override
   public void start() {
     delegate.start();
   }
+
   @Override
   public void init(Context context) {
     delegate.init(context);
   }
+
   @Override
   public int getReplicationQueueLength() {
     return delegate.getReplicationQueueLength();
+  }
+
+  @Override
+  public int getBulkLoadQueueLength() {
+    return delegate.getBulkLoadQueueLength();
   }
 
   @Override
@@ -70,6 +77,11 @@ public class DelegatingRpcScheduler extends RpcScheduler {
   @Override
   public int getActiveReplicationRpcHandlerCount() {
     return delegate.getActiveReplicationRpcHandlerCount();
+  }
+
+  @Override
+  public int getActiveBulkLoadRpcHandlerCount() {
+    return delegate.getActiveBulkLoadRpcHandlerCount();
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
@@ -27,12 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
@@ -43,8 +41,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private Runnable runnable;
   private long period;
   private ScheduledFuture<?> tableMetricsUpdateTask;
-  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap
-    = new ConcurrentHashMap<>();
+  private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap =
+    new ConcurrentHashMap<>();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -52,8 +50,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       HConstants.DEFAULT_REGIONSERVER_METRICS_PERIOD) + 1000;
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new TableMetricsWrapperRunnable();
-    this.tableMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, period,
-      period, TimeUnit.MILLISECONDS);
+    this.tableMetricsUpdateTask =
+      this.executor.scheduleWithFixedDelay(this.runnable, period, period, TimeUnit.MILLISECONDS);
   }
 
   public class TableMetricsWrapperRunnable implements Runnable {
@@ -77,23 +75,32 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             familyName = store.getColumnFamilyName();
 
             mt.storeFileCount += store.getStorefilesCount();
+            mt.maxStoreFileCount = Math.max(mt.maxStoreFileCount, store.getStorefilesCount());
             mt.memstoreSize += (store.getMemStoreSize().getDataSize()
-                + store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
+              + store.getMemStoreSize().getHeapSize() + store.getMemStoreSize().getOffHeapSize());
             mt.storeFileSize += store.getStorefilesSize();
             mt.referenceFileCount += store.getNumReferenceFiles();
             if (store.getMaxStoreFileAge().isPresent()) {
               mt.maxStoreFileAge =
-                  Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
+                Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
             }
             if (store.getMinStoreFileAge().isPresent()) {
               mt.minStoreFileAge =
-                  Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
+                Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
             }
             if (store.getAvgStoreFileAge().isPresent()) {
               mt.totalStoreFileAge =
-                  (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
+                (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
             }
             mt.storeCount += 1;
+
+            mt.staticIndexSize += store.getTotalStaticIndexSize();
+            mt.staticBloomSize += store.getTotalStaticBloomSize();
+
+            mt.bloomRequestsCount += store.getBloomFilterRequestsCount();
+            mt.bloomNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+            mt.bloomEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
+
             tempKey = tbl.getNameAsString() + HASH + familyName;
             Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
             if (tempVal == null) {
@@ -122,17 +129,16 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
         TableName tbl = entry.getKey();
         if (metricsTableMap.get(tbl) == null) {
           // this will add the Wrapper to the list of TableMetrics
-          CompatibilitySingletonFactory
-              .getInstance(MetricsRegionServerSourceFactory.class)
-              .getTableAggregate()
-              .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
+          CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
+            .getTableAggregate()
+            .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
         }
         metricsTableMap.put(entry.getKey(), entry.getValue());
       }
       Set<TableName> existingTableNames = Sets.newHashSet(metricsTableMap.keySet());
       existingTableNames.removeAll(localMetricsTableMap.keySet());
       MetricsTableAggregateSource agg = CompatibilitySingletonFactory
-          .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
+        .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
       for (TableName table : existingTableNames) {
         agg.deleteTableSource(table.getNameAsString());
         if (metricsTableMap.get(table) != null) {
@@ -267,6 +273,15 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   }
 
   @Override
+  public long getMaxStoreFiles(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+    return metricsTable.maxStoreFileCount;
+  }
+
+  @Override
   public long getMaxStoreFileAge(String table) {
     MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
     if (metricsTable == null) {
@@ -292,8 +307,58 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     }
 
     return metricsTable.storeFileCount == 0
-        ? 0
-        : (metricsTable.totalStoreFileAge / metricsTable.storeFileCount);
+      ? 0
+      : (metricsTable.totalStoreFileAge / metricsTable.storeFileCount);
+  }
+
+  @Override
+  public long getStaticIndexSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.staticIndexSize;
+  }
+
+  @Override
+  public long getStaticBloomSize(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.staticBloomSize;
+  }
+
+  @Override
+  public long getBloomFilterRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomRequestsCount;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomNegativeResultsCount;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return 0;
+    }
+
+    return metricsTable.bloomEligibleRequestsCount;
   }
 
   @Override
@@ -312,8 +377,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return 0;
     }
     return metricsTable.regionCount == 0
-        ? 0
-        : (metricsTable.memstoreSize + metricsTable.storeFileSize) / metricsTable.regionCount;
+      ? 0
+      : (metricsTable.memstoreSize + metricsTable.storeFileSize) / metricsTable.regionCount;
   }
 
   public long getCpRequestCount(String table) {
@@ -337,11 +402,20 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long regionCount;
     long storeCount;
     long storeFileCount;
+    long maxStoreFileCount;
     long storeFileSize;
     long maxStoreFileAge;
     long minStoreFileAge = Long.MAX_VALUE;
     long totalStoreFileAge;
+
+    long staticIndexSize;
+
+    long staticBloomSize;
     long referenceFileCount;
+
+    long bloomRequestsCount;
+    long bloomNegativeResultsCount;
+    long bloomEligibleRequestsCount;
     long cpRequestCount;
     Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
     Map<String, Long> perStoreMixedReadCount = new HashMap<>();

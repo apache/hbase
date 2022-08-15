@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -98,12 +98,17 @@ public final class TestingHBaseClusterOption {
    */
   private final boolean createWALDir;
 
+  private final String externalDfsUri;
+
+  private final String externalZkConnectString;
+
   /**
    * Private constructor. Use {@link Builder#build()}.
    */
   private TestingHBaseClusterOption(Configuration conf, int numMasters, int numAlwaysStandByMasters,
     int numRegionServers, List<Integer> rsPorts, int numDataNodes, String[] dataNodeHosts,
-    int numZkServers, boolean createRootDir, boolean createWALDir) {
+    int numZkServers, boolean createRootDir, boolean createWALDir, String externalDfsUri,
+    String externalZkConnectString) {
     this.conf = conf;
     this.numMasters = numMasters;
     this.numAlwaysStandByMasters = numAlwaysStandByMasters;
@@ -114,6 +119,8 @@ public final class TestingHBaseClusterOption {
     this.numZkServers = numZkServers;
     this.createRootDir = createRootDir;
     this.createWALDir = createWALDir;
+    this.externalDfsUri = externalDfsUri;
+    this.externalZkConnectString = externalZkConnectString;
   }
 
   public Configuration conf() {
@@ -156,12 +163,20 @@ public final class TestingHBaseClusterOption {
     return createWALDir;
   }
 
+  public String getExternalDfsUri() {
+    return externalDfsUri;
+  }
+
+  public String getExternalZkConnectString() {
+    return externalZkConnectString;
+  }
+
   @Override
   public String toString() {
-    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers=" +
-      numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes=" +
-      numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers=" +
-      numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
+    return "StartMiniClusterOption{" + "numMasters=" + numMasters + ", numRegionServers="
+      + numRegionServers + ", rsPorts=" + StringUtils.join(rsPorts) + ", numDataNodes="
+      + numDataNodes + ", dataNodeHosts=" + Arrays.toString(dataNodeHosts) + ", numZkServers="
+      + numZkServers + ", createRootDir=" + createRootDir + ", createWALDir=" + createWALDir + '}';
   }
 
   /**
@@ -197,6 +212,8 @@ public final class TestingHBaseClusterOption {
     private int numZkServers = 1;
     private boolean createRootDir = false;
     private boolean createWALDir = false;
+    private String externalDfsUri = null;
+    private String externalZkConnectString = null;
 
     private Builder() {
     }
@@ -207,7 +224,7 @@ public final class TestingHBaseClusterOption {
       }
       return new TestingHBaseClusterOption(conf, numMasters, numAlwaysStandByMasters,
         numRegionServers, rsPorts, numDataNodes, dataNodeHosts, numZkServers, createRootDir,
-        createWALDir);
+        createWALDir, externalDfsUri, externalZkConnectString);
     }
 
     public Builder conf(Configuration conf) {
@@ -257,6 +274,16 @@ public final class TestingHBaseClusterOption {
 
     public Builder createWALDir(boolean createWALDir) {
       this.createWALDir = createWALDir;
+      return this;
+    }
+
+    public Builder useExternalDfs(String uri) {
+      this.externalDfsUri = uri;
+      return this;
+    }
+
+    public Builder useExternalZooKeeper(String connectString) {
+      this.externalZkConnectString = connectString;
       return this;
     }
   }

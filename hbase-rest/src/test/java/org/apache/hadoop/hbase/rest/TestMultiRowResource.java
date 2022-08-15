@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -56,12 +56,12 @@ import org.junit.runners.Parameterized;
 import org.apache.hbase.thirdparty.com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
 
-@Category({RestTests.class, MediumTests.class})
+@Category({ RestTests.class, MediumTests.class })
 @RunWith(Parameterized.class)
 public class TestMultiRowResource {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestMultiRowResource.class);
+    HBaseClassTestRule.forClass(TestMultiRowResource.class);
 
   private static final TableName TABLE = TableName.valueOf("TestRowResource");
   private static final String CFA = "a";
@@ -104,10 +104,7 @@ public class TestMultiRowResource {
     extraHdr = new BasicHeader(RESTServer.REST_CSRF_CUSTOM_HEADER_DEFAULT, "");
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
-    context = JAXBContext.newInstance(
-            CellModel.class,
-            CellSetModel.class,
-            RowModel.class);
+    context = JAXBContext.newInstance(CellModel.class, CellSetModel.class, RowModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
@@ -115,13 +112,11 @@ public class TestMultiRowResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TABLE);
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(TABLE);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFA)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
-    columnFamilyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
+    columnFamilyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CFB)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
     admin.createTable(tableDescriptorBuilder.build());
   }
@@ -264,8 +259,8 @@ public class TestMultiRowResource {
 
     Response response = client.get(path.toString(), Constants.MIMETYPE_JSON);
     assertEquals(200, response.getCode());
-    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(
-        CellSetModel.class, MediaType.APPLICATION_JSON_TYPE);
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(CellSetModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
     CellSetModel cellSet = mapper.readValue(response.getBody(), CellSetModel.class);
     assertEquals(1, cellSet.getRows().size());
     assertEquals(ROW_1, Bytes.toString(cellSet.getRows().get(0).getKey()));

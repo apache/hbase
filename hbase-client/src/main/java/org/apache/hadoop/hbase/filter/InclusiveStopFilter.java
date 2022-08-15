@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,34 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
- * A Filter that stops after the given row.  There is no "RowStopFilter" because
- * the Scan spec allows you to specify a stop row.
- *
- * Use this filter to include the stop row, eg: [A,Z].
+ * A Filter that stops after the given row. There is no "RowStopFilter" because the Scan spec allows
+ * you to specify a stop row. Use this filter to include the stop row, eg: [A,Z].
  */
 @InterfaceAudience.Public
 public class InclusiveStopFilter extends FilterBase {
-  private byte [] stopRowKey;
+  private byte[] stopRowKey;
   private boolean done = false;
 
-  public InclusiveStopFilter(final byte [] stopRowKey) {
+  public InclusiveStopFilter(final byte[] stopRowKey) {
     this.stopRowKey = stopRowKey;
   }
 
@@ -61,7 +57,8 @@ public class InclusiveStopFilter extends FilterBase {
   public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
     if (filterAllRemaining()) return true;
-    int cmp = CellComparator.getInstance().compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
+    int cmp =
+      CellComparator.getInstance().compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
     done = reversed ? cmp < 0 : cmp > 0;
     return done;
   }
@@ -71,53 +68,55 @@ public class InclusiveStopFilter extends FilterBase {
     return done;
   }
 
-  public static Filter createFilterFromArguments (ArrayList<byte []> filterArguments) {
-    Preconditions.checkArgument(filterArguments.size() == 1,
-                                "Expected 1 but got: %s", filterArguments.size());
-    byte [] stopRowKey = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+  public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+    Preconditions.checkArgument(filterArguments.size() == 1, "Expected 1 but got: %s",
+      filterArguments.size());
+    byte[] stopRowKey = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
     return new InclusiveStopFilter(stopRowKey);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
-  public byte [] toByteArray() {
+  public byte[] toByteArray() {
     FilterProtos.InclusiveStopFilter.Builder builder =
       FilterProtos.InclusiveStopFilter.newBuilder();
-    if (this.stopRowKey != null) builder.setStopRowKey(
-        UnsafeByteOperations.unsafeWrap(this.stopRowKey));
+    if (this.stopRowKey != null)
+      builder.setStopRowKey(UnsafeByteOperations.unsafeWrap(this.stopRowKey));
     return builder.build().toByteArray();
   }
 
   /**
+   * Parse a serialized representation of {@link InclusiveStopFilter}
    * @param pbBytes A pb serialized {@link InclusiveStopFilter} instance
    * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code>
-   * @throws DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
-  public static InclusiveStopFilter parseFrom(final byte [] pbBytes)
-  throws DeserializationException {
+  public static InclusiveStopFilter parseFrom(final byte[] pbBytes)
+    throws DeserializationException {
     FilterProtos.InclusiveStopFilter proto;
     try {
       proto = FilterProtos.InclusiveStopFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    return new InclusiveStopFilter(proto.hasStopRowKey()?proto.getStopRowKey().toByteArray():null);
+    return new InclusiveStopFilter(
+      proto.hasStopRowKey() ? proto.getStopRowKey().toByteArray() : null);
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized
-   * are equal to the corresponding fields in other.  Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof InclusiveStopFilter)) return false;
-
-    InclusiveStopFilter other = (InclusiveStopFilter)o;
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof InclusiveStopFilter)) {
+      return false;
+    }
+    InclusiveStopFilter other = (InclusiveStopFilter) o;
     return Bytes.equals(this.getStopRowKey(), other.getStopRowKey());
   }
 

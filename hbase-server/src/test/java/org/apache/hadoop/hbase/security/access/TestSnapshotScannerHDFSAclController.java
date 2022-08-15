@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.security.access.Permission.Action.READ;
@@ -26,6 +25,7 @@ import static org.apache.hadoop.hbase.security.access.SnapshotScannerHDFSAclCont
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -64,11 +64,11 @@ import org.slf4j.LoggerFactory;
 public class TestSnapshotScannerHDFSAclController {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestSnapshotScannerHDFSAclController.class);
+    HBaseClassTestRule.forClass(TestSnapshotScannerHDFSAclController.class);
   @Rule
   public TestName name = new TestName();
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController.class);
+    LoggerFactory.getLogger(TestSnapshotScannerHDFSAclController.class);
 
   private static final String UN_GRANT_USER = "un_grant_user";
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -95,7 +95,7 @@ public class TestSnapshotScannerHDFSAclController {
     // add SnapshotScannerHDFSAclController coprocessor
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) + ","
-          + SnapshotScannerHDFSAclController.class.getName());
+        + SnapshotScannerHDFSAclController.class.getName());
 
     TEST_UTIL.startMiniCluster();
     SnapshotScannerHDFSAclController coprocessor = TEST_UTIL.getHBaseCluster().getMaster()
@@ -111,8 +111,8 @@ public class TestSnapshotScannerHDFSAclController {
 
     // set hbase directory permission
     FsPermission commonDirectoryPermission =
-        new FsPermission(conf.get(SnapshotScannerHDFSAclHelper.COMMON_DIRECTORY_PERMISSION,
-          SnapshotScannerHDFSAclHelper.COMMON_DIRECTORY_PERMISSION_DEFAULT));
+      new FsPermission(conf.get(SnapshotScannerHDFSAclHelper.COMMON_DIRECTORY_PERMISSION,
+        SnapshotScannerHDFSAclHelper.COMMON_DIRECTORY_PERMISSION_DEFAULT));
     Path path = rootDir;
     while (path != null) {
       FS.setPermission(path, commonDirectoryPermission);
@@ -124,8 +124,8 @@ public class TestSnapshotScannerHDFSAclController {
       FS.mkdirs(restoreDir);
       FS.setPermission(restoreDir,
         new FsPermission(
-            conf.get(SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_DIRECTORY_PERMISSION,
-              SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT)));
+          conf.get(SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_DIRECTORY_PERMISSION,
+            SnapshotScannerHDFSAclHelper.SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT)));
     }
     path = restoreDir.getParent();
     while (path != null) {
@@ -141,7 +141,7 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   private void snapshotAndWait(final String snapShotName, final TableName tableName)
-    throws Exception{
+    throws Exception {
     admin.snapshot(snapShotName, tableName);
     LOG.info("Sleep for three seconds, waiting for HDFS Acl setup");
     Threads.sleep(3000);
@@ -198,8 +198,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
     admin.grant(new UserPermission(grantUserName,
-        Permission.newBuilder(namespace1).withActions(READ).build()),
-      false);
+      Permission.newBuilder(namespace1).withActions(READ).build()), false);
     // grant G(W)
     SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, WRITE);
     // create table in namespace2 and snapshot
@@ -524,8 +523,7 @@ public class TestSnapshotScannerHDFSAclController {
     assertFalse(hasUserNamespaceHdfsAcl(aclTable, grantUserName, namespace));
     checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), grantUserName, true, false);
     assertTrue(hasUserTableHdfsAcl(aclTable, grantUserName, table));
-    checkUserAclEntry(FS, helper.getTableRootPaths(table, false),
-      grantUserName, true, true);
+    checkUserAclEntry(FS, helper.getTableRootPaths(table, false), grantUserName, true, true);
     deleteTable(table);
   }
 
@@ -730,7 +728,7 @@ public class TestSnapshotScannerHDFSAclController {
     assertTrue(
       SnapshotScannerHDFSAclCleaner.isArchiveDataDir(archiveTableDir.getParent().getParent()));
     assertFalse(SnapshotScannerHDFSAclCleaner
-        .isArchiveDataDir(archiveTableDir.getParent().getParent().getParent()));
+      .isArchiveDataDir(archiveTableDir.getParent().getParent().getParent()));
     deleteTable(table);
   }
 
@@ -775,7 +773,7 @@ public class TestSnapshotScannerHDFSAclController {
 
     // enable user scan snapshot
     admin.modifyTable(TableDescriptorBuilder.newBuilder(td)
-        .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build());
+      .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build());
     // check scan snapshot
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, 6);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
@@ -830,7 +828,7 @@ public class TestSnapshotScannerHDFSAclController {
     TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName3, table2, READ);
     // disable user scan snapshot
     admin.modifyTable(TableDescriptorBuilder.newBuilder(admin.getDescriptor(table))
-        .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "false").build());
+      .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "false").build());
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, -1);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
@@ -912,14 +910,14 @@ public class TestSnapshotScannerHDFSAclController {
   }
 
   static void checkUserAclEntry(FileSystem fs, List<Path> paths, String user,
-      boolean requireAccessAcl, boolean requireDefaultAcl) throws Exception {
+    boolean requireAccessAcl, boolean requireDefaultAcl) throws Exception {
     for (Path path : paths) {
       checkUserAclEntry(fs, path, user, requireAccessAcl, requireDefaultAcl);
     }
   }
 
   static void checkUserAclEntry(FileSystem fs, Path path, String userName, boolean requireAccessAcl,
-      boolean requireDefaultAcl) throws IOException {
+    boolean requireDefaultAcl) throws IOException {
     boolean accessAclEntry = false;
     boolean defaultAclEntry = false;
     if (fs.exists(path)) {

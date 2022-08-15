@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.ServerName;
 public class DummyConnectionRegistry implements ConnectionRegistry {
 
   public static final String REGISTRY_IMPL_CONF_KEY =
-      HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
+    HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY;
 
   @Override
   public CompletableFuture<RegionLocations> getMetaRegionLocations() {

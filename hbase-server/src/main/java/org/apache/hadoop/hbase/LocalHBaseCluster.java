@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,26 +40,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class creates a single process HBase cluster. One thread is created for
- * a master and one per region server.
- *
- * Call {@link #startup()} to start the cluster running and {@link #shutdown()}
- * to close it all down. {@link #join} the cluster is you want to wait on
- * shutdown completion.
- *
- * <p>Runs master on port 16000 by default.  Because we can't just kill the
- * process -- not till HADOOP-1700 gets fixed and even then.... -- we need to
- * be able to find the master with a remote client to run shutdown.  To use a
- * port other than 16000, set the hbase.master to a value of 'local:PORT':
- * that is 'local', not 'localhost', and the port number the master should use
- * instead of 16000.
- *
+ * This class creates a single process HBase cluster. One thread is created for a master and one per
+ * region server. Call {@link #startup()} to start the cluster running and {@link #shutdown()} to
+ * close it all down. {@link #join} the cluster is you want to wait on shutdown completion.
+ * <p>
+ * Runs master on port 16000 by default. Because we can't just kill the process -- not till
+ * HADOOP-1700 gets fixed and even then.... -- we need to be able to find the master with a remote
+ * client to run shutdown. To use a port other than 16000, set the hbase.master to a value of
+ * 'local:PORT': that is 'local', not 'localhost', and the port number the master should use instead
+ * of 16000.
  */
 @InterfaceAudience.Private
 public class LocalHBaseCluster {
   private static final Logger LOG = LoggerFactory.getLogger(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads = new CopyOnWriteArrayList<>();
-  private final List<JVMClusterUtil.RegionServerThread> regionThreads = new CopyOnWriteArrayList<>();
+  private final List<JVMClusterUtil.RegionServerThread> regionThreads =
+    new CopyOnWriteArrayList<>();
   private final static int DEFAULT_NO = 1;
   /** local mode */
   public static final String LOCAL = "local";
@@ -73,108 +68,103 @@ public class LocalHBaseCluster {
   private final Class<? extends HRegionServer> regionServerClass;
 
   /**
-   * Constructor.
-   * @param conf
-   * @throws IOException
+   * Constructor. nn
    */
-  public LocalHBaseCluster(final Configuration conf)
-  throws IOException {
+  public LocalHBaseCluster(final Configuration conf) throws IOException {
     this(conf, DEFAULT_NO);
   }
 
   /**
    * Constructor.
-   * @param conf Configuration to use.  Post construction has the master's
-   * address.
-   * @param noRegionServers Count of regionservers to start.
-   * @throws IOException
+   * @param conf            Configuration to use. Post construction has the master's address.
+   * @param noRegionServers Count of regionservers to start. n
    */
-  public LocalHBaseCluster(final Configuration conf, final int noRegionServers)
-  throws IOException {
+  public LocalHBaseCluster(final Configuration conf, final int noRegionServers) throws IOException {
     this(conf, 1, 0, noRegionServers, getMasterImplementation(conf),
-        getRegionServerImplementation(conf));
+      getRegionServerImplementation(conf));
   }
 
   /**
    * Constructor.
-   * @param conf Configuration to use.  Post construction has the active master
-   * address.
-   * @param noMasters Count of masters to start.
-   * @param noRegionServers Count of regionservers to start.
-   * @throws IOException
+   * @param conf            Configuration to use. Post construction has the active master address.
+   * @param noMasters       Count of masters to start.
+   * @param noRegionServers Count of regionservers to start. n
    */
-  public LocalHBaseCluster(final Configuration conf, final int noMasters,
-      final int noRegionServers)
-  throws IOException {
+  public LocalHBaseCluster(final Configuration conf, final int noMasters, final int noRegionServers)
+    throws IOException {
     this(conf, noMasters, 0, noRegionServers, getMasterImplementation(conf),
-        getRegionServerImplementation(conf));
+      getRegionServerImplementation(conf));
   }
 
   @SuppressWarnings("unchecked")
-  private static Class<? extends HRegionServer> getRegionServerImplementation(final Configuration conf) {
-    return (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
-       HRegionServer.class);
+  private static Class<? extends HRegionServer>
+    getRegionServerImplementation(final Configuration conf) {
+    return (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL,
+      HRegionServer.class);
   }
 
   @SuppressWarnings("unchecked")
   private static Class<? extends HMaster> getMasterImplementation(final Configuration conf) {
-    return (Class<? extends HMaster>)conf.getClass(HConstants.MASTER_IMPL,
-       HMaster.class);
+    return (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, HMaster.class);
   }
 
   public LocalHBaseCluster(final Configuration conf, final int noMasters, final int noRegionServers,
-      final Class<? extends HMaster> masterClass,
-      final Class<? extends HRegionServer> regionServerClass) throws IOException {
+    final Class<? extends HMaster> masterClass,
+    final Class<? extends HRegionServer> regionServerClass) throws IOException {
     this(conf, noMasters, 0, noRegionServers, masterClass, regionServerClass);
   }
 
   /**
    * Constructor.
-   * @param conf Configuration to use.  Post construction has the master's
-   * address.
-   * @param noMasters Count of masters to start.
-   * @param noRegionServers Count of regionservers to start.
-   * @param masterClass
-   * @param regionServerClass
-   * @throws IOException
+   * @param conf            Configuration to use. Post construction has the master's address.
+   * @param noMasters       Count of masters to start.
+   * @param noRegionServers Count of regionservers to start. nnn
    */
   @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf, final int noMasters,
-      final int noAlwaysStandByMasters, final int noRegionServers,
-      final Class<? extends HMaster> masterClass,
-      final Class<? extends HRegionServer> regionServerClass) throws IOException {
+    final int noAlwaysStandByMasters, final int noRegionServers,
+    final Class<? extends HMaster> masterClass,
+    final Class<? extends HRegionServer> regionServerClass) throws IOException {
     this.conf = conf;
 
     // When active, if a port selection is default then we switch to random
     if (conf.getBoolean(ASSIGN_RANDOM_PORTS, false)) {
-      if (conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT)
-          == HConstants.DEFAULT_MASTER_PORT) {
+      if (
+        conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT)
+            == HConstants.DEFAULT_MASTER_PORT
+      ) {
         LOG.debug("Setting Master Port to random.");
         conf.set(HConstants.MASTER_PORT, "0");
       }
-      if (conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
-          == HConstants.DEFAULT_REGIONSERVER_PORT) {
+      if (
+        conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT)
+            == HConstants.DEFAULT_REGIONSERVER_PORT
+      ) {
         LOG.debug("Setting RegionServer Port to random.");
         conf.set(HConstants.REGIONSERVER_PORT, "0");
       }
       // treat info ports special; expressly don't change '-1' (keep off)
       // in case we make that the default behavior.
-      if (conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1 &&
-          conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT)
-          == HConstants.DEFAULT_REGIONSERVER_INFOPORT) {
+      if (
+        conf.getInt(HConstants.REGIONSERVER_INFO_PORT, 0) != -1
+          && conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
+            HConstants.DEFAULT_REGIONSERVER_INFOPORT) == HConstants.DEFAULT_REGIONSERVER_INFOPORT
+      ) {
         LOG.debug("Setting RS InfoServer Port to random.");
         conf.set(HConstants.REGIONSERVER_INFO_PORT, "0");
       }
-      if (conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1 &&
-          conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
-          == HConstants.DEFAULT_MASTER_INFOPORT) {
+      if (
+        conf.getInt(HConstants.MASTER_INFO_PORT, 0) != -1
+          && conf.getInt(HConstants.MASTER_INFO_PORT, HConstants.DEFAULT_MASTER_INFOPORT)
+              == HConstants.DEFAULT_MASTER_INFOPORT
+      ) {
         LOG.debug("Setting Master InfoServer Port to random.");
         conf.set(HConstants.MASTER_INFO_PORT, "0");
       }
     }
 
-    this.masterClass = (Class<? extends HMaster>)
-      conf.getClass(HConstants.MASTER_IMPL, masterClass);
+    this.masterClass =
+      (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, masterClass);
     // Start the HMasters.
     int i;
     for (i = 0; i < noMasters; i++) {
@@ -186,45 +176,40 @@ public class LocalHBaseCluster {
       addMaster(c, i + j);
     }
     // Start the HRegionServers.
-    this.regionServerClass =
-      (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
-       regionServerClass);
+    this.regionServerClass = (Class<? extends HRegionServer>) conf
+      .getClass(HConstants.REGION_SERVER_IMPL, regionServerClass);
 
     for (int j = 0; j < noRegionServers; j++) {
       addRegionServer(new Configuration(conf), j);
     }
   }
 
-  public JVMClusterUtil.RegionServerThread addRegionServer()
-      throws IOException {
+  public JVMClusterUtil.RegionServerThread addRegionServer() throws IOException {
     return addRegionServer(new Configuration(conf), this.regionThreads.size());
   }
 
   @SuppressWarnings("unchecked")
-  public JVMClusterUtil.RegionServerThread addRegionServer(
-      Configuration config, final int index)
-  throws IOException {
+  public JVMClusterUtil.RegionServerThread addRegionServer(Configuration config, final int index)
+    throws IOException {
     // Create each regionserver with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager).
     JVMClusterUtil.RegionServerThread rst =
-        JVMClusterUtil.createRegionServerThread(config, (Class<? extends HRegionServer>) conf
-            .getClass(HConstants.REGION_SERVER_IMPL, this.regionServerClass), index);
+      JVMClusterUtil.createRegionServerThread(config, (Class<? extends HRegionServer>) conf
+        .getClass(HConstants.REGION_SERVER_IMPL, this.regionServerClass), index);
 
     this.regionThreads.add(rst);
     return rst;
   }
 
-  public JVMClusterUtil.RegionServerThread addRegionServer(
-      final Configuration config, final int index, User user)
-  throws IOException, InterruptedException {
-    return user.runAs(
-        new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
-          @Override
-          public JVMClusterUtil.RegionServerThread run() throws Exception {
-            return addRegionServer(config, index);
-          }
-        });
+  public JVMClusterUtil.RegionServerThread addRegionServer(final Configuration config,
+    final int index, User user) throws IOException, InterruptedException {
+    return user.runAs(new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
+      @Override
+      public JVMClusterUtil.RegionServerThread run() throws Exception {
+        return addRegionServer(config, index);
+      }
+    });
   }
 
   public JVMClusterUtil.MasterThread addMaster() throws IOException {
@@ -232,66 +217,58 @@ public class LocalHBaseCluster {
   }
 
   public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
-      throws IOException {
+    throws IOException {
     // Create each master with its own Configuration instance so each has
     // its Connection instance rather than share (see HBASE_INSTANCES down in
     // the guts of ConnectionManager.
     JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c,
-        (Class<? extends HMaster>) c.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
+      (Class<? extends HMaster>) c.getClass(HConstants.MASTER_IMPL, this.masterClass), index);
     this.masterThreads.add(mt);
     // Refresh the master address config.
     List<String> masterHostPorts = new ArrayList<>();
-    getMasters().forEach(masterThread ->
-        masterHostPorts.add(masterThread.getMaster().getServerName().getAddress().toString()));
+    getMasters().forEach(masterThread -> masterHostPorts
+      .add(masterThread.getMaster().getServerName().getAddress().toString()));
     conf.set(HConstants.MASTER_ADDRS_KEY, String.join(",", masterHostPorts));
     return mt;
   }
 
-  public JVMClusterUtil.MasterThread addMaster(
-      final Configuration c, final int index, User user)
-  throws IOException, InterruptedException {
-    return user.runAs(
-        new PrivilegedExceptionAction<JVMClusterUtil.MasterThread>() {
-          @Override
-          public JVMClusterUtil.MasterThread run() throws Exception {
-            return addMaster(c, index);
-          }
-        });
+  public JVMClusterUtil.MasterThread addMaster(final Configuration c, final int index, User user)
+    throws IOException, InterruptedException {
+    return user.runAs(new PrivilegedExceptionAction<JVMClusterUtil.MasterThread>() {
+      @Override
+      public JVMClusterUtil.MasterThread run() throws Exception {
+        return addMaster(c, index);
+      }
+    });
   }
 
   /**
-   * @param serverNumber
-   * @return region server
+   * n * @return region server
    */
   public HRegionServer getRegionServer(int serverNumber) {
     return regionThreads.get(serverNumber).getRegionServer();
   }
 
-  /**
-   * @return Read-only list of region server threads.
-   */
+  /** Returns Read-only list of region server threads. */
   public List<JVMClusterUtil.RegionServerThread> getRegionServers() {
     return Collections.unmodifiableList(this.regionThreads);
   }
 
   /**
-   * @return List of running servers (Some servers may have been killed or
-   * aborted during lifetime of cluster; these servers are not included in this
-   * list).
+   * @return List of running servers (Some servers may have been killed or aborted during lifetime
+   *         of cluster; these servers are not included in this list).
    */
   public List<JVMClusterUtil.RegionServerThread> getLiveRegionServers() {
     List<JVMClusterUtil.RegionServerThread> liveServers = new ArrayList<>();
     List<RegionServerThread> list = getRegionServers();
-    for (JVMClusterUtil.RegionServerThread rst: list) {
+    for (JVMClusterUtil.RegionServerThread rst : list) {
       if (rst.isAlive()) liveServers.add(rst);
       else LOG.info("Not alive " + rst.getName());
     }
     return liveServers;
   }
 
-  /**
-   * @return the Configuration used by this LocalHBaseCluster
-   */
+  /** Returns the Configuration used by this LocalHBaseCluster */
   public Configuration getConfiguration() {
     return this.conf;
   }
@@ -327,45 +304,39 @@ public class LocalHBaseCluster {
     return rst.getName();
   }
 
-  /**
-   * @return the HMaster thread
-   */
+  /** Returns the HMaster thread */
   public HMaster getMaster(int serverNumber) {
     return masterThreads.get(serverNumber).getMaster();
   }
 
   /**
-   * Gets the current active master, if available.  If no active master, returns
-   * null.
+   * Gets the current active master, if available. If no active master, returns null.
    * @return the HMaster for the active master
    */
   public HMaster getActiveMaster() {
     for (JVMClusterUtil.MasterThread mt : masterThreads) {
       // Ensure that the current active master is not stopped.
       // We don't want to return a stopping master as an active master.
-      if (mt.getMaster().isActiveMaster()  && !mt.getMaster().isStopped()) {
+      if (mt.getMaster().isActiveMaster() && !mt.getMaster().isStopped()) {
         return mt.getMaster();
       }
     }
     return null;
   }
 
-  /**
-   * @return Read-only list of master threads.
-   */
+  /** Returns Read-only list of master threads. */
   public List<JVMClusterUtil.MasterThread> getMasters() {
     return Collections.unmodifiableList(this.masterThreads);
   }
 
   /**
-   * @return List of running master servers (Some servers may have been killed
-   * or aborted during lifetime of cluster; these servers are not included in
-   * this list).
+   * @return List of running master servers (Some servers may have been killed or aborted during
+   *         lifetime of cluster; these servers are not included in this list).
    */
   public List<JVMClusterUtil.MasterThread> getLiveMasters() {
     List<JVMClusterUtil.MasterThread> liveServers = new ArrayList<>();
     List<JVMClusterUtil.MasterThread> list = getMasters();
-    for (JVMClusterUtil.MasterThread mt: list) {
+    for (JVMClusterUtil.MasterThread mt : list) {
       if (mt.isAlive()) {
         liveServers.add(mt);
       }
@@ -394,7 +365,7 @@ public class LocalHBaseCluster {
         masterThread.join();
       } catch (InterruptedException e) {
         LOG.error("Interrupted while waiting for {} to finish. Retrying join",
-            masterThread.getName(), e);
+          masterThread.getName(), e);
         interrupted = true;
       }
     }
@@ -406,12 +377,11 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * Wait for Mini HBase Cluster to shut down.
-   * Presumes you've already called {@link #shutdown()}.
+   * Wait for Mini HBase Cluster to shut down. Presumes you've already called {@link #shutdown()}.
    */
   public void join() {
     if (this.regionThreads != null) {
-      for(Thread t: this.regionThreads) {
+      for (Thread t : this.regionThreads) {
         if (t.isAlive()) {
           try {
             Threads.threadDumpingIsAlive(t);
@@ -453,8 +423,9 @@ public class LocalHBaseCluster {
    * @return True if a 'local' address in hbase.master value.
    */
   public static boolean isLocal(final Configuration c) {
-    boolean mode = c.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
-    return(mode == HConstants.CLUSTER_IS_LOCAL);
+    boolean mode =
+      c.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
+    return (mode == HConstants.CLUSTER_IS_LOCAL);
   }
 
   /**

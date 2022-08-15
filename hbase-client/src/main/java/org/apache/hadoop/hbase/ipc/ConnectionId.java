@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.util.Objects;
-
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This class holds the address and the user ticket, etc. The client connections
- * to servers are uniquely identified by &lt;remoteAddress, ticket, serviceName&gt;
+ * This class holds the address and the user ticket, etc. The client connections to servers are
+ * uniquely identified by &lt;remoteAddress, ticket, serviceName&gt;
  */
 @InterfaceAudience.Private
 class ConnectionId {
@@ -58,24 +57,27 @@ class ConnectionId {
   }
 
   @Override
+  @SuppressWarnings("ReferenceEquality")
   public boolean equals(Object obj) {
-    if (obj instanceof ConnectionId) {
-      ConnectionId id = (ConnectionId) obj;
-      return address.equals(id.address) &&
-            ((ticket != null && ticket.equals(id.ticket)) ||
-             (ticket == id.ticket)) && Objects.equals(this.serviceName, id.serviceName);
+    if (obj == this) {
+      return true;
     }
-    return false;
+    if (!(obj instanceof ConnectionId)) {
+      return false;
+    }
+    ConnectionId id = (ConnectionId) obj;
+    return address.equals(id.address)
+      && ((ticket != null && ticket.equals(id.ticket)) || (ticket == id.ticket))
+      && Objects.equals(this.serviceName, id.serviceName);
   }
 
-  @Override  // simply use the default Object#hashcode() ?
+  @Override // simply use the default Object#hashcode() ?
   public int hashCode() {
-    return hashCode(ticket,serviceName,address);
+    return hashCode(ticket, serviceName, address);
   }
 
   public static int hashCode(User ticket, String serviceName, Address address) {
-    return (address.hashCode() +
-        PRIME * (PRIME * serviceName.hashCode() ^
-            (ticket == null ? 0 : ticket.hashCode())));
+    return (address.hashCode()
+      + PRIME * (PRIME * serviceName.hashCode() ^ (ticket == null ? 0 : ticket.hashCode())));
   }
 }
