@@ -1,14 +1,15 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 
 # This check includes - hbck, ltt, itbll, canary. Can be improved further.
 
-usage="Usage: hbase_smoke_test.sh (--help|--testAll|--testReadWrite|--testRegions|--testItbll|--testCanaryRs|--testCanaryZk)"
+usage="Usage: hbase_smoke_test.sh (--help|--testAll|--testReadWrite|--testRegions|--testItbll|--testCanaryRs|--testCanaryZk)
+        \n\nKerberos Authentication is required for this script to run.\n"
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 
 # This will set HBASE_HOME, etc.
-. "$bin"/hbase-config.sh
+. "$bin"/../hbase-config.sh
 
 case $1 in
   --testAll|--testReadWrite|--testRegions|--testItbll|--testCanaryRs|--testCanaryZk|--help)
@@ -17,7 +18,7 @@ case $1 in
 esac
 
 if [ $# -ne 1 -o "$accept" = "" ]; then
-  echo $usage
+  echo -e $usage
   exit 1;
 fi
 
@@ -110,10 +111,9 @@ fi
 }
 
 run_health_check(){
-  echo "HBase Health Check is progress..."
   case $1 in
   --help)
-    echo $usage;
+    echo -e $usage;
     ;;
   --testRegions)
     test_hbck;
