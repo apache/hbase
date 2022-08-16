@@ -55,8 +55,8 @@ public class PrometheusHadoopServlet extends HttpServlet {
    * solution doesn't add any dependencies to the project. You can check the Prometheus format here:
    * https://prometheus.io/docs/instrumenting/exposition_formats/
    */
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
+  @RestrictedApi(explanation = "Should only be called in tests or self", link = "",
+      allowedOnPath = ".*/src/test/.*|.*/PrometheusHadoopServlet\\.java")
   void writeMetrics(Writer writer) throws IOException {
     Collection<MetricsRecord> metricRecords = MetricsExportHelper.export();
     for (MetricsRecord metricsRecord : metricRecords) {

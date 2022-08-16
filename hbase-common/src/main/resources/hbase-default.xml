@@ -1788,7 +1788,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.http.metrics.servlets</name>
-    <value>jmx,prometheus</value>
+    <value>jmx,metrics,prometheus</value>
     <description>
       Comma separated list of servlet names to enable for metrics collection. Supported
       servlets are jmx, metrics, prometheus

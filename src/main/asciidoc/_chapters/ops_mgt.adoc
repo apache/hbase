@@ -1613,7 +1613,7 @@ Restart the region server for the changes to take effect.
 [[enabling.metrics.servlets]]
 === Enabling Metrics Servlets
 
-HBase exposes the metrics in many formats such as JSON, prometheus-format through different servlets (`/jmx`, `/metrics`, `/prometheus`). Any of these servlets can be enabled or disabled by the configuration property `hbase.http.metrics.servlets`. The value for the property should be a comma separated list of the servlet aliases which are `{jmx, metrics, prometheus}`. `/jmx` is enabled by default. To get metrics using these servlets access the URL `http://SERVER_HOSTNAME:SERVER_WEB_UI_PORT/endpoint`. Where endpoint is one of {`/jmx`, `/metrics`, `/prometheus`}. Eg. `http://my.rs.xyz.com:16030/prometheus`
+HBase exposes the metrics in many formats such as JSON, prometheus-format through different servlets (`/jmx`, `/metrics`, `/prometheus`). Any of these servlets can be enabled or disabled by the configuration property `hbase.http.metrics.servlets`. The value for the property should be a comma separated list of the servlet aliases which are `{jmx, metrics, prometheus}`. `/jmx`, `/metrics`, `/prometheus` are enabled by default. To get metrics using these servlets access the URL `http://SERVER_HOSTNAME:SERVER_WEB_UI_PORT/endpoint`. Where endpoint is one of {`/jmx`, `/metrics`, `/prometheus`}. Eg. `http://my.rs.xyz.com:16030/prometheus`
 
 [[prometheus.format.metrics]]
 === Prometheus servlets

@@ -154,7 +154,7 @@ public class HttpServer implements FilterContainer {
   public static final String APP_DIR = "webapps";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
-  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx" };
+  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx", "metrics", "prometheus" };
   private static final Map<String, ServletConfig> METRIC_SERVLETS =
     new HashMap<String, ServletConfig>() {
       {
@@ -163,7 +163,7 @@ public class HttpServer implements FilterContainer {
         put("metrics",
           new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"));
         put("prometheus", new ServletConfig("prometheus", "/prometheus",
-          "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoop2Servlet"));
+          "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"));
       }
     };
 
