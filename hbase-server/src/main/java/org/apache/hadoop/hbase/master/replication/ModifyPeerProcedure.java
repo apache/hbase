@@ -74,7 +74,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
    * update the peer storage.
    */
   protected abstract void postPeerModification(MasterProcedureEnv env)
-    throws IOException, ReplicationException;
+    throws IOException, ReplicationException, ProcedureSuspendedException;
 
   protected void releaseLatch(MasterProcedureEnv env) {
     ProcedurePrepareLatch.releaseLatch(latch, this);
