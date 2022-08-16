@@ -188,4 +188,13 @@ public final class HBaseKerberosUtils {
       UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
     return ugi;
   }
+
+  public static UserGroupInformation loginKerberosPrincipal(String krbKeytab, String krbPrincipal)
+    throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.loginUserFromKeytab(krbPrincipal, krbKeytab);
+    return UserGroupInformation.getLoginUser();
+  }
 }
