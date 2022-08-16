@@ -46,9 +46,7 @@ public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTex
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSaslTlsIPCRejectPlainText.class);
 
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static final File KEYTAB_FILE = new File(UTIL.getDataTestDir("keytab").toUri().getPath());
+  private static File KEYTAB_FILE;
 
   private static MiniKdc KDC;
   private static String HOST = "localhost";
@@ -57,13 +55,16 @@ public class TestSaslTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTex
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    HBaseTestingUtility util = new HBaseTestingUtility();
+    UTIL = util;
     initialize();
-    KDC = UTIL.setupMiniKdc(KEYTAB_FILE);
+    KEYTAB_FILE = new File(util.getDataTestDir("keytab").toUri().getPath());
+    KDC = util.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     UGI = loginKerberosPrincipal(KEYTAB_FILE.getCanonicalPath(), PRINCIPAL);
-    setSecuredConfiguration(UTIL.getConfiguration());
+    setSecuredConfiguration(util.getConfiguration());
     SecurityInfo securityInfoMock = Mockito.mock(SecurityInfo.class);
     Mockito.when(securityInfoMock.getServerPrincipal())
       .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);

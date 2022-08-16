@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
@@ -41,6 +42,7 @@ public class TestNettyTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainTe
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
+    UTIL = new HBaseCommonTestingUtility();
     initialize();
   }
 
