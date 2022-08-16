@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 
 public abstract class AbstractTestTlsRejectPlainText {
 
-  protected static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
+  protected static HBaseCommonTestingUtil UTIL;
 
   protected static File DIR;
 
