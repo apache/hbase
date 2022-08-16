@@ -124,6 +124,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    */
   public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
 
+  public static final String SKIP_STORE_FILE_SPLITTING =
+    "hbase.loadincremental.skip.storefile.splitting";
+
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
@@ -141,6 +144,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   private List<String> clusterIds = new ArrayList<>();
   private boolean replicate = true;
+  private boolean skipStoreFileSplitting = false;
 
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
@@ -159,6 +163,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     nrThreads =
       conf.getInt("hbase.loadincremental.threads.max", Runtime.getRuntime().availableProcessors());
     bulkLoadByFamily = conf.getBoolean(BULK_LOAD_HFILES_BY_FAMILY, false);
+    skipStoreFileSplitting = conf.getBoolean(SKIP_STORE_FILE_SPLITTING, false);
   }
 
   // Initialize a thread pool
@@ -699,6 +704,11 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       Bytes.compareTo(last.get(), startEndKeys.get(firstKeyRegionIdx).getSecond()) < 0 || Bytes
         .equals(startEndKeys.get(firstKeyRegionIdx).getSecond(), HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
+      if (skipStoreFileSplitting) {
+        throw new IOException("The key range of hfile=" + hfilePath + " fits into no region. "
+          + "And because " + SKIP_STORE_FILE_SPLITTING + " was set to true, "
+          + "we just skip the next steps.");
+      }
       int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
       int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) / 2;
       // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
