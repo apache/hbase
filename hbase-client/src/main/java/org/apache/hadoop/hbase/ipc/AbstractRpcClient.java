@@ -380,7 +380,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace(
-        "Call: " + call.md.getName() + ", callTime: " + call.callStats.getCallTimeMs() + "ms");
+        "CallId: {}, call: {}, startTime: {}ms, callTime: {}ms", call.id, call.getStartTime(),
+        call.md.getName(), call.callStats.getCallTimeMs());
     }
     if (call.error != null) {
       if (call.error instanceof RemoteException) {
