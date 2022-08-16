@@ -575,22 +575,35 @@ function hadoopcheck_rebuild
 
   # All supported Hadoop versions that we want to test the compilation with
   # See the Hadoop section on prereqs in the HBase Reference Guide
-  if [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
-    yetus_info "Setting Hadoop 2 versions to test based on branch-2.4+ rules."
+  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.4 rules."
     if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-      hbase_hadoop2_versions="2.10.1"
+      hbase_hadoop2_versions="2.10.2"
     else
-      hbase_hadoop2_versions="2.10.0 2.10.1"
+      hbase_hadoop2_versions="2.10.0 2.10.1 2.10.2"
     fi
+  elif [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
+    yetus_info "Setting Hadoop 2 versions to test based on branch-2.5+ rules."
+    hbase_hadoop2_versions="2.10.2"
   else
     yetus_info "Setting Hadoop 2 versions to null on master/feature branch rules since we do not support hadoop 2 for hbase 3.x any more."
     hbase_hadoop2_versions=""
   fi
-  yetus_info "Setting Hadoop 3 versions to test based on branch-2.4+/master/feature branch rules"
-  if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
-    hbase_hadoop3_versions="3.1.2 3.2.2 3.3.1"
+
+  if [[ "${PATCH_BRANCH}" = branch-2.4 ]]; then
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.4 rules"
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop3_versions="3.1.4 3.2.4 3.3.4"
+    else
+      hbase_hadoop3_versions="3.1.1 3.1.2 3.1.3 3.1.4 3.2.0 3.2.1 3.2.2 3.2.3 3.2.4 3.3.0 3.3.1 3.3.2 3.3.3 3.3.4"
+    fi
   else
-    hbase_hadoop3_versions="3.1.1 3.1.2 3.2.0 3.2.1 3.2.2 3.3.0 3.3.1"
+    yetus_info "Setting Hadoop 3 versions to test based on branch-2.5+/master/feature branch rules"
+    if [[ "${QUICK_HADOOPCHECK}" == "true" ]]; then
+      hbase_hadoop3_versions="3.2.4 3.3.4"
+    else
+      hbase_hadoop3_versions="3.2.3 3.2.4 3.3.2 3.3.3 3.3.4"
+    fi
   fi
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
