@@ -47,6 +47,8 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClientHandler.class);
 
+  public static final String HANDLER_NAME = "SaslRpcClientHandler";
+
   private final Promise<Boolean> saslPromise;
 
   private final UserGroupInformation ugi;
@@ -86,7 +88,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
     }
 
     ChannelPipeline p = ctx.pipeline();
-    saslRpcClient.setupSaslHandler(p);
+    saslRpcClient.setupSaslHandler(p, HANDLER_NAME);
     p.remove(SaslChallengeDecoder.class);
     p.remove(this);
 

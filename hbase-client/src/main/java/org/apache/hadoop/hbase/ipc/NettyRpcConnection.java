@@ -222,7 +222,8 @@ class NettyRpcConnection extends RpcConnection {
       return;
     }
     ch.pipeline().addBefore(BufferCallBeforeInitHandler.NAME, null, new SaslChallengeDecoder())
-      .addBefore(BufferCallBeforeInitHandler.NAME, null, saslHandler);
+      .addBefore(BufferCallBeforeInitHandler.NAME, NettyHBaseSaslRpcClientHandler.HANDLER_NAME,
+        saslHandler);
     NettyFutureUtils.addListener(saslPromise, new FutureListener<Boolean>() {
 
       @Override
