@@ -876,6 +876,9 @@ public class TestStoreScanner {
       HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
     try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
+      if (scanner.getOldestUnexpiredTS() - now >= -200L) {
+        return;
+      }
       assertEquals(true, scanner.next(results));
       assertEquals(2, results.size());
       assertEquals(kvs[1], results.get(0));

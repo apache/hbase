@@ -1240,4 +1240,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       trySwitchToStreamRead();
     }
   }
+
+  public long getOldestUnexpiredTS() {
+    return this.oldestUnexpiredTS;
+  }
 }
