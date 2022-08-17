@@ -182,9 +182,8 @@ public class TestMobFileCleanerChore {
     assertEquals(30, scanned);
 
     // add a MOB file to with a name refering to a non-existing region
-    ColumnFamilyDescriptor familyDescriptor =
-      ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true).setMobThreshold(mobLen)
-        .setMaxVersions(1).build();
+    ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam)
+      .setMobEnabled(true).setMobThreshold(mobLen).setMaxVersions(1).build();
     Path extraMOBFile = MobTestUtil.generateMOBFileForRegion(conf, table.getName(),
       familyDescriptor, "nonExistentRegion");
     num = getNumberOfMobFiles(conf, table.getName(), new String(fam));

@@ -97,8 +97,8 @@ public class TestRSMobFileCleanerChore {
     admin = HTU.getAdmin();
     familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(fam).setMobEnabled(true)
       .setMobThreshold(mobLen).setMaxVersions(1).build();
-    tableDescriptor = HTU.createModifyableTableDescriptor("testMobCompactTable")
-      .setColumnFamily(familyDescriptor);
+    tableDescriptor =
+      HTU.createModifyableTableDescriptor("testMobCompactTable").setColumnFamily(familyDescriptor);
     table = HTU.createTable(tableDescriptor, Bytes.toByteArrays("1"));
   }
 
