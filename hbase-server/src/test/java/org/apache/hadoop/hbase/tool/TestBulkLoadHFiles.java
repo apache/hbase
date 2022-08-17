@@ -785,7 +785,7 @@ public class TestBulkLoadHFiles {
   }
 
   @Test
-  public void testSkipStoreFileSplitting() throws IOException {
+  public void testFailIfNeedSplitHFile() throws IOException {
     TableName tableName = TableName.valueOf(tn.getMethodName());
     Table table = util.createTable(tableName, FAMILY);
 
@@ -796,18 +796,16 @@ public class TestBulkLoadHFiles {
     HFileTestUtil.createHFile(util.getConfiguration(), fs, sfPath, FAMILY, QUALIFIER,
       Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
-
     util.getAdmin().split(tableName);
     util.waitFor(10000, 1000, () -> util.getAdmin().getRegions(tableName).size() > 1);
 
-    Configuration config = util.getConfiguration();
-    config.setBoolean(BulkLoadHFilesTool.SKIP_STORE_FILE_SPLITTING, true);
+    Configuration config = new Configuration(util.getConfiguration());
+    config.setBoolean(BulkLoadHFilesTool.FAIL_IF_NEED_SPLIT_HFILE, true);
     BulkLoadHFilesTool tool = new BulkLoadHFilesTool(config);
 
     String[] args = new String[] { fs.getWorkingDirectory().toString(), tableName.toString() };
     assertThrows(IOException.class, () -> tool.run(args));
-    util.getHBaseCluster().getRegions(tableName).forEach(r ->
-      assertEquals(1, r.getStore(FAMILY).getStorefiles().size())
-    );
+    util.getHBaseCluster().getRegions(tableName)
+      .forEach(r -> assertEquals(1, r.getStore(FAMILY).getStorefiles().size()));
   }
 }
