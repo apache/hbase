@@ -69,6 +69,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
@@ -154,18 +155,16 @@ public class HttpServer implements FilterContainer {
   public static final String APP_DIR = "webapps";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
-  public static final String METRICS_SERVLETS_DEFAULT[] = { "jmx", "metrics", "prometheus" };
-  private static final Map<String, ServletConfig> METRIC_SERVLETS =
-    new HashMap<String, ServletConfig>() {
-      {
-        put("jmx",
-          new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"));
-        put("metrics",
-          new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"));
-        put("prometheus", new ServletConfig("prometheus", "/prometheus",
-          "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"));
-      }
-    };
+  public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };
+  private static final ImmutableMap<String,
+    ServletConfig> METRIC_SERVLETS = new ImmutableMap.Builder<String, ServletConfig>()
+      .put("jmx",
+        new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
+      .put("metrics",
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+      .put("prometheus", new ServletConfig("prometheus", "/prometheus",
+        "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
+      .build();
 
   private final AccessControlList adminsAcl;
 
@@ -790,7 +789,7 @@ public class HttpServer implements FilterContainer {
     }
 
     /* register metrics servlets */
-    String enabledServlets[] = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
+    String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
     for (String enabledServlet : enabledServlets) {
       try {
         ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);

@@ -65,7 +65,9 @@ public class TestMetricsExportHelper {
     String metricName) {
     return metrics.stream().filter(mr -> mr.name().equals(metricsName)).anyMatch(mr -> {
       for (AbstractMetric metric : mr.metrics()) {
-        if (metric.name().equals(metricName)) return true;
+        if (metric.name().equals(metricName)) {
+          return true;
+        }
       }
       return false;
     });

@@ -17,20 +17,22 @@
  */
 package org.apache.hadoop.metrics2.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class MetricsExportHelper {
+public final class MetricsExportHelper {
+  private MetricsExportHelper() {
+  }
 
   public static Collection<MetricsRecord> export() {
     MetricsSystemImpl instance = (MetricsSystemImpl) DefaultMetricsSystem.instance();
     MetricsBuffer metricsBuffer = instance.sampleMetrics();
-    List<MetricsRecord> metrics = new LinkedList<>();
+    List<MetricsRecord> metrics = new ArrayList<>();
     for (MetricsBuffer.Entry entry : metricsBuffer) {
       entry.records().forEach(metrics::add);
     }
