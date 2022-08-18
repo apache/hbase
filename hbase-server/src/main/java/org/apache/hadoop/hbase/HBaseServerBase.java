@@ -252,9 +252,13 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       InetSocketAddress addr = rpcServices.getSocketAddress();
-      String hostName = StringUtils.isBlank(useThisHostnameInstead)
-        ? addr.getHostName()
-        : this.useThisHostnameInstead;
+
+      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+      String isaHostName =
+        useIp ? addr.getAddress().getHostAddress() : addr.getAddress().getHostName();
+      String hostName =
+        StringUtils.isBlank(useThisHostnameInstead) ? isaHostName : useThisHostnameInstead;
       serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
       // login the zookeeper client principal (if using security)
       ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,

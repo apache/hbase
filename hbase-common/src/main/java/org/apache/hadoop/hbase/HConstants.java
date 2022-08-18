@@ -1571,6 +1571,16 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /**
+   * Support whether to use IP for master/rs servers for some special scenarios, default is false.
+   */
+  public final static String HBASE_SERVER_USEIP_ENABLED_KEY = "hbase.server.useip.enabled";
+
+  /**
+   * Default value of {@link #HBASE_SERVER_USEIP_ENABLED_KEY}
+   */
+  public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

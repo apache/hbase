@@ -219,8 +219,11 @@ public class ServerManager {
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
 
+    boolean useIp = master.getConfiguration().getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+      HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+    String isaHostName = useIp ? ia.getHostAddress() : ia.getHostName();
     final String hostname =
-      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : ia.getHostName();
+      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : isaHostName;
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");

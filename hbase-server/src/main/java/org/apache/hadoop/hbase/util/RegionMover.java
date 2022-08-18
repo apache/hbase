@@ -26,6 +26,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -48,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -180,6 +183,16 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         this.port = Integer.parseInt(splitHostname[1]);
       } else {
         this.port = conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
+      }
+      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+      if (useIp && StringUtils.isNotBlank(this.hostname)) {
+        try {
+          this.hostname = InetAddress.getByName(this.hostname).getHostAddress();
+        } catch (UnknownHostException e) {
+          LOG.error(e.getMessage());
+          throw new RuntimeException(e);
+        }
       }
       this.filename = defaultDir + File.separator + System.getProperty("user.name") + this.hostname
         + ":" + Integer.toString(this.port);
