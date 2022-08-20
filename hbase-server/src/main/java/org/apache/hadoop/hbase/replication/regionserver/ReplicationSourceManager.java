@@ -236,7 +236,7 @@ public class ReplicationSourceManager {
    */
   void init() throws IOException {
     for (String id : this.replicationPeers.getAllPeerIds()) {
-      addSource(id);
+      addSource(id, true);
     }
   }
 
@@ -256,7 +256,7 @@ public class ReplicationSourceManager {
       throw new IOException(e);
     }
     if (added) {
-      addSource(peerId);
+      addSource(peerId, false);
     }
   }
 
@@ -322,11 +322,16 @@ public class ReplicationSourceManager {
   /**
    * Add a normal source for the given peer on this region server. Meanwhile, add new replication
    * queue to storage. For the newly added peer, we only need to enqueue the latest log of each wal
-   * group and do replication
+   * group and do replication.
+   * <p/>
+   * We add a {@code init} parameter to indicate whether this is part of the initialization process.
+   * If so, we should skip adding the replication queues as this may introduce dead lock on region
+   * server start up and hbase:replication table online.
    * @param peerId the id of the replication peer
+   * @param init   whether this call is part of the initialization process
    * @return the source that was created
    */
-  void addSource(String peerId) throws IOException {
+  void addSource(String peerId, boolean init) throws IOException {
     ReplicationPeer peer = replicationPeers.getPeer(peerId);
     if (
       ReplicationUtils.LEGACY_REGION_REPLICATION_ENDPOINT_NAME
@@ -351,11 +356,16 @@ public class ReplicationSourceManager {
           NavigableSet<String> wals = new TreeSet<>();
           wals.add(walPath.getName());
           walsByGroup.put(walPrefixAndPath.getKey(), wals);
-          // Abort RS and throw exception to make add peer failed
-          // TODO: can record the length of the current wal file so we could replicate less data
-          abortAndThrowIOExceptionWhenFail(
-            () -> this.queueStorage.setOffset(queueId, walPrefixAndPath.getKey(),
-              new ReplicationGroupOffset(walPath.getName(), 0), Collections.emptyMap()));
+          if (!init) {
+            // Abort RS and throw exception to make add peer failed
+            // Ideally we'd better use the current file size as offset so we can skip replicating
+            // the data before adding replication peer, but the problem is that the file may not end
+            // at a valid entry's ending, and the current WAL Reader implementation can not deal
+            // with reading from the middle of a WAL entry. Can improve later.
+            abortAndThrowIOExceptionWhenFail(
+              () -> this.queueStorage.setOffset(queueId, walPrefixAndPath.getKey(),
+                new ReplicationGroupOffset(walPath.getName(), 0), Collections.emptyMap()));
+          }
           src.enqueueLog(walPath);
           LOG.trace("Enqueued {} to source {} during source creation.", walPath, src.getQueueId());
         }
@@ -794,9 +804,15 @@ public class ReplicationSourceManager {
    * @return {@code true} means we should replicate the given {@code wal}, otherwise {@code false}.
    */
   private boolean shouldReplicate(ReplicationGroupOffset offset, String wal) {
-    if (offset == null || offset == ReplicationGroupOffset.BEGIN) {
+    // skip replicating meta wals
+    if (AbstractFSWALProvider.isMetaFile(wal)) {
       return false;
     }
+    // if no offset or the offset is just a place marker, replicate
+    if (offset == null || offset == ReplicationGroupOffset.BEGIN) {
+      return true;
+    }
+    // otherwise, compare the timestamp
     long walTs = AbstractFSWALProvider.getTimestamp(wal);
     long startWalTs = AbstractFSWALProvider.getTimestamp(offset.getWal());
     if (walTs < startWalTs) {
@@ -891,7 +907,6 @@ public class ReplicationSourceManager {
         LOG.debug("Skip enqueuing log {} because it is before the start offset {}", file.getName(),
           groupOffset);
       }
-      walFilesPQ.add(file);
     }
     // the method is a bit long, so assign it to null here to avoid later we reuse it again by
     // mistake, we should use the sorted walFilesPQ instead
