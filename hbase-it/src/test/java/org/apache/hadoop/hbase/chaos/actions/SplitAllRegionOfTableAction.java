@@ -38,6 +38,7 @@ public class SplitAllRegionOfTableAction extends Action {
     this.tableName = tableName;
   }
 
+  @Override
   public void init(ActionContext context) throws IOException {
     super.init(context);
     this.maxFullTableSplits = getConf().getInt(MAX_SPLIT_KEY, DEFAULT_MAX_SPLITS);

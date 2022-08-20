@@ -87,6 +87,7 @@ public class IntegrationTestTableMapReduceUtil implements Configurable, Tool {
     return 0;
   }
 
+  @Override
   public void setConf(Configuration conf) {
     if (util != null) {
       throw new IllegalArgumentException(

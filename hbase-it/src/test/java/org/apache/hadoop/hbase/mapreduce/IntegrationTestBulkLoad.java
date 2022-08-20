@@ -371,7 +371,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       taskId = taskId + iteration * numMapTasks;
       numMapTasks = numMapTasks * numIterations;
 
-      long chainId = Math.abs(ThreadLocalRandom.current().nextLong());
+      long chainId = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per
                                                             // task and across iterations
       LongWritable[] keys = new LongWritable[] { new LongWritable(chainId) };

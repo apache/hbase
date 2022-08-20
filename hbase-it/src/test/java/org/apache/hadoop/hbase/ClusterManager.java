@@ -40,7 +40,7 @@ interface ClusterManager extends Configurable {
     HBASE_MASTER("master"),
     HBASE_REGIONSERVER("regionserver");
 
-    private String name;
+    private final String name;
 
     ServiceType(String name) {
       this.name = name;

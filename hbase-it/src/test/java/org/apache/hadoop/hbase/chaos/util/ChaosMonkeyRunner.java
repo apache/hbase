@@ -167,7 +167,7 @@ public class ChaosMonkeyRunner extends AbstractHBaseTool {
     return Sets.newHashSet(familyName);
   }
 
-  /*
+  /**
    * If caller wants to add config parameters from a file, the path to the conf file can be passed
    * like this: -c <path-to-conf>. The file is presumed to have the Configuration file xml format
    * and is added as a new Resource to the current Configuration. Use this mechanism to set

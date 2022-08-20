@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
@@ -85,6 +87,8 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
@@ -441,34 +445,32 @@ public class IntegrationTestLoadAndVerify extends IntegrationTestBase {
     }
     if (!fs.isDirectory(keysInputDir)) {
       FileStatus keyFileStatus = fs.getFileStatus(keysInputDir);
-      readFileToSearch(conf, fs, keyFileStatus, result);
+      readFileToSearch(fs, keyFileStatus, result);
     } else {
       RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(keysInputDir, false);
       while (iterator.hasNext()) {
         LocatedFileStatus keyFileStatus = iterator.next();
         // Skip "_SUCCESS" file.
         if (keyFileStatus.getPath().getName().startsWith("_")) continue;
-        readFileToSearch(conf, fs, keyFileStatus, result);
+        readFileToSearch(fs, keyFileStatus, result);
       }
     }
     return result;
   }
 
-  private static SortedSet<byte[]> readFileToSearch(final Configuration conf, final FileSystem fs,
+  private static SortedSet<byte[]> readFileToSearch(final FileSystem fs,
     final FileStatus keyFileStatus, SortedSet<byte[]> result)
     throws IOException, InterruptedException {
     // verify uses file output format and writes <Text, Text>. We can read it as a text file
-    try (InputStream in = fs.open(keyFileStatus.getPath());
-      BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+    try (InputStream in = fs.open(keyFileStatus.getPath()); BufferedReader reader =
+      new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
       // extract out the key and return that missing as a missing key
       String line;
       while ((line = reader.readLine()) != null) {
         if (line.isEmpty()) continue;
-
-        String[] parts = line.split("\\s+");
-        if (parts.length >= 1) {
-          String key = parts[0];
-          result.add(Bytes.toBytesBinary(key));
+        List<String> parts = Splitter.onPattern("\\s+").splitToList(line);
+        if (parts.size() >= 1) {
+          result.add(Bytes.toBytesBinary(Iterables.get(parts, 0)));
         } else {
           LOG.info("Cannot parse key from: " + line);
         }
@@ -477,7 +479,7 @@ public class IntegrationTestLoadAndVerify extends IntegrationTestBase {
     return result;
   }
 
-  private int doSearch(Configuration conf, String keysDir) throws Exception {
+  private int doSearch(String keysDir) throws Exception {
     Path inputDir = new Path(keysDir);
 
     getConf().set(SEARCHER_INPUTDIR_KEY, inputDir.toString());
@@ -619,7 +621,7 @@ public class IntegrationTestLoadAndVerify extends IntegrationTestBase {
       }
     }
     if (doSearch) {
-      return doSearch(getConf(), keysDir);
+      return doSearch(keysDir);
     }
     return 0;
   }

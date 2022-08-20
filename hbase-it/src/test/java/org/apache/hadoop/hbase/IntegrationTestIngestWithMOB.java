@@ -104,6 +104,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   }
 
   @Test
+  @Override
   public void testIngest() throws Exception {
     runIngestTest(JUNIT_RUN_TIME, 100, 10, 1024, 10, 20);
   };

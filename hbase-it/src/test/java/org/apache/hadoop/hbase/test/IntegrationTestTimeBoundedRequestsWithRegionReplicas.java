@@ -268,7 +268,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       try {
         this.timeoutThread.join();
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        // Restore interrupt status
+        Thread.currentThread().interrupt();
       }
       this.aborted = true;
       super.waitForFinish();
@@ -294,7 +295,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       return new TimeBoundedMultiThreadedReaderThread(readerId);
     }
 
-    private class TimeoutThread extends Thread {
+    private static class TimeoutThread extends Thread {
       long timeout;
       long reportInterval = 60000;
 

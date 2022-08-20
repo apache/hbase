@@ -23,9 +23,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.codahale.metrics.Histogram;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -104,7 +104,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
    * Wraps the invocation of {@link PerformanceEvaluation} in a {@code Callable}.
    */
   static class PerfEvalCallable implements Callable<TimingResult> {
-    private final Queue<String> argv = new LinkedList<>();
+    private final Queue<String> argv = new ArrayDeque<>();
     private final Admin admin;
 
     public PerfEvalCallable(Admin admin, String argv) {
