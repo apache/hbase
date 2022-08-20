@@ -360,9 +360,9 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
     // do a best effort restore
     boolean success = true;
-    success = restoreMasters(initial, current) & success;
-    success = restoreRegionServers(initial, current) & success;
-    success = restoreAdmin() & success;
+    success = restoreMasters(initial, current) && success;
+    success = restoreRegionServers(initial, current) && success;
+    success = restoreAdmin() && success;
 
     LOG.info("Restoring cluster - done");
     return success;

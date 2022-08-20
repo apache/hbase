@@ -98,6 +98,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -220,12 +221,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         LOG.error("Loader failed");
         return -1;
       }
-      res = runVerify(outputDir);
+      return runVerify(outputDir);
     } catch (Exception e) {
       LOG.error("Tool failed with exception", e);
       return -1;
     }
-    return 0;
   }
 
   @Override
@@ -527,9 +527,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         try (FSDataInputStream is = fs.open(warcFileInput)) {
           InputStreamReader reader;
           if (warcFileInput.getName().toLowerCase().endsWith(".gz")) {
-            reader = new InputStreamReader(new GZIPInputStream(is));
+            reader = new InputStreamReader(new GZIPInputStream(is), StandardCharsets.UTF_8);
           } else {
-            reader = new InputStreamReader(is);
+            reader = new InputStreamReader(is, StandardCharsets.UTF_8);
           }
           try (BufferedReader br = new BufferedReader(reader)) {
             String line;
@@ -949,8 +949,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     // Reverse the components of the hostname
     String reversedHost;
     if (uri.getHost() != null) {
+      final String[] hostComponents =
+        Splitter.on('.').splitToStream(uri.getHost()).toArray(String[]::new);
       final StringBuilder sb = new StringBuilder();
-      final String[] hostComponents = uri.getHost().split("\\.");
       for (int i = hostComponents.length - 1; i >= 0; i--) {
         sb.append(hostComponents[i]);
         if (i != 0) {

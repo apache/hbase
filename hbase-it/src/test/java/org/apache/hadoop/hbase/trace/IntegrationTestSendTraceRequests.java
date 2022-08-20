@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -140,12 +141,9 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
             ht.close();
             ht = null;
-          } catch (IOException e) {
-            LOG.warn("Exception occurred while scanning table", e);
+          } catch (Exception e) {
             span.addEvent("exception",
               Attributes.of(AttributeKey.stringKey("exception"), e.getClass().getSimpleName()));
-          } catch (Exception e) {
-            LOG.warn("Exception occurred while scanning table", e);
           } finally {
             span.end();
             if (rs != null) {
@@ -166,36 +164,36 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
         @Override
         public void run() {
-
           Table ht = null;
           try {
             ht = util.getConnection().getTable(tableName);
+            long accum = 0;
+            for (int x = 0; x < 5; x++) {
+              Span span = TraceUtil.getGlobalTracer().spanBuilder("gets").startSpan();
+              try (Scope scope = span.makeCurrent()) {
+                long rk = rowKeyQueue.take();
+                Result r1 = ht.get(new Get(Bytes.toBytes(rk)));
+                if (r1 != null) {
+                  accum |= Bytes.toLong(r1.getRow());
+                }
+                Result r2 = ht.get(new Get(Bytes.toBytes(rk)));
+                if (r2 != null) {
+                  accum |= Bytes.toLong(r2.getRow());
+                }
+                span.addEvent("Accum = " + accum);
+              } catch (IOException | InterruptedException ie) {
+                // IGNORED
+              } finally {
+                span.end();
+              }
+            }
           } catch (IOException e) {
-            e.printStackTrace();
-          }
-
-          long accum = 0;
-          for (int x = 0; x < 5; x++) {
-            Span span = TraceUtil.getGlobalTracer().spanBuilder("gets").startSpan();
-            try (Scope scope = span.makeCurrent()) {
-              long rk = rowKeyQueue.take();
-              Result r1 = ht.get(new Get(Bytes.toBytes(rk)));
-              if (r1 != null) {
-                accum |= Bytes.toLong(r1.getRow());
-              }
-              Result r2 = ht.get(new Get(Bytes.toBytes(rk)));
-              if (r2 != null) {
-                accum |= Bytes.toLong(r2.getRow());
-              }
-              span.addEvent("Accum = " + accum);
-
-            } catch (IOException | InterruptedException ie) {
-              // IGNORED
-            } finally {
-              span.end();
+            // IGNORED
+          } finally {
+            if (ht != null) {
+              IOUtils.closeQuietly(ht);
             }
           }
-
         }
       };
       service.execute(runnable);

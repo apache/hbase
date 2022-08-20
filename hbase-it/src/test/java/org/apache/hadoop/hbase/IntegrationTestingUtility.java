@@ -116,14 +116,13 @@ public class IntegrationTestingUtility extends HBaseTestingUtility {
   }
 
   /**
-   * @return whether we are interacting with a distributed cluster as opposed to and in-process mini
-   *         cluster or a local cluster.
+   * Returns whether we are interacting with a distributed cluster as opposed to and in-process mini
+   * cluster or a local cluster.
    * @see IntegrationTestingUtility#setUseDistributedCluster(Configuration)
    */
   public boolean isDistributedCluster() {
     Configuration conf = getConfiguration();
-    boolean isDistributedCluster = false;
-    isDistributedCluster =
+    boolean isDistributedCluster =
       Boolean.parseBoolean(System.getProperty(IS_DISTRIBUTED_CLUSTER, "false"));
     if (!isDistributedCluster) {
       isDistributedCluster = conf.getBoolean(IS_DISTRIBUTED_CLUSTER, false);

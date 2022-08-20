@@ -115,6 +115,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
@@ -289,7 +290,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      */
     public static final String BIG_FAMILY_VALUE_SIZE_KEY = "generator.big.family.value.size";
 
-    public static enum Counts {
+    public static enum GeneratorCounts {
       SUCCESS,
       TERMINATING,
       UNDEFINED,
@@ -448,6 +449,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       volatile boolean walkersStop;
       int numWalkers;
+      final Object flushedLoopsLock = new Object();
       volatile List<Long> flushedLoops = new ArrayList<>();
       List<Thread> walkers = new ArrayList<>();
 
@@ -550,9 +552,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       private void addFlushed(byte[] rowKey) {
-        synchronized (flushedLoops) {
+        synchronized (flushedLoopsLock) {
           flushedLoops.add(Bytes.toLong(rowKey));
-          flushedLoops.notifyAll();
+          flushedLoopsLock.notifyAll();
         }
       }
 
@@ -597,16 +599,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       private void joinWalkers() {
-        walkersStop = true;
-        synchronized (flushedLoops) {
-          flushedLoops.notifyAll();
+        synchronized (flushedLoopsLock) {
+          walkersStop = true;
+          flushedLoopsLock.notifyAll();
         }
         for (Thread walker : walkers) {
-          try {
-            walker.join();
-          } catch (InterruptedException e) {
-            // no-op
-          }
+          Uninterruptibles.joinUninterruptibly(walker);
         }
       }
 
@@ -635,7 +633,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
               try {
                 walkLoop(node);
               } catch (IOException e) {
-                context.getCounter(Counts.IOEXCEPTION).increment(1l);
+                context.getCounter(GeneratorCounts.IOEXCEPTION).increment(1l);
                 return;
               }
             } catch (InterruptedException e) {
@@ -651,9 +649,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         }
 
         private long selectLoop() throws InterruptedException {
-          synchronized (flushedLoops) {
+          synchronized (flushedLoopsLock) {
             while (flushedLoops.isEmpty() && !walkersStop) {
-              flushedLoops.wait();
+              flushedLoopsLock.wait();
             }
             if (walkersStop) {
               throw new InterruptedException();
@@ -691,19 +689,17 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           while (numQueries < maxQueries) {
             numQueries++;
             byte[] prev = node.prev;
-            long t1 = EnvironmentEdgeManager.currentTime();
             node = getNode(prev, table, node);
-            long t2 = EnvironmentEdgeManager.currentTime();
             if (node == null) {
               LOG.error("ConcurrentWalker found UNDEFINED NODE: " + Bytes.toStringBinary(prev));
-              context.getCounter(Counts.UNDEFINED).increment(1l);
+              context.getCounter(GeneratorCounts.UNDEFINED).increment(1l);
             } else if (node.prev.length == NO_KEY.length) {
               LOG.error(
                 "ConcurrentWalker found TERMINATING NODE: " + Bytes.toStringBinary(node.key));
-              context.getCounter(Counts.TERMINATING).increment(1l);
+              context.getCounter(GeneratorCounts.TERMINATING).increment(1l);
             } else {
               // Increment for successful walk
-              context.getCounter(Counts.SUCCESS).increment(1l);
+              context.getCounter(GeneratorCounts.SUCCESS).increment(1l);
             }
           }
           table.close();
@@ -873,14 +869,17 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         }
 
         if (
-          counters.findCounter(Counts.TERMINATING).getValue() > 0
-            || counters.findCounter(Counts.UNDEFINED).getValue() > 0
-            || counters.findCounter(Counts.IOEXCEPTION).getValue() > 0
+          counters.findCounter(GeneratorCounts.TERMINATING).getValue() > 0
+            || counters.findCounter(GeneratorCounts.UNDEFINED).getValue() > 0
+            || counters.findCounter(GeneratorCounts.IOEXCEPTION).getValue() > 0
         ) {
           LOG.error("Concurrent walker failed to verify during Generation phase");
-          LOG.error("TERMINATING nodes: " + counters.findCounter(Counts.TERMINATING).getValue());
-          LOG.error("UNDEFINED nodes: " + counters.findCounter(Counts.UNDEFINED).getValue());
-          LOG.error("IOEXCEPTION nodes: " + counters.findCounter(Counts.IOEXCEPTION).getValue());
+          LOG.error(
+            "TERMINATING nodes: " + counters.findCounter(GeneratorCounts.TERMINATING).getValue());
+          LOG.error(
+            "UNDEFINED nodes: " + counters.findCounter(GeneratorCounts.UNDEFINED).getValue());
+          LOG.error(
+            "IOEXCEPTION nodes: " + counters.findCounter(GeneratorCounts.IOEXCEPTION).getValue());
           return false;
         }
       } catch (IOException e) {
@@ -1022,16 +1021,17 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           LocatedFileStatus keyFileStatus = iterator.next();
           // Skip "_SUCCESS" file.
           if (keyFileStatus.getPath().getName().startsWith("_")) continue;
-          result.addAll(readFileToSearch(conf, fs, keyFileStatus));
+          result.addAll(readFileToSearch(conf, keyFileStatus));
         }
       }
       return result;
     }
 
-    private static SortedSet<byte[]> readFileToSearch(final Configuration conf, final FileSystem fs,
+    private static SortedSet<byte[]> readFileToSearch(final Configuration conf,
       final LocatedFileStatus keyFileStatus) throws IOException, InterruptedException {
       SortedSet<byte[]> result = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-      // Return entries that are flagged Counts.UNDEFINED in the value. Return the row. This is
+      // Return entries that are flagged VerifyCounts.UNDEFINED in the value. Return the row. This
+      // is
       // what is missing.
       TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
       try (SequenceFileAsBinaryInputFormat.SequenceFileAsBinaryRecordReader rr =
@@ -1042,7 +1042,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         while (rr.nextKeyValue()) {
           rr.getCurrentKey();
           BytesWritable bw = rr.getCurrentValue();
-          if (Verify.VerifyReducer.whichType(bw.getBytes()) == Verify.Counts.UNDEFINED) {
+          if (Verify.VerifyReducer.whichType(bw.getBytes()) == Verify.VerifyCounts.UNDEFINED) {
             byte[] key = new byte[rr.getCurrentKey().getLength()];
             System.arraycopy(rr.getCurrentKey().getBytes(), 0, key, 0,
               rr.getCurrentKey().getLength());
@@ -1103,7 +1103,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      * Don't change the order of these enums. Their ordinals are used as type flag when we emit
      * problems found from the reducer.
      */
-    public static enum Counts {
+    public static enum VerifyCounts {
       UNREFERENCED,
       UNDEFINED,
       REFERENCED,
@@ -1122,9 +1122,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       extends Reducer<BytesWritable, BytesWritable, BytesWritable, BytesWritable> {
       private ArrayList<byte[]> refs = new ArrayList<>();
       private final BytesWritable UNREF =
-        new BytesWritable(addPrefixFlag(Counts.UNREFERENCED.ordinal(), new byte[] {}));
+        new BytesWritable(addPrefixFlag(VerifyCounts.UNREFERENCED.ordinal(), new byte[] {}));
       private final BytesWritable LOSTFAM =
-        new BytesWritable(addPrefixFlag(Counts.LOST_FAMILIES.ordinal(), new byte[] {}));
+        new BytesWritable(addPrefixFlag(VerifyCounts.LOST_FAMILIES.ordinal(), new byte[] {}));
 
       private AtomicInteger rows = new AtomicInteger(0);
       private Connection connection;
@@ -1166,9 +1166,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
        * n * @return Type from the Counts enum of this row. Reads prefix added by
        * {@link #addPrefixFlag(int, byte[])}
        */
-      public static Counts whichType(final byte[] bs) {
+      public static VerifyCounts whichType(final byte[] bs) {
         int ordinal = Bytes.toShort(bs, 0, Bytes.SIZEOF_SHORT);
-        return Counts.values()[ordinal];
+        return VerifyCounts.values()[ordinal];
       }
 
       /**
@@ -1210,7 +1210,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         if (lostFamilies) {
           String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
           LOG.error("LinkedListError: key=" + keyString + ", lost big or tiny families");
-          context.getCounter(Counts.LOST_FAMILIES).increment(1);
+          context.getCounter(VerifyCounts.LOST_FAMILIES).increment(1);
           context.write(key, LOSTFAM);
         }
 
@@ -1222,11 +1222,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             byte[] bs = refs.get(i);
             int ordinal;
             if (i <= 0) {
-              ordinal = Counts.UNDEFINED.ordinal();
+              ordinal = VerifyCounts.UNDEFINED.ordinal();
               context.write(key, new BytesWritable(addPrefixFlag(ordinal, bs)));
-              context.getCounter(Counts.UNDEFINED).increment(1);
+              context.getCounter(VerifyCounts.UNDEFINED).increment(1);
             } else {
-              ordinal = Counts.EXTRA_UNDEF_REFERENCES.ordinal();
+              ordinal = VerifyCounts.EXTRA_UNDEF_REFERENCES.ordinal();
               context.write(key, new BytesWritable(addPrefixFlag(ordinal, bs)));
             }
           }
@@ -1241,7 +1241,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         } else if (defCount > 0 && refs.isEmpty()) {
           // node is defined but not referenced
           context.write(key, UNREF);
-          context.getCounter(Counts.UNREFERENCED).increment(1);
+          context.getCounter(VerifyCounts.UNREFERENCED).increment(1);
           if (rows.addAndGet(1) < MISSING_ROWS_TO_LOG) {
             String keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
             context.getCounter("unref", keyString).increment(1);
@@ -1250,13 +1250,13 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           if (refs.size() > 1) {
             // Skip first reference.
             for (int i = 1; i < refs.size(); i++) {
-              context.write(key,
-                new BytesWritable(addPrefixFlag(Counts.EXTRAREFERENCES.ordinal(), refs.get(i))));
+              context.write(key, new BytesWritable(
+                addPrefixFlag(VerifyCounts.EXTRAREFERENCES.ordinal(), refs.get(i))));
             }
-            context.getCounter(Counts.EXTRAREFERENCES).increment(refs.size() - 1);
+            context.getCounter(VerifyCounts.EXTRAREFERENCES).increment(refs.size() - 1);
           }
           // node is defined and referenced
-          context.getCounter(Counts.REFERENCED).increment(1);
+          context.getCounter(VerifyCounts.REFERENCED).increment(1);
         }
       }
 
@@ -1264,6 +1264,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
        * Dump out extra info around references if there are any. Helps debugging.
        * @return StringBuilder filled with references if any. n
        */
+      @SuppressWarnings("JavaUtilDate")
       private StringBuilder dumpExtraInfoOnRefs(final BytesWritable key, final Context context,
         final List<byte[]> refs) throws IOException {
         StringBuilder refsSb = null;
@@ -1418,8 +1419,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      * @return True if the values match what's expected, false otherwise
      */
     protected boolean verifyExpectedValues(long expectedReferenced, Counters counters) {
-      final Counter referenced = counters.findCounter(Counts.REFERENCED);
-      final Counter unreferenced = counters.findCounter(Counts.UNREFERENCED);
+      final Counter referenced = counters.findCounter(VerifyCounts.REFERENCED);
+      final Counter unreferenced = counters.findCounter(VerifyCounts.UNREFERENCED);
       boolean success = true;
 
       if (expectedReferenced != referenced.getValue()) {
@@ -1429,7 +1430,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       if (unreferenced.getValue() > 0) {
-        final Counter multiref = counters.findCounter(Counts.EXTRAREFERENCES);
+        final Counter multiref = counters.findCounter(VerifyCounts.EXTRAREFERENCES);
         boolean couldBeMultiRef = (multiref.getValue() == unreferenced.getValue());
         LOG.error(
           "Unreferenced nodes were not expected. Unreferenced count=" + unreferenced.getValue()
@@ -1446,8 +1447,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      * @return True if the "bad" counter objects are 0, false otherwise
      */
     protected boolean verifyUnexpectedValues(Counters counters) {
-      final Counter undefined = counters.findCounter(Counts.UNDEFINED);
-      final Counter lostfamilies = counters.findCounter(Counts.LOST_FAMILIES);
+      final Counter undefined = counters.findCounter(VerifyCounts.UNDEFINED);
+      final Counter lostfamilies = counters.findCounter(VerifyCounts.LOST_FAMILIES);
       boolean success = true;
 
       if (undefined.getValue() > 0) {
@@ -1825,8 +1826,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
     return node;
   }
-
-  protected IntegrationTestingUtility util;
 
   @Override
   public void setUpCluster() throws Exception {

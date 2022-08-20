@@ -50,6 +50,7 @@ public class LosePacketsCommandAction extends TCCommandAction {
     return LOG;
   }
 
+  @Override
   protected void localPerform() throws IOException {
     getLogger().info("Starting to execute LosePacketsCommandAction");
     ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getCurrentServers());
