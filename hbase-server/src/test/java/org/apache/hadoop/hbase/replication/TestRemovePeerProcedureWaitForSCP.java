@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +36,7 @@ import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.replication.AssignReplicationQueuesProcedure;
+import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -43,26 +48,26 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerModificationState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 /**
- * In HBASE-26029, we reimplement the claim queue operation with proc-v2 and make it a step in SCP,
- * this is a UT to make sure the {@link AssignReplicationQueuesProcedure} works correctly.
+ * Make sure we will wait until all the SCPs finished in RemovePeerProcedure.
+ * <p/>
+ * See HBASE-27109 for more details.
  */
 @Category({ ReplicationTests.class, LargeTests.class })
-public class TestClaimReplicationQueue extends TestReplicationBase {
+public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClaimReplicationQueue.class);
+    HBaseClassTestRule.forClass(TestRemovePeerProcedureWaitForSCP.class);
 
   private static final TableName tableName3 = TableName.valueOf("test3");
 
   private static final String PEER_ID3 = "3";
 
   private static Table table3;
-
-  private static Table table4;
 
   private static volatile boolean EMPTY = false;
 
@@ -106,14 +111,6 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     TestReplicationBase.setUpBeforeClass();
     createTable(tableName3);
     table3 = connection1.getTable(tableName3);
-    table4 = connection2.getTable(tableName3);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    Closeables.close(table3, true);
-    Closeables.close(table4, true);
-    TestReplicationBase.tearDownAfterClass();
   }
 
   @Override
@@ -130,15 +127,21 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     removePeer(PEER_ID3);
   }
 
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    Closeables.close(table3, true);
+    TestReplicationBase.tearDownAfterClass();
+  }
+
   @Test
-  public void testClaim() throws Exception {
+  public void testWait() throws Exception {
     // disable the peers
     hbaseAdmin.disableReplicationPeer(PEER_ID2);
     hbaseAdmin.disableReplicationPeer(PEER_ID3);
 
     // put some data
-    int count1 = UTIL1.loadTable(htable1, famName);
-    int count2 = UTIL1.loadTable(table3, famName);
+    UTIL1.loadTable(htable1, famName);
+    UTIL1.loadTable(table3, famName);
 
     EMPTY = true;
     UTIL1.getMiniHBaseCluster().stopRegionServer(0).join();
@@ -152,16 +155,26 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
         .filter(p -> p instanceof AssignReplicationQueuesProcedure)
         .anyMatch(p -> p.getState() == ProcedureState.WAITING_TIMEOUT));
 
-    hbaseAdmin.enableReplicationPeer(PEER_ID2);
-    hbaseAdmin.enableReplicationPeer(PEER_ID3);
-
+    // call remove replication peer, and make sure it will be stuck in the POST_PEER_MODIFICATION
+    // state.
+    hbaseAdmin.removeReplicationPeerAsync(PEER_ID3);
+    UTIL1.waitFor(30000,
+      () -> master.getProcedures().stream().filter(p -> p instanceof RemovePeerProcedure)
+        .anyMatch(p -> ((RemovePeerProcedure) p).getCurrentStateId()
+            == PeerModificationState.POST_PEER_MODIFICATION_VALUE));
+    Thread.sleep(5000);
+    assertEquals(PeerModificationState.POST_PEER_MODIFICATION_VALUE,
+      ((RemovePeerProcedure) master.getProcedures().stream()
+        .filter(p -> p instanceof RemovePeerProcedure).findFirst().get()).getCurrentStateId());
     EMPTY = false;
     // wait until the SCP finished, AssignReplicationQueuesProcedure is a sub procedure of SCP
     UTIL1.waitFor(30000, () -> master.getProcedures().stream()
       .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
-
-    // we should get all the data in the target cluster
-    waitForReplication(htable2, count1, NB_RETRIES);
-    waitForReplication(table4, count2, NB_RETRIES);
+    // the RemovePeerProcedure should have also finished
+    UTIL1.waitFor(30000, () -> master.getProcedures().stream()
+      .filter(p -> p instanceof RemovePeerProcedure).allMatch(Procedure::isSuccess));
+    // make sure there is no remaining replication queues for PEER_ID3
+    assertThat(master.getReplicationPeerManager().getQueueStorage().listAllQueueIds(PEER_ID3),
+      empty());
   }
 }

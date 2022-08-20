@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
@@ -102,8 +103,12 @@ public class AssignReplicationQueuesProcedure
   }
 
   private Flow claimQueues(MasterProcedureEnv env) throws ReplicationException {
+    Set<String> existingPeerIds = env.getReplicationPeerManager().listPeers(null).stream()
+      .map(ReplicationPeerDescription::getPeerId).collect(Collectors.toSet());
     ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
-    List<ReplicationQueueId> queueIds = storage.listAllQueueIds(crashedServer);
+    // filter out replication queue for deleted peers
+    List<ReplicationQueueId> queueIds = storage.listAllQueueIds(crashedServer).stream()
+      .filter(q -> existingPeerIds.contains(q.getPeerId())).collect(Collectors.toList());
     if (queueIds.isEmpty()) {
       LOG.debug("Finish claiming replication queues for {}", crashedServer);
       // we are done
@@ -130,10 +135,6 @@ public class AssignReplicationQueuesProcedure
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     try {
       switch (state) {
-        case ASSIGN_REPLICATION_QUEUES_PRE_CHECK:
-          // TODO: reserved for implementing the fencing logic with Add/Remove/UpdatePeerProcedure
-          setNextState(AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES);
-          return Flow.HAS_MORE_STATE;
         case ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES:
           addMissingQueues(env);
           retryCounter = null;
@@ -183,7 +184,7 @@ public class AssignReplicationQueuesProcedure
 
   @Override
   protected AssignReplicationQueuesState getInitialState() {
-    return AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_PRE_CHECK;
+    return AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES;
   }
 
   @Override
