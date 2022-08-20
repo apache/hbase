@@ -182,8 +182,7 @@ public class RestoreDriver extends AbstractHBaseTool {
     return 0;
   }
 
-  private String getTablesForSet(Connection conn, String name)
-    throws IOException {
+  private String getTablesForSet(Connection conn, String name) throws IOException {
     try (final BackupSystemTable table = new BackupSystemTable(conn)) {
       List<TableName> tables = table.describeBackupSet(name);
 

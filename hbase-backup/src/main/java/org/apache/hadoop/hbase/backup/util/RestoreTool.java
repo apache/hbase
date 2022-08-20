@@ -325,8 +325,7 @@ public class RestoreTool {
             + ", will only create table");
         }
         tableDescriptor = TableDescriptorBuilder.copy(newTableName, tableDescriptor);
-        checkAndCreateTable(conn, newTableName, null, tableDescriptor,
-          truncateIfExists);
+        checkAndCreateTable(conn, newTableName, null, tableDescriptor, truncateIfExists);
         return;
       } else {
         throw new IllegalStateException(
@@ -347,8 +346,7 @@ public class RestoreTool {
 
       // should only try to create the table with all region informations, so we could pre-split
       // the regions in fine grain
-      checkAndCreateTable(conn, newTableName, regionPathList,
-        tableDescriptor, truncateIfExists);
+      checkAndCreateTable(conn, newTableName, regionPathList, tableDescriptor, truncateIfExists);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
       Path[] paths = new Path[regionPathList.size()];
       regionPathList.toArray(paths);
@@ -466,9 +464,9 @@ public class RestoreTool {
    * @param truncateIfExists truncates table if exists
    * @throws IOException exception
    */
-  private void checkAndCreateTable(Connection conn,
-    TableName targetTableName, ArrayList<Path> regionDirList, TableDescriptor htd,
-    boolean truncateIfExists) throws IOException {
+  private void checkAndCreateTable(Connection conn, TableName targetTableName,
+    ArrayList<Path> regionDirList, TableDescriptor htd, boolean truncateIfExists)
+    throws IOException {
     try (Admin admin = conn.getAdmin()) {
       boolean createNew = false;
       if (admin.tableExists(targetTableName)) {
