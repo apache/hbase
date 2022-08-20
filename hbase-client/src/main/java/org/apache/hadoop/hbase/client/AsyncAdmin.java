@@ -1456,6 +1456,14 @@ public interface AsyncAdmin {
   }
 
   /**
+   * List all the unknown region servers.
+   */
+  default CompletableFuture<List<ServerName>> listUnknownServers() {
+    return this.getClusterMetrics(EnumSet.of(Option.UNKNOWN_SERVERS))
+      .thenApply(ClusterMetrics::getUnknownServerNames);
+  }
+
+  /**
    * Clear dead region servers from master.
    * @param servers list of dead region servers.
    * @return - returns a list of servers that not cleared wrapped by a {@link CompletableFuture}.

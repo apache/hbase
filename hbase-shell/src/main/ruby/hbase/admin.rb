@@ -1632,6 +1632,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # list unknown region servers
+    def list_unknownservers
+      @admin.listUnknownServers.to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
     # List live region servers
     def list_liveservers
       @admin.getClusterMetrics.getLiveServerMetrics.keySet.to_a
