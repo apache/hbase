@@ -32,12 +32,9 @@ import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-// revisit later when we reviewing the implementation for serial replication
-@Ignore
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestSerialReplicationFailover extends SerialReplicationTestBase {
 
