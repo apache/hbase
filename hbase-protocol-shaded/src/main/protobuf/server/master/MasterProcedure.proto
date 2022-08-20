@@ -515,6 +515,7 @@ message UpdatePeerConfigStateData {
 
 message RemovePeerStateData {
   optional ReplicationPeer peer_config = 1;
+  repeated int64 ongoing_assign_replication_queues_proc_ids = 2;
 }
 
 message EnablePeerStateData {
@@ -714,9 +715,8 @@ message ModifyColumnFamilyStoreFileTrackerStateData {
 }
 
 enum AssignReplicationQueuesState {
-  ASSIGN_REPLICATION_QUEUES_PRE_CHECK = 1;
-  ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES = 2;
-  ASSIGN_REPLICATION_QUEUES_CLAIM = 3;
+  ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES = 1;
+  ASSIGN_REPLICATION_QUEUES_CLAIM = 2;
 }
 
 message AssignReplicationQueuesStateData {
