@@ -109,6 +109,8 @@ public class ExampleRegionObserverWithMetrics implements RegionCoprocessor {
         // simulate the operation by sleeping.
         Thread.sleep(ThreadLocalRandom.current().nextLong(100));
       } catch (InterruptedException ignore) {
+        // Restore the interrupt status
+        Thread.currentThread().interrupt();
       }
     }
   }

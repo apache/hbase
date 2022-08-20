@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +36,8 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * Sample Uploader MapReduce
@@ -77,16 +81,16 @@ public class SampleUploader extends Configured implements Tool {
       // Each line is comma-delimited; row,family,qualifier,value
 
       // Split CSV line
-      String[] values = line.toString().split(",");
-      if (values.length != 4) {
+      List<String> values = Splitter.on(',').splitToList(line.toString());
+      if (values.size() != 4) {
         return;
       }
-
+      Iterator<String> i = values.iterator();
       // Extract each value
-      byte[] row = Bytes.toBytes(values[0]);
-      byte[] family = Bytes.toBytes(values[1]);
-      byte[] qualifier = Bytes.toBytes(values[2]);
-      byte[] value = Bytes.toBytes(values[3]);
+      byte[] row = Bytes.toBytes(i.next());
+      byte[] family = Bytes.toBytes(i.next());
+      byte[] qualifier = Bytes.toBytes(i.next());
+      byte[] value = Bytes.toBytes(i.next());
 
       // Create Put
       Put put = new Put(row);
@@ -132,6 +136,7 @@ public class SampleUploader extends Configured implements Tool {
    * @param otherArgs The command line parameters after ToolRunner handles standard.
    * @throws Exception When running the job fails.
    */
+  @Override
   public int run(String[] otherArgs) throws Exception {
     if (otherArgs.length != 2) {
       System.err.println("Wrong number of arguments: " + otherArgs.length);
