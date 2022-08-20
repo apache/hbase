@@ -390,9 +390,10 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
       if (LOG.isTraceEnabled()) {
-        LOG.trace(CurCall.get().toString() + ", response " + TextFormat.shortDebugString(result)
-          + " queueTime: " + qTime + " processingTime: " + processingTime + " totalTime: "
-          + totalTime);
+        LOG.trace(
+          "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, totalTime: {}",
+          CurCall.get().toString(), TextFormat.shortDebugString(result),
+          CurCall.get().getReceiveTime(), qTime, processingTime, totalTime);
       }
       // Use the raw request call size for now.
       long requestSize = call.getSize();
