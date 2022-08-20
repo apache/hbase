@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -66,7 +65,7 @@ public class UnbalanceKillAndRebalanceAction extends Action {
   @Override
   public void perform() throws Exception {
     ClusterMetrics status = this.cluster.getClusterMetrics();
-    List<ServerName> victimServers = new LinkedList<>(status.getLiveServerMetrics().keySet());
+    List<ServerName> victimServers = new ArrayList<>(status.getLiveServerMetrics().keySet());
     Set<ServerName> killedServers = new HashSet<>();
     int liveCount = (int) Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int) Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());

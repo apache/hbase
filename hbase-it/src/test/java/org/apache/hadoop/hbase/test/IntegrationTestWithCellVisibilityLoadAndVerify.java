@@ -59,6 +59,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -119,14 +121,16 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     conf.set("hbase.superuser", User.getCurrent().getName());
     conf.setBoolean("dfs.permissions", false);
     super.setUpCluster();
-    String[] users = userNames.split(",");
-    if (users.length != 2) {
+    List<String> users = Splitter.on(',').splitToList(userNames);
+    if (users.size() != 2) {
       System.err.println(ERROR_STR);
       throw new IOException(ERROR_STR);
     }
-    System.out.println(userNames + " " + users[0] + " " + users[1]);
-    USER1 = User.createUserForTesting(conf, users[0], new String[] {});
-    USER2 = User.createUserForTesting(conf, users[1], new String[] {});
+    String user1 = Iterables.get(users, 0);
+    String user2 = Iterables.get(users, 1);
+    System.out.println(userNames + " " + user1 + " " + user2);
+    USER1 = User.createUserForTesting(conf, user1, new String[] {});
+    USER2 = User.createUserForTesting(conf, user2, new String[] {});
     addLabelsAndAuths();
   }
 

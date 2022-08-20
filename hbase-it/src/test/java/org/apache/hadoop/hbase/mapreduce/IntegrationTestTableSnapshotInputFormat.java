@@ -41,11 +41,11 @@ import org.slf4j.LoggerFactory;
  * f2:(null) to be the the same as the row value.
  *
  * <pre>
- * aaa, f1: => aaa
- * aaa, f2: => aaa
- * aab, f1: => aab
+ * aaa, f1: =&gt; aaa
+ * aaa, f2: =&gt; aaa
+ * aab, f1: =&gt; aab
  * ....
- * zzz, f2: => zzz
+ * zzz, f2: =&gt; zzz
  * </pre>
  *
  * Then the test creates a snapshot from this table, and overrides the values in the original table
@@ -89,8 +89,6 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   // mapred.TestTableSnapshotInputFormat
   private static final byte[] MAPRED_START_ROW = Bytes.toBytes("aaa");
   private static final byte[] MAPRED_END_ROW = Bytes.toBytes("zz{"); // 'z' + 1 => '{'
-
-  private IntegrationTestingUtility util;
 
   @Override
   public void setConf(Configuration conf) {

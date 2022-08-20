@@ -175,7 +175,6 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
 
       int verifyPercent = 100;
       int updatePercent = 20;
-      int ret = -1;
       int regionReplicaId =
         conf.getInt(String.format("%s.%s", TEST_NAME, LoadTestTool.OPT_REGION_REPLICA_ID), 1);
 
@@ -191,7 +190,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       args.add("-" + LoadTestTool.OPT_REGION_REPLICA_ID);
       args.add(String.valueOf(regionReplicaId));
 
-      ret = loadTool.run(args.toArray(new String[args.size()]));
+      int ret = loadTool.run(args.toArray(new String[args.size()]));
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
