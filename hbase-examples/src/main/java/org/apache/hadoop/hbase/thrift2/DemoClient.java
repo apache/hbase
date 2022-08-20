@@ -140,11 +140,11 @@ public class DemoClient {
 
     TResult result = client.get(table, get);
 
-    System.out.print("row = " + new String(result.getRow()));
+    System.out.print("row = " + ClientUtils.utf8(result.getRow()));
     for (TColumnValue resultColumnValue : result.getColumnValues()) {
-      System.out.print("family = " + new String(resultColumnValue.getFamily()));
-      System.out.print("qualifier = " + new String(resultColumnValue.getFamily()));
-      System.out.print("value = " + new String(resultColumnValue.getValue()));
+      System.out.print("family = " + ClientUtils.utf8(resultColumnValue.getFamily()));
+      System.out.print("qualifier = " + ClientUtils.utf8(resultColumnValue.getFamily()));
+      System.out.print("value = " + ClientUtils.utf8(resultColumnValue.getValue()));
       System.out.print("timestamp = " + resultColumnValue.getTimestamp());
     }
 

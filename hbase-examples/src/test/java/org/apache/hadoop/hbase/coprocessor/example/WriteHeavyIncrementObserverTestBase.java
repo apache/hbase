@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -78,6 +79,7 @@ public class WriteHeavyIncrementObserverTestBase {
         try {
           Thread.sleep(10);
         } catch (InterruptedException e) {
+          throw (IOException) new InterruptedIOException().initCause(e);
         }
       }
     }

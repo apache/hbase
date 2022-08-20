@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -87,7 +86,7 @@ public final class ClientUtils {
     }
 
     StringBuilder rowStr = new StringBuilder();
-    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
+    for (Map.Entry<String, TCell> entry : sorted.entrySet()) {
       rowStr.append(entry.getKey());
       rowStr.append(" => ");
       rowStr.append(utf8(entry.getValue().value.array()));
@@ -98,8 +97,8 @@ public final class ClientUtils {
   }
 
   /**
-   * Helper to translate byte[]'s to UTF8 strings
-   * @param buf byte array buffer
+   * Helper to translate byte[]s to UTF8 strings
+   * @param buf byte array
    * @return UTF8 decoded string value
    */
   public static String utf8(final byte[] buf) {
@@ -108,6 +107,19 @@ public final class ClientUtils {
     } catch (IllegalArgumentException e) {
       return "[INVALID UTF-8]";
     }
+  }
+
+  /**
+   * Helper to translate a byte buffer to UTF8 strings
+   * @param bb byte buffer
+   * @return UTF8 decoded string value
+   */
+  public static String utf8(final ByteBuffer bb) {
+    // performance is not very critical here so we always copy the BB to a byte array
+    byte[] buf = new byte[bb.remaining()];
+    // duplicate so the get will not change the position of the original bb
+    bb.duplicate().get(buf);
+    return utf8(buf);
   }
 
 }

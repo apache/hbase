@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -97,10 +99,7 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
@@ -121,21 +120,15 @@ public class RowCountEndpoint extends RowCountService implements RegionCoprocess
       long count = 0;
       do {
         hasMore = scanner.next(results);
-        for (Cell kv : results) {
-          count++;
-        }
+        count += Iterables.size(results);
         results.clear();
       } while (hasMore);
-
       response = CountResponse.newBuilder().setCount(count).build();
     } catch (IOException ioe) {
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);

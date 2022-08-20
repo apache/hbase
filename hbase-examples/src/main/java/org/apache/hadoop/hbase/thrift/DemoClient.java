@@ -41,15 +41,12 @@ import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * See the instructions under hbase-examples/README.txt
  */
 @InterfaceAudience.Private
 public class DemoClient {
-  private static final Logger LOG = LoggerFactory.getLogger(DemoClient.class);
 
   static protected int port;
   static protected String host;
@@ -128,15 +125,15 @@ public class DemoClient {
     System.out.println("scanning tables...");
 
     for (ByteBuffer name : client.getTableNames()) {
-      System.out.println("  found: " + ClientUtils.utf8(name.array()));
+      System.out.println("  found: " + ClientUtils.utf8(name));
 
       if (name.equals(demoTable) || name.equals(disabledTable)) {
         if (client.isTableEnabled(name)) {
-          System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
+          System.out.println("    disabling table: " + ClientUtils.utf8(name));
           client.disableTable(name);
         }
 
-        System.out.println("    deleting table: " + ClientUtils.utf8(name.array()));
+        System.out.println("    deleting table: " + ClientUtils.utf8(name));
         client.deleteTable(name);
       }
     }
@@ -324,7 +321,7 @@ public class DemoClient {
     columnNames.clear();
 
     for (ColumnDescriptor col2 : client.getColumnDescriptors(demoTable).values()) {
-      System.out.println("column with name: " + new String(col2.name.array()));
+      System.out.println("column with name: " + ClientUtils.utf8(col2.name));
       System.out.println(col2.toString());
 
       columnNames.add(col2.name);
@@ -356,7 +353,7 @@ public class DemoClient {
       rowStr.append("; ");
     }
 
-    System.out.println("row: " + ClientUtils.utf8(row.array()) + ", values: " + rowStr);
+    System.out.println("row: " + ClientUtils.utf8(row) + ", values: " + rowStr);
   }
 
   private void printRow(TRowResult rowResult) {

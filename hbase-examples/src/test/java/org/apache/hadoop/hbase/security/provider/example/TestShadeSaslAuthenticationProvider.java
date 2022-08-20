@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -128,8 +129,8 @@ public class TestShadeSaslAuthenticationProvider {
     if (fs.exists(p)) {
       fs.delete(p, true);
     }
-    try (FSDataOutputStream out = fs.create(p);
-      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out))) {
+    try (FSDataOutputStream out = fs.create(p); BufferedWriter writer =
+      new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
       for (Entry<String, char[]> e : userDatabase.entrySet()) {
         writer.write(e.getKey());
         writer.write(ShadeSaslServerAuthenticationProvider.SEPARATOR);
