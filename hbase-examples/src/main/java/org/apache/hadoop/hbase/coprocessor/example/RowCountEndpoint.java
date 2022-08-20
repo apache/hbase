@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -37,6 +38,8 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
@@ -93,10 +96,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);
@@ -117,9 +117,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
       long count = 0;
       do {
         hasMore = scanner.next(results);
-        for (Cell kv : results) {
-          count++;
-        }
+        count += Iterables.size(results);
         results.clear();
       } while (hasMore);
 
@@ -128,10 +126,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService implements R
       CoprocessorRpcUtils.setControllerException(controller, ioe);
     } finally {
       if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (IOException ignored) {
-        }
+        IOUtils.closeQuietly(scanner);
       }
     }
     done.run(response);

@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
@@ -37,8 +36,6 @@ import javax.security.auth.login.LoginContext;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hbase.thrift.generated.TCell;
-import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClientUtils;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -132,13 +129,13 @@ public class HttpDoAsClient {
     //
     System.out.println("scanning tables...");
     for (ByteBuffer name : refresh(client, httpClient).getTableNames()) {
-      System.out.println("  found: " + ClientUtils.utf8(name.array()));
-      if (ClientUtils.utf8(name.array()).equals(ClientUtils.utf8(t))) {
+      System.out.println("  found: " + ClientUtils.utf8(name));
+      if (ClientUtils.utf8(name).equals(ClientUtils.utf8(t))) {
         if (refresh(client, httpClient).isTableEnabled(name)) {
-          System.out.println("    disabling table: " + ClientUtils.utf8(name.array()));
+          System.out.println("    disabling table: " + ClientUtils.utf8(name));
           refresh(client, httpClient).disableTable(name);
         }
-        System.out.println("    deleting table: " + ClientUtils.utf8(name.array()));
+        System.out.println("    deleting table: " + ClientUtils.utf8(name));
         refresh(client, httpClient).deleteTable(name);
       }
     }
@@ -170,8 +167,8 @@ public class HttpDoAsClient {
     Map<ByteBuffer, ColumnDescriptor> columnMap =
       refresh(client, httpClient).getColumnDescriptors(ByteBuffer.wrap(t));
     for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println(
-        "  column: " + ClientUtils.utf8(col2.name.array()) + ", maxVer: " + col2.maxVersions);
+      System.out
+        .println("  column: " + ClientUtils.utf8(col2.name) + ", maxVer: " + col2.maxVersions);
     }
 
     transport.close();
@@ -208,24 +205,11 @@ public class HttpDoAsClient {
     context.requestInteg(true);
 
     final byte[] outToken = context.initSecContext(new byte[0], 0, 0);
-    StringBuffer outputBuffer = new StringBuffer();
+    StringBuilder outputBuffer = new StringBuilder();
     outputBuffer.append("Negotiate ");
     outputBuffer.append(Bytes.toString(Base64.getEncoder().encode(outToken)));
     System.out.print("Ticket is: " + outputBuffer);
     return outputBuffer.toString();
-  }
-
-  private void printVersions(ByteBuffer row, List<TCell> versions) {
-    StringBuilder rowStr = new StringBuilder();
-    for (TCell cell : versions) {
-      rowStr.append(ClientUtils.utf8(cell.value.array()));
-      rowStr.append("; ");
-    }
-    System.out.println("row: " + ClientUtils.utf8(row.array()) + ", values: " + rowStr);
-  }
-
-  private void printRow(TRowResult rowResult) {
-    ClientUtils.printRow(rowResult);
   }
 
   static Subject getSubject() throws Exception {

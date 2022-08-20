@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Scan;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse;
-import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -155,7 +153,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
           }
           OperationStatus[] opStatus = region.batchMutate(deleteArr);
           for (i = 0; i < opStatus.length; i++) {
-            if (opStatus[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
+            if (opStatus[i].getOperationStatusCode() != HConstants.OperationStatusCode.SUCCESS) {
               break;
             }
             totalRowsDeleted++;
@@ -181,7 +179,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements RegionCopro
         }
       }
     }
-    Builder responseBuilder = BulkDeleteResponse.newBuilder();
+    BulkDeleteResponse.Builder responseBuilder = BulkDeleteResponse.newBuilder();
     responseBuilder.setRowsDeleted(totalRowsDeleted);
     if (deleteType == DeleteType.VERSION) {
       responseBuilder.setVersionsDeleted(totalVersionsDeleted);
