@@ -475,6 +475,7 @@ Shell.load_command_group(
     clear_compaction_queues
     list_deadservers
     list_liveservers
+    list_unknownservers
     clear_deadservers
     clear_block_cache
     stop_master

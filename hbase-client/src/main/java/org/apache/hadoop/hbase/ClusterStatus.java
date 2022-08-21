@@ -114,6 +114,11 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   @Override
+  public List<ServerName> getUnknownServerNames() {
+    return metrics.getUnknownServerNames();
+  }
+
+  @Override
   public Map<ServerName, ServerMetrics> getLiveServerMetrics() {
     return metrics.getLiveServerMetrics();
   }

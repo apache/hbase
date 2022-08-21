@@ -339,6 +339,7 @@ message ClusterStatus {
   repeated ServerName servers_name = 11;
   repeated TableRegionStatesCount table_region_states_count = 12;
   repeated ServerTask master_tasks = 13;
+  repeated ServerName unknown_servers = 14;
 }
 
 enum Option {
@@ -355,4 +356,5 @@ enum Option {
   SERVERS_NAME = 10;
   TABLE_TO_REGIONS_COUNT = 11;
   TASKS = 12;
+  UNKNOWN_SERVERS = 13;
 }
