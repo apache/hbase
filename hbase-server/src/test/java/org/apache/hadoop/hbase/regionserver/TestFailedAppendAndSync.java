@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -90,6 +91,7 @@ public class TestFailedAppendAndSync {
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
+    CONF.setLong(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS, 10000);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     tableName = TableName.valueOf(name.getMethodName());
   }
@@ -256,22 +258,17 @@ public class TestFailedAppendAndSync {
         dodgyWAL.throwSyncException = true;
         Put put = new Put(value);
         put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("2"), value);
+        region.rsServices = services;
         region.put(put);
       } catch (IOException ioe) {
         threwOnSync = true;
       }
+
+      region.rsServices = null;
       // An append in the WAL but the sync failed is a server abort condition. That is our
-      // current semantic. Verify. It takes a while for abort to be called. Just hang here till it
-      // happens. If it don't we'll timeout the whole test. That is fine.
-      while (true) {
-        try {
-          Mockito.verify(services, Mockito.atLeast(1)).abort(Mockito.anyString(),
-            Mockito.any(Throwable.class));
-          break;
-        } catch (WantedButNotInvoked t) {
-          Threads.sleep(1);
-        }
-      }
+      // current semantic. Verify.
+      Mockito.verify(services, Mockito.atLeast(1)).abort(Mockito.anyString(),
+        (Throwable) Mockito.anyObject());
 
       try {
         dodgyWAL.throwAppendException = false;

@@ -211,7 +211,7 @@ public class TestLogRollAbort {
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();
-      ((AbstractFSWAL<?>) log).replaceWriter(((FSHLog) log).getOldPath(), null, null);
+      this.closeFSHLogWriter((FSHLog) log);
 
       // code taken from MasterFileSystem.getLogDirs(), which is called from
       // MasterFileSystem.splitLog() handles RS shutdowns (as observed by the splitting process)
@@ -242,5 +242,14 @@ public class TestLogRollAbort {
         fs.delete(thisTestsDir, true);
       }
     }
+  }
+
+  private void closeFSHLogWriter(FSHLog fsHLog) {
+    fsHLog.waitForSafePoint();
+    long oldFileLen = fsHLog.closeWriter(fsHLog.writer, fsHLog.getOldPath());
+    fsHLog.logRollAndSetupWalProps(fsHLog.getOldPath(), null, oldFileLen);
+    fsHLog.writer = null;
+    fsHLog.onWriterReplaced(null);
+    fsHLog.rollRequested.set(false);
   }
 }
