@@ -26,9 +26,12 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * This class is a wrapper for the implementation of com.sun.management.UnixOperatingSystemMXBean It
@@ -167,11 +170,10 @@ public class JVM {
       // need to get the PID number of the process first
       RuntimeMXBean rtmbean = ManagementFactory.getRuntimeMXBean();
       String rtname = rtmbean.getName();
-      String[] pidhost = rtname.split("@");
-
+      Iterator<String> pidhost = Splitter.on('@').split(rtname).iterator();
       // using linux bash commands to retrieve info
       Process p = Runtime.getRuntime()
-        .exec(new String[] { "bash", "-c", "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
+        .exec(new String[] { "bash", "-c", "ls /proc/" + pidhost.next() + "/fdinfo | wc -l" });
       inputStream = p.getInputStream();
       inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
       bufferedReader = new BufferedReader(inputStreamReader);
@@ -208,6 +210,7 @@ public class JVM {
   }
 
   /**
+   * Get the system load average
    * @see java.lang.management.OperatingSystemMXBean#getSystemLoadAverage
    */
   public double getSystemLoadAverage() {
@@ -215,9 +218,9 @@ public class JVM {
   }
 
   /**
-   * @return the physical free memory (not the JVM one, as it's not very useful as it depends on the
-   *         GC), but the one from the OS as it allows a little bit more to guess if the machine is
-   *         overloaded or not).
+   * Return the physical free memory (not the JVM one, as it's not very useful as it depends on the
+   * GC), but the one from the OS as it allows a little bit more to guess if the machine is
+   * overloaded or not).
    */
   public long getFreeMemory() {
     if (ibmvendor) {

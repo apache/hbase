@@ -43,23 +43,20 @@ public interface HFileBlockEncodingContext {
    */
   void postEncoding(BlockType blockType) throws IOException;
 
-  /**
-   * Releases the resources used.
-   */
+  /** Releases the resources used. */
   void close();
 
   /** Returns HFile context information */
   HFileContext getHFileContext();
 
-  /**
-   * Sets the encoding state.
-   */
+  /** Sets the encoding state. */
   void setEncodingState(EncodingState state);
 
   /** Returns the encoding state */
   EncodingState getEncodingState();
 
   /**
+   * Compress and encrypt the supplied encoded block data with header.
    * @param data   encoded bytes with header
    * @param offset the offset in encoded data to start at
    * @param length the number of encoded bytes

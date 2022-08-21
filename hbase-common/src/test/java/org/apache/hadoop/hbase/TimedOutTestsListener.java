@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.LockInfo;
@@ -24,6 +25,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -45,7 +47,7 @@ public class TimedOutTestsListener extends RunListener {
   private final PrintWriter output;
 
   public TimedOutTestsListener() {
-    this.output = new PrintWriter(System.err);
+    this.output = new PrintWriter(new OutputStreamWriter(System.err, StandardCharsets.UTF_8));
   }
 
   public TimedOutTestsListener(PrintWriter output) {
@@ -65,6 +67,7 @@ public class TimedOutTestsListener extends RunListener {
     output.flush();
   }
 
+  @SuppressWarnings("JavaUtilDate")
   public static String buildThreadDiagnosticString() {
     StringWriter sw = new StringWriter();
     PrintWriter output = new PrintWriter(sw);

@@ -31,6 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * The values in the enum appear in the order they appear in a version 2 HFile.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("ImmutableEnumChecker")
 public enum BlockType {
 
   // Scanned block section
@@ -179,6 +180,8 @@ public enum BlockType {
    * @param offset position in the array
    * @return incremented offset
    */
+  // System.arraycopy is static native. We can't do anything about this until minimum JDK is 9.
+  @SuppressWarnings("UnsafeFinalization")
   public int put(byte[] bytes, int offset) {
     System.arraycopy(magic, 0, bytes, offset, MAGIC_LENGTH);
     return offset + MAGIC_LENGTH;

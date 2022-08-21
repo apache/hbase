@@ -116,8 +116,8 @@ public class TestLRUDictionary {
   public void TestLRUPolicy() {
     // start by filling the dictionary up with byte arrays
     for (int i = 0; i < Short.MAX_VALUE; i++) {
-      testee.findEntry((BigInteger.valueOf(i)).toByteArray(), 0,
-        (BigInteger.valueOf(i)).toByteArray().length);
+      testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
+        BigInteger.valueOf(i).toByteArray().length);
     }
 
     // check we have the first element added

@@ -26,7 +26,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,9 +51,9 @@ public class KeyValueUtil {
 
   public static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
     if (withTags) {
-      return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen));
+      return (int) KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen);
     }
-    return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen));
+    return (int) KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen);
   }
 
   /**
@@ -214,7 +213,6 @@ public class KeyValueUtil {
     if (bb.remaining() < 1) {
       return null;
     }
-    KeyValue keyValue = null;
     int underlyingArrayOffset = bb.arrayOffset() + bb.position();
     int keyLength = bb.getInt();
     int valueLength = bb.getInt();
@@ -226,7 +224,7 @@ public class KeyValueUtil {
       ByteBufferUtils.skip(bb, tagsLength);
     }
     int kvLength = (int) KeyValue.getKeyValueDataStructureSize(keyLength, valueLength, tagsLength);
-    keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
+    KeyValue keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
     if (includesMvccVersion) {
       long mvccVersion = ByteBufferUtils.readVLong(bb);
       keyValue.setSequenceId(mvccVersion);
@@ -257,7 +255,7 @@ public class KeyValueUtil {
     final byte[] family, final int foffset, final int flength, final byte[] qualifier,
     final int qoffset, final int qlength) {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-      qlength, PrivateConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+      qlength, PrivateConstants.OLDEST_TIMESTAMP, KeyValue.Type.Minimum, null, 0, 0);
   }
 
   /**
@@ -268,7 +266,7 @@ public class KeyValueUtil {
    */
   public static KeyValue createFirstOnRow(final byte[] row, int roffset, short rlength) {
     return new KeyValue(row, roffset, rlength, null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP,
-      Type.Maximum, null, 0, 0);
+      KeyValue.Type.Maximum, null, 0, 0);
   }
 
   /**
@@ -278,7 +276,7 @@ public class KeyValueUtil {
    * @return Last possible KeyValue on passed <code>row</code>
    */
   public static KeyValue createLastOnRow(final byte[] row) {
-    return new KeyValue(row, null, null, HConstants.LATEST_TIMESTAMP, Type.Minimum);
+    return new KeyValue(row, null, null, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Minimum);
   }
 
   /**
@@ -299,7 +297,7 @@ public class KeyValueUtil {
    * @return First possible key on passed <code>row</code> and timestamp.
    */
   public static KeyValue createFirstOnRow(final byte[] row, final long ts) {
-    return new KeyValue(row, null, null, ts, Type.Maximum);
+    return new KeyValue(row, null, null, ts, KeyValue.Type.Maximum);
   }
 
   /**
@@ -312,10 +310,12 @@ public class KeyValueUtil {
    */
   public static KeyValue createFirstOnRow(final byte[] row, final byte[] family,
     final byte[] qualifier) {
-    return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, Type.Maximum);
+    return new KeyValue(row, family, qualifier, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum);
   }
 
   /**
+   * Create a KeyValue for the specified row, family and qualifier that would be smaller than all
+   * other possible KeyValues that have the same row, family, qualifier. Used for seeking.
    * @param row - row key (arbitrary byte array)
    * @param f   - family name
    * @param q   - column qualifier
@@ -324,7 +324,7 @@ public class KeyValueUtil {
    */
   public static KeyValue createFirstOnRow(final byte[] row, final byte[] f, final byte[] q,
     final long ts) {
-    return new KeyValue(row, f, q, ts, Type.Maximum);
+    return new KeyValue(row, f, q, ts, KeyValue.Type.Maximum);
   }
 
   /**
@@ -345,7 +345,7 @@ public class KeyValueUtil {
     final byte[] family, final int foffset, final int flength, final byte[] qualifier,
     final int qoffset, final int qlength) {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
-      qlength, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+      qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum, null, 0, 0);
   }
 
   /**
@@ -565,7 +565,7 @@ public class KeyValueUtil {
       throw new IllegalArgumentException(msg);
     }
     byte type = buf[pos];
-    if (!Type.isValidType(type)) {
+    if (!KeyValue.Type.isValidType(type)) {
       String msg = "Invalid type in KeyValue, type=" + type + bytesToHex(buf, offset, length);
       LOG.warn(msg);
       throw new IllegalArgumentException(msg);
@@ -740,7 +740,6 @@ public class KeyValueUtil {
       int qlen = cell.getQualifierLength();
       int vlen = cell.getValueLength();
       int tlen = cell.getTagsLength();
-      int size = 0;
       // write key length
       int klen = keyLength(rlen, flen, qlen);
       ByteBufferUtils.putInt(out, klen);
@@ -760,7 +759,7 @@ public class KeyValueUtil {
       out.write(cell.getTypeByte());
       // write value
       out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
-      size = klen + vlen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+      int size = klen + vlen + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
       // write tags if we have to
       if (withTags && tlen > 0) {
         // 2 bytes tags length followed by tags bytes
