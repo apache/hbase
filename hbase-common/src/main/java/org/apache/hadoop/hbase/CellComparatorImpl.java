@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Comparator;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -692,11 +691,11 @@ public class CellComparatorImpl implements CellComparator {
     int rFamLength = right.getFamilyLength();
     int lQualLength = left.getQualifierLength();
     int rQualLength = right.getQualifierLength();
-    if (lFamLength + lQualLength == 0 && left.getTypeByte() == Type.Minimum.getCode()) {
+    if (lFamLength + lQualLength == 0 && left.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (rFamLength + rQualLength == 0 && right.getTypeByte() == Type.Minimum.getCode()) {
+    if (rFamLength + rQualLength == 0 && right.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
       return -1;
     }
     if (lFamLength != rFamLength) {

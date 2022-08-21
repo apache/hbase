@@ -80,12 +80,13 @@ public class RowIndexSeekerV1 extends AbstractEncodedSeeker {
   }
 
   @Override
+  @SuppressWarnings("ByteBufferBackingArray")
   public Cell getKey() {
     if (current.keyBuffer.hasArray()) {
       return new KeyValue.KeyOnlyKeyValue(current.keyBuffer.array(),
         current.keyBuffer.arrayOffset() + current.keyBuffer.position(), current.keyLength);
     } else {
-      byte[] key = new byte[current.keyLength];
+      final byte[] key = new byte[current.keyLength];
       ByteBufferUtils.copyFromBufferToArray(key, current.keyBuffer, current.keyBuffer.position(), 0,
         current.keyLength);
       return new KeyValue.KeyOnlyKeyValue(key, 0, current.keyLength);

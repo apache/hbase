@@ -520,28 +520,27 @@ public class TestCellUtil {
     byte[] r = Bytes.toBytes("row1");
     byte[] f = Bytes.toBytes("cf1");
     byte[] q1 = Bytes.toBytes("qual1");
-    byte[] q2 = Bytes.toBytes("qual2");
     byte[] v = Bytes.toBytes("val1");
     byte[] tags = Bytes.toBytes("tag1");
     KeyValue kv =
       new KeyValue(r, f, q1, 0, q1.length, 1234L, KeyValue.Type.Put, v, 0, v.length, tags);
     NonExtendedCell nonExtCell = new NonExtendedCell(kv);
     ByteArrayOutputStream os = new ByteArrayOutputStream();
-    int writeCell = PrivateCellUtil.writeCell(nonExtCell, os, true);
+    PrivateCellUtil.writeCell(nonExtCell, os, true);
     byte[] byteArray = os.toByteArray();
     KeyValue res = new KeyValue(byteArray);
     assertTrue(CellUtil.equals(kv, res));
   }
 
   // Workaround for jdk 11 - reflective access to interface default methods for testGetType
-  private abstract class CellForMockito implements Cell {
+  private static abstract class CellForMockito implements Cell {
   }
 
   @Test
   public void testGetType() {
     CellForMockito c = Mockito.mock(CellForMockito.class);
     Mockito.when(c.getType()).thenCallRealMethod();
-    for (CellForMockito.Type type : CellForMockito.Type.values()) {
+    for (Cell.Type type : Cell.Type.values()) {
       Mockito.when(c.getTypeByte()).thenReturn(type.getCode());
       assertEquals(type, c.getType());
     }

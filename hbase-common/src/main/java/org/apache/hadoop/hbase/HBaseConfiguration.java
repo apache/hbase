@@ -132,6 +132,7 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
+   * Creates a Configuration with HBase resources
    * @param that Configuration to clone.
    * @return a Configuration created with the hbase-*.xml files plus the given configuration.
    */

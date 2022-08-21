@@ -86,9 +86,7 @@ public class HDFSBlocksDistribution {
       return weightForSsd;
     }
 
-    /**
-     * comparator used to sort hosts based on weight
-     */
+    /** Comparator used to sort hosts based on weight */
     public static class WeightComparator implements Comparator<HostAndWeight> {
       @Override
       public int compare(HostAndWeight l, HostAndWeight r) {
@@ -100,16 +98,10 @@ public class HDFSBlocksDistribution {
     }
   }
 
-  /**
-   * Constructor
-   */
   public HDFSBlocksDistribution() {
     this.hostAndWeights = new TreeMap<>();
   }
 
-  /**
-   * @see java.lang.Object#toString()
-   */
   @Override
   public synchronized String toString() {
     return "number of unique hosts in the distribution=" + this.hostAndWeights.size();
@@ -206,14 +198,13 @@ public class HDFSBlocksDistribution {
     return uniqueBlocksTotalWeight;
   }
 
-  /**
-   * Implementations 'visit' hostAndWeight.
-   */
+  /** Implementations 'visit' hostAndWeight. */
   public interface Visitor {
     long visit(final HostAndWeight hostAndWeight);
   }
 
   /**
+   * Get the block locality index for a given host
    * @param host the host name
    * @return the locality index of the given host
    */
@@ -227,6 +218,7 @@ public class HDFSBlocksDistribution {
   }
 
   /**
+   * Get the block locality index for a ssd for a given host
    * @param host the host name
    * @return the locality index with ssd of the given host
    */
@@ -240,6 +232,7 @@ public class HDFSBlocksDistribution {
   }
 
   /**
+   * Get the blocks local weight for a given host
    * @param host the host name
    * @return the blocks local weight of the given host
    */
@@ -248,6 +241,7 @@ public class HDFSBlocksDistribution {
   }
 
   /**
+   * Get the blocks local weight with ssd for a given host
    * @param host the host name
    * @return the blocks local with ssd weight of the given host
    */
@@ -255,10 +249,6 @@ public class HDFSBlocksDistribution {
     return getBlocksLocalityWeightInternal(host, HostAndWeight::getWeightForSsd);
   }
 
-  /**
-   * @param host the host name
-   * @return the locality index of the given host
-   */
   private long getBlocksLocalityWeightInternal(String host, Visitor visitor) {
     long localityIndex = 0;
     HostAndWeight hostAndWeight = this.hostAndWeights.get(host);
@@ -293,9 +283,7 @@ public class HDFSBlocksDistribution {
     addUniqueWeight(otherBlocksDistribution.getUniqueBlocksTotalWeight());
   }
 
-  /**
-   * return the sorted list of hosts in terms of their weights
-   */
+  /** Return the sorted list of hosts in terms of their weights */
   public List<String> getTopHosts() {
     HostAndWeight[] hostAndWeights = getTopHostsWithWeights();
     List<String> topHosts = new ArrayList<>(hostAndWeights.length);
@@ -305,9 +293,7 @@ public class HDFSBlocksDistribution {
     return topHosts;
   }
 
-  /**
-   * return the sorted list of hosts in terms of their weights
-   */
+  /** Return the sorted list of hosts in terms of their weights */
   public HostAndWeight[] getTopHostsWithWeights() {
     NavigableSet<HostAndWeight> orderedHosts = new TreeSet<>(new HostAndWeight.WeightComparator());
     orderedHosts.addAll(this.hostAndWeights.values());

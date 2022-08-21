@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.net;
 
 import java.net.InetSocketAddress;
+import java.util.Iterator;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.net.HostAndPort;
 
 /**
@@ -95,11 +98,14 @@ public class Address implements Comparable<Address> {
    */
   public String toStringWithoutDomain() {
     String hostname = getHostName();
-    String[] parts = hostname.split("\\.");
-    if (parts.length > 1) {
-      for (String part : parts) {
+    List<String> parts = Splitter.on('.').splitToList(hostname);
+    if (parts.size() > 1) {
+      Iterator<String> i = parts.iterator();
+      String base = i.next();
+      while (i.hasNext()) {
+        String part = i.next();
         if (!StringUtils.isNumeric(part)) {
-          return Address.fromParts(parts[0], getPort()).toString();
+          return Address.fromParts(base, getPort()).toString();
         }
       }
     }

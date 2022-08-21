@@ -24,7 +24,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generic, immutable class for pairs of objects both of type <code>T</code>.
- * @param <T>
  * @see Pair if Types differ.
  */
 @InterfaceAudience.Public
