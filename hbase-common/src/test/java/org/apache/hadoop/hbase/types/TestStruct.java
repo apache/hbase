@@ -147,10 +147,7 @@ public class TestStruct {
       if (this == obj) {
         return true;
       }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
+      if (!(obj instanceof Pojo1)) {
         return false;
       }
       Pojo1 other = (Pojo1) obj;
@@ -240,10 +237,7 @@ public class TestStruct {
       if (this == obj) {
         return true;
       }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
+      if (!(obj instanceof Pojo2)) {
         return false;
       }
       Pojo2 other = (Pojo2) obj;

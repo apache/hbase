@@ -44,11 +44,11 @@ public class HFileContextBuilder {
   /** Whether tags to be compressed or not **/
   private boolean compressTags = false;
   /** the checksum type **/
-  private ChecksumType checksumType = ChecksumType.getDefaultChecksumType();
+  private ChecksumType checkSumType = ChecksumType.getDefaultChecksumType();
   /** the number of bytes per checksum value **/
   private int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
   /** Number of uncompressed bytes we allow per block. */
-  private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
+  private int blockSize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
   /** Crypto context */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
@@ -71,9 +71,9 @@ public class HFileContextBuilder {
     this.includesTags = hfc.isIncludesTags();
     this.compression = hfc.getCompression();
     this.compressTags = hfc.isCompressTags();
-    this.checksumType = hfc.getChecksumType();
+    this.checkSumType = hfc.getChecksumType();
     this.bytesPerChecksum = hfc.getBytesPerChecksum();
-    this.blocksize = hfc.getBlocksize();
+    this.blockSize = hfc.getBlocksize();
     this.encoding = hfc.getDataBlockEncoding();
     this.cryptoContext = hfc.getEncryptionContext();
     this.fileCreateTime = hfc.getFileCreateTime();
@@ -109,7 +109,7 @@ public class HFileContextBuilder {
   }
 
   public HFileContextBuilder withChecksumType(ChecksumType checkSumType) {
-    this.checksumType = checkSumType;
+    this.checkSumType = checkSumType;
     return this;
   }
 
@@ -119,7 +119,7 @@ public class HFileContextBuilder {
   }
 
   public HFileContextBuilder withBlockSize(int blockSize) {
-    this.blocksize = blockSize;
+    this.blockSize = blockSize;
     return this;
   }
 
@@ -160,7 +160,7 @@ public class HFileContextBuilder {
 
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-      compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
+      compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
       fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
   }
 }

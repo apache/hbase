@@ -78,6 +78,7 @@ public final class Superusers {
   }
 
   /**
+   * Check if the current user is a super user
    * @return true if current user is a super user (whether as user running process, declared as
    *         individual superuser or member of supergroup), false otherwise.
    * @param user to check
@@ -104,6 +105,7 @@ public final class Superusers {
   }
 
   /**
+   * Check if the current user is a super user
    * @return true if current user is a super user, false otherwise.
    * @param user to check
    */

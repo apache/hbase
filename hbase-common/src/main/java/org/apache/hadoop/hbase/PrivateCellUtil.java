@@ -132,6 +132,7 @@ public final class PrivateCellUtil {
     private static final int HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + 2 * ClassSize.REFERENCE;
 
     /**
+     * Construct a TagRewriteCell
      * @param cell The original Cell which it rewrites
      * @param tags the tags bytes. The array suppose to contain the tags bytes alone.
      */
@@ -828,8 +829,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
-   *         or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
+   * Return true if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
+   * or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
   public static boolean isDelete(final byte type) {
     return KeyValue.Type.Delete.getCode() <= type && type <= KeyValue.Type.DeleteFamily.getCode();
@@ -868,9 +869,7 @@ public final class PrivateCellUtil {
     return output;
   }
 
-  /**
-   * Copies the tags info into the tag portion of the cell nnn * @return position after tags
-   */
+  /** Copies the tags info into the tag portion of the cell */
   public static int copyTagsTo(Cell cell, byte[] destination, int destinationOffset) {
     int tlen = cell.getTagsLength();
     if (cell instanceof ByteBufferExtendedCell) {
@@ -884,9 +883,7 @@ public final class PrivateCellUtil {
     return destinationOffset + tlen;
   }
 
-  /**
-   * Copies the tags info into the tag portion of the cell nnn * @return the position after tags
-   */
+  /** Copies the tags info into the tag portion of the cell */
   public static int copyTagsTo(Cell cell, ByteBuffer destination, int destinationOffset) {
     int tlen = cell.getTagsLength();
     if (cell instanceof ByteBufferExtendedCell) {
@@ -900,6 +897,7 @@ public final class PrivateCellUtil {
   }
 
   /**
+   * Return tags in the given Cell as a List
    * @param cell The Cell
    * @return Tags in the given Cell as a List
    */
@@ -945,7 +943,7 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Util method to iterate through the tags in the given cell.
+   * Utility method to iterate through the tags in the given cell.
    * @param cell The Cell over which tags iterator is needed.
    * @return iterator for the tags
    */
@@ -1001,9 +999,7 @@ public final class PrivateCellUtil {
       && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2, end1) < 0);
   }
 
-  /**
-   * Write rowkey excluding the common part. nnnnn
-   */
+  /** Write rowkey excluding the common part. */
   public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
     DataOutputStream out) throws IOException {
     if (commonPrefix == 0) {
@@ -1211,8 +1207,9 @@ public final class PrivateCellUtil {
 
   /**
    * Compares only the key portion of a cell. It does not include the sequence id/mvcc of the cell
-   * nn * @return an int greater than 0 if left &gt; than right lesser than 0 if left &lt; than
-   * right equal to 0 if left is equal to right
+   * nn
+   * @return an int greater than 0 if left &gt; than right lesser than 0 if left &lt; than right
+   *         equal to 0 if left is equal to right
    */
   public static final int compareKeyIgnoresMvcc(CellComparator comparator, Cell left, Cell right) {
     return ((CellComparatorImpl) comparator).compare(left, right, true);
@@ -1807,7 +1804,7 @@ public final class PrivateCellUtil {
 
   private static class FirstOnRowColCell extends FirstOnRowCell {
     // @formatter:off
-    private static final long FIXED_HEAPSIZE = FirstOnRowCell.FIXED_HEAPSIZE
+    private static final long FIXED_HEAPSIZE = (long) FirstOnRowCell.FIXED_HEAPSIZE
       + Bytes.SIZEOF_BYTE // flength
       + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
       + ClassSize.REFERENCE * 2; // fArray, qArray
@@ -1976,7 +1973,7 @@ public final class PrivateCellUtil {
 
   private static class LastOnRowColCell extends LastOnRowCell {
     // @formatter:off
-    private static final long FIXED_OVERHEAD = LastOnRowCell.FIXED_OVERHEAD
+    private static final long FIXED_OVERHEAD = (long) LastOnRowCell.FIXED_OVERHEAD
       + ClassSize.REFERENCE * 2 // fArray and qArray
       + Bytes.SIZEOF_INT * 3 // foffset, qoffset, qlength
       + Bytes.SIZEOF_BYTE; // flength
@@ -2318,7 +2315,7 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell. n * @param ts buffer containing the timestamp value
+   * Sets the given timestamp to the cell.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static void setTimestamp(Cell cell, byte[] ts) throws IOException {
@@ -2332,7 +2329,8 @@ public final class PrivateCellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}. nn * @return True if cell timestamp is modified.
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
@@ -2345,7 +2343,7 @@ public final class PrivateCellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}. n * @param ts buffer containing the timestamp value
+   * {@link HConstants#LATEST_TIMESTAMP}.
    * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
@@ -2684,8 +2682,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * @return An new cell is located following input cell. If both of type and timestamp are minimum,
-   *         the input cell will be returned directly.
+   * Return a new cell is located following input cell. If both of type and timestamp are minimum,
+   * the input cell will be returned directly.
    */
   public static Cell createNextOnRowCol(Cell cell) {
     long ts = cell.getTimestamp();

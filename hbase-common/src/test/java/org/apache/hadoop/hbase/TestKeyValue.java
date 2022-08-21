@@ -242,13 +242,10 @@ public class TestKeyValue {
     // This will output the keys incorrectly.
     boolean assertion = false;
     int count = 0;
-    try {
-      for (KeyValue k : set) {
-        assertEquals(count++, k.getTimestamp());
+    for (KeyValue k : set) {
+      if (count++ != k.getTimestamp()) {
+        assertion = true;
       }
-    } catch (java.lang.AssertionError e) {
-      // Expected
-      assertion = true;
     }
     assertTrue(assertion);
     // Make set with good comparator
@@ -323,7 +320,6 @@ public class TestKeyValue {
      * |_keyLen_|_valLen_|_rowLen_|_rowKey_|_famiLen_|_fami_|_Quali_|....
      * ------------------|-------commonLength--------|--------------
      */
-    int commonLength = KeyValue.ROW_LENGTH_SIZE + KeyValue.FAMILY_LENGTH_SIZE + row.length;
     // 'fa:' < 'fami:'. They have commonPrefix + 2 same prefix bytes.
     assertKVLessWithoutRow(c, kv_0, kv0_0);
     // 'fami:' < 'fami:qf1'. They have commonPrefix + 4 same prefix bytes.

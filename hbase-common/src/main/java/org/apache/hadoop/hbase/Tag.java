@@ -55,15 +55,13 @@ public interface Tag {
   /** Returns Length of tag value within the backed buffer */
   int getValueLength();
 
-  /**
-   * Tells whether or not this Tag is backed by a byte array.
-   * @return true when this Tag is backed by byte array
-   */
+  /** Return true if the tag is backed by a byte array */
   boolean hasArray();
 
   /**
-   * @return The array containing the value bytes. n * when {@link #hasArray()} return false. Use
-   *         {@link #getValueByteBuffer()} in such situation
+   * Return an array containing the value bytes if {@link #hasArray()} returns true.
+   * <p>
+   * Use {@link #getValueByteBuffer()} otherwise.
    */
   byte[] getValueArray();
 

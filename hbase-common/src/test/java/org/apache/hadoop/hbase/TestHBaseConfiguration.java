@@ -216,9 +216,6 @@ public class TestHBaseConfiguration {
         getCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
           HADOOP_CRED_PROVIDER_GET_CREDENTIAL_ENTRY_METHOD_NAME, String.class);
 
-        Method getAliasesMethod =
-          loadMethod(hadoopCredProviderClz, HADOOP_CRED_PROVIDER_GET_ALIASES_METHOD_NAME);
-
         createCredentialEntryMethod = loadMethod(hadoopCredProviderClz,
           HADOOP_CRED_PROVIDER_CREATE_CREDENTIAL_ENTRY_METHOD_NAME, String.class, char[].class);
 

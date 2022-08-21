@@ -81,7 +81,8 @@ public class TagCompressionContext {
   public void compressTags(OutputStream out, ByteBuffer in, int offset, int length)
     throws IOException {
     if (in.hasArray()) {
-      compressTags(out, in.array(), offset, length);
+      // Offset we are given is relative to ByteBuffer#arrayOffset
+      compressTags(out, in.array(), in.arrayOffset() + offset, length);
     } else {
       int pos = offset;
       int endOffset = pos + length;

@@ -84,6 +84,7 @@ public final class AvlUtil {
   @InterfaceAudience.Private
   public static interface AvlNodeVisitor<TNode extends AvlNode> {
     /**
+     * Visitor
      * @param node the node that we are currently visiting
      * @return false to stop the iteration. true to continue.
      */
@@ -96,6 +97,7 @@ public final class AvlUtil {
   @InterfaceAudience.Private
   public static class AvlTree {
     /**
+     * Return the node that matches the specified key or null in case of node not found.
      * @param root          the current root of the tree
      * @param key           the key for the node we are trying to find
      * @param keyComparator the comparator to use to match node and key
@@ -117,6 +119,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Return the first node of the tree.
      * @param root the current root of the tree
      * @return the first (min) node of the tree
      */
@@ -130,6 +133,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Return the last node of the tree.
      * @param root the current root of the tree
      * @return the last (max) node of the tree
      */
@@ -325,6 +329,7 @@ public final class AvlUtil {
 
     /**
      * Create the iterator starting from the first (min) node of the tree
+     * @param root the current root of the tree
      */
     public AvlTreeIterator(final TNode root) {
       seekFirst(root);
@@ -448,6 +453,7 @@ public final class AvlUtil {
   @InterfaceAudience.Private
   public static class AvlIterableList {
     /**
+     * Return the successor of the current node
      * @param node the current node
      * @return the successor of the current node
      */
@@ -456,6 +462,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Return the predecessor of the current node
      * @param node the current node
      * @return the predecessor of the current node
      */
@@ -464,6 +471,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Prepend a node to the tree
      * @param head the head of the linked list
      * @param node the node to add to the front of the list
      * @return the new head of the list
@@ -484,6 +492,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Append a node to the tree
      * @param head the head of the linked list
      * @param node the node to add to the tail of the list
      * @return the new head of the list
@@ -504,6 +513,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Append a list of nodes to the tree
      * @param head      the head of the current linked list
      * @param otherHead the head of the list to append to the current list
      * @return the new head of the current list
@@ -522,6 +532,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Remove a node from the tree
      * @param head the head of the linked list
      * @param node the node to remove from the list
      * @return the new head of the list
@@ -541,6 +552,7 @@ public final class AvlUtil {
     }
 
     /**
+     * Prepend a node to the tree before a specific node
      * @param head the head of the linked list
      * @param base the node which we want to add the {@code node} before it
      * @param node the node which we want to add it before the {@code base} node
@@ -554,10 +566,7 @@ public final class AvlUtil {
       return head == base ? node : head;
     }
 
-    /**
-     * @param node the node to check
-     * @return true if the node is linked to a list, false otherwise
-     */
+    /** Return true if the node is linked to a list, false otherwise */
     public static <TNode extends AvlLinkedNode> boolean isLinked(TNode node) {
       return node.iterPrev != null && node.iterNext != null;
     }
