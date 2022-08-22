@@ -800,6 +800,102 @@ aliases to store multiple certificates in the same truststore. Name of the alias
 keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
 ----
 
+=== Upgrading existing non-TLS cluster with no downtime
+
+Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of
+port unification functionality. There's a property on server side called `hbase.server.netty.tls.supportplaintext`
+which makes possible to accept TLS and plaintext connections on the same socket port.
+
+. Create the necessary key stores and trust stores for all server participants as described in the previous section.
+
+. Enable secure communication on the Master node with `supportplaintext=True`. Restart the Master.
+
+. Enable secure communication on the Region Servers with `supportplaintext=True`. Restart RSs in rolling restart fashion.
+
+. Enable secure communication on the clients.
+
+. Disable plaintext communication on the Master by removing `supportplaintext` property. Restart Master.
+
+. Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling
+restart fashion.
+
+=== Additional configuration
+
+==== Enabled protocols
+
+Comma-separated list of TLS protocol versions to enable. Default is empty.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabledProtocols</name>
+  <value>TLSv1.2,TLSv1.3</value>
+</property>
+----
+
+==== Default protocol
+
+Set the default TLS protocol version to use. Default is TLSv1.2. Use this protocol if enabled protocols is not defined.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.protocol</name>
+  <value>TLSv1.2</value>
+</property>
+----
+
+==== Enabled cipher suites
+
+List of enabled cipher suites in TLS protocol. Useful when you want to disable certain cipher suites due to recent
+security concerns. Default value is a mix of CBC and GCM ciphers. Due to performance reasons we prefer CBC ciphers for
+Java 8 and GCM ciphers for Java 9+.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.ciphersuites</name>
+  <value>TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256</value>
+</property>
+----
+
+==== Certificate Revocation Checking
+
+There's a built-in mechanism in JDK's TrustManager which automatically checks certificates for revocation. See
+link:https://docs.oracle.com/cd/E19263-01/817-5215/ssl.html#wp19807[Managing Server Certificates]. Disabled by default.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.clr</name>
+  <value>false</value>
+</property>
+----
+
+==== Online Certificate Status Protocol
+
+Enables link:https://en.wikipedia.org/wiki/OCSP_stapling[OCSP] stapling. Please note that not all `SSLProvider`
+implementations support OCSP stapling and an exception will be thrown upon. Disabled by default.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.ocsp</name>
+  <value>false</value>
+</property>
+----
+
+==== Client handshake timeout
+
+Set the TLS client handshake timeout is milliseconds. Default is 5 seconds.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.handshaketimeout</name>
+  <value>5000</value>
+</property>
+----
 
 == Securing Access to HDFS and ZooKeeper
 Secure HBase requires secure ZooKeeper and HDFS so that users cannot access and/or modify the metadata and data from under HBase. HBase uses HDFS (or configured file system) to keep its data files as well as write ahead logs (WALs) and other data. HBase uses ZooKeeper to store some metadata for operations (master address, table locks, recovery state, etc).
