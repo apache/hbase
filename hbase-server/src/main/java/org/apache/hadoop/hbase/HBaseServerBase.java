@@ -253,6 +253,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       InetSocketAddress addr = rpcServices.getSocketAddress();
 
+      // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+      // see HBASE-27304 for details.
       boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
         HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
       String isaHostName =

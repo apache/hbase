@@ -184,6 +184,9 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       } else {
         this.port = conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
       }
+
+      // if use-ip is enabled, we will resolve the hostname to ip to ensure that the RegionMover
+      // logic can be executed normally, see HBASE-27304 for details.
       boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
         HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
       if (useIp && StringUtils.isNotBlank(this.hostname)) {

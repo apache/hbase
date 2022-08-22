@@ -219,6 +219,8 @@ public class ServerManager {
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
 
+    // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+    // see HBASE-27304 for details.
     boolean useIp = master.getConfiguration().getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
       HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
     String isaHostName = useIp ? ia.getHostAddress() : ia.getHostName();
