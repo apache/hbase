@@ -226,6 +226,20 @@ public class HRegionFileSystem {
   }
 
   /**
+   * Set storage policy for a whole region. <br>
+   * <i>"LAZY_PERSIST"</i>, <i>"ALL_SSD"</i>, <i>"ONE_SSD"</i>, <i>"HOT"</i>, <i>"WARM"</i>,
+   * <i>"COLD"</i> <br>
+   * <br>
+   * See {@link org.apache.hadoop.hdfs.protocol.HdfsConstants} for more details.
+   * @param policyName The name of the storage policy: 'HOT', 'COLD', etc. See hadoop 2.6+
+   *                   org.apache.hadoop.hdfs.protocol.HdfsConstants for possible list e.g 'COLD',
+   *                   'WARM', 'HOT', 'ONE_SSD', 'ALL_SSD', 'LAZY_PERSIST'.
+   */
+  public void setStoragePolicy(String policyName) {
+    CommonFSUtils.setStoragePolicy(this.fs, getRegionDir(), policyName);
+  }
+
+  /**
    * Get the storage policy of the directory of CF.
    * @param familyName The name of column family.
    * @return Storage policy name, or {@code null} if not using {@link HFileSystem} or exception
