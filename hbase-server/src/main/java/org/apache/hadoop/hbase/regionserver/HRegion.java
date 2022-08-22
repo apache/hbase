@@ -251,6 +251,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String SPLIT_IGNORE_BLOCKING_ENABLED_KEY =
     "hbase.hregion.split.ignore.blocking.enabled";
 
+  public static final String REGION_STORAGE_POLICY_KEY = "hbase.hregion.block.storage.policy";
+  public static final String DEFAULT_REGION_STORAGE_POLICY = "NONE";
+
   /**
    * This is for for using HRegion as a local storage, where we may put the recovered edits in a
    * special place. Once this is set, we will only replay the recovered edits under this directory
@@ -975,6 +978,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       status.setStatus("Running coprocessor pre-open hook");
       coprocessorHost.preOpen();
     }
+
+    String policyName = this.conf.get(REGION_STORAGE_POLICY_KEY, DEFAULT_REGION_STORAGE_POLICY);
+    this.fs.setStoragePolicy(policyName.trim());
 
     // Write HRI to a file in case we need to recover hbase:meta
     // Only the primary replica should write .regioninfo
