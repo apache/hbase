@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.tool;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -792,5 +793,30 @@ public class TestLoadIncrementalHFiles {
       }
       util.getConfiguration().setBoolean(BulkLoadHFiles.BULK_LOAD_HFILES_BY_FAMILY, false);
     }
+  }
+
+  @Test
+  public void testFailIfNeedSplitHFile() throws IOException {
+    TableName tableName = TableName.valueOf(tn.getMethodName());
+    Table table = util.createTable(tableName, FAMILY);
+
+    util.loadTable(table, FAMILY);
+
+    FileSystem fs = util.getTestFileSystem();
+    Path sfPath = new Path(fs.getWorkingDirectory(), new Path(Bytes.toString(FAMILY), "file"));
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, sfPath, FAMILY, QUALIFIER,
+      Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    util.getAdmin().split(tableName);
+    util.waitFor(10000, 1000, () -> util.getAdmin().getRegions(tableName).size() > 1);
+
+    Configuration config = new Configuration(util.getConfiguration());
+    config.setBoolean(BulkLoadHFilesTool.FAIL_IF_NEED_SPLIT_HFILE, true);
+    BulkLoadHFilesTool tool = new BulkLoadHFilesTool(config);
+
+    String[] args = new String[] { fs.getWorkingDirectory().toString(), tableName.toString() };
+    assertThrows(IOException.class, () -> tool.run(args));
+    util.getHBaseCluster().getRegions(tableName)
+      .forEach(r -> assertEquals(1, r.getStore(FAMILY).getStorefiles().size()));
   }
 }

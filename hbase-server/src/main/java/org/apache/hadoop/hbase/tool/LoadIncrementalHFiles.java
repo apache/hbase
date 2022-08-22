@@ -141,6 +141,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     BulkLoadHFiles.IGNORE_UNMATCHED_CF_CONF_KEY;
   public final static String ALWAYS_COPY_FILES = BulkLoadHFiles.ALWAYS_COPY_FILES;
 
+  public static final String FAIL_IF_NEED_SPLIT_HFILE =
+    "hbase.loadincremental.fail.if.need.split.hfile";
+
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
   static final String TMP_DIR = ".tmp";
@@ -161,6 +164,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private List<String> clusterIds = new ArrayList<>();
 
   private boolean replicate = true;
+
+  private boolean failIfNeedSplitHFile = false;
 
   /**
    * Represents an HFile waiting to be loaded. An queue is used in this class in order to support
@@ -195,6 +200,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
     bulkLoadByFamily = conf.getBoolean(BulkLoadHFiles.BULK_LOAD_HFILES_BY_FAMILY, false);
+    failIfNeedSplitHFile = conf.getBoolean(FAIL_IF_NEED_SPLIT_HFILE, false);
     nrThreads =
       conf.getInt("hbase.loadincremental.threads.max", Runtime.getRuntime().availableProcessors());
     numRetries = new AtomicInteger(0);
@@ -803,6 +809,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Bytes.compareTo(last.get(), startEndKeys.getSecond()[firstKeyRegionIdx]) < 0
         || Bytes.equals(startEndKeys.getSecond()[firstKeyRegionIdx], HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
+      if (failIfNeedSplitHFile) {
+        throw new IOException(
+          "The key range of hfile=" + hfilePath + " fits into no region. " + "And because "
+            + FAIL_IF_NEED_SPLIT_HFILE + " was set to true, we just skip the next steps.");
+      }
       int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
       int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) >>> 1;
       // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
