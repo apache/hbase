@@ -3025,6 +3025,14 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * List unknown region servers.
+   * @return List of unknown region servers.
+   */
+  default List<ServerName> listUnknownServers() throws IOException {
+    return getClusterMetrics(EnumSet.of(Option.UNKNOWN_SERVERS)).getUnknownServerNames();
+  }
+
+  /**
    * Clear dead region servers from master.
    * @param servers list of dead region servers.
    * @throws IOException if a remote or network exception occurs

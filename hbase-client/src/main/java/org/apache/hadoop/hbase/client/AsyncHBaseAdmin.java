@@ -765,6 +765,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<ServerName>> listUnknownServers() {
+    return wrap(rawAdmin.listUnknownServers());
+  }
+
+  @Override
   public CompletableFuture<List<ServerName>> clearDeadServers(List<ServerName> servers) {
     return wrap(rawAdmin.clearDeadServers(servers));
   }

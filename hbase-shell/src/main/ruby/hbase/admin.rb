@@ -1537,7 +1537,7 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # clear dead region servers
+    # list dead region servers
     def list_deadservers
       @admin.listDeadServers.to_a
     end
@@ -1556,6 +1556,12 @@ module Hbase
         end
       end
       @admin.clearDeadServers(servers).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # list unknown region servers
+    def list_unknownservers
+      @admin.listUnknownServers.to_a
     end
 
     #----------------------------------------------------------------------------------------------

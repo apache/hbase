@@ -2846,6 +2846,12 @@ public class HMaster extends HRegionServer implements MasterServices {
           }
           break;
         }
+        case UNKNOWN_SERVERS: {
+          if (serverManager != null) {
+            builder.setUnknownServerNames(getUnknownServers());
+          }
+          break;
+        }
         case MASTER_COPROCESSORS: {
           if (cpHost != null) {
             builder.setMasterCoprocessorNames(Arrays.asList(getMasterCoprocessors()));
@@ -2903,6 +2909,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     return builder.build();
+  }
+
+  private List<ServerName> getUnknownServers() {
+    if (serverManager != null) {
+      final Set<ServerName> serverNames = getAssignmentManager().getRegionStates().getRegionStates()
+        .stream().map(RegionState::getServerName).collect(Collectors.toSet());
+      final List<ServerName> unknownServerNames = serverNames.stream()
+        .filter(sn -> sn != null && serverManager.isServerUnknown(sn)).collect(Collectors.toList());
+      return unknownServerNames;
+    }
+    return null;
   }
 
   private Map<ServerName, ServerMetrics> getOnlineServers() {
