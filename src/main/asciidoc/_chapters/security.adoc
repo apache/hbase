@@ -675,6 +675,132 @@ For more information about ACLs, please see the <<hbase.accesscontrol.configurat
 It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPNEGO HTTP authentication.
 This is future work.
 
+== Transport Level Security (TLS) in HBase RPC communication
+
+Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication.
+link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[Transport Layer Security (TLS)] is a standard
+cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation
+works exactly how secure websites are accessed via *https* prefix in a web browser: once established all communication
+on the channel will be securely hidden from malicious access.
+
+The encryption works at the transport level which means it's independent of the configured authentication method. Secure
+client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while
+TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing
+attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
+
+HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementation. Netty's
+powerful SSL implementation is a great foundation for highly secure and performant communication providing the latest and
+greatest cryptographic solution at all times.
+
+Since Region Servers effectively work as clients from Master's perspective, TLS supports encrypted communication
+between cluster members too.
+
+=== Server side configuration
+
+We need to setup Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
+encryption. See link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[TLS wikipedia page]
+for further details of the protocol. Add the following configuration to `hbase-site.xml` on Master, Region Servers and HBase
+clients:
+
+[source,xml]
+----
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.keystore.type</name>
+  <value>JKS</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.keystore.location</name>
+  <value>/path/to/keystore.jks</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.keystore.password</name>
+  <value>keyStor3pa$$w0rd</value>
+</property>
+----
+
+The supported store types are based on the registered security providers. If not specified, JKS will be used by default.
+
+=== Client side configuration
+
+We need to configure trust store for the client. Trust store contains the list of certificates that the client should trust
+when doing the handshake with the server. Add the following to `hbase-site.xml`.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.truststore.type</name>
+  <value>JKS</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.truststore.location</name>
+  <value>/path/to/truststore.jks</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.truststore.password</name>
+  <value>trustStor3pa$$w0rd</value>
+</property>
+----
+
+However specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list
+of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them,
+you don't need to configure your clients to trust it. Similarly to an internet browser, you don't need to setup the
+certificates of every single website you're planning to visit. Later in this documentation we'll walk through the steps of
+creating self-signed certificates which requires a trust store setup.
+
+You can check the list of public certificate authorities shipped with your JDK implementation:
+
+----
+keytool -keystore $JAVA_HOME/jre/lib/security/cacerts -list
+----
+
+Password is empty by default.
+
+=== Creating self-signed certificates
+
+While obtaining globally trusted certificates from Certificate Authorities is convenient is perfect valid to generate
+our own private/public keypairs and set them up specifically for the HBase cluster. Especially if we don't want to enable
+public access to the cluster, paying money for a certificate doesn't make sense.
+
+Follow the following steps to generate self-signed certificates.
+
+. Create SSL key store JKS to store local credentials
+
+Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is
+associated with, otherwise hostname verification won't work.
+
+----
+keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
+----
+
+At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member
+will have its own key store.
+
+[start=2]
+. Extract the signed public key (certificate) from each key store
+
+----
+keytool -exportcert -alias $(hostname -f) -keystore keystore.jks -file $(hostname -f).cer -rfc
+----
+
+[start=3]
+. Create SSL trust store JKS containing certificates for the clients
+
+The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different
+aliases to store multiple certificates in the same truststore. Name of the aliases doesn't matter.
+
+----
+keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
+----
+
+
 == Securing Access to HDFS and ZooKeeper
 Secure HBase requires secure ZooKeeper and HDFS so that users cannot access and/or modify the metadata and data from under HBase. HBase uses HDFS (or configured file system) to keep its data files as well as write ahead logs (WALs) and other data. HBase uses ZooKeeper to store some metadata for operations (master address, table locks, recovery state, etc).
 
