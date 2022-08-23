@@ -688,7 +688,7 @@ client access mentioned in the previous section requires Kerberos to be configur
 TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing
 attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
 
-HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementation. Netty's
+HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementations. Netty's
 powerful SSL implementation is a great foundation for highly secure and performant communication providing the latest and
 greatest cryptographic solution at all times.
 
@@ -697,7 +697,7 @@ between cluster members too.
 
 === Server side configuration
 
-We need to setup Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
+We need to set up Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
 encryption. See link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[TLS wikipedia page]
 for further details of the protocol. Add the following configuration to `hbase-site.xml` on Master, Region Servers and HBase
 clients:
@@ -749,9 +749,9 @@ when doing the handshake with the server. Add the following to `hbase-site.xml`.
 </property>
 ----
 
-However specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list
+However, specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list
 of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them,
-you don't need to configure your clients to trust it. Similarly to an internet browser, you don't need to setup the
+you don't need to configure your clients to trust it. Similarly to an internet browser, you don't need to set up the
 certificates of every single website you're planning to visit. Later in this documentation we'll walk through the steps of
 creating self-signed certificates which requires a trust store setup.
 
@@ -765,8 +765,8 @@ Password is empty by default.
 
 === Creating self-signed certificates
 
-While obtaining globally trusted certificates from Certificate Authorities is convenient is perfect valid to generate
-our own private/public keypairs and set them up specifically for the HBase cluster. Especially if we don't want to enable
+While obtaining globally trusted certificates from Certificate Authorities is convenient, it's perfectly valid to generate
+your own private/public keypairs and set them up specifically for the HBase cluster. Especially if you don't want to enable
 public access to the cluster, paying money for a certificate doesn't make sense.
 
 Follow the following steps to generate self-signed certificates.
@@ -808,16 +808,78 @@ which makes possible to accept TLS and plaintext connections on the same socket 
 
 . Create the necessary key stores and trust stores for all server participants as described in the previous section.
 
-. Enable secure communication on the Master node with `supportplaintext=True`. Restart the Master.
+. Enable secure communication on the Master node in _server-only_ mode with plaintext support.
 
-. Enable secure communication on the Region Servers with `supportplaintext=True`. Restart RSs in rolling restart fashion.
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>false</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>true</value>
+</property>
+...keystore / truststore setup ...
+----
 
+Restart the Master. Master now accepts both TLS/non-TLS connections and works with non-TLS in client mode.
+
+[start=3]
+. Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>true</value>
+</property>
+...keystore / truststore setup ...
+----
+
+Restart RSs in rolling restart fashion. RSs accepts both TLS/non-TLS communication.
+
+[start=4]
 . Enable secure communication on the clients.
 
-. Disable plaintext communication on the Master by removing `supportplaintext` property. Restart Master.
+. Enable client-mode TLS on master and disable plaintext mode.
 
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>false</value>
+</property>
+----
+
+Restart Master.
+
+[start=6]
 . Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling
 restart fashion.
+
+WARNING: Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able to communicate
+with other clusters which have TLS enabled. For example, this would impact intra-cluster replication.
 
 === Additional configuration
 
