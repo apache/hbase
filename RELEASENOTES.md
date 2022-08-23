@@ -27,6 +27,184 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
+* [HBASE-27305](https://issues.apache.org/jira/browse/HBASE-27305) | *Minor* | **add an option to skip file splitting when bulkload hfiles**
+
+Add a 'hbase.loadincremental.fail.if.need.split.hfile' configuration. If set to true, th bulk load operation will fail immediately if we need to split the hfiles. This can be used to prevent unexpected time consuming bulk load operation.
+
+
+---
+
+* [HBASE-27104](https://issues.apache.org/jira/browse/HBASE-27104) | *Major* | **Add a tool command list\_unknownservers**
+
+Introduce a shell command 'list\_unknownservers' to list unknown servers.
+
+
+---
+
+* [HBASE-27129](https://issues.apache.org/jira/browse/HBASE-27129) | *Major* | **Add a config that allows us to configure region-level storage policies**
+
+Add a 'hbase.hregion.block.storage.policy' so you can config storage policy at region level. This is useful when you want to control the storage policy for the directories other than CF directories, such as .splits, .recovered.edits, etc.
+
+
+---
+
+* [HBASE-27089](https://issues.apache.org/jira/browse/HBASE-27089) | *Minor* | **Add “commons.crypto.stream.buffer.size” configuration**
+
+Add a 'commons.crypto.stream.buffer.size' config for setting the buffer size when doing AES crypto for RPC.
+
+
+---
+
+* [HBASE-27299](https://issues.apache.org/jira/browse/HBASE-27299) | *Major* | **Bump minimum hadoop 2 version to 2.10.2**
+
+Now the minimum support hadoop 2.x version is 2.10.2 for hbase 2.5+.
+
+
+---
+
+* [HBASE-27281](https://issues.apache.org/jira/browse/HBASE-27281) | *Critical* | **Add default implementation for Connection$getClusterId**
+
+Adds a default null implementation for Connection$getClusterId. Downstream applications should implement this method.
+
+
+---
+
+* [HBASE-27229](https://issues.apache.org/jira/browse/HBASE-27229) | *Major* | **BucketCache statistics should not count evictions by hfile**
+
+The eviction metric for the BucketCache has been updated to only count evictions triggered by the eviction process (i.e responding to cache pressure). This brings it in-line with the other cache implementations, with the goal of this metric being to give operators insight into cache pressure. Other evictions by hfile or drain to storage engine failure, etc, no longer count towards the eviction rate.
+
+
+---
+
+* [HBASE-27204](https://issues.apache.org/jira/browse/HBASE-27204) | *Critical* | **BlockingRpcClient will hang for 20 seconds when SASL is enabled after finishing negotiation**
+
+When Kerberos authentication succeeds, on the server side, after receiving the final SASL token from the client, we simply wait for the client to continue by sending the connection header. After HBASE-24579, on the client side, an additional readStatus() was added, which assumed that after negotiation has completed a status code will be sent. However when authentication has succeeded the server will not send one. As a result the client would hang and only throw an exception when the configured read timeout is reached, which is 20 seconds by default. This was especially noticeable when using BlockingRpcClient as the client implementation. HBASE-24579 was reverted to correct this issue.
+
+
+---
+
+* [HBASE-27219](https://issues.apache.org/jira/browse/HBASE-27219) | *Minor* | **Change JONI encoding in RegexStringComparator**
+
+In RegexStringComparator an infinite loop can occur if an invalid UTF8 is encountered. We now use joni's NonStrictUTF8Encoding instead of UTF8Encoding to avoid the issue.
+
+
+---
+
+* [HBASE-20499](https://issues.apache.org/jira/browse/HBASE-20499) | *Minor* | **Replication/Priority executors can use specific max queue length as default value instead of general maxQueueLength**
+
+Added new config 'hbase.ipc.server.replication.max.callqueue.length'
+
+
+---
+
+* [HBASE-27048](https://issues.apache.org/jira/browse/HBASE-27048) | *Major* | **Server side scanner time limit should account for time in queue**
+
+Server will now account for queue time when determining how long a scanner can run before heartbeat should be returned. This should help avoid timeouts when server is overloaded.
+
+
+---
+
+* [HBASE-27148](https://issues.apache.org/jira/browse/HBASE-27148) | *Major* | **Move minimum hadoop 3  support version to 3.2.3**
+
+Bump the minimum hadoop 3 dependency to 3.2.3.
+
+Also upgrade apache-avro to 1.11.0 and exclude all jackson 1.x dependencies since all jackson 1.x versions have vulnerabilities.
+
+Notice that for hadoop 2 dependency we will need to include jackson 1.x because hadoop directly depend on it.
+
+
+---
+
+* [HBASE-27078](https://issues.apache.org/jira/browse/HBASE-27078) | *Major* | **Allow configuring a separate timeout for meta scans**
+
+Similar to hbase.read.rpc.timeout and hbase.client.scanner.timeout.period for normal scans, this issue adds two new configs for meta scans: hbase.client.meta.read.rpc.timeout and hbase.client.meta.scanner.timeout.period.  Each meta scan RPC call will be limited by hbase.client.meta.read.rpc.timeout, while hbase.client.meta.scanner.timeout.period acts as an overall operation timeout.
+
+Additionally, for 2.5.0, normal Table-based scan RPCs will now be limited by hbase.read.rpc.timeout if configured, instead of hbase.rpc.timeout. This behavior already existed for AsyncTable scans.
+
+
+---
+
+* [HBASE-13126](https://issues.apache.org/jira/browse/HBASE-13126) | *Critical* | **Provide alternate mini cluster classes other than HBTU for downstream users to write unit tests**
+
+Introduce a TestingHBaseCluster for users to implement integration test with mini hbase cluster.
+See this section https://hbase.apache.org/book.html#\_integration\_testing\_with\_an\_hbase\_mini\_cluster in the ref guide for more details on how to use it.
+TestingHBaseCluster also allowes you to start a mini hbase cluster based on external HDFS cluster and zookeeper cluster, please see the release note of HBASE-26167 for more details.
+HBaseTestingUtility is marked as deprecated and will be 'removed' in the future.
+
+
+---
+
+* [HBASE-27028](https://issues.apache.org/jira/browse/HBASE-27028) | *Minor* | **Add a shell command  for flushing master local region**
+
+Introduced a shell command flush\_master\_store for flushing master local region after HBASE-27028
+
+
+---
+
+* [HBASE-27125](https://issues.apache.org/jira/browse/HBASE-27125) | *Minor* | **The batch size of cleaning expired mob files should have an upper bound**
+
+Configure "hbase.master.mob.cleaner.batch.size.upper.bound" to set a proper batch size of cleaning expired mob files, its default value is 10000.
+
+
+---
+
+* [HBASE-26167](https://issues.apache.org/jira/browse/HBASE-26167) | *Major* | **Allow users to not start zookeeper and dfs cluster when using TestingHBaseCluster**
+
+Introduce two new methods when creating a TestingHBaseClusterOption.
+
+public Builder useExternalDfs(String uri)
+public Builder useExternalZooKeeper(String connectString)
+
+Users can use these two methods to specify external zookeeper or HDFS cluster to be used by the TestingHBaseCluster.
+
+
+---
+
+* [HBASE-27108](https://issues.apache.org/jira/browse/HBASE-27108) | *Blocker* | **Revert HBASE-25709**
+
+HBASE-25709 caused a regression for scans that result in a large number of rows and has been reverted in this release.
+
+
+---
+
+* [HBASE-26923](https://issues.apache.org/jira/browse/HBASE-26923) | *Minor* | **PerformanceEvaluation support encryption option**
+
+Add a new command line argument: --encryption to enable encryptopn in PerformanceEvaluation tool.
+
+Usage:
+ encryption          Encryption type to use (AES, ...). Default: 'NONE'"
+
+Examples:
+ To run a AES encryption sequentialWrite:
+ $ bin/hbase org.apache.hadoop.hbase.PerformanceEvaluation --table=xxx --encryption='AES' sequentialWrite 10
+
+
+---
+
+* [HBASE-26826](https://issues.apache.org/jira/browse/HBASE-26826) | *Major* | **Backport StoreFileTracker (HBASE-26067, HBASE-26584, and others) to branch-2.5**
+
+Introduces the StoreFileTracker interface to HBase. This is a server-side interface which abstracts how a Store (column family) knows what files should be included in that Store. Previously, HBase relied on a listing the directory a Store used for storage to determine the files which should make up that Store.
+
+\*\*\* StoreFileTracker is EXPERIMENTAL in 2.5. Use at your own risk. \*\*\*
+
+After this feature, there are two implementations of StoreFileTrackers. The first (and default) implementation is listing the Store directory. The second is a new implementation which records files which belong to a Store within each Store. Whenever the list of files that make up a Store change, this metadata file will be updated.
+
+This feature is notable in that it better enables HBase to function on storage systems which do not provide the typical posix filesystem semantics, most importantly, those which do not implement a file rename operation which is atomic. Storage systems which do not implement atomic renames often implement a rename as a copy and delete operation which amplifies the I/O costs by 2x.
+
+At scale, this feature should have a 2x reduction in I/O costs when using storage systems that do not provide atomic renames, most importantly in HBase compactions and memstore flushes. See the corresponding section, "Store File Tracking", in the HBase book for more information on how to use this feature. 
+
+The file based StoreFileTracker, FileBasedStoreFileTracker, is currently incompatible with the Medium Objects (MOB) feature. Do not enable them together.
+
+
+---
+
+* [HBASE-26649](https://issues.apache.org/jira/browse/HBASE-26649) | *Major* | **Support meta replica LoadBalance mode for RegionLocator#getAllRegionLocations()**
+
+When setting 'hbase.locator.meta.replicas.mode' to "LoadBalance" at HBase client, RegionLocator#getAllRegionLocations() now load balances across all Meta Replica Regions. Please note,  results from non-primary meta replica regions may contain stale data.
+
+
+---
+
 * [HBASE-27055](https://issues.apache.org/jira/browse/HBASE-27055) | *Minor* | **Add additional comments when using HBASE\_TRACE\_OPTS with standalone mode**
 
 hbase-env.sh has been updated with an optional configuration HBASE\_OPTS for standalone mode
@@ -119,21 +297,6 @@ Adds a new "hbase.client.metrics.scope" config which allows users to define a cu
 
 ---
 
-* [HBASE-26826](https://issues.apache.org/jira/browse/HBASE-26826) | *Major* | **Backport StoreFileTracker (HBASE-26067, HBASE-26584, and others) to branch-2.5**
-
-Introduces the StoreFileTracker interface to HBase. This is a server-side interface which abstracts how a Store (column family) knows what files should be included in that Store. Previously, HBase relied on a listing the directory a Store used for storage to determine the files which should make up that Store.
-
-After this feature, there are two implementations of StoreFileTrackers. The first (and default) implementation is listing the Store directory. The second is a new implementation which records files which belong to a Store within each Store. Whenever the list of files that make up a Store change, this metadata file will be updated.
-
-This feature is notable in that it better enables HBase to function on storage systems which do not provide the typical posix filesystem semantics, most importantly, those which do not implement a file rename operation which is atomic. Storage systems which do not implement atomic renames often implement a rename as a copy and delete operation which amplifies the I/O costs by 2x.
-
-At scale, this feature should have a 2x reduction in I/O costs when using storage systems that do not provide atomic renames, most importantly in HBase compactions and memstore flushes. See the corresponding section, "Store File Tracking", in the HBase book for more information on how to use this feature.
-
-The file based StoreFileTracker, FileBasedStoreFileTracker, is currently incompatible with the Medium Objects (MOB) feature. Do not enable them together.
-
-
----
-
 * [HBASE-26618](https://issues.apache.org/jira/browse/HBASE-26618) | *Minor* | **Involving primary meta region in meta scan with CatalogReplicaLoadBalanceSimpleSelector**
 
 When META replica LoadBalance mode is enabled at client-side, clients will try to read from one META region first. If META location is from any non-primary META regions, in case of errors, it will fall back to the primary META region.
@@ -183,9 +346,11 @@ Do not retry to roll log is the default behavior.
 
 ---
 
-* [HBASE-25709](https://issues.apache.org/jira/browse/HBASE-25709) | *Major* | **Close region may stuck when region is compacting and skipped most cells read**
+* [HBASE-26640](https://issues.apache.org/jira/browse/HBASE-26640) | *Major* | **Reimplement master local region initialization to better work with SFT**
 
-Both compacting scanners and user scanners should return promptly, when  there are many skipped cells.
+Introduced a 'hbase.master.store.region.file-tracker.impl' config to specify the store file tracker implementation for master local region.
+
+If not present, master local region will use the cluster level store file tracker implementation.
 
 
 ---
@@ -194,12 +359,12 @@ Both compacting scanners and user scanners should return promptly, when  there a
 
 Introduced two shell commands for change table's or family's sft:
 
-change\_sft:
+change\_sft: 
   Change table's or table column family's sft. Examples:
     hbase\> change\_sft 't1','FILE'
     hbase\> change\_sft 't2','cf1','FILE'
 
-change\_sft\_all:
+change\_sft\_all: 
   Change all of the tables's sft matching the given regex:
     hbase\> change\_sft\_all 't.\*','FILE'
     hbase\> change\_sft\_all 'ns:.\*','FILE'
@@ -210,7 +375,7 @@ change\_sft\_all:
 
 * [HBASE-26742](https://issues.apache.org/jira/browse/HBASE-26742) | *Major* | **Comparator of NOT\_EQUAL NULL is invalid for checkAndMutate**
 
-The semantics of checkAndPut for null(or empty) value comparator is changed, the old match is always true.
+The semantics of checkAndPut for null(or empty) value comparator is changed, the old match is always true. 
 But we should consider that  EQUAL or NOT\_EQUAL for null check is a common usage, so the semantics of checkAndPut for matching null is correct now.
 There is rare use of LESS or GREATER null, so keep the semantics for them.
 
@@ -306,7 +471,7 @@ Now we will upload the site artifacts to nightlies for nightly build as well as 
 
 * [HBASE-26316](https://issues.apache.org/jira/browse/HBASE-26316) | *Minor* | **Per-table or per-CF compression codec setting overrides**
 
-It is now possible to specify codec configuration options as part of table or column family schema definitions. The configuration options will only apply to the defined scope. For example:
+It is now possible to specify codec configuration options as part of table or column family schema definitions. The configuration options will only apply to the defined scope. For example: 
 
   hbase\> create 'sometable', \\
     { NAME =\> 'somefamily', COMPRESSION =\> 'ZSTD' }, \\
@@ -616,7 +781,7 @@ belong to system RSGroup only.
 
 * [HBASE-25902](https://issues.apache.org/jira/browse/HBASE-25902) | *Critical* | **Add missing CFs in meta during HBase 1 to 2.3+ Upgrade**
 
-While upgrading cluster from 1.x to 2.3+ versions, after the active master is done setting it's status as 'Initialized', it attempts to add 'table' and 'repl\_barrier' CFs in meta. Once CFs are added successfully, master is aborted with PleaseRestartMasterException because master has missed certain initialization events (e.g ClusterSchemaService is not initialized and tableStateManager fails to migrate table states from ZK to meta due to missing CFs). Subsequent active master initialization is expected to be smooth.
+While upgrading cluster from 1.x to 2.3+ versions, after the active master is done setting it's status as 'Initialized', it attempts to add 'table' and 'repl\_barrier' CFs in meta. Once CFs are added successfully, master is aborted with PleaseRestartMasterException because master has missed certain initialization events (e.g ClusterSchemaService is not initialized and tableStateManager fails to migrate table states from ZK to meta due to missing CFs). Subsequent active master initialization is expected to be smooth. 
 In the presence of multi masters, when one of them becomes active for the first time after upgrading to HBase 2.3+, it is aborted after fixing CFs in meta and one of the other backup masters will take over and become active soon. Hence, overall this is expected to be smooth upgrade if we have backup masters configured. If not, operator is expected to restart same master again manually.
 
 
@@ -888,7 +1053,7 @@ Expose HBCK repost results in metrics, includes: "orphanRegionsOnRS", "orphanReg
 
 * [HBASE-25582](https://issues.apache.org/jira/browse/HBASE-25582) | *Major* | **Support setting scan ReadType to be STREAM at cluster level**
 
-Adding a new meaning for the config 'hbase.storescanner.pread.max.bytes' when configured with a value \<0.
+Adding a new meaning for the config 'hbase.storescanner.pread.max.bytes' when configured with a value \<0.   
 In HBase 2.x we allow the Scan op to specify a ReadType (PREAD / STREAM/ DEFAULT).  When Scan comes with DEFAULT read type, we will start scan with preads and later switch to stream read once we see we are scanning a total data size \> value of hbase.storescanner.pread.max.bytes.  (This is calculated for data per region:cf).  This config defaults to 4 x of HFile block size = 256 KB by default.
 This jira added a new meaning for this config when configured with a -ve value.  In such case, for all scans with DEFAULT read type, we will start with STREAM read itself. (Switch at begin of the scan itself)
 
@@ -985,6 +1150,39 @@ setRegionStateInMeta can be accessed only through Admin rights
 
 Upgrade commons-io to 2.8.0. Remove deprecated IOUtils.closeQuietly call in code base.
 
+
+---
+
+* [HBASE-22749](https://issues.apache.org/jira/browse/HBASE-22749) | *Major* | **Distributed MOB compactions**
+
+<!-- markdown -->
+MOB compaction is now handled in-line with per-region compaction on region
+  servers
+
+- regions with mob data store per-hfile metadata about which mob hfiles are
+  referenced
+- admin requested major compaction will also rewrite MOB files; periodic RS
+  initiated major compaction will not
+- periodically a chore in the master will initiate a major compaction that
+  will rewrite MOB values to ensure it happens. controlled by
+  'hbase.mob.compaction.chore.period'. default is weekly
+- control how many RS the chore requests major compaction on in parallel
+  with 'hbase.mob.major.compaction.region.batch.size'. default is as
+  parallel as possible.
+- periodic chore in master will scan backing hfiles from regions to get the
+  set of referenced mob hfiles and archive those that are no longer
+  referenced. control period with 'hbase.master.mob.cleaner.period'
+- Optionally, RS that are compacting mob files can limit write
+  amplification by not rewriting values from mob hfiles over a certain size
+  limit. opt-in by setting 'hbase.mob.compaction.type' to 'optimized'.
+  control threshold by 'hbase.mob.compactions.max.file.size'.
+  default is 1GiB
+- Should smoothly integrate with existing MOB users via rolling upgrade.
+  will delay old MOB file cleanup until per-region compaction has managed
+  to compact each region at least once so that used mob hfile metadata can
+  be gathered.
+
+This improvement obviates the dataloss in HBASE-22075.
 
 
 
