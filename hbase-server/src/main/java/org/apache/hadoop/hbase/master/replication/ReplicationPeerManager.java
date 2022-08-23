@@ -587,8 +587,8 @@ public class ReplicationPeerManager {
     return s1.equals(s2);
   }
 
-  public void acquireSyncReplicationPeerLock() throws InterruptedException {
-    syncReplicationPeerLock.acquire();
+  public boolean tryAcquireSyncReplicationPeerLock() {
+    return syncReplicationPeerLock.tryAcquire();
   }
 
   public void releaseSyncReplicationPeerLock() {
