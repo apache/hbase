@@ -207,9 +207,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this.syncRunners = new SyncRunner[syncerCount];
     for (int i = 0; i < syncerCount; i++) {
       this.syncRunners[i] = new SyncRunner("sync." + i, maxBatchCount);
-      this.syncRunners[i].start();
     }
+  }
 
+  @Override
+  public void init() throws IOException {
+    super.init();
+    for (SyncRunner syncRunner : this.syncRunners) {
+      syncRunner.start();
+    }
   }
 
   /**
