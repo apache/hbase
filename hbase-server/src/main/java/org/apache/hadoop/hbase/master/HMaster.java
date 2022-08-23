@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.conf.ConfigurationHolder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
@@ -598,6 +599,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private void registerConfigurationObservers() {
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
+    configurationManager.registerObserver(ConfigurationHolder.getInstance());
   }
 
   // Main run loop. Calls through to the regionserver run loop AFTER becoming active Master; will

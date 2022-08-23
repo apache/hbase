@@ -21,8 +21,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.util.Arrays;
 import java.util.regex.Pattern;
+import org.apache.hadoop.hbase.conf.ConfigurationHolder;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.jcodings.Encoding;
 import org.jcodings.EncodingDB;
@@ -257,9 +259,17 @@ public class RegexStringComparator extends ByteArrayComparable {
   static class JavaRegexEngine implements Engine {
     private Charset charset = Charset.forName("UTF-8");
     private Pattern pattern;
+    private final long timeoutMillis;
 
     public JavaRegexEngine(String regex, int flags) {
       this.pattern = Pattern.compile(regex, flags);
+      this.timeoutMillis = ConfigurationHolder.getInstance().getConf()
+          .getLong("hbase.filter.regex.java.timeout", -1);
+    }
+
+    JavaRegexEngine(String regex, int flags, long timeoutMillis) {
+      this.pattern = Pattern.compile(regex, flags);
+      this.timeoutMillis = timeoutMillis;
     }
 
     @Override
@@ -294,7 +304,14 @@ public class RegexStringComparator extends ByteArrayComparable {
       } else {
         tmp = new String(value, offset, length, charset);
       }
-      return pattern.matcher(tmp).find() ? 0 : 1;
+
+      if (timeoutMillis == -1) {
+        return pattern.matcher(tmp).find() ? 0 : 1;
+      } else {
+        final TimeoutCharSequence chars =
+          new TimeoutCharSequence(tmp, EnvironmentEdgeManager.currentTime(), timeoutMillis);
+        return pattern.matcher(chars).find() ? 0 : 1;
+      }
     }
 
     @Override
