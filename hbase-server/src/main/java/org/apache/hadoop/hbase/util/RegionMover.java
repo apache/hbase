@@ -27,7 +27,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -70,6 +68,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -119,6 +118,17 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     setConf(builder.conf);
     this.conn = ConnectionFactory.createConnection(conf);
     this.admin = conn.getAdmin();
+
+    // if master's hostname is ip, it indicates that the master/RS has enabled use-ip, we need to
+    // resolve the current hostname to ip to ensure that the RegionMover logic can be executed
+    // normally, see HBASE-27304 for details.
+    ServerName master = admin.getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
+    if (InetAddresses.isInetAddress(master.getHostname())) {
+      if (!InetAddresses.isInetAddress(hostname)) {
+        this.hostname = InetAddress.getByName(this.hostname).getHostAddress();
+      }
+    }
+
     // Only while running unit tests, builder.rackManager will not be null for the convenience of
     // providing custom rackManager. Otherwise for regular workflow/user triggered action,
     // builder.rackManager is supposed to be null. Hence, setter of builder.rackManager is
@@ -183,19 +193,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         this.port = Integer.parseInt(splitHostname[1]);
       } else {
         this.port = conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
-      }
-
-      // if use-ip is enabled, we will resolve the hostname to ip to ensure that the RegionMover
-      // logic can be executed normally, see HBASE-27304 for details.
-      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
-        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
-      if (useIp && StringUtils.isNotBlank(this.hostname)) {
-        try {
-          this.hostname = InetAddress.getByName(this.hostname).getHostAddress();
-        } catch (UnknownHostException e) {
-          LOG.error(e.getMessage());
-          throw new RuntimeException(e);
-        }
       }
       this.filename = defaultDir + File.separator + System.getProperty("user.name") + this.hostname
         + ":" + Integer.toString(this.port);
