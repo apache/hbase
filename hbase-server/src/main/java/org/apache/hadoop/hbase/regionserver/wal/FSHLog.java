@@ -283,7 +283,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return future;
   }
 
-  class SyncRequest {
+  static class SyncRequest {
     private final Writer writer;
     private final boolean shouldUseHSync;
     private final long sequenceWhenSync;

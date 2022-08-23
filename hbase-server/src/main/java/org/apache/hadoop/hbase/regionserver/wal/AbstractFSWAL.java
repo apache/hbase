@@ -1982,6 +1982,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   private void onAppendEntryFailed(IOException exception) {
+    LOG.warn("append entry failed", exception);
     final long currentEpoch = (long) epochAndState >>> 2L;
     this.onException(currentEpoch, exception);
   }
