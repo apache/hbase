@@ -20,6 +20,82 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+# HBASE  2.4.14 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27089](https://issues.apache.org/jira/browse/HBASE-27089) | *Minor* | **Add “commons.crypto.stream.buffer.size” configuration**
+
+Add a 'commons.crypto.stream.buffer.size' config for setting the buffer size when doing AES crypto for RPC.
+
+
+---
+
+* [HBASE-27281](https://issues.apache.org/jira/browse/HBASE-27281) | *Critical* | **Add default implementation for Connection$getClusterId**
+
+Adds a default null implementation for Connection$getClusterId. Downstream applications should implement this method.
+
+
+---
+
+* [HBASE-27251](https://issues.apache.org/jira/browse/HBASE-27251) | *Critical* | **Rolling back from 2.5.0-SNAPSHOT to 2.4.13 fails due to \`File does not exist: /hbase/MasterData/data/master/store/.initialized/.regioninfo\`**
+
+Before upgrading HBase cluster to 2.5.0, it is strongly recommended to upgrade the cluster to HBase-2.4.14 or later first. This is to guarantee a smooth rollback in case. Otherwise, it may run into HBASE-27251.
+
+
+---
+
+* [HBASE-27225](https://issues.apache.org/jira/browse/HBASE-27225) | *Major* | **Add BucketAllocator bucket size statistic logging**
+
+When bucket cache is enabled, setting loglevel to DEBUG for the org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator logger will result in a periodic summary of bucket usage for the bucket cache. This log output can give insight into block distribution of the cluster, where bucket cache memory is being allocated, and how much waste/fragmentation there is in the bucket cache. See Javadoc in BucketAllocate for more explanation of the logging.
+
+
+---
+
+* [HBASE-27204](https://issues.apache.org/jira/browse/HBASE-27204) | *Critical* | **BlockingRpcClient will hang for 20 seconds when SASL is enabled after finishing negotiation**
+
+When Kerberos authentication succeeds, on the server side, after receiving the final SASL token from the client, we simply wait for the client to continue by sending the connection header. After HBASE-24579, on the client side, an additional readStatus() was added, which assumed that after negotiation has completed a status code will be sent. However when authentication has succeeded the server will not send one. As a result the client would hang and only throw an exception when the configured read timeout is reached, which is 20 seconds by default. This was especially noticeable when using BlockingRpcClient as the client implementation. HBASE-24579 was reverted to correct this issue.
+
+
+---
+
+* [HBASE-27219](https://issues.apache.org/jira/browse/HBASE-27219) | *Minor* | **Change JONI encoding in RegexStringComparator**
+
+In RegexStringComparator an infinite loop can occur if an invalid UTF8 is encountered. We now use joni's NonStrictUTF8Encoding instead of UTF8Encoding to avoid the issue.
+
+
+---
+
+* [HBASE-27048](https://issues.apache.org/jira/browse/HBASE-27048) | *Major* | **Server side scanner time limit should account for time in queue**
+
+Server will now account for queue time when determining how long a scanner can run before heartbeat should be returned. This should help avoid timeouts when server is overloaded.
+
+
+---
+
+* [HBASE-27060](https://issues.apache.org/jira/browse/HBASE-27060) | *Major* | **Allow sharing connections between AggregationClient instances**
+
+Added a new no-arg constructor for AggregationClient which allows lightweight usage of just the methods accepting a Table. Also added a new constructor which takes a Connection, allowing the user to pass their own externally managed connection which will be used when methods accepting a TableName are used.
+
+
+---
+
+* [HBASE-26790](https://issues.apache.org/jira/browse/HBASE-26790) | *Major* | **getAllRegionLocations can cache locations with null hostname**
+
+getAllRegionLocations will no longer add locations to the MetaCache which have no server name. Region locations without a server name can occur for brief periods during region splits and merges, but the MetaCache relies on every cached location having a server name.
+
+
+---
+
+* [HBASE-26945](https://issues.apache.org/jira/browse/HBASE-26945) | *Minor* | **Quotas causes too much load on meta for large clusters**
+
+The quotas chore no longer scans meta to get information about region counts. Instead it uses the Admin API, which reads in-memory state in the HMaster and should scale well for large clusters.
+
+
+
 # HBASE  2.4.13 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

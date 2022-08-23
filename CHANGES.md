@@ -20,6 +20,89 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.14 - Unreleased (as of 2022-08-23)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27089](https://issues.apache.org/jira/browse/HBASE-27089) | Add “commons.crypto.stream.buffer.size” configuration |  Minor | io |
+| [HBASE-27268](https://issues.apache.org/jira/browse/HBASE-27268) | In trace log mode, the client does not print callId/startTime and the server does not print receiveTime |  Minor | logging |
+| [HBASE-27296](https://issues.apache.org/jira/browse/HBASE-27296) | Some Cell's implementation of toString() such as IndividualBytesFieldCell prints out value and tags which is too verbose |  Minor | logging |
+| [HBASE-27273](https://issues.apache.org/jira/browse/HBASE-27273) | Should stop autoRead and skip all the bytes when rpc request too big |  Major | IPC/RPC |
+| [HBASE-27257](https://issues.apache.org/jira/browse/HBASE-27257) | Remove unnecessary usage of CachedBlocksByFile from RS UI |  Major | . |
+| [HBASE-27225](https://issues.apache.org/jira/browse/HBASE-27225) | Add BucketAllocator bucket size statistic logging |  Major | . |
+| [HBASE-27208](https://issues.apache.org/jira/browse/HBASE-27208) | Use spotless to purge the missing summary warnings from error prone |  Major | pom |
+| [HBASE-27048](https://issues.apache.org/jira/browse/HBASE-27048) | Server side scanner time limit should account for time in queue |  Major | . |
+| [HBASE-27188](https://issues.apache.org/jira/browse/HBASE-27188) | Report maxStoreFileCount in jmx |  Minor | . |
+| [HBASE-27186](https://issues.apache.org/jira/browse/HBASE-27186) | Report block cache size metrics separately for L1 and L2 |  Minor | . |
+| [HBASE-26218](https://issues.apache.org/jira/browse/HBASE-26218) | Better logging in CanaryTool |  Minor | canary |
+| [HBASE-27060](https://issues.apache.org/jira/browse/HBASE-27060) | Allow sharing connections between AggregationClient instances |  Major | . |
+| [HBASE-27146](https://issues.apache.org/jira/browse/HBASE-27146) | Avoid CellUtil.cloneRow in MetaCellComparator |  Major | meta, Offheaping, Performance |
+| [HBASE-26945](https://issues.apache.org/jira/browse/HBASE-26945) | Quotas causes too much load on meta for large clusters |  Minor | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27292](https://issues.apache.org/jira/browse/HBASE-27292) | Fix build failure against Hadoop 3.3.4 due to added dependency on okhttp |  Major | build, hadoop3, pom |
+| [HBASE-27244](https://issues.apache.org/jira/browse/HBASE-27244) | bin/hbase still use slf4j-log4j while reload4j in place |  Major | shell |
+| [HBASE-27275](https://issues.apache.org/jira/browse/HBASE-27275) | graceful\_stop.sh unable to restore the balance state |  Blocker | regionserver |
+| [HBASE-27282](https://issues.apache.org/jira/browse/HBASE-27282) | CME in AuthManager causes region server crash |  Major | acl |
+| [HBASE-26775](https://issues.apache.org/jira/browse/HBASE-26775) | TestProcedureSchedulerConcurrency fails in pre commit |  Major | proc-v2, test |
+| [HBASE-27269](https://issues.apache.org/jira/browse/HBASE-27269) | The implementation of TestReplicationStatus.waitOnMetricsReport is incorrect |  Major | Replication, test |
+| [HBASE-27271](https://issues.apache.org/jira/browse/HBASE-27271) | BufferCallBeforeInitHandler should ignore the flush request |  Major | IPC/RPC |
+| [HBASE-27251](https://issues.apache.org/jira/browse/HBASE-27251) | Rolling back from 2.5.0-SNAPSHOT to 2.4.13 fails due to \`File does not exist: /hbase/MasterData/data/master/store/.initialized/.regioninfo\` |  Critical | master |
+| [HBASE-27087](https://issues.apache.org/jira/browse/HBASE-27087) | TestQuotaThrottle times out |  Major | test |
+| [HBASE-27239](https://issues.apache.org/jira/browse/HBASE-27239) | Upgrade reload4j due to XXE vulnerability |  Major | . |
+| [HBASE-27204](https://issues.apache.org/jira/browse/HBASE-27204) | BlockingRpcClient will hang for 20 seconds when SASL is enabled after finishing negotiation |  Critical | rpc, sasl, security |
+| [HBASE-27219](https://issues.apache.org/jira/browse/HBASE-27219) | Change JONI encoding in RegexStringComparator |  Minor | Filters |
+| [HBASE-27205](https://issues.apache.org/jira/browse/HBASE-27205) | Fix tests that rely on EnvironmentEdgeManager in branch-2.4 |  Minor | . |
+| [HBASE-27211](https://issues.apache.org/jira/browse/HBASE-27211) | Data race in MonitoredTaskImpl could cause split wal failure |  Critical | monitoring, wal |
+| [HBASE-27053](https://issues.apache.org/jira/browse/HBASE-27053) | IOException during caching of uncompressed block to the block cache. |  Major | BlockCache |
+| [HBASE-27192](https://issues.apache.org/jira/browse/HBASE-27192) | The retry number for TestSeparateClientZKCluster is too small |  Major | test, Zookeeper |
+| [HBASE-27193](https://issues.apache.org/jira/browse/HBASE-27193) | TestZooKeeper is flaky |  Major | test, Zookeeper |
+| [HBASE-27097](https://issues.apache.org/jira/browse/HBASE-27097) | SimpleRpcServer is broken |  Blocker | rpc |
+| [HBASE-27189](https://issues.apache.org/jira/browse/HBASE-27189) | NettyServerRpcConnection is not properly closed when the netty channel is closed |  Blocker | netty, rpc |
+| [HBASE-27169](https://issues.apache.org/jira/browse/HBASE-27169) | TestSeparateClientZKCluster is flaky |  Major | test |
+| [HBASE-27180](https://issues.apache.org/jira/browse/HBASE-27180) | Multiple possible buffer leaks |  Major | netty, regionserver |
+| [HBASE-26708](https://issues.apache.org/jira/browse/HBASE-26708) | Netty "leak detected" and OutOfDirectMemoryError due to direct memory buffering with SASL implementation |  Blocker | netty, rpc, sasl |
+| [HBASE-27171](https://issues.apache.org/jira/browse/HBASE-27171) | Fix Annotation Error in HRegionFileSystem |  Trivial | . |
+| [HBASE-27170](https://issues.apache.org/jira/browse/HBASE-27170) | ByteBuffAllocator leak when decompressing blocks near minSizeForReservoirUse |  Major | . |
+| [HBASE-27160](https://issues.apache.org/jira/browse/HBASE-27160) | ClientZKSyncer.deleteDataForClientZkUntilSuccess should break from the loop when deletion is succeeded |  Major | Client, Zookeeper |
+| [HBASE-26790](https://issues.apache.org/jira/browse/HBASE-26790) | getAllRegionLocations can cache locations with null hostname |  Major | . |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27161](https://issues.apache.org/jira/browse/HBASE-27161) | Improve TestMultiRespectsLimits |  Minor | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27301](https://issues.apache.org/jira/browse/HBASE-27301) | Add Delete addFamilyVersion  timestamp verify |  Minor | Client |
+| [HBASE-27293](https://issues.apache.org/jira/browse/HBASE-27293) | Remove jenkins and personality scripts support for 1.x |  Major | scripts |
+| [HBASE-27220](https://issues.apache.org/jira/browse/HBASE-27220) | Apply the spotless format change in HBASE-27208 to our code base |  Major | . |
+| [HBASE-23330](https://issues.apache.org/jira/browse/HBASE-23330) |   Expose cluster ID for clients using it for delegation token based auth |  Major | Client, master |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27294](https://issues.apache.org/jira/browse/HBASE-27294) | Add new hadoop releases in our hadoop checks |  Major | scripts |
+| [HBASE-27221](https://issues.apache.org/jira/browse/HBASE-27221) | Bump spotless version to 2.24.1 |  Major | build, pom |
+| [HBASE-27281](https://issues.apache.org/jira/browse/HBASE-27281) | Add default implementation for Connection$getClusterId |  Critical | Client |
+| [HBASE-27175](https://issues.apache.org/jira/browse/HBASE-27175) | Failure to cleanup WAL split dir log should be at INFO level |  Minor | . |
+
+
 ## Release 2.4.13 - Unreleased (as of 2022-06-23)
 
 
