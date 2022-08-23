@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -50,6 +51,8 @@ public class HFileContextBuilder {
   /** Number of uncompressed bytes we allow per block. */
   private int blockSize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
+  /** the index block encoding type **/
+  private IndexBlockEncoding indexBlockEncoding = IndexBlockEncoding.NONE;
   /** Crypto context */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
   private long fileCreateTime = 0;
@@ -128,6 +131,11 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withIndexBlockEncoding(IndexBlockEncoding indexBlockEncoding) {
+    this.indexBlockEncoding = indexBlockEncoding;
+    return this;
+  }
+
   public HFileContextBuilder withEncryptionContext(Encryption.Context cryptoContext) {
     this.cryptoContext = cryptoContext;
     return this;
@@ -161,6 +169,6 @@ public class HFileContextBuilder {
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
       compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
-      fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
+      fileCreateTime, hfileName, columnFamily, tableName, cellComparator, indexBlockEncoding);
   }
 }
