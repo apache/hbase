@@ -540,8 +540,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if (!this.isSourceActive()) {
       setSourceStartupStatus(false);
-      if (Thread.currentThread().isInterrupted()) {
-        // If source is not running and thread is interrupted this means someone has tried to
+      if (Thread.currentThread().isInterrupted() || !this.sourceRunning) {
+        // If source is not running or thread is interrupted this means someone has tried to
         // remove this peer.
         return;
       }
@@ -570,8 +570,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     if (!this.isSourceActive()) {
       setSourceStartupStatus(false);
-      if (Thread.currentThread().isInterrupted()) {
-        // If source is not running and thread is interrupted this means someone has tried to
+      if (Thread.currentThread().isInterrupted() || !this.sourceRunning) {
+        // If source is not running or thread is interrupted this means someone has tried to
         // remove this peer.
         return;
       }
