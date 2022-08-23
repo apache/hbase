@@ -1780,7 +1780,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * passed in WALKey <code>walKey</code> parameter. Be warned that the WriteEntry is not
    * immediately available on return from this method. It WILL be available subsequent to a sync of
    * this append; otherwise, you will just have to wait on the WriteEntry to get filled in.
-   * @param info       the regioninfo associated with append
+   * @param hri        the regioninfo associated with append
    * @param key        Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits      Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    *                   sequence id that is after all currently appended edits.
