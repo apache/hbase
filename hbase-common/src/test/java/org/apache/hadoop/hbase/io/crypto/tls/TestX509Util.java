@@ -63,6 +63,38 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   private static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
   @Test
+  public void testCreateSSLContextWithClientAuthDefault() throws Exception {
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getNeedClientAuth());
+  }
+
+  @Test
+  public void testCreateSSLContextWithClientAuthNEED() throws Exception {
+    conf.set(X509Util.HBASE_SERVER_NETTY_TLS_CLIENT_AUTH_MODE, X509Util.ClientAuth.NEED.name());
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getNeedClientAuth());
+  }
+
+  @Test
+  public void testCreateSSLContextWithClientAuthWANT() throws Exception {
+    conf.set(X509Util.HBASE_SERVER_NETTY_TLS_CLIENT_AUTH_MODE, X509Util.ClientAuth.WANT.name());
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getWantClientAuth());
+  }
+
+  @Test
+  public void testCreateSSLContextWithClientAuthNONE() throws Exception {
+    conf.set(X509Util.HBASE_SERVER_NETTY_TLS_CLIENT_AUTH_MODE, X509Util.ClientAuth.NONE.name());
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertFalse(sslContext.newEngine(byteBufAllocatorMock).getNeedClientAuth());
+    assertFalse(sslContext.newEngine(byteBufAllocatorMock).getWantClientAuth());
+  }
+
+  @Test
   public void testCreateSSLContextWithoutCustomProtocol() throws Exception {
     SslContext sslContext = X509Util.createSslContextForClient(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
@@ -164,7 +196,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), KeyStoreFileType.PEM.getPropertyValue(), false,
-      false);
+      false, true, true);
   }
 
   @Test
@@ -173,7 +205,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     // Make sure that empty password and null password are treated the same
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(), null,
-      KeyStoreFileType.PEM.getPropertyValue(), false, false);
+      KeyStoreFileType.PEM.getPropertyValue(), false, false, true, true);
   }
 
   @Test
@@ -183,7 +215,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'
-      false, false);
+      false, false, true, true);
   }
 
   @Test
@@ -227,7 +259,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     // Make sure we can instantiate a trust manager from the JKS file on disk
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
-      x509TestContext.getTrustStorePassword(), KeyStoreFileType.JKS.getPropertyValue(), true, true);
+      x509TestContext.getTrustStorePassword(), KeyStoreFileType.JKS.getPropertyValue(), true, true,
+      true, true);
   }
 
   @Test
@@ -236,7 +269,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     // Make sure that empty password and null password are treated the same
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), null,
-      KeyStoreFileType.JKS.getPropertyValue(), false, false);
+      KeyStoreFileType.JKS.getPropertyValue(), false, false, true, true);
   }
 
   @Test
@@ -246,7 +279,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'
-      true, true);
+      true, true, true, true);
   }
 
   @Test
@@ -255,7 +288,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
         x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
-        "wrong password".toCharArray(), KeyStoreFileType.JKS.getPropertyValue(), true, true);
+        "wrong password".toCharArray(), KeyStoreFileType.JKS.getPropertyValue(), true, true, true,
+        true);
     });
   }
 
@@ -301,7 +335,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), KeyStoreFileType.PKCS12.getPropertyValue(), true,
-      true);
+      true, true, true);
   }
 
   @Test
@@ -310,7 +344,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     // Make sure that empty password and null password are treated the same
     X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(), null,
-      KeyStoreFileType.PKCS12.getPropertyValue(), false, false);
+      KeyStoreFileType.PKCS12.getPropertyValue(), false, false, true, true);
   }
 
   @Test
@@ -320,7 +354,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'
-      true, true);
+      true, true, true, true);
   }
 
   @Test
@@ -329,7 +363,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
         x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-        "wrong password".toCharArray(), KeyStoreFileType.PKCS12.getPropertyValue(), true, true);
+        "wrong password".toCharArray(), KeyStoreFileType.PKCS12.getPropertyValue(), true, true,
+        true, true);
     });
   }
 
