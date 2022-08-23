@@ -124,7 +124,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     // normally, see HBASE-27304 for details.
     ServerName master = admin.getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
     if (InetAddresses.isInetAddress(master.getHostname())) {
-      if (!InetAddresses.isInetAddress(hostname)) {
+      if (!InetAddresses.isInetAddress(this.hostname)) {
         this.hostname = InetAddress.getByName(this.hostname).getHostAddress();
       }
     }
