@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -220,6 +221,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -388,7 +390,7 @@ public class HMaster extends HRegionServer implements MasterServices {
   // the key is table name, the value is the number of compactions in that table.
   private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
 
-  MasterCoprocessorHost cpHost;
+  volatile MasterCoprocessorHost cpHost;
 
   private final boolean preLoadTableDescriptors;
 
@@ -544,11 +546,17 @@ public class HMaster extends HRegionServer implements MasterServices {
     return conf.get(MASTER_HOSTNAME_KEY);
   }
 
+  private void registerConfigurationObservers() {
+    configurationManager.registerObserver(this.rpcServices);
+    configurationManager.registerObserver(this);
+  }
+
   // Main run loop. Calls through to the regionserver run loop AFTER becoming active Master; will
   // block in here until then.
   @Override
   public void run() {
     try {
+      registerConfigurationObservers();
       Threads.setDaemonThreadRunning(new Thread(() -> TraceUtil.trace(() -> {
         try {
           int infoPort = putUpJettyServer();
@@ -993,14 +1001,9 @@ public class HMaster extends HRegionServer implements MasterServices {
     tableCFsUpdater.copyTableCFs();
 
     if (!maintenanceMode) {
-      // Add the Observer to delete quotas on table deletion before starting all CPs by
-      // default with quota support, avoiding if user specifically asks to not load this Observer.
-      if (QuotaUtil.isQuotaEnabled(conf)) {
-        updateConfigurationForQuotasObserver(conf);
-      }
-      // initialize master side coprocessors before we start handling requests
       status.setStatus("Initializing master coprocessors");
-      this.cpHost = new MasterCoprocessorHost(this, this.conf);
+      setQuotasObserver(conf);
+      initializeCoprocessorHost(conf);
     }
 
     // Checking if meta needs initializing.
@@ -4182,6 +4185,40 @@ public class HMaster extends HRegionServer implements MasterServices {
       allowedOnPath = ".*/src/test/.*")
   static void setDisableBalancerChoreForTest(boolean disable) {
     disableBalancerChoreForTest = disable;
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    super.onConfigurationChange(newConf);
+    // append the quotas observer back to the master coprocessor key
+    setQuotasObserver(newConf);
+    // update region server coprocessor if the configuration has changed.
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY) && !maintenanceMode
+    ) {
+      LOG.info("Update the master coprocessor(s) because the configuration has changed");
+      initializeCoprocessorHost(newConf);
+    }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
+    return configurationManager;
+  }
+
+  private void setQuotasObserver(Configuration conf) {
+    // Add the Observer to delete quotas on table deletion before starting all CPs by
+    // default with quota support, avoiding if user specifically asks to not load this Observer.
+    if (QuotaUtil.isQuotaEnabled(conf)) {
+      updateConfigurationForQuotasObserver(conf);
+    }
+  }
+
+  private void initializeCoprocessorHost(Configuration conf) {
+    // initialize master side coprocessors before we start handling requests
+    this.cpHost = new MasterCoprocessorHost(this, conf);
   }
 
 }

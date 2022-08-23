@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -514,7 +515,7 @@ public class HRegionServer extends Thread
   // chore for refreshing store files for secondary regions
   private StorefileRefresherChore storefileRefresher;
 
-  private RegionServerCoprocessorHost rsHost;
+  private volatile RegionServerCoprocessorHost rsHost;
 
   private RegionServerProcedureManagerHost rspmHost;
 
@@ -3829,6 +3830,15 @@ public class HRegionServer extends Thread
       Superusers.initialize(newConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
+    }
+
+    // update region server coprocessor if the configuration has changed.
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
+        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
+    ) {
+      LOG.info("Update region server coprocessors because the configuration has changed");
+      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
     }
   }
 

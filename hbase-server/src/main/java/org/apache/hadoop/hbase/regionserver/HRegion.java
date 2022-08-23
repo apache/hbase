@@ -166,6 +166,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
@@ -689,7 +690,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final MultiVersionConcurrencyControl mvcc;
 
   // Coprocessor host
-  private RegionCoprocessorHost coprocessorHost;
+  private volatile RegionCoprocessorHost coprocessorHost;
 
   private TableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
@@ -8343,6 +8344,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @Override
   public void onConfigurationChange(Configuration conf) {
     this.storeHotnessProtector.update(conf);
+    // update coprocessorHost if the configuration has changed.
+    if (
+      CoprocessorConfigurationUtil.checkConfigurationChange(getReadOnlyConfiguration(), conf,
+        CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY)
+    ) {
+      LOG.info("Update the system coprocessors because the configuration has changed");
+      decorateRegionConfiguration(conf);
+      this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
+    }
   }
 
   /**
