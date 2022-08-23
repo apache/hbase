@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.http.conf;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -27,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * A servlet to print out the running configuration data.
@@ -39,6 +43,9 @@ public class ConfServlet extends HttpServlet {
   private static final String FORMAT_JSON = "json";
   private static final String FORMAT_XML = "xml";
   private static final String FORMAT_PARAM = "format";
+  private static final List<String> MASK_PROPERTIES =
+    ImmutableList.of("password", "secret", "superuser");
+  static final String MASKED = "<masked>";
 
   /**
    * Return the Configuration of the daemon hosting this servlet. This is populated when the
@@ -83,13 +90,28 @@ public class ConfServlet extends HttpServlet {
    */
   static void writeResponse(Configuration conf, Writer out, String format)
     throws IOException, BadFormatException {
+    Configuration maskedConf = mask(conf);
     if (FORMAT_JSON.equals(format)) {
-      Configuration.dumpConfiguration(conf, out);
+      Configuration.dumpConfiguration(maskedConf, out);
     } else if (FORMAT_XML.equals(format)) {
-      conf.writeXml(out);
+      maskedConf.writeXml(out);
     } else {
       throw new BadFormatException("Bad format: " + format);
     }
+  }
+
+  static Configuration mask(Configuration conf) {
+    Configuration maskedConf = new Configuration(conf);
+    for (Map.Entry<String, String> entry : maskedConf) {
+      String key = entry.getKey();
+      for (String maskProperty : MASK_PROPERTIES) {
+        if (key.toLowerCase().contains(maskProperty)) {
+          maskedConf.set(key, MASKED);
+          break;
+        }
+      }
+    }
+    return maskedConf;
   }
 
   public static class BadFormatException extends Exception {
