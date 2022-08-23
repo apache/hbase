@@ -793,9 +793,11 @@ public class HttpServer implements FilterContainer {
     for (String enabledServlet : enabledServlets) {
       try {
         ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
-        Class<?> clz = Class.forName(servletConfig.getClazz());
-        addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
-          clz.asSubclass(HttpServlet.class));
+        if (servletConfig != null) {
+          Class<?> clz = Class.forName(servletConfig.getClazz());
+          addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+            clz.asSubclass(HttpServlet.class));
+        }
       } catch (Exception e) {
         /* shouldn't be fatal, so warn the user about it */
         LOG.warn("Couldn't register the servlet " + enabledServlet, e);
