@@ -27,13 +27,6 @@ These release notes cover new developer and user-facing incompatibilities, impor
 
 ---
 
-* [HBASE-27129](https://issues.apache.org/jira/browse/HBASE-27129) | *Major* | **Add a config that allows us to configure region-level storage policies**
-
-Add a 'hbase.hregion.block.storage.policy' so you can config storage policy at region level. This is useful when you want to control the storage policy for the directories other than CF directories, such as .splits, .recovered.edits, etc.
-
-
----
-
 * [HBASE-27089](https://issues.apache.org/jira/browse/HBASE-27089) | *Minor* | **Add “commons.crypto.stream.buffer.size” configuration**
 
 Add a 'commons.crypto.stream.buffer.size' config for setting the buffer size when doing AES crypto for RPC.
@@ -100,13 +93,6 @@ getAllRegionLocations will no longer add locations to the MetaCache which have n
 * [HBASE-26945](https://issues.apache.org/jira/browse/HBASE-26945) | *Minor* | **Quotas causes too much load on meta for large clusters**
 
 The quotas chore no longer scans meta to get information about region counts. Instead it uses the Admin API, which reads in-memory state in the HMaster and should scale well for large clusters.
-
-
----
-
-* [HBASE-27125](https://issues.apache.org/jira/browse/HBASE-27125) | *Minor* | **The batch size of cleaning expired mob files should have an upper bound**
-
-Configure "hbase.master.mob.cleaner.batch.size.upper.bound" to set a proper batch size of cleaning expired mob files, its default value is 10000.
 
 
 

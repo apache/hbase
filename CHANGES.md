@@ -20,15 +20,8 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.4.14 - Unreleased (as of 2022-08-22)
+## Release 2.4.14 - Unreleased (as of 2022-08-23)
 
-
-
-### NEW FEATURES:
-
-| JIRA | Summary | Priority | Component |
-|:---- |:---- | :--- |:---- |
-| [HBASE-27129](https://issues.apache.org/jira/browse/HBASE-27129) | Add a config that allows us to configure region-level storage policies |  Major | regionserver |
 
 
 ### IMPROVEMENTS:
@@ -49,7 +42,6 @@
 | [HBASE-27060](https://issues.apache.org/jira/browse/HBASE-27060) | Allow sharing connections between AggregationClient instances |  Major | . |
 | [HBASE-27146](https://issues.apache.org/jira/browse/HBASE-27146) | Avoid CellUtil.cloneRow in MetaCellComparator |  Major | meta, Offheaping, Performance |
 | [HBASE-26945](https://issues.apache.org/jira/browse/HBASE-26945) | Quotas causes too much load on meta for large clusters |  Minor | . |
-| [HBASE-27125](https://issues.apache.org/jira/browse/HBASE-27125) | The batch size of cleaning expired mob files should have an upper bound |  Minor | mob |
 
 
 ### BUG FIXES:
@@ -95,6 +87,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-27301](https://issues.apache.org/jira/browse/HBASE-27301) | Add Delete addFamilyVersion  timestamp verify |  Minor | Client |
 | [HBASE-27293](https://issues.apache.org/jira/browse/HBASE-27293) | Remove jenkins and personality scripts support for 1.x |  Major | scripts |
 | [HBASE-27220](https://issues.apache.org/jira/browse/HBASE-27220) | Apply the spotless format change in HBASE-27208 to our code base |  Major | . |
 | [HBASE-23330](https://issues.apache.org/jira/browse/HBASE-23330) |   Expose cluster ID for clients using it for delegation token based auth |  Major | Client, master |
