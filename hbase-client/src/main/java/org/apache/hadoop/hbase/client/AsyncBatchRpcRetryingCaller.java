@@ -487,6 +487,10 @@ class AsyncBatchRpcRetryingCaller<T> {
     } else {
       delayNs = getPauseTime(pauseNsToUse, tries - 1);
     }
+    Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
+    if(isServerOverloaded){
+      metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
+    }
     retryTimer.newTimeout(t -> groupAndSend(actions, tries + 1), delayNs, TimeUnit.NANOSECONDS);
   }
 

@@ -139,6 +139,10 @@ public abstract class AsyncRpcRetryingCaller<T> {
       delayNs = getPauseTime(pauseNsToUse, tries - 1);
     }
     tries++;
+    Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
+    if(HBaseServerException.isServerOverloaded(error)){
+      metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
+    }
     retryTimer.newTimeout(t -> doCall(), delayNs, TimeUnit.NANOSECONDS);
   }
 
