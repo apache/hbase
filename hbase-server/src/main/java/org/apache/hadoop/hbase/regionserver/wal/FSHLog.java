@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.apache.hadoop.hbase.regionserver.wal.WALActionsListener.RollRequestReason.SLOW_SYNC;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
@@ -284,9 +283,19 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     long txidWhenSync) {
     CompletableFuture<Long> future = new CompletableFuture<>();
     SyncRequest syncRequest = new SyncRequest(writer, shouldUseHSync, txidWhenSync, future);
-    this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
-    this.syncRunners[this.syncRunnerIndex].offer(syncRequest);
+    this.offerSyncRequest(syncRequest);
     return future;
+  }
+
+  private void offerSyncRequest(SyncRequest syncRequest) {
+    for (int i = 0; i < this.syncRunners.length; i++) {
+      this.syncRunnerIndex = (this.syncRunnerIndex + 1) % this.syncRunners.length;
+      if (this.syncRunners[this.syncRunnerIndex].offer(syncRequest)) {
+        return;
+      }
+    }
+    syncRequest.completableFuture
+      .completeExceptionally(new IOException("There is no available syncRunner."));
   }
 
   static class SyncRequest {
@@ -344,26 +353,22 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       this.syncRequests = new LinkedBlockingQueue<>(maxHandlersCount * 3);
     }
 
-    void offer(SyncRequest syncRequest) {
+    boolean offer(SyncRequest syncRequest) {
       if (this.shutDown) {
-        syncRequest.completableFuture.completeExceptionally(WAL_CLOSE_EXCEPTION);
-        return;
+        return false;
       }
-      try {
-        this.syncRequests.put(syncRequest);
-      } catch (InterruptedException e) {
-        LOG.warn("interrupted when put syncRequest", e);
-        syncRequest.completableFuture
-          .completeExceptionally(new InterruptedIOException("interrupted when put syncRequest"));
-        return;
+
+      if (!this.syncRequests.offer(syncRequest)) {
+        return false;
       }
 
       // recheck
       if (this.shutDown) {
         if (this.syncRequests.remove(syncRequest)) {
-          syncRequest.completableFuture.completeExceptionally(WAL_CLOSE_EXCEPTION);
+          return false;
         }
       }
+      return true;
     }
 
     private void completeSyncRequests(SyncRequest syncRequest, long syncedSequenceId) {
