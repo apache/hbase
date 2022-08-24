@@ -219,8 +219,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       if (script == null || script.isEmpty()) {
         return null;
       }
-      Shell.ShellCommandExecutor rsgroupMappingScript = new Shell.ShellCommandExecutor(new String[]
-          { script, "", "" }, null, null, scriptTimeout);
+      Shell.ShellCommandExecutor rsgroupMappingScript =
+        new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null, null, scriptTimeout);
 
       String[] exec = rsgroupMappingScript.getExecString();
       exec[1] = namespace;
