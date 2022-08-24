@@ -114,6 +114,15 @@ public class TestConfServlet {
   }
 
   @Test
+  public void testMask() {
+    final String passwordKey = "hbase.rpc.tls.keystore.password";
+    Configuration conf = getTestConf();
+    conf.set(passwordKey, "MyPassword");
+    Configuration maskedConf = ConfServlet.mask(conf);
+    assertEquals(ConfServlet.MASKED, maskedConf.get(passwordKey));
+  }
+
+  @Test
   public void testBadFormat() throws Exception {
     StringWriter sw = new StringWriter();
     try {
