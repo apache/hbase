@@ -1787,6 +1787,14 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.http.metrics.servlets</name>
+    <value>jmx,metrics,prometheus</value>
+    <description>
+      Comma separated list of servlet names to enable for metrics collection. Supported
+      servlets are jmx, metrics, prometheus
+    </description>
+  </property>
+  <property>
   	<name>hbase.replication.rpc.codec</name>
   	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
   	<description>
