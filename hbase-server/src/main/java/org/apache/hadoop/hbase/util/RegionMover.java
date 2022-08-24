@@ -119,8 +119,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     this.conn = ConnectionFactory.createConnection(conf);
     this.admin = conn.getAdmin();
 
-    // if master's hostname is ip, it indicates that the master/RS has enabled use-ip, we need to
-    // resolve the current hostname to ip to ensure that the RegionMover logic can be executed
+    // if the hostname of master is ip, it indicates that the master/RS has enabled use-ip, we need
+    // to resolve the current hostname to ip to ensure that the RegionMover logic can be executed
     // normally, see HBASE-27304 for details.
     ServerName master = admin.getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
     if (InetAddresses.isInetAddress(master.getHostname())) {
