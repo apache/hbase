@@ -52,7 +52,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
-import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -69,6 +68,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
@@ -152,6 +152,18 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
+
+  public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
+  public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };
+  private static final ImmutableMap<String,
+    ServletConfig> METRIC_SERVLETS = new ImmutableMap.Builder<String, ServletConfig>()
+      .put("jmx",
+        new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
+      .put("metrics",
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+      .put("prometheus", new ServletConfig("prometheus", "/prometheus",
+        "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
+      .build();
 
   private final AccessControlList adminsAcl;
 
@@ -750,16 +762,7 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addPrivilegedServlet("stacks", "/stacks", StackServlet.class);
     addPrivilegedServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    // Hadoop3 has moved completely to metrics2, and dropped support for Metrics v1's
-    // MetricsServlet (see HADOOP-12504). We'll using reflection to load if against hadoop2.
-    // Remove when we drop support for hbase on hadoop2.x.
-    try {
-      Class<?> clz = Class.forName("org.apache.hadoop.metrics.MetricsServlet");
-      addPrivilegedServlet("metrics", "/metrics", clz.asSubclass(HttpServlet.class));
-    } catch (Exception e) {
-      // do nothing
-    }
-    addPrivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
+
     // While we don't expect users to have sensitive information in their configuration, they
     // might. Give them an option to not expose the service configuration to all users.
     if (conf.getBoolean(HTTP_PRIVILEGED_CONF_KEY, HTTP_PRIVILEGED_CONF_DEFAULT)) {
@@ -782,6 +785,22 @@ public class HttpServer implements FilterContainer {
       addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
         + "not specified. Disabling /prof endpoint.");
+    }
+
+    /* register metrics servlets */
+    String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
+    for (String enabledServlet : enabledServlets) {
+      try {
+        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+        if (servletConfig != null) {
+          Class<?> clz = Class.forName(servletConfig.getClazz());
+          addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+            clz.asSubclass(HttpServlet.class));
+        }
+      } catch (Exception e) {
+        /* shouldn't be fatal, so warn the user about it */
+        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+      }
     }
   }
 
