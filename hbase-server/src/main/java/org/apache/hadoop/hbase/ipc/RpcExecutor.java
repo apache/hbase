@@ -443,7 +443,7 @@ public abstract class RpcExecutor {
         configKey = RpcScheduler.IPC_SERVER_PRIORITY_MAX_CALLQUEUE_LENGTH;
       } else if (name.toLowerCase(Locale.ROOT).contains("replication")) {
         configKey = RpcScheduler.IPC_SERVER_REPLICATION_MAX_CALLQUEUE_LENGTH;
-      } else if (name.toLowerCase(Locale.ROOT).contains("bulkLoad")) {
+      } else if (name.toLowerCase(Locale.ROOT).contains("bulkload")) {
         configKey = RpcScheduler.IPC_SERVER_BULKLOAD_MAX_CALLQUEUE_LENGTH;
       }
     }
