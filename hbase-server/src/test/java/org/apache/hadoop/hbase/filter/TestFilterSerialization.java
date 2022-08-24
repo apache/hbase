@@ -18,30 +18,60 @@
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.text.StringSubstitutor;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
+@RunWith(Parameterized.class)
 @Category({ FilterTests.class, MediumTests.class })
 public class TestFilterSerialization {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestFilterSerialization.class);
+
+  @Parameterized.Parameter(0)
+  public boolean allowFastReflectionFallthrough;
+
+  @Parameterized.Parameters(name = "{index}: allowFastReflectionFallthrough={0}")
+  public static Iterable<Object[]> data() {
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
+  }
+
+  @AfterClass
+  public static void afterClass() throws Exception {
+    // set back to true so that it doesn't affect any other tests
+    ProtobufUtil.setAllowFastReflectionFallthrough(true);
+  }
 
   @Test
   public void testColumnCountGetFilter() throws Exception {
@@ -322,4 +352,52 @@ public class TestFilterSerialization {
     assertTrue(columnValueFilter
       .areSerializedFieldsEqual(ProtobufUtil.toFilter(ProtobufUtil.toFilter(columnValueFilter))));
   }
+
+  /**
+   * Test that we can load and deserialize custom filters. Good to have generally, but also proves
+   * that this still works after HBASE-27276 despite not going through our fast function caches.
+   */
+  @Test
+  public void testCustomFilter() throws Exception {
+    Filter baseFilter = new PrefixFilter("foo".getBytes());
+    FilterProtos.Filter filterProto = ProtobufUtil.toFilter(baseFilter);
+    String className = "CustomLoadedFilter" + allowFastReflectionFallthrough;
+    filterProto = filterProto.toBuilder().setName(className).build();
+
+    Configuration conf = HBaseConfiguration.create();
+    HBaseTestingUtil testUtil = new HBaseTestingUtil();
+    String dataTestDir = testUtil.getDataTestDir().toString();
+
+    // First make sure the test bed is clean, delete any pre-existing class.
+    // Below toComparator call is expected to fail because the comparator is not loaded now
+    ClassLoaderTestHelper.deleteClass(className, dataTestDir, conf);
+    try {
+      ProtobufUtil.toFilter(filterProto);
+      fail("expected to fail");
+    } catch (DoNotRetryIOException e) {
+      // do nothing, this is expected
+    }
+
+    // Write a jar to be loaded into the classloader
+    String code = StringSubstitutor.replace(
+      IOUtils.toString(getClass().getResourceAsStream("/CustomLoadedFilter.java"),
+        Charset.defaultCharset()),
+      Collections.singletonMap("suffix", allowFastReflectionFallthrough));
+    ClassLoaderTestHelper.buildJar(dataTestDir, className, code,
+      ClassLoaderTestHelper.localDirPath(conf));
+
+    // Disallow fallthrough at first, we expect below to fail
+    ProtobufUtil.setAllowFastReflectionFallthrough(false);
+    try {
+      ProtobufUtil.toFilter(filterProto);
+      fail("expected to fail");
+    } catch (DoNotRetryIOException e) {
+      // do nothing, this is expected
+    }
+    ProtobufUtil.setAllowFastReflectionFallthrough(true);
+    // Now the deserialization should pass
+    ProtobufUtil.toFilter(filterProto);
+
+  }
+
 }
