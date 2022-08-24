@@ -147,23 +147,21 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
       "hbase.rsgroup.table.mapping.script.timeout";
 
-    private Shell.ShellCommandExecutor rsgroupMappingScript;
+    private final String script;
+    private final long scriptTimeout;
 
     RSGroupMappingScript(Configuration conf) {
-      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
-      if (script == null || script.isEmpty()) {
-        return;
-      }
-
-      rsgroupMappingScript = new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null,
-        null, conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
-      );
+      script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      scriptTimeout = conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000); // 5 seconds
     }
 
     String getRSGroup(String namespace, String tablename) {
-      if (rsgroupMappingScript == null) {
+      if (script == null || script.isEmpty()) {
         return null;
       }
+      Shell.ShellCommandExecutor rsgroupMappingScript =
+        new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null, null, scriptTimeout);
+
       String[] exec = rsgroupMappingScript.getExecString();
       exec[1] = namespace;
       exec[2] = tablename;
