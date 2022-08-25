@@ -831,6 +831,18 @@ Restart the Master. Master now accepts both TLS/non-TLS connections and works wi
 
 [start=3]
 . Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support.
+Client mode here will ensure that RegionServer's communication to Master is encrypted.
+
+[WARNING]
+====
+*Replication*
+
+If you have read replicas enabled in your cluster or replication between two different clusters, you
+have to break this into two steps. Secure communication has to be enabled on the _server side_ first with plaintext
+support and once all Region Servers are upgraded you can repeat the upgrade by enabling _client side_ as well.
+
+You have to prepare all Region Servers for secure communication before upgrading the client side.
+====
 
 [source,xml]
 ----
@@ -849,11 +861,21 @@ Restart the Master. Master now accepts both TLS/non-TLS connections and works wi
 ...keystore / truststore setup ...
 ----
 
-Restart RSs in rolling restart fashion. RSs accepts both TLS/non-TLS communication.
+Restart Region Servers in rolling restart fashion. They send requests with TLS and accept both TLS and non-TLS communication.
 
 [start=4]
 . Enable secure communication on the clients.
 
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+...truststore setup ...
+----
+
+[start=5]
 . Enable client-mode TLS on master and disable plaintext mode.
 
 [source,xml]
@@ -879,7 +901,7 @@ Restart Master.
 restart fashion.
 
 WARNING: Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able to communicate
-with other clusters which have TLS enabled. For example, this would impact intra-cluster replication.
+with other clusters which have TLS enabled. For example, this would impact inter-cluster replication.
 
 === Additional configuration
 
