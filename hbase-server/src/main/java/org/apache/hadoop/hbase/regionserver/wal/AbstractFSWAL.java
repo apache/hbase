@@ -1484,6 +1484,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }
     }
     postSync(System.nanoTime() - startTimeNs, finishSync());
+    /**
+     * This method is used to be compatible with the original logic of {@link FSHLog}.
+     */
     checkSlowSyncCount();
     if (trySetReadyForRolling()) {
       // we have just finished a roll, then do not need to check for log rolling, the writer will be
@@ -1535,6 +1538,13 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       }, consumeExecutor);
   }
 
+  /**
+   * This method is to adapt {@link FSHLog} and {@link ASyncFSWAL},for {@link ASyncFSWAL},we use
+   * {@link AbstractFSWAL#highestProcessedAppendTxid} at the point we calling
+   * {@link AsyncFSWAL#doWriterSync} method as successful syncedTxid,for {@link FSHLog},because we
+   * use multi-thread {@link FSHLog.SyncRunner}s, we used the result of {@link CompletableFuture} as
+   * successful syncedTxid.
+   */
   protected long getSyncedTxid(long processedTxid, long completableFutureResult) {
     return processedTxid;
   }
@@ -1608,7 +1618,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     boolean addedToUnackedAppends = false;
     for (Iterator<FSWALEntry> iter = toWriteAppends.iterator(); iter.hasNext();) {
       FSWALEntry entry = iter.next();
-      // For FSHog,here may throws IOException
+      /**
+       * For {@link FSHog},here may throws IOException,but for {@link AsyncFSWAL}, here would not
+       * throw any IOException.
+       */
       boolean appended = appendEntry(writer, entry);
       newHighestProcessedAppendTxid = entry.getTxid();
       iter.remove();
@@ -1710,10 +1723,17 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       waitingConsumePayloadsGatingSequence.set(nextCursor);
     }
 
+    /**
+     * This method is used to be compatible with the original logic of {@link AsyncFSWAL}.
+     */
     preAppendAndSync();
     try {
       appendAndSync();
     } catch (IOException exception) {
+      /**
+       * For {@link FSHog},here may catch IOException,but for {@link AsyncFSWAL}, the code doesn't
+       * go in here.
+       */
       LOG.error("appendAndSync throws IOException.", exception);
       onAppendEntryFailed(exception);
       return;
@@ -1898,6 +1918,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     long oldFileLen = closeWriter(this.writer, oldPath);
     logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
+    /**
+     * Here is used for {@link AsyncFSWAL} and {@link FSHLog} to set the under layer filesystem
+     * output after writer is replaced.
+     */
     onWriterReplaced(nextWriter);
     this.fileLengthAtLastSync = nextWriter.getLength();
     this.highestProcessedAppendTxidAtLastSync = 0L;
@@ -1920,6 +1944,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   protected void doShutdown() throws IOException {
     waitForSafePoint();
+    /**
+     * For {@link FSHLog},here would shutdown {@link FSHLog.SyncRunner}.
+     */
     doCleanUp();
     closeWriter(this.writer, getOldPath());
     this.writer = null;
