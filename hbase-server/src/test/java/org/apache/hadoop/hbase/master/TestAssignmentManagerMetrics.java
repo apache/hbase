@@ -74,8 +74,8 @@ public class TestAssignmentManagerMetrics {
     LOG.info("Starting cluster");
     Configuration conf = TEST_UTIL.getConfiguration();
 
-    // Disable sanity check for coprocessor
-    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
+    // Enable sanity check for coprocessor, so that region reopen fails on the RS
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
 
     // set RIT stuck warning threshold to a small value
     conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
@@ -100,6 +100,8 @@ public class TestAssignmentManagerMetrics {
     TEST_UTIL.startMiniCluster(1);
     CLUSTER = TEST_UTIL.getHBaseCluster();
     MASTER = CLUSTER.getMaster();
+    // Disable sanity check for coprocessor, so that modify table runs on the HMaster
+    MASTER.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
   }
 
   @AfterClass
@@ -133,7 +135,6 @@ public class TestAssignmentManagerMetrics {
         amSource);
 
       // alter table with a non-existing coprocessor
-
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(TABLENAME)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
         .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder("com.foo.FooRegionObserver")
