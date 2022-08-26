@@ -37,6 +37,7 @@ import java.util.function.Function;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
@@ -98,6 +99,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   protected CP compactionPolicy;
   protected C compactor;
   protected SFM storeFileManager;
+
+  private final BloomFilterMetrics bloomFilterMetrics = new BloomFilterMetrics();
   private Configuration conf;
   private StoreContext ctx;
   private RegionCoprocessorHost coprocessorHost;
@@ -143,30 +146,22 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     storeLock.writeLock().unlock();
   }
 
-  /**
-   * @return Compaction policy to use.
-   */
+  /** Returns Compaction policy to use. */
   public CompactionPolicy getCompactionPolicy() {
     return this.compactionPolicy;
   }
 
-  /**
-   * @return Compactor to use.
-   */
+  /** Returns Compactor to use. */
   public Compactor<?> getCompactor() {
     return this.compactor;
   }
 
-  /**
-   * @return Store file manager to use.
-   */
+  /** Returns Store file manager to use. */
   public StoreFileManager getStoreFileManager() {
     return this.storeFileManager;
   }
 
-  /**
-   * @return Store flusher to use.
-   */
+  /** Returns Store flusher to use. */
   public StoreFlusher getStoreFlusher() {
     return this.storeFlusher;
   }
@@ -225,8 +220,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
 
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
-    HStoreFile storeFile =
-      new HStoreFile(info, ctx.getFamily().getBloomFilterType(), ctx.getCacheConf());
+    HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
+      ctx.getCacheConf(), bloomFilterMetrics);
     storeFile.initReader();
     return storeFile;
   }
@@ -548,5 +543,9 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       allowedOnPath = ".*/TestHStore.java")
   ReadWriteLock getLock() {
     return storeLock;
+  }
+
+  public BloomFilterMetrics getBloomFilterMetrics() {
+    return bloomFilterMetrics;
   }
 }

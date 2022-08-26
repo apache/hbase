@@ -146,13 +146,13 @@ public class TestCoprocessorEndpoint {
     Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], Long> results =
       sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0], ROWS[ROWS.length - 1]);
-    int sumResult = 0;
-    int expectedResult = 0;
+    long sumResult = 0;
+    long expectedResult = 0;
     for (Map.Entry<byte[], Long> e : results.entrySet()) {
       LOG.info("Got value " + e.getValue() + " for region " + Bytes.toStringBinary(e.getKey()));
       sumResult += e.getValue();
     }
-    for (int i = 0; i < ROWSIZE; i++) {
+    for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
     assertEquals("Invalid result", expectedResult, sumResult);
@@ -271,6 +271,7 @@ public class TestCoprocessorEndpoint {
         String> results = table.coprocessorService(TestRpcServiceProtos.TestProtobufRpcProto.class,
           ROWS[0], ROWS[ROWS.length - 1],
           new Batch.Call<TestRpcServiceProtos.TestProtobufRpcProto, String>() {
+            @Override
             public String call(TestRpcServiceProtos.TestProtobufRpcProto instance)
               throws IOException {
               CoprocessorRpcUtils.BlockingRpcCallback<TestProtos.EchoResponseProto> callback =

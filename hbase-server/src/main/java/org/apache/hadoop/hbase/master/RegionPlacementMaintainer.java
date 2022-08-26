@@ -133,9 +133,7 @@ public class RegionPlacementMaintainer implements Closeable {
     }
   }
 
-  /**
-   * @return the new RegionAssignmentSnapshot
-   */
+  /** Returns the new RegionAssignmentSnapshot */
   public SnapshotOfRegionAssignmentFromMeta getRegionAssignmentSnapshot() throws IOException {
     SnapshotOfRegionAssignmentFromMeta currentAssignmentShapshot =
       new SnapshotOfRegionAssignmentFromMeta(ConnectionFactory.createConnection(conf));

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -29,10 +32,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.http.HttpServer.Builder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * This is a base class for functional tests of the {@link HttpServer}. The methods are static for
  * other classes to import statically.
  */
-public class HttpServerFunctionalTest extends Assert {
+public class HttpServerFunctionalTest {
   private static final Logger LOG = LoggerFactory.getLogger(HttpServerFunctionalTest.class);
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
@@ -116,16 +117,14 @@ public class HttpServerFunctionalTest extends Assert {
   /**
    * Prepare the test webapp by creating the directory from the test properties fail if the
    * directory cannot be created.
+   * @throws IOException    if an error occurred
    * @throws AssertionError if a condition was not met
    */
-  protected static void prepareTestWebapp() {
+  protected static void prepareTestWebapp() throws IOException {
     String webapps = System.getProperty(TEST_BUILD_WEBAPPS, BUILD_WEBAPPS_DIR);
     File testWebappDir = new File(webapps + File.separatorChar + TEST);
-    try {
-      if (!testWebappDir.exists()) {
-        fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
-      }
-    } catch (IOException e) {
+    if (!testWebappDir.exists()) {
+      fail("Test webapp dir " + testWebappDir.getCanonicalPath() + " missing");
     }
   }
 
@@ -168,7 +167,7 @@ public class HttpServerFunctionalTest extends Assert {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
   }
 
-  private static Builder localServerBuilder(String webapp) {
+  private static HttpServer.Builder localServerBuilder(String webapp) {
     return new HttpServer.Builder().setName(webapp).addEndpoint(URI.create("http://localhost:0"));
   }
 
@@ -232,7 +231,7 @@ public class HttpServerFunctionalTest extends Assert {
     byte[] buffer = new byte[64 * 1024];
     int len = in.read(buffer);
     while (len > 0) {
-      out.append(new String(buffer, 0, len));
+      out.append(new String(buffer, 0, len, StandardCharsets.UTF_8));
       len = in.read(buffer);
     }
     return out.toString();

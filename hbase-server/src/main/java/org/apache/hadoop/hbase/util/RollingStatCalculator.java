@@ -79,16 +79,12 @@ public class RollingStatCalculator {
     numberOfDataValues--;
   }
 
-  /**
-   * @return mean of the data values that are in the current list of data values
-   */
+  /** Returns mean of the data values that are in the current list of data values */
   public double getMean() {
     return this.currentSum / (double) numberOfDataValues;
   }
 
-  /**
-   * @return deviation of the data values that are in the current list of data values
-   */
+  /** Returns deviation of the data values that are in the current list of data values */
   public double getDeviation() {
     double variance = (currentSqrSum - (currentSum * currentSum) / (double) (numberOfDataValues))
       / numberOfDataValues;

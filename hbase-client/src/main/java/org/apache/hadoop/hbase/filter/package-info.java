@@ -20,15 +20,14 @@
 /**
  * Provides row-level filters applied to HRegion scan results during calls to
  * {@link org.apache.hadoop.hbase.client.ResultScanner#next()}.
-
-<p>
-Filters run the extent of a table unless you wrap your filter in a
-{@link org.apache.hadoop.hbase.filter.WhileMatchFilter}.
-The latter returns as soon as the filter stops matching.
-</p>
-<p>Do not rely on filters carrying state across rows; its not reliable in current
-hbase as we have no handlers in place for when regions split, close or server
-crashes.
-</p>
-*/
+ *
+ * <p>
+ * Filters run the extent of a table unless you wrap your filter in a
+ * {@link org.apache.hadoop.hbase.filter.WhileMatchFilter}.
+ * The latter returns as soon as the filter stops matching.
+ * </p>
+ * <p>Do not rely on filters carrying state across rows; its not reliable in current
+ * hbase as we have no handlers in place for when regions split, close or server
+ * crashes.
+ */
 package org.apache.hadoop.hbase.filter;

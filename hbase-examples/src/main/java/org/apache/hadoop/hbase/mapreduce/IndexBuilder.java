@@ -131,6 +131,7 @@ public class IndexBuilder extends Configured implements Tool {
     return job;
   }
 
+  @Override
   public int run(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create(getConf());
     if (args.length < 3) {

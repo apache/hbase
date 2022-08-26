@@ -51,9 +51,7 @@ public interface TableProcedureInterface {
     MERGED_REGIONS_GC/* region operations */
   }
 
-  /**
-   * @return the name of the table the procedure is operating on
-   */
+  /** Returns the name of the table the procedure is operating on */
   TableName getTableName();
 
   /**

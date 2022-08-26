@@ -87,8 +87,8 @@ public class TestRegionInfoDisplay {
     String firstPartOrig = origDesc.substring(0, origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
       origDesc.indexOf(Bytes.toStringBinary(startKey)) + Bytes.toStringBinary(startKey).length());
-    assert (firstPart.equals(firstPartOrig));
-    assert (secondPart.equals(secondPartOrig));
+    Assert.assertTrue(firstPart.equals(firstPartOrig));
+    Assert.assertTrue(secondPart.equals(secondPartOrig));
   }
 
   private void checkEquality(RegionInfo ri, Configuration conf) throws IOException {

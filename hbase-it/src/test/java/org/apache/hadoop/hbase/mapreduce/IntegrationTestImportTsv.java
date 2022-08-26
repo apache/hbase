@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -59,6 +58,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * Validate ImportTsv + BulkLoadFiles on a distributed cluster.
@@ -83,13 +84,13 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
       private static final long serialVersionUID = 1L;
       {
         byte[] family = Bytes.toBytes("d");
-        for (String line : simple_tsv.split("\n")) {
+        for (String line : Splitter.on('\n').split(simple_tsv)) {
           String[] row = line.split("\t");
           byte[] key = Bytes.toBytes(row[0]);
           long ts = Long.parseLong(row[1]);
           byte[][] fields = { Bytes.toBytes(row[2]), Bytes.toBytes(row[3]) };
-          add(new KeyValue(key, family, fields[0], ts, Type.Put, fields[0]));
-          add(new KeyValue(key, family, fields[1], ts, Type.Put, fields[1]));
+          add(new KeyValue(key, family, fields[0], ts, KeyValue.Type.Put, fields[0]));
+          add(new KeyValue(key, family, fields[1], ts, KeyValue.Type.Put, fields[1]));
         }
       }
     };
@@ -98,10 +99,12 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
   // JUnit/Maven or by main when run from the CLI.
   protected static IntegrationTestingUtility util = null;
 
+  @Override
   public Configuration getConf() {
     return util.getConfiguration();
   }
 
+  @Override
   public void setConf(Configuration conf) {
     LOG.debug("Ignoring setConf call.");
   }
@@ -207,6 +210,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
     LOG.info("testGenerateAndLoad completed successfully.");
   }
 
+  @Override
   public int run(String[] args) throws Exception {
     if (args.length != 0) {
       System.err.println(format("%s [genericOptions]", NAME));

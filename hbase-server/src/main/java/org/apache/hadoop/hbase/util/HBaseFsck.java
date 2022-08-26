@@ -354,9 +354,7 @@ public class HBaseFsck extends Configured implements Closeable {
     zkw = createZooKeeperWatcher();
   }
 
-  /**
-   * @return A retry counter factory configured for retrying lock file creation.
-   */
+  /** Returns A retry counter factory configured for retrying lock file creation. */
   public static RetryCounterFactory createLockRetryCounterFactory(Configuration conf) {
     return new RetryCounterFactory(
       conf.getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
@@ -366,9 +364,7 @@ public class HBaseFsck extends Configured implements Closeable {
         DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
   }
 
-  /**
-   * @return A retry counter factory configured for retrying znode creation.
-   */
+  /** Returns A retry counter factory configured for retrying znode creation. */
   private static RetryCounterFactory createZnodeRetryCounterFactory(Configuration conf) {
     return new RetryCounterFactory(
       conf.getInt("hbase.hbck.createznode.attempts", DEFAULT_MAX_CREATE_ZNODE_ATTEMPTS),
@@ -378,9 +374,7 @@ public class HBaseFsck extends Configured implements Closeable {
         DEFAULT_CREATE_ZNODE_ATTEMPT_MAX_SLEEP_TIME));
   }
 
-  /**
-   * @return Return the tmp dir this tool writes too.
-   */
+  /** Returns Return the tmp dir this tool writes too. */
   @InterfaceAudience.Private
   public static Path getTmpDir(Configuration conf) throws IOException {
     return new Path(CommonFSUtils.getRootDir(conf), HConstants.HBASE_TEMP_DIRECTORY);
@@ -396,9 +390,7 @@ public class HBaseFsck extends Configured implements Closeable {
       this.conf = conf;
     }
 
-    /**
-     * @return Will be <code>null</code> unless you call {@link #call()}
-     */
+    /** Returns Will be <code>null</code> unless you call {@link #call()} */
     Path getHbckLockPath() {
       return this.hbckLockPath;
     }

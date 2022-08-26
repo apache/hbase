@@ -35,6 +35,7 @@ public class Addressing {
   public static final String HOSTNAME_PORT_SEPARATOR = ":";
 
   /**
+   * Create a socket address
    * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return An InetSocketInstance
    */
@@ -44,6 +45,7 @@ public class Addressing {
   }
 
   /**
+   * Create a host-and-port string
    * @param hostname Server hostname
    * @param port     Server port
    * @return Returns a concatenation of <code>hostname</code> and <code>port</code> in following
@@ -56,6 +58,7 @@ public class Addressing {
   }
 
   /**
+   * Parse the hostname portion of a host-and-port string
    * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return The hostname portion of <code>hostAndPort</code>
    */
@@ -68,6 +71,7 @@ public class Addressing {
   }
 
   /**
+   * Parse the port portion of a host-and-port string
    * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return The port portion of <code>hostAndPort</code>
    */
@@ -163,9 +167,7 @@ public class Addressing {
       : address.toString();
   }
 
-  /**
-   * Interface for AddressSelectionCondition to check if address is acceptable
-   */
+  /** Interface for AddressSelectionCondition to check if address is acceptable */
   public interface AddressSelectionCondition {
     /**
      * Condition on which to accept inet address

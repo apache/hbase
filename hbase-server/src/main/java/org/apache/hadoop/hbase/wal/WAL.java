@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.replication.regionserver.WALFileLengthProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -133,18 +134,21 @@ public interface WAL extends Closeable, WALFileLengthProvider {
 
   /**
    * Sync what we have in the WAL.
+   * @throws when timeout, it would throw {@link WALSyncTimeoutIOException}.
    */
   void sync() throws IOException;
 
   /**
    * Sync the WAL if the txId was not already sync'd.
    * @param txid Transaction id to sync to.
+   * @throws when timeout, it would throw {@link WALSyncTimeoutIOException}.
    */
   void sync(long txid) throws IOException;
 
   /**
    * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
    *                  vs hsync.
+   * @throws when timeout, it would throw {@link WALSyncTimeoutIOException}.
    */
   default void sync(boolean forceSync) throws IOException {
     sync();
@@ -154,6 +158,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * @param txid      Transaction id to sync to.
    * @param forceSync Flag to force sync rather than flushing to the buffer. Example - Hadoop hflush
    *                  vs hsync.
+   * @throws when timeout, it would throw {@link WALSyncTimeoutIOException}.
    */
   default void sync(long txid, boolean forceSync) throws IOException {
     sync(txid);
@@ -198,9 +203,7 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    */
   void abortCacheFlush(byte[] encodedRegionName);
 
-  /**
-   * @return Coprocessor host.
-   */
+  /** Returns Coprocessor host. */
   WALCoprocessorHost getCoprocessorHost();
 
   /**

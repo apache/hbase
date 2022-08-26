@@ -97,6 +97,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for match
      * @param family    family to check
      * @param qualifier qualifier to check
      * @param compareOp comparison operator to use
@@ -113,6 +114,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Check for match
      * @param filter filter to check
      * @return the CheckAndMutate object
      */
@@ -122,6 +124,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Specify a timerange
      * @param timeRange time range to check
      * @return the CheckAndMutate object
      */
@@ -144,6 +147,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object
      * @param put data to put if check succeeds
      * @return a CheckAndMutate object
      */
@@ -157,6 +161,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object
      * @param delete data to delete if check succeeds
      * @return a CheckAndMutate object
      */
@@ -170,6 +175,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with an Increment to commit if the check succeeds.
      * @param increment data to increment if check succeeds
      * @return a CheckAndMutate object
      */
@@ -183,6 +189,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with an Append to commit if the check succeeds.
      * @param append data to append if check succeeds
      * @return a CheckAndMutate object
      */
@@ -196,6 +203,7 @@ public final class CheckAndMutate implements Row {
     }
 
     /**
+     * Build the CheckAndMutate object with a RowMutations to commit if the check succeeds.
      * @param mutations mutations to perform if check succeeds
      * @return a CheckAndMutate object
      */
@@ -250,66 +258,48 @@ public final class CheckAndMutate implements Row {
     this.action = action;
   }
 
-  /**
-   * @return the row
-   */
+  /** Returns the row */
   @Override
   public byte[] getRow() {
     return row;
   }
 
-  /**
-   * @return the family to check
-   */
+  /** Returns the family to check */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier to check
-   */
+  /** Returns the qualifier to check */
   public byte[] getQualifier() {
     return qualifier;
   }
 
-  /**
-   * @return the comparison operator
-   */
+  /** Returns the comparison operator */
   public CompareOperator getCompareOp() {
     return op;
   }
 
-  /**
-   * @return the expected value
-   */
+  /** Returns the expected value */
   public byte[] getValue() {
     return value;
   }
 
-  /**
-   * @return the filter to check
-   */
+  /** Returns the filter to check */
   public Filter getFilter() {
     return filter;
   }
 
-  /**
-   * @return whether this has a filter or not
-   */
+  /** Returns whether this has a filter or not */
   public boolean hasFilter() {
     return filter != null;
   }
 
-  /**
-   * @return the time range to check
-   */
+  /** Returns the time range to check */
   public TimeRange getTimeRange() {
     return timeRange;
   }
 
-  /**
-   * @return the action done if check succeeds
-   */
+  /** Returns the action done if check succeeds */
   public Row getAction() {
     return action;
   }

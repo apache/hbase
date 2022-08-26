@@ -504,9 +504,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return choreService;
   }
 
-  /**
-   * @return Return table descriptors implementation.
-   */
+  /** Returns Return table descriptors implementation. */
   public TableDescriptors getTableDescriptors() {
     return this.tableDescriptors;
   }
@@ -534,9 +532,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return ConnectionFactory.createConnection(conf, null, user);
   }
 
-  /**
-   * @return Return the rootDir.
-   */
+  /** Returns Return the rootDir. */
   public Path getDataRootDir() {
     return dataRootDir;
   }
@@ -546,30 +542,22 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return dataFs;
   }
 
-  /**
-   * @return Return the walRootDir.
-   */
+  /** Returns Return the walRootDir. */
   public Path getWALRootDir() {
     return walRootDir;
   }
 
-  /**
-   * @return Return the walFs.
-   */
+  /** Returns Return the walFs. */
   public FileSystem getWALFileSystem() {
     return walFs;
   }
 
-  /**
-   * @return True if the cluster is up.
-   */
+  /** Returns True if the cluster is up. */
   public boolean isClusterUp() {
     return !clusterMode() || this.clusterStatusTracker.isClusterUp();
   }
 
-  /**
-   * @return time stamp in millis of when this server was started
-   */
+  /** Returns time stamp in millis of when this server was started */
   public long getStartcode() {
     return this.startcode;
   }

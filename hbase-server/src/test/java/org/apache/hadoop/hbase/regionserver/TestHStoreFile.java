@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.BLOCK_COMPRESSED_SIZE_PREDICATOR;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,18 +63,24 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.PreviousBlockCompressionRatePredicator;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.UncompressedBlockSizePredicator;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -179,6 +187,24 @@ public class TestHStoreFile {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
           writer.append(new KeyValue(b, fam, qualifier, now, b));
+        }
+      }
+    } finally {
+      writer.close();
+    }
+  }
+
+  public static void writeLargeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier,
+    int rounds) throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    try {
+      for (int i = 0; i < rounds; i++) {
+        for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
+          for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
+            byte[] b = new byte[] { (byte) d, (byte) e };
+            byte[] key = new byte[] { (byte) i };
+            writer.append(new KeyValue(key, fam, qualifier, now, b));
+          }
         }
       }
     } finally {
@@ -1141,4 +1167,104 @@ public class TestHStoreFile {
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
     assertArrayEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
   }
+
+  @Test
+  public void testDataBlockSizeEncoded() throws Exception {
+    // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
+    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path path = new Path(dir, "1234567890");
+
+    DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
+
+    conf.setDouble("hbase.writer.unified.encoded.blocksize.ratio", 1);
+
+    cacheConf = new CacheConfig(conf);
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo).build();
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
+    writeStoreFile(writer);
+
+    HStoreFile storeFile =
+      new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    StoreFileReader reader = storeFile.getReader();
+
+    Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
+    byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
+    assertEquals(dataBlockEncoderAlgo.name(), Bytes.toString(value));
+
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
+
+    FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
+    long fileSize = fs.getFileStatus(writer.getPath()).getLen();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
+    HFileBlock block;
+    while (offset <= max) {
+      block = fReader.readBlock(offset, -1, /* cacheBlock */
+        false, /* pread */ false, /* isCompaction */ false, /* updateCacheMetrics */
+        false, null, null);
+      offset += block.getOnDiskSizeWithHeader();
+      double diff = block.getOnDiskSizeWithHeader() - BLOCKSIZE_SMALL;
+      if (offset <= max) {
+        assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
+      }
+    }
+  }
+
+  @Test
+  public void testDataBlockSizeCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR,
+      PreviousBlockCompressionRatePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(11,
+      (s, c) -> (c > 1 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
+  }
+
+  @Test
+  public void testDataBlockSizeUnCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, UncompressedBlockSizePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(200, (s, c) -> s < BLOCKSIZE_SMALL * 10);
+  }
+
+  private void testDataBlockSizeWithCompressionRatePredicator(int expectedBlockCount,
+    BiFunction<Integer, Integer, Boolean> validation) throws Exception {
+    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path path = new Path(dir, "1234567890");
+    DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
+    cacheConf = new CacheConfig(conf);
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo)
+        .withCompression(Compression.Algorithm.GZ).build();
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
+    writeLargeStoreFile(writer, Bytes.toBytes(name.getMethodName()),
+      Bytes.toBytes(name.getMethodName()), 200);
+    writer.close();
+    HStoreFile storeFile =
+      new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
+    FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
+    long fileSize = fs.getFileStatus(writer.getPath()).getLen();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
+    HFileBlock block;
+    int blockCount = 0;
+    while (offset <= max) {
+      block = fReader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+        /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
+      offset += block.getOnDiskSizeWithHeader();
+      blockCount++;
+      assertTrue(validation.apply(block.getUncompressedSizeWithoutHeader(), blockCount));
+    }
+    assertEquals(expectedBlockCount, blockCount);
+  }
+
 }

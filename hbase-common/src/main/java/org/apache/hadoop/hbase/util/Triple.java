@@ -61,11 +61,11 @@ public class Triple<A, B, C> {
 
     Triple<?, ?, ?> otherTriple = (Triple<?, ?, ?>) obj;
 
-    if (first != otherTriple.first && (first != null && !(first.equals(otherTriple.first))))
+    if (first != otherTriple.first && (first != null && !first.equals(otherTriple.first)))
       return false;
-    if (second != otherTriple.second && (second != null && !(second.equals(otherTriple.second))))
+    if (second != otherTriple.second && (second != null && !second.equals(otherTriple.second)))
       return false;
-    if (third != otherTriple.third && (third != null && !(third.equals(otherTriple.third))))
+    if (third != otherTriple.third && (third != null && !third.equals(otherTriple.third)))
       return false;
 
     return true;

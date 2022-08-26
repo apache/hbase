@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -91,13 +92,18 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
 
   @Override
   protected void prePeerModification(MasterProcedureEnv env)
-    throws IOException, ReplicationException, InterruptedException {
+    throws IOException, ReplicationException, ProcedureSuspendedException {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
     }
     if (peerConfig.isSyncReplication()) {
-      env.getReplicationPeerManager().acquireSyncReplicationPeerLock();
+      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+        throw suspend(env.getMasterConfiguration(),
+          backoff -> LOG.warn(
+            "Can not acquire sync replication peer lock for peer {}, sleep {} secs", peerId,
+            backoff / 1000));
+      }
     }
     env.getReplicationPeerManager().preAddPeer(peerId, peerConfig);
   }
@@ -116,6 +122,20 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
     MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       env.getMasterCoprocessorHost().postAddReplicationPeer(peerId, peerConfig);
+    }
+  }
+
+  @Override
+  protected void afterReplay(MasterProcedureEnv env) {
+    if (getCurrentState() == getInitialState()) {
+      // will try to acquire the lock when executing the procedure, no need to acquire it here
+      return;
+    }
+    if (peerConfig.isSyncReplication()) {
+      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+        throw new IllegalStateException(
+          "Can not acquire sync replication peer lock for peer " + peerId);
+      }
     }
   }
 

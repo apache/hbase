@@ -22,10 +22,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsReplicationSourceFactoryImpl implements MetricsReplicationSourceFactory {
 
+  @SuppressWarnings("ImmutableEnumChecker")
   private static enum SourceHolder {
     INSTANCE;
 
-    final MetricsReplicationSourceImpl source = new MetricsReplicationSourceImpl();
+    private final MetricsReplicationSourceImpl source = new MetricsReplicationSourceImpl();
   }
 
   @Override

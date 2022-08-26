@@ -46,6 +46,7 @@ public class MutableHistogram extends MutableMetric implements MetricHistogram {
     this.histogram = new HistogramImpl();
   }
 
+  @Override
   public void add(final long val) {
     histogram.update(val);
   }

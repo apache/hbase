@@ -134,6 +134,7 @@ public class ChoreService {
   }
 
   /**
+   * Schedule a chore.
    * @param chore Chore to be scheduled. If the chore is already scheduled with another ChoreService
    *              instance, that schedule will be cancelled (i.e. a Chore can only ever be scheduled
    *              with a single ChoreService instance).
@@ -228,9 +229,7 @@ public class ChoreService {
     }
   }
 
-  /**
-   * @return true when the chore is scheduled with the implementer of this interface
-   */
+  /** Returns true when the chore is scheduled with the implementer of this interface */
   @InterfaceAudience.Private
   public synchronized boolean isChoreScheduled(ScheduledChore chore) {
     return chore != null && scheduledChores.containsKey(chore)
@@ -248,24 +247,20 @@ public class ChoreService {
     rescheduleChore(chore);
   }
 
-  /**
-   * @return number of chores that this service currently has scheduled
-   */
+  /** Returns number of chores that this service currently has scheduled */
   int getNumberOfScheduledChores() {
     return scheduledChores.size();
   }
 
   /**
-   * @return number of chores that this service currently has scheduled that are missing their
-   *         scheduled start time
+   * Return number of chores that this service currently has scheduled that are missing their
+   * scheduled start time
    */
   int getNumberOfChoresMissingStartTime() {
     return choresMissingStartTime.size();
   }
 
-  /**
-   * @return number of threads in the core pool of the underlying ScheduledThreadPoolExecutor
-   */
+  /** Returns number of threads in the core pool of the underlying ScheduledThreadPoolExecutor */
   int getCorePoolSize() {
     return scheduler.getCorePoolSize();
   }
@@ -279,9 +274,6 @@ public class ChoreService {
     private final static String THREAD_NAME_SUFFIX = ".Chore.";
     private AtomicInteger threadNumber = new AtomicInteger(1);
 
-    /**
-     * @param threadPrefix The prefix given to all threads created by this factory
-     */
     public ChoreServiceThreadFactory(final String threadPrefix) {
       this.threadPrefix = threadPrefix;
     }
@@ -356,9 +348,9 @@ public class ChoreService {
   }
 
   /**
-   * shutdown the service. Any chores that are scheduled for execution will be cancelled. Any chores
-   * in the middle of execution will be interrupted and shutdown. This service will be unusable
-   * after this method has been called (i.e. future scheduling attempts will fail).
+   * Shut down the service. Any chores that are scheduled for execution will be cancelled. Any
+   * chores in the middle of execution will be interrupted and shutdown. This service will be
+   * unusable after this method has been called (i.e. future scheduling attempts will fail).
    * <p/>
    * Notice that, this will only clean the chore from this ChoreService but you could still schedule
    * the chore with other ChoreService.
@@ -375,16 +367,12 @@ public class ChoreService {
     choresMissingStartTime.clear();
   }
 
-  /**
-   * @return true when the service is shutdown and thus cannot be used anymore
-   */
+  /** Returns true when the service is shutdown and thus cannot be used anymore */
   public boolean isShutdown() {
     return scheduler.isShutdown();
   }
 
-  /**
-   * @return true when the service is shutdown and all threads have terminated
-   */
+  /** Returns true when the service is shutdown and all threads have terminated */
   public boolean isTerminated() {
     return scheduler.isTerminated();
   }
@@ -400,9 +388,7 @@ public class ChoreService {
     }
   }
 
-  /**
-   * Prints a summary of important details about the chore. Used for debugging purposes
-   */
+  /** Prints a summary of important details about the chore. Used for debugging purposes */
   private void printChoreDetails(final String header, ScheduledChore chore) {
     if (!LOG.isTraceEnabled()) {
       return;
@@ -418,9 +404,7 @@ public class ChoreService {
     }
   }
 
-  /**
-   * Prints a summary of important details about the service. Used for debugging purposes
-   */
+  /** Prints a summary of important details about the service. Used for debugging purposes */
   private void printChoreServiceDetails(final String header) {
     if (!LOG.isTraceEnabled()) {
       return;

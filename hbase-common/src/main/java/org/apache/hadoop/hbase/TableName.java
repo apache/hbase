@@ -85,9 +85,7 @@ public final class TableName implements Comparable<TableName> {
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
 
-  /**
-   * @return True if <code>tn</code> is the hbase:meta table name.
-   */
+  /** Returns True if <code>tn</code> is the hbase:meta table name. */
   public static boolean isMetaTableName(final TableName tn) {
     return tn.equals(TableName.META_TABLE_NAME);
   }
@@ -262,9 +260,7 @@ public final class TableName implements Comparable<TableName> {
     return qualifierAsString;
   }
 
-  /**
-   * @return A pointer to TableName as String bytes.
-   */
+  /** Returns A pointer to TableName as String bytes. */
   public byte[] toBytes() {
     return name;
   }
@@ -278,9 +274,6 @@ public final class TableName implements Comparable<TableName> {
     return nameAsString;
   }
 
-  /**
-   * @throws IllegalArgumentException See {@link #valueOf(byte[])}
-   */
   private TableName(ByteBuffer namespace, ByteBuffer qualifier) throws IllegalArgumentException {
     this.qualifier = new byte[qualifier.remaining()];
     qualifier.duplicate().get(this.qualifier);
@@ -324,9 +317,7 @@ public final class TableName implements Comparable<TableName> {
     isLegalTableQualifierName(this.qualifier);
   }
 
-  /**
-   * This is only for the old and meta tables.
-   */
+  /** This is only for the old and meta tables. */
   private TableName(String qualifier) {
     this.qualifier = Bytes.toBytes(qualifier);
     this.qualifierAsString = qualifier;
@@ -398,6 +389,7 @@ public final class TableName implements Comparable<TableName> {
   }
 
   /**
+   * Construct a TableName
    * @param fullName will use the entire byte array
    * @throws IllegalArgumentException if fullName equals old root or old meta. Some code depends on
    *                                  this. The test is buried in the table creation to save on
@@ -409,6 +401,7 @@ public final class TableName implements Comparable<TableName> {
   }
 
   /**
+   * Construct a TableName
    * @param fullName byte array to look into
    * @param offset   within said array
    * @param length   within said array
@@ -441,6 +434,7 @@ public final class TableName implements Comparable<TableName> {
   }
 
   /**
+   * Construct a TableName
    * @param fullname of a table, possibly with a leading namespace and ':' as delimiter.
    * @throws IllegalArgumentException if fullName equals old root or old meta.
    */
@@ -466,6 +460,7 @@ public final class TableName implements Comparable<TableName> {
   }
 
   /**
+   * Construct a TableName
    * @throws IllegalArgumentException if fullName equals old root or old meta. Some code depends on
    *                                  this.
    */
@@ -530,12 +525,12 @@ public final class TableName implements Comparable<TableName> {
     return hashCode;
   }
 
-  /**
-   * For performance reasons, the ordering is not lexicographic.
-   */
   @Override
   public int compareTo(TableName tableName) {
-    if (this == tableName) return 0;
+    // For performance reasons, the ordering is not lexicographic.
+    if (this == tableName) {
+      return 0;
+    }
     if (this.hashCode < tableName.hashCode()) {
       return -1;
     }

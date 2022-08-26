@@ -80,7 +80,7 @@ public class BigDecimalColumnInterpreter
 
   @Override
   public BigDecimal increment(BigDecimal bd) {
-    return bd == null ? null : (bd.add(BigDecimal.ONE));
+    return bd == null ? null : bd.add(BigDecimal.ONE);
   }
 
   @Override

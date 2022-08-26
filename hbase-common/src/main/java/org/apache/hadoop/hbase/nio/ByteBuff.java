@@ -69,6 +69,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
     ObjectUtil.checkPositive(refCnt(), REFERENCE_COUNT_NAME);
   }
 
+  @Override
   public int refCnt() {
     return refCnt.refCnt();
   }
@@ -80,9 +81,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /******************************* Methods for ByteBuff **************************************/
 
-  /**
-   * @return this ByteBuff's current position
-   */
+  /** Returns this ByteBuff's current position */
   public abstract int position();
 
   /**
@@ -102,32 +101,19 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff moveBack(int len);
 
-  /**
-   * @return the total capacity of this ByteBuff.
-   */
+  /** Returns the total capacity of this ByteBuff. */
   public abstract int capacity();
 
-  /**
-   * Returns the limit of this ByteBuff
-   * @return limit of the ByteBuff
-   */
+  /** Returns the limit of this ByteBuff */
   public abstract int limit();
 
-  /**
-   * Marks the limit of this ByteBuff. n * @return This ByteBuff
-   */
+  /** Marks the limit of this ByteBuff */
   public abstract ByteBuff limit(int limit);
 
-  /**
-   * Rewinds this ByteBuff and the position is set to 0
-   * @return this object
-   */
+  /** Rewinds this ByteBuff and the position is set to 0 */
   public abstract ByteBuff rewind();
 
-  /**
-   * Marks the current position of the ByteBuff
-   * @return this object
-   */
+  /** Marks the current position of the ByteBuff */
   public abstract ByteBuff mark();
 
   /**
@@ -160,16 +146,10 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair);
 
-  /**
-   * Returns the number of elements between the current position and the limit.
-   * @return the remaining elements in this ByteBuff
-   */
+  /** Returns the number of elements between the current position and the limit. */
   public abstract int remaining();
 
-  /**
-   * Returns true if there are elements between the current position and the limt
-   * @return true if there are elements, false otherwise
-   */
+  /** Returns true if there are elements between the current position and the limit. */
   public abstract boolean hasRemaining();
 
   /**
@@ -205,31 +185,34 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /**
    * Fetches the byte at the given index. Does not change position of the underlying ByteBuffers n
-   * * @return the byte at the given index
+   * @return the byte at the given index
    */
   public abstract byte get(int index);
 
   /**
    * Fetches the byte at the given offset from current position. Does not change position of the
-   * underlying ByteBuffers. n * @return the byte value at the given index.
+   * underlying ByteBuffers.
+   * @return the byte value at the given index.
    */
   public abstract byte getByteAfterPosition(int offset);
 
   /**
-   * Writes a byte to this ByteBuff at the current position and increments the position n * @return
-   * this object
+   * Writes a byte to this ByteBuff at the current position and increments the position
+   * @return this object
    */
   public abstract ByteBuff put(byte b);
 
   /**
-   * Writes a byte to this ByteBuff at the given index nn * @return this object
+   * Writes a byte to this ByteBuff at the given index
+   * @return this object
    */
   public abstract ByteBuff put(int index, byte b);
 
   /**
    * Copies the specified number of bytes from this ByteBuff's current position to the byte[]'s
-   * offset. Also advances the position of the ByteBuff by the given length. n * @param offset
-   * within the current array
+   * offset. Also advances the position of the ByteBuff by the given length.
+   * @param dst    the byte[] to which the ByteBuff's content is to be copied
+   * @param offset within the current array
    * @param length upto which the bytes to be copied
    */
   public abstract void get(byte[] dst, int offset, int length);
@@ -246,13 +229,15 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /**
    * Copies the content from this ByteBuff's current position to the byte array and fills it. Also
-   * advances the position of the ByteBuff by the length of the byte[]. n
+   * advances the position of the ByteBuff by the length of the byte[].
+   * @param dst the byte[] to which the ByteBuff's content is to be copied
    */
   public abstract void get(byte[] dst);
 
   /**
-   * Copies from the given byte[] to this ByteBuff n * @param offset the position in the byte array
-   * from which the copy should be done
+   * Copies from the given byte[] to this ByteBuff
+   * @param src    source byte array
+   * @param offset the position in the byte array from which the copy should be done
    * @param length the length upto which the copy should happen
    * @return this ByteBuff
    */
@@ -260,28 +245,23 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /**
    * Copies from the given byte[] to this ByteBuff n * @return this ByteBuff
+   * @param src source byte array
+   * @return this ByteBuff
    */
   public abstract ByteBuff put(byte[] src);
 
-  /**
-   * @return true or false if the underlying BB support hasArray
-   */
+  /** Returns true or false if the underlying BB support hasArray */
   public abstract boolean hasArray();
 
-  /**
-   * @return the byte[] if the underlying BB has single BB and hasArray true
-   */
+  /** Returns the byte[] if the underlying BB has single BB and hasArray true */
   public abstract byte[] array();
 
-  /**
-   * @return the arrayOffset of the byte[] incase of a single BB backed ByteBuff
-   */
+  /** Returns the arrayOffset of the byte[] incase of a single BB backed ByteBuff */
   public abstract int arrayOffset();
 
   /**
    * Returns the short value at the current position. Also advances the position by the size of
-   * short
-   * @return the short value at the current position
+   * short.
    */
   public abstract short getShort();
 
@@ -301,43 +281,37 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   public abstract short getShortAfterPosition(int offset);
 
   /**
-   * Returns the int value at the current position. Also advances the position by the size of int
-   * @return the int value at the current position
+   * Returns the int value at the current position. Also advances the position by the size of int.
    */
   public abstract int getInt();
 
   /**
    * Writes an int to this ByteBuff at its current position. Also advances the position by size of
-   * int
-   * @param value Int value to write
-   * @return this object
+   * int.
    */
   public abstract ByteBuff putInt(int value);
 
   /**
    * Fetches the int at the given index. Does not change position of the underlying ByteBuffers.
    * Even if the current int does not fit in the current item we can safely move to the next item
-   * and fetch the remaining bytes forming the int n * @return the int value at the given index
+   * and fetch the remaining bytes forming the int.
    */
   public abstract int getInt(int index);
 
   /**
    * Fetches the int value at the given offset from current position. Does not change position of
-   * the underlying ByteBuffers. n * @return the int value at the given index.
+   * the underlying ByteBuffers.
    */
   public abstract int getIntAfterPosition(int offset);
 
   /**
-   * Returns the long value at the current position. Also advances the position by the size of long
-   * @return the long value at the current position
+   * Returns the long value at the current position. Also advances the position by the size of long.
    */
   public abstract long getLong();
 
   /**
    * Writes a long to this ByteBuff at its current position. Also advances the position by size of
-   * long
-   * @param value Long value to write
-   * @return this object
+   * long.
    */
   public abstract ByteBuff putLong(long value);
 
@@ -357,16 +331,13 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
 
   /**
    * Copy the content from this ByteBuff to a byte[].
-   * @return byte[] with the copied contents from this ByteBuff.
    */
   public byte[] toBytes() {
     return toBytes(0, this.limit());
   }
 
   /**
-   * Copy the content from this ByteBuff to a byte[] based on the given offset and length n * the
-   * position from where the copy should start n * the length upto which the copy has to be done
-   * @return byte[] with the copied contents from this ByteBuff.
+   * Copy the content from this ByteBuff to a byte[] based on the given offset and length.
    */
   public abstract byte[] toBytes(int offset, int length);
 
@@ -389,25 +360,16 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    */
   public abstract ByteBuff put(int offset, ByteBuff src, int srcOffset, int length);
 
-  /**
-   * Reads bytes from the given channel into this ByteBuff n * @return The number of bytes read from
-   * the channel n
-   */
+  /** Reads bytes from the given channel into this ByteBuf. */
   public abstract int read(ReadableByteChannel channel) throws IOException;
 
-  /**
-   * Reads bytes from FileChannel into this ByteBuff
-   */
+  /** Reads bytes from FileChannel into this ByteBuff */
   public abstract int read(FileChannel channel, long offset) throws IOException;
 
-  /**
-   * Write this ByteBuff's data into target file
-   */
+  /** Write this ByteBuff's data into target file */
   public abstract int write(FileChannel channel, long offset) throws IOException;
 
-  /**
-   * function interface for Channel read
-   */
+  /** Functional interface for Channel read */
   @FunctionalInterface
   interface ChannelReader {
     int read(ReadableByteChannel channel, ByteBuffer buf, long offset) throws IOException;
@@ -448,10 +410,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
     return (nBytes > 0) ? nBytes : ret;
   }
 
-  /**
-   * Read integer from ByteBuff coded in 7 bits and increment position.
-   * @return Read integer.
-   */
+  /** Read integer from ByteBuff coded in 7 bits and increment position. */
   public static int readCompressedInt(ByteBuff buf) {
     byte b = buf.get();
     if ((b & ByteBufferUtils.NEXT_BIT_MASK) != 0) {
@@ -570,9 +529,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
     return refCnt;
   }
 
-  /**
-   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
-   */
+  // Make this private because we don't want to expose the refCnt related wrap method to upstream.
   private static ByteBuff wrap(List<ByteBuffer> buffers, RefCnt refCnt) {
     if (buffers == null || buffers.size() == 0) {
       throw new IllegalArgumentException("buffers shouldn't be null or empty");
@@ -582,9 +539,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
       : new MultiByteBuff(refCnt, buffers.toArray(new ByteBuffer[0]));
   }
 
-  /**
-   * Make this private because we don't want to expose the refCnt related wrap method to upstream.
-   */
+  // Make this private because we don't want to expose the refCnt related wrap method to upstream.
   private static ByteBuff wrap(ByteBuffer buffer, RefCnt refCnt) {
     return new SingleByteBuff(refCnt, buffer);
   }

@@ -17,16 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -47,10 +52,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
-import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
-import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
-import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -60,14 +64,6 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.CONFIG })
 public class NettyRpcServer extends RpcServer {
   public static final Logger LOG = LoggerFactory.getLogger(NettyRpcServer.class);
-
-  /**
-   * Name of property to change netty rpc server eventloop thread count. Default is 0. Tests may set
-   * this down from unlimited.
-   */
-  public static final String HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY =
-    "hbase.netty.eventloop.rpcserver.thread.count";
-  private static final int EVENTLOOP_THREADCOUNT_DEFAULT = 0;
 
   /**
    * Name of property to change the byte buf allocator for the netty channels. Default is no value,
@@ -97,21 +93,16 @@ public class NettyRpcServer extends RpcServer {
     super(server, name, services, bindAddress, conf, scheduler, reservoirEnabled);
     this.bindAddress = bindAddress;
     this.channelAllocator = getChannelAllocator(conf);
-    EventLoopGroup eventLoopGroup;
-    Class<? extends ServerChannel> channelClass;
-    if (server instanceof HRegionServer) {
-      NettyEventLoopGroupConfig config = ((HBaseServerBase) server).getEventLoopGroupConfig();
-      eventLoopGroup = config.group();
-      channelClass = config.serverChannelClass();
-    } else {
-      int threadCount = server == null
-        ? EVENTLOOP_THREADCOUNT_DEFAULT
-        : server.getConfiguration().getInt(HBASE_NETTY_EVENTLOOP_RPCSERVER_THREADCOUNT_KEY,
-          EVENTLOOP_THREADCOUNT_DEFAULT);
-      eventLoopGroup = new NioEventLoopGroup(threadCount,
-        new DefaultThreadFactory("NettyRpcServer", true, Thread.MAX_PRIORITY));
-      channelClass = NioServerSocketChannel.class;
+    // Get the event loop group configuration from the server class if available.
+    NettyEventLoopGroupConfig config = null;
+    if (server instanceof HBaseServerBase) {
+      config = ((HBaseServerBase<?>) server).getEventLoopGroupConfig();
     }
+    if (config == null) {
+      config = new NettyEventLoopGroupConfig(conf, "NettyRpcServer");
+    }
+    EventLoopGroup eventLoopGroup = config.group();
+    Class<? extends ServerChannel> channelClass = config.serverChannelClass();
     ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
       .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
@@ -123,11 +114,11 @@ public class NettyRpcServer extends RpcServer {
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
-          pipeline.addLast("preambleDecoder", preambleDecoder);
-          pipeline.addLast("preambleHandler", createNettyRpcServerPreambleHandler());
-          pipeline.addLast("frameDecoder", new NettyRpcFrameDecoder(maxRequestSize));
-          pipeline.addLast("decoder", new NettyRpcServerRequestDecoder(allChannels, metrics));
-          pipeline.addLast("encoder", new NettyRpcServerResponseEncoder(metrics));
+          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
+            initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
+          }
+          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
+            .addLast(createNettyRpcServerPreambleHandler());
         }
       });
     try {
@@ -170,6 +161,7 @@ public class NettyRpcServer extends RpcServer {
     }
   }
 
+  // will be overriden in tests
   @InterfaceAudience.Private
   protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
     return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
@@ -231,5 +223,18 @@ public class NettyRpcServer extends RpcServer {
     int channelsCount = allChannels.size();
     // allChannels also contains the server channel, so exclude that from the count.
     return channelsCount > 0 ? channelsCount - 1 : channelsCount;
+  }
+
+  private void initSSL(ChannelPipeline p, boolean supportPlaintext)
+    throws X509Exception, SSLException {
+    SslContext nettySslContext = X509Util.createSslContextForServer(conf);
+
+    if (supportPlaintext) {
+      p.addLast("ssl", new OptionalSslHandler(nettySslContext));
+      LOG.debug("Dual mode SSL handler added for channel: {}", p.channel());
+    } else {
+      p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
+      LOG.debug("SSL handler added for channel: {}", p.channel());
+    }
   }
 }

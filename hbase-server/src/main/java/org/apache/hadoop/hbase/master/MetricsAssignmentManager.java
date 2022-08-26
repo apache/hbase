@@ -127,58 +127,42 @@ public class MetricsAssignmentManager {
     assignmentManagerSource.setEmptyRegionInfoRegions(emptyRegionInfoRegions);
   }
 
-  /**
-   * @return Set of common metrics for assign procedure
-   */
+  /** Returns Set of common metrics for assign procedure */
   public ProcedureMetrics getAssignProcMetrics() {
     return assignProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for unassign procedure
-   */
+  /** Returns Set of common metrics for unassign procedure */
   public ProcedureMetrics getUnassignProcMetrics() {
     return unassignProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for move procedure
-   */
+  /** Returns Set of common metrics for move procedure */
   public ProcedureMetrics getMoveProcMetrics() {
     return moveProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for reopen procedure
-   */
+  /** Returns Set of common metrics for reopen procedure */
   public ProcedureMetrics getReopenProcMetrics() {
     return reopenProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for OpenRegionProcedure
-   */
+  /** Returns Set of common metrics for OpenRegionProcedure */
   public ProcedureMetrics getOpenProcMetrics() {
     return openProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for CloseRegionProcedure
-   */
+  /** Returns Set of common metrics for CloseRegionProcedure */
   public ProcedureMetrics getCloseProcMetrics() {
     return closeProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for split procedure
-   */
+  /** Returns Set of common metrics for split procedure */
   public ProcedureMetrics getSplitProcMetrics() {
     return splitProcMetrics;
   }
 
-  /**
-   * @return Set of common metrics for merge procedure
-   */
+  /** Returns Set of common metrics for merge procedure */
   public ProcedureMetrics getMergeProcMetrics() {
     return mergeProcMetrics;
   }

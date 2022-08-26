@@ -69,9 +69,7 @@ public class HBaseSnapshotException extends DoNotRetryIOException {
     super(message, cause);
   }
 
-  /**
-   * @return the description of the snapshot that is being failed
-   */
+  /** Returns the description of the snapshot that is being failed */
   public SnapshotDescription getSnapshotDescription() {
     return this.description;
   }

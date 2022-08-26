@@ -1075,10 +1075,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       + getValueLength() + "/seqid=" + seqId;
   }
 
-  /**
-   * @param k Key portion of a KeyValue.
-   * @return Key as a String, empty string if k is null.
-   */
+  /** Return key as a String, empty string if k is null. */
   public static String keyToString(final byte[] k) {
     if (k == null) {
       return "";
@@ -1164,16 +1161,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return this.bytes;
   }
 
-  /**
-   * @return Offset into {@link #getBuffer()} at which this KeyValue starts.
-   */
+  /** Returns Offset into {@link #getBuffer()} at which this KeyValue starts. */
   public int getOffset() {
     return this.offset;
   }
 
-  /**
-   * @return Length of bytes this KeyValue occupies in {@link #getBuffer()}.
-   */
+  /** Returns Length of bytes this KeyValue occupies in {@link #getBuffer()}. */
   public int getLength() {
     return length;
   }
@@ -1197,9 +1190,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return klength + vlength;
   }
 
-  /**
-   * @return Key offset in backing buffer..
-   */
+  /** Returns Key offset in backing buffer.. */
   public int getKeyOffset() {
     return this.offset + ROW_OFFSET;
   }
@@ -1208,33 +1199,27 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return Bytes.toStringBinary(getBuffer(), getKeyOffset(), getKeyLength());
   }
 
-  /**
-   * @return Length of key portion.
-   */
+  /** Returns Length of key portion. */
   public int getKeyLength() {
     return Bytes.toInt(this.bytes, this.offset);
   }
 
   /**
-   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   * Returns the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
   public byte[] getValueArray() {
     return bytes;
   }
 
-  /**
-   * @return the value offset
-   */
+  /** Returns the value offset */
   @Override
   public int getValueOffset() {
     int voffset = getKeyOffset() + getKeyLength();
     return voffset;
   }
 
-  /**
-   * @return Value length
-   */
+  /** Returns Value length */
   @Override
   public int getValueLength() {
     int vlength = Bytes.toInt(this.bytes, this.offset + Bytes.SIZEOF_INT);
@@ -1242,63 +1227,51 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   * Returns the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
   public byte[] getRowArray() {
     return bytes;
   }
 
-  /**
-   * @return Row offset
-   */
+  /** Returns Row offset */
   @Override
   public int getRowOffset() {
     return this.offset + ROW_KEY_OFFSET;
   }
 
-  /**
-   * @return Row length
-   */
+  /** Returns Row length */
   @Override
   public short getRowLength() {
     return Bytes.toShort(this.bytes, getKeyOffset());
   }
 
   /**
-   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   * Returns the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
   public byte[] getFamilyArray() {
     return bytes;
   }
 
-  /**
-   * @return Family offset
-   */
+  /** Returns Family offset */
   @Override
   public int getFamilyOffset() {
     return getFamilyOffset(getFamilyLengthPosition(getRowLength()));
   }
 
-  /**
-   * @return Family offset
-   */
+  /** Returns Family offset */
   int getFamilyOffset(int familyLenPosition) {
     return familyLenPosition + Bytes.SIZEOF_BYTE;
   }
 
-  /**
-   * @return Family length
-   */
+  /** Returns Family length */
   @Override
   public byte getFamilyLength() {
     return getFamilyLength(getFamilyLengthPosition(getRowLength()));
   }
 
-  /**
-   * @return Family length
-   */
+  /** Returns Family length */
   public byte getFamilyLength(int famLenPos) {
     return this.bytes[famLenPos];
   }
@@ -1308,81 +1281,63 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   * Returns the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
   public byte[] getQualifierArray() {
     return bytes;
   }
 
-  /**
-   * @return Qualifier offset
-   */
+  /** Returns Qualifier offset */
   @Override
   public int getQualifierOffset() {
     return getQualifierOffset(getFamilyOffset());
   }
 
-  /**
-   * @return Qualifier offset
-   */
+  /** Returns Qualifier offset */
   private int getQualifierOffset(int foffset) {
     return getQualifierOffset(foffset, getFamilyLength());
   }
 
-  /**
-   * @return Qualifier offset
-   */
+  /** Returns Qualifier offset */
   int getQualifierOffset(int foffset, int flength) {
     return foffset + flength;
   }
 
-  /**
-   * @return Qualifier length
-   */
+  /** Returns Qualifier length */
   @Override
   public int getQualifierLength() {
     return getQualifierLength(getRowLength(), getFamilyLength());
   }
 
-  /**
-   * @return Qualifier length
-   */
+  /** Returns Qualifier length */
   private int getQualifierLength(int rlength, int flength) {
     return getQualifierLength(getKeyLength(), rlength, flength);
   }
 
-  /**
-   * @return Qualifier length
-   */
+  /** Returns Qualifier length */
   int getQualifierLength(int keyLength, int rlength, int flength) {
     return keyLength - (int) getKeyDataStructureSize(rlength, flength, 0);
   }
 
-  /**
-   * @return Timestamp offset
-   */
+  /** Returns Timestamp offset */
   public int getTimestampOffset() {
     return getTimestampOffset(getKeyLength());
   }
 
-  /**
-   * @param keylength Pass if you have it to save on a int creation.
-   * @return Timestamp offset
-   */
+  /** Return the timestamp offset */
   private int getTimestampOffset(final int keylength) {
     return getKeyOffset() + keylength - TIMESTAMP_TYPE_SIZE;
   }
 
-  /**
-   * @return True if this KeyValue has a LATEST_TIMESTAMP timestamp.
-   */
+  /** Returns True if this KeyValue has a LATEST_TIMESTAMP timestamp. */
   public boolean isLatestTimestamp() {
     return Bytes.equals(getBuffer(), getTimestampOffset(), Bytes.SIZEOF_LONG,
       HConstants.LATEST_TIMESTAMP_BYTES, 0, Bytes.SIZEOF_LONG);
   }
 
   /**
+   * Update the timestamp.
    * @param now Time to set into <code>this</code> IFF timestamp ==
    *            {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
    * @return True is we modified this.
@@ -1426,37 +1381,30 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return key;
   }
 
-  /**
-   * n
-   */
+  /** Return the timestamp. */
   @Override
   public long getTimestamp() {
     return getTimestamp(getKeyLength());
   }
 
-  /**
-   * @param keylength Pass if you have it to save on a int creation. n
-   */
+  /** Return the timestamp. */
   long getTimestamp(final int keylength) {
     int tsOffset = getTimestampOffset(keylength);
     return Bytes.toLong(this.bytes, tsOffset);
   }
 
-  /**
-   * @return KeyValue.TYPE byte representation
-   */
+  /** Returns KeyValue.TYPE byte representation */
   @Override
   public byte getTypeByte() {
     return getTypeByte(getKeyLength());
   }
 
+  /** Return the KeyValue.TYPE byte representation */
   byte getTypeByte(int keyLength) {
     return this.bytes[this.offset + keyLength - 1 + ROW_OFFSET];
   }
 
-  /**
-   * This returns the offset where the tag actually starts.
-   */
+  /** Return the offset where the tag data starts. */
   @Override
   public int getTagsOffset() {
     int tagsLen = getTagsLength();
@@ -1466,9 +1414,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return this.offset + this.length - tagsLen;
   }
 
-  /**
-   * This returns the total length of the tag bytes
-   */
+  /** Return the total length of the tag bytes */
   @Override
   public int getTagsLength() {
     int tagsLen = this.length - (getKeyLength() + getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE);
@@ -1481,7 +1427,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
-   * @return the backing array of the entire KeyValue (all KeyValue fields are in a single array)
+   * Returns the backing array of the entire KeyValue (all KeyValue fields are in a single array)
    */
   @Override
   public byte[] getTagsArray() {
@@ -1508,6 +1454,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
+   * Find index of passed delimiter walking from start of buffer forwards.
    * @param b         the kv serialized byte[] to process
    * @param delimiter input delimeter to fetch index from start
    * @return Index of delimiter having started from start of <code>b</code> moving rightward.
@@ -1791,6 +1738,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
+     * Compares the rows of a cell
      * @param left  left cell to compare rows for
      * @param right right cell to compare rows for
      * @return Result comparing rows.
@@ -2038,6 +1986,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
+     * Compares the row of two keyvalues for equality
      * @param left       left cell to compare row
      * @param lrowlength left row length
      * @param right      right cell to compare row
@@ -2166,6 +2115,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
+   * Create a KeyValue reading from <code>in</code>
    * @param in Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes
    *           copied from the steam.
    * @return KeyValue created by deserializing from <code>in</code> OR if we find a length of zero,
@@ -2292,7 +2242,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return fixed + ClassSize.sizeOfByteArray(length);
     } else {
       // only count the number of bytes
-      return fixed + length;
+      return (long) fixed + length;
     }
   }
 
@@ -2381,6 +2331,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return this.bytes[getFamilyOffset() - 1];
     }
 
+    @Override
     int getFamilyLengthPosition(int rowLength) {
       return this.offset + Bytes.SIZEOF_SHORT + rowLength;
     }
@@ -2420,6 +2371,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return getTypeByte(getKeyLength());
     }
 
+    @Override
     byte getTypeByte(int keyLength) {
       return this.bytes[this.offset + keyLength - 1];
     }

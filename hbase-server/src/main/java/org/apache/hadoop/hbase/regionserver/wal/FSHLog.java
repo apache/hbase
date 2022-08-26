@@ -720,9 +720,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     return false;
   }
 
-  /**
-   * @return true if number of replicas for the WAL is lower than threshold
-   */
+  /** Returns true if number of replicas for the WAL is lower than threshold */
   @Override
   protected boolean doCheckLogLowReplication() {
     boolean logRollNeeded = false;
@@ -896,9 +894,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       return syncFuture;
     }
 
-    /**
-     * @return if the safepoint has been attained.
-     */
+    /** Returns if the safepoint has been attained. */
     @InterfaceAudience.Private
     boolean isSafePointAttained() {
       return this.safePointAttainedLatch.getCount() == 0;
@@ -922,9 +918,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       this.safePointReleasedLatch.countDown();
     }
 
-    /**
-     * @return True is this is a 'cocked', fresh instance, and not one that has already fired.
-     */
+    /** Returns True is this is a 'cocked', fresh instance, and not one that has already fired. */
     boolean isCocked() {
       return this.safePointAttainedLatch.getCount() > 0
         && this.safePointReleasedLatch.getCount() > 0;
@@ -1003,9 +997,7 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       this.syncFuturesCount.set(0);
     }
 
-    /**
-     * @return True if outstanding sync futures still
-     */
+    /** Returns True if outstanding sync futures still */
     private boolean isOutstandingSyncs() {
       // Look at SyncFutures in the EventHandler
       for (int i = 0; i < this.syncFuturesCount.get(); i++) {

@@ -45,14 +45,13 @@ public class ClusterId {
     this.id = uuid;
   }
 
-  /**
-   * @return The clusterid serialized using pb w/ pb magic prefix
-   */
+  /** Returns The clusterid serialized using pb w/ pb magic prefix */
   public byte[] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
   }
 
   /**
+   * Parse the serialized representation of the {@link ClusterId}
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
    * @return An instance of {@link ClusterId} made from <code>bytes</code> n * @see #toByteArray()
    */
@@ -74,9 +73,7 @@ public class ClusterId {
     }
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   public ClusterIdProtos.ClusterId convert() {
     ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
     return builder.setClusterId(this.id).build();

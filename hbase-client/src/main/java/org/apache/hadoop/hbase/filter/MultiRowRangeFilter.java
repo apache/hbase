@@ -176,9 +176,7 @@ public class MultiRowRangeFilter extends FilterBase {
     return PrivateCellUtil.createFirstOnRow(comparisonData, 0, (short) comparisonData.length);
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     FilterProtos.MultiRowRangeFilter.Builder builder =
@@ -199,9 +197,11 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link MultiRowRangeFilter}
    * @param pbBytes A pb serialized instance
-   * @return An instance of MultiRowRangeFilter
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @return An instance of {@link MultiRowRangeFilter}
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static MultiRowRangeFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -226,15 +226,17 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   /**
-   * @param o the filter to compare
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof MultiRowRangeFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof MultiRowRangeFilter)) {
+      return false;
+    }
     MultiRowRangeFilter other = (MultiRowRangeFilter) o;
     if (this.rangeList.size() != other.rangeList.size()) return false;
     for (int i = 0; i < rangeList.size(); ++i) {
@@ -469,16 +471,12 @@ public class MultiRowRangeFilter extends FilterBase {
       return stopRow;
     }
 
-    /**
-     * @return if start row is inclusive.
-     */
+    /** Returns if start row is inclusive. */
     public boolean isStartRowInclusive() {
       return startRowInclusive;
     }
 
-    /**
-     * @return if stop row is inclusive.
-     */
+    /** Returns if stop row is inclusive. */
     public boolean isStopRowInclusive() {
       return stopRowInclusive;
     }
@@ -725,7 +723,7 @@ public class MultiRowRangeFilter extends FilterBase {
     /**
      * Gets the RowRange at the given offset.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
     public <T extends BasicRowRange> T get(int i) {
       return (T) ranges.get(i);
     }

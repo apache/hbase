@@ -92,7 +92,7 @@ public class RegionCoprocessorServiceExec implements Row {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof RegionCoprocessorServiceExec)) {
       return false;
     }
     return compareTo((RegionCoprocessorServiceExec) obj) == 0;

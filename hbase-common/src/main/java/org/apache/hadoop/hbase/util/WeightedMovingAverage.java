@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * weight. And it is based on {@link WindowMovingAverage}, such that it only focus on the last N.
  */
 @InterfaceAudience.Private
-public class WeightedMovingAverage extends WindowMovingAverage {
+public class WeightedMovingAverage<T> extends WindowMovingAverage<T> {
   private int[] coefficient;
   private int denominator;
 
@@ -53,8 +53,8 @@ public class WeightedMovingAverage extends WindowMovingAverage {
     int coIndex = 0;
     int length = getNumberOfStatistics();
     // tmIndex, it points to the oldest data.
-    for (int tmIndex = (getMostRecentPosistion() + 1) % length; coIndex
-        < length; coIndex++, tmIndex = (++tmIndex) % length) {
+    for (int tmIndex = (getMostRecentPosition() + 1) % length; coIndex
+        < length; coIndex++, tmIndex = ++tmIndex % length) {
       // start the multiplication from oldest to newest
       average += coefficient[coIndex] * getStatisticsAtIndex(tmIndex);
     }

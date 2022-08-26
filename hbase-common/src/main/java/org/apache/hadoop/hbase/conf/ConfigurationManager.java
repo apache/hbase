@@ -117,18 +117,14 @@ public class ConfigurationManager {
     }
   }
 
-  /**
-   * @return the number of observers.
-   */
+  /** Returns the number of observers. */
   public int getNumObservers() {
     synchronized (configurationObservers) {
       return configurationObservers.size();
     }
   }
 
-  /**
-   * @return true if contains the observer, for unit test only
-   */
+  /** Returns true if contains the observer, for unit test only */
   public boolean containsObserver(ConfigurationObserver observer) {
     synchronized (configurationObservers) {
       return configurationObservers.contains(observer);

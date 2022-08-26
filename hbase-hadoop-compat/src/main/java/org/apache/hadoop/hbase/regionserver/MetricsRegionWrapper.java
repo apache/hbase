@@ -80,24 +80,16 @@ public interface MetricsRegionWrapper {
    */
   long getFilteredReadRequestCount();
 
-  /**
-   * @return Max age of store files under this region
-   */
+  /** Returns Max age of store files under this region */
   long getMaxStoreFileAge();
 
-  /**
-   * @return Min age of store files under this region
-   */
+  /** Returns Min age of store files under this region */
   long getMinStoreFileAge();
 
-  /**
-   * @return Average age of store files under this region
-   */
+  /** Returns Average age of store files under this region */
   long getAvgStoreFileAge();
 
-  /**
-   * @return Number of reference files under this region
-   */
+  /** Returns Number of reference files under this region */
   long getNumReferenceFiles();
 
   /**
@@ -113,9 +105,7 @@ public interface MetricsRegionWrapper {
 
   long getNumCompactionsCompleted();
 
-  /**
-   * @return Age of the last major compaction
-   */
+  /** Returns Age of the last major compaction */
   long getLastMajorCompactionAge();
 
   /**
@@ -126,14 +116,14 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsFailed();
 
   /**
-   * @return the total number of compactions that are currently queued(or being executed) at point
-   *         in time
+   * Returns the total number of compactions that are currently queued(or being executed) at point
+   * in time
    */
   long getNumCompactionsQueued();
 
   /**
-   * @return the total number of flushes currently queued(being executed) for this region at point
-   *         in time
+   * Returns the total number of flushes currently queued(being executed) for this region at point
+   * in time
    */
   long getNumFlushesQueued();
 
@@ -156,25 +146,19 @@ public interface MetricsRegionWrapper {
    */
   int getReplicaId();
 
-  /**
-   * @return the number of references active on the store
-   */
+  /** Returns the number of references active on the store */
   long getStoreRefCount();
 
   /**
-   * @return the max number of references active on any store file among all compacted store files
-   *         that belong to this region
+   * Returns the max number of references active on any store file among all compacted store files
+   * that belong to this region
    */
   long getMaxCompactedStoreFileRefCount();
 
-  /**
-   * @return the number of row reads completely on memstore per store
-   */
+  /** Returns the number of row reads completely on memstore per store */
   Map<String, Long> getMemstoreOnlyRowReadsCount();
 
-  /**
-   * @return the number of row reads on memstore and file per store
-   */
+  /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
 
 }

@@ -122,9 +122,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
    */
   void enforceSeek() throws IOException;
 
-  /**
-   * @return true if this is a file scanner. Otherwise a memory scanner is assumed.
-   */
+  /** Returns true if this is a file scanner. Otherwise a memory scanner is assumed. */
   boolean isFileScanner();
 
   /**

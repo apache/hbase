@@ -116,9 +116,7 @@ public class BlockCacheUtil {
     }
   }
 
-  /**
-   * @return A JSON String of <code>filename</code> and counts of <code>blocks</code>
-   */
+  /** Returns A JSON String of <code>filename</code> and counts of <code>blocks</code> */
   public static String toJSON(String filename, NavigableSet<CachedBlock> blocks)
     throws IOException {
     CachedBlockCountsPerFile counts = new CachedBlockCountsPerFile(filename);
@@ -134,16 +132,12 @@ public class BlockCacheUtil {
     return GSON.toJson(counts);
   }
 
-  /**
-   * @return JSON string of <code>cbsf</code> aggregated
-   */
+  /** Returns JSON string of <code>cbsf</code> aggregated */
   public static String toJSON(CachedBlocksByFile cbsbf) throws IOException {
     return GSON.toJson(cbsbf);
   }
 
-  /**
-   * @return JSON string of <code>bc</code> content.
-   */
+  /** Returns JSON string of <code>bc</code> content. */
   public static String toJSON(BlockCache bc) throws IOException {
     return GSON.toJson(bc);
   }
@@ -248,6 +242,12 @@ public class BlockCacheUtil {
     }
   }
 
+  private static final int DEFAULT_MAX = 1000000;
+
+  public static int getMaxCachedBlocksByFile(Configuration conf) {
+    return conf == null ? DEFAULT_MAX : conf.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+  }
+
   /**
    * Use one of these to keep a running account of cached blocks by file. Throw it away when done.
    * This is different than metrics in that it is stats on current state of a cache. See
@@ -265,14 +265,13 @@ public class BlockCacheUtil {
      * displays warning in red when stats are incomplete.
      */
     private final int max;
-    public static final int DEFAULT_MAX = 1000000;
 
     CachedBlocksByFile() {
       this(null);
     }
 
     CachedBlocksByFile(final Configuration c) {
-      this.max = c == null ? DEFAULT_MAX : c.getInt("hbase.ui.blockcache.by.file.max", DEFAULT_MAX);
+      this.max = getMaxCachedBlocksByFile(c);
     }
 
     /**
@@ -318,9 +317,7 @@ public class BlockCacheUtil {
       return this.cachedBlockByFile;
     }
 
-    /**
-     * @return count of blocks in the cache
-     */
+    /** Returns count of blocks in the cache */
     public int getCount() {
       return count;
     }
@@ -329,16 +326,12 @@ public class BlockCacheUtil {
       return dataBlockCount;
     }
 
-    /**
-     * @return size of blocks in the cache
-     */
+    /** Returns size of blocks in the cache */
     public long getSize() {
       return size;
     }
 
-    /**
-     * @return Size of data.
-     */
+    /** Returns Size of data. */
     public long getDataSize() {
       return dataSize;
     }

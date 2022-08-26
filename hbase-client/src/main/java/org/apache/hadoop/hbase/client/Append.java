@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public class Append extends Mutation {
   private static final Logger LOG = LoggerFactory.getLogger(Append.class);
-  private static final long HEAP_OVERHEAD = ClassSize.REFERENCE + ClassSize.TIMERANGE;
+  private static final long HEAP_OVERHEAD = (long) ClassSize.REFERENCE + ClassSize.TIMERANGE;
   private TimeRange tr = TimeRange.allTime();
 
   /**
@@ -92,9 +92,7 @@ public class Append extends Mutation {
     return this;
   }
 
-  /**
-   * @return current setting for returnResults
-   */
+  /** Returns current setting for returnResults */
   // This method makes public the superclasses's protected method.
   @Override
   public boolean isReturnResults() {

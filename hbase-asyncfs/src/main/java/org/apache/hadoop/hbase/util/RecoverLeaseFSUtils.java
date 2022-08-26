@@ -186,9 +186,7 @@ public final class RecoverLeaseFSUtils {
     return recovered;
   }
 
-  /**
-   * @return Detail to append to any log message around lease recovering.
-   */
+  /** Returns Detail to append to any log message around lease recovering. */
   private static String getLogMessageDetail(final int nbAttempt, final Path p,
     final long startWaiting) {
     return "attempt=" + nbAttempt + " on file=" + p + " after "

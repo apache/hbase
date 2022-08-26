@@ -26,9 +26,12 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 
 /**
  * This class is a wrapper for the implementation of com.sun.management.UnixOperatingSystemMXBean It
@@ -42,12 +45,15 @@ public class JVM {
 
   private static final boolean ibmvendor =
     System.getProperty("java.vendor") != null && System.getProperty("java.vendor").contains("IBM");
-  private static final boolean windows =
-    System.getProperty("os.name") != null && System.getProperty("os.name").startsWith("Windows");
-  private static final boolean linux =
-    System.getProperty("os.name") != null && System.getProperty("os.name").startsWith("Linux");
+  // At least on my systems os.name reports as "linux", not "Linux". Prefer case insensitive tests.
+  private static final boolean windows = System.getProperty("os.name") != null
+    && System.getProperty("os.name").toLowerCase().contains("windows");
+  private static final boolean linux = System.getProperty("os.name") != null
+    && System.getProperty("os.name").toLowerCase().contains("linux");
   private static final boolean amd64 =
     System.getProperty("os.arch") != null && System.getProperty("os.arch").contains("amd64");
+  private static final boolean aarch64 =
+    System.getProperty("os.arch") != null && System.getProperty("os.arch").contains("aarch64");
 
   private static final String JVMVersion = System.getProperty("java.version");
 
@@ -97,6 +103,14 @@ public class JVM {
    */
   public static boolean isAmd64() {
     return amd64;
+  }
+
+  /**
+   * Check if the arch is aarch64;
+   * @return whether this is aarch64 or not.
+   */
+  public static boolean isAarch64() {
+    return aarch64;
   }
 
   /**
@@ -156,11 +170,10 @@ public class JVM {
       // need to get the PID number of the process first
       RuntimeMXBean rtmbean = ManagementFactory.getRuntimeMXBean();
       String rtname = rtmbean.getName();
-      String[] pidhost = rtname.split("@");
-
+      Iterator<String> pidhost = Splitter.on('@').split(rtname).iterator();
       // using linux bash commands to retrieve info
       Process p = Runtime.getRuntime()
-        .exec(new String[] { "bash", "-c", "ls /proc/" + pidhost[0] + "/fdinfo | wc -l" });
+        .exec(new String[] { "bash", "-c", "ls /proc/" + pidhost.next() + "/fdinfo | wc -l" });
       inputStream = p.getInputStream();
       inputStreamReader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
       bufferedReader = new BufferedReader(inputStreamReader);
@@ -197,6 +210,7 @@ public class JVM {
   }
 
   /**
+   * Get the system load average
    * @see java.lang.management.OperatingSystemMXBean#getSystemLoadAverage
    */
   public double getSystemLoadAverage() {
@@ -204,9 +218,9 @@ public class JVM {
   }
 
   /**
-   * @return the physical free memory (not the JVM one, as it's not very useful as it depends on the
-   *         GC), but the one from the OS as it allows a little bit more to guess if the machine is
-   *         overloaded or not).
+   * Return the physical free memory (not the JVM one, as it's not very useful as it depends on the
+   * GC), but the one from the OS as it allows a little bit more to guess if the machine is
+   * overloaded or not).
    */
   public long getFreeMemory() {
     if (ibmvendor) {

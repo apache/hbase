@@ -43,6 +43,7 @@ public final class DNS {
   private static Method GET_DEFAULT_HOST_METHOD;
 
   /**
+   * Hostname configuration key
    * @deprecated since 2.4.0 and will be removed in 4.0.0. Use {@link DNS#UNSAFE_RS_HOSTNAME_KEY}
    *             instead.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-24667">HBASE-24667</a>
@@ -65,9 +66,9 @@ public final class DNS {
     MASTER("master"),
     REGIONSERVER("regionserver");
 
-    private String name;
+    private final String name;
 
-    ServerType(String name) {
+    private ServerType(String name) {
       this.name = name;
     }
 

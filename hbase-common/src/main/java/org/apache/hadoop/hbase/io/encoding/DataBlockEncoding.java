@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * assign it a new id. Announce the new id in the HBase mailing list to prevent collisions.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("ImmutableEnumChecker")
 public enum DataBlockEncoding {
 
   /** Disable data block encoding. */
@@ -77,16 +78,12 @@ public enum DataBlockEncoding {
     this.encoderCls = encoderClsName;
   }
 
-  /**
-   * @return name converted to bytes.
-   */
+  /** Returns name converted to bytes. */
   public byte[] getNameInBytes() {
     return Bytes.toBytes(toString());
   }
 
-  /**
-   * @return The id of a data block encoder.
-   */
+  /** Returns The id of a data block encoder. */
   public short getId() {
     return id;
   }
@@ -104,6 +101,8 @@ public enum DataBlockEncoding {
    * @param dest   output array
    * @param offset starting offset of the output array n
    */
+  // System.arraycopy is static native. Nothing we can do this until we have minimum JDK 9.
+  @SuppressWarnings("UnsafeFinalization")
   public void writeIdInBytes(byte[] dest, int offset) throws IOException {
     System.arraycopy(idInBytes, 0, dest, offset, ID_SIZE);
   }
@@ -163,10 +162,10 @@ public enum DataBlockEncoding {
     return algorithm;
   }
 
-  protected static DataBlockEncoder createEncoder(String fullyQualifiedClassName) {
+  static DataBlockEncoder createEncoder(String fullyQualifiedClassName) {
     try {
-      return (DataBlockEncoder) Class.forName(fullyQualifiedClassName).getDeclaredConstructor()
-        .newInstance();
+      return Class.forName(fullyQualifiedClassName).asSubclass(DataBlockEncoder.class)
+        .getDeclaredConstructor().newInstance();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -277,13 +276,13 @@ public abstract class Action {
 
   protected void unbalanceRegions(ClusterMetrics clusterStatus, List<ServerName> fromServers,
     List<ServerName> toServers, double fractionOfRegions) throws Exception {
-    List<byte[]> victimRegions = new LinkedList<>();
+    List<byte[]> victimRegions = new ArrayList<>();
     for (Map.Entry<ServerName, ServerMetrics> entry : clusterStatus.getLiveServerMetrics()
       .entrySet()) {
       ServerName sn = entry.getKey();
       ServerMetrics serverLoad = entry.getValue();
       // Ugh.
-      List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
+      List<byte[]> regions = new ArrayList<>(serverLoad.getRegionMetrics().keySet());
       int victimRegionCount = (int) Math.ceil(fractionOfRegions * regions.size());
       getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
       Random rand = ThreadLocalRandom.current();

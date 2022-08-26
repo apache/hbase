@@ -58,7 +58,9 @@ import org.slf4j.LoggerFactory;
 public class IntegrationTestLazyCfLoading {
   private static final TableName TABLE_NAME =
     TableName.valueOf(IntegrationTestLazyCfLoading.class.getSimpleName());
+  @SuppressWarnings("InlineFormatString")
   private static final String TIMEOUT_KEY = "hbase.%s.timeout";
+  @SuppressWarnings("InlineFormatString")
   private static final String ENCODING_KEY = "hbase.%s.datablock.encoding";
 
   /** A soft test timeout; duration of the test, as such, depends on number of keys to put. */

@@ -96,6 +96,7 @@ public class Increment extends Mutation {
    * Add the specified KeyValue to this operation.
    * @param cell individual Cell n * @throws java.io.IOException e
    */
+  @Override
   public Increment add(Cell cell) throws IOException {
     super.add(cell);
     return this;
@@ -164,9 +165,7 @@ public class Increment extends Mutation {
     return this;
   }
 
-  /**
-   * @return current setting for returnResults
-   */
+  /** Returns current setting for returnResults */
   // This method makes public the superclasses's protected method.
   @Override
   public boolean isReturnResults() {

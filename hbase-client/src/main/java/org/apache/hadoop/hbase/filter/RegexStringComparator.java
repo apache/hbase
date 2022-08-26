@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.jcodings.Encoding;
 import org.jcodings.EncodingDB;
-import org.jcodings.specific.UTF8Encoding;
+import org.jcodings.specific.NonStrictUTF8Encoding;
 import org.joni.Matcher;
 import org.joni.Option;
 import org.joni.Regex;
@@ -145,18 +145,18 @@ public class RegexStringComparator extends ByteArrayComparable {
     return engine.compareTo(value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     return engine.toByteArray();
   }
 
   /**
+   * Parse a serialized representation of {@link RegexStringComparator}
    * @param pbBytes A pb serialized {@link RegexStringComparator} instance
-   * @return An instance of {@link RegexStringComparator} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link RegexStringComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static RegexStringComparator parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -185,13 +185,17 @@ public class RegexStringComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof RegexStringComparator)) return false;
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof RegexStringComparator)) {
+      return false;
+    }
     RegexStringComparator comparator = (RegexStringComparator) other;
     return super.areSerializedFieldsEqual(comparator)
       && engine.getClass().isInstance(comparator.getEngine())
@@ -314,7 +318,9 @@ public class RegexStringComparator extends ByteArrayComparable {
    * NOTE: Only the {@link Pattern} flags CASE_INSENSITIVE, DOTALL, and MULTILINE are supported.
    */
   static class JoniRegexEngine implements Engine {
-    private Encoding encoding = UTF8Encoding.INSTANCE;
+    // When using UTF8Encoding, an infinite loop can occur if an invalid UTF8 is encountered.
+    // Use NonStrictUTF8Encoding instead of UTF8Encoding to avoid the issue.
+    private Encoding encoding = NonStrictUTF8Encoding.INSTANCE;
     private String regex;
     private Regex pattern;
 

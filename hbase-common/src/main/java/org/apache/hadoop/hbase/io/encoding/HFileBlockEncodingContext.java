@@ -31,14 +31,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface HFileBlockEncodingContext {
 
-  /**
-   * @return the block type after encoding
-   */
+  /** Returns the block type after encoding */
   BlockType getBlockType();
 
-  /**
-   * @return the {@link DataBlockEncoding} encoding used
-   */
+  /** Returns the {@link DataBlockEncoding} encoding used */
   DataBlockEncoding getDataBlockEncoding();
 
   /**
@@ -47,27 +43,20 @@ public interface HFileBlockEncodingContext {
    */
   void postEncoding(BlockType blockType) throws IOException;
 
-  /**
-   * Releases the resources used.
-   */
+  /** Releases the resources used. */
   void close();
 
-  /**
-   * @return HFile context information
-   */
+  /** Returns HFile context information */
   HFileContext getHFileContext();
 
-  /**
-   * Sets the encoding state.
-   */
+  /** Sets the encoding state. */
   void setEncodingState(EncodingState state);
 
-  /**
-   * @return the encoding state
-   */
+  /** Returns the encoding state */
   EncodingState getEncodingState();
 
   /**
+   * Compress and encrypt the supplied encoded block data with header.
    * @param data   encoded bytes with header
    * @param offset the offset in encoded data to start at
    * @param length the number of encoded bytes

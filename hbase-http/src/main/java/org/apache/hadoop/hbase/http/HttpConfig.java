@@ -71,7 +71,7 @@ public class HttpConfig {
   }
 
   public String getSchemePrefix() {
-    return (isSecure()) ? "https://" : "http://";
+    return isSecure() ? "https://" : "http://";
   }
 
   public String getScheme(Policy policy) {

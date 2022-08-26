@@ -2399,9 +2399,7 @@ public class AssignmentManager {
     return master;
   }
 
-  /**
-   * @return a snapshot of rsReports
-   */
+  /** Returns a snapshot of rsReports */
   public Map<ServerName, Set<byte[]>> getRSReports() {
     Map<ServerName, Set<byte[]>> rsReportsSnapshot = new HashMap<>();
     synchronized (rsReports) {

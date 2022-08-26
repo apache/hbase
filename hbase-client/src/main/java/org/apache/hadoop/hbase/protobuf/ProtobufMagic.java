@@ -35,8 +35,7 @@ public class ProtobufMagic {
   public static final byte[] PB_MAGIC = new byte[] { 'P', 'B', 'U', 'F' };
 
   /**
-   * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * Returns True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte[] bytes) {
     if (bytes == null) return false;
@@ -66,20 +65,13 @@ public class ProtobufMagic {
     return length1 - length2;
   }
 
-  /**
-   * @param bytes  Bytes to check.
-   * @param offset offset to start at
-   * @param len    length to use
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
-   */
+  /** Returns True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix. */
   public static boolean isPBMagicPrefix(final byte[] bytes, int offset, int len) {
     if (bytes == null || len < PB_MAGIC.length) return false;
     return compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
   }
 
-  /**
-   * @return Length of {@link #PB_MAGIC}
-   */
+  /** Returns Length of {@link #PB_MAGIC} */
   public static int lengthOfPBMagic() {
     return PB_MAGIC.length;
   }

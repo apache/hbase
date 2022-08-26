@@ -222,9 +222,7 @@ public class ReplicationPeerManager {
     return desc;
   }
 
-  /**
-   * @return the old desciption of the peer
-   */
+  /** Returns the old desciption of the peer */
   ReplicationPeerDescription preTransitPeerSyncReplicationState(String peerId,
     SyncReplicationState state) throws DoNotRetryIOException {
     ReplicationPeerDescription desc = checkPeerExists(peerId);
@@ -589,8 +587,8 @@ public class ReplicationPeerManager {
     return s1.equals(s2);
   }
 
-  public void acquireSyncReplicationPeerLock() throws InterruptedException {
-    syncReplicationPeerLock.acquire();
+  public boolean tryAcquireSyncReplicationPeerLock() {
+    return syncReplicationPeerLock.tryAcquire();
   }
 
   public void releaseSyncReplicationPeerLock() {

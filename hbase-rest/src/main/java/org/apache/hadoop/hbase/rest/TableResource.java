@@ -53,14 +53,12 @@ public class TableResource extends ResourceBase {
     this.table = table;
   }
 
-  /** @return the table name */
+  /** Returns the table name */
   String getName() {
     return table;
   }
 
-  /**
-   * @return true if the table exists n
-   */
+  /** Returns true if the table exists n */
   boolean exists() throws IOException {
     return servlet.getAdmin().tableExists(TableName.valueOf(table));
   }

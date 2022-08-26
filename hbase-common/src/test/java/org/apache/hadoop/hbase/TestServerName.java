@@ -82,14 +82,14 @@ public class TestServerName {
     assertEquals(sn.toString(), parsedSn.toString());
     assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
     assertEquals(sn.getPort(), parsedSn.getPort());
-    assertEquals(sn.getStartcode(), parsedSn.getStartcode());
+    assertEquals(sn.getStartCode(), parsedSn.getStartCode());
 
     final String hostnamePortStr = sn.getAddress().toString();
     byte[] bytes = Bytes.toBytes(hostnamePortStr);
     parsedSn = ServerName.parseVersionedServerName(bytes);
     assertEquals(sn.getHostnameLowerCase(), parsedSn.getHostnameLowerCase());
     assertEquals(sn.getPort(), parsedSn.getPort());
-    assertEquals(ServerName.NON_STARTCODE, parsedSn.getStartcode());
+    assertEquals(ServerName.NON_STARTCODE, parsedSn.getStartCode());
   }
 
   @Test

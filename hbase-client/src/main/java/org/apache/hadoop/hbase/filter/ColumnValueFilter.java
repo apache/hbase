@@ -75,23 +75,17 @@ public class ColumnValueFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the column family
-   */
+  /** Returns the column family */
   public byte[] getFamily() {
     return family;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Returns the qualifier */
   public byte[] getQualifier() {
     return qualifier;
   }
@@ -161,9 +155,7 @@ public class ColumnValueFilter extends FilterBase {
     return new ColumnValueFilter(family, qualifier, operator, comparator);
   }
 
-  /**
-   * @return A pb instance to represent this instance.
-   */
+  /** Returns A pb instance to represent this instance. */
   FilterProtos.ColumnValueFilter convert() {
     FilterProtos.ColumnValueFilter.Builder builder = FilterProtos.ColumnValueFilter.newBuilder();
 
@@ -176,10 +168,11 @@ public class ColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Parse protobuf bytes to a ColumnValueFilter
-   * @param pbBytes pbBytes
-   * @return a ColumnValueFilter
-   * @throws DeserializationException deserialization exception
+   * Parse a serialized representation of {@link ColumnValueFilter}
+   * @param pbBytes A pb serialized {@link ColumnValueFilter} instance
+   * @return An instance of {@link ColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static ColumnValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnValueFilter proto;
@@ -206,6 +199,10 @@ public class ColumnValueFilter extends FilterBase {
     return convert().toByteArray();
   }
 
+  /**
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
+   */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
     if (o == this) {
@@ -213,7 +210,6 @@ public class ColumnValueFilter extends FilterBase {
     } else if (!(o instanceof ColumnValueFilter)) {
       return false;
     }
-
     ColumnValueFilter other = (ColumnValueFilter) o;
     return Bytes.equals(this.getFamily(), other.getFamily())
       && Bytes.equals(this.getQualifier(), other.getQualifier())

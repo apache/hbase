@@ -111,8 +111,6 @@ public class Delete extends Mutation {
    * <p>
    * This timestamp is ONLY used for a delete row operation. If specifying families or columns, you
    * must specify each timestamp individually.
-   * @param row We make a local copy of this passed in row. nn * @param timestamp maximum version
-   *            timestamp (only for delete row)
    */
   public Delete(final byte[] row, final int rowOffset, final int rowLength, long timestamp) {
     checkRow(row, rowOffset, rowLength);
@@ -121,6 +119,7 @@ public class Delete extends Mutation {
   }
 
   /**
+   * Create a Delete operation using another Delete as template.
    * @param deleteToCopy delete to copy
    */
   public Delete(final Delete deleteToCopy) {
@@ -144,6 +143,7 @@ public class Delete extends Mutation {
    * @param cell An existing cell of type "delete".
    * @return this for invocation chaining n
    */
+  @Override
   public Delete add(Cell cell) throws IOException {
     super.add(cell);
     return this;
@@ -190,6 +190,9 @@ public class Delete extends Mutation {
    * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte[] family, final long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     List<Cell> list = getCellList(family);
     list.add(new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamilyVersion));
     return this;

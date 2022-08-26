@@ -192,7 +192,7 @@ public class TestRpcControllerFactory {
 
       // reversed, regular
       scanInfo.setReadType(ReadType.STREAM);
-      counter = doScan(table, scanInfo, counter + 1);
+      doScan(table, scanInfo, counter + 1);
 
       // make sure we have no priority count
       verifyPriorityGroupCount(HConstants.ADMIN_QOS, 0);

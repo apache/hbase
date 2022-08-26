@@ -133,15 +133,11 @@ public interface BlockCache extends Iterable<CachedBlock> {
    */
   long getDataBlockCount();
 
-  /**
-   * @return Iterator over the blocks in the cache.
-   */
+  /** Returns Iterator over the blocks in the cache. */
   @Override
   Iterator<CachedBlock> iterator();
 
-  /**
-   * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
-   */
+  /** Returns The list of sub blockcaches that make up this one; returns null if no sub caches. */
   BlockCache[] getBlockCaches();
 
   /**

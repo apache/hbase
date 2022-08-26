@@ -645,9 +645,7 @@ public final class RequestConverter {
       ProtobufUtil.toMutationNoData(MutationType.APPEND, append, mutationBuilder, nonce)));
   }
 
-  /**
-   * @return whether or not the rowMutations has a Increment or Append
-   */
+  /** Returns whether or not the rowMutations has a Increment or Append */
   private static boolean buildNoDataRegionAction(final RowMutations rowMutations,
     final List<CellScannable> cells, long nonce, final RegionAction.Builder regionActionBuilder,
     final ClientProtos.Action.Builder actionBuilder, final MutationProto.Builder mutationBuilder)
@@ -706,6 +704,7 @@ public final class RequestConverter {
   }
 
   /**
+   * Create a protocol buffer GetRegionInfoRequest,
    * @param regionName             the name of the region to get info
    * @param includeCompactionState indicate if the compaction state is requested
    * @param includeBestSplitRow    indicate if the bestSplitRow is requested
@@ -914,7 +913,7 @@ public final class RequestConverter {
   public static DeleteColumnRequest buildDeleteColumnRequest(final TableName tableName,
     final byte[] columnName, final long nonceGroup, final long nonce) {
     DeleteColumnRequest.Builder builder = DeleteColumnRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setColumnName(UnsafeByteOperations.unsafeWrap(columnName));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
@@ -927,7 +926,7 @@ public final class RequestConverter {
   public static ModifyColumnRequest buildModifyColumnRequest(final TableName tableName,
     final ColumnFamilyDescriptor column, final long nonceGroup, final long nonce) {
     ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setColumnFamilies(ProtobufUtil.toColumnFamilySchema(column));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
@@ -939,7 +938,7 @@ public final class RequestConverter {
     final long nonce) {
     ModifyColumnStoreFileTrackerRequest.Builder builder =
       ModifyColumnStoreFileTrackerRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setFamily(ByteString.copyFrom(family));
     builder.setDstSft(dstSFT);
     builder.setNonceGroup(nonceGroup);
@@ -1061,7 +1060,7 @@ public final class RequestConverter {
   public static DisableTableRequest buildDisableTableRequest(final TableName tableName,
     final long nonceGroup, final long nonce) {
     DisableTableRequest.Builder builder = DisableTableRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();
@@ -1090,7 +1089,7 @@ public final class RequestConverter {
   public static ModifyTableRequest buildModifyTableRequest(final TableName tableName,
     final TableDescriptor tableDesc, final long nonceGroup, final long nonce) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setTableSchema(ProtobufUtil.toTableSchema(tableDesc));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
@@ -1101,7 +1100,7 @@ public final class RequestConverter {
     final TableName tableName, final String dstSFT, final long nonceGroup, final long nonce) {
     ModifyTableStoreFileTrackerRequest.Builder builder =
       ModifyTableStoreFileTrackerRequest.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setDstSft(dstSFT);
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);

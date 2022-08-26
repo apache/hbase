@@ -498,9 +498,7 @@ class ReplicationSourceWALReader extends Thread {
     return newBufferUsed >= totalBufferQuota;
   }
 
-  /**
-   * @return whether the reader thread is running
-   */
+  /** Returns whether the reader thread is running */
   public boolean isReaderRunning() {
     return isReaderRunning && !isInterrupted();
   }

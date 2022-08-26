@@ -69,7 +69,7 @@ public class IntegrationTestRpcClient {
   protected AbstractRpcClient<?> createRpcClient(Configuration conf, boolean isSyncClient) {
     return isSyncClient ? new BlockingRpcClient(conf) : new NettyRpcClient(conf) {
       @Override
-      Codec getCodec() {
+      protected Codec getCodec() {
         return null;
       }
     };
@@ -124,8 +124,8 @@ public class IntegrationTestRpcClient {
     }
 
     void stopRandomServer() throws Exception {
-      lock.writeLock().lock();
       RpcServer rpcServer = null;
+      lock.writeLock().lock();
       try {
         if (rpcServers.size() <= minServers) {
           return;
@@ -243,6 +243,7 @@ public class IntegrationTestRpcClient {
     }
 
     @Override
+    @SuppressWarnings("AssertionFailureIgnored") // intended
     public void run() {
       while (running.get()) {
         boolean isBigPayload = ThreadLocalRandom.current().nextBoolean();

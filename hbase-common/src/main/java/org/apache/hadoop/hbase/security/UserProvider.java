@@ -141,7 +141,7 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
-   * @return the userName for the current logged-in user.
+   * Returns the userName for the current logged-in user.
    * @throws IOException if the underlying user cannot be obtained
    */
   public String getCurrentUserName() throws IOException {
@@ -149,17 +149,15 @@ public class UserProvider extends BaseConfigurable {
     return user == null ? null : user.getName();
   }
 
-  /**
-   * @return <tt>true</tt> if security is enabled, <tt>false</tt> otherwise
-   */
+  /** Returns <tt>true</tt> if security is enabled, <tt>false</tt> otherwise */
   public boolean isHBaseSecurityEnabled() {
     return User.isHBaseSecurityEnabled(this.getConf());
   }
 
   /**
-   * @return whether or not Kerberos authentication is configured for Hadoop. For non-secure Hadoop,
-   *         this always returns <code>false</code>. For secure Hadoop, it will return the value
-   *         from {@code UserGroupInformation.isSecurityEnabled()}.
+   * Return whether or not Kerberos authentication is configured for Hadoop. For non-secure Hadoop,
+   * this always returns <code>false</code>. For secure Hadoop, it will return the value from
+   * {@code UserGroupInformation.isSecurityEnabled()}.
    */
   public boolean isHadoopSecurityEnabled() {
     return User.isSecurityEnabled();
@@ -174,7 +172,7 @@ public class UserProvider extends BaseConfigurable {
   }
 
   /**
-   * @return the current user within the current execution context
+   * Return the current user within the current execution context
    * @throws IOException if the user cannot be loaded
    */
   public User getCurrent() throws IOException {

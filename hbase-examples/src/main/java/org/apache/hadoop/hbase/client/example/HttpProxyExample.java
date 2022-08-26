@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.client.example;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.io.netty.bootstrap.ServerBootstrap;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -71,6 +75,11 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
  *
  * Use HTTP GET to fetch data, and use HTTP PUT to put data. Encode the value as the request content
  * when doing PUT.
+ * <p>
+ * Notice that, future class methods will all return a new Future, so you always have one future
+ * that will not been checked, so we need to suppress error-prone "FutureReturnValueIgnored"
+ * warnings on the methods such as join and stop. In your real production code, you should use your
+ * own convenient way to address the warning.
  */
 @InterfaceAudience.Private
 public class HttpProxyExample {
@@ -148,16 +157,24 @@ public class HttpProxyExample {
         resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status);
       }
       resp.headers().set(HttpHeaderNames.CONTENT_TYPE, "text-plain; charset=UTF-8");
-      ctx.writeAndFlush(resp);
+      safeWriteAndFlush(ctx, resp);
     }
 
     private Params parse(FullHttpRequest req) {
-      String[] components = new QueryStringDecoder(req.uri()).path().split("/");
-      Preconditions.checkArgument(components.length == 4, "Unrecognized uri: %s", req.uri());
+      List<String> components =
+        Splitter.on('/').splitToList(new QueryStringDecoder(req.uri()).path());
+      Preconditions.checkArgument(components.size() == 4, "Unrecognized uri: %s", req.uri());
+      Iterator<String> i = components.iterator();
       // path is start with '/' so split will give an empty component
-      String[] cfAndCq = components[3].split(":");
-      Preconditions.checkArgument(cfAndCq.length == 2, "Unrecognized uri: %s", req.uri());
-      return new Params(components[1], components[2], cfAndCq[0], cfAndCq[1]);
+      i.next();
+      String table = i.next();
+      String row = i.next();
+      List<String> cfAndCq = Splitter.on(':').splitToList(i.next());
+      Preconditions.checkArgument(cfAndCq.size() == 2, "Unrecognized uri: %s", req.uri());
+      i = cfAndCq.iterator();
+      String family = i.next();
+      String qualifier = i.next();
+      return new Params(table, row, family, qualifier);
     }
 
     private void get(ChannelHandlerContext ctx, FullHttpRequest req) {
@@ -239,6 +256,7 @@ public class HttpProxyExample {
         }).bind(port).syncUninterruptibly().channel();
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void join() {
     serverChannel.closeFuture().awaitUninterruptibly();
   }
@@ -251,6 +269,7 @@ public class HttpProxyExample {
     }
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void stop() throws IOException {
     serverChannel.close().syncUninterruptibly();
     serverChannel = null;

@@ -148,10 +148,7 @@ public class RegionPlan implements Comparable<RegionPlan> {
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
+    if (!(obj instanceof RegionPlan)) {
       return false;
     }
     RegionPlan other = (RegionPlan) obj;

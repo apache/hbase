@@ -29,11 +29,12 @@ public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServer
    * A singleton used to make sure that only one thrift metrics source per server type is ever
    * created.
    */
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum FactoryStorage {
     INSTANCE;
 
-    MetricsThriftServerSourceImpl thriftOne;
-    MetricsThriftServerSourceImpl thriftTwo;
+    private MetricsThriftServerSourceImpl thriftOne;
+    private MetricsThriftServerSourceImpl thriftTwo;
   }
 
   @Override

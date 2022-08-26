@@ -69,38 +69,29 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public interface ClusterMetrics {
 
-  /**
-   * @return the HBase version string as reported by the HMaster
-   */
+  /** Returns the HBase version string as reported by the HMaster */
   @Nullable
   String getHBaseVersion();
 
-  /**
-   * @return the names of region servers on the dead list
-   */
+  /** Returns the names of region servers on the dead list */
   List<ServerName> getDeadServerNames();
 
-  /**
-   * @return the names of region servers on the decommissioned list
-   */
+  /** Returns the names of region servers on the unknown list */
+  List<ServerName> getUnknownServerNames();
+
+  /** Returns the names of region servers on the decommissioned list */
   List<ServerName> getDecommissionedServerNames();
 
-  /**
-   * @return the names of region servers on the live list
-   */
+  /** Returns the names of region servers on the live list */
   Map<ServerName, ServerMetrics> getLiveServerMetrics();
 
-  /**
-   * @return the number of regions deployed on the cluster
-   */
+  /** Returns the number of regions deployed on the cluster */
   default int getRegionCount() {
     return getLiveServerMetrics().entrySet().stream()
       .mapToInt(v -> v.getValue().getRegionMetrics().size()).sum();
   }
 
-  /**
-   * @return the number of requests since last report
-   */
+  /** Returns the number of requests since last report */
   default long getRequestCount() {
     return getLiveServerMetrics().entrySet().stream()
       .flatMap(v -> v.getValue().getRegionMetrics().values().stream())
@@ -114,9 +105,7 @@ public interface ClusterMetrics {
   @Nullable
   ServerName getMasterName();
 
-  /**
-   * @return the names of backup masters
-   */
+  /** Returns the names of backup masters */
   List<ServerName> getBackupMasterNames();
 
   @InterfaceAudience.Private
@@ -147,9 +136,7 @@ public interface ClusterMetrics {
 
   List<ServerName> getServersName();
 
-  /**
-   * @return the average cluster load
-   */
+  /** Returns the average cluster load */
   default double getAverageLoad() {
     int serverSize = getLiveServerMetrics().size();
     if (serverSize == 0) {
@@ -195,6 +182,10 @@ public interface ClusterMetrics {
      * metrics about dead region servers
      */
     DEAD_SERVERS,
+    /**
+     * metrics about unknown region servers
+     */
+    UNKNOWN_SERVERS,
     /**
      * metrics about master name
      */

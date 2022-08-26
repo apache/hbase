@@ -815,9 +815,7 @@ public class StripeStoreFileManager
       return result;
     }
 
-    /**
-     * @return A lazy L0 copy from current state.
-     */
+    /** Returns A lazy L0 copy from current state. */
     private final ArrayList<HStoreFile> getLevel0Copy() {
       if (this.level0Files == null) {
         this.level0Files = new ArrayList<>(StripeStoreFileManager.this.state.level0Files);

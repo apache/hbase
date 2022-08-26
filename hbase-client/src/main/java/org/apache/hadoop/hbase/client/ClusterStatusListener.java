@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.consume;
+import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeClose;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -183,7 +186,6 @@ class ClusterStatusListener implements Closeable {
 
     @Override
     public void connect(Configuration conf) throws IOException {
-
       String mcAddress =
         conf.get(HConstants.STATUS_MULTICAST_ADDRESS, HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       String bindAddress = conf.get(HConstants.STATUS_MULTICAST_BIND_ADDRESS,
@@ -218,16 +220,21 @@ class ClusterStatusListener implements Closeable {
       }
 
       LOG.debug("Channel bindAddress={}, networkInterface={}, INA={}", bindAddress, ni, ina);
-      channel.joinGroup(ina, ni, null, channel.newPromise());
+      try {
+        consume(channel.joinGroup(ina, ni, null).sync());
+      } catch (InterruptedException e) {
+        close();
+        throw ExceptionUtil.asInterrupt(e);
+      }
     }
 
     @Override
     public void close() {
       if (channel != null) {
-        channel.close();
+        safeClose(channel);
         channel = null;
       }
-      group.shutdownGracefully();
+      consume(group.shutdownGracefully());
     }
 
     /**

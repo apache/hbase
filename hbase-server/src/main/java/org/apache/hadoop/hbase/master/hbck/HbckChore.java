@@ -82,7 +82,7 @@ public class HbckChore extends ScheduledChore {
   }
 
   /**
-   * @return Returns last published Report that comes of last successful execution of this chore.
+   * Returns Returns last published Report that comes of last successful execution of this chore.
    */
   public HbckReport getLastReport() {
     return lastReport;

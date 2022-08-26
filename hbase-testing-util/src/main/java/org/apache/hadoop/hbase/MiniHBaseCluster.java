@@ -636,16 +636,12 @@ public class MiniHBaseCluster extends HBaseCluster {
     return false;
   }
 
-  /**
-   * @return List of master threads.
-   */
+  /** Returns List of master threads. */
   public List<JVMClusterUtil.MasterThread> getMasterThreads() {
     return this.hbaseCluster.getMasters();
   }
 
-  /**
-   * @return List of live master threads (skips the aborted and the killed)
-   */
+  /** Returns List of live master threads (skips the aborted and the killed) */
   public List<JVMClusterUtil.MasterThread> getLiveMasterThreads() {
     return this.hbaseCluster.getLiveMasters();
   }
@@ -743,9 +739,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
   }
 
-  /**
-   * @return Number of live region servers in the cluster currently.
-   */
+  /** Returns Number of live region servers in the cluster currently. */
   public int getNumLiveRegionServers() {
     return this.hbaseCluster.getLiveRegionServers().size();
   }
@@ -758,9 +752,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     return this.hbaseCluster.getRegionServers();
   }
 
-  /**
-   * @return List of live region server threads (skips the aborted and the killed)
-   */
+  /** Returns List of live region server threads (skips the aborted and the killed) */
   public List<JVMClusterUtil.RegionServerThread> getLiveRegionServerThreads() {
     return this.hbaseCluster.getLiveRegionServers();
   }

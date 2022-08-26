@@ -722,6 +722,7 @@ public class TestAdmin2 extends TestAdminBase {
     assertEquals(11111111, ADMIN.getDescriptor(tableName).getMaxFileSize());
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   @Test
   public void testTableMergeFollowedByModify() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());

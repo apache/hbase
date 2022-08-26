@@ -197,9 +197,7 @@ public class HBaseZKTestingUtility extends HBaseCommonTestingUtility {
     });
   }
 
-  /**
-   * @return True if we removed the test dirs
-   */
+  /** Returns True if we removed the test dirs */
   @Override
   public boolean cleanupTestDir() {
     boolean ret = super.cleanupTestDir();

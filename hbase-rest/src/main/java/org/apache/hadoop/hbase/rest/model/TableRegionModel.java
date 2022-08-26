@@ -83,9 +83,7 @@ public class TableRegionModel implements Serializable {
     this.location = location;
   }
 
-  /**
-   * @return the region name
-   */
+  /** Returns the region name */
   @XmlAttribute
   public String getName() {
     byte[] tableNameAsBytes = Bytes.toBytes(this.table);
@@ -95,33 +93,25 @@ public class TableRegionModel implements Serializable {
     return Bytes.toString(nameAsBytes);
   }
 
-  /**
-   * @return the encoded region id
-   */
+  /** Returns the encoded region id */
   @XmlAttribute
   public long getId() {
     return id;
   }
 
-  /**
-   * @return the start key
-   */
+  /** Returns the start key */
   @XmlAttribute
   public byte[] getStartKey() {
     return startKey;
   }
 
-  /**
-   * @return the end key
-   */
+  /** Returns the end key */
   @XmlAttribute
   public byte[] getEndKey() {
     return endKey;
   }
 
-  /**
-   * @return the name and port of the region server hosting the region
-   */
+  /** Returns the name and port of the region server hosting the region */
   @XmlAttribute
   public String getLocation() {
     return location;

@@ -771,7 +771,7 @@
     <maven.min.version>3.0.4</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.2.3</hadoop-three.version>
+    <hadoop-three.version>3.2.4</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -851,7 +851,7 @@
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.22.2</spotless.version>
+    <spotless.version>2.24.1</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
@@ -1561,6 +1561,12 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -2715,6 +2721,27 @@
               <!-- spotless manve plugin does not allow empty here, so use \n -->
               <replacement>\n</replacement>
             </replaceRegex>
+            <!--
+              e.g., rewrite
+              /** @return blabla */
+              or
+              /**
+               * @return blabla
+               */
+              to
+              /** Returns blabla */
+              See https://errorprone.info/bugpattern/EmptyBlockTag
+            -->
+            <replaceRegex>
+              <name>Purge single returns tag multi line</name>
+              <searchRegex>(?m)^ */\*\*\n *\* *@return *(.*) *\n *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
+            <replaceRegex>
+              <name>Purge single returns tag single line</name>
+              <searchRegex>^ */\*\* *@return *(.*) *\*/$</searchRegex>
+              <replacement>/** Returns $1 */</replacement>
+            </replaceRegex>
             <!-- apply a specific flavor -->
             <eclipse>
               <file>${session.executionRootDirectory}/dev-support/hbase_eclipse_formatter.xml</file>
@@ -3118,7 +3145,6 @@
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
         <argLine>-Dio.netty.tryReflectionSetAccessible=true
-          --illegal-access=permit
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
@@ -3126,6 +3152,7 @@
           --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
           --add-opens java.base/java.lang.reflect=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
           ${hbase-surefire.argLine}</argLine>
         <!--
           Value to use for surefire when running jdk11.

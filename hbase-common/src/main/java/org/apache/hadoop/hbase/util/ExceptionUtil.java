@@ -33,9 +33,7 @@ public final class ExceptionUtil {
   private ExceptionUtil() {
   }
 
-  /**
-   * @return true if the throwable comes an interruption, false otherwise.
-   */
+  /** Returns true if the throwable comes an interruption, false otherwise. */
   public static boolean isInterrupt(Throwable t) {
     if (t instanceof InterruptedException) {
       return true;
@@ -48,9 +46,7 @@ public final class ExceptionUtil {
     return (t instanceof InterruptedIOException || t instanceof ClosedByInterruptException);
   }
 
-  /**
-   * @throws InterruptedIOException if t was an interruption. Does nothing otherwise.
-   */
+  /** Throw InterruptedIOException if t was an interruption, nothing otherwise. */
   public static void rethrowIfInterrupt(Throwable t) throws InterruptedIOException {
     InterruptedIOException iie = asInterrupt(t);
 
@@ -59,9 +55,7 @@ public final class ExceptionUtil {
     }
   }
 
-  /**
-   * @return an InterruptedIOException if t was an interruption, null otherwise
-   */
+  /** Returns an InterruptedIOException if t was an interruption, null otherwise */
   public static InterruptedIOException asInterrupt(Throwable t) {
     if (t instanceof SocketTimeoutException) {
       return null;

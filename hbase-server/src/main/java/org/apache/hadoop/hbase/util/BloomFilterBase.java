@@ -25,18 +25,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public interface BloomFilterBase {
 
-  /**
-   * @return The number of keys added to the bloom
-   */
+  /** Returns The number of keys added to the bloom */
   long getKeyCount();
 
-  /**
-   * @return The max number of keys that can be inserted to maintain the desired error rate
-   */
+  /** Returns The max number of keys that can be inserted to maintain the desired error rate */
   long getMaxKeys();
 
-  /**
-   * @return Size of the bloom, in bytes
-   */
+  /** Returns Size of the bloom, in bytes */
   long getByteSize();
 }

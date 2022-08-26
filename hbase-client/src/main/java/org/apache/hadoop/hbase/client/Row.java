@@ -28,8 +28,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Row {
   Comparator<Row> COMPARATOR = (v1, v2) -> Bytes.compareTo(v1.getRow(), v2.getRow());
 
-  /**
-   * @return The row.
-   */
+  /** Returns The row. */
   byte[] getRow();
 }

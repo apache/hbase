@@ -105,6 +105,7 @@ public class HBaseConfiguration extends Configuration {
   }
 
   /**
+   * Creates a Configuration with HBase resources
    * @param that Configuration to clone.
    * @return a Configuration created with the hbase-*.xml files plus the given configuration.
    */
@@ -158,9 +159,7 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
-  /**
-   * @return whether to show HBase Configuration in servlet
-   */
+  /** Returns whether to show HBase Configuration in servlet */
   public static boolean isShowConfInServlet() {
     boolean isShowConf = false;
     try {

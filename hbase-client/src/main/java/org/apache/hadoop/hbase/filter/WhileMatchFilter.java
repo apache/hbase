@@ -94,9 +94,7 @@ public class WhileMatchFilter extends FilterBase {
     return true;
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() throws IOException {
     FilterProtos.WhileMatchFilter.Builder builder = FilterProtos.WhileMatchFilter.newBuilder();
@@ -105,9 +103,10 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   /**
+   * Parse a serialized representation of {@link WhileMatchFilter}
    * @param pbBytes A pb serialized {@link WhileMatchFilter} instance
    * @return An instance of {@link WhileMatchFilter} made from <code>bytes</code>
-   * @throws org.apache.hadoop.hbase.exceptions.DeserializationException
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static WhileMatchFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
@@ -125,15 +124,17 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   /**
-   * @param o the other filter to compare with
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Return true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof WhileMatchFilter)) return false;
-
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof WhileMatchFilter)) {
+      return false;
+    }
     WhileMatchFilter other = (WhileMatchFilter) o;
     return getFilter().areSerializedFieldsEqual(other.getFilter());
   }

@@ -28,23 +28,17 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Public
 public interface CoprocessorDescriptor {
-  /**
-   * @return the name of the class or interface represented by this object.
-   */
+  /** Returns the name of the class or interface represented by this object. */
   String getClassName();
 
   /**
-   * @return Path of the jar file. If it's null, the class will be loaded from default classloader.
+   * Returns Path of the jar file. If it's null, the class will be loaded from default classloader.
    */
   Optional<String> getJarPath();
 
-  /**
-   * @return The order to execute this coprocessor
-   */
+  /** Returns The order to execute this coprocessor */
   int getPriority();
 
-  /**
-   * @return Arbitrary key-value parameter pairs passed into the coprocessor.
-   */
+  /** Returns Arbitrary key-value parameter pairs passed into the coprocessor. */
   Map<String, String> getProperties();
 }

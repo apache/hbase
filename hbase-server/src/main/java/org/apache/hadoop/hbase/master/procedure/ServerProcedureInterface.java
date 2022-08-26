@@ -58,14 +58,10 @@ public interface ServerProcedureInterface {
     VERIFY_SNAPSHOT
   }
 
-  /**
-   * @return Name of this server instance.
-   */
+  /** Returns Name of this server instance. */
   ServerName getServerName();
 
-  /**
-   * @return True if this server has an hbase:meta table region.
-   */
+  /** Returns True if this server has an hbase:meta table region. */
   boolean hasMetaTableRegion();
 
   /**

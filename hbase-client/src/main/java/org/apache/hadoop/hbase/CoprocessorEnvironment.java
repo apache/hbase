@@ -28,29 +28,27 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public interface CoprocessorEnvironment<C extends Coprocessor> {
 
-  /** @return the Coprocessor interface version */
+  /** Returns the Coprocessor interface version */
   int getVersion();
 
-  /** @return the HBase version as a string (e.g. "0.21.0") */
+  /** Returns the HBase version as a string (e.g. "0.21.0") */
   String getHBaseVersion();
 
-  /** @return the loaded coprocessor instance */
+  /** Returns the loaded coprocessor instance */
   C getInstance();
 
-  /** @return the priority assigned to the loaded coprocessor */
+  /** Returns the priority assigned to the loaded coprocessor */
   int getPriority();
 
-  /** @return the load sequence number */
+  /** Returns the load sequence number */
   int getLoadSequence();
 
   /**
-   * @return a Read-only Configuration; throws {@link UnsupportedOperationException} if you try to
-   *         set a configuration.
+   * Returns a Read-only Configuration; throws {@link UnsupportedOperationException} if you try to
+   * set a configuration.
    */
   Configuration getConfiguration();
 
-  /**
-   * @return the classloader for the loaded coprocessor instance
-   */
+  /** Returns the classloader for the loaded coprocessor instance */
   ClassLoader getClassLoader();
 }

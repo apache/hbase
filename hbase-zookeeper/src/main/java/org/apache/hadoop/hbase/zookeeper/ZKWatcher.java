@@ -516,9 +516,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     return new ArrayList<>(listeners);
   }
 
-  /**
-   * @return The number of currently registered listeners
-   */
+  /** Returns The number of currently registered listeners */
   public int getNumberOfListeners() {
     return listeners.size();
   }
@@ -606,7 +604,7 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     LOG.debug(prefix("Received ZooKeeper Event, " + "type=" + event.getType() + ", " + "state="
       + event.getState() + ", " + "path=" + event.getPath()));
     final String spanName = ZKWatcher.class.getSimpleName() + "-" + identifier;
-    zkEventProcessor.submit(TraceUtil.tracedRunnable(() -> processEvent(event), spanName));
+    zkEventProcessor.execute(TraceUtil.tracedRunnable(() -> processEvent(event), spanName));
   }
 
   // Connection management

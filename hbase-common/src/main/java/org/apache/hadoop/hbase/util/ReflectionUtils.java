@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 
 @InterfaceAudience.Private
 public class ReflectionUtils {
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   public static <T> T instantiateWithCustomCtor(String className, Class<?>[] ctorArgTypes,
     Object[] ctorArgs) {
     try {
@@ -63,7 +63,7 @@ public class ReflectionUtils {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "TypeParameterUnusedInFormals" })
   public static <T> T newInstance(String className, Object... params) {
     Class<T> type;
     try {
@@ -107,7 +107,7 @@ public class ReflectionUtils {
           match = !ctorParamTypes[i].isPrimitive();
         } else {
           Class<?> paramType = paramTypes[i].getClass();
-          match = (!ctorParamTypes[i].isPrimitive())
+          match = !ctorParamTypes[i].isPrimitive()
             ? ctorParamTypes[i].isAssignableFrom(paramType)
             : ((int.class.equals(ctorParamTypes[i]) && Integer.class.equals(paramType))
               || (long.class.equals(ctorParamTypes[i]) && Long.class.equals(paramType))

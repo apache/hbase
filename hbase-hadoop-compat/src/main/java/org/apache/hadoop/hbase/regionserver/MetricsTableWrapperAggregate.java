@@ -93,33 +93,39 @@ public interface MetricsTableWrapperAggregate {
    */
   long getMaxStoreFiles(String table);
 
-  /**
-   * @return Max age of store files for this table
-   */
+  /** Returns Max age of store files for this table */
   long getMaxStoreFileAge(String table);
 
-  /**
-   * @return Min age of store files for this table
-   */
+  /** Returns Min age of store files for this table */
   long getMinStoreFileAge(String table);
 
-  /**
-   * @return Average age of store files for this table
-   */
+  /** Returns Average age of store files for this table */
   long getAvgStoreFileAge(String table);
 
+  /** Returns the size of the static indexes for this table */
+  long getStaticIndexSize(String table);
+
+  /** Returns the size of the static blooms for this table */
+  long getStaticBloomSize(String table);
+
+  /** Returns count of bloom filter requests for this table. */
+  long getBloomFilterRequestsCount(String table);
+
+  /** Returns count of bloom filter requests which return a negative result for this table. */
+  long getBloomFilterNegativeResultsCount(String table);
+
   /**
-   * @return Number of reference files for this table
+   * Returns count of requests which could have used bloom filters for this table, but they weren't
+   * configured or loaded.
    */
+  long getBloomFilterEligibleRequestsCount(String table);
+
+  /** Returns Number of reference files for this table */
   long getNumReferenceFiles(String table);
 
-  /**
-   * @return number of row reads completely from memstore per store for this table
-   */
+  /** Returns number of row reads completely from memstore per store for this table */
   Map<String, Long> getMemstoreOnlyRowReadsCount(String table);
 
-  /**
-   * @return number of row reads from file and memstore per store for this table
-   */
+  /** Returns number of row reads from file and memstore per store for this table */
   Map<String, Long> getMixedRowReadsCount(String table);
 }

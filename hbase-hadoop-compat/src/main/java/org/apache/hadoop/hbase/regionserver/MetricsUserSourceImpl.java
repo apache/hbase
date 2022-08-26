@@ -57,7 +57,6 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   private final int hashCode;
 
   private AtomicBoolean closed = new AtomicBoolean(false);
-  private final MetricsUserAggregateSourceImpl agg;
   private final DynamicMetricsRegistry registry;
 
   private ConcurrentHashMap<String, ClientMetrics> clientMetricsMap;
@@ -115,7 +114,6 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     }
 
     this.user = user;
-    this.agg = agg;
     this.registry = agg.getMetricsRegistry();
 
     this.userNamePrefix = "user_" + user + "_metric_";

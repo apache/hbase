@@ -70,9 +70,7 @@ public interface MemStore {
    */
   void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
 
-  /**
-   * @return Oldest timestamp of all the Cells in the MemStore
-   */
+  /** Returns Oldest timestamp of all the Cells in the MemStore */
   long timeOfOldestEdit();
 
   /**

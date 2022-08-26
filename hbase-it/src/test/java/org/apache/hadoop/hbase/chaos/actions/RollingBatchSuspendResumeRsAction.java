@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
@@ -68,8 +68,8 @@ public class RollingBatchSuspendResumeRsAction extends Action {
     getLogger().info("Performing action: Rolling batch restarting {}% of region servers",
       (int) (ratio * 100));
     List<ServerName> selectedServers = selectServers();
-    Queue<ServerName> serversToBeSuspended = new LinkedList<>(selectedServers);
-    Queue<ServerName> suspendedServers = new LinkedList<>();
+    Queue<ServerName> serversToBeSuspended = new ArrayDeque<>(selectedServers);
+    Queue<ServerName> suspendedServers = new ArrayDeque<>();
     Random rand = ThreadLocalRandom.current();
     // loop while there are servers to be suspended or suspended servers to be resumed
     while (

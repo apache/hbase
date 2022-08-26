@@ -196,9 +196,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     this.report.holes.add(new Pair<>(a, b));
   }
 
-  /**
-   * @return True if table is disabled or disabling; defaults false!
-   */
+  /** Returns True if table is disabled or disabling; defaults false! */
   boolean isTableDisabled(RegionInfo ri) {
     if (ri == null) {
       return false;
@@ -275,9 +273,7 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
     }
   }
 
-  /**
-   * @return True iff first row in hbase:meta or if we've broached a new table in hbase:meta
-   */
+  /** Returns True iff first row in hbase:meta or if we've broached a new table in hbase:meta */
   private boolean isTableTransition(RegionInfo ri) {
     return this.previous == null || !this.previous.getTable().equals(ri.getTable());
   }

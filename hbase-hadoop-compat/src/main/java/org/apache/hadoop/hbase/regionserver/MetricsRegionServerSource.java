@@ -288,6 +288,18 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STATIC_INDEX_SIZE_DESC = "Uncompressed size of the static indexes.";
   String STATIC_BLOOM_SIZE = "staticBloomSize";
   String STATIC_BLOOM_SIZE_DESC = "Uncompressed size of the static bloom filters.";
+
+  String BLOOM_FILTER_REQUESTS_COUNT = "bloomFilterRequestsCount";
+  String BLOOM_FILTER_REQUESTS_COUNT_DESC = "Count of requests to bloom filters.";
+
+  String BLOOM_FILTER_NEGATIVE_RESULTS_COUNT = "bloomFilterNegativeResultsCount";
+  String BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC =
+    "Count of bloom filter requests which returned a negative result.";
+
+  String BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT = "bloomFilterEligibleRequestsCount";
+  String BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC =
+    "Count of requests which could have used bloom filters but didn't because they weren't configured or loaded";
+
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
     "Number of mutations that have been sent by clients with the write ahead logging turned off.";

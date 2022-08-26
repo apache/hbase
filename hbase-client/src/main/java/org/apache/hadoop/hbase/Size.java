@@ -69,9 +69,7 @@ public final class Size implements Comparable<Size> {
     this.unit = Preconditions.checkNotNull(unit);
   }
 
-  /**
-   * @return size unit
-   */
+  /** Returns size unit */
   public Unit getUnit() {
     return unit;
   }

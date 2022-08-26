@@ -132,16 +132,12 @@ public class FsDelegationToken {
     return userProvider;
   }
 
-  /**
-   * @return the account name that is allowed to renew the token.
-   */
+  /** Returns the account name that is allowed to renew the token. */
   public String getRenewer() {
     return renewer;
   }
 
-  /**
-   * @return the delegation token acquired, or null in case it was not acquired
-   */
+  /** Returns the delegation token acquired, or null in case it was not acquired */
   public Token<?> getUserToken() {
     return userToken;
   }

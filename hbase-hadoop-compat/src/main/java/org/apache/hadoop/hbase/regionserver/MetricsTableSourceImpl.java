@@ -74,6 +74,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
 @InterfaceAudience.Private
 public class MetricsTableSourceImpl implements MetricsTableSource {
 
@@ -336,6 +339,28 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
             MetricsRegionServerSource.AVG_STORE_FILE_AGE_DESC),
           tableWrapperAgg.getAvgStoreFileAge(tableName.getNameAsString()));
         mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STATIC_BLOOM_SIZE,
+            MetricsRegionServerSource.STATIC_BLOOM_SIZE_DESC),
+          tableWrapperAgg.getStaticBloomSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.STATIC_INDEX_SIZE,
+            MetricsRegionServerSource.STATIC_INDEX_SIZE),
+          tableWrapperAgg.getStaticIndexSize(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_REQUESTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterRequestsCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(
+            tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_NEGATIVE_RESULTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterNegativeResultsCount(tableName.getNameAsString()));
+        mrb.addCounter(
+          Interns.info(
+            tableNamePrefix + MetricsRegionServerSource.BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT,
+            MetricsRegionServerSource.BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC),
+          tableWrapperAgg.getBloomFilterEligibleRequestsCount(tableName.getNameAsString()));
+        mrb.addGauge(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.NUM_REFERENCE_FILES,
             MetricsRegionServerSource.NUM_REFERENCE_FILES_DESC),
           tableWrapperAgg.getNumReferenceFiles(tableName.getNameAsString()));
@@ -354,8 +379,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
       for (Entry<String, Long> entry : metricMap.entrySet()) {
         // append 'store' and its name to the metric
         mrb.addGauge(Interns.info(this.tableNamePrefixPart1 + _COLUMNFAMILY
-          + entry.getKey().split(MetricsTableWrapperAggregate.HASH)[1] + this.tableNamePrefixPart2
-          + metricName, metricDesc), entry.getValue());
+          + Iterables
+            .get(Splitter.onPattern(MetricsTableWrapperAggregate.HASH).split(entry.getKey()), 1)
+          + this.tableNamePrefixPart2 + metricName, metricDesc), entry.getValue());
       }
     }
   }
@@ -375,11 +401,9 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     if (this == o) {
       return true;
     }
-
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof MetricsTableSourceImpl)) {
       return false;
     }
-
     return (compareTo((MetricsTableSourceImpl) o) == 0);
   }
 

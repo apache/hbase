@@ -244,14 +244,12 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   private void runTestSingle(TableName table) throws IOException {
 
     List<String> backupIds = new ArrayList<String>();
-    List<Integer> tableSizes = new ArrayList<Integer>();
 
     try (Connection conn = util.getConnection(); Admin admin = conn.getAdmin();
       BackupAdmin client = new BackupAdminImpl(conn);) {
 
       // #0- insert some data to table 'table'
       loadData(table, rowsInIteration);
-      tableSizes.add(rowsInIteration);
 
       // #1 - create full backup for table first
       LOG.info("create full backup image for {}", table);
@@ -270,7 +268,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
         // Load data
         loadData(table, rowsInIteration);
-        tableSizes.add(rowsInIteration * count);
         // Do incremental backup
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
@@ -321,10 +318,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     return arr;
   }
 
-  /**
-   * @param backupId pass backup ID to check status of
-   * @return status of backup
-   */
+  /** Returns status of backup */
   protected boolean checkSucceeded(String backupId) throws IOException {
     BackupInfo status = getBackupInfo(backupId);
     if (status == null) {
@@ -365,9 +359,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.debug("Done initializing/checking cluster");
   }
 
-  /**
-   * @return status of CLI execution
-   */
+  /** Returns status of CLI execution */
   @Override
   public int runTestFromCommandLine() throws Exception {
     // Check if backup is enabled
@@ -430,9 +422,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       .add(NUMBER_OF_TABLES_KEY, numTables).add(SLEEP_TIME_KEY, sleepTime).toString());
   }
 
-  /**
-   * @param args argument list
-   */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);

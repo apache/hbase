@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
@@ -279,14 +278,14 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   protected static class OnheapDecodedCell implements ExtendedCell {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-      + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.ARRAY));
+      + Bytes.SIZEOF_SHORT + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.ARRAY));
     private byte[] keyOnlyBuffer;
     private short rowLength;
     private int familyOffset;
     private byte familyLength;
     private int qualifierOffset;
     private int qualifierLength;
-    private long timestamp;
+    private long timeStamp;
     private byte typeByte;
     private byte[] valueBuffer;
     private int valueOffset;
@@ -306,7 +305,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       this.familyLength = familyLength;
       this.qualifierOffset = qualOffset;
       this.qualifierLength = qualLength;
-      this.timestamp = timeStamp;
+      this.timeStamp = timeStamp;
       this.typeByte = typeByte;
       this.valueBuffer = valueBuffer;
       this.valueOffset = valueOffset;
@@ -364,7 +363,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public long getTimestamp() {
-      return timestamp;
+      return timeStamp;
     }
 
     @Override
@@ -475,16 +474,17 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   }
 
   protected static class OffheapDecodedExtendedCell extends ByteBufferExtendedCell {
-    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-      + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-      + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (3 * ClassSize.BYTE_BUFFER));
+    private static final long FIXED_OVERHEAD =
+      (long) ClassSize.align(ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG)
+        + (7 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE)
+        + (3 * ClassSize.BYTE_BUFFER);
     private ByteBuffer keyBuffer;
     private short rowLength;
     private int familyOffset;
     private byte familyLength;
     private int qualifierOffset;
     private int qualifierLength;
-    private long timestamp;
+    private long timeStamp;
     private byte typeByte;
     private ByteBuffer valueBuffer;
     private int valueOffset;
@@ -507,7 +507,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       this.familyLength = familyLength;
       this.qualifierOffset = qualOffset;
       this.qualifierLength = qualLength;
-      this.timestamp = timeStamp;
+      this.timeStamp = timeStamp;
       this.typeByte = typeByte;
       this.valueBuffer = valueBuffer;
       this.valueOffset = valueOffset;
@@ -519,6 +519,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
+    @SuppressWarnings("ByteBufferBackingArray")
     public byte[] getRowArray() {
       return this.keyBuffer.array();
     }
@@ -534,6 +535,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
+    @SuppressWarnings("ByteBufferBackingArray")
     public byte[] getFamilyArray() {
       return this.keyBuffer.array();
     }
@@ -549,6 +551,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     }
 
     @Override
+    @SuppressWarnings("ByteBufferBackingArray")
     public byte[] getQualifierArray() {
       return this.keyBuffer.array();
     }
@@ -565,7 +568,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
 
     @Override
     public long getTimestamp() {
-      return this.timestamp;
+      return this.timeStamp;
     }
 
     @Override
@@ -671,10 +674,10 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     @Override
     public int write(OutputStream out, boolean withTags) throws IOException {
       int lenToWrite = getSerializedSize(withTags);
-      ByteBufferUtils.putInt(out, keyBuffer.capacity());
+      ByteBufferUtils.putInt(out, keyBuffer.remaining());
       ByteBufferUtils.putInt(out, valueLength);
       // Write key
-      out.write(keyBuffer.array());
+      out.write(keyBuffer.array(), keyBuffer.arrayOffset(), keyBuffer.remaining());
       // Write value
       ByteBufferUtils.copyBufferToStream(out, this.valueBuffer, this.valueOffset, this.valueLength);
       if (withTags && this.tagsLength > 0) {
@@ -928,14 +931,14 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     private int compareTypeBytes(Cell key, Cell right) {
       if (
         key.getFamilyLength() + key.getQualifierLength() == 0
-          && key.getTypeByte() == Type.Minimum.getCode()
+          && key.getTypeByte() == KeyValue.Type.Minimum.getCode()
       ) {
         // left is "bigger", i.e. it appears later in the sorted order
         return 1;
       }
       if (
         right.getFamilyLength() + right.getQualifierLength() == 0
-          && right.getTypeByte() == Type.Minimum.getCode()
+          && right.getTypeByte() == KeyValue.Type.Minimum.getCode()
       ) {
         return -1;
       }
@@ -1001,9 +1004,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     abstract protected void decodeNext();
   }
 
-  /**
-   * @return unencoded size added
-   */
+  /** Returns unencoded size added */
   protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
     HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;

@@ -75,7 +75,7 @@ public final class CommonFSUtils {
    */
   public static boolean isStartingWithPath(final Path rootPath, final String path) {
     String uriRootPath = rootPath.toUri().getPath();
-    String tailUriPath = (new Path(path)).toUri().getPath();
+    String tailUriPath = new Path(path).toUri().getPath();
     return tailUriPath.startsWith(uriRootPath);
   }
 
@@ -280,6 +280,7 @@ public final class CommonFSUtils {
   }
 
   /**
+   * Get the path for the root data directory
    * @param c configuration
    * @return {@link Path} to hbase root directory from configuration as a qualified Path.
    * @throws IOException e
@@ -308,6 +309,7 @@ public final class CommonFSUtils {
   }
 
   /**
+   * Get the path for the root directory for WAL data
    * @param c configuration
    * @return {@link Path} to hbase log root directory: e.g. {@value HBASE_WAL_DIR} from
    *         configuration as a qualified Path. Defaults to HBase root dir.
@@ -550,8 +552,7 @@ public final class CommonFSUtils {
   }
 
   /**
-   * @param conf must not be null
-   * @return True if this filesystem whose scheme is 'hdfs'.
+   * Return true if this is a filesystem whose scheme is 'hdfs'.
    * @throws IOException from underlying FileSystem
    */
   public static boolean isHDFS(final Configuration conf) throws IOException {
@@ -570,8 +571,7 @@ public final class CommonFSUtils {
   }
 
   /**
-   * @param conf must not be null
-   * @return Returns the filesystem of the hbase rootdir.
+   * Returns the filesystem of the hbase rootdir.
    * @throws IOException from underlying FileSystem
    */
   public static FileSystem getCurrentFileSystem(Configuration conf) throws IOException {

@@ -30,9 +30,7 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface MasterCoprocessorEnvironment extends CoprocessorEnvironment<MasterCoprocessor> {
-  /**
-   * @return Hosting Server's ServerName
-   */
+  /** Returns Hosting Server's ServerName */
   ServerName getServerName();
 
   /**

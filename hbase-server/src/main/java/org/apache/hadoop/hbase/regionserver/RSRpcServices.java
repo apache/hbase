@@ -1241,17 +1241,13 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     return scanners.size();
   }
 
-  /**
-   * @return The outstanding RegionScanner for <code>scannerId</code> or null if none found.
-   */
+  /** Returns The outstanding RegionScanner for <code>scannerId</code> or null if none found. */
   RegionScanner getScanner(long scannerId) {
     RegionScannerHolder rsh = getRegionScannerHolder(scannerId);
     return rsh == null ? null : rsh.s;
   }
 
-  /**
-   * @return The associated RegionScannerHolder for <code>scannerId</code> or null.
-   */
+  /** Returns The associated RegionScannerHolder for <code>scannerId</code> or null. */
   private RegionScannerHolder getRegionScannerHolder(long scannerId) {
     return scanners.get(toScannerName(scannerId));
   }
@@ -1338,9 +1334,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     return lastBlock;
   }
 
-  /**
-   * @return Remote client's ip and port else null if can't be determined.
-   */
+  /** Returns Remote client's ip and port else null if can't be determined. */
   @RestrictedApi(explanation = "Should only be called in TestRSRpcServices and RSRpcServices",
       link = "", allowedOnPath = ".*(TestRSRpcServices|RSRpcServices).java")
   static String getRemoteClientIpAndPort() {
@@ -1358,9 +1352,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     return Address.fromParts(address.getHostAddress(), rpcCall.getRemotePort()).toString();
   }
 
-  /**
-   * @return Remote client's username.
-   */
+  /** Returns Remote client's username. */
   @RestrictedApi(explanation = "Should only be called in TestRSRpcServices and RSRpcServices",
       link = "", allowedOnPath = ".*(TestRSRpcServices|RSRpcServices).java")
   static String getUserName() {

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.BLOCK_CACHE_KEY_KEY;
+
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -44,7 +46,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -214,13 +215,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     return getLastKey().map(CellUtil::cloneRow);
   }
 
-  /** @return number of KV entries in this HFile */
+  /** Returns number of KV entries in this HFile */
   @Override
   public long getEntries() {
     return trailer.getEntryCount();
   }
 
-  /** @return comparator */
+  /** Returns comparator */
   @Override
   public CellComparator getComparator() {
     return this.hfileContext.getCellComparator();
@@ -961,16 +962,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       return blockSeek(key, seekBefore);
     }
 
-    /**
-     * @return True if v &lt;= 0 or v &gt; current block buffer limit.
-     */
+    /** Returns True if v &lt;= 0 or v &gt; current block buffer limit. */
     protected final boolean checkKeyLen(final int v) {
       return v <= 0 || v > this.blockBuffer.limit();
     }
 
-    /**
-     * @return True if v &lt; 0 or v &gt; current block buffer limit.
-     */
+    /** Returns True if v &lt; 0 or v &gt; current block buffer limit. */
     protected final boolean checkLen(final int v) {
       return v < 0 || v > this.blockBuffer.limit();
     }
@@ -1256,11 +1253,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     BlockCacheKey cacheKey =
       new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
+    Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
-    Span span = TraceUtil.getGlobalTracer().spanBuilder("HFileReaderImpl.readBlock").startSpan();
-    try (Scope traceScope = span.makeCurrent()) {
+    final Span span = Span.current();
+    try {
       while (true) {
         // Check cache for block. If found return.
         if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
@@ -1273,9 +1271,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("From Cache " + cachedBlock);
+              LOG.trace("From Cache {}", cachedBlock);
             }
-            span.addEvent("blockCacheHit");
+            span.addEvent("block cache hit", attributes);
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               if (updateCacheMetrics) {
@@ -1305,7 +1303,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           // Carry on, please load.
         }
 
-        span.addEvent("blockCacheMiss");
+        span.addEvent("block cache miss", attributes);
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
           !isCompaction, shouldUseHeap(expectedBlockType));
@@ -1335,7 +1333,6 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       if (lockEntry != null) {
         offsetLock.releaseLockEntry(lockEntry);
       }
-      span.end();
     }
   }
 
@@ -1513,7 +1510,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public String getKeyString() {
-      return CellUtil.toString(getKey(), true);
+      return CellUtil.toString(getKey(), false);
     }
 
     @Override

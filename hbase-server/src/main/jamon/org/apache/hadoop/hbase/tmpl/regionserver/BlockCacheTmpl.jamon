@@ -30,12 +30,14 @@ BlockCache bc;
 </%java>
 <%import>
 java.util.Map;
+org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile;
 org.apache.hadoop.hbase.io.hfile.AgeSnapshot;
 org.apache.hadoop.hbase.io.hfile.CachedBlock;
 org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.io.hfile.CacheConfig;
 org.apache.hadoop.hbase.io.hfile.BlockCache;
+org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
@@ -281,9 +283,9 @@ are combined counts. Request count is sum of hits and misses.</p>
 <%java>
   String bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
   String bcName = bc.getClass().getSimpleName();
-  org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile cbsbf =
-    org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.getLoadedCachedBlocksByFile(config, bc);
-  AgeSnapshot cbsbfSnapshot = cbsbf.getAgeInCacheSnapshot();
+  int maxCachedBlocksByFile = BlockCacheUtil.getMaxCachedBlocksByFile(config);
+
+  boolean lru = bc instanceof LruBlockCache;
 
   boolean bucketCache = bc.getClass().getSimpleName().equals("BucketCache");
   BucketCacheStats bucketCacheStats = null;
@@ -294,13 +296,6 @@ are combined counts. Request count is sum of hits and misses.</p>
     bucketAllocator = ((BucketCache)bc).getAllocator();
   }
 </%java>
-<%if cbsbf.isFull() %>
-<p>
-<div class="alert alert-danger">
-<strong>The stats below are incomplete!</strong> We ran into our accounting limit of <% cbsbf.getCount() %> blocks. Up the configuration <i>hbase.ui.blockcache.by.file.max</i>.
-</div>
-</p> 
-</%if>
 <table id="blocks_summary" class="table table-striped">
     <tr>
         <th>Attribute</th>
@@ -336,7 +331,19 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td>Count of DATA Blocks</td>
     </tr>
 </%if>
+<%if lru %>
     <tr>
+        <td>Index Block Count</td>
+        <td><% String.format("%,d", ((LruBlockCache)bc).getIndexBlockCount()) %></td>
+        <td>Count of INDEX Blocks</td>
+    </tr>
+    <tr>
+        <td>Bloom Block Count</td>
+        <td><% String.format("%,d", ((LruBlockCache)bc).getBloomBlockCount()) %></td>
+        <td>Count of BLOOM Blocks</td>
+    </tr>
+</%if>
+      <tr>
         <td>Size of Blocks</td>
         <td><% TraditionalBinaryPrefix.long2String(bc.getCurrentSize(), "B", 1) %></td>
         <td>Size of Blocks</td>
@@ -348,7 +355,19 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if> 
-<& evictions_tmpl; bc = bc; &>
+<%if lru %>
+    <tr>
+        <td>Size of Index Blocks</td>
+        <td><% TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentIndexSize(), "B", 1) %></td>
+        <td>Size of INDEX Blocks</td>
+    </tr>
+    <tr>
+        <td>Size of Bloom Blocks</td>
+        <td><% TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentBloomSize(), "B", 1) %></td>
+        <td>Size of BLOOM Blocks</td>
+    </tr>
+</%if>
+ <& evictions_tmpl; bc = bc; &>
 <& hits_tmpl; bc = bc; &>
 
 <%if bucketCache %>
@@ -365,9 +384,13 @@ are combined counts. Request count is sum of hits and misses.</p>
 </%if>
 </table>
 <%doc>Call through to block cache Detail rendering template</%doc>
-<p>View block cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a></p>
-<%java>
-cbsbf = null;
-</%java>
+<p>
+View block cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a>
+<%if bc.getBlockCount() > maxCachedBlocksByFile %>
+<br>
+<b>Note</b>: JSON view of block cache will be incomplete, because block count <% bc.getBlockCount() %> is greater than <i>hbase.ui.blockcache.by.file.max</i> value of <% maxCachedBlocksByFile %>.
+Increase that value to get a complete picture.
+</%if>
+</p>
 </%def>
 

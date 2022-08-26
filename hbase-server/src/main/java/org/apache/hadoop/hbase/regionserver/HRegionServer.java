@@ -763,9 +763,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
-  /**
-   * @return True if the cluster is up.
-   */
+  /** Returns True if the cluster is up. */
   @Override
   public boolean isClusterUp() {
     return this.masterless
@@ -1034,9 +1032,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return allUserRegionsOffline;
   }
 
-  /**
-   * @return Current write count for all online regions.
-   */
+  /** Returns Current write count for all online regions. */
   private long getWriteRequestCount() {
     long writeCount = 0;
     for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
@@ -1783,9 +1779,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
-  /**
-   * @return Master address tracker instance.
-   */
+  /** Returns Master address tracker instance. */
   public MasterAddressTracker getMasterAddressTracker() {
     return this.masterAddressTracker;
   }
@@ -2468,17 +2462,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
-  /**
-   * @return Return the object that implements the replication source executorService.
-   */
+  /** Returns Return the object that implements the replication source executorService. */
   @Override
   public ReplicationSourceService getReplicationSourceService() {
     return replicationSourceHandler;
   }
 
-  /**
-   * @return Return the object that implements the replication sink executorService.
-   */
+  /** Returns Return the object that implements the replication sink executorService. */
   public ReplicationSinkService getReplicationSinkService() {
     return replicationSinkHandler;
   }
@@ -2750,7 +2740,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return sortedRegions;
   }
 
-  /** @return reference to FlushRequester */
+  /** Returns reference to FlushRequester */
   @Override
   public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
@@ -2766,9 +2756,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return leaseManager;
   }
 
-  /**
-   * @return {@code true} when the data file system is available, {@code false} otherwise.
-   */
+  /** Returns {@code true} when the data file system is available, {@code false} otherwise. */
   boolean isDataFileSystemOk() {
     return this.dataFsOk;
   }
@@ -3256,9 +3244,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return org.apache.commons.lang3.StringUtils.isNotBlank(healthScriptLocation);
   }
 
-  /**
-   * @return the underlying {@link CompactSplit} for the servers
-   */
+  /** Returns the underlying {@link CompactSplit} for the servers */
   public CompactSplit getCompactSplitThread() {
     return this.compactSplitThread;
   }
@@ -3320,9 +3306,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return Optional.ofNullable(this.mobFileCache);
   }
 
-  /**
-   * @return : Returns the ConfigurationManager object for testing purposes.
-   */
+  /** Returns : Returns the ConfigurationManager object for testing purposes. */
   ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }

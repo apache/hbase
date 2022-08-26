@@ -50,9 +50,7 @@ public interface Cacheable extends HeapSize, HBaseReferenceCounted {
    */
   CacheableDeserializer<Cacheable> getDeserializer();
 
-  /**
-   * @return the block type of this cached HFile block
-   */
+  /** Returns the block type of this cached HFile block */
   BlockType getBlockType();
 
   /******************************* ReferenceCounted Interfaces ***********************************/

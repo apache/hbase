@@ -91,25 +91,19 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     return this.bytes;
   }
 
-  /**
-   * @param b Use passed bytes as backing array for this instance.
-   */
+  /** Use passed bytes as backing array for this instance. */
   public void set(final byte[] b) {
     set(b, 0, b.length);
   }
 
-  /**
-   * @param b Use passed bytes as backing array for this instance. nn
-   */
+  /** Use passed bytes as backing array for this instance. */
   public void set(final byte[] b, final int offset, final int length) {
     this.bytes = b;
     this.offset = offset;
     this.length = length;
   }
 
-  /**
-   * @return the number of valid bytes in the buffer
-   */
+  /** Returns the number of valid bytes in the buffer */
   public int getLength() {
     if (this.bytes == null) {
       throw new IllegalStateException(
@@ -118,9 +112,7 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     return this.length;
   }
 
-  /**
-   * n
-   */
+  /** Return the offset into the buffer. */
   public int getOffset() {
     return this.offset;
   }
@@ -140,6 +132,7 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
   }
 
   // Below methods copied from BytesWritable
+
   @Override
   public int hashCode() {
     int hash = 1;
@@ -169,9 +162,6 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
       that.length);
   }
 
-  /**
-   * @see java.lang.Object#equals(java.lang.Object)
-   */
   @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof byte[]) {
@@ -183,9 +173,6 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     return false;
   }
 
-  /**
-   * @see java.lang.Object#toString()
-   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(3 * this.length);
@@ -202,21 +189,15 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     return sb.length() > 0 ? sb.substring(1) : "";
   }
 
-  /**
-   * A Comparator optimized for ImmutableBytesWritable.
-   */
+  /** A Comparator optimized for ImmutableBytesWritable. */
   @InterfaceAudience.Public
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator = new BytesWritable.Comparator();
 
-    /** constructor */
     public Comparator() {
       super(ImmutableBytesWritable.class);
     }
 
-    /**
-     * @see org.apache.hadoop.io.WritableComparator#compare(byte[], int, int, byte[], int, int)
-     */
     @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return comparator.compare(b1, s1, l1, b2, s2, l2);
@@ -228,6 +209,7 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
   }
 
   /**
+   * Convert a list of byte arrays into an array of byte arrays
    * @param array List of byte [].
    * @return Array of byte [].
    */
@@ -240,9 +222,7 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
     return results;
   }
 
-  /**
-   * Returns a copy of the bytes referred to by this writable
-   */
+  /** Returns a copy of the bytes referred to by this writable */
   public byte[] copyBytes() {
     return Arrays.copyOfRange(bytes, offset, offset + length);
   }

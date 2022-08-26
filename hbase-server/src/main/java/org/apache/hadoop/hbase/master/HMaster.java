@@ -1825,9 +1825,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     shutdownChore(rollingUpgradeChore);
   }
 
-  /**
-   * @return Get remote side's InetAddress
-   */
+  /** Returns Get remote side's InetAddress */
   InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
     throws UnknownHostException {
     // Do it out here in its own little method so can fake an address when
@@ -1845,9 +1843,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return ia;
   }
 
-  /**
-   * @return Maximum time we should run balancer for
-   */
+  /** Returns Maximum time we should run balancer for */
   private int getMaxBalancingTime() {
     // if max balancing time isn't set, defaulting it to period time
     int maxBalancingTime =
@@ -1856,9 +1852,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return maxBalancingTime;
   }
 
-  /**
-   * @return Maximum number of regions in transition
-   */
+  /** Returns Maximum number of regions in transition */
   private int getMaxRegionsInTransition() {
     int numRegions = this.assignmentManager.getRegionStates().getRegionAssignments().size();
     return Math.max((int) Math.floor(numRegions * this.maxRitPercent), 1);
@@ -2136,9 +2130,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return regionNormalizerManager.normalizeRegions(targetTables, isHighPriority);
   }
 
-  /**
-   * @return Client info for use as prefix on an audit log string; who did an action
-   */
+  /** Returns Client info for use as prefix on an audit log string; who did an action */
   @Override
   public String getClientIdAuditPrefix() {
     return "Client=" + RpcServer.getRequestUserName().orElse(null) + "/"
@@ -2877,6 +2869,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           }
           break;
         }
+        case UNKNOWN_SERVERS: {
+          if (serverManager != null) {
+            builder.setUnknownServerNames(getUnknownServers());
+          }
+          break;
+        }
         case MASTER_COPROCESSORS: {
           if (cpHost != null) {
             builder.setMasterCoprocessorNames(Arrays.asList(getMasterCoprocessors()));
@@ -2942,6 +2940,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return builder.build();
   }
 
+  private List<ServerName> getUnknownServers() {
+    if (serverManager != null) {
+      final Set<ServerName> serverNames = getAssignmentManager().getRegionStates().getRegionStates()
+        .stream().map(RegionState::getServerName).collect(Collectors.toSet());
+      final List<ServerName> unknownServerNames = serverNames.stream()
+        .filter(sn -> sn != null && serverManager.isServerUnknown(sn)).collect(Collectors.toList());
+      return unknownServerNames;
+    }
+    return null;
+  }
+
   private Map<ServerName, ServerMetrics> getOnlineServers() {
     if (serverManager != null) {
       final Map<ServerName, ServerMetrics> map = new HashMap<>();
@@ -2951,9 +2960,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return null;
   }
 
-  /**
-   * @return cluster status
-   */
+  /** Returns cluster status */
   public ClusterMetrics getClusterMetrics() throws IOException {
     return getClusterMetrics(EnumSet.allOf(Option.class));
   }
@@ -2969,9 +2976,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return status;
   }
 
-  /**
-   * @return info port of active master or 0 if any exception occurs.
-   */
+  /** Returns info port of active master or 0 if any exception occurs. */
   public int getActiveMasterInfoPort() {
     return activeMasterManager.getActiveMasterInfoPort();
   }
@@ -2993,23 +2998,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return CoprocessorHost.getLoadedCoprocessors().toString();
   }
 
-  /**
-   * @return timestamp in millis when HMaster was started.
-   */
+  /** Returns timestamp in millis when HMaster was started. */
   public long getMasterStartTime() {
     return startcode;
   }
 
-  /**
-   * @return timestamp in millis when HMaster became the active master.
-   */
+  /** Returns timestamp in millis when HMaster became the active master. */
   public long getMasterActiveTime() {
     return masterActiveTime;
   }
 
-  /**
-   * @return timestamp in millis when HMaster finished becoming the active master
-   */
+  /** Returns timestamp in millis when HMaster finished becoming the active master */
   public long getMasterFinishedInitializationTime() {
     return masterFinishedInitializationTime;
   }
@@ -3041,9 +3040,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     assignmentManager.checkIfShouldMoveSystemRegionAsync();
   }
 
-  /**
-   * @return array of coprocessor SimpleNames.
-   */
+  /** Returns array of coprocessor SimpleNames. */
   public String[] getMasterCoprocessors() {
     Set<String> masterCoprocessors = getMasterCoprocessorHost().getCoprocessors();
     return masterCoprocessors.toArray(new String[masterCoprocessors.size()]);
@@ -3311,17 +3308,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return this.logCleaner;
   }
 
-  /**
-   * @return the underlying snapshot manager
-   */
+  /** Returns the underlying snapshot manager */
   @Override
   public SnapshotManager getSnapshotManager() {
     return this.snapshotManager;
   }
 
-  /**
-   * @return the underlying MasterProcedureManagerHost
-   */
+  /** Returns the underlying MasterProcedureManagerHost */
   @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return mpmHost;

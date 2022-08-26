@@ -52,9 +52,7 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
     this.walSplitter = walSplitter;
   }
 
-  /**
-   * @return a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close.
-   */
+  /** Returns a writer that wraps a {@link WALProvider.Writer} and its Path. Caller should close. */
   protected RecoveredEditsWriter createRecoveredEditsWriter(TableName tableName, byte[] region,
     long seqId) throws IOException {
     Path regionEditsPath = getRegionSplitEditsPath(tableName, region, seqId,

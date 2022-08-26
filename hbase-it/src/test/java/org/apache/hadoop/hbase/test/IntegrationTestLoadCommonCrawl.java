@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -96,6 +98,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -218,12 +221,11 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         LOG.error("Loader failed");
         return -1;
       }
-      res = runVerify(outputDir);
+      return runVerify(outputDir);
     } catch (Exception e) {
       LOG.error("Tool failed with exception", e);
       return -1;
     }
-    return 0;
   }
 
   @Override
@@ -525,9 +527,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
         try (FSDataInputStream is = fs.open(warcFileInput)) {
           InputStreamReader reader;
           if (warcFileInput.getName().toLowerCase().endsWith(".gz")) {
-            reader = new InputStreamReader(new GZIPInputStream(is));
+            reader = new InputStreamReader(new GZIPInputStream(is), StandardCharsets.UTF_8);
           } else {
-            reader = new InputStreamReader(is);
+            reader = new InputStreamReader(is, StandardCharsets.UTF_8);
           }
           try (BufferedReader br = new BufferedReader(reader)) {
             String line;
@@ -684,9 +686,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
             }
             final long putStartTime = System.currentTimeMillis();
             final CompletableFuture<Void> putFuture = table.put(put);
-            putFuture.thenRun(() -> {
+            addListener(putFuture, (r, e) -> {
               inflight.decrementAndGet();
-              if (!putFuture.isCompletedExceptionally()) {
+              if (e == null) {
                 output.getCounter(Counts.RPC_TIME_MS)
                   .increment(System.currentTimeMillis() - putStartTime);
                 output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(put.heapSize());
@@ -732,9 +734,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
                   }
                   final long incrStartTime = System.currentTimeMillis();
                   final CompletableFuture<Result> incrFuture = table.increment(increment);
-                  incrFuture.thenRun(() -> {
+                  addListener(incrFuture, (r, e) -> {
                     inflight.decrementAndGet();
-                    if (!incrFuture.isCompletedExceptionally()) {
+                    if (e == null) {
                       output.getCounter(Counts.RPC_TIME_MS)
                         .increment(System.currentTimeMillis() - incrStartTime);
                       output.getCounter(Counts.RPC_BYTES_WRITTEN).increment(increment.heapSize());
@@ -947,8 +949,9 @@ public class IntegrationTestLoadCommonCrawl extends IntegrationTestBase {
     // Reverse the components of the hostname
     String reversedHost;
     if (uri.getHost() != null) {
+      final String[] hostComponents =
+        Splitter.on('.').splitToStream(uri.getHost()).toArray(String[]::new);
       final StringBuilder sb = new StringBuilder();
-      final String[] hostComponents = uri.getHost().split("\\.");
       for (int i = hostComponents.length - 1; i >= 0; i--) {
         sb.append(hostComponents[i]);
         if (i != 0) {

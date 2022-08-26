@@ -246,6 +246,7 @@ class RegionHDFSBlockLocationFinder extends Configured {
    */
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*|.*/RegionHDFSBlockLocationFinder.java")
+  @SuppressWarnings("MixedMutabilityReturnType")
   List<ServerName> mapHostNameToServerName(List<String> hosts) {
     if (hosts == null || status == null) {
       if (hosts == null) {

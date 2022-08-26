@@ -58,9 +58,7 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
     return ByteBufferUtils.compareTo(this.value, 0, this.value.length, value, offset, length);
   }
 
-  /**
-   * @return The comparator serialized using pb
-   */
+  /** Returns The comparator serialized using pb */
   @Override
   public byte[] toByteArray() {
     ComparatorProtos.BinaryPrefixComparator.Builder builder =
@@ -70,9 +68,11 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
   }
 
   /**
+   * Parse a serialized representation of {@link BinaryPrefixComparator}
    * @param pbBytes A pb serialized {@link BinaryPrefixComparator} instance
-   * @return An instance of {@link BinaryPrefixComparator} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link BinaryPrefixComparator} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
+   * @see #toByteArray
    */
   public static BinaryPrefixComparator parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -86,14 +86,17 @@ public class BinaryPrefixComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the comparator that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
-    if (other == this) return true;
-    if (!(other instanceof BinaryPrefixComparator)) return false;
-
+    if (other == this) {
+      return true;
+    }
+    if (!(other instanceof BinaryPrefixComparator)) {
+      return false;
+    }
     return super.areSerializedFieldsEqual(other);
   }
 }

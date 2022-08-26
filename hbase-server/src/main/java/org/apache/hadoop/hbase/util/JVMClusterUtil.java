@@ -52,7 +52,7 @@ public class JVMClusterUtil {
       this.regionServer = r;
     }
 
-    /** @return the region server */
+    /** Returns the region server */
     public HRegionServer getRegionServer() {
       return this.regionServer;
     }
@@ -103,7 +103,7 @@ public class JVMClusterUtil {
       this.master = m;
     }
 
-    /** @return the master */
+    /** Returns the master */
     public HMaster getMaster() {
       return this.master;
     }

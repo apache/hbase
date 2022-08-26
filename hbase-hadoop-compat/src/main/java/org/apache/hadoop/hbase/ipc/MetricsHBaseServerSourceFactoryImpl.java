@@ -23,10 +23,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {
+
+  @SuppressWarnings("ImmutableEnumChecker")
   private enum SourceStorage {
     INSTANCE;
 
-    HashMap<String, MetricsHBaseServerSource> sources = new HashMap<>();
+    private final HashMap<String, MetricsHBaseServerSource> sources = new HashMap<>();
   }
 
   @Override

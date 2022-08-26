@@ -80,23 +80,10 @@ public class MemcachedBlockCache implements BlockCache {
     boolean optimize = c.getBoolean(MEMCACHED_OPTIMIZE_KEY, MEMCACHED_OPTIMIZE_DEFAULT);
 
     ConnectionFactoryBuilder builder =
-      new ConnectionFactoryBuilder().setOpTimeout(opTimeout).setOpQueueMaxBlockTime(queueTimeout) // Cap
-                                                                                                  // the
-                                                                                                  // max
-                                                                                                  // time
-                                                                                                  // before
-                                                                                                  // anything
-                                                                                                  // times
-                                                                                                  // out
-        .setFailureMode(FailureMode.Redistribute).setShouldOptimize(optimize).setDaemon(true) // Don't
-                                                                                              // keep
-                                                                                              // threads
-                                                                                              // around
-                                                                                              // past
-                                                                                              // the
-                                                                                              // end
-                                                                                              // of
-                                                                                              // days.
+      // Cap the max time before anything times out
+      new ConnectionFactoryBuilder().setOpTimeout(opTimeout).setOpQueueMaxBlockTime(queueTimeout)
+        // Don't keep threads around past the end of days.
+        .setFailureMode(FailureMode.Redistribute).setShouldOptimize(optimize).setDaemon(true)
         .setUseNagleAlgorithm(false) // Ain't nobody got time for that
         .setReadBufferSize(HConstants.DEFAULT_BLOCKSIZE * 4 * 1024); // Much larger just in case
 
@@ -124,10 +111,17 @@ public class MemcachedBlockCache implements BlockCache {
     cacheBlock(cacheKey, buf);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
     if (buf instanceof HFileBlock) {
-      client.add(cacheKey.toString(), MAX_SIZE, (HFileBlock) buf, tc);
+      client.add(cacheKey.toString(), MAX_SIZE, (HFileBlock) buf, tc).addListener(f -> {
+        try {
+          f.get();
+        } catch (ExecutionException e) {
+          LOG.warn("Failed to cache block", e);
+        }
+      });
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug(

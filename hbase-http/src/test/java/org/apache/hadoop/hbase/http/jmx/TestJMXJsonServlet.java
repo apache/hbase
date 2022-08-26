@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.http.jmx;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;

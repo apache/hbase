@@ -206,23 +206,22 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     static final String RS_GROUP_MAPPING_SCRIPT = "hbase.rsgroup.table.mapping.script";
     static final String RS_GROUP_MAPPING_SCRIPT_TIMEOUT =
       "hbase.rsgroup.table.mapping.script.timeout";
-    private Shell.ShellCommandExecutor rsgroupMappingScript;
+
+    private final String script;
+    private final long scriptTimeout;
 
     RSGroupMappingScript(Configuration conf) {
-      String script = conf.get(RS_GROUP_MAPPING_SCRIPT);
-      if (script == null || script.isEmpty()) {
-        return;
-      }
-
-      rsgroupMappingScript = new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null,
-        null, conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000) // 5 seconds
-      );
+      script = conf.get(RS_GROUP_MAPPING_SCRIPT);
+      scriptTimeout = conf.getLong(RS_GROUP_MAPPING_SCRIPT_TIMEOUT, 5000); // 5 seconds
     }
 
     String getRSGroup(String namespace, String tablename) {
-      if (rsgroupMappingScript == null) {
+      if (script == null || script.isEmpty()) {
         return null;
       }
+      Shell.ShellCommandExecutor rsgroupMappingScript =
+        new Shell.ShellCommandExecutor(new String[] { script, "", "" }, null, null, scriptTimeout);
+
       String[] exec = rsgroupMappingScript.getExecString();
       exec[1] = namespace;
       exec[2] = tablename;
@@ -316,9 +315,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     return rsGroupInfo;
   }
 
-  /**
-   * @return Set of online Servers named for their hostname and port (not ServerName).
-   */
+  /** Returns Set of online Servers named for their hostname and port (not ServerName). */
   private Set<Address> getOnlineServers() {
     return masterServices.getServerManager().getOnlineServers().keySet().stream()
       .map(ServerName::getAddress).collect(Collectors.toSet());
@@ -941,9 +938,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
-  /**
-   * @return List of Regions associated with this <code>server</code>.
-   */
+  /** Returns List of Regions associated with this <code>server</code>. */
   private List<RegionInfo> getRegions(final Address server) {
     LinkedList<RegionInfo> regions = new LinkedList<>();
     for (Map.Entry<RegionInfo, ServerName> el : masterServices.getAssignmentManager()

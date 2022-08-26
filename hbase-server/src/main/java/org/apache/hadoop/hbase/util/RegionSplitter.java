@@ -212,9 +212,7 @@ public class RegionSplitter {
      */
     String rowToStr(byte[] row);
 
-    /**
-     * @return the separator character to use when storing / printing the row
-     */
+    /** Returns the separator character to use when storing / printing the row */
     String separator();
 
     /**

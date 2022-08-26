@@ -62,23 +62,17 @@ class ColumnCount {
     this.count = count;
   }
 
-  /**
-   * @return the buffer
-   */
+  /** Returns the buffer */
   public byte[] getBuffer() {
     return this.bytes;
   }
 
-  /**
-   * @return the offset
-   */
+  /** Returns the offset */
   public int getOffset() {
     return this.offset;
   }
 
-  /**
-   * @return the length
-   */
+  /** Returns the length */
   public int getLength() {
     return this.length;
   }

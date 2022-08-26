@@ -30,11 +30,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
 import org.apache.hadoop.hbase.security.NettyHBaseRpcConnectionHeaderHandler;
 import org.apache.hadoop.hbase.security.NettyHBaseSaslRpcClientHandler;
 import org.apache.hadoop.hbase.security.SaslChallengeDecoder;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -50,11 +52,13 @@ import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelFuture;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelFutureListener;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandler;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelInitializer;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.timeout.ReadTimeoutHandler;
 import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
@@ -155,14 +159,14 @@ class NettyRpcConnection extends RpcConnection {
 
   private void established(Channel ch) throws IOException {
     assert eventLoop.inEventLoop();
-    ChannelPipeline p = ch.pipeline();
-    String addBeforeHandler = p.context(BufferCallBeforeInitHandler.class).name();
-    p.addBefore(addBeforeHandler, null,
-      new IdleStateHandler(0, rpcClient.minIdleTimeBeforeClose, 0, TimeUnit.MILLISECONDS));
-    p.addBefore(addBeforeHandler, null, new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4));
-    p.addBefore(addBeforeHandler, null,
-      new NettyRpcDuplexHandler(this, rpcClient.cellBlockBuilder, codec, compressor));
-    p.fireUserEventTriggered(BufferCallEvent.success());
+    ch.pipeline()
+      .addBefore(BufferCallBeforeInitHandler.NAME, null,
+        new IdleStateHandler(0, rpcClient.minIdleTimeBeforeClose, 0, TimeUnit.MILLISECONDS))
+      .addBefore(BufferCallBeforeInitHandler.NAME, null,
+        new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4))
+      .addBefore(BufferCallBeforeInitHandler.NAME, null,
+        new NettyRpcDuplexHandler(this, rpcClient.cellBlockBuilder, codec, compressor))
+      .fireUserEventTriggered(BufferCallEvent.success());
   }
 
   private boolean reloginInProgress;
@@ -216,36 +220,37 @@ class NettyRpcConnection extends RpcConnection {
       failInit(ch, e);
       return;
     }
-    ch.pipeline().addFirst(new SaslChallengeDecoder(), saslHandler);
-    saslPromise.addListener(new FutureListener<Boolean>() {
+    ch.pipeline().addBefore(BufferCallBeforeInitHandler.NAME, null, new SaslChallengeDecoder())
+      .addBefore(BufferCallBeforeInitHandler.NAME, NettyHBaseSaslRpcClientHandler.HANDLER_NAME,
+        saslHandler);
+    NettyFutureUtils.addListener(saslPromise, new FutureListener<Boolean>() {
 
       @Override
       public void operationComplete(Future<Boolean> future) throws Exception {
         if (future.isSuccess()) {
           ChannelPipeline p = ch.pipeline();
-          p.remove(SaslChallengeDecoder.class);
-          p.remove(NettyHBaseSaslRpcClientHandler.class);
-
           // check if negotiate with server for connection header is necessary
           if (saslHandler.isNeedProcessConnectionHeader()) {
             Promise<Boolean> connectionHeaderPromise = ch.eventLoop().newPromise();
             // create the handler to handle the connection header
-            ChannelHandler chHandler = new NettyHBaseRpcConnectionHeaderHandler(
-              connectionHeaderPromise, conf, connectionHeaderWithLength);
+            NettyHBaseRpcConnectionHeaderHandler chHandler =
+              new NettyHBaseRpcConnectionHeaderHandler(connectionHeaderPromise, conf,
+                connectionHeaderWithLength);
 
             // add ReadTimeoutHandler to deal with server doesn't response connection header
             // because of the different configuration in client side and server side
-            p.addFirst(
-              new ReadTimeoutHandler(RpcClient.DEFAULT_SOCKET_TIMEOUT_READ, TimeUnit.MILLISECONDS));
-            p.addLast(chHandler);
-            connectionHeaderPromise.addListener(new FutureListener<Boolean>() {
+            final String readTimeoutHandlerName = "ReadTimeout";
+            p.addBefore(BufferCallBeforeInitHandler.NAME, readTimeoutHandlerName,
+              new ReadTimeoutHandler(rpcClient.readTO, TimeUnit.MILLISECONDS))
+              .addBefore(BufferCallBeforeInitHandler.NAME, null, chHandler);
+            NettyFutureUtils.addListener(connectionHeaderPromise, new FutureListener<Boolean>() {
               @Override
               public void operationComplete(Future<Boolean> future) throws Exception {
                 if (future.isSuccess()) {
                   ChannelPipeline p = ch.pipeline();
-                  p.remove(ReadTimeoutHandler.class);
+                  p.remove(readTimeoutHandlerName);
                   p.remove(NettyHBaseRpcConnectionHeaderHandler.class);
-                  // don't send connection header, NettyHbaseRpcConnectionHeaderHandler
+                  // don't send connection header, NettyHBaseRpcConnectionHeaderHandler
                   // sent it already
                   established(ch);
                 } else {
@@ -277,17 +282,27 @@ class NettyRpcConnection extends RpcConnection {
       .option(ChannelOption.TCP_NODELAY, rpcClient.isTcpNoDelay())
       .option(ChannelOption.SO_KEEPALIVE, rpcClient.tcpKeepAlive)
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, rpcClient.connectTO)
-      .handler(new BufferCallBeforeInitHandler()).localAddress(rpcClient.localAddr)
-      .remoteAddress(remoteAddr).connect().addListener(new ChannelFutureListener() {
-
+      .handler(new ChannelInitializer<Channel>() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-          Channel ch = future.channel();
-          if (!future.isSuccess()) {
-            failInit(ch, toIOE(future.cause()));
-            rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
-            return;
+        protected void initChannel(Channel ch) throws Exception {
+          if (conf.getBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, false)) {
+            SslContext sslContext = rpcClient.getSslContext();
+            SslHandler sslHandler = sslContext.newHandler(ch.alloc(),
+              remoteId.address.getHostName(), remoteId.address.getPort());
+            sslHandler.setHandshakeTimeoutMillis(
+              conf.getInt(X509Util.HBASE_CLIENT_NETTY_TLS_HANDSHAKETIMEOUT,
+                X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS));
+            ch.pipeline().addFirst(sslHandler);
+            LOG.info("SSL handler added with handshake timeout {} ms",
+              sslHandler.getHandshakeTimeoutMillis());
           }
+          ch.pipeline().addLast(BufferCallBeforeInitHandler.NAME,
+            new BufferCallBeforeInitHandler());
+        }
+      }).localAddress(rpcClient.localAddr).remoteAddress(remoteAddr).connect()
+      .addListener(new ChannelFutureListener() {
+
+        private void succeed(Channel ch) throws IOException {
           ch.writeAndFlush(connectionHeaderPreamble.retainedDuplicate());
           if (useSasl) {
             saslNegotiate(ch);
@@ -295,6 +310,32 @@ class NettyRpcConnection extends RpcConnection {
             // send the connection header to server
             ch.write(connectionHeaderWithLength.retainedDuplicate());
             established(ch);
+          }
+        }
+
+        private void fail(Channel ch, Throwable error) {
+          failInit(ch, toIOE(error));
+          rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), error);
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+          Channel ch = future.channel();
+          if (!future.isSuccess()) {
+            fail(ch, future.cause());
+            return;
+          }
+          SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
+          if (sslHandler != null) {
+            NettyFutureUtils.addListener(sslHandler.handshakeFuture(), f -> {
+              if (f.isSuccess()) {
+                succeed(ch);
+              } else {
+                fail(ch, f.cause());
+              }
+            });
+          } else {
+            succeed(ch);
           }
         }
       }).channel();

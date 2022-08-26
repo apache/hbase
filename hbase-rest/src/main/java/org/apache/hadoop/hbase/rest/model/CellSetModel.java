@@ -100,9 +100,7 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
     rows.add(row);
   }
 
-  /**
-   * @return the rows
-   */
+  /** Returns the rows */
   public List<RowModel> getRows() {
     return rows;
   }

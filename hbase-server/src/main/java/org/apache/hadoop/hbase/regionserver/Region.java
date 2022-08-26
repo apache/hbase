@@ -61,30 +61,28 @@ public interface Region extends ConfigurationObserver {
   ///////////////////////////////////////////////////////////////////////////
   // Region state
 
-  /** @return region information for this region */
+  /** Returns region information for this region */
   RegionInfo getRegionInfo();
 
-  /** @return table descriptor for this region */
+  /** Returns table descriptor for this region */
   TableDescriptor getTableDescriptor();
 
-  /** @return true if region is available (not closed and not closing) */
+  /** Returns true if region is available (not closed and not closing) */
   boolean isAvailable();
 
-  /** @return true if region is closed */
+  /** Returns true if region is closed */
   boolean isClosed();
 
-  /** @return True if closing process has started */
+  /** Returns True if closing process has started */
   boolean isClosing();
 
-  /** @return True if region is read only */
+  /** Returns True if region is read only */
   boolean isReadOnly();
 
-  /** @return true if region is splittable */
+  /** Returns true if region is splittable */
   boolean isSplittable();
 
-  /**
-   * @return true if region is mergeable
-   */
+  /** Returns true if region is mergeable */
   boolean isMergeable();
 
   /**
@@ -103,7 +101,7 @@ public interface Region extends ConfigurationObserver {
    */
   Store getStore(byte[] family);
 
-  /** @return list of store file names for the given families */
+  /** Returns list of store file names for the given families */
   List<String> getStoreFileList(byte[][] columns);
 
   /**
@@ -140,16 +138,16 @@ public interface Region extends ConfigurationObserver {
   ///////////////////////////////////////////////////////////////////////////
   // Metrics
 
-  /** @return read requests count for this region */
+  /** Returns read requests count for this region */
   long getReadRequestsCount();
 
-  /** @return coprocessor requests count for this region */
+  /** Returns coprocessor requests count for this region */
   long getCpRequestsCount();
 
-  /** @return filtered read requests count for this region */
+  /** Returns filtered read requests count for this region */
   long getFilteredReadRequestsCount();
 
-  /** @return write request count for this region */
+  /** Returns write request count for this region */
   long getWriteRequestsCount();
 
   /**
@@ -173,19 +171,19 @@ public interface Region extends ConfigurationObserver {
    */
   long getMemStoreOffHeapSize();
 
-  /** @return the number of mutations processed bypassing the WAL */
+  /** Returns the number of mutations processed bypassing the WAL */
   long getNumMutationsWithoutWAL();
 
-  /** @return the size of data processed bypassing the WAL, in bytes */
+  /** Returns the size of data processed bypassing the WAL, in bytes */
   long getDataInMemoryWithoutWAL();
 
-  /** @return the number of blocked requests */
+  /** Returns the number of blocked requests */
   long getBlockedRequestsCount();
 
-  /** @return the number of checkAndMutate guards that passed */
+  /** Returns the number of checkAndMutate guards that passed */
   long getCheckAndMutateChecksPassed();
 
-  /** @return the number of failed checkAndMutate guards */
+  /** Returns the number of failed checkAndMutate guards */
   long getCheckAndMutateChecksFailed();
 
   ///////////////////////////////////////////////////////////////////////////
@@ -537,9 +535,7 @@ public interface Region extends ConfigurationObserver {
   // Flushes, compactions, splits, etc.
   // Wizards only, please
 
-  /**
-   * @return if a given region is in compaction now.
-   */
+  /** Returns if a given region is in compaction now. */
   CompactionState getCompactionState();
 
   /**

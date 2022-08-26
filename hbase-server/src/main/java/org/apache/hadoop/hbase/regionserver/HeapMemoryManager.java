@@ -230,9 +230,7 @@ public class HeapMemoryManager {
     return this.tunerOn;
   }
 
-  /**
-   * @return heap occupancy percentage, 0 &lt;= n &lt;= 1. or -0.0 for error asking JVM
-   */
+  /** Returns heap occupancy percentage, 0 &lt;= n &lt;= 1. or -0.0 for error asking JVM */
   public float getHeapOccupancyPercent() {
     return this.heapOccupancyPercent == Float.MAX_VALUE
       ? HEAP_OCCUPANCY_ERROR_VALUE

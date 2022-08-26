@@ -22,8 +22,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generic class for pairs.
- * @param <T1>
- * @param <T2>
  */
 @InterfaceAudience.Public
 public class Pair<T1, T2> implements Serializable {
@@ -102,9 +100,13 @@ public class Pair<T1, T2> implements Serializable {
 
   @Override
   public int hashCode() {
-    if (first == null) return (second == null) ? 0 : second.hashCode() + 1;
-    else if (second == null) return first.hashCode() + 2;
-    else return first.hashCode() * 17 + second.hashCode();
+    if (first == null) {
+      return (second == null) ? 0 : second.hashCode() + 1;
+    } else if (second == null) {
+      return first.hashCode() + 2;
+    } else {
+      return first.hashCode() * 17 + second.hashCode();
+    }
   }
 
   @Override

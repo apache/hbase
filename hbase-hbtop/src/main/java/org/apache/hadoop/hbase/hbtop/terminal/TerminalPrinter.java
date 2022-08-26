@@ -61,6 +61,7 @@ public interface TerminalPrinter {
     return this;
   }
 
+  @SuppressWarnings("AnnotateFormatMethod")
   default TerminalPrinter printFormat(String format, Object... args) {
     print(String.format(format, args));
     return this;

@@ -156,6 +156,9 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (metaTransitionExecutor != null) {
       metaTransitionExecutor.resizeQueues(conf);
     }
+    if (bulkloadExecutor != null) {
+      bulkloadExecutor.resizeQueues(conf);
+    }
 
     String callQueueType =
       conf.get(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, RpcExecutor.CALL_QUEUE_TYPE_CONF_DEFAULT);

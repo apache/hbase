@@ -417,12 +417,13 @@ public class RegionState {
    */
   @Override
   public boolean equals(Object obj) {
-    if (this == obj) return true;
-    if (obj == null || getClass() != obj.getClass()) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof RegionState)) {
       return false;
     }
     RegionState tmp = (RegionState) obj;
-
     return RegionInfo.COMPARATOR.compare(tmp.hri, hri) == 0 && tmp.state == state
       && ((serverName != null && serverName.equals(tmp.serverName))
         || (tmp.serverName == null && serverName == null));

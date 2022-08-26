@@ -125,23 +125,17 @@ public class SingleColumnValueFilter extends FilterBase {
     return op;
   }
 
-  /**
-   * @return the comparator
-   */
+  /** Returns the comparator */
   public org.apache.hadoop.hbase.filter.ByteArrayComparable getComparator() {
     return comparator;
   }
 
-  /**
-   * @return the family
-   */
+  /** Returns the family */
   public byte[] getFamily() {
     return columnFamily;
   }
 
-  /**
-   * @return the qualifier
-   */
+  /** Returns the qualifier */
   public byte[] getQualifier() {
     return columnQualifier;
   }
@@ -283,17 +277,17 @@ public class SingleColumnValueFilter extends FilterBase {
     return builder.build();
   }
 
-  /**
-   * @return The filter serialized using pb
-   */
+  /** Returns The filter serialized using pb */
   @Override
   public byte[] toByteArray() {
     return convert().toByteArray();
   }
 
   /**
+   * Parse a serialized representation of {@link SingleColumnValueFilter}
    * @param pbBytes A pb serialized {@link SingleColumnValueFilter} instance
    * @return An instance of {@link SingleColumnValueFilter} made from <code>bytes</code>
+   * @throws DeserializationException if an error occurred
    * @see #toByteArray
    */
   public static SingleColumnValueFilter parseFrom(final byte[] pbBytes)
@@ -320,8 +314,8 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * @return true if and only if the fields of the filter that are serialized are equal to the
-   *         corresponding fields in other. Used for testing.
+   * Returns true if and only if the fields of the filter that are serialized are equal to the
+   * corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
