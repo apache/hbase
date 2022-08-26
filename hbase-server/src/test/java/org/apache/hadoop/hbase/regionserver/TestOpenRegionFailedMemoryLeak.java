@@ -27,6 +27,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -40,9 +41,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -59,6 +62,14 @@ public class TestOpenRegionFailedMemoryLeak {
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionFailedMemoryLeak.class);
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @BeforeClass
+  public static void startCluster() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Enable sanity check for coprocessor
+    conf.setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, true);
+  }
 
   @AfterClass
   public static void tearDown() throws IOException {
