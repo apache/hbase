@@ -99,8 +99,7 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   public boolean parseOptions(String[] args) throws ParseException, IOException {
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
-      formatter
-        .printHelp(helpMsg, options, true);
+      formatter.printHelp(helpMsg, options, true);
       return false;
     }
 
