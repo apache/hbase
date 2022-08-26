@@ -7690,15 +7690,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private HRegion openHRegion(final CancelableProgressable reporter) throws IOException {
     try {
+      CompoundConfiguration cConfig =
+        new CompoundConfiguration().add(conf).addBytesMap(htableDescriptor.getValues());
       // Refuse to open the region if we are missing local compression support
-      TableDescriptorChecker.checkCompression(htableDescriptor);
+      TableDescriptorChecker.checkCompression(cConfig, htableDescriptor);
       // Refuse to open the region if encryption configuration is incorrect or
       // codec support is missing
       LOG.debug("checking encryption for " + this.getRegionInfo().getEncodedName());
-      TableDescriptorChecker.checkEncryption(conf, htableDescriptor);
+      TableDescriptorChecker.checkEncryption(cConfig, htableDescriptor);
       // Refuse to open the region if a required class cannot be loaded
       LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
-      TableDescriptorChecker.checkClassLoading(conf, htableDescriptor);
+      TableDescriptorChecker.checkClassLoading(cConfig, htableDescriptor);
       this.openSeqNum = initialize(reporter);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
