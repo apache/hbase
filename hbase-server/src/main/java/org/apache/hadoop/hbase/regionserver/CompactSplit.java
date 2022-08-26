@@ -382,6 +382,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       // pool; we will do selection there, and move to large pool if necessary.
       pool = shortCompactions;
     }
+
+    // A simple implementation for under compaction marks.
+    // Since this method is always called in the synchronized methods, we do not need to use the
+    // boolean result to make sure that exactly the one that added here will be removed
+    // in the next steps.
+    underCompactionStores.add(getStoreNameForUnderCompaction(store));
     pool.execute(
       new CompactionRunner(store, region, compaction, tracker, completeTracker, pool, user));
     if (LOG.isDebugEnabled()) {
@@ -390,7 +396,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
           + "store size is {}",
         getStoreNameForUnderCompaction(store), priority, underCompactionStores.size());
     }
-    underCompactionStores.add(getStoreNameForUnderCompaction(store));
     region.incrementCompactionsQueuedCount();
     if (LOG.isDebugEnabled()) {
       String type = (pool == shortCompactions) ? "Small " : "Large ";
