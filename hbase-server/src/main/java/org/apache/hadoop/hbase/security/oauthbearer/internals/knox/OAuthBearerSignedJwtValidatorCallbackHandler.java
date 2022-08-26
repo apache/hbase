@@ -73,15 +73,17 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
   private static final Logger LOG =
     LoggerFactory.getLogger(OAuthBearerSignedJwtValidatorCallbackHandler.class);
   private static final String OPTION_PREFIX = "hbase.security.oauth.jwt.";
-  private static final String JWKS_URL = OPTION_PREFIX + "jwks.url";
-  private static final String JWKS_FILE = OPTION_PREFIX + "jwks.file";
   private static final String ALLOWABLE_CLOCK_SKEW_SECONDS_OPTION =
     OPTION_PREFIX + "allowableclockskewseconds";
   static final String REQUIRED_AUDIENCE_OPTION = OPTION_PREFIX + "audience";
   static final String REQUIRED_ISSUER_OPTION = OPTION_PREFIX + "issuer";
   private Configuration hBaseConfiguration;
-  private JWKSet jwkSet;
+  private final JWKSet jwkSet;
   private boolean configured = false;
+
+  public OAuthBearerSignedJwtValidatorCallbackHandler(JWKSet jwkSet) {
+    this.jwkSet = jwkSet;
+  }
 
   @Override
   public void handle(Callback[] callbacks) throws UnsupportedCallbackException {
@@ -116,20 +118,12 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
     }
 
     this.hBaseConfiguration = configs;
-
-    try {
-      loadJwkSet();
-    } catch (IOException | ParseException e) {
-      throw new RuntimeException("Unable to initialize JWK Set", e);
-    }
-
     configured = true;
   }
 
   @InterfaceAudience.Private
-  public void configure(Configuration configs, JWKSet jwkSet) {
+  public void configure(Configuration configs) {
     this.hBaseConfiguration = Objects.requireNonNull(configs);
-    this.jwkSet = Objects.requireNonNull(jwkSet);
     this.configured = true;
   }
 
@@ -160,37 +154,18 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
   private int allowableClockSkewSeconds() {
     String allowableClockSkewSecondsValue = hBaseConfiguration.get(
       ALLOWABLE_CLOCK_SKEW_SECONDS_OPTION);
-    int allowableClockSkewSeconds = 0;
+    int skewSeconds;
     try {
-      allowableClockSkewSeconds = StringUtils.isBlank(allowableClockSkewSecondsValue)
+      skewSeconds = StringUtils.isBlank(allowableClockSkewSecondsValue)
         ? 0 : Integer.parseInt(allowableClockSkewSecondsValue.trim());
     } catch (NumberFormatException e) {
       throw new OAuthBearerConfigException(e.getMessage(), e);
     }
-    if (allowableClockSkewSeconds < 0) {
+    if (skewSeconds < 0) {
       throw new OAuthBearerConfigException(
         String.format("Allowable clock skew seconds must not be negative: %s",
           allowableClockSkewSecondsValue));
     }
-    return allowableClockSkewSeconds;
-  }
-
-  private void loadJwkSet() throws IOException, ParseException {
-    String jwksFile = hBaseConfiguration.get(JWKS_FILE);
-    String jwksUrl = hBaseConfiguration.get(JWKS_URL);
-
-    if (StringUtils.isBlank(jwksFile) && StringUtils.isBlank(jwksUrl)) {
-      throw new RuntimeException("Failed to initialize JWKS db. "
-        + JWKS_FILE + " or " + JWKS_URL + " must be specified in the config.");
-    }
-
-    if (!StringUtils.isBlank(jwksFile)) {
-      this.jwkSet = JWKSet.load(new File(jwksFile));
-      LOG.debug("JWKS db initialized from file: {}", jwksFile);
-      return;
-    }
-
-    this.jwkSet = JWKSet.load(new URL(jwksUrl));
-    LOG.debug("JWKS db initialized from URL: {}", jwksUrl);
+    return skewSeconds;
   }
 }

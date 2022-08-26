@@ -1268,6 +1268,11 @@
         <artifactId>jettison</artifactId>
         <version>${jettison.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>${nimbusds.version}</version>
+      </dependency>
       <!-- Logging -->
       <dependency>
         <groupId>org.slf4j</groupId>
@@ -3953,17 +3958,16 @@
             <artifactId>hadoop-distcp</artifactId>
             <version>${hadoop-three.version}</version>
           </dependency>
-
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop-three.version}</version>
           </dependency>
-         <dependency>
-           <groupId>com.nimbusds</groupId>
-           <artifactId>nimbus-jose-jwt</artifactId>
-           <version>${nimbusds.version}</version>
-         </dependency>
+          <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>${nimbusds.version}</version>
+          </dependency>
         </dependencies>
       </dependencyManagement>
 

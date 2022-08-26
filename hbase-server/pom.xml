@@ -708,6 +708,10 @@
             </exclusion>
           </exclusions>
         </dependency>
+        <dependency>
+          <groupId>com.nimbusds</groupId>
+          <artifactId>nimbus-jose-jwt</artifactId>
+        </dependency>
         <!-- Hadoop needs Netty 3.x at test scope for the minicluster>
         <dependency>
           <groupId>io.netty</groupId>

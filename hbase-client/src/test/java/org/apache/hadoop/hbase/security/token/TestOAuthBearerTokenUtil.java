@@ -27,14 +27,24 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 import javax.security.auth.Subject;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerToken;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ SecurityTests.class, SmallTests.class })
 public class TestOAuthBearerTokenUtil {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestOAuthBearerTokenUtil.class);
 
   @Test
   public void testAddTokenFromEnvVar() {

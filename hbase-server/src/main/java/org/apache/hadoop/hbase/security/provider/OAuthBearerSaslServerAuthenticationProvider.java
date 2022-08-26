@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.text.ParseException;
 import java.util.Map;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
+import com.nimbusds.jose.jwk.JWKSet;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
 import org.apache.hadoop.hbase.security.oauthbearer.internals.OAuthBearerSaslServerProvider;
@@ -39,10 +44,14 @@ public class OAuthBearerSaslServerAuthenticationProvider
     extends OAuthBearerSaslAuthenticationProvider
     implements SaslServerAuthenticationProvider {
 
+  private static final String OPTION_PREFIX = "hbase.security.oauth.jwt.";
+  private static final String JWKS_URL = OPTION_PREFIX + "jwks.url";
+  private static final String JWKS_FILE = OPTION_PREFIX + "jwks.file";
   private static final Logger LOG = LoggerFactory.getLogger(
     OAuthBearerSaslServerAuthenticationProvider.class);
   private Configuration hbaseConfiguration;
   private boolean initialized = false;
+  private JWKSet jwkSet = null;
 
   static {
     OAuthBearerSaslServerProvider.initialize(); // not part of public API
@@ -51,6 +60,11 @@ public class OAuthBearerSaslServerAuthenticationProvider
 
   @Override public void init(Configuration conf) throws IOException {
     this.hbaseConfiguration = conf;
+    try {
+      loadJwkSet();
+    } catch (IOException | ParseException e) {
+      throw new RuntimeException("Unable to initialize JWK Set", e);
+    }
     this.initialized = true;
   }
 
@@ -73,7 +87,7 @@ public class OAuthBearerSaslServerAuthenticationProvider
         @Override
         public AttemptingUserProvidingSaslServer run() throws SaslException {
           AuthenticateCallbackHandler callbackHandler =
-            new OAuthBearerSignedJwtValidatorCallbackHandler();
+            new OAuthBearerSignedJwtValidatorCallbackHandler(jwkSet);
           callbackHandler.configure(hbaseConfiguration, getSaslAuthMethod().getSaslMechanism(),
             saslProps);
           return new AttemptingUserProvidingSaslServer(Sasl.createSaslServer(
@@ -96,5 +110,24 @@ public class OAuthBearerSaslServerAuthenticationProvider
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
     ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
     return ugi;
+  }
+
+  private void loadJwkSet() throws IOException, ParseException {
+    String jwksFile = hbaseConfiguration.get(JWKS_FILE);
+    String jwksUrl = hbaseConfiguration.get(JWKS_URL);
+
+    if (StringUtils.isBlank(jwksFile) && StringUtils.isBlank(jwksUrl)) {
+      throw new RuntimeException("Failed to initialize JWKS db. "
+        + JWKS_FILE + " or " + JWKS_URL + " must be specified in the config.");
+    }
+
+    if (!StringUtils.isBlank(jwksFile)) {
+      this.jwkSet = JWKSet.load(new File(jwksFile));
+      LOG.debug("JWKS db initialized from file: {}", jwksFile);
+      return;
+    }
+
+    this.jwkSet = JWKSet.load(new URL(jwksUrl));
+    LOG.debug("JWKS db initialized from URL: {}", jwksUrl);
   }
 }

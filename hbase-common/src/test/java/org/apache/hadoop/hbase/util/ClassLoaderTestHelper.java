@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;

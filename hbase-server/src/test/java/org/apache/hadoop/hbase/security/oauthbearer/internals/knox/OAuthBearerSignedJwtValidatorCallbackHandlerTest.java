@@ -159,8 +159,8 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   private OAuthBearerSignedJwtValidatorCallbackHandler
     createCallbackHandler(HBaseConfiguration config) {
     OAuthBearerSignedJwtValidatorCallbackHandler callbackHandler =
-      new OAuthBearerSignedJwtValidatorCallbackHandler();
-    callbackHandler.configure(config, new JWKSet(RSA_KEY));
+      new OAuthBearerSignedJwtValidatorCallbackHandler(new JWKSet(RSA_KEY));
+    callbackHandler.configure(config);
     return callbackHandler;
   }
 }

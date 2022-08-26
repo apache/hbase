@@ -59,8 +59,8 @@ public class OAuthBearerSaslServerTest {
     RSAKey rsaKey = JwtTestUtils.generateRSAKey();
     JWT = JwtTestUtils.createSignedJwt(rsaKey);
     OAuthBearerSignedJwtValidatorCallbackHandler validatorCallbackHandler =
-      new OAuthBearerSignedJwtValidatorCallbackHandler();
-    validatorCallbackHandler.configure(CONFIGS, new JWKSet(rsaKey));
+      new OAuthBearerSignedJwtValidatorCallbackHandler(new JWKSet(rsaKey));
+    validatorCallbackHandler.configure(CONFIGS);
     // only validate extensions "firstKey" and "secondKey"
     saslServer = new OAuthBearerSaslServer(validatorCallbackHandler);
   }
