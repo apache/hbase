@@ -129,12 +129,15 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   // Enable it if the replications recover.
   private volatile boolean lowReplicationRollEnabled = true;
 
+  private final int syncerCount;
+  private final int maxSyncRequestCount;
+
   /**
    * Which syncrunner to use next.
    */
   private int syncRunnerIndex = 0;
 
-  private final SyncRunner[] syncRunners;
+  private SyncRunner[] syncRunners = null;
 
   /**
    * Constructor.
@@ -193,8 +196,8 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     // Advance the ring buffer sequence so that it starts from 1 instead of 0,
     // because SyncFuture.NOT_DONE = 0.
 
-    int syncerCount = conf.getInt(SYNCER_COUNT, DEFAULT_SYNCER_COUNT);
-    int maxBatchCount = conf.getInt(MAX_BATCH_COUNT,
+    this.syncerCount = conf.getInt(SYNCER_COUNT, DEFAULT_SYNCER_COUNT);
+    this.maxSyncRequestCount = conf.getInt(MAX_BATCH_COUNT,
       conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, DEFAULT_MAX_BATCH_COUNT));
 
     this.createSingleThreadPoolConsumeExecutor("FSHLog", rootDir, prefix);
@@ -202,18 +205,20 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     this.setWaitOnShutdownInSeconds(
       conf.getInt(FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS, DEFAULT_FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS),
       FSHLOG_WAIT_ON_SHUTDOWN_IN_SECONDS);
-
-    this.syncRunners = new SyncRunner[syncerCount];
-    for (int i = 0; i < syncerCount; i++) {
-      this.syncRunners[i] = new SyncRunner("sync." + i, maxBatchCount);
-    }
   }
 
   @Override
   public void init() throws IOException {
     super.init();
-    for (SyncRunner syncRunner : this.syncRunners) {
-      syncRunner.start();
+    this.createSyncRunnersAndStart();
+  }
+
+  protected void createSyncRunnersAndStart() {
+    this.syncRunnerIndex = 0;
+    this.syncRunners = new SyncRunner[syncerCount];
+    for (int i = 0; i < syncerCount; i++) {
+      this.syncRunners[i] = new SyncRunner("sync." + i, maxSyncRequestCount);
+      this.syncRunners[i].start();
     }
   }
 
@@ -269,14 +274,23 @@ public class FSHLog extends AbstractFSWAL<Writer> {
     } else {
       this.hdfs_out = null;
     }
+    this.createSyncRunnersAndStart();
   }
 
   @Override
-  protected void doCleanUp() {
-    for (SyncRunner syncRunner : this.syncRunners) {
-      syncRunner.shutDown();
-    }
+  protected void doCleanUpResources() {
+    this.shutDownSyncRunners();
   };
+
+  protected void shutDownSyncRunners() {
+    SyncRunner[] syncRunnersToUse = this.syncRunners;
+    if (syncRunnersToUse != null) {
+      for (SyncRunner syncRunner : syncRunnersToUse) {
+        syncRunner.shutDown();
+      }
+    }
+    this.syncRunners = null;
+  }
 
   @Override
   protected CompletableFuture<Long> doWriterSync(Writer writer, boolean shouldUseHSync,

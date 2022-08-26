@@ -1915,6 +1915,10 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected void doReplaceWriter(Path oldPath, Path newPath, W nextWriter) throws IOException {
     Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
+    /**
+     * For {@link FSHLog},here would shutdown {@link FSHLog.SyncRunner}.
+     */
+    doCleanUpResources();
     long oldFileLen = closeWriter(this.writer, oldPath);
     logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
     this.writer = nextWriter;
@@ -1947,7 +1951,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     /**
      * For {@link FSHLog},here would shutdown {@link FSHLog.SyncRunner}.
      */
-    doCleanUp();
+    doCleanUpResources();
     closeWriter(this.writer, getOldPath());
     this.writer = null;
     closeExecutor.shutdown();
@@ -1987,7 +1991,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
   }
 
-  protected void doCleanUp() {
+  protected void doCleanUpResources() {
   };
 
   protected abstract void doAppend(W writer, FSWALEntry entry) throws IOException;
