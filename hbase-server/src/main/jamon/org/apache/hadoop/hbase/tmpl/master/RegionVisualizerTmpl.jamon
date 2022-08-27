@@ -33,7 +33,7 @@ limitations under the License.
             format: { type: 'json', property: 'data' }
           },
           transform: [
-            { calculate: "split(datum.server_name.servername, ',', 1)[0]", as: 'server_name' },
+            { calculate: "split(datum.server_name.server_name, ',', 1)[0]", as: 'server_name' },
             { calculate: 'values(datum.region_status)', as: 'region_status' },
             { flatten: ['region_status'] },
             { calculate: "split(datum.region_status.name, ',', 1)[0]", as: 'table_name' },
