@@ -549,7 +549,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     ThreadPoolExecutor tpe =
       new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveTime, TimeUnit.SECONDS, workQueue,
-        new ThreadFactoryBuilder().setNameFormat(toString() + nameHint + "-pool-%d")
+        new ThreadFactoryBuilder().setDaemon(true).setNameFormat(toString() + nameHint + "-pool-%d")
           .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
