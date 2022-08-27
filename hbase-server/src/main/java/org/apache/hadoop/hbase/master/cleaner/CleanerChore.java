@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -81,6 +80,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final AtomicBoolean enabled = new AtomicBoolean(true);
   protected List<T> cleanersChain;
   protected List<String> excludeDirs;
+  private CompletableFuture<Boolean> future;
+  private boolean forceRun;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
     FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
@@ -168,10 +169,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
-    this.cleanersChain = new LinkedList<>();
-    String[] logCleaners = conf.getStrings(confKey);
-    if (logCleaners != null) {
-      for (String className : logCleaners) {
+    this.cleanersChain = new ArrayList<>();
+    String[] cleaners = conf.getStrings(confKey);
+    if (cleaners != null) {
+      for (String className : cleaners) {
         className = className.trim();
         if (className.isEmpty()) {
           continue;
@@ -209,25 +210,61 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   }
 
   @Override
-  protected void chore() {
-    if (getEnabled()) {
-      try {
-        pool.latchCountUp();
-        if (runCleaner()) {
-          LOG.trace("Cleaned all WALs under {}", oldFileDir);
-        } else {
-          LOG.trace("WALs outstanding under {}", oldFileDir);
-        }
-      } finally {
-        pool.latchCountDown();
+  protected boolean initialChore() {
+    synchronized (this) {
+      if (forceRun) {
+        // wake up the threads waiting in triggerCleanerNow, as a triggerNow may triggers the first
+        // loop where we will only call initialChore. We need to trigger another run immediately.
+        forceRun = false;
+        notifyAll();
       }
+    }
+    return true;
+  }
+
+  @Override
+  protected void chore() {
+    CompletableFuture<Boolean> f;
+    synchronized (this) {
+      if (!enabled.get()) {
+        if (!forceRun) {
+          LOG.trace("Cleaner chore {} disabled! Not cleaning.", getName());
+          return;
+        } else {
+          LOG.info("Force executing cleaner chore {} when disabled", getName());
+        }
+      }
+      if (future != null) {
+        LOG.warn("A cleaner chore {}'s run is in progress, give up running", getName());
+        return;
+      }
+      f = new CompletableFuture<>();
+      future = f;
+      notifyAll();
+    }
+    pool.latchCountUp();
+    try {
+      preRunCleaner();
+      pool.execute(() -> traverseAndDelete(oldFileDir, true, f));
+      if (f.get()) {
+        LOG.trace("Cleaned all files under {}", oldFileDir);
+      } else {
+        LOG.trace("Files outstanding under {}", oldFileDir);
+      }
+    } catch (Exception e) {
+      LOG.info("Failed to traverse and delete the dir: {}", oldFileDir, e);
+    } finally {
+      postRunCleaner();
+      synchronized (this) {
+        future = null;
+        forceRun = false;
+      }
+      pool.latchCountDown();
       // After each cleaner chore, checks if received reconfigure notification while cleaning.
       // First in cleaner turns off notification, to avoid another cleaner updating pool again.
       // This cleaner is waiting for other cleaners finishing their jobs.
       // To avoid missing next chore, only wait 0.8 * period, then shutdown.
       pool.tryUpdatePoolSize((long) (0.8 * getTimeUnit().toMillis(getPeriod())));
-    } else {
-      LOG.trace("Cleaner chore disabled! Not cleaning.");
     }
   }
 
@@ -235,15 +272,24 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     cleanersChain.forEach(FileCleanerDelegate::preClean);
   }
 
-  public boolean runCleaner() {
-    preRunCleaner();
-    try {
-      CompletableFuture<Boolean> future = new CompletableFuture<>();
-      pool.execute(() -> traverseAndDelete(oldFileDir, true, future));
-      return future.get();
-    } catch (Exception e) {
-      LOG.info("Failed to traverse and delete the dir: {}", oldFileDir, e);
-      return false;
+  private void postRunCleaner() {
+    cleanersChain.forEach(FileCleanerDelegate::postClean);
+  }
+
+  /**
+   * Trigger the cleaner immediately and return a CompletableFuture for getting the result. Return
+   * {@code true} means all the old files have been deleted, otherwise {@code false}.
+   */
+  public synchronized CompletableFuture<Boolean> triggerCleanerNow() throws InterruptedException {
+    for (;;) {
+      if (future != null) {
+        return future;
+      }
+      forceRun = true;
+      if (!triggerNow()) {
+        return CompletableFuture.completedFuture(false);
+      }
+      wait();
     }
   }
 
@@ -396,9 +442,6 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     return pool.getSize();
   }
 
-  /**
-   * n
-   */
   public boolean setEnabled(final boolean enabled) {
     return this.enabled.getAndSet(enabled);
   }
@@ -449,7 +492,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])),
         (voidObj, e) -> {
           if (e != null) {
-            result.completeExceptionally(e);
+            result.completeExceptionally(FutureUtils.unwrapCompletionException(e));
             return;
           }
           try {

@@ -50,6 +50,12 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
   }
 
   /**
+   * Used to do some cleanup work
+   */
+  default void postClean() {
+  }
+
+  /**
    * Check if a empty directory with no subdirs or subfiles can be deleted
    * @param dir Path of the directory
    * @return True if the directory can be deleted, otherwise false
