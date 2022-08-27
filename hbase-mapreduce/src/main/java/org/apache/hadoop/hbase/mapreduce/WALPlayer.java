@@ -143,19 +143,22 @@ public class WALPlayer extends Configured implements Tool {
    * A mapper that just writes out Cells. This one can be used together with {@link CellSortReducer}
    */
   static class WALCellMapper extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Cell> {
-    private byte[] table;
+    private Set<String> tableSet = new HashSet<>();
+    private boolean multiTableSupport = false;
 
     @Override
     public void map(WALKey key, WALEdit value, Context context) throws IOException {
       try {
-        // skip all other tables
-        if (Bytes.equals(table, key.getTableName().getName())) {
+        TableName table = key.getTableName();
+        if (tableSet.contains(table.getNameAsString())) {
           for (Cell cell : value.getCells()) {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
             }
-            context.write(new ImmutableBytesWritable(CellUtil.cloneRow(cell)),
-              new MapReduceExtendedCell(cell));
+            byte[] outKey = multiTableSupport
+              ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
+              : CellUtil.cloneRow(cell);
+            context.write(new ImmutableBytesWritable(outKey), new MapReduceExtendedCell(cell));
           }
         }
       } catch (InterruptedException e) {
@@ -165,13 +168,12 @@ public class WALPlayer extends Configured implements Tool {
 
     @Override
     public void setup(Context context) throws IOException {
-      // only a single table is supported when HFiles are generated with HFileOutputFormat
-      String[] tables = context.getConfiguration().getStrings(TABLES_KEY);
-      if (tables == null || tables.length != 1) {
-        // this can only happen when WALMapper is used directly by a class other than WALPlayer
-        throw new IOException("Exactly one table must be specified for bulk HFile case.");
+      Configuration conf = context.getConfiguration();
+      String[] tables = conf.getStrings(TABLES_KEY);
+      this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
+      for (String table : tables) {
+        tableSet.add(table);
       }
-      table = Bytes.toBytes(tables[0]);
     }
   }
 
@@ -363,7 +365,7 @@ public class WALPlayer extends Configured implements Tool {
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputValueClass(KeyValue.class);
       try (Connection conn = ConnectionFactory.createConnection(conf);) {
-        List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
+        List<TableInfo> tableInfoList = new ArrayList<>();
         for (TableName tableName : tableNames) {
           Table table = conn.getTable(tableName);
           RegionLocator regionLocator = conn.getRegionLocator(tableName);
