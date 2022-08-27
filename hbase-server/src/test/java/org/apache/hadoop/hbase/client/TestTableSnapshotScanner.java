@@ -451,7 +451,7 @@ public class TestTableSnapshotScanner {
       // set file modify time and then run cleaner
       long time = EnvironmentEdgeManager.currentTime() - TimeToLiveHFileCleaner.DEFAULT_TTL * 1000;
       traverseAndSetFileTime(HFileArchiveUtil.getArchivePath(conf), time);
-      UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().runCleaner();
+      UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().triggerCleanerNow().get();
       // scan snapshot
       try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf,
         UTIL.getDataTestDirOnTestFS(snapshotName), snapshotName, new Scan(bbb, yyy))) {

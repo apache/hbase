@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -1572,8 +1574,16 @@ public class MasterRpcServices extends RSRpcServices
   public RunCleanerChoreResponse runCleanerChore(RpcController c, RunCleanerChoreRequest req)
     throws ServiceException {
     rpcPreCheck("runCleanerChore");
-    boolean result = master.getHFileCleaner().runCleaner() && master.getLogCleaner().runCleaner();
-    return ResponseConverter.buildRunCleanerChoreResponse(result);
+    try {
+      CompletableFuture<Boolean> fileCleanerFuture = master.getHFileCleaner().triggerCleanerNow();
+      CompletableFuture<Boolean> logCleanerFuture = master.getLogCleaner().triggerCleanerNow();
+      boolean result = fileCleanerFuture.get() && logCleanerFuture.get();
+      return ResponseConverter.buildRunCleanerChoreResponse(result);
+    } catch (InterruptedException e) {
+      throw new ServiceException(e);
+    } catch (ExecutionException e) {
+      throw new ServiceException(e.getCause());
+    }
   }
 
   @Override
