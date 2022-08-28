@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +19,7 @@ package org.apache.hadoop.hbase.security.token;
 
 import static org.apache.hadoop.hbase.client.ConnectionFactory.ENV_OAUTHBEARER_TOKEN;
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.time.Instant;
@@ -50,27 +50,32 @@ public final class OAuthBearerTokenUtil {
     LOG.info("OAuthBearer SASL client provider has been initialized");
   }
 
-  private OAuthBearerTokenUtil() {  }
+  private OAuthBearerTokenUtil() {
+  }
 
   /**
-   * Add token to user's subject private credentials and a hint to provider selector
-   * to correctly select OAuthBearer SASL provider.
+   * Add token to user's subject private credentials and a hint to provider selector to correctly
+   * select OAuthBearer SASL provider.
    */
   public static void addTokenForUser(User user, String encodedToken, long lifetimeMs) {
     user.addToken(new Token<>(null, null, new Text(TOKEN_KIND), null));
     user.runAs(new PrivilegedAction<Object>() {
-      @Override public Object run() {
+      @Override
+      public Object run() {
         Subject subject = Subject.getSubject(AccessController.getContext());
         OAuthBearerToken jwt = new OAuthBearerToken() {
-          @Override public String value() {
+          @Override
+          public String value() {
             return encodedToken;
           }
 
-          @Override public long lifetimeMs() {
+          @Override
+          public long lifetimeMs() {
             return lifetimeMs;
           }
 
-          @Override public String principalName() {
+          @Override
+          public String principalName() {
             return user.getName();
           }
         };
@@ -85,13 +90,12 @@ public final class OAuthBearerTokenUtil {
   }
 
   /**
-   * Check whether an OAuth Beaerer token is provided in environment variable HBASE_JWT.
-   * Parse and add it to user private credentials, but only if another token is not already present.
+   * Check whether an OAuth Beaerer token is provided in environment variable HBASE_JWT. Parse and
+   * add it to user private credentials, but only if another token is not already present.
    */
   public static void addTokenFromEnvironmentVar(User user, String token) {
     Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
-      .filter((t) -> new Text(OAuthBearerUtils.TOKEN_KIND).equals(t.getKind()))
-      .findFirst();
+      .filter((t) -> new Text(OAuthBearerUtils.TOKEN_KIND).equals(t.getKind())).findFirst();
 
     if (oauthBearerToken.isPresent()) {
       LOG.warn("Ignoring OAuth Bearer token in " + ENV_OAUTHBEARER_TOKEN + " environment "

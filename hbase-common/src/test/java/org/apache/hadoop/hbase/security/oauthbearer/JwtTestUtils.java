@@ -42,20 +42,12 @@ public final class JwtTestUtils {
   }
 
   public static String createSignedJwt(RSAKey rsaKey, String issuer, String subject,
-    LocalDate expirationTime, LocalDate issueTime, String audience)
-    throws JOSEException {
-    JWSHeader jwsHeader =
-      new JWSHeader.Builder(JWSAlgorithm.RS256)
-        .type(JOSEObjectType.JWT)
-        .keyID(rsaKey.getKeyID())
-        .build();
-    JWTClaimsSet payload = new JWTClaimsSet.Builder()
-      .issuer(issuer)
-      .subject(subject)
+    LocalDate expirationTime, LocalDate issueTime, String audience) throws JOSEException {
+    JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
+      .keyID(rsaKey.getKeyID()).build();
+    JWTClaimsSet payload = new JWTClaimsSet.Builder().issuer(issuer).subject(subject)
       .issueTime(java.sql.Date.valueOf(issueTime))
-      .expirationTime(java.sql.Date.valueOf(expirationTime))
-      .audience(audience)
-      .build();
+      .expirationTime(java.sql.Date.valueOf(expirationTime)).audience(audience).build();
     SignedJWT signedJwt = new SignedJWT(jwsHeader, payload);
     signedJwt.sign(new RSASSASigner(rsaKey));
     return signedJwt.serialize();
@@ -63,15 +55,10 @@ public final class JwtTestUtils {
 
   public static String createSignedJwt(RSAKey rsaKey) throws JOSEException {
     LocalDateTime now = LocalDateTime.now(ZONE_ID);
-    JWSHeader jwsHeader =
-      new JWSHeader.Builder(JWSAlgorithm.RS256)
-        .type(JOSEObjectType.JWT)
-        .keyID(rsaKey.getKeyID())
-        .build();
-    JWTClaimsSet payload = new JWTClaimsSet.Builder()
-      .subject(USER)
-      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1)))
-      .build();
+    JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
+      .keyID(rsaKey.getKeyID()).build();
+    JWTClaimsSet payload = new JWTClaimsSet.Builder().subject(USER)
+      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1))).build();
     SignedJWT signedJwt = new SignedJWT(jwsHeader, payload);
     signedJwt.sign(new RSASSASigner(rsaKey));
     return signedJwt.serialize();
@@ -79,16 +66,10 @@ public final class JwtTestUtils {
 
   public static String createSignedJwtWithAudience(RSAKey rsaKey, String aud) throws JOSEException {
     LocalDateTime now = LocalDateTime.now(ZONE_ID);
-    JWSHeader jwsHeader =
-      new JWSHeader.Builder(JWSAlgorithm.RS256)
-        .type(JOSEObjectType.JWT)
-        .keyID(rsaKey.getKeyID())
-        .build();
-    JWTClaimsSet payload = new JWTClaimsSet.Builder()
-      .subject(USER)
-      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1)))
-      .audience(aud)
-      .build();
+    JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
+      .keyID(rsaKey.getKeyID()).build();
+    JWTClaimsSet payload = new JWTClaimsSet.Builder().subject(USER)
+      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1))).audience(aud).build();
     SignedJWT signedJwt = new SignedJWT(jwsHeader, payload);
     signedJwt.sign(new RSASSASigner(rsaKey));
     return signedJwt.serialize();
@@ -96,16 +77,10 @@ public final class JwtTestUtils {
 
   public static String createSignedJwtWithIssuer(RSAKey rsaKey, String iss) throws JOSEException {
     LocalDateTime now = LocalDateTime.now(ZONE_ID);
-    JWSHeader jwsHeader =
-      new JWSHeader.Builder(JWSAlgorithm.RS256)
-        .type(JOSEObjectType.JWT)
-        .keyID(rsaKey.getKeyID())
-        .build();
-    JWTClaimsSet payload = new JWTClaimsSet.Builder()
-      .subject(USER)
-      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1)))
-      .issuer(iss)
-      .build();
+    JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT)
+      .keyID(rsaKey.getKeyID()).build();
+    JWTClaimsSet payload = new JWTClaimsSet.Builder().subject(USER)
+      .expirationTime(java.sql.Timestamp.valueOf(now.plusDays(1))).issuer(iss).build();
     SignedJWT signedJwt = new SignedJWT(jwsHeader, payload);
     signedJwt.sign(new RSASSASigner(rsaKey));
     return signedJwt.serialize();

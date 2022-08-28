@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.exceptions;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This exception indicates unexpected requests prior to SASL authentication.
- * This could be due to misconfigured security.
+ * This exception indicates unexpected requests prior to SASL authentication. This could be due to
+ * misconfigured security.
  */
 @InterfaceAudience.Public
 public class IllegalSaslStateException extends IllegalStateException {

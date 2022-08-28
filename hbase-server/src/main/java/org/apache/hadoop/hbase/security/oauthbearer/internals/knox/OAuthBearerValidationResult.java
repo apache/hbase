@@ -22,7 +22,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The result of some kind of token validation
- *
+ * <p/>
  * This class has been copy-and-pasted from Kafka codebase.
  */
 @InterfaceAudience.Public
@@ -35,7 +35,6 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return an instance indicating success
-   *
    * @return an instance indicating success
    */
   public static OAuthBearerValidationResult newSuccess() {
@@ -44,9 +43,7 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return a new validation failure instance
-   *
-   * @param failureDescription
-   *            optional description of the failure
+   * @param failureDescription optional description of the failure
    * @return a new validation failure instance
    */
   public static OAuthBearerValidationResult newFailure(String failureDescription) {
@@ -55,14 +52,10 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return a new validation failure instance
-   *
-   * @param failureDescription
-   *            optional description of the failure
-   * @param failureScope
-   *            optional scope to be reported with the failure
-   * @param failureOpenIdConfig
-   *            optional OpenID Connect configuration to be reported with the
-   *            failure
+   * @param failureDescription  optional description of the failure
+   * @param failureScope        optional scope to be reported with the failure
+   * @param failureOpenIdConfig optional OpenID Connect configuration to be reported with the
+   *                            failure
    * @return a new validation failure instance
    */
   public static OAuthBearerValidationResult newFailure(String failureDescription,
@@ -85,7 +78,6 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return true if this instance indicates success, otherwise false
-   *
    * @return true if this instance indicates success, otherwise false
    */
   public boolean success() {
@@ -94,7 +86,6 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return the (potentially null) descriptive message for the failure
-   *
    * @return the (potentially null) descriptive message for the failure
    */
   public String failureDescription() {
@@ -103,7 +94,6 @@ public final class OAuthBearerValidationResult implements Serializable {
 
   /**
    * Return the (potentially null) scope to be reported with the failure
-   *
    * @return the (potentially null) scope to be reported with the failure
    */
   public String failureScope() {
@@ -111,21 +101,16 @@ public final class OAuthBearerValidationResult implements Serializable {
   }
 
   /**
-   * Return the (potentially null) OpenID Connect configuration to be reported
-   * with the failure
-   *
-   * @return the (potentially null) OpenID Connect configuration to be reported
-   *         with the failure
+   * Return the (potentially null) OpenID Connect configuration to be reported with the failure
+   * @return the (potentially null) OpenID Connect configuration to be reported with the failure
    */
   public String failureOpenIdConfig() {
     return failureOpenIdConfig;
   }
 
   /**
-   * Raise an exception if this instance indicates failure, otherwise do nothing
-   *
-   * @throws OAuthBearerIllegalTokenException
-   *             if this instance indicates failure
+   * Raise an exception if this instance indicates failure, otherwise do nothing n * if this
+   * instance indicates failure
    */
   public void throwExceptionIfFailed() throws OAuthBearerIllegalTokenException {
     if (!success()) {

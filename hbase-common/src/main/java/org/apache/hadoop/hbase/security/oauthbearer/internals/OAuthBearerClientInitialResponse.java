@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * OAuthBearer SASL client's initial message to the server.
- *
+ * <p/>
  * This class has been copy-and-pasted from Kafka codebase.
  */
 @InterfaceAudience.Public
@@ -46,9 +46,8 @@ public class OAuthBearerClientInitialResponse {
   private static final String KVPAIRS = String.format("(%s=%s%s)*", KEY, VALUE, SEPARATOR);
   private static final Pattern AUTH_PATTERN =
     Pattern.compile("(?<scheme>[\\w]+)[ ]+(?<token>[-_\\.a-zA-Z0-9]+)");
-  private static final Pattern CLIENT_INITIAL_RESPONSE_PATTERN = Pattern.compile(
-    String.format("n,(a=(?<authzid>%s))?,%s(?<kvpairs>%s)%s",
-      SASLNAME, SEPARATOR, KVPAIRS, SEPARATOR));
+  private static final Pattern CLIENT_INITIAL_RESPONSE_PATTERN = Pattern.compile(String
+    .format("n,(a=(?<authzid>%s))?,%s(?<kvpairs>%s)%s", SASLNAME, SEPARATOR, KVPAIRS, SEPARATOR));
   public static final String AUTH_KEY = "auth";
 
   private final String tokenValue;
@@ -88,13 +87,11 @@ public class OAuthBearerClientInitialResponse {
 
   /**
    * Constructor
-   *
-   * @param tokenValue
-   *            the mandatory token value
-   * @throws SaslException
-   *             if any extension name or value fails to conform to the required
-   *             regular expression as defined by the specification, or if the
-   *             reserved {@code auth} appears as a key
+   * <p/>
+   * @param tokenValue the mandatory token value
+   * @throws SaslException if any extension name or value fails to conform to the required regular
+   *                       expression as defined by the specification, or if the reserved
+   *                       {@code auth} appears as a key
    */
   public OAuthBearerClientInitialResponse(String tokenValue) {
     this(tokenValue, "");
@@ -102,15 +99,12 @@ public class OAuthBearerClientInitialResponse {
 
   /**
    * Constructor
-   *
-   * @param tokenValue
-   *            the mandatory token value
-   * @param authorizationId
-   *            the optional authorization ID
-   * @throws SaslException
-   *             if any extension name or value fails to conform to the required
-   *             regular expression as defined by the specification, or if the
-   *             reserved {@code auth} appears as a key
+   * <p/>
+   * @param tokenValue      the mandatory token value
+   * @param authorizationId the optional authorization ID
+   * @throws SaslException if any extension name or value fails to conform to the required regular
+   *                       expression as defined by the specification, or if the reserved
+   *                       {@code auth} appears as a key
    */
   public OAuthBearerClientInitialResponse(String tokenValue, String authorizationId) {
     this.tokenValue = Objects.requireNonNull(tokenValue, "token value must not be null");
@@ -120,15 +114,14 @@ public class OAuthBearerClientInitialResponse {
   public byte[] toBytes() {
     String authzid = authorizationId.isEmpty() ? "" : "a=" + authorizationId;
 
-    String message = String.format("n,%s,%sauth=Bearer %s%s%s", authzid,
-      SEPARATOR, tokenValue, SEPARATOR, SEPARATOR);
+    String message = String.format("n,%s,%sauth=Bearer %s%s%s", authzid, SEPARATOR, tokenValue,
+      SEPARATOR, SEPARATOR);
 
     return Bytes.toBytes(message);
   }
 
   /**
    * Return the always non-null token value
-   *
    * @return the always non-null toklen value
    */
   public String tokenValue() {
@@ -137,7 +130,6 @@ public class OAuthBearerClientInitialResponse {
 
   /**
    * Return the always non-null authorization ID
-   *
    * @return the always non-null authorization ID
    */
   public String authorizationId() {

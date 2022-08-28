@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -63,7 +63,8 @@ public class JwtClientExample extends Configured implements Tool {
     setConf(conf);
   }
 
-  @Override public int run(String[] args) throws Exception {
+  @Override
+  public int run(String[] args) throws Exception {
     LOG.info("JWT client example has been started");
 
     Configuration conf = getConf();
@@ -81,20 +82,15 @@ public class JwtClientExample extends Configured implements Tool {
       TableName tn = TableName.valueOf("jwt-test-table");
       if (!admin.isTableAvailable(tn)) {
         TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tn)
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build())
-          .build();
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).build()).build();
         admin.createTable(tableDescriptor);
       }
 
       Table table = conn.getTable(tn);
       byte[] rk = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
       Put p = new Put(rk);
-      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
-          .setRow(rk)
-          .setFamily(FAMILY)
-          .setType(Cell.Type.Put)
-          .setValue("test".getBytes(StandardCharsets.UTF_8))
-        .build());
+      p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(rk).setFamily(FAMILY)
+        .setType(Cell.Type.Put).setValue("test".getBytes(StandardCharsets.UTF_8)).build());
       table.put(p);
 
       admin.disableTable(tn);

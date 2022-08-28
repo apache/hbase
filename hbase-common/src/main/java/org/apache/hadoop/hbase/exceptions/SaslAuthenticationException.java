@@ -21,19 +21,18 @@ import javax.security.sasl.SaslServer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * This exception indicates that SASL authentication has failed. The error message
- * in the exception indicates the actual cause of failure.
+ * This exception indicates that SASL authentication has failed. The error message in the exception
+ * indicates the actual cause of failure.
  * <p>
- * SASL authentication failures typically indicate invalid credentials, but
- * could also include other failures specific to the SASL mechanism used
- * for authentication.
+ * SASL authentication failures typically indicate invalid credentials, but could also include other
+ * failures specific to the SASL mechanism used for authentication.
  * </p>
- * <p><b>Note:</b>If {@link SaslServer#evaluateResponse(byte[])} throws this exception during
+ * <p>
+ * <b>Note:</b>If {@link SaslServer#evaluateResponse(byte[])} throws this exception during
  * authentication, the message from the exception will be sent to clients in the SaslAuthenticate
- * response. Custom {@link SaslServer} implementations may throw this exception in order to
- * provide custom error messages to clients, but should take care not to include any
- * security-critical information in the message that should not be leaked to unauthenticated
- * clients.
+ * response. Custom {@link SaslServer} implementations may throw this exception in order to provide
+ * custom error messages to clients, but should take care not to include any security-critical
+ * information in the message that should not be leaked to unauthenticated clients.
  * </p>
  */
 @InterfaceAudience.Public

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
 import static org.junit.Assert.assertEquals;
+
 import java.nio.charset.StandardCharsets;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
@@ -31,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerSaslClientTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -44,15 +45,18 @@ public class OAuthBearerSaslClientTest {
       for (Callback callback : callbacks) {
         if (callback instanceof OAuthBearerTokenCallback) {
           ((OAuthBearerTokenCallback) callback).token(new OAuthBearerToken() {
-            @Override public String value() {
+            @Override
+            public String value() {
               return "";
             }
 
-            @Override public long lifetimeMs() {
+            @Override
+            public long lifetimeMs() {
               return 100;
             }
 
-            @Override public String principalName() {
+            @Override
+            public String principalName() {
               return "principalName";
             }
           });
@@ -65,8 +69,8 @@ public class OAuthBearerSaslClientTest {
 
   @Test
   public void testAttachesExtensionsToFirstClientMessage() throws Exception {
-    String expectedToken = new String(
-      new OAuthBearerClientInitialResponse("").toBytes(), StandardCharsets.UTF_8);
+    String expectedToken =
+      new String(new OAuthBearerClientInitialResponse("").toBytes(), StandardCharsets.UTF_8);
     OAuthBearerSaslClient client = new OAuthBearerSaslClient(new ExtensionsCallbackHandler());
     String message = new String(client.evaluateChallenge("".getBytes(StandardCharsets.UTF_8)),
       StandardCharsets.UTF_8);

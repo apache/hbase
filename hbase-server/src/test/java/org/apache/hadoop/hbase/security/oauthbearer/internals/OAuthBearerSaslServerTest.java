@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -40,7 +41,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerSaslServerTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -67,11 +68,10 @@ public class OAuthBearerSaslServerTest {
 
   @Test
   public void noAuthorizationIdSpecified() throws Exception {
-    byte[] nextChallenge = saslServer
-      .evaluateResponse(clientInitialResponse(null));
+    byte[] nextChallenge = saslServer.evaluateResponse(clientInitialResponse(null));
     // also asserts that no authentication error is thrown
     // if OAuthBearerExtensionsValidatorCallback is not supported
-    assertTrue("Next challenge is not empty",nextChallenge.length == 0);
+    assertTrue("Next challenge is not empty", nextChallenge.length == 0);
   }
 
   @Test
@@ -80,15 +80,13 @@ public class OAuthBearerSaslServerTest {
     OAuthBearerToken token =
       (OAuthBearerToken) saslServer.getNegotiatedProperty("OAUTHBEARER.token");
     assertNotNull(token);
-    assertEquals(token.lifetimeMs(),
-      saslServer.getNegotiatedProperty(
-        OAuthBearerSaslServer.CREDENTIAL_LIFETIME_MS_SASL_NEGOTIATED_PROPERTY_KEY));
+    assertEquals(token.lifetimeMs(), saslServer.getNegotiatedProperty(
+      OAuthBearerSaslServer.CREDENTIAL_LIFETIME_MS_SASL_NEGOTIATED_PROPERTY_KEY));
   }
 
   @Test
   public void authorizatonIdEqualsAuthenticationId() throws Exception {
-    byte[] nextChallenge = saslServer
-      .evaluateResponse(clientInitialResponse(USER));
+    byte[] nextChallenge = saslServer.evaluateResponse(clientInitialResponse(USER));
     assertTrue("Next challenge is not empty", nextChallenge.length == 0);
   }
 
@@ -105,8 +103,7 @@ public class OAuthBearerSaslServerTest {
     assertEquals("{\"status\":\"invalid_token\"}", challenge);
   }
 
-  private byte[] clientInitialResponse(String authorizationId)
-    throws OAuthBearerConfigException {
+  private byte[] clientInitialResponse(String authorizationId) throws OAuthBearerConfigException {
     return clientInitialResponse(authorizationId, false);
   }
 

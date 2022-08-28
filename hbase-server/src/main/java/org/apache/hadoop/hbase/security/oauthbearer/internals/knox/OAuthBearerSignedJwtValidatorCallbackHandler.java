@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.security.oauthbearer.internals.knox;
 
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
+
 import com.nimbusds.jose.jwk.JWKSet;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.text.ParseException;
 import java.util.Map;
 import java.util.Objects;
 import javax.security.auth.callback.Callback;
@@ -36,36 +33,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@code CallbackHandler} that recognizes
- * {@link OAuthBearerValidatorCallback} and validates a secure (signed) OAuth 2
- * bearer token (JWT).
- *
- * It requires a valid JWK Set to be initialized at startup which holds the available
- * RSA public keys that JWT signature can be validated with. The Set can be initialized
- * via an URL or a local file.
- *
- * It requires there to be an <code>"exp" (Expiration Time)</code>
- * claim of type Number. If <code>"iat" (Issued At)</code> or
- * <code>"nbf" (Not Before)</code> claims are present each must be a number that
- * precedes the Expiration Time claim, and if both are present the Not Before
- * claim must not precede the Issued At claim. It also accepts the following
- * options, none of which are required:
+ * A {@code CallbackHandler} that recognizes {@link OAuthBearerValidatorCallback} and validates a
+ * secure (signed) OAuth 2 bearer token (JWT).
+ * <p/>
+ * It requires a valid JWK Set to be initialized at startup which holds the available RSA public
+ * keys that JWT signature can be validated with. The Set can be initialized via an URL or a local
+ * file.
+ * <p/>
+ * It requires there to be an <code>"exp" (Expiration Time)</code> claim of type Number. If
+ * <code>"iat" (Issued At)</code> or <code>"nbf" (Not Before)</code> claims are present each must be
+ * a number that precedes the Expiration Time claim, and if both are present the Not Before claim
+ * must not precede the Issued At claim. It also accepts the following options, none of which are
+ * required:
  * <ul>
- * <li>{@code hbase.security.oauth.jwt.jwks.url} set to a non-empty value if you
- * wish to initialize the JWK Set via an URL. HTTPS URLs must have valid certificates.
- * </li>
- * <li>{@code hbase.security.oauth.jwt.jwks.file} set to a non-empty value if you
- * wish to initialize the JWK Set from a local JSON file.
- * </li>
- * <li>{@code hbase.security.oauth.jwt.audience} set to a String value which
- * you want the desired audience ("aud") the JWT to have.</li>
- * <li>{@code hbase.security.oauth.jwt.issuer} set to a String value which
- * you want the issuer ("iss") of the JWT has to be.</li>
- * <li>{@code hbase.security.oauth.jwt.allowableclockskewseconds} set to a positive integer
- * value if you wish to allow up to some number of positive seconds of
- * clock skew (the default is 0)</li>
+ * <li>{@code hbase.security.oauth.jwt.jwks.url} set to a non-empty value if you wish to initialize
+ * the JWK Set via an URL. HTTPS URLs must have valid certificates.</li>
+ * <li>{@code hbase.security.oauth.jwt.jwks.file} set to a non-empty value if you wish to initialize
+ * the JWK Set from a local JSON file.</li>
+ * <li>{@code hbase.security.oauth.jwt.audience} set to a String value which you want the desired
+ * audience ("aud") the JWT to have.</li>
+ * <li>{@code hbase.security.oauth.jwt.issuer} set to a String value which you want the issuer
+ * ("iss") of the JWT has to be.</li>
+ * <li>{@code hbase.security.oauth.jwt.allowableclockskewseconds} set to a positive integer value if
+ * you wish to allow up to some number of positive seconds of clock skew (the default is 0)</li>
  * </ul>
- *
  * This class is based on Kafka's OAuthBearerUnsecuredValidatorCallbackHandler.
  */
 @InterfaceAudience.Public
@@ -110,7 +101,8 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
     }
   }
 
-  @Override public void configure(Configuration configs, String saslMechanism,
+  @Override
+  public void configure(Configuration configs, String saslMechanism,
     Map<String, String> saslProps) {
     if (!OAUTHBEARER_MECHANISM.equals(saslMechanism)) {
       throw new IllegalArgumentException(
@@ -132,11 +124,9 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
     if (tokenValue == null) {
       throw new IllegalArgumentException("Callback missing required token value");
     }
-    OAuthBearerSignedJwt signedJwt = new OAuthBearerSignedJwt(tokenValue, jwkSet)
-      .audience(requiredAudience())
-      .issuer(requiredIssuer())
-      .maxClockSkewSeconds(allowableClockSkewSeconds())
-      .validate();
+    OAuthBearerSignedJwt signedJwt =
+      new OAuthBearerSignedJwt(tokenValue, jwkSet).audience(requiredAudience())
+        .issuer(requiredIssuer()).maxClockSkewSeconds(allowableClockSkewSeconds()).validate();
 
     LOG.info("Successfully validated token with principal {}: {}", signedJwt.principalName(),
       signedJwt.claims());
@@ -152,19 +142,19 @@ public class OAuthBearerSignedJwtValidatorCallbackHandler implements Authenticat
   }
 
   private int allowableClockSkewSeconds() {
-    String allowableClockSkewSecondsValue = hBaseConfiguration.get(
-      ALLOWABLE_CLOCK_SKEW_SECONDS_OPTION);
+    String allowableClockSkewSecondsValue =
+      hBaseConfiguration.get(ALLOWABLE_CLOCK_SKEW_SECONDS_OPTION);
     int skewSeconds;
     try {
       skewSeconds = StringUtils.isBlank(allowableClockSkewSecondsValue)
-        ? 0 : Integer.parseInt(allowableClockSkewSecondsValue.trim());
+        ? 0
+        : Integer.parseInt(allowableClockSkewSecondsValue.trim());
     } catch (NumberFormatException e) {
       throw new OAuthBearerConfigException(e.getMessage(), e);
     }
     if (skewSeconds < 0) {
-      throw new OAuthBearerConfigException(
-        String.format("Allowable clock skew seconds must not be negative: %s",
-          allowableClockSkewSecondsValue));
+      throw new OAuthBearerConfigException(String.format(
+        "Allowable clock skew seconds must not be negative: %s", allowableClockSkewSecondsValue));
     }
     return skewSeconds;
   }

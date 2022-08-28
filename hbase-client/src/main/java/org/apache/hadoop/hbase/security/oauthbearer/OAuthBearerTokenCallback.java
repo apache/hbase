@@ -22,19 +22,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A {@code Callback} for use by the {@code SaslClient} and {@code Login}
- * implementations when they require an OAuth 2 bearer token. Callback handlers
- * should use the {@link #error(String, String, String)} method to communicate
- * errors returned by the authorization server as per
- * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth
- * 2.0 Authorization Framework</a>. Callback handlers should communicate other
- * problems by raising an {@code IOException}.
+ * A {@code Callback} for use by the {@code SaslClient} and {@code Login} implementations when they
+ * require an OAuth 2 bearer token. Callback handlers should use the
+ * {@link #error(String, String, String)} method to communicate errors returned by the authorization
+ * server as per <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth 2.0
+ * Authorization Framework</a>. Callback handlers should communicate other problems by raising an
+ * {@code IOException}.
  * <p>
- * This class was introduced in 3.0.0 and, while it feels stable, it could
- * evolve. We will try to evolve the API in a compatible manner, but we reserve
- * the right to make breaking changes in minor releases, if necessary. We will
- * update the {@code InterfaceStability} annotation and this notice once the API
- * is considered stable.
+ * This class was introduced in 3.0.0 and, while it feels stable, it could evolve. We will try to
+ * evolve the API in a compatible manner, but we reserve the right to make breaking changes in minor
+ * releases, if necessary. We will update the {@code InterfaceStability} annotation and this notice
+ * once the API is considered stable.
  */
 @InterfaceAudience.Private
 public class OAuthBearerTokenCallback implements Callback {
@@ -45,7 +43,6 @@ public class OAuthBearerTokenCallback implements Callback {
 
   /**
    * Return the (potentially null) token
-   *
    * @return the (potentially null) token
    */
   public OAuthBearerToken token() {
@@ -54,9 +51,8 @@ public class OAuthBearerTokenCallback implements Callback {
 
   /**
    * Return the optional (but always non-empty if not null) error code as per
-   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth
-   * 2.0 Authorization Framework</a>.
-   *
+   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth 2.0 Authorization
+   * Framework</a>.
    * @return the optional (but always non-empty if not null) error code
    */
   public String errorCode() {
@@ -65,9 +61,8 @@ public class OAuthBearerTokenCallback implements Callback {
 
   /**
    * Return the (potentially null) error description as per
-   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth
-   * 2.0 Authorization Framework</a>.
-   *
+   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth 2.0 Authorization
+   * Framework</a>.
    * @return the (potentially null) error description
    */
   public String errorDescription() {
@@ -76,9 +71,8 @@ public class OAuthBearerTokenCallback implements Callback {
 
   /**
    * Return the (potentially null) error URI as per
-   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth
-   * 2.0 Authorization Framework</a>.
-   *
+   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth 2.0 Authorization
+   * Framework</a>.
    * @return the (potentially null) error URI
    */
   public String errorUri() {
@@ -86,10 +80,7 @@ public class OAuthBearerTokenCallback implements Callback {
   }
 
   /**
-   * Set the token. All error-related values are cleared.
-   *
-   * @param token
-   *            the optional token to set
+   * Set the token. All error-related values are cleared. n * the optional token to set
    */
   public void token(OAuthBearerToken token) {
     this.token = token;
@@ -99,16 +90,12 @@ public class OAuthBearerTokenCallback implements Callback {
   }
 
   /**
-   * Set the error values as per
-   * <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749: The OAuth
-   * 2.0 Authorization Framework</a>. Any token is cleared.
-   *
-   * @param errorCode
-   *            the mandatory error code to set
-   * @param errorDescription
-   *            the optional error description to set
-   * @param errorUri
-   *            the optional error URI to set
+   * Set the error values as per <a href="https://tools.ietf.org/html/rfc6749#section-5.2">RFC 6749:
+   * The OAuth 2.0 Authorization Framework</a>. Any token is cleared.
+   * <p/>
+   * @param errorCode        the mandatory error code to set
+   * @param errorDescription the optional error description to set
+   * @param errorUri         the optional error URI to set
    */
   public void error(String errorCode, String errorDescription, String errorUri) {
     if (StringUtils.isEmpty(errorCode)) {

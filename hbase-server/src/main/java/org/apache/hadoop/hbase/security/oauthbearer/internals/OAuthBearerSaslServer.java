@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
+
 import com.nimbusds.jose.shaded.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -42,11 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@code SaslServer} implementation for SASL/OAUTHBEARER in Kafka. An instance
- * of {@link OAuthBearerToken} is available upon successful authentication via
- * the negotiated property "{@code OAUTHBEARER.token}"; the token could be used
- * in a custom authorizer (to authorize based on JWT claims rather than ACLs,
- * for example).
+ * {@code SaslServer} implementation for SASL/OAUTHBEARER in Kafka. An instance of
+ * {@link OAuthBearerToken} is available upon successful authentication via the negotiated property
+ * "{@code OAUTHBEARER.token}"; the token could be used in a custom authorizer (to authorize based
+ * on JWT claims rather than ACLs, for example).
  */
 @InterfaceAudience.Public
 public class OAuthBearerSaslServer implements SaslServer {
@@ -73,24 +73,25 @@ public class OAuthBearerSaslServer implements SaslServer {
   }
 
   /**
-   * @throws SaslAuthenticationException
-   *             if access token cannot be validated
-   *             <p>
-   *             <b>Note:</b> This method may throw
-   *             {@link SaslAuthenticationException} to provide custom error
-   *             messages to clients. But care should be taken to avoid including
-   *             any information in the exception message that should not be
-   *             leaked to unauthenticated clients. It may be safer to throw
-   *             {@link SaslException} in some cases so that a standard error
-   *             message is returned to clients.
-   *             </p>
+   * @throws SaslAuthenticationException if access token cannot be validated
+   *                                     <p>
+   *                                     <b>Note:</b> This method may throw
+   *                                     {@link SaslAuthenticationException} to provide custom error
+   *                                     messages to clients. But care should be taken to avoid
+   *                                     including any information in the exception message that
+   *                                     should not be leaked to unauthenticated clients. It may be
+   *                                     safer to throw {@link SaslException} in some cases so that
+   *                                     a standard error message is returned to clients.
+   *                                     </p>
    */
   @Override
   public byte[] evaluateResponse(byte[] response)
     throws SaslException, SaslAuthenticationException {
     try {
-      if (response.length == 1 && response[0] == OAuthBearerSaslClient.BYTE_CONTROL_A &&
-        errorMessage != null) {
+      if (
+        response.length == 1 && response[0] == OAuthBearerSaslClient.BYTE_CONTROL_A
+          && errorMessage != null
+      ) {
         LOG.error("Received %x01 response from client after it received our error");
         throw new SaslAuthenticationException(errorMessage);
       }
@@ -166,11 +167,10 @@ public class OAuthBearerSaslServer implements SaslServer {
     tokenForNegotiatedProperty = null;
   }
 
-  private byte[] process(String tokenValue, String authorizationId)
-    throws SaslException {
+  private byte[] process(String tokenValue, String authorizationId) throws SaslException {
     OAuthBearerValidatorCallback callback = new OAuthBearerValidatorCallback(tokenValue);
     try {
-      callbackHandler.handle(new Callback[] {callback});
+      callbackHandler.handle(new Callback[] { callback });
     } catch (IOException | UnsupportedCallbackException e) {
       handleCallbackError(e);
     }
@@ -182,8 +182,8 @@ public class OAuthBearerSaslServer implements SaslServer {
       return errorMessage.getBytes(StandardCharsets.UTF_8);
     }
     /*
-     * We support the client specifying an authorization ID as per the SASL
-     * specification, but it must match the principal name if it is specified.
+     * We support the client specifying an authorization ID as per the SASL specification, but it
+     * must match the principal name if it is specified.
      */
     if (!authorizationId.isEmpty() && !authorizationId.equals(token.principalName())) {
       throw new SaslAuthenticationException(String.format(

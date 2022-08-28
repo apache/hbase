@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.oauthbearer.internals;
 
 import static org.junit.Assert.assertEquals;
+
 import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -26,21 +27,20 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerClientInitialResponseTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(OAuthBearerClientInitialResponseTest.class);
 
   /*
-      Test how a client would build a response
+   * Test how a client would build a response
    */
   @Test
   public void testBuildClientResponseToBytes() {
     String expectedMesssage = "n,,\u0001auth=Bearer 123.345.567\u0001\u0001";
 
-    OAuthBearerClientInitialResponse response =
-      new OAuthBearerClientInitialResponse("123.345.567");
+    OAuthBearerClientInitialResponse response = new OAuthBearerClientInitialResponse("123.345.567");
 
     String message = new String(response.toBytes(), StandardCharsets.UTF_8);
 
@@ -90,8 +90,8 @@ public class OAuthBearerClientInitialResponseTest {
   // But since we use Base64Url encoding, padding is omitted. Hence this test verifies without '='.
   @Test
   public void testRfc7688Example() throws Exception {
-    String message = "n,a=user@example.com,\u0001host=server.example.com\u0001port=143\u0001" +
-      "auth=Bearer vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg\u0001\u0001";
+    String message = "n,a=user@example.com,\u0001host=server.example.com\u0001port=143\u0001"
+      + "auth=Bearer vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg\u0001\u0001";
     OAuthBearerClientInitialResponse response =
       new OAuthBearerClientInitialResponse(message.getBytes(StandardCharsets.UTF_8));
     assertEquals("vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg", response.tokenValue());
@@ -100,8 +100,8 @@ public class OAuthBearerClientInitialResponseTest {
 
   @Test
   public void testNoExtensionsFromByteArray() throws Exception {
-    String message = "n,a=user@example.com,\u0001" +
-      "auth=Bearer vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg\u0001\u0001";
+    String message = "n,a=user@example.com,\u0001"
+      + "auth=Bearer vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg\u0001\u0001";
     OAuthBearerClientInitialResponse response =
       new OAuthBearerClientInitialResponse(message.getBytes(StandardCharsets.UTF_8));
     assertEquals("vF9dft4qmTc2Nvb3RlckBhbHRhdmlzdGEuY29tCg", response.tokenValue());

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.provider;
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+
 import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
@@ -38,7 +39,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerSaslClientCallbackHandlerTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -67,14 +68,12 @@ public class OAuthBearerSaslClientCallbackHandlerTest {
   public void testWithZeroTokens() {
     OAuthBearerSaslClientAuthenticationProvider.OAuthBearerSaslClientCallbackHandler handler =
       createCallbackHandler();
-    PrivilegedActionException e =
-      assertThrows(PrivilegedActionException.class, () -> Subject.doAs(new Subject(),
-      (PrivilegedExceptionAction<Void>) () -> {
-          OAuthBearerTokenCallback callback = new OAuthBearerTokenCallback();
-          handler.handle(new Callback[] {callback});
-          return null;
-        }
-    ));
+    PrivilegedActionException e = assertThrows(PrivilegedActionException.class,
+      () -> Subject.doAs(new Subject(), (PrivilegedExceptionAction<Void>) () -> {
+        OAuthBearerTokenCallback callback = new OAuthBearerTokenCallback();
+        handler.handle(new Callback[] { callback });
+        return null;
+      }));
     assertEquals(IOException.class, e.getCause().getClass());
   }
 
@@ -84,14 +83,14 @@ public class OAuthBearerSaslClientCallbackHandlerTest {
       createCallbackHandler();
     Subject.doAs(new Subject(), (PrivilegedExceptionAction<Void>) () -> {
       final int maxTokens = 4;
-      final Set<Object> privateCredentials = Subject.getSubject(AccessController.getContext())
-        .getPrivateCredentials();
+      final Set<Object> privateCredentials =
+        Subject.getSubject(AccessController.getContext()).getPrivateCredentials();
       privateCredentials.clear();
       for (int num = 1; num <= maxTokens; ++num) {
         privateCredentials.add(createTokenWithLifetimeMillis(num));
         privateCredentials.add(createTokenWithLifetimeMillis(-num));
         OAuthBearerTokenCallback callback = new OAuthBearerTokenCallback();
-        handler.handle(new Callback[] {callback});
+        handler.handle(new Callback[] { callback });
         assertEquals(num, callback.token().lifetimeMs());
       }
       return null;

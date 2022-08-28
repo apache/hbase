@@ -30,19 +30,19 @@ public interface AuthenticateCallbackHandler extends CallbackHandler {
 
   /**
    * Configures this callback handler for the specified SASL mechanism.
-   *
-   * @param configs Key-value pairs containing the parsed configuration options of
-   *        the client or server. Note that these are the HBase configuration options
-   *        and not the JAAS configuration options. JAAS config options may be obtained
-   *        from `jaasConfigEntries` for callbacks which obtain some configs from the
-   *        JAAS configuration. For configs that may be specified as both HBase config
-   *        as well as JAAS config (e.g. sasl.kerberos.service.name), the configuration
-   *        is treated as invalid if conflicting values are provided.
-   * @param saslMechanism Negotiated SASL mechanism. For clients, this is the SASL
-   *        mechanism configured for the client. For brokers, this is the mechanism
-   *        negotiated with the client and is one of the mechanisms enabled on the broker.
-   * @param saslProps SASL properties provided by the SASL library.
+   * @param configs       Key-value pairs containing the parsed configuration options of the client
+   *                      or server. Note that these are the HBase configuration options and not the
+   *                      JAAS configuration options. JAAS config options may be obtained from
+   *                      `jaasConfigEntries` for callbacks which obtain some configs from the JAAS
+   *                      configuration. For configs that may be specified as both HBase config as
+   *                      well as JAAS config (e.g. sasl.kerberos.service.name), the configuration
+   *                      is treated as invalid if conflicting values are provided.
+   * @param saslMechanism Negotiated SASL mechanism. For clients, this is the SASL mechanism
+   *                      configured for the client. For brokers, this is the mechanism negotiated
+   *                      with the client and is one of the mechanisms enabled on the broker.
+   * @param saslProps     SASL properties provided by the SASL library.
    */
-  default void configure(
-    Configuration configs, String saslMechanism, Map<String, String> saslProps) {}
+  default void configure(Configuration configs, String saslMechanism,
+    Map<String, String> saslProps) {
+  }
 }

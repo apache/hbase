@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.security.PrivilegedExceptionAction;
@@ -305,7 +306,8 @@ public class ConnectionFactory {
         }
 
         if (System.getenv().containsKey(ENV_OAUTHBEARER_TOKEN)) {
-          OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, System.getenv(ENV_OAUTHBEARER_TOKEN));
+          OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user,
+            System.getenv(ENV_OAUTHBEARER_TOKEN));
         }
 
         Class<? extends AsyncConnection> clazz = conf.getClass(HBASE_CLIENT_ASYNC_CONNECTION_IMPL,

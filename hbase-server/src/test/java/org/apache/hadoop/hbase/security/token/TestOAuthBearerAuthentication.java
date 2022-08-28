@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.junit.Assert.assertArrayEquals;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -94,8 +95,7 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
   public TestName testName = new TestName();
 
   private static void initRSA() throws JOSEException, IOException {
-    RSA = new RSAKeyGenerator(2048)
-      .keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key
+    RSA = new RSAKeyGenerator(2048).keyUse(KeyUse.SIGNATURE) // indicate the intended use of the key
       .keyID(UUID.randomUUID().toString()) // give the key a unique ID
       .generate();
     JWKSet jwkSet = new JWKSet(RSA.toPublicJWK());
@@ -112,12 +112,8 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
     JWSSigner signer = new RSASSASigner(RSA);
     LocalDate now = LocalDate.now();
 
-    JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-      .subject(principal)
-      .issuer(ISSUER)
-      .audience(AUDIENCE)
-      .expirationTime(java.sql.Date.valueOf(now.plusDays(1)))
-      .build();
+    JWTClaimsSet claimsSet = new JWTClaimsSet.Builder().subject(principal).issuer(ISSUER)
+      .audience(AUDIENCE).expirationTime(java.sql.Date.valueOf(now.plusDays(1))).build();
 
     SignedJWT signedJWT = new SignedJWT(
       new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(RSA.getKeyID()).build(), claimsSet);
@@ -139,8 +135,8 @@ public class TestOAuthBearerAuthentication extends SecureTestCluster {
     byte[] row = Bytes.toBytes("row");
     byte[] value = Bytes.toBytes("data");
 
-    User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser_jwt",
-      new String[] {});
+    User user =
+      User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser_jwt", new String[] {});
     OAuthBearerTokenUtil.addTokenForUser(user, generateBase64EncodedToken(user.getName()), 0);
 
     try (Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), user)) {

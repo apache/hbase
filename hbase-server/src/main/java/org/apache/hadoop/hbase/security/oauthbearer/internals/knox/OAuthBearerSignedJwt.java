@@ -43,7 +43,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Signed JWT implementation for OAuth Bearer authentication mech of SASL.
- *
+ * <p/>
  * This class is based on Kafka's Unsecured JWS token implementation.
  */
 @InterfaceAudience.Public
@@ -59,11 +59,9 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
 
   /**
    * Constructor base64 encoded JWT token and JWK Set.
-   *
-   * @param compactSerialization
-   *            the compact serialization to parse as a signed JWT
-   * @param jwkSet
-   *            the key set which the signature of this JWT should be verified with
+   * <p/>
+   * @param compactSerialization the compact serialization to parse as a signed JWT
+   * @param jwkSet               the key set which the signature of this JWT should be verified with
    */
   public OAuthBearerSignedJwt(String compactSerialization, JWKSet jwkSet) {
     this.jwkSet = jwkSet;
@@ -87,7 +85,6 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
 
   /**
    * Return the JWT Claim Set as a {@code Map}
-   *
    * @return the (always non-null but possibly empty) claims
    */
   public Map<String, Object> claims() {
@@ -96,8 +93,8 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
 
   /**
    * Set required audience, as per
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3">
-   *   RFC7519 Section 4.1.3</a>
+   * <a href="https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3"> RFC7519 Section
+   * 4.1.3</a>
    */
   public OAuthBearerSignedJwt audience(String aud) {
     this.requiredAudience = aud;
@@ -106,8 +103,8 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
 
   /**
    * Set required issuer, as per
-   * <a href="https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1">
-   *   RFC7519 Section 4.1.1</a>
+   * <a href="https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.1"> RFC7519 Section
+   * 4.1.1</a>
    */
   public OAuthBearerSignedJwt issuer(String iss) {
     this.requiredIssuer = iss;
@@ -124,18 +121,16 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
   }
 
   /**
-   * This method provides a single method for validating the JWT for use in
-   * request processing.
-   *
-   * @throws OAuthBearerIllegalTokenException
-   *             if the compact serialization is not a valid JWT
-   *             (meaning it did not have 3 dot-separated Base64URL sections
-   *             with a digital signature; or the header or claims
-   *             either are not valid Base 64 URL encoded values or are not JSON
-   *             after decoding; or the mandatory '{@code alg}' header value is
-   *             missing)
+   * This method provides a single method for validating the JWT for use in request processing.
+   * <p/>
+   * @throws OAuthBearerIllegalTokenException if the compact serialization is not a valid JWT
+   *                                          (meaning it did not have 3 dot-separated Base64URL
+   *                                          sections with a digital signature; or the header or
+   *                                          claims either are not valid Base 64 URL encoded values
+   *                                          or are not JSON after decoding; or the mandatory
+   *                                          '{@code alg}' header value is missing)
    */
-  public OAuthBearerSignedJwt validate(){
+  public OAuthBearerSignedJwt validate() {
     try {
       this.claims = validateToken(compactSerialization);
       Date expirationTimeSeconds = claims.getExpirationTime();
@@ -146,8 +141,8 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
       lifetime = expirationTimeSeconds.toInstant().toEpochMilli();
       String principalName = claims.getSubject();
       if (StringUtils.isBlank(principalName)) {
-        throw new OAuthBearerIllegalTokenException(OAuthBearerValidationResult
-          .newFailure("No principal name in JWT claim"));
+        throw new OAuthBearerIllegalTokenException(
+          OAuthBearerValidationResult.newFailure("No principal name in JWT claim"));
       }
       return this;
     } catch (ParseException | BadJOSEException | JOSEException e) {
@@ -184,9 +179,8 @@ public class OAuthBearerSignedJwt implements OAuthBearerToken {
     jwtClaimsSetVerifier.setMaxClockSkew(maxClockSkewSeconds);
     jwtProcessor.setJWTClaimsSetVerifier(jwtClaimsSetVerifier);
 
-    JWSKeySelector<SecurityContext> keySelector =
-      new JWSVerificationKeySelector<>((JWSAlgorithm)jwt.getHeader().getAlgorithm(),
-        new ImmutableJWKSet<>(jwkSet));
+    JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
+      (JWSAlgorithm) jwt.getHeader().getAlgorithm(), new ImmutableJWKSet<>(jwkSet));
     jwtProcessor.setJWSKeySelector(keySelector);
     return jwtProcessor.process(jwtToken, null);
   }

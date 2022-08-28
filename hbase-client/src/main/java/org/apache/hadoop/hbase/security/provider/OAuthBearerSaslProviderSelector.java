@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKEN_KIND;
+
 import java.util.Collection;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -38,26 +39,25 @@ public class OAuthBearerSaslProviderSelector extends BuiltInProviderSelector {
   private final Text OAUTHBEARER_TOKEN_KIND_TEXT = new Text(TOKEN_KIND);
   private OAuthBearerSaslClientAuthenticationProvider oauthbearer;
 
-  @Override public void configure(Configuration conf,
+  @Override
+  public void configure(Configuration conf,
     Collection<SaslClientAuthenticationProvider> providers) {
     super.configure(conf, providers);
 
     this.oauthbearer = (OAuthBearerSaslClientAuthenticationProvider) providers.stream()
-      .filter((p) -> p instanceof OAuthBearerSaslClientAuthenticationProvider)
-      .findFirst()
-      .orElseThrow(() -> new RuntimeException(
-        "OAuthBearerSaslClientAuthenticationProvider not loaded"));
+      .filter((p) -> p instanceof OAuthBearerSaslClientAuthenticationProvider).findFirst()
+      .orElseThrow(
+        () -> new RuntimeException("OAuthBearerSaslClientAuthenticationProvider not loaded"));
   }
 
   @Override
-  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> selectProvider(
-    String clusterId, User user) {
+  public Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>>
+    selectProvider(String clusterId, User user) {
     Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> pair =
       super.selectProvider(clusterId, user);
 
     Optional<Token<?>> optional = user.getTokens().stream()
-      .filter((t) -> OAUTHBEARER_TOKEN_KIND_TEXT.equals(t.getKind()))
-      .findFirst();
+      .filter((t) -> OAUTHBEARER_TOKEN_KIND_TEXT.equals(t.getKind())).findFirst();
     if (optional.isPresent()) {
       LOG.info("OAuthBearer token found in user tokens");
       return new Pair<>(oauthbearer, optional.get());

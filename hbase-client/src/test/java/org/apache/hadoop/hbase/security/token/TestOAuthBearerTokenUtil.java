@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.TOKE
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.time.Instant;
@@ -56,12 +57,12 @@ public class TestOAuthBearerTokenUtil {
     OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, testToken);
 
     // Assert
-    Optional<Token<?>> oauthBearerToken = user.getTokens().stream()
-      .filter((t) -> new Text(TOKEN_KIND).equals(t.getKind()))
-      .findFirst();
+    Optional<Token<?>> oauthBearerToken =
+      user.getTokens().stream().filter((t) -> new Text(TOKEN_KIND).equals(t.getKind())).findFirst();
     assertTrue("Token cannot be found in user tokens", oauthBearerToken.isPresent());
     user.runAs(new PrivilegedAction<Object>() {
-      @Override public Object run() {
+      @Override
+      public Object run() {
         Subject subject = Subject.getSubject(AccessController.getContext());
         Set<OAuthBearerToken> tokens = subject.getPrivateCredentials(OAuthBearerToken.class);
         assertFalse("Token cannot be found in subject's private credentials", tokens.isEmpty());
@@ -109,12 +110,12 @@ public class TestOAuthBearerTokenUtil {
     OAuthBearerTokenUtil.addTokenFromEnvironmentVar(user, testToken);
 
     // Assert
-    long numberOfTokens = user.getTokens().stream()
-      .filter((t) -> new Text(TOKEN_KIND).equals(t.getKind()))
-      .count();
+    long numberOfTokens =
+      user.getTokens().stream().filter((t) -> new Text(TOKEN_KIND).equals(t.getKind())).count();
     assertEquals("Invalid number of tokens on User", 1, numberOfTokens);
     user.runAs(new PrivilegedAction<Object>() {
-      @Override public Object run() {
+      @Override
+      public Object run() {
         Subject subject = Subject.getSubject(AccessController.getContext());
         Set<OAuthBearerToken> tokens = subject.getPrivateCredentials(OAuthBearerToken.class);
         assertTrue("Token should not have been added to subject's credentials", tokens.isEmpty());

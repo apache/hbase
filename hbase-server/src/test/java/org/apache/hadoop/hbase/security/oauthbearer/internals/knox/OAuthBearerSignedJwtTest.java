@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.oauthbearer.internals.knox;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -34,7 +35,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerSignedJwtTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -57,13 +58,12 @@ public class OAuthBearerSignedJwtTest {
 
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
-    String validCompactSerialization =
-      compactSerialization(subject, issuedAt, expirationTime);
-    OAuthBearerSignedJwt jws = new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET)
-      .validate();
+    String validCompactSerialization = compactSerialization(subject, issuedAt, expirationTime);
+    OAuthBearerSignedJwt jws =
+      new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET).validate();
     assertEquals(5, jws.claims().size());
     assertEquals(subject, jws.claims().get("sub"));
-    assertEquals(issuedAt,  Date.class.cast(jws.claims().get("iat")).toInstant()
+    assertEquals(issuedAt, Date.class.cast(jws.claims().get("iat")).toInstant()
       .atZone(ZoneId.systemDefault()).toLocalDate());
     assertEquals(expirationTime, Date.class.cast(jws.claims().get("exp")).toInstant()
       .atZone(ZoneId.systemDefault()).toLocalDate());
@@ -76,8 +76,7 @@ public class OAuthBearerSignedJwtTest {
     String subject = null;
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
-    String validCompactSerialization =
-      compactSerialization(subject, issuedAt, expirationTime);
+    String validCompactSerialization = compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
       () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET).validate());
   }
@@ -87,19 +86,16 @@ public class OAuthBearerSignedJwtTest {
     String subject = "   ";
     LocalDate issuedAt = LocalDate.now(ZONE_ID);
     LocalDate expirationTime = issuedAt.plusDays(EXP_DAYS);
-    String validCompactSerialization =
-      compactSerialization(subject, issuedAt, expirationTime);
+    String validCompactSerialization = compactSerialization(subject, issuedAt, expirationTime);
     assertThrows(OAuthBearerIllegalTokenException.class,
       () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET).validate());
   }
 
   @Test
   public void missingIssuer() throws JOSEException {
-    String validCompactSerialization =
-      JwtTestUtils.createSignedJwtWithIssuer(RSA_KEY, "");
+    String validCompactSerialization = JwtTestUtils.createSignedJwtWithIssuer(RSA_KEY, "");
     assertThrows(OAuthBearerIllegalTokenException.class,
-      () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET)
-        .issuer("test-issuer")
+      () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET).issuer("test-issuer")
         .validate());
   }
 
@@ -108,14 +104,13 @@ public class OAuthBearerSignedJwtTest {
     String validCompactSerialization =
       JwtTestUtils.createSignedJwtWithIssuer(RSA_KEY, "bad-issuer");
     assertThrows(OAuthBearerIllegalTokenException.class,
-      () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET)
-        .issuer("test-issuer")
+      () -> new OAuthBearerSignedJwt(validCompactSerialization, JWK_SET).issuer("test-issuer")
         .validate());
   }
 
   private String compactSerialization(String subject, LocalDate issuedAt, LocalDate expirationTime)
     throws JOSEException {
-    return JwtTestUtils.createSignedJwt(RSA_KEY, "me", subject,
-        expirationTime, issuedAt, "test-audience");
+    return JwtTestUtils.createSignedJwt(RSA_KEY, "me", subject, expirationTime, issuedAt,
+      "test-audience");
   }
 }

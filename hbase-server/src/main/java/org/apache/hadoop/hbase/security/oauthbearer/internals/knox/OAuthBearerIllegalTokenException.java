@@ -21,8 +21,8 @@ import java.util.Objects;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Exception thrown when token validation fails due to a problem with the token
- * itself (as opposed to a missing remote resource or a configuration problem)
+ * Exception thrown when token validation fails due to a problem with the token itself (as opposed
+ * to a missing remote resource or a configuration problem)
  */
 @InterfaceAudience.Public
 public class OAuthBearerIllegalTokenException extends RuntimeException {
@@ -31,10 +31,8 @@ public class OAuthBearerIllegalTokenException extends RuntimeException {
 
   /**
    * Constructor
-   *
-   * @param reason
-   *            the mandatory reason for the validation failure; it must indicate
-   *            failure
+   * <p/>
+   * @param reason the mandatory reason for the validation failure; it must indicate failure
    */
   public OAuthBearerIllegalTokenException(OAuthBearerValidationResult reason) {
     super(Objects.requireNonNull(reason, "Reason cannot be null").failureDescription());
@@ -56,7 +54,6 @@ public class OAuthBearerIllegalTokenException extends RuntimeException {
 
   /**
    * Return the (always non-null) reason for the validation failure
-   *
    * @return the reason for the validation failure
    */
   public OAuthBearerValidationResult reason() {

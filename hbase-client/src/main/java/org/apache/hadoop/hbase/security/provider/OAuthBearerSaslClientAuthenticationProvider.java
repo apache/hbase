@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.provider;
 
 import static org.apache.hadoop.hbase.security.oauthbearer.OAuthBearerUtils.OAUTHBEARER_MECHANISM;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.AccessController;
@@ -47,22 +48,21 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 @InterfaceAudience.Private
 public class OAuthBearerSaslClientAuthenticationProvider
-    extends OAuthBearerSaslAuthenticationProvider
-    implements SaslClientAuthenticationProvider {
+  extends OAuthBearerSaslAuthenticationProvider implements SaslClientAuthenticationProvider {
 
   @Override
   public SaslClient createClient(Configuration conf, InetAddress serverAddr,
-                                 SecurityInfo securityInfo, Token<? extends TokenIdentifier> token,
-                                 boolean fallbackAllowed,
-                                 Map<String, String> saslProps) throws IOException {
+    SecurityInfo securityInfo, Token<? extends TokenIdentifier> token, boolean fallbackAllowed,
+    Map<String, String> saslProps) throws IOException {
     AuthenticateCallbackHandler callbackHandler = new OAuthBearerSaslClientCallbackHandler();
     callbackHandler.configure(conf, getSaslAuthMethod().getSaslMechanism(), saslProps);
     return Sasl.createSaslClient(new String[] { getSaslAuthMethod().getSaslMechanism() }, null,
-        null, SaslUtil.SASL_DEFAULT_REALM, saslProps, callbackHandler);
+      null, SaslUtil.SASL_DEFAULT_REALM, saslProps, callbackHandler);
   }
 
   public static class OAuthBearerSaslClientCallbackHandler implements AuthenticateCallbackHandler {
@@ -70,7 +70,8 @@ public class OAuthBearerSaslClientAuthenticationProvider
       LoggerFactory.getLogger(OAuthBearerSaslClientCallbackHandler.class);
     private boolean configured = false;
 
-    @Override public void configure(Configuration configs, String saslMechanism,
+    @Override
+    public void configure(Configuration configs, String saslMechanism,
       Map<String, String> saslProps) {
       if (!OAUTHBEARER_MECHANISM.equals(saslMechanism)) {
         throw new IllegalArgumentException(
@@ -116,26 +117,26 @@ public class OAuthBearerSaslClientAuthenticationProvider
         return privateCredentials.iterator().next();
       } else {
         /*
-         * There a very small window of time upon token refresh (on the order of milliseconds)
-         * where both an old and a new token appear on the Subject's private credentials.
-         * Rather than implement a lock to eliminate this window, we will deal with it by
-         * checking for the existence of multiple tokens and choosing the one that has the
-         * longest lifetime.  It is also possible that a bug could cause multiple tokens to
-         * exist (e.g. KAFKA-7902), so dealing with the unlikely possibility that occurs
-         * during normal operation also allows us to deal more robustly with potential bugs.
+         * There a very small window of time upon token refresh (on the order of milliseconds) where
+         * both an old and a new token appear on the Subject's private credentials. Rather than
+         * implement a lock to eliminate this window, we will deal with it by checking for the
+         * existence of multiple tokens and choosing the one that has the longest lifetime. It is
+         * also possible that a bug could cause multiple tokens to exist (e.g. KAFKA-7902), so
+         * dealing with the unlikely possibility that occurs during normal operation also allows us
+         * to deal more robustly with potential bugs.
          */
         NavigableSet<OAuthBearerToken> sortedByLifetime =
-          new TreeSet<>(
-            new Comparator<OAuthBearerToken>() {
-              @Override
-              public int compare(OAuthBearerToken o1, OAuthBearerToken o2) {
-                return Long.compare(o1.lifetimeMs(), o2.lifetimeMs());
-              }
-            });
+          new TreeSet<>(new Comparator<OAuthBearerToken>() {
+            @Override
+            public int compare(OAuthBearerToken o1, OAuthBearerToken o2) {
+              return Long.compare(o1.lifetimeMs(), o2.lifetimeMs());
+            }
+          });
         sortedByLifetime.addAll(privateCredentials);
         if (LOG.isWarnEnabled()) {
-          LOG.warn("Found {} OAuth Bearer tokens in Subject's private credentials; " +
-              "the oldest expires at {}, will use the newest, which expires at {}",
+          LOG.warn(
+            "Found {} OAuth Bearer tokens in Subject's private credentials; "
+              + "the oldest expires at {}, will use the newest, which expires at {}",
             sortedByLifetime.size(),
             LocalDateTime.ofInstant(Instant.ofEpochMilli(sortedByLifetime.first().lifetimeMs()),
               ZoneId.systemDefault()),

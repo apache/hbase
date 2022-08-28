@@ -1,5 +1,5 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
+import com.nimbusds.jose.jwk.JWKSet;
 import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -26,7 +27,6 @@ import java.text.ParseException;
 import java.util.Map;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
-import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.auth.AuthenticateCallbackHandler;
@@ -41,14 +41,13 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class OAuthBearerSaslServerAuthenticationProvider
-    extends OAuthBearerSaslAuthenticationProvider
-    implements SaslServerAuthenticationProvider {
+  extends OAuthBearerSaslAuthenticationProvider implements SaslServerAuthenticationProvider {
 
   private static final String OPTION_PREFIX = "hbase.security.oauth.jwt.";
   private static final String JWKS_URL = OPTION_PREFIX + "jwks.url";
   private static final String JWKS_FILE = OPTION_PREFIX + "jwks.file";
-  private static final Logger LOG = LoggerFactory.getLogger(
-    OAuthBearerSaslServerAuthenticationProvider.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(OAuthBearerSaslServerAuthenticationProvider.class);
   private Configuration hbaseConfiguration;
   private boolean initialized = false;
   private JWKSet jwkSet = null;
@@ -58,7 +57,8 @@ public class OAuthBearerSaslServerAuthenticationProvider
     LOG.info("OAuthBearer SASL server provider has been initialized");
   }
 
-  @Override public void init(Configuration conf) throws IOException {
+  @Override
+  public void init(Configuration conf) throws IOException {
     this.hbaseConfiguration = conf;
     try {
       loadJwkSet();
@@ -68,9 +68,10 @@ public class OAuthBearerSaslServerAuthenticationProvider
     this.initialized = true;
   }
 
-  @Override public AttemptingUserProvidingSaslServer createServer(
-    SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
-    throws IOException {
+  @Override
+  public AttemptingUserProvidingSaslServer
+    createServer(SecretManager<TokenIdentifier> secretManager, Map<String, String> saslProps)
+      throws IOException {
 
     if (!initialized) {
       throw new IllegalStateException(
@@ -90,9 +91,10 @@ public class OAuthBearerSaslServerAuthenticationProvider
             new OAuthBearerSignedJwtValidatorCallbackHandler(jwkSet);
           callbackHandler.configure(hbaseConfiguration, getSaslAuthMethod().getSaslMechanism(),
             saslProps);
-          return new AttemptingUserProvidingSaslServer(Sasl.createSaslServer(
-            getSaslAuthMethod().getSaslMechanism(), null, null, saslProps,
-            callbackHandler), () -> null);
+          return new AttemptingUserProvidingSaslServer(
+            Sasl.createSaslServer(getSaslAuthMethod().getSaslMechanism(), null, null, saslProps,
+              callbackHandler),
+            () -> null);
         }
       });
     } catch (InterruptedException e) {
@@ -101,11 +103,13 @@ public class OAuthBearerSaslServerAuthenticationProvider
     }
   }
 
-  @Override public boolean supportsProtocolAuthentication() {
+  @Override
+  public boolean supportsProtocolAuthentication() {
     return true;
   }
 
-  @Override public UserGroupInformation getAuthorizedUgi(String authzId,
+  @Override
+  public UserGroupInformation getAuthorizedUgi(String authzId,
     SecretManager<TokenIdentifier> secretManager) {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(authzId);
     ugi.setAuthenticationMethod(getSaslAuthMethod().getAuthMethod());
@@ -117,8 +121,8 @@ public class OAuthBearerSaslServerAuthenticationProvider
     String jwksUrl = hbaseConfiguration.get(JWKS_URL);
 
     if (StringUtils.isBlank(jwksFile) && StringUtils.isBlank(jwksUrl)) {
-      throw new RuntimeException("Failed to initialize JWKS db. "
-        + JWKS_FILE + " or " + JWKS_URL + " must be specified in the config.");
+      throw new RuntimeException("Failed to initialize JWKS db. " + JWKS_FILE + " or " + JWKS_URL
+        + " must be specified in the config.");
     }
 
     if (!StringUtils.isBlank(jwksFile)) {

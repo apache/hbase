@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.security.oauthbearer.internals.knox.OAuthB
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -40,7 +41,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -70,26 +71,23 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   public void validToken() throws JOSEException, UnsupportedCallbackException {
     Object validationResult = validationResult(EMPTY_CONFIG, JwtTestUtils.createSignedJwt(RSA_KEY));
     assertTrue(validationResult instanceof OAuthBearerValidatorCallback);
-    assertTrue(((OAuthBearerValidatorCallback) validationResult).token()
-      instanceof OAuthBearerSignedJwt);
+    assertTrue(
+      ((OAuthBearerValidatorCallback) validationResult).token() instanceof OAuthBearerSignedJwt);
   }
 
   @Test
-  public void missingPrincipal()
-    throws UnsupportedCallbackException, JOSEException {
+  public void missingPrincipal() throws UnsupportedCallbackException, JOSEException {
     LocalDate now = LocalDate.now(ZONE_ID);
-    String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
-      now.plusDays(1), now, "test-aud");
+    String token =
+      JwtTestUtils.createSignedJwt(RSA_KEY, "me", "", now.plusDays(1), now, "test-aud");
     confirmFailsValidation(EMPTY_CONFIG, token);
   }
 
   @Test
   public void tooEarlyExpirationTime() throws JOSEException, UnsupportedCallbackException {
     LocalDate now = LocalDate.now(ZONE_ID);
-    String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "",
-      now.minusDays(1),
-      now.minusDays(1),
-      "test-aud");
+    String token = JwtTestUtils.createSignedJwt(RSA_KEY, "me", "", now.minusDays(1),
+      now.minusDays(1), "test-aud");
     confirmFailsValidation(EMPTY_CONFIG, token);
   }
 
@@ -98,8 +96,8 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
     String token = JwtTestUtils.createSignedJwtWithAudience(RSA_KEY, "test-audience");
     Object validationResult = validationResult(REQUIRED_AUDIENCE_CONFIG, token);
     assertTrue(validationResult instanceof OAuthBearerValidatorCallback);
-    assertTrue(((OAuthBearerValidatorCallback) validationResult).token()
-      instanceof OAuthBearerSignedJwt);
+    assertTrue(
+      ((OAuthBearerValidatorCallback) validationResult).token() instanceof OAuthBearerSignedJwt);
   }
 
   @Test
@@ -119,8 +117,8 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
     String token = JwtTestUtils.createSignedJwtWithIssuer(RSA_KEY, "test-issuer");
     Object validationResult = validationResult(REQUIRED_ISSUER_CONFIG, token);
     assertTrue(validationResult instanceof OAuthBearerValidatorCallback);
-    assertTrue(((OAuthBearerValidatorCallback) validationResult).token()
-      instanceof OAuthBearerSignedJwt);
+    assertTrue(
+      ((OAuthBearerValidatorCallback) validationResult).token() instanceof OAuthBearerSignedJwt);
   }
 
   @Test
@@ -148,14 +146,13 @@ public class OAuthBearerSignedJwtValidatorCallbackHandlerTest {
   }
 
   private OAuthBearerValidatorCallback validationResult(HBaseConfiguration config,
-    String tokenValue)
-    throws UnsupportedCallbackException {
+    String tokenValue) throws UnsupportedCallbackException {
     OAuthBearerValidatorCallback callback = new OAuthBearerValidatorCallback(tokenValue);
-    createCallbackHandler(config).handle(new Callback[] {callback});
+    createCallbackHandler(config).handle(new Callback[] { callback });
     return callback;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   private OAuthBearerSignedJwtValidatorCallbackHandler
     createCallbackHandler(HBaseConfiguration config) {
     OAuthBearerSignedJwtValidatorCallbackHandler callbackHandler =

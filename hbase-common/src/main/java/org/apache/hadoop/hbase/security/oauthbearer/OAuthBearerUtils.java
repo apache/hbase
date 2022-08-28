@@ -28,27 +28,27 @@ public final class OAuthBearerUtils {
   public static final String TOKEN_KIND = "HBASE_JWT_TOKEN";
 
   /**
-   * Verifies configuration for OAuth Bearer authentication mechanism.
-   * Throws RuntimeException if PlainText is not allowed.
+   * Verifies configuration for OAuth Bearer authentication mechanism. Throws RuntimeException if
+   * PlainText is not allowed.
    */
   public static String[] mechanismNamesCompatibleWithPolicy(Map<String, ?> props) {
     if (props != null && "true".equals(String.valueOf(props.get(Sasl.POLICY_NOPLAINTEXT)))) {
-      throw new RuntimeException("OAuth Bearer authentication mech cannot be used if plaintext is "
-        + "disallowed.");
+      throw new RuntimeException(
+        "OAuth Bearer authentication mech cannot be used if plaintext is " + "disallowed.");
     }
     return new String[] { OAUTHBEARER_MECHANISM };
   }
 
   /**
-   *  Converts an extensions string into a {@code Map<String, String>}.
-   *
-   *  Example:
-   *      {@code parseMap("key=hey,keyTwo=hi,keyThree=hello", "=", ",") =>
-   *      { key: "hey", keyTwo: "hi", keyThree: "hello" }}
-   *
+   * Converts an extensions string into a {@code Map<String, String>}.
+   * <p/>
+   * Example:
+   * <p/>
+   * {@code parseMap("key=hey,keyTwo=hi,keyThree=hello", "=", ",") => { key: "hey", keyTwo: "hi",
+   * keyThree: "hello" }}
    */
-  public static Map<String, String> parseMap(String mapStr,
-    String keyValueSeparator, String elementSeparator) {
+  public static Map<String, String> parseMap(String mapStr, String keyValueSeparator,
+    String elementSeparator) {
     Map<String, String> map = new HashMap<>();
 
     if (!mapStr.isEmpty()) {
