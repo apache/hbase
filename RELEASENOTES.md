@@ -191,7 +191,7 @@ After this feature, there are two implementations of StoreFileTrackers. The firs
 
 This feature is notable in that it better enables HBase to function on storage systems which do not provide the typical posix filesystem semantics, most importantly, those which do not implement a file rename operation which is atomic. Storage systems which do not implement atomic renames often implement a rename as a copy and delete operation which amplifies the I/O costs by 2x.
 
-At scale, this feature should have a 2x reduction in I/O costs when using storage systems that do not provide atomic renames, most importantly in HBase compactions and memstore flushes. See the corresponding section, "Store File Tracking", in the HBase book for more information on how to use this feature. 
+At scale, this feature should have a 2x reduction in I/O costs when using storage systems that do not provide atomic renames, most importantly in HBase compactions and memstore flushes. See the corresponding section, "Store File Tracking", in the HBase book for more information on how to use this feature.
 
 The file based StoreFileTracker, FileBasedStoreFileTracker, is currently incompatible with the Medium Objects (MOB) feature. Do not enable them together.
 
@@ -359,12 +359,12 @@ If not present, master local region will use the cluster level store file tracke
 
 Introduced two shell commands for change table's or family's sft:
 
-change\_sft: 
+change\_sft:
   Change table's or table column family's sft. Examples:
     hbase\> change\_sft 't1','FILE'
     hbase\> change\_sft 't2','cf1','FILE'
 
-change\_sft\_all: 
+change\_sft\_all:
   Change all of the tables's sft matching the given regex:
     hbase\> change\_sft\_all 't.\*','FILE'
     hbase\> change\_sft\_all 'ns:.\*','FILE'
@@ -375,7 +375,7 @@ change\_sft\_all:
 
 * [HBASE-26742](https://issues.apache.org/jira/browse/HBASE-26742) | *Major* | **Comparator of NOT\_EQUAL NULL is invalid for checkAndMutate**
 
-The semantics of checkAndPut for null(or empty) value comparator is changed, the old match is always true. 
+The semantics of checkAndPut for null(or empty) value comparator is changed, the old match is always true.
 But we should consider that  EQUAL or NOT\_EQUAL for null check is a common usage, so the semantics of checkAndPut for matching null is correct now.
 There is rare use of LESS or GREATER null, so keep the semantics for them.
 
@@ -471,7 +471,7 @@ Now we will upload the site artifacts to nightlies for nightly build as well as 
 
 * [HBASE-26316](https://issues.apache.org/jira/browse/HBASE-26316) | *Minor* | **Per-table or per-CF compression codec setting overrides**
 
-It is now possible to specify codec configuration options as part of table or column family schema definitions. The configuration options will only apply to the defined scope. For example: 
+It is now possible to specify codec configuration options as part of table or column family schema definitions. The configuration options will only apply to the defined scope. For example:
 
   hbase\> create 'sometable', \\
     { NAME =\> 'somefamily', COMPRESSION =\> 'ZSTD' }, \\
@@ -781,7 +781,7 @@ belong to system RSGroup only.
 
 * [HBASE-25902](https://issues.apache.org/jira/browse/HBASE-25902) | *Critical* | **Add missing CFs in meta during HBase 1 to 2.3+ Upgrade**
 
-While upgrading cluster from 1.x to 2.3+ versions, after the active master is done setting it's status as 'Initialized', it attempts to add 'table' and 'repl\_barrier' CFs in meta. Once CFs are added successfully, master is aborted with PleaseRestartMasterException because master has missed certain initialization events (e.g ClusterSchemaService is not initialized and tableStateManager fails to migrate table states from ZK to meta due to missing CFs). Subsequent active master initialization is expected to be smooth. 
+While upgrading cluster from 1.x to 2.3+ versions, after the active master is done setting it's status as 'Initialized', it attempts to add 'table' and 'repl\_barrier' CFs in meta. Once CFs are added successfully, master is aborted with PleaseRestartMasterException because master has missed certain initialization events (e.g ClusterSchemaService is not initialized and tableStateManager fails to migrate table states from ZK to meta due to missing CFs). Subsequent active master initialization is expected to be smooth.
 In the presence of multi masters, when one of them becomes active for the first time after upgrading to HBase 2.3+, it is aborted after fixing CFs in meta and one of the other backup masters will take over and become active soon. Hence, overall this is expected to be smooth upgrade if we have backup masters configured. If not, operator is expected to restart same master again manually.
 
 
@@ -1053,7 +1053,7 @@ Expose HBCK repost results in metrics, includes: "orphanRegionsOnRS", "orphanReg
 
 * [HBASE-25582](https://issues.apache.org/jira/browse/HBASE-25582) | *Major* | **Support setting scan ReadType to be STREAM at cluster level**
 
-Adding a new meaning for the config 'hbase.storescanner.pread.max.bytes' when configured with a value \<0.   
+Adding a new meaning for the config 'hbase.storescanner.pread.max.bytes' when configured with a value \<0.
 In HBase 2.x we allow the Scan op to specify a ReadType (PREAD / STREAM/ DEFAULT).  When Scan comes with DEFAULT read type, we will start scan with preads and later switch to stream read once we see we are scanning a total data size \> value of hbase.storescanner.pread.max.bytes.  (This is calculated for data per region:cf).  This config defaults to 4 x of HFile block size = 256 KB by default.
 This jira added a new meaning for this config when configured with a -ve value.  In such case, for all scans with DEFAULT read type, we will start with STREAM read itself. (Switch at begin of the scan itself)
 
