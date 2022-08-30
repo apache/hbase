@@ -226,7 +226,7 @@ public class NettyRpcServer extends RpcServer {
   }
 
   private void initSSL(ChannelPipeline p, boolean supportPlaintext)
-    throws X509Exception, SSLException {
+    throws X509Exception, IOException {
     SslContext nettySslContext = X509Util.createSslContextForServer(conf);
 
     if (supportPlaintext) {

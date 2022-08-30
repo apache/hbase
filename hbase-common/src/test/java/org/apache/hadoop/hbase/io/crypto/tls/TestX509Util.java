@@ -84,7 +84,7 @@ public class TestX509Util {
   public X509KeyType certKeyType;
 
   @Parameterized.Parameter(value = 2)
-  public String keyPassword;
+  public char[] keyPassword;
 
   @Parameterized.Parameter(value = 3)
   public Integer paramIndex;
@@ -100,7 +100,7 @@ public class TestX509Util {
     int paramIndex = 0;
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
-        for (String keyPassword : new String[] { "", "pa$$w0rd" }) {
+        for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
           params.add(new Object[] { caKeyType, certKeyType, keyPassword, paramIndex++ });
         }
       }
@@ -172,13 +172,6 @@ public class TestX509Util {
     X509Util.createSslContextForClient(conf);
   }
 
-  @Test(expected = X509Exception.class)
-  public void testCreateSSLContextWithoutKeyStorePassword() throws Exception {
-    assumeTrue(x509TestContext.isKeyStoreEncrypted());
-    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
-    X509Util.createSslContextForServer(conf);
-  }
-
   @Test
   public void testCreateSSLContextWithoutTrustStoreLocationClient() throws Exception {
     conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION);
@@ -220,7 +213,7 @@ public class TestX509Util {
 
   @Test
   public void testLoadJKSKeyStoreNullPassword() throws Exception {
-    assumeTrue(x509TestContext.getKeyStorePassword().isEmpty());
+    assumeTrue(x509TestContext.getKeyStorePassword() == null);
     // Make sure that empty password and null password are treated the same
     X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), null,
@@ -241,7 +234,7 @@ public class TestX509Util {
     assertThrows(KeyManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createKeyManager(
-        x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password",
+        x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password".toCharArray(),
         KeyStoreFileType.JKS.getPropertyValue());
     });
   }
@@ -256,7 +249,7 @@ public class TestX509Util {
 
   @Test
   public void testLoadJKSTrustStoreNullPassword() throws Exception {
-    if (!x509TestContext.getTrustStorePassword().isEmpty()) {
+    if (x509TestContext.getTrustStorePassword() != null) {
       return;
     }
     // Make sure that empty password and null password are treated the same
@@ -279,7 +272,7 @@ public class TestX509Util {
     assertThrows(TrustManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
-        x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password",
+        x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password".toCharArray(),
         KeyStoreFileType.JKS.getPropertyValue(), true, true);
     });
   }
@@ -294,7 +287,7 @@ public class TestX509Util {
 
   @Test
   public void testLoadPKCS12KeyStoreNullPassword() throws Exception {
-    if (!x509TestContext.getKeyStorePassword().isEmpty()) {
+    if (x509TestContext.getKeyStorePassword() != null) {
       return;
     }
     // Make sure that empty password and null password are treated the same
@@ -309,7 +302,7 @@ public class TestX509Util {
       // Attempting to load with the wrong key password should fail
       X509Util.createKeyManager(
         x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-        "wrong password", KeyStoreFileType.PKCS12.getPropertyValue());
+        "wrong password".toCharArray(), KeyStoreFileType.PKCS12.getPropertyValue());
     });
   }
 
@@ -324,7 +317,7 @@ public class TestX509Util {
 
   @Test
   public void testLoadPKCS12TrustStoreNullPassword() throws Exception {
-    if (!x509TestContext.getTrustStorePassword().isEmpty()) {
+    if (x509TestContext.getTrustStorePassword() != null) {
       return;
     }
     // Make sure that empty password and null password are treated the same
@@ -339,7 +332,7 @@ public class TestX509Util {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
         x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-        "wrong password", KeyStoreFileType.PKCS12.getPropertyValue(), true, true);
+        "wrong password".toCharArray(), KeyStoreFileType.PKCS12.getPropertyValue(), true, true);
     });
   }
 

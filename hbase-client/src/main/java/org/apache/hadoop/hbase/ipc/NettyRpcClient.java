@@ -88,7 +88,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
     }
   }
 
-  SslContext getSslContext() throws X509Exception, SSLException {
+  SslContext getSslContext() throws X509Exception, IOException {
     SslContext result = sslContextForClient.get();
     if (result == null) {
       result = X509Util.createSslContextForClient(conf);
