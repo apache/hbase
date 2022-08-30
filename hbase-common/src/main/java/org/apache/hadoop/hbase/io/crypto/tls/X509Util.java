@@ -65,6 +65,7 @@ import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 public final class X509Util {
 
   private static final Logger LOG = LoggerFactory.getLogger(X509Util.class);
+  private static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
   // Config
   static final String CONFIG_PREFIX = "hbase.rpc.tls.";
@@ -232,6 +233,10 @@ public final class X509Util {
       keyStoreType = "jks";
     }
 
+    if (keyStorePassword == null) {
+      keyStorePassword = EMPTY_CHAR_ARRAY;
+    }
+
     try {
       KeyStore ks = KeyStore.getInstance(keyStoreType);
       try (InputStream inputStream =
@@ -272,6 +277,10 @@ public final class X509Util {
 
     if (trustStoreType == null) {
       trustStoreType = "jks";
+    }
+
+    if (trustStorePassword == null) {
+      trustStorePassword = EMPTY_CHAR_ARRAY;
     }
 
     try {
