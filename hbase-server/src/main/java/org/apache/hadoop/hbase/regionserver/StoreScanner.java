@@ -1252,5 +1252,4 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       trySwitchToStreamRead();
     }
   }
-
 }
