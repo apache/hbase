@@ -235,8 +235,8 @@ public class TestX509Util {
     assertThrows(KeyManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createKeyManager(
-        x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password".toCharArray(),
-        KeyStoreFileType.JKS.getPropertyValue());
+        x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
+        "wrong password".toCharArray(), KeyStoreFileType.JKS.getPropertyValue());
     });
   }
 
@@ -271,8 +271,8 @@ public class TestX509Util {
     assertThrows(TrustManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
-        x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(), "wrong password".toCharArray(),
-        KeyStoreFileType.JKS.getPropertyValue(), true, true);
+        x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
+        "wrong password".toCharArray(), KeyStoreFileType.JKS.getPropertyValue(), true, true);
     });
   }
 

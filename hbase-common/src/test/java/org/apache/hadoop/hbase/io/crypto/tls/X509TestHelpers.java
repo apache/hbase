@@ -284,8 +284,8 @@ final class X509TestHelpers {
     if (password != null) {
       encryptor =
         new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
-          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG)
-          .setPasssword(password).build();
+          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG).setPasssword(password)
+          .build();
     }
     pemWriter.writeObject(new JcaPKCS8Generator(key, encryptor));
     pemWriter.close();
