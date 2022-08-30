@@ -84,7 +84,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean parallelSeekEnabled = false;
   private ExecutorService executor;
   private final Scan scan;
-  private final long oldestUnexpiredTS;
+  private long oldestUnexpiredTS = 0L;
   private final long now;
   private final int minVersions;
   private final long maxRowSize;
