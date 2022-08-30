@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -238,8 +237,7 @@ public final class X509Util {
 
     try {
       KeyStore ks = KeyStore.getInstance(keyStoreType);
-      try (InputStream inputStream =
-        new BufferedInputStream(Files.newInputStream(new File(keyStoreLocation).toPath()))) {
+      try (InputStream inputStream = Files.newInputStream(new File(keyStoreLocation).toPath())) {
         ks.load(inputStream, keyStorePassword);
       }
 
@@ -284,8 +282,7 @@ public final class X509Util {
 
     try {
       KeyStore ts = KeyStore.getInstance(trustStoreType);
-      try (InputStream inputStream =
-        new BufferedInputStream(Files.newInputStream(new File(trustStoreLocation).toPath()))) {
+      try (InputStream inputStream = Files.newInputStream(new File(trustStoreLocation).toPath())) {
         ts.load(inputStream, trustStorePassword);
       }
 
