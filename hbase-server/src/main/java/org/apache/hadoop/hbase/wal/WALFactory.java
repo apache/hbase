@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
@@ -170,15 +171,33 @@ public class WALFactory {
   }
 
   /**
-   * @param conf      must not be null, will keep a reference to read params in later reader/writer
-   *                  instances.
-   * @param factoryId a unique identifier for this factory. used i.e. by filesystem implementations
-   *                  to make a directory
+   * Create a WALFactory.
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*|.*/HBaseTestingUtility.java")
   public WALFactory(Configuration conf, String factoryId) throws IOException {
     // default enableSyncReplicationWALProvider is true, only disable SyncReplicationWALProvider
     // for HMaster or HRegionServer which take system table only. See HBASE-19999
     this(conf, factoryId, null, true);
+  }
+
+  /**
+   * Create a WALFactory.
+   * <p/>
+   * This is the constructor you should use when creating a WALFactory in normal code, to make sure
+   * that the {@code factoryId} is the server name. We need this assumption in some places for
+   * parsing the server name out from the wal file name.
+   * @param conf                             must not be null, will keep a reference to read params
+   *                                         in later reader/writer instances.
+   * @param serverName                       use to generate the factoryId, which will be append at
+   *                                         the first of the final file name
+   * @param abortable                        the server associated with this WAL file
+   * @param enableSyncReplicationWALProvider whether wrap the wal provider to a
+   *                                         {@link SyncReplicationWALProvider} n
+   */
+  public WALFactory(Configuration conf, ServerName serverName, Abortable abortable,
+    boolean enableSyncReplicationWALProvider) throws IOException {
+    this(conf, serverName.toString(), abortable, enableSyncReplicationWALProvider);
   }
 
   /**
@@ -190,7 +209,7 @@ public class WALFactory {
    * @param enableSyncReplicationWALProvider whether wrap the wal provider to a
    *                                         {@link SyncReplicationWALProvider}
    */
-  public WALFactory(Configuration conf, String factoryId, Abortable abortable,
+  private WALFactory(Configuration conf, String factoryId, Abortable abortable,
     boolean enableSyncReplicationWALProvider) throws IOException {
     // until we've moved reader/writer construction down into providers, this initialization must
     // happen prior to provider initialization, in case they need to instantiate a reader/writer.
