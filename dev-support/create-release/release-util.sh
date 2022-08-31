@@ -30,7 +30,7 @@
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
-GPG_ARGS=(-v --no-autostart --batch --pinentry-mode error)
+GPG_ARGS=(--no-autostart --batch --pinentry-mode error)
 if [ -n "${GPG_KEY}" ]; then
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 fi
