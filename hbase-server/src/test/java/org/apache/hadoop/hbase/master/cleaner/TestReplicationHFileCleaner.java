@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +35,9 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -48,19 +51,19 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO: revisit later
-@Ignore
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+
 @Category({ MasterTests.class, SmallTests.class })
 public class TestReplicationHFileCleaner {
 
@@ -71,19 +74,25 @@ public class TestReplicationHFileCleaner {
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationHFileCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Server server;
+  private static final TableName tableName = TableName.valueOf("test_cleaner");
   private static ReplicationQueueStorage rq;
   private static ReplicationPeers rp;
   private static final String peerId = "TestReplicationHFileCleaner";
   private static Configuration conf = TEST_UTIL.getConfiguration();
-  static FileSystem fs = null;
-  Path root;
+  private static FileSystem fs = null;
+  private static Map<String, Object> params;
+  private Path root;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     server = new DummyServer();
+    params = ImmutableMap.of(HMaster.MASTER, server);
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     HMaster.decorateMasterConfiguration(conf);
+    TableDescriptor td = ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName);
+    TEST_UTIL.getAdmin().createTable(td);
+    conf.set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME, tableName.getNameAsString());
     rp = ReplicationFactory.getReplicationPeers(server.getZooKeeper(), conf);
     rp.init();
     rq = ReplicationStorageFactory.getReplicationQueueStorage(server.getConnection(), conf);
@@ -92,7 +101,7 @@ public class TestReplicationHFileCleaner {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Before
@@ -115,6 +124,13 @@ public class TestReplicationHFileCleaner {
     rp.getPeerStorage().removePeer(peerId);
   }
 
+  private ReplicationHFileCleaner createCleaner() {
+    ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
+    cleaner.setConf(conf);
+    cleaner.init(params);
+    return cleaner;
+  }
+
   @Test
   public void testIsFileDeletable() throws IOException, ReplicationException {
     // 1. Create a file
@@ -122,8 +138,7 @@ public class TestReplicationHFileCleaner {
     fs.createNewFile(file);
     // 2. Assert file is successfully created
     assertTrue("Test file not created!", fs.exists(file));
-    ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
-    cleaner.setConf(conf);
+    ReplicationHFileCleaner cleaner = createCleaner();
     // 3. Assert that file as is should be deletable
     assertTrue("Cleaner should allow to delete this file as there is no hfile reference node "
       + "for it in the queue.", cleaner.isFileDeletable(fs.getFileStatus(file)));
@@ -160,8 +175,7 @@ public class TestReplicationHFileCleaner {
     // 2. Add one file to hfile-refs queue
     rq.addHFileRefs(peerId, hfiles);
 
-    ReplicationHFileCleaner cleaner = new ReplicationHFileCleaner();
-    cleaner.setConf(conf);
+    ReplicationHFileCleaner cleaner = createCleaner();
     Iterator<FileStatus> deletableFilesIterator = cleaner.getDeletableFiles(files).iterator();
     int i = 0;
     while (deletableFilesIterator.hasNext() && i < 2) {
@@ -180,6 +194,15 @@ public class TestReplicationHFileCleaner {
     @Override
     public Configuration getConfiguration() {
       return TEST_UTIL.getConfiguration();
+    }
+
+    @Override
+    public ZKWatcher getZooKeeper() {
+      try {
+        return TEST_UTIL.getZooKeeperWatcher();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
 
     @Override

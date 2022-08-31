@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
+import org.apache.hadoop.hbase.replication.ReplicationOffsetUtil;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
@@ -808,22 +809,7 @@ public class ReplicationSourceManager {
     if (AbstractFSWALProvider.isMetaFile(wal)) {
       return false;
     }
-    // if no offset or the offset is just a place marker, replicate
-    if (offset == null || offset == ReplicationGroupOffset.BEGIN) {
-      return true;
-    }
-    // otherwise, compare the timestamp
-    long walTs = AbstractFSWALProvider.getTimestamp(wal);
-    long startWalTs = AbstractFSWALProvider.getTimestamp(offset.getWal());
-    if (walTs < startWalTs) {
-      return false;
-    } else if (walTs > startWalTs) {
-      return true;
-    }
-    // if the timestamp equals, usually it means we should include this wal but there is a special
-    // case, a negative offset means the wal has already been fully replicated, so here we should
-    // check the offset.
-    return offset.getOffset() >= 0;
+    return ReplicationOffsetUtil.shouldReplicate(offset, wal);
   }
 
   void claimQueue(ReplicationQueueId queueId) {
