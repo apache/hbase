@@ -4286,5 +4286,4 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
-
 }

@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,6 +42,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -631,5 +635,30 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static String getWALPrefixFromWALName(String name) {
     return getWALNameGroupFromWALName(name, 1);
+  }
+
+  private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("^[^"
+    + ServerName.SERVERNAME_SEPARATOR + "]+" + ServerName.SERVERNAME_SEPARATOR
+    + Addressing.VALID_PORT_REGEX + ServerName.SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX);
+
+  /**
+   * Parse the server name from wal prefix. A wal's name is always started with a server name in non
+   * test code.
+   * @throws IllegalArgumentException if the name passed in is not started with a server name
+   * @return the server name
+   */
+  public static ServerName parseServerNameFromWALName(String name) {
+    String decoded;
+    try {
+      decoded = URLDecoder.decode(name, StandardCharsets.UTF_8.name());
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError("should never happen", e);
+    }
+    Matcher matcher = SERVER_NAME_PATTERN.matcher(decoded);
+    if (matcher.find()) {
+      return ServerName.valueOf(matcher.group());
+    } else {
+      throw new IllegalArgumentException(name + " is not started with a server name");
+    }
   }
 }
