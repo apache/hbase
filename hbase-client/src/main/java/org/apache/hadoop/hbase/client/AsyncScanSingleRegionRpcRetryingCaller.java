@@ -444,8 +444,9 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     tries++;
-    Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
+
     if (HBaseServerException.isServerOverloaded(error)) {
+      Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
       metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
     }
     retryTimer.newTimeout(t -> call(), delayNs, TimeUnit.NANOSECONDS);
