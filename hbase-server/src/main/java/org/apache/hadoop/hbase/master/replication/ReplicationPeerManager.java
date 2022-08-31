@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -97,6 +98,9 @@ public class ReplicationPeerManager {
 
   // Only allow to add one sync replication peer concurrently
   private final Semaphore syncReplicationPeerLock = new Semaphore(1);
+
+  private final ReplicationLogCleanerBarrier replicationLogCleanerBarrier =
+    new ReplicationLogCleanerBarrier();
 
   private final String clusterId;
 
@@ -692,5 +696,9 @@ public class ReplicationPeerManager {
 
   public void releaseSyncReplicationPeerLock() {
     syncReplicationPeerLock.release();
+  }
+
+  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
+    return replicationLogCleanerBarrier;
   }
 }
