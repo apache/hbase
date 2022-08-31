@@ -190,7 +190,7 @@ public class TestReplicationSourceManager {
 
     replication = new Replication();
     replication.initialize(server, FS, logDir, oldLogDir,
-      new WALFactory(CONF, "test", null, false));
+      new WALFactory(CONF, server.getServerName(), null, false));
     manager = replication.getReplicationManager();
   }
 
