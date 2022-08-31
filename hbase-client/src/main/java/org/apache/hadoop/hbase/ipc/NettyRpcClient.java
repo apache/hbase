@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
@@ -89,7 +88,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
     }
   }
 
-  SslContext getSslContext() throws X509Exception, SSLException {
+  SslContext getSslContext() throws X509Exception, IOException {
     SslContext result = sslContextForClient.get();
     if (result == null) {
       result = X509Util.createSslContextForClient(conf);
