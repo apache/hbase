@@ -117,7 +117,10 @@ public class ReplicationSyncUp extends Configured implements Tool {
       System.out.println("Start Replication Server start");
       Replication replication = new Replication();
       replication.initialize(new DummyServer(zkw), fs, logDir, oldLogDir,
-        new WALFactory(conf, "test", null, false));
+        new WALFactory(conf,
+          ServerName
+            .valueOf(getClass().getSimpleName() + ",16010," + EnvironmentEdgeManager.currentTime()),
+          null, false));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init();
       claimReplicationQueues(zkw, manager);
