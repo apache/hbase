@@ -72,7 +72,7 @@ public abstract class AbstractTestTlsRejectPlainText {
   public X509KeyType certKeyType;
 
   @Parameterized.Parameter(2)
-  public String keyPassword;
+  public char[] keyPassword;
 
   private X509TestContext x509TestContext;
 
@@ -85,7 +85,7 @@ public abstract class AbstractTestTlsRejectPlainText {
     List<Object[]> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
-        for (String keyPassword : new String[] { "", "pa$$w0rd" }) {
+        for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
           params.add(new Object[] { caKeyType, certKeyType, keyPassword });
         }
       }

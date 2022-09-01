@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +31,6 @@ import java.util.Objects;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -65,6 +63,7 @@ import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 public final class X509Util {
 
   private static final Logger LOG = LoggerFactory.getLogger(X509Util.class);
+  private static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
   // Config
   static final String CONFIG_PREFIX = "hbase.rpc.tls.";
@@ -140,12 +139,12 @@ public final class X509Util {
   }
 
   public static SslContext createSslContextForClient(Configuration config)
-    throws X509Exception, SSLException {
+    throws X509Exception, IOException {
 
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    String keyStorePassword = config.get(TLS_CONFIG_KEYSTORE_PASSWORD, "");
+    char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
 
     if (keyStoreLocation.isEmpty()) {
@@ -156,7 +155,7 @@ public final class X509Util {
     }
 
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    String trustStorePassword = config.get(TLS_CONFIG_TRUSTSTORE_PASSWORD, "");
+    char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
     String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
@@ -177,9 +176,9 @@ public final class X509Util {
   }
 
   public static SslContext createSslContextForServer(Configuration config)
-    throws X509Exception, SSLException {
+    throws X509Exception, IOException {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    String keyStorePassword = config.get(TLS_CONFIG_KEYSTORE_PASSWORD, "");
+    char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
 
     if (keyStoreLocation.isEmpty()) {
@@ -193,7 +192,7 @@ public final class X509Util {
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    String trustStorePassword = config.get(TLS_CONFIG_TRUSTSTORE_PASSWORD, "");
+    char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
     String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
@@ -225,27 +224,25 @@ public final class X509Util {
    * @return the key manager.
    * @throws KeyManagerException if something goes wrong.
    */
-  static X509KeyManager createKeyManager(String keyStoreLocation, String keyStorePassword,
+  static X509KeyManager createKeyManager(String keyStoreLocation, char[] keyStorePassword,
     String keyStoreType) throws KeyManagerException {
-
-    if (keyStorePassword == null) {
-      keyStorePassword = "";
-    }
 
     if (keyStoreType == null) {
       keyStoreType = "jks";
     }
 
+    if (keyStorePassword == null) {
+      keyStorePassword = EMPTY_CHAR_ARRAY;
+    }
+
     try {
-      char[] password = keyStorePassword.toCharArray();
       KeyStore ks = KeyStore.getInstance(keyStoreType);
-      try (InputStream inputStream =
-        new BufferedInputStream(Files.newInputStream(new File(keyStoreLocation).toPath()))) {
-        ks.load(inputStream, password);
+      try (InputStream inputStream = Files.newInputStream(new File(keyStoreLocation).toPath())) {
+        ks.load(inputStream, keyStorePassword);
       }
 
       KeyManagerFactory kmf = KeyManagerFactory.getInstance("PKIX");
-      kmf.init(ks, password);
+      kmf.init(ks, keyStorePassword);
 
       for (KeyManager km : kmf.getKeyManagers()) {
         if (km instanceof X509KeyManager) {
@@ -272,23 +269,21 @@ public final class X509Util {
    * @return the trust manager.
    * @throws TrustManagerException if something goes wrong.
    */
-  static X509TrustManager createTrustManager(String trustStoreLocation, String trustStorePassword,
+  static X509TrustManager createTrustManager(String trustStoreLocation, char[] trustStorePassword,
     String trustStoreType, boolean crlEnabled, boolean ocspEnabled) throws TrustManagerException {
-
-    if (trustStorePassword == null) {
-      trustStorePassword = "";
-    }
 
     if (trustStoreType == null) {
       trustStoreType = "jks";
     }
 
+    if (trustStorePassword == null) {
+      trustStorePassword = EMPTY_CHAR_ARRAY;
+    }
+
     try {
-      char[] password = trustStorePassword.toCharArray();
       KeyStore ts = KeyStore.getInstance(trustStoreType);
-      try (InputStream inputStream =
-        new BufferedInputStream(Files.newInputStream(new File(trustStoreLocation).toPath()))) {
-        ts.load(inputStream, password);
+      try (InputStream inputStream = Files.newInputStream(new File(trustStoreLocation).toPath())) {
+        ts.load(inputStream, trustStorePassword);
       }
 
       PKIXBuilderParameters pbParams = new PKIXBuilderParameters(ts, new X509CertSelector());
