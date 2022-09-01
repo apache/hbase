@@ -255,15 +255,21 @@ class WALEntryStream implements Closeable {
    * Returns whether the file is opened for writing.
    */
   private boolean readNextEntryAndRecordReaderPosition() throws IOException {
+    long prePos = reader.getPosition();
+    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
+    if (fileLength.isPresent() && prePos == fileLength.getAsLong()) {
+      LOG.debug("The provider tells us the valid length for {} is {}, we have advanced the end",
+        currentPath, fileLength.getAsLong());
+      return true;
+    }
     Entry readEntry = reader.next();
     long readerPos = reader.getPosition();
-    OptionalLong fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
     if (fileLength.isPresent() && readerPos > fileLength.getAsLong()) {
       // See HBASE-14004, for AsyncFSWAL which uses fan-out, it is possible that we read uncommitted
       // data, so we need to make sure that we do not read beyond the committed file length.
       if (LOG.isDebugEnabled()) {
-        LOG.debug("The provider tells us the valid length for " + currentPath + " is "
-          + fileLength.getAsLong() + ", but we have advanced to " + readerPos);
+        LOG.debug("The provider tells us the valid length for {} is {}, but we have advanced to {}",
+          currentPath, fileLength.getAsLong(), readerPos);
       }
       resetReader();
       return true;
