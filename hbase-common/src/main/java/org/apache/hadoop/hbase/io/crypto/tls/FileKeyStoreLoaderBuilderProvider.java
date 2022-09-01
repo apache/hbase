@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.util.Objects;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This file has been copied from the Apache ZooKeeper project.
@@ -26,8 +25,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/FileKeyStoreLoaderBuilderProvider.java">Base
  *      revision</a>
  */
-@InterfaceAudience.Private
-public class FileKeyStoreLoaderBuilderProvider {
+class FileKeyStoreLoaderBuilderProvider {
   /**
    * Returns a {@link FileKeyStoreLoader.Builder} that can build a loader which loads keys and certs
    * from files of the given {@link KeyStoreFileType}.
