@@ -15,40 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.util.Objects;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This file has been copied from the Apache ZooKeeper project.
  * @see <a href=
- *         "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/FileKeyStoreLoaderBuilderProvider.java">Base
- *         revision</a>
+ *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/FileKeyStoreLoaderBuilderProvider.java">Base
+ *      revision</a>
  */
+@InterfaceAudience.Private
 public class FileKeyStoreLoaderBuilderProvider {
-    /**
-     * Returns a {@link FileKeyStoreLoader.Builder} that can build a loader
-     * which loads keys and certs from files of the given
-     * {@link KeyStoreFileType}.
-     *
-     * @param type the file type to load keys/certs from.
-     * @return a new Builder.
-     */
-    static FileKeyStoreLoader.Builder<? extends FileKeyStoreLoader>
+  /**
+   * Returns a {@link FileKeyStoreLoader.Builder} that can build a loader which loads keys and certs
+   * from files of the given {@link KeyStoreFileType}.
+   * @param type the file type to load keys/certs from.
+   * @return a new Builder.
+   */
+  static FileKeyStoreLoader.Builder<? extends FileKeyStoreLoader>
     getBuilderForKeyStoreFileType(KeyStoreFileType type) {
-        switch (Objects.requireNonNull(type)) {
-            case JKS:
-                return new JKSFileLoader.Builder();
-            case PEM:
-                return new PEMFileLoader.Builder();
-            case PKCS12:
-                return new PKCS12FileLoader.Builder();
-            case BCFKS:
-              return new BCFKSFileLoader.Builder();
-            default:
-                throw new AssertionError(
-                        "Unexpected StoreFileType: " + type.name());
-        }
+    switch (Objects.requireNonNull(type)) {
+      case JKS:
+        return new JKSFileLoader.Builder();
+      case PEM:
+        return new PEMFileLoader.Builder();
+      case PKCS12:
+        return new PKCS12FileLoader.Builder();
+      case BCFKS:
+        return new BCFKSFileLoader.Builder();
+      default:
+        throw new AssertionError("Unexpected StoreFileType: " + type.name());
     }
+  }
 }

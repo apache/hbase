@@ -15,54 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.util.Optional;
-
-import org.apache.zookeeper.util.PemReader;
 
 /**
  * Implementation of {@link FileKeyStoreLoader} that loads from PEM files.
  * <p/>
  * This file has been copied from the Apache ZooKeeper project.
  * @see <a href=
- *         "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/PEMFileLoader.java">Base
- *         revision</a>
+ *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/PEMFileLoader.java">Base
+ *      revision</a>
  */
 class PEMFileLoader extends FileKeyStoreLoader {
-    private PEMFileLoader(String keyStorePath,
-                          String trustStorePath,
-                          char[] keyStorePassword,
-                          char[] trustStorePassword) {
-        super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
-    }
+  private PEMFileLoader(String keyStorePath, String trustStorePath, char[] keyStorePassword,
+    char[] trustStorePassword) {
+    super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
+  }
 
+  @Override
+  public KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
+    File file = new File(keyStorePath);
+    return PemReader.loadKeyStore(file, file, keyStorePassword);
+  }
+
+  @Override
+  public KeyStore loadTrustStore() throws IOException, GeneralSecurityException {
+    return PemReader.loadTrustStore(new File(trustStorePath));
+  }
+
+  static class Builder extends FileKeyStoreLoader.Builder<PEMFileLoader> {
     @Override
-    public KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
-        Optional<String> passwordOption;
-        if (keyStorePassword == null || keyStorePassword.length == 0) {
-            passwordOption = Optional.empty();
-        } else {
-            passwordOption = Optional.of(String.valueOf(keyStorePassword));
-        }
-        File file = new File(keyStorePath);
-        return PemReader.loadKeyStore(file, file, passwordOption);
+    PEMFileLoader build() {
+      return new PEMFileLoader(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
     }
-
-    @Override
-    public KeyStore loadTrustStore() throws IOException, GeneralSecurityException {
-        return PemReader.loadTrustStore(new File(trustStorePath));
-    }
-
-    static class Builder extends FileKeyStoreLoader.Builder<PEMFileLoader> {
-        @Override
-        PEMFileLoader build() {
-            return new PEMFileLoader(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
-        }
-    }
+  }
 }

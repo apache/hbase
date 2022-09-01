@@ -36,6 +36,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -205,6 +207,69 @@ public class TestX509Util {
   }
 
   @Test
+  public void testLoadPEMKeyStore() throws Exception {
+    // Make sure we can instantiate a key manager from the PEM file on disk
+    X509KeyManager km = X509Util.createKeyManager(
+      x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
+      x509TestContext.getKeyStorePassword(), KeyStoreFileType.PEM.getPropertyValue());
+  }
+
+  @Test
+  public void testLoadPEMKeyStoreNullPassword() throws Exception {
+    assumeThat(x509TestContext.getKeyStorePassword(), equalTo(EMPTY_CHAR_ARRAY));
+    // Make sure that empty password and null password are treated the same
+    X509KeyManager km = X509Util.createKeyManager(
+      x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(), null,
+      KeyStoreFileType.PEM.getPropertyValue());
+  }
+
+  @Test
+  public void testLoadPEMKeyStoreAutodetectStoreFileType() throws Exception {
+    // Make sure we can instantiate a key manager from the PEM file on disk
+    X509KeyManager km = X509Util.createKeyManager(
+      x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
+      x509TestContext.getKeyStorePassword(),
+      null /* null StoreFileType means 'autodetect from file extension' */);
+  }
+
+  @Test(expected = KeyManagerException.class)
+  public void testLoadPEMKeyStoreWithWrongPassword() throws Exception {
+    // Attempting to load with the wrong key password should fail
+    X509KeyManager km = X509Util.createKeyManager(
+      x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
+      "wrong password".toCharArray(), // intentionally use the wrong password
+      KeyStoreFileType.PEM.getPropertyValue());
+  }
+
+  @Test
+  public void testLoadPEMTrustStore() throws Exception {
+    // Make sure we can instantiate a trust manager from the PEM file on disk
+    X509TrustManager tm = X509Util.createTrustManager(
+      x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
+      x509TestContext.getTrustStorePassword(), KeyStoreFileType.PEM.getPropertyValue(), false,
+      false);
+  }
+
+  @Test
+  public void testLoadPEMTrustStoreNullPassword() throws Exception {
+    assumeThat(x509TestContext.getTrustStorePassword(), equalTo(EMPTY_CHAR_ARRAY));
+    // Make sure that empty password and null password are treated the same
+    X509TrustManager tm = X509Util.createTrustManager(
+      x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(), null,
+      KeyStoreFileType.PEM.getPropertyValue(), false, false);
+  }
+
+  @Test
+  public void testLoadPEMTrustStoreAutodetectStoreFileType() throws Exception {
+    // Make sure we can instantiate a trust manager from the PEM file on disk
+    X509TrustManager tm = X509Util.createTrustManager(
+      x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
+      x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
+                                                     // file extension'
+      false, false);
+  }
+
+  @Test
   public void testLoadJKSKeyStore() throws Exception {
     // Make sure we can instantiate a key manager from the JKS file on disk
     X509Util.createKeyManager(
@@ -222,9 +287,9 @@ public class TestX509Util {
   }
 
   @Test
-  public void testLoadJKSKeyStoreFileTypeDefaultToJks() throws Exception {
+  public void testLoadJKSKeyStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a key manager from the JKS file on disk
-    X509Util.createKeyManager(
+    X509KeyManager km = X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
       x509TestContext.getKeyStorePassword(),
       null /* null StoreFileType means 'autodetect from file extension' */);
@@ -258,16 +323,17 @@ public class TestX509Util {
   }
 
   @Test
-  public void testLoadJKSTrustStoreFileTypeDefaultToJks() throws Exception {
+  public void testLoadJKSTrustStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a trust manager from the JKS file on disk
-    X509Util.createTrustManager(
+    X509TrustManager tm = X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
-      // null StoreFileType means 'autodetect from file extension'
-      x509TestContext.getTrustStorePassword(), null, true, true);
+      x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
+                                                     // file extension'
+      true, true);
   }
 
   @Test
-  public void testLoadJKSTrustStoreWithWrongPassword() throws Exception {
+  public void testLoadJKSTrustStoreWithWrongPassword() {
     assertThrows(TrustManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
@@ -294,7 +360,16 @@ public class TestX509Util {
   }
 
   @Test
-  public void testLoadPKCS12KeyStoreWithWrongPassword() throws Exception {
+  public void testLoadPKCS12KeyStoreAutodetectStoreFileType() throws Exception {
+    // Make sure we can instantiate a key manager from the PKCS12 file on disk
+    X509KeyManager km = X509Util.createKeyManager(
+      x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+      x509TestContext.getKeyStorePassword(),
+      null /* null StoreFileType means 'autodetect from file extension' */);
+  }
+
+  @Test
+  public void testLoadPKCS12KeyStoreWithWrongPassword() {
     assertThrows(KeyManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createKeyManager(
@@ -322,7 +397,17 @@ public class TestX509Util {
   }
 
   @Test
-  public void testLoadPKCS12TrustStoreWithWrongPassword() throws Exception {
+  public void testLoadPKCS12TrustStoreAutodetectStoreFileType() throws Exception {
+    // Make sure we can instantiate a trust manager from the PKCS12 file on disk
+    X509TrustManager tm = X509Util.createTrustManager(
+      x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+      x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
+                                                     // file extension'
+      true, true);
+  }
+
+  @Test
+  public void testLoadPKCS12TrustStoreWithWrongPassword() {
     assertThrows(TrustManagerException.class, () -> {
       // Attempting to load with the wrong key password should fail
       X509Util.createTrustManager(
@@ -332,42 +417,42 @@ public class TestX509Util {
   }
 
   @Test
-  public void testGetDefaultCipherSuitesJava8() throws Exception {
+  public void testGetDefaultCipherSuitesJava8() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("1.8");
     // Java 8 default should have the CBC suites first
     assertThat(cipherSuites[0], containsString("CBC"));
   }
 
   @Test
-  public void testGetDefaultCipherSuitesJava9() throws Exception {
+  public void testGetDefaultCipherSuitesJava9() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("9");
     // Java 9+ default should have the GCM suites first
     assertThat(cipherSuites[0], containsString("GCM"));
   }
 
   @Test
-  public void testGetDefaultCipherSuitesJava10() throws Exception {
+  public void testGetDefaultCipherSuitesJava10() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("10");
     // Java 9+ default should have the GCM suites first
     assertThat(cipherSuites[0], containsString("GCM"));
   }
 
   @Test
-  public void testGetDefaultCipherSuitesJava11() throws Exception {
+  public void testGetDefaultCipherSuitesJava11() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("11");
     // Java 9+ default should have the GCM suites first
     assertThat(cipherSuites[0], containsString("GCM"));
   }
 
   @Test
-  public void testGetDefaultCipherSuitesUnknownVersion() throws Exception {
+  public void testGetDefaultCipherSuitesUnknownVersion() {
     String[] cipherSuites = X509Util.getDefaultCipherSuitesForJavaVersion("notaversion");
     // If version can't be parsed, use the more conservative Java 8 default
     assertThat(cipherSuites[0], containsString("CBC"));
   }
 
   @Test
-  public void testGetDefaultCipherSuitesNullVersion() throws Exception {
+  public void testGetDefaultCipherSuitesNullVersion() {
     assertThrows(NullPointerException.class, () -> {
       X509Util.getDefaultCipherSuitesForJavaVersion(null);
     });

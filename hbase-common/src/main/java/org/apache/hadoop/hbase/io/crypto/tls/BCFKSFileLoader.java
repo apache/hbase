@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 /**
@@ -23,21 +22,21 @@ package org.apache.hadoop.hbase.io.crypto.tls;
  * <p/>
  * This file has been copied from the Apache ZooKeeper project.
  * @see <a href=
- *         "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/BCFKSFileLoader.java">Base
- *         revision</a>
+ *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/BCFKSFileLoader.java">Base
+ *      revision</a>
  */
 class BCFKSFileLoader extends StandardTypeFileKeyStoreLoader {
-    private BCFKSFileLoader(String keyStorePath,
-                            String trustStorePath,
-                            char[] keyStorePassword,
-                            char[] trustStorePassword) {
-        super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword, SupportedStandardKeyFormat.BCFKS);
-    }
+  private BCFKSFileLoader(String keyStorePath, String trustStorePath, char[] keyStorePassword,
+    char[] trustStorePassword) {
+    super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword,
+      SupportedStandardKeyFormat.BCFKS);
+  }
 
-    static class Builder extends FileKeyStoreLoader.Builder<BCFKSFileLoader> {
-        @Override
-        BCFKSFileLoader build() {
-            return new BCFKSFileLoader(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
-        }
+  static class Builder extends FileKeyStoreLoader.Builder<BCFKSFileLoader> {
+    @Override
+    BCFKSFileLoader build() {
+      return new BCFKSFileLoader(keyStorePath, trustStorePath, keyStorePassword,
+        trustStorePassword);
     }
+  }
 }
