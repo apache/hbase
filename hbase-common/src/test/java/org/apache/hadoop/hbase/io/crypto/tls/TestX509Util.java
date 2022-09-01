@@ -28,30 +28,17 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 import static org.mockito.Mockito.mock;
 
-import java.io.File;
-import java.io.IOException;
 import java.security.Security;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
 import org.apache.hadoop.hbase.exceptions.TrustManagerException;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -68,82 +55,14 @@ import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
  *      revision</a>
  */
 @RunWith(Parameterized.class)
-@Category({ MiscTests.class, SmallTests.class })
-public class TestX509Util {
+@Category({ SecurityTests.class, SmallTests.class })
+public class TestX509Util extends AbstractTestX509Parameterized {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestX509Util.class);
 
-  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
   private static final char[] EMPTY_CHAR_ARRAY = new char[0];
-
-  private static X509TestContextProvider PROVIDER;
-
-  @Parameterized.Parameter()
-  public X509KeyType caKeyType;
-
-  @Parameterized.Parameter(value = 1)
-  public X509KeyType certKeyType;
-
-  @Parameterized.Parameter(value = 2)
-  public char[] keyPassword;
-
-  @Parameterized.Parameter(value = 3)
-  public Integer paramIndex;
-
-  private X509TestContext x509TestContext;
-
-  private Configuration conf;
-
-  @Parameterized.Parameters(
-      name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, paramIndex={3}")
-  public static Collection<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
-    int paramIndex = 0;
-    for (X509KeyType caKeyType : X509KeyType.values()) {
-      for (X509KeyType certKeyType : X509KeyType.values()) {
-        for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, paramIndex++ });
-        }
-      }
-    }
-    return params;
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws IOException {
-    Security.addProvider(new BouncyCastleProvider());
-    File dir = new File(UTIL.getDataTestDir(TestX509Util.class.getSimpleName()).toString())
-      .getCanonicalFile();
-    FileUtils.forceMkdir(dir);
-    PROVIDER = new X509TestContextProvider(UTIL.getConfiguration(), dir);
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() {
-    Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
-    UTIL.cleanupTestDir();
-  }
-
-  @Before
-  public void setUp() throws IOException {
-    x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
-    x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
-    conf = new Configuration(UTIL.getConfiguration());
-  }
-
-  @After
-  public void cleanUp() {
-    x509TestContext.clearConfigurations();
-    x509TestContext.getConf().unset(X509Util.TLS_CONFIG_OCSP);
-    x509TestContext.getConf().unset(X509Util.TLS_CONFIG_CLR);
-    x509TestContext.getConf().unset(X509Util.TLS_CONFIG_PROTOCOL);
-    System.clearProperty("com.sun.net.ssl.checkRevocation");
-    System.clearProperty("com.sun.security.enableCRLDP");
-    Security.setProperty("ocsp.enable", Boolean.FALSE.toString());
-    Security.setProperty("com.sun.security.enableCRLDP", Boolean.FALSE.toString());
-  }
 
   @Test
   public void testCreateSSLContextWithoutCustomProtocol() throws Exception {
