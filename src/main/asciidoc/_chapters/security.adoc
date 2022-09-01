@@ -695,6 +695,17 @@ greatest cryptographic solution at all times.
 Since Region Servers effectively work as clients from Master's perspective, TLS supports encrypted communication
 between cluster members too.
 
+[NOTE]
+====
+From version 2.6.0 HBase supports the
+link:https://hadoop.apache.org/docs/r3.3.4/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html[Hadoop CredentialProvider API]
+to avoid storing sensitive information in HBase configuration files. The recommended way of storing keystore / truststore passwords
+is to use one of the supported credential providers e.g. the local jceks file provider. You can find more information
+about how to setup credential providers in the Hadoop documentation.
+
+The CLI interface for accessing the Hadoop Credential Shell is also available in HBase CLI. Type `hbase credential` to get help.
+====
+
 === Server side configuration
 
 We need to set up Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
@@ -709,20 +720,15 @@ clients:
   <value>true</value>
 </property>
 <property>
-  <name>hbase.rpc.tls.keystore.type</name>
-  <value>JKS</value>
-</property>
-<property>
   <name>hbase.rpc.tls.keystore.location</name>
   <value>/path/to/keystore.jks</value>
 </property>
-<property>
-  <name>hbase.rpc.tls.keystore.password</name>
-  <value>keyStor3pa$$w0rd</value>
-</property>
 ----
 
-The supported store types are based on the registered security providers. If not specified, JKS will be used by default.
+Use `hbase.rpc.tls.keystore.password` alias to retrieve key store password from Hadoop credential provider.
+
+NOTE: The supported storefile formats are based on the registered security providers and the loader can be autodetected from
+the file extension. If needed, the file format can be explicitly specified with the `hbase.rpc.tls.keystore.type` property.
 
 === Client side configuration
 
@@ -736,18 +742,15 @@ when doing the handshake with the server. Add the following to `hbase-site.xml`.
   <value>true</value>
 </property>
 <property>
-  <name>hbase.rpc.tls.truststore.type</name>
-  <value>JKS</value>
-</property>
-<property>
   <name>hbase.rpc.tls.truststore.location</name>
   <value>/path/to/truststore.jks</value>
 </property>
-<property>
-  <name>hbase.rpc.tls.truststore.password</name>
-  <value>trustStor3pa$$w0rd</value>
-</property>
 ----
+
+Use `hbase.rpc.tls.truststore.password` alias to retrieve trust store password from Hadoop credential provider.
+
+NOTE: The supported storefile formats are based on the registered security providers and the loader can be autodetected from
+the file extension. If needed, the file format can be explicitly specified with the `hbase.rpc.tls.truststore.type` property.
 
 However, specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list
 of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them,
