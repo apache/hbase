@@ -712,6 +712,7 @@
     <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
          property as of javadoc-plugin 3.0.0 -->
     <doclint>none</doclint>
+    <javax.activation.version>1.2.0</javax.activation.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1882,6 +1883,32 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <configuration>
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+            <phase>process-resources</phase>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <phase>clean</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -3149,6 +3176,22 @@
             <version>${hadoop-two.version}</version>
             <exclusions>
               <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
               </exclusion>
@@ -3585,7 +3628,7 @@
             -->
             <groupId>javax.activation</groupId>
             <artifactId>javax.activation-api</artifactId>
-            <version>1.2.0</version>
+            <version>${javax.activation.version}</version>
             <scope>test</scope>
           </dependency>
           <dependency>
@@ -3698,6 +3741,10 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>bouncycastle</groupId>
+                <artifactId>bcprov-jdk15</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3711,7 +3758,6 @@
             <artifactId>hadoop-distcp</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
-
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
@@ -3753,6 +3799,10 @@
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop-three.version}</version>
             <exclusions>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
@@ -3812,6 +3862,22 @@
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
             <version>${hadoop-three.version}</version>
             <exclusions>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
@@ -4353,6 +4419,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>bouncycastle</groupId>
+                <artifactId>bcprov-jdk15</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

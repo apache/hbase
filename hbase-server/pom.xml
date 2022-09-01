@@ -277,17 +277,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minikdc</artifactId>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>bouncycastle</groupId>
-          <artifactId>bcprov-jdk15</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.kerby</groupId>
       <artifactId>kerb-client</artifactId>
       <scope>test</scope>
@@ -732,6 +721,11 @@
           <version>${netty.hadoop.version}</version>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -838,6 +832,11 @@
           <version>${netty.hadoop.version}</version>
           <scope>test</scope>
         </dependency-->
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
