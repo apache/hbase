@@ -25,7 +25,6 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -214,7 +213,7 @@ public class NettyRpcServer extends RpcServer {
   }
 
   private void initSSL(ChannelPipeline p, boolean supportPlaintext)
-    throws X509Exception, SSLException {
+    throws X509Exception, IOException {
     SslContext nettySslContext = X509Util.createSslContextForServer(conf);
 
     if (supportPlaintext) {

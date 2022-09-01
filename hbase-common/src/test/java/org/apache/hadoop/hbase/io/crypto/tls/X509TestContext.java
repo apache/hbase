@@ -56,14 +56,14 @@ public final class X509TestContext {
   private final Configuration conf;
 
   private final X509Certificate trustStoreCertificate;
-  private final String trustStorePassword;
+  private final char[] trustStorePassword;
   private File trustStoreJksFile;
   private File trustStorePemFile;
   private File trustStorePkcs12File;
 
   private final KeyPair keyStoreKeyPair;
   private final X509Certificate keyStoreCertificate;
-  private final String keyStorePassword;
+  private final char[] keyStorePassword;
   private File keyStoreJksFile;
   private File keyStorePemFile;
   private File keyStorePkcs12File;
@@ -80,7 +80,7 @@ public final class X509TestContext {
    * @param keyStorePassword   the password to protect the key store private key.
    */
   private X509TestContext(Configuration conf, File tempDir, KeyPair trustStoreKeyPair,
-    String trustStorePassword, KeyPair keyStoreKeyPair, String keyStorePassword)
+    char[] trustStorePassword, KeyPair keyStoreKeyPair, char[] keyStorePassword)
     throws IOException, GeneralSecurityException, OperatorCreationException {
     if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
       throw new IllegalStateException("BC Security provider was not found");
@@ -117,7 +117,7 @@ public final class X509TestContext {
     return tempDir;
   }
 
-  public String getTrustStorePassword() {
+  public char[] getTrustStorePassword() {
     return trustStorePassword;
   }
 
@@ -198,12 +198,12 @@ public final class X509TestContext {
     return keyStoreCertificate;
   }
 
-  public String getKeyStorePassword() {
+  public char[] getKeyStorePassword() {
     return keyStorePassword;
   }
 
   public boolean isKeyStoreEncrypted() {
-    return keyStorePassword.length() > 0;
+    return keyStorePassword != null;
   }
 
   public Configuration getConf() {
@@ -307,11 +307,11 @@ public final class X509TestContext {
     KeyStoreFileType trustStoreFileType) throws IOException {
     conf.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION,
       this.getKeyStoreFile(keyStoreFileType).getAbsolutePath());
-    conf.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD, this.getKeyStorePassword());
+    conf.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD, String.valueOf(this.getKeyStorePassword()));
     conf.set(X509Util.TLS_CONFIG_KEYSTORE_TYPE, keyStoreFileType.getPropertyValue());
     conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION,
       this.getTrustStoreFile(trustStoreFileType).getAbsolutePath());
-    conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD, this.getTrustStorePassword());
+    conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD, String.valueOf(this.getTrustStorePassword()));
     conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE, trustStoreFileType.getPropertyValue());
   }
 
@@ -332,9 +332,9 @@ public final class X509TestContext {
     private final Configuration conf;
     private File tempDir;
     private X509KeyType trustStoreKeyType;
-    private String trustStorePassword;
+    private char[] trustStorePassword;
     private X509KeyType keyStoreKeyType;
-    private String keyStorePassword;
+    private char[] keyStorePassword;
 
     /**
      * Creates an empty builder with the given Configuration.
@@ -342,9 +342,7 @@ public final class X509TestContext {
     public Builder(Configuration conf) {
       this.conf = conf;
       trustStoreKeyType = X509KeyType.EC;
-      trustStorePassword = "";
       keyStoreKeyType = X509KeyType.EC;
-      keyStorePassword = "";
     }
 
     /**
@@ -387,7 +385,7 @@ public final class X509TestContext {
      * @param password the password.
      * @return this Builder.
      */
-    public Builder setTrustStorePassword(String password) {
+    public Builder setTrustStorePassword(char[] password) {
       trustStorePassword = password;
       return this;
     }
@@ -409,7 +407,7 @@ public final class X509TestContext {
      * @param password the password.
      * @return this Builder.
      */
-    public Builder setKeyStorePassword(String password) {
+    public Builder setKeyStorePassword(char[] password) {
       keyStorePassword = password;
       return this;
     }
