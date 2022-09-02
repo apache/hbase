@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -404,6 +405,7 @@ public final class PermissionStorage {
 
     Scan scan = new Scan();
     scan.addFamily(ACL_LIST_FAMILY);
+    scan.setPriority(HConstants.MASTER_HIGH_QOS);
 
     InternalScanner iScanner = null;
     try {
@@ -512,6 +514,7 @@ public final class PermissionStorage {
     ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
     Get get = new Get(entryName);
     get.addFamily(ACL_LIST_FAMILY);
+    get.setPriority(HConstants.MASTER_HIGH_QOS);
     Result row = null;
     if (t == null) {
       try (Connection connection = ConnectionFactory.createConnection(conf)) {

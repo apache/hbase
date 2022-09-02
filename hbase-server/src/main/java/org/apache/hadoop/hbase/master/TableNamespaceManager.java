@@ -73,7 +73,8 @@ public class TableNamespaceManager {
   private void migrateNamespaceTable() throws IOException {
     try (Table nsTable = masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
       ResultScanner scanner = nsTable.getScanner(
-        new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES).readAllVersions());
+        new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
+          .readAllVersions().setPriority(HConstants.MASTER_HIGH_QOS));
       BufferedMutator mutator =
         masterServices.getConnection().getBufferedMutator(TableName.META_TABLE_NAME)) {
       for (Result result;;) {
@@ -99,7 +100,8 @@ public class TableNamespaceManager {
 
   private void loadNamespaceIntoCache() throws IOException {
     try (Table table = masterServices.getConnection().getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = table.getScanner(HConstants.NAMESPACE_FAMILY)) {
+      ResultScanner scanner = table.getScanner(new Scan().addFamily(HConstants.NAMESPACE_FAMILY)
+        .setPriority(HConstants.MASTER_HIGH_QOS))) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {

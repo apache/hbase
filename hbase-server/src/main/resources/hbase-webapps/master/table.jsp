@@ -219,8 +219,8 @@
 <%  return;
   } %>
 
-<% // unknow table
-  if (! admin.tableExists(TableName.valueOf(fqtn)).get()) { %>
+<% // unknown table
+  if (! master.getTableDescriptors().exists(TableName.valueOf(fqtn))) { %>
     <div class="container-fluid content">
       <div class="row inner_header">
         <div class="page-header">

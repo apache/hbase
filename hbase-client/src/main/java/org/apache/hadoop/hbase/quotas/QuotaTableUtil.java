@@ -33,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -243,6 +244,7 @@ public class QuotaTableUtil {
     if (filter != null && !filter.isNull()) {
       scan.setFilter(makeFilter(filter));
     }
+    scan.setPriority(HConstants.MASTER_HIGH_QOS);
     return scan;
   }
 

@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
@@ -447,7 +448,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
     List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
     AsyncTable<?> table = conn.getTable(RSGROUP_TABLE_NAME);
-    try (ResultScanner scanner = table.getScanner(META_FAMILY_BYTES, META_QUALIFIER_BYTES)) {
+    Scan scan = new Scan()
+      .addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES)
+      .setPriority(HConstants.MASTER_HIGH_QOS);
+    try (ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {
         result = scanner.next();
         if (result == null) {
@@ -794,7 +798,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             createRSGroupTable();
           }
           // try reading from the table
-          FutureUtils.get(conn.getTable(RSGROUP_TABLE_NAME).get(new Get(ROW_KEY)));
+          FutureUtils.get(conn.getTable(RSGROUP_TABLE_NAME)
+            .get(new Get(ROW_KEY).setPriority(HConstants.MASTER_HIGH_QOS)));
           LOG.info("RSGroup table={} is online, refreshing cached information", RSGROUP_TABLE_NAME);
           RSGroupInfoManagerImpl.this.refresh(true);
           online = true;

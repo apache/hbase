@@ -185,6 +185,7 @@ public final class MetaTableAccessor {
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(HConstants.MASTER_HIGH_QOS);
     Result r;
     try (Table t = getMetaHTable(connection)) {
       r = t.get(get);
@@ -212,6 +213,7 @@ public final class MetaTableAccessor {
     throws IOException {
     Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(ri));
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(HConstants.MASTER_HIGH_QOS);
     try (Table t = getMetaHTable(connection)) {
       return t.get(get);
     }
@@ -227,6 +229,7 @@ public final class MetaTableAccessor {
     throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
+    get.setPriority(HConstants.MASTER_HIGH_QOS);
     try (Table t = getMetaHTable(connection)) {
       return t.get(get);
     }
@@ -340,6 +343,7 @@ public final class MetaTableAccessor {
       scan.setReadType(Scan.ReadType.PREAD);
     }
     scan.setCaching(scannerCaching);
+    scan.setPriority(HConstants.MASTER_HIGH_QOS);
     return scan;
   }
 
@@ -387,7 +391,7 @@ public final class MetaTableAccessor {
       LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
       TableState state = CatalogFamilyFormat.getTableState(r);
       if (state != null) {
-        LOG.info("fullScanMetaAndPrint.Table State={}" + state);
+        LOG.info("fullScanMetaAndPrint.Table State={}", state);
       } else {
         RegionLocations locations = CatalogFamilyFormat.getRegionLocations(r);
         if (locations == null) {
@@ -585,7 +589,7 @@ public final class MetaTableAccessor {
     }
     Table metaHTable = getMetaHTable(conn);
     Get get = new Get(tableName.getName()).addColumn(HConstants.TABLE_FAMILY,
-      HConstants.TABLE_STATE_QUALIFIER);
+      HConstants.TABLE_STATE_QUALIFIER).setPriority(HConstants.MASTER_HIGH_QOS);
     Result result = metaHTable.get(get);
     return CatalogFamilyFormat.getTableState(result);
   }
@@ -881,7 +885,7 @@ public final class MetaTableAccessor {
     addRegionInfo(put, regionInfo);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
-    LOG.info("Updated row {} with server=", regionInfo.getRegionNameAsString(), sn);
+    LOG.info("Updated row {} with server={}", regionInfo.getRegionNameAsString(), sn);
   }
 
   public static Put addRegionInfo(final Put p, final RegionInfo hri) throws IOException {
