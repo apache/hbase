@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -106,6 +107,9 @@ public interface ColumnFamilyDescriptor {
 
   /** Returns the data block encoding algorithm used in block cache and optionally on disk */
   DataBlockEncoding getDataBlockEncoding();
+
+  /** Return the index block encoding algorithm used in block cache and optionally on disk */
+  IndexBlockEncoding getIndexBlockEncoding();
 
   /** Returns Return the raw crypto key attribute for the family, or null if not set */
   byte[] getEncryptionKey();
