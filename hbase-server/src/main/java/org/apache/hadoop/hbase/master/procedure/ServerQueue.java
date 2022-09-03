@@ -41,6 +41,7 @@ class ServerQueue extends Queue<ServerName> {
       case CLAIM_REPLICATION_QUEUES:
       case CLAIM_REPLICATION_QUEUE_REMOTE:
       case VERIFY_SNAPSHOT:
+      case LOG_ROLL:
         return false;
       default:
         break;

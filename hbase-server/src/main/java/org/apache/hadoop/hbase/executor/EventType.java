@@ -291,7 +291,14 @@ public enum EventType {
    * RS verify snapshot.<br>
    * RS_VERIFY_SNAPSHOT
    */
-  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS);
+  RS_VERIFY_SNAPSHOT(88, ExecutorType.RS_SNAPSHOT_OPERATIONS),
+
+  /**
+   *  RS log roll.<br>
+   *
+   *  RS_LOG_ROLL
+   */
+  RS_LOG_ROLL(89, ExecutorType.RS_LOG_ROLL);
 
   private final int code;
   private final ExecutorType executor;

@@ -119,3 +119,30 @@ message BackupInfo {
     STORE_MANIFEST = 5;
   }
 }
+enum LogRollState {
+  LOG_ROLL_ROLL_LOG_ON_EACH_RS = 1;
+  LOG_ROLL_ROLL_LOG_FINISH = 2;
+}
+enum RSLogRollState {
+  RS_LOG_ROLL_ROLL_LOG_REMOTE = 1;
+  RS_LOG_ROLL_CONFIRM_RESULT = 2;
+}
+
+message LogRollData {
+  required string backup_root = 1;
+}
+
+message RSLogRollData {
+  required string backup_root = 1;
+  required ServerName target_server = 2;
+  required int64 last_log_roll_result = 3;
+}
+
+message RSLogRollRemoteData {
+  required string backup_root = 1;
+  required ServerName target_server = 2;
+}
+
+message RSLogRollParameter {
+  required string backup_root = 1;
+}
