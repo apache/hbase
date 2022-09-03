@@ -588,8 +588,9 @@ public final class MetaTableAccessor {
       return new TableState(tableName, TableState.State.ENABLED);
     }
     Table metaHTable = getMetaHTable(conn);
-    Get get = new Get(tableName.getName()).addColumn(HConstants.TABLE_FAMILY,
-      HConstants.TABLE_STATE_QUALIFIER).setPriority(HConstants.MASTER_HIGH_QOS);
+    Get get = new Get(tableName.getName())
+      .addColumn(HConstants.TABLE_FAMILY, HConstants.TABLE_STATE_QUALIFIER)
+      .setPriority(HConstants.MASTER_HIGH_QOS);
     Result result = metaHTable.get(get);
     return CatalogFamilyFormat.getTableState(result);
   }

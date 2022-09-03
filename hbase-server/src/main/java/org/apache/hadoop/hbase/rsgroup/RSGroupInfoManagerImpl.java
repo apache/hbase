@@ -448,8 +448,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private List<RSGroupInfo> retrieveGroupListFromGroupTable() throws IOException {
     List<RSGroupInfo> rsGroupInfoList = Lists.newArrayList();
     AsyncTable<?> table = conn.getTable(RSGROUP_TABLE_NAME);
-    Scan scan = new Scan()
-      .addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES)
+    Scan scan = new Scan().addColumn(META_FAMILY_BYTES, META_QUALIFIER_BYTES)
       .setPriority(HConstants.MASTER_HIGH_QOS);
     try (ResultScanner scanner = table.getScanner(scan)) {
       for (Result result;;) {

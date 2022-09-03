@@ -72,8 +72,8 @@ public class TableNamespaceManager {
 
   private void migrateNamespaceTable() throws IOException {
     try (Table nsTable = masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
-      ResultScanner scanner = nsTable.getScanner(
-        new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
+      ResultScanner scanner =
+        nsTable.getScanner(new Scan().addFamily(TableDescriptorBuilder.NAMESPACE_FAMILY_INFO_BYTES)
           .readAllVersions().setPriority(HConstants.MASTER_HIGH_QOS));
       BufferedMutator mutator =
         masterServices.getConnection().getBufferedMutator(TableName.META_TABLE_NAME)) {
