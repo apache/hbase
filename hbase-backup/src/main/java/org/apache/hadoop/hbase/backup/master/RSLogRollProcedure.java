@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.backup.master;
 
 import java.io.IOException;
@@ -32,14 +31,14 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.RSLogRollData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.RSLogRollState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
 @InterfaceAudience.Private
-public class RSLogRollProcedure
-  extends StateMachineProcedure<MasterProcedureEnv, RSLogRollState>
+public class RSLogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, RSLogRollState>
   implements ServerProcedureInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSLogRollProcedure.class);
@@ -77,12 +76,11 @@ public class RSLogRollProcedure
           return Flow.NO_MORE_STATE;
         }
         try {
-          BackupSystemTable table =
-            new BackupSystemTable(env.getMasterServices().getConnection());
+          BackupSystemTable table = new BackupSystemTable(env.getMasterServices().getConnection());
           long newestLogRollResult = table
             .getRegionServerLastLogRollResult(targetServer.getAddress().toString(), backupRoot);
-          LOG.debug("newestLogRollResult={}, lastLogRollResult={}",
-            newestLogRollResult, lastLogRollResult);
+          LOG.debug("newestLogRollResult={}, lastLogRollResult={}", newestLogRollResult,
+            lastLogRollResult);
           if (newestLogRollResult > lastLogRollResult) {
             return Flow.NO_MORE_STATE;
           } else {
@@ -144,8 +142,8 @@ public class RSLogRollProcedure
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     super.serializeStateData(serializer);
     RSLogRollData.Builder builder = RSLogRollData.newBuilder();
-    builder.setTargetServer(ProtobufUtil.toServerName(targetServer))
-      .setBackupRoot(backupRoot).setLastLogRollResult(lastLogRollResult);
+    builder.setTargetServer(ProtobufUtil.toServerName(targetServer)).setBackupRoot(backupRoot)
+      .setLastLogRollResult(lastLogRollResult);
     serializer.serialize(builder.build());
   }
 
@@ -167,9 +165,8 @@ public class RSLogRollProcedure
 
   @Override
   protected void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName())
-      .append(" targetServer=").append(targetServer)
-      .append(", backupRoot=").append(backupRoot)
-      .append(", lastLogRollResult=").append(lastLogRollResult);
+    sb.append(getClass().getSimpleName()).append(" targetServer=").append(targetServer)
+      .append(", backupRoot=").append(backupRoot).append(", lastLogRollResult=")
+      .append(lastLogRollResult);
   }
 }

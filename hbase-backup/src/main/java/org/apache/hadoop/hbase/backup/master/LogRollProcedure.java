@@ -1,13 +1,13 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,12 +40,12 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.LogRollData;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.BackupProtos.LogRollState;
 
 @InterfaceAudience.Private
-public class LogRollProcedure
-  extends StateMachineProcedure<MasterProcedureEnv, LogRollState>
+public class LogRollProcedure extends StateMachineProcedure<MasterProcedureEnv, LogRollState>
   implements TableProcedureInterface {
 
   private static final Logger LOG = LoggerFactory.getLogger(RSLogRollProcedure.class);
@@ -72,8 +72,7 @@ public class LogRollProcedure
         case LOG_ROLL_ROLL_LOG_ON_EACH_RS:
           final List<ServerName> onlineServers =
             env.getMasterServices().getServerManager().getOnlineServersList();
-          final List<RSLogRollProcedure> subProcedures =
-            new ArrayList<>(onlineServers.size());
+          final List<RSLogRollProcedure> subProcedures = new ArrayList<>(onlineServers.size());
           final BackupSystemTable table =
             new BackupSystemTable(env.getMasterServices().getConnection());
           final HashMap<String, Long> lastLogRollResults =

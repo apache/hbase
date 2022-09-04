@@ -700,16 +700,16 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * read Region Server last roll log result (timestamp) from the backup system table
-   * @param server Region Server name
+   * @param server     Region Server name
    * @param backupRoot root directory path to backup
    * @throws IOException exception
    */
   public Long getRegionServerLastLogRollResult(String server, String backupRoot)
-      throws IOException {
+    throws IOException {
     try (Table table = connection.getTable(tableName)) {
       Get get = createGetForRegionServerLastLogRollResult(server, backupRoot);
-      byte[] value = table.get(get)
-        .getValue(BackupSystemTable.META_FAMILY, Bytes.toBytes("rs-log-ts"));
+      byte[] value =
+        table.get(get).getValue(BackupSystemTable.META_FAMILY, Bytes.toBytes("rs-log-ts"));
       if (value == null) {
         return Long.MIN_VALUE;
       } else {

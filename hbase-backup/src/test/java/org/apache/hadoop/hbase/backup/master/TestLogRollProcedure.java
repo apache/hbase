@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManage
 import static org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.DISPATCH_DELAY_CONF_KEY;
 import static org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.DISPATCH_MAX_QUEUE_SIZE_CONF_KEY;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -108,8 +109,8 @@ public class TestLogRollProcedure {
     LogRollProcedure procedure = new LogRollProcedure(backupRoot, conf);
     long procId = cluster.getMaster().getMasterProcedureExecutor().submitProcedure(procedure);
 
-    TEST_UTIL.waitFor(60000, () -> cluster.getMaster().getMasterProcedureExecutor()
-      .getProcedures().stream().anyMatch(p -> p instanceof RSLogRollRemoteProcedure));
+    TEST_UTIL.waitFor(60000, () -> cluster.getMaster().getMasterProcedureExecutor().getProcedures()
+      .stream().anyMatch(p -> p instanceof RSLogRollRemoteProcedure));
     ServerName serverName = cluster.getMaster().getServerName();
     cluster.killMaster(serverName);
     cluster.waitForMasterToStop(serverName, 30000);

@@ -1860,8 +1860,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         .setCorePoolSize(rsSnapshotOperationThreads));
     final int logRollThreads =
       conf.getInt("hbase.regionserver.executor.backup.log.roll.threads", 1);
-    executorService.startExecutorService(executorService.new ExecutorConfig().setExecutorType(
-      ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);

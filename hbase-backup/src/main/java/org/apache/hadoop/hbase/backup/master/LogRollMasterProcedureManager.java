@@ -66,8 +66,7 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
   public static final String BACKUP_TIMEOUT_MILLIS_KEY = "hbase.backup.logroll.timeout.millis";
   public static final String BACKUP_POOL_THREAD_NUMBER_KEY =
     "hbase.backup.logroll.pool.thread.number";
-  public static final String LOGROLL_PROCEDURE_ENABLED =
-    "hbase.backup.logroll.procedure.enabled";
+  public static final String LOGROLL_PROCEDURE_ENABLED = "hbase.backup.logroll.procedure.enabled";
 
   public static final int BACKUP_WAKE_MILLIS_DEFAULT = 500;
   public static final int BACKUP_TIMEOUT_MILLIS_DEFAULT = 180000;
@@ -110,8 +109,8 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
     ProcedureCoordinatorRpcs comms =
       coordManager.getProcedureCoordinatorRpcs(getProcedureSignature(), name);
     this.coordinator = new ProcedureCoordinator(comms, tpool, timeoutMillis, wakeFrequency);
-    this.logRollProcedureEnabled = conf.getBoolean(LOGROLL_PROCEDURE_ENABLED,
-      LOGROLL_PROCEDURE_ENABLED_DEFAULT);
+    this.logRollProcedureEnabled =
+      conf.getBoolean(LOGROLL_PROCEDURE_ENABLED, LOGROLL_PROCEDURE_ENABLED_DEFAULT);
   }
 
   @Override
@@ -128,9 +127,9 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
     }
 
     if (logRollProcedureEnabled) {
-      NameStringPair pair = desc.getConfigurationList().stream()
-        .filter(p -> "backupRoot".equals(p.getName())).findFirst()
-        .orElseThrow(() -> new DoNotRetryIOException("backupRoot is not specified"));
+      NameStringPair pair =
+        desc.getConfigurationList().stream().filter(p -> "backupRoot".equals(p.getName()))
+          .findFirst().orElseThrow(() -> new DoNotRetryIOException("backupRoot is not specified"));
       long procId = master.getMasterProcedureExecutor()
         .submitProcedure(new LogRollProcedure(pair.getValue(), master.getConfiguration()));
       return Bytes.toBytes(procId);
@@ -211,8 +210,8 @@ public class LogRollMasterProcedureManager extends MasterProcedureManager {
       return done;
     } else {
       if (!logRollProcedureEnabled) {
-        throw new IOException("LogRollProcedure is DISABLED now. "
-          + "Maybe Master is restarted with new settings.");
+        throw new IOException(
+          "LogRollProcedure is DISABLED now. " + "Maybe Master is restarted with new settings.");
       }
       long dummyProcId = Long.parseLong(dummyProcIdStr);
       ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();

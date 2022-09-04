@@ -58,7 +58,7 @@ public interface ServerProcedureInterface {
     VERIFY_SNAPSHOT,
 
     /**
-     *  send roll log request to region server and handle the response
+     * send roll log request to region server and handle the response
      */
     LOG_ROLL
   }

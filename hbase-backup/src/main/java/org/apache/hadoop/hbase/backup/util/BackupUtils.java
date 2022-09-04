@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManage
 import static org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager.ROLLLOG_PROCEDURE_SIGNATURE;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.FutureUtils.get;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -76,11 +77,11 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 
 /**
  * A collection for methods used by multiple classes to backup HBase tables.
@@ -766,20 +767,19 @@ public final class BackupUtils {
   }
 
   private static CompletableFuture<Void> logRollInternal(Map<String, String> props,
-      Configuration config) {
+    Configuration config) {
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(ConnectionFactory.createAsyncConnection(config), (asyncConn, error1) -> {
       if (error1 != null) {
         closeConnectionAndCompleteFuture(future, error1, asyncConn);
       } else {
-        addListener(asyncConn.getAdmin()
-            .execProcedureWithReturn(ROLLLOG_PROCEDURE_SIGNATURE, ROLLLOG_PROCEDURE_NAME, props),
-          (res, error2) -> {
+        addListener(asyncConn.getAdmin().execProcedureWithReturn(ROLLLOG_PROCEDURE_SIGNATURE,
+          ROLLLOG_PROCEDURE_NAME, props), (res, error2) -> {
             if (error2 != null) {
               closeConnectionAndCompleteFuture(future, error2, asyncConn);
             } else {
-              long pauseNs = TimeUnit.MILLISECONDS.toNanos(
-                config.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE));
+              long pauseNs = TimeUnit.MILLISECONDS
+                .toNanos(config.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE));
 
               if (res == null || res.length == 0) {
                 waitProcedureDone(props, asyncConn, future, pauseNs, 0);
@@ -803,9 +803,8 @@ public final class BackupUtils {
 
   private static void waitProcedureDone(Map<String, String> props, AsyncConnection conn,
     CompletableFuture<Void> future, long pauseNs, int retries) {
-    addListener(conn.getAdmin()
-        .isProcedureFinished(ROLLLOG_PROCEDURE_SIGNATURE, ROLLLOG_PROCEDURE_NAME, props),
-      (done, error) -> {
+    addListener(conn.getAdmin().isProcedureFinished(ROLLLOG_PROCEDURE_SIGNATURE,
+      ROLLLOG_PROCEDURE_NAME, props), (done, error) -> {
         if (error != null) {
           closeConnectionAndCompleteFuture(future, error, conn);
           return;
@@ -819,8 +818,8 @@ public final class BackupUtils {
       });
   }
 
-  private static void closeConnectionAndCompleteFuture(CompletableFuture<Void> future,
-    Throwable ex, AsyncConnection conn) {
+  private static void closeConnectionAndCompleteFuture(CompletableFuture<Void> future, Throwable ex,
+    AsyncConnection conn) {
     if (!conn.isClosed()) {
       try {
         conn.close();
