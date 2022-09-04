@@ -31,8 +31,6 @@ import static org.mockito.Mockito.mock;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.Collections;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
