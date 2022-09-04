@@ -128,7 +128,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPEMKeyStore() throws Exception {
     // Make sure we can instantiate a key manager from the PEM file on disk
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getKeyStorePassword(), KeyStoreFileType.PEM.getPropertyValue());
   }
@@ -137,7 +137,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   public void testLoadPEMKeyStoreNullPassword() throws Exception {
     assumeThat(x509TestContext.getKeyStorePassword(), equalTo(EMPTY_CHAR_ARRAY));
     // Make sure that empty password and null password are treated the same
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(), null,
       KeyStoreFileType.PEM.getPropertyValue());
   }
@@ -145,7 +145,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPEMKeyStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a key manager from the PEM file on disk
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getKeyStorePassword(),
       null /* null StoreFileType means 'autodetect from file extension' */);
@@ -154,7 +154,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test(expected = KeyManagerException.class)
   public void testLoadPEMKeyStoreWithWrongPassword() throws Exception {
     // Attempting to load with the wrong key password should fail
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       "wrong password".toCharArray(), // intentionally use the wrong password
       KeyStoreFileType.PEM.getPropertyValue());
@@ -163,7 +163,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPEMTrustStore() throws Exception {
     // Make sure we can instantiate a trust manager from the PEM file on disk
-    X509TrustManager tm = X509Util.createTrustManager(
+    X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), KeyStoreFileType.PEM.getPropertyValue(), false,
       false);
@@ -173,7 +173,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   public void testLoadPEMTrustStoreNullPassword() throws Exception {
     assumeThat(x509TestContext.getTrustStorePassword(), equalTo(EMPTY_CHAR_ARRAY));
     // Make sure that empty password and null password are treated the same
-    X509TrustManager tm = X509Util.createTrustManager(
+    X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(), null,
       KeyStoreFileType.PEM.getPropertyValue(), false, false);
   }
@@ -181,7 +181,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPEMTrustStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a trust manager from the PEM file on disk
-    X509TrustManager tm = X509Util.createTrustManager(
+    X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'
@@ -208,7 +208,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadJKSKeyStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a key manager from the JKS file on disk
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
       x509TestContext.getKeyStorePassword(),
       null /* null StoreFileType means 'autodetect from file extension' */);
@@ -244,7 +244,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadJKSTrustStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a trust manager from the JKS file on disk
-    X509TrustManager tm = X509Util.createTrustManager(
+    X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'
@@ -281,7 +281,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPKCS12KeyStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a key manager from the PKCS12 file on disk
-    X509KeyManager km = X509Util.createKeyManager(
+    X509Util.createKeyManager(
       x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
       x509TestContext.getKeyStorePassword(),
       null /* null StoreFileType means 'autodetect from file extension' */);
@@ -318,7 +318,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   @Test
   public void testLoadPKCS12TrustStoreAutodetectStoreFileType() throws Exception {
     // Make sure we can instantiate a trust manager from the PKCS12 file on disk
-    X509TrustManager tm = X509Util.createTrustManager(
+    X509Util.createTrustManager(
       x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
       x509TestContext.getTrustStorePassword(), null, // null StoreFileType means 'autodetect from
                                                      // file extension'

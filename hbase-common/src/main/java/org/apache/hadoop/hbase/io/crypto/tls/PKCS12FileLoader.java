@@ -25,7 +25,7 @@ package org.apache.hadoop.hbase.io.crypto.tls;
  *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/PKCS12FileLoader.java">Base
  *      revision</a>
  */
-class PKCS12FileLoader extends StandardTypeFileKeyStoreLoader {
+final class PKCS12FileLoader extends StandardTypeFileKeyStoreLoader {
   private PKCS12FileLoader(String keyStorePath, String trustStorePath, char[] keyStorePassword,
     char[] trustStorePassword) {
     super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword,

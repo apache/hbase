@@ -165,12 +165,14 @@ final class PemReader {
       KeyFactory keyFactory = KeyFactory.getInstance("RSA");
       return keyFactory.generatePrivate(encodedKeySpec);
     } catch (InvalidKeySpecException ignore) {
+      // ignore
     }
 
     try {
       KeyFactory keyFactory = KeyFactory.getInstance("EC");
       return keyFactory.generatePrivate(encodedKeySpec);
     } catch (InvalidKeySpecException ignore) {
+      // ignore
     }
 
     KeyFactory keyFactory = KeyFactory.getInstance("DSA");
@@ -196,12 +198,14 @@ final class PemReader {
       KeyFactory keyFactory = KeyFactory.getInstance("RSA");
       return keyFactory.generatePublic(encodedKeySpec);
     } catch (InvalidKeySpecException ignore) {
+      // ignore
     }
 
     try {
       KeyFactory keyFactory = KeyFactory.getInstance("EC");
       return keyFactory.generatePublic(encodedKeySpec);
     } catch (InvalidKeySpecException ignore) {
+      // ignore
     }
 
     KeyFactory keyFactory = KeyFactory.getInstance("DSA");

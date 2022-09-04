@@ -25,7 +25,7 @@ import java.util.Objects;
  *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/main/java/org/apache/zookeeper/common/FileKeyStoreLoaderBuilderProvider.java">Base
  *      revision</a>
  */
-class FileKeyStoreLoaderBuilderProvider {
+final class FileKeyStoreLoaderBuilderProvider {
   /**
    * Returns a {@link FileKeyStoreLoader.Builder} that can build a loader which loads keys and certs
    * from files of the given {@link KeyStoreFileType}.
@@ -46,5 +46,9 @@ class FileKeyStoreLoaderBuilderProvider {
       default:
         throw new AssertionError("Unexpected StoreFileType: " + type.name());
     }
+  }
+
+  private FileKeyStoreLoaderBuilderProvider() {
+    // disabled
   }
 }
