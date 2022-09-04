@@ -24,21 +24,17 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.ByteBufferKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -104,10 +100,10 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
 
   /**
    * Writes this chunk into the given output stream in the root block index format. This format is
-   * similar to the {@link HFile} version 1 block index format, except that we store on-disk size
-   * of the block instead of its uncompressed size.
-   * @param out the data output stream to write the block index to. Typically a stream writing
-   *            into an {@link HFile} block. n
+   * similar to the {@link HFile} version 1 block index format, except that we store on-disk size of
+   * the block instead of its uncompressed size.
+   * @param out the data output stream to write the block index to. Typically a stream writing into
+   *            an {@link HFile} block. n
    */
   private void writeRoot(BlockIndexChunk blockIndexChunk, DataOutput out) throws IOException {
     for (int i = 0; i < blockIndexChunk.getNumEntries(); ++i) {
