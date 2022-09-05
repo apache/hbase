@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -124,6 +125,8 @@ public class HFileWriterImpl implements HFile.Writer {
    */
   protected final HFileDataBlockEncoder blockEncoder;
 
+  protected final HFileIndexBlockEncoder indexBlockEncoder;
+
   protected final HFileContext hFileContext;
 
   private int maxTagsLength = 0;
@@ -171,6 +174,12 @@ public class HFileWriterImpl implements HFile.Writer {
       this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
+    }
+    IndexBlockEncoding indexBlockEncoding = hFileContext.getIndexBlockEncoding();
+    if (indexBlockEncoding != IndexBlockEncoding.NONE) {
+      this.indexBlockEncoder = new HFileIndexBlockEncoderImpl(indexBlockEncoding);
+    } else {
+      this.indexBlockEncoder = NoOpIndexBlockEncoder.INSTANCE;
     }
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -299,7 +308,7 @@ public class HFileWriterImpl implements HFile.Writer {
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
-      cacheIndexesOnWrite ? cacheConf : null, cacheIndexesOnWrite ? name : null);
+      cacheIndexesOnWrite ? cacheConf : null, cacheIndexesOnWrite ? name : null, indexBlockEncoder);
     dataBlockIndexWriter.setMaxChunkSize(HFileBlockIndex.getMaxChunkSize(conf));
     dataBlockIndexWriter.setMinIndexNumEntries(HFileBlockIndex.getMinIndexNumEntries(conf));
     inlineBlockWriters.add(dataBlockIndexWriter);
@@ -590,6 +599,8 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     // Save data block encoder metadata in the file info.
     blockEncoder.saveMetadata(this);
+    // Save index block encoder metadata in the file info.
+    indexBlockEncoder.saveMetadata(this);
     // Write out the end of the data blocks, then write meta data blocks.
     // followed by fileinfo, data block index and meta block index.
 
