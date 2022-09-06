@@ -281,7 +281,7 @@ final class X509TestHelpers {
     StringWriter stringWriter = new StringWriter();
     JcaPEMWriter pemWriter = new JcaPEMWriter(stringWriter);
     OutputEncryptor encryptor = null;
-    if (password != null) {
+    if (password != null && password.length > 0) {
       encryptor =
         new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
           .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG).setPasssword(password)
@@ -341,6 +341,23 @@ final class X509TestHelpers {
     return certToTrustStoreBytes(cert, keyPassword, trustStore);
   }
 
+  /**
+   * Encodes the given X509Certificate as a BCFKS TrustStore, optionally protecting the cert with a
+   * password (though it's unclear why one would do this since certificates only contain public
+   * information and do not need to be kept secret). Returns the byte array encoding of the trust
+   * store, which may be written to a file and loaded to instantiate the trust store at a later
+   * point or in another process.
+   * @param cert        the certificate to serialize.
+   * @param keyPassword an optional password to encrypt the trust store. If empty or null, the cert
+   *                    will not be encrypted.
+   * @return the serialized bytes of the BCFKS trust store. nn
+   */
+  public static byte[] certToBCFKSTrustStoreBytes(X509Certificate cert, char[] keyPassword)
+    throws IOException, GeneralSecurityException {
+    KeyStore trustStore = KeyStore.getInstance("BCFKS");
+    return certToTrustStoreBytes(cert, keyPassword, trustStore);
+  }
+
   private static byte[] certToTrustStoreBytes(X509Certificate cert, char[] keyPassword,
     KeyStore trustStore) throws IOException, GeneralSecurityException {
     trustStore.load(null, keyPassword);
@@ -384,6 +401,23 @@ final class X509TestHelpers {
   public static byte[] certAndPrivateKeyToPKCS12Bytes(X509Certificate cert, PrivateKey privateKey,
     char[] keyPassword) throws IOException, GeneralSecurityException {
     KeyStore keyStore = KeyStore.getInstance("PKCS12");
+    return certAndPrivateKeyToBytes(cert, privateKey, keyPassword, keyStore);
+  }
+
+  /**
+   * Encodes the given X509Certificate and private key as a BCFKS KeyStore, optionally protecting
+   * the private key (and possibly the cert?) with a password. Returns the byte array encoding of
+   * the key store, which may be written to a file and loaded to instantiate the key store at a
+   * later point or in another process.
+   * @param cert        the X509 certificate to serialize.
+   * @param privateKey  the private key to serialize.
+   * @param keyPassword an optional key password. If empty or null, the private key will not be
+   *                    encrypted.
+   * @return the serialized bytes of the BCFKS key store. nn
+   */
+  public static byte[] certAndPrivateKeyToBCFKSBytes(X509Certificate cert, PrivateKey privateKey,
+    char[] keyPassword) throws IOException, GeneralSecurityException {
+    KeyStore keyStore = KeyStore.getInstance("BCFKS");
     return certAndPrivateKeyToBytes(cert, privateKey, keyPassword, keyStore);
   }
 
