@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Security;
@@ -227,19 +224,16 @@ public final class X509Util {
   static X509KeyManager createKeyManager(String keyStoreLocation, char[] keyStorePassword,
     String keyStoreType) throws KeyManagerException {
 
-    if (keyStoreType == null) {
-      keyStoreType = "jks";
-    }
-
     if (keyStorePassword == null) {
       keyStorePassword = EMPTY_CHAR_ARRAY;
     }
 
     try {
-      KeyStore ks = KeyStore.getInstance(keyStoreType);
-      try (InputStream inputStream = Files.newInputStream(new File(keyStoreLocation).toPath())) {
-        ks.load(inputStream, keyStorePassword);
-      }
+      KeyStoreFileType storeFileType =
+        KeyStoreFileType.fromPropertyValueOrFileName(keyStoreType, keyStoreLocation);
+      KeyStore ks = FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(storeFileType)
+        .setKeyStorePath(keyStoreLocation).setKeyStorePassword(keyStorePassword).build()
+        .loadKeyStore();
 
       KeyManagerFactory kmf = KeyManagerFactory.getInstance("PKIX");
       kmf.init(ks, keyStorePassword);
@@ -272,19 +266,16 @@ public final class X509Util {
   static X509TrustManager createTrustManager(String trustStoreLocation, char[] trustStorePassword,
     String trustStoreType, boolean crlEnabled, boolean ocspEnabled) throws TrustManagerException {
 
-    if (trustStoreType == null) {
-      trustStoreType = "jks";
-    }
-
     if (trustStorePassword == null) {
       trustStorePassword = EMPTY_CHAR_ARRAY;
     }
 
     try {
-      KeyStore ts = KeyStore.getInstance(trustStoreType);
-      try (InputStream inputStream = Files.newInputStream(new File(trustStoreLocation).toPath())) {
-        ts.load(inputStream, trustStorePassword);
-      }
+      KeyStoreFileType storeFileType =
+        KeyStoreFileType.fromPropertyValueOrFileName(trustStoreType, trustStoreLocation);
+      KeyStore ts = FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(storeFileType)
+        .setTrustStorePath(trustStoreLocation).setTrustStorePassword(trustStorePassword).build()
+        .loadTrustStore();
 
       PKIXBuilderParameters pbParams = new PKIXBuilderParameters(ts, new X509CertSelector());
       if (crlEnabled || ocspEnabled) {

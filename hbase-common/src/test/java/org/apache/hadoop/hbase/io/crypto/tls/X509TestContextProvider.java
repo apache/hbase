@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 
@@ -83,4 +86,18 @@ public class X509TestContextProvider {
   public X509TestContext get(X509KeyType caKeyType, X509KeyType certKeyType, char[] keyPassword) {
     return ctxs.getUnchecked(new CacheKey(caKeyType, certKeyType, keyPassword));
   }
+
+  static Collection<Object[]> defaultParams() {
+    List<Object[]> params = new ArrayList<>();
+    int paramIndex = 0;
+    for (X509KeyType caKeyType : X509KeyType.values()) {
+      for (X509KeyType certKeyType : X509KeyType.values()) {
+        for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
+          params.add(new Object[] { caKeyType, certKeyType, keyPassword, paramIndex++ });
+        }
+      }
+    }
+    return params;
+  }
+
 }

@@ -31,7 +31,6 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
@@ -60,6 +59,7 @@ public final class X509TestContext {
   private File trustStoreJksFile;
   private File trustStorePemFile;
   private File trustStorePkcs12File;
+  private File trustStoreBcfksFile;
 
   private final KeyPair keyStoreKeyPair;
   private final X509Certificate keyStoreCertificate;
@@ -67,6 +67,7 @@ public final class X509TestContext {
   private File keyStoreJksFile;
   private File keyStorePemFile;
   private File keyStorePkcs12File;
+  private File keyStoreBcfksFile;
 
   /**
    * Constructor is intentionally private, use the Builder class instead.
@@ -137,6 +138,8 @@ public final class X509TestContext {
         return getTrustStorePemFile();
       case PKCS12:
         return getTrustStorePkcs12File();
+      case BCFKS:
+        return getTrustStoreBcfksFile();
       default:
         throw new IllegalArgumentException("Invalid trust store type: " + storeFileType
           + ", must be one of: " + Arrays.toString(KeyStoreFileType.values()));
@@ -194,6 +197,25 @@ public final class X509TestContext {
     return trustStorePkcs12File;
   }
 
+  private File getTrustStoreBcfksFile() throws IOException {
+    if (trustStoreBcfksFile == null) {
+      File trustStoreBcfksFile = File.createTempFile(TRUST_STORE_PREFIX,
+        KeyStoreFileType.BCFKS.getDefaultFileExtension(), tempDir);
+      trustStoreBcfksFile.deleteOnExit();
+      try (
+        final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStoreBcfksFile)) {
+        byte[] bytes =
+          X509TestHelpers.certToBCFKSTrustStoreBytes(trustStoreCertificate, trustStorePassword);
+        trustStoreOutputStream.write(bytes);
+        trustStoreOutputStream.flush();
+      } catch (GeneralSecurityException e) {
+        throw new IOException(e);
+      }
+      this.trustStoreBcfksFile = trustStoreBcfksFile;
+    }
+    return trustStoreBcfksFile;
+  }
+
   public X509Certificate getKeyStoreCertificate() {
     return keyStoreCertificate;
   }
@@ -226,6 +248,8 @@ public final class X509TestContext {
         return getKeyStorePemFile();
       case PKCS12:
         return getKeyStorePkcs12File();
+      case BCFKS:
+        return getKeyStoreBcfksFile();
       default:
         throw new IllegalArgumentException("Invalid key store type: " + storeFileType
           + ", must be one of: " + Arrays.toString(KeyStoreFileType.values()));
@@ -284,6 +308,24 @@ public final class X509TestContext {
       this.keyStorePkcs12File = keyStorePkcs12File;
     }
     return keyStorePkcs12File;
+  }
+
+  private File getKeyStoreBcfksFile() throws IOException {
+    if (keyStoreBcfksFile == null) {
+      File keyStoreBcfksFile = File.createTempFile(KEY_STORE_PREFIX,
+        KeyStoreFileType.BCFKS.getDefaultFileExtension(), tempDir);
+      keyStoreBcfksFile.deleteOnExit();
+      try (final FileOutputStream keyStoreOutputStream = new FileOutputStream(keyStoreBcfksFile)) {
+        byte[] bytes = X509TestHelpers.certAndPrivateKeyToBCFKSBytes(keyStoreCertificate,
+          keyStoreKeyPair.getPrivate(), keyStorePassword);
+        keyStoreOutputStream.write(bytes);
+        keyStoreOutputStream.flush();
+      } catch (GeneralSecurityException e) {
+        throw new IOException(e);
+      }
+      this.keyStoreBcfksFile = keyStoreBcfksFile;
+    }
+    return keyStoreBcfksFile;
   }
 
   /**
@@ -411,14 +453,6 @@ public final class X509TestContext {
       keyStorePassword = password;
       return this;
     }
-  }
-
-  /**
-   * Returns a new default-constructed Builder.
-   * @return a new Builder.
-   */
-  public static Builder newBuilder() {
-    return newBuilder(HBaseConfiguration.create());
   }
 
   /**
