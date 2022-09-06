@@ -2561,13 +2561,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           info = this.server.getAssignmentManager()
             .getRegionInfoFromEncodedRegionName(spec.getValue().toStringUtf8());
         } else {
-          // TODO: actually, a full region name can save a lot on meta scan, improve later.
           info = CatalogFamilyFormat.parseRegionInfoFromRegionName(spec.getValue().toByteArray());
         }
         replicaId = info.getReplicaId();
         LOG.trace("region info", info);
         RegionState prevState =
           this.server.getAssignmentManager().getRegionStates().getRegionState(info);
+
+        // If there is no region with input region encodedName or regionName,
+        // let client know.
+        if (prevState == null) {
+          throw new ServiceException("Region {} does not exist" + info);
+        }
         RegionState.State newState = RegionState.State.convert(s.getState());
         LOG.info("{} set region={} state from {} to {}", server.getClientIdAuditPrefix(), info,
           prevState.getState(), newState);
