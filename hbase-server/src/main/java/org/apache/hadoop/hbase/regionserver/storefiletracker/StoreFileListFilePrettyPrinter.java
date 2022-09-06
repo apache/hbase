@@ -61,8 +61,8 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   private final String regionOption = "r";
   private final String tableNameOption = "t";
 
-  private final String helpMsg = "sft [--file=</path/to/tracker/file> | --table=<namespace:"
-    + "tablename|tablename> --region=<regionname> --columnFamily=<columnfamily> ]";
+  private final String helpMsg = "sft [--f=</path/to/tracker/file> | --t=<namespace:"
+    + "tablename|tablename> --r=<regionname> --cf=<columnfamily> ]";
 
   private String namespace;
   private String regionName;
