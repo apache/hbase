@@ -1,3 +1,4 @@
+
 Apache HBase [1] is an open-source, distributed, versioned, column-oriented
 store modeled after Google' Bigtable: A Distributed Storage System for
 Structured Data by Chang et al.[2]  Just as Bigtable leverages the distributed
@@ -23,6 +24,7 @@ The HBase mailing lists and archives are listed here [8].
 The HBase distribution includes cryptographic software. See the export control
 notice here [9].
 
+The following are the websites mentioned in the article：
 1. http://hbase.apache.org
 2. http://research.google.com/archive/bigtable.html
 3. http://hadoop.apache.org
