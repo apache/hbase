@@ -84,7 +84,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean parallelSeekEnabled = false;
   private ExecutorService executor;
   private final Scan scan;
-  private long oldestUnexpiredTS = 0L;
+  private final long oldestUnexpiredTS;
   private final long now;
   private final int minVersions;
   private final long maxRowSize;
@@ -161,7 +161,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
-    boolean cacheBlocks, ScanType scanType) {
+    boolean cacheBlocks, ScanType scanType, Long timeStampOrigin) {
     this.readPt = readPt;
     this.store = store;
     this.cacheBlocks = cacheBlocks;
@@ -170,7 +170,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     explicitColumnQuery = numColumns > 0;
     this.scan = scan;
     this.now = EnvironmentEdgeManager.currentTime();
-    this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
+    if (timeStampOrigin == null) {
+      this.oldestUnexpiredTS = scan.isRaw() ? 0L : now - scanInfo.getTtl();
+    } else {
+      this.oldestUnexpiredTS = timeStampOrigin - scanInfo.getTtl();
+    }
     this.minVersions = scanInfo.getMinVersions();
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -230,7 +234,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
     long readPt) throws IOException {
     this(store, scan, scanInfo, columns != null ? columns.size() : 0, readPt, scan.getCacheBlocks(),
-      ScanType.USER_SCAN);
+      ScanType.USER_SCAN, null);
     if (columns != null && scan.isRaw()) {
       throw new DoNotRetryIOException("Cannot specify any column for a raw scan");
     }
@@ -307,7 +311,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     ScanType scanType, long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
     byte[] dropDeletesToRow) throws IOException {
     this(store, SCAN_FOR_COMPACTION, scanInfo, 0,
-      store.getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED), false, scanType);
+      store.getHRegion().getReadPoint(IsolationLevel.READ_COMMITTED), false, scanType, null);
     assert scanType != ScanType.USER_SCAN;
     matcher =
       CompactionScanQueryMatcher.create(scanInfo, scanType, smallestReadPoint, earliestPutTs,
@@ -334,7 +338,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // For mob compaction only as we do not have a Store instance when doing mob compaction.
   public StoreScanner(ScanInfo scanInfo, ScanType scanType,
     List<? extends KeyValueScanner> scanners) throws IOException {
-    this(null, SCAN_FOR_COMPACTION, scanInfo, 0, Long.MAX_VALUE, false, scanType);
+    this(null, SCAN_FOR_COMPACTION, scanInfo, 0, Long.MAX_VALUE, false, scanType, null);
     assert scanType != ScanType.USER_SCAN;
     this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE, 0L,
       oldestUnexpiredTS, now, null, null, null);
@@ -346,7 +350,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<? extends KeyValueScanner> scanners, ScanType scanType) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
-      scanType);
+      scanType, null);
     if (scanType == ScanType.USER_SCAN) {
       this.matcher =
         UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
@@ -362,8 +366,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<? extends KeyValueScanner> scanners, Long timeStampOrigin) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L,
-      scan.getCacheBlocks(), ScanType.USER_SCAN);
-    oldestUnexpiredTS = timeStampOrigin - scanInfo.getTtl();
+      scan.getCacheBlocks(), ScanType.USER_SCAN, timeStampOrigin);
     this.matcher =
       UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
@@ -374,7 +377,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
-      ScanType.USER_SCAN);
+      ScanType.USER_SCAN, null);
     this.matcher =
       UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
@@ -385,7 +388,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, maxVersions > 0 ? new Scan().readVersions(maxVersions) : SCAN_FOR_COMPACTION,
-      scanInfo, 0, 0L, false, scanType);
+      scanInfo, 0, 0L, false, scanType, null);
     this.matcher = CompactionScanQueryMatcher.create(scanInfo, scanType, Long.MAX_VALUE,
       PrivateConstants.OLDEST_TIMESTAMP, oldestUnexpiredTS, now, null, null, null);
     seekAllScanner(scanInfo, scanners);
