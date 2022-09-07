@@ -24,15 +24,12 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -77,7 +74,7 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     TracedAdvancedScanResultConsumer scanConsumer = new TracedAdvancedScanResultConsumer();
-    connectionRule.getAsyncConnection().getTable(TABLE_NAME).scan(scan, scanConsumer);
+    CONN_RULE.getAsyncConnection().getTable(TABLE_NAME).scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
     // these tests batch settings with the sample data result in each result being
     // split in two. so we must allow twice the expected results in order to reach
@@ -104,39 +101,33 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
-    final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    waitForSpan(scanOperationSpanMatcher);
 
-    // RawAsyncTableImpl never invokes the callback to `onScanMetricsCreated` -- bug?
-    final Matcher<SpanData> onScanMetricsCreatedMatcher =
-      hasName("TracedAdvancedScanResultConsumer#onScanMetricsCreated");
-    assertThat(spans, not(hasItem(onScanMetricsCreatedMatcher)));
-
+    final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().get();
     final Matcher<SpanData> onNextMatcher = hasName("TracedAdvancedScanResultConsumer#onNext");
-    assertThat(spans, hasItem(onNextMatcher));
-    spans.stream().filter(onNextMatcher::matches)
+    waitForSpan(onNextMatcher);
+    spanStream().filter(onNextMatcher::matches)
       .forEach(span -> assertThat(span, hasParentSpanId(scanOperationSpanId)));
-    assertThat(spans, hasItem(allOf(onNextMatcher, hasParentSpanId(scanOperationSpanId),
-      hasStatusWithCode(StatusCode.OK), hasEnded())));
+    waitForSpan(allOf(onNextMatcher, hasParentSpanId(scanOperationSpanId),
+      hasStatusWithCode(StatusCode.OK), hasEnded()));
 
     final Matcher<SpanData> onCompleteMatcher =
       hasName("TracedAdvancedScanResultConsumer#onComplete");
-    assertThat(spans, hasItem(onCompleteMatcher));
-    spans.stream().filter(onCompleteMatcher::matches)
+    waitForSpan(onCompleteMatcher);
+    spanStream().filter(onCompleteMatcher::matches)
       .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
         hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
@@ -148,27 +139,26 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
         hasException(exceptionMatcher), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
-    final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    waitForSpan(scanOperationSpanMatcher);
+    final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> onCompleteMatcher = hasName("TracedAdvancedScanResultConsumer#onError");
-    assertThat(spans, hasItem(onCompleteMatcher));
-    spans.stream().filter(onCompleteMatcher::matches)
+    waitForSpan(onCompleteMatcher);
+    spanStream().filter(onCompleteMatcher::matches)
       .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
         hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
