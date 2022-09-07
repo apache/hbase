@@ -366,7 +366,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     seekAllScanner(scanInfo, scanners);
   }
 
-  // Almost the same as above except for settting the start time of oldestUnexpiredTS
+  // Almost the same as below except for settting the start time of oldestUnexpiredTS
   StoreScanner(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
     List<? extends KeyValueScanner> scanners, Long timeStampOrigin) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
