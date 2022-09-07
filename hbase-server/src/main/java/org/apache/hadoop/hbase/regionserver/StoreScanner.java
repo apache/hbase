@@ -382,7 +382,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<? extends KeyValueScanner> scanners) throws IOException {
     // 0 is passed as readpoint because the test bypasses Store
     this(null, scan, scanInfo, columns != null ? columns.size() : 0, 0L, scan.getCacheBlocks(),
-      ScanType.USER_SCAN, null);
+      ScanType.USER_SCAN);
     this.matcher =
       UserScanQueryMatcher.create(scan, scanInfo, columns, oldestUnexpiredTS, now, null);
     seekAllScanner(scanInfo, scanners);
