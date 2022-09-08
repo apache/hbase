@@ -29,7 +29,7 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private static final long serialVersionUID = -5199992013113130534L;
   private final String hfileName;
   private final long offset;
-  private final BlockType blockType;
+  private BlockType blockType;
   private final boolean isPrimaryReplicaBlock;
 
   /**
@@ -97,5 +97,9 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   public BlockType getBlockType() {
     return blockType;
+  }
+
+  public void setBlockType(BlockType blockType) {
+    this.blockType = blockType;
   }
 }
