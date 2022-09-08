@@ -100,7 +100,7 @@ public class HFileBlockIndex {
    * the middle leaf-level index block offset (long), its on-disk size without header included
    * (int), and the mid-key entry's zero-based index in that leaf index block.
    */
-  private static final int MID_KEY_METADATA_SIZE = Bytes.SIZEOF_LONG + 2 * Bytes.SIZEOF_INT;
+  protected static final int MID_KEY_METADATA_SIZE = Bytes.SIZEOF_LONG + 2 * Bytes.SIZEOF_INT;
 
   /**
    * An implementation of the BlockIndexReader that deals with block keys which are plain byte[]
@@ -225,7 +225,7 @@ public class HFileBlockIndex {
     /** Pre-computed mid-key */
     private AtomicReference<Cell> midKey = new AtomicReference<>();
     /** Needed doing lookup on blocks. */
-    private CellComparator comparator;
+    protected CellComparator comparator;
 
     public CellBasedKeyBlockIndexReader(final CellComparator c, final int treeLevel) {
       // Can be null for METAINDEX block
@@ -480,6 +480,82 @@ public class HFileBlockIndex {
           .append(", dataSize=" + blockDataSizes[i]).append("\n");
       }
       return sb.toString();
+    }
+  }
+
+  static class CellBasedKeyBlockIndexReaderV2 extends CellBasedKeyBlockIndexReader {
+
+    private HFileIndexBlockEncoder indexBlockEncoder;
+
+    private HFileIndexBlockEncoder.EncodedSeeker seeker;
+
+    public CellBasedKeyBlockIndexReaderV2(final CellComparator c, final int treeLevel) {
+      this(c, treeLevel, null);
+    }
+
+    public CellBasedKeyBlockIndexReaderV2(final CellComparator c, final int treeLevel,
+      HFileIndexBlockEncoder indexBlockEncoder) {
+      super(c, treeLevel);
+      // Can be null for METAINDEX block
+      this.indexBlockEncoder =
+        indexBlockEncoder != null ? indexBlockEncoder : NoOpIndexBlockEncoder.INSTANCE;
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return seeker.isEmpty();
+    }
+
+    @Override
+    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+      boolean cacheBlocks, boolean pread, boolean isCompaction,
+      DataBlockEncoding expectedDataBlockEncoding, CachingBlockReader cachingBlockReader)
+      throws IOException {
+      return seeker.loadDataBlockWithScanInfo(key, currentBlock, cacheBlocks, pread, isCompaction,
+        expectedDataBlockEncoding, cachingBlockReader);
+    }
+
+    @Override
+    public Cell midkey(CachingBlockReader cachingBlockReader) throws IOException {
+      return seeker.midkey(cachingBlockReader);
+    }
+
+    /**
+     * n * from 0 to {@link #getRootBlockCount() - 1}
+     */
+    public Cell getRootBlockKey(int i) {
+      return seeker.getRootBlockKey(i);
+    }
+
+    @Override
+    public int getRootBlockCount() {
+      return seeker.getRootBlockCount();
+    }
+
+    @Override
+    public int rootBlockContainingKey(Cell key) {
+      return seeker.rootBlockContainingKey(key);
+    }
+
+    @Override
+    protected long calculateHeapSizeForBlockKeys(long heapSize) {
+      heapSize = super.calculateHeapSizeForBlockKeys(heapSize);
+      if (seeker != null) {
+        heapSize += ClassSize.REFERENCE;
+        heapSize += ClassSize.align(seeker.heapSize());
+      }
+      return heapSize;
+    }
+
+    @Override
+    public void readMultiLevelIndexRoot(HFileBlock blk, final int numEntries) throws IOException {
+      seeker = indexBlockEncoder.createSeeker();
+      seeker.initRootIndex(blk, numEntries, comparator, searchTreeLevel);
+    }
+
+    @Override
+    public String toString() {
+      return seeker.toString();
     }
   }
 
@@ -863,13 +939,13 @@ public class HFileBlockIndex {
      * block index. After all levels of the index were written by
      * {@link #writeIndexBlocks(FSDataOutputStream)}, this contains the final root-level index.
      */
-    private BlockIndexChunk rootChunk = new BlockIndexChunk();
+    private BlockIndexChunk rootChunk = new BlockIndexChunkImpl();
 
     /**
      * Current leaf-level chunk. New entries referencing data blocks get added to this chunk until
      * it grows large enough to be written to disk.
      */
-    private BlockIndexChunk curInlineChunk = new BlockIndexChunk();
+    private BlockIndexChunk curInlineChunk = new BlockIndexChunkImpl();
 
     /**
      * The number of block index levels. This is one if there is only root level (even empty), two
@@ -910,9 +986,12 @@ public class HFileBlockIndex {
     /** Name to use for computing cache keys */
     private String nameForCaching;
 
+    /** Type of encoding used for index blocks in HFile */
+    private HFileIndexBlockEncoder indexBlockEncoder;
+
     /** Creates a single-level block index writer */
     public BlockIndexWriter() {
-      this(null, null, null);
+      this(null, null, null, null);
       singleLevelOnly = true;
     }
 
@@ -922,7 +1001,7 @@ public class HFileBlockIndex {
      * @param cacheConf   used to determine when and how a block should be cached-on-write.
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter, CacheConfig cacheConf,
-      String nameForCaching) {
+      String nameForCaching, HFileIndexBlockEncoder indexBlockEncoder) {
       if ((cacheConf == null) != (nameForCaching == null)) {
         throw new IllegalArgumentException(
           "Block cache and file name for " + "caching must be both specified or both null");
@@ -933,6 +1012,8 @@ public class HFileBlockIndex {
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
       this.minIndexNumEntries = HFileBlockIndex.DEFAULT_MIN_INDEX_NUM_ENTRIES;
+      this.indexBlockEncoder =
+        indexBlockEncoder != null ? indexBlockEncoder : NoOpIndexBlockEncoder.INSTANCE;
     }
 
     public void setMaxChunkSize(int maxChunkSize) {
@@ -989,7 +1070,7 @@ public class HFileBlockIndex {
 
       {
         DataOutput blockStream = blockWriter.startWriting(BlockType.ROOT_INDEX);
-        rootChunk.writeRoot(blockStream);
+        indexBlockEncoder.encode(rootChunk, true, blockStream);
         if (midKeyMetadata != null) blockStream.write(midKeyMetadata);
         blockWriter.writeHeaderAndData(out);
         if (cacheConf != null) {
@@ -1030,13 +1111,13 @@ public class HFileBlockIndex {
         throw new IOException("Root-level entries already added in " + "single-level mode");
 
       rootChunk = curInlineChunk;
-      curInlineChunk = new BlockIndexChunk();
+      curInlineChunk = new BlockIndexChunkImpl();
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("Wrote a single-level " + description + " index with " + rootChunk.getNumEntries()
           + " entries, " + rootChunk.getRootSize() + " bytes");
       }
-      rootChunk.writeRoot(out);
+      indexBlockEncoder.encode(rootChunk, true, out);
     }
 
     /**
@@ -1050,10 +1131,10 @@ public class HFileBlockIndex {
     private BlockIndexChunk writeIntermediateLevel(FSDataOutputStream out,
       BlockIndexChunk currentLevel) throws IOException {
       // Entries referencing intermediate-level blocks we are about to create.
-      BlockIndexChunk parent = new BlockIndexChunk();
+      BlockIndexChunk parent = new BlockIndexChunkImpl();
 
       // The current intermediate-level block index chunk.
-      BlockIndexChunk curChunk = new BlockIndexChunk();
+      BlockIndexChunk curChunk = new BlockIndexChunkImpl();
 
       for (int i = 0; i < currentLevel.getNumEntries(); ++i) {
         curChunk.add(currentLevel.getBlockKey(i), currentLevel.getBlockOffset(i),
@@ -1078,7 +1159,7 @@ public class HFileBlockIndex {
       BlockIndexChunk curChunk) throws IOException {
       long beginOffset = out.getPos();
       DataOutputStream dos = blockWriter.startWriting(BlockType.INTERMEDIATE_INDEX);
-      curChunk.writeNonRoot(dos);
+      indexBlockEncoder.encode(curChunk, false, dos);
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
@@ -1172,7 +1253,7 @@ public class HFileBlockIndex {
 
       // Write the inline block index to the output stream in the non-root
       // index block format.
-      curInlineChunk.writeNonRoot(out);
+      indexBlockEncoder.encode(curInlineChunk, false, out);
 
       // Save the first key of the inline block so that we can add it to the
       // parent-level index.
@@ -1266,7 +1347,7 @@ public class HFileBlockIndex {
    * A single chunk of the block index in the process of writing. The data in this chunk can become
    * a leaf-level, intermediate-level, or root index block.
    */
-  static class BlockIndexChunk {
+  static class BlockIndexChunkImpl implements BlockIndexChunk {
 
     /** First keys of the key range corresponding to each index entry. */
     private final List<byte[]> blockKeys = new ArrayList<>();
@@ -1313,7 +1394,9 @@ public class HFileBlockIndex {
      *                              leaf-level chunks, including the one corresponding to the
      *                              second-level entry being added.
      */
-    void add(byte[] firstKey, long blockOffset, int onDiskDataSize, long curTotalNumSubEntries) {
+    @Override
+    public void add(byte[] firstKey, long blockOffset, int onDiskDataSize,
+      long curTotalNumSubEntries) {
       // Record the offset for the secondary index
       secondaryIndexOffsetMarks.add(curTotalNonRootEntrySize);
       curTotalNonRootEntrySize += SECONDARY_INDEX_ENTRY_OVERHEAD + firstKey.length;
@@ -1341,10 +1424,12 @@ public class HFileBlockIndex {
      * account. Used for single-level indexes.
      * @see #add(byte[], long, int, long)
      */
+    @Override
     public void add(byte[] firstKey, long blockOffset, int onDiskDataSize) {
       add(firstKey, blockOffset, onDiskDataSize, -1);
     }
 
+    @Override
     public void clear() {
       blockKeys.clear();
       blockOffsets.clear();
@@ -1366,6 +1451,7 @@ public class HFileBlockIndex {
      * @param k sub-entry index, from 0 to the total number sub-entries - 1
      * @return the 0-based index of the entry corresponding to the given sub-entry
      */
+    @Override
     public int getEntryBySubEntry(long k) {
       // We define mid-key as the key corresponding to k'th sub-entry
       // (0-based).
@@ -1387,6 +1473,7 @@ public class HFileBlockIndex {
      * @return a few serialized fields for finding the mid-key
      * @throws IOException if could not create metadata for computing mid-key
      */
+    @Override
     public byte[] getMidKeyMetadata() throws IOException {
       ByteArrayOutputStream baos = new ByteArrayOutputStream(MID_KEY_METADATA_SIZE);
       DataOutputStream baosDos = new DataOutputStream(baos);
@@ -1422,62 +1509,32 @@ public class HFileBlockIndex {
       return baos.toByteArray();
     }
 
-    /**
-     * Writes the block index chunk in the non-root index block format. This format contains the
-     * number of entries, an index of integer offsets for quick binary search on variable-length
-     * records, and tuples of block offset, on-disk block size, and the first key for each entry. nn
-     */
-    void writeNonRoot(DataOutput out) throws IOException {
-      // The number of entries in the block.
-      out.writeInt(blockKeys.size());
-
-      if (secondaryIndexOffsetMarks.size() != blockKeys.size()) {
-        throw new IOException("Corrupted block index chunk writer: " + blockKeys.size()
-          + " entries but " + secondaryIndexOffsetMarks.size() + " secondary index items");
-      }
-
-      // For each entry, write a "secondary index" of relative offsets to the
-      // entries from the end of the secondary index. This works, because at
-      // read time we read the number of entries and know where the secondary
-      // index ends.
-      for (int currentSecondaryIndex : secondaryIndexOffsetMarks)
-        out.writeInt(currentSecondaryIndex);
-
-      // We include one other element in the secondary index to calculate the
-      // size of each entry more easily by subtracting secondary index elements.
-      out.writeInt(curTotalNonRootEntrySize);
-
-      for (int i = 0; i < blockKeys.size(); ++i) {
-        out.writeLong(blockOffsets.get(i));
-        out.writeInt(onDiskDataSizes.get(i));
-        out.write(blockKeys.get(i));
-      }
-    }
-
     /** Returns the size of this chunk if stored in the non-root index block format */
-    int getNonRootSize() {
+    @Override
+    public int getNonRootSize() {
       return Bytes.SIZEOF_INT // Number of entries
         + Bytes.SIZEOF_INT * (blockKeys.size() + 1) // Secondary index
         + curTotalNonRootEntrySize; // All entries
     }
 
-    /**
-     * Writes this chunk into the given output stream in the root block index format. This format is
-     * similar to the {@link HFile} version 1 block index format, except that we store on-disk size
-     * of the block instead of its uncompressed size.
-     * @param out the data output stream to write the block index to. Typically a stream writing
-     *            into an {@link HFile} block. n
-     */
-    void writeRoot(DataOutput out) throws IOException {
-      for (int i = 0; i < blockKeys.size(); ++i) {
-        out.writeLong(blockOffsets.get(i));
-        out.writeInt(onDiskDataSizes.get(i));
-        Bytes.writeByteArray(out, blockKeys.get(i));
-      }
+    @Override
+    public int getCurTotalNonRootEntrySize() {
+      return curTotalNonRootEntrySize;
+    }
+
+    @Override
+    public List<byte[]> getBlockKeys() {
+      return blockKeys;
+    }
+
+    @Override
+    public List<Integer> getSecondaryIndexOffsetMarks() {
+      return secondaryIndexOffsetMarks;
     }
 
     /** Returns the size of this chunk if stored in the root index block format */
-    int getRootSize() {
+    @Override
+    public int getRootSize() {
       return curTotalRootSize;
     }
 

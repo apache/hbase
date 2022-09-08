@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -224,7 +225,7 @@ public class TestColumnFamilyDescriptorBuilder {
   @Test
   public void testDefaultBuilder() {
     final Map<String, String> defaultValueMap = ColumnFamilyDescriptorBuilder.getDefaultValues();
-    assertEquals(defaultValueMap.size(), 11);
+    assertEquals(defaultValueMap.size(), 12);
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.BLOOMFILTER),
       BloomType.ROW.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.REPLICATION_SCOPE), "0");
@@ -244,6 +245,8 @@ public class TestColumnFamilyDescriptorBuilder {
       KeepDeletedCells.FALSE.toString());
     assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.DATA_BLOCK_ENCODING),
       DataBlockEncoding.NONE.toString());
+    assertEquals(defaultValueMap.get(ColumnFamilyDescriptorBuilder.INDEX_BLOCK_ENCODING),
+      IndexBlockEncoding.NONE.toString());
   }
 
   @Test
