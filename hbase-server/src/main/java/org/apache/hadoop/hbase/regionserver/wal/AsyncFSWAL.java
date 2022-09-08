@@ -41,6 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -200,7 +201,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
    * {@link AbstractFSWAL#rollWriterLock}, there is at most one method call at the same time,so we
    * could just use a simple variable to save the request.
    */
-  private volatile ReplaceWriterRequest replaceWriterRequest = null;
+  private final AtomicReference<ReplaceWriterRequest> replaceWriterRequestRef =
+    new AtomicReference<ReplaceWriterRequest>(null);
 
   private boolean alreadyProcessedShutdown = false;
 
@@ -275,7 +277,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private boolean waitingRoll() {
-    return this.replaceWriterRequest != null;
+    return this.replaceWriterRequestRef.get() != null;
   }
 
   private static boolean writerBroken(int epochAndState) {
@@ -287,15 +289,14 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private boolean completeRolling() {
-    ReplaceWriterRequest replaceWriterRequestToUse = this.replaceWriterRequest;
-    if (replaceWriterRequestToUse == null) {
+    ReplaceWriterRequest replaceWriterRequest = this.replaceWriterRequestRef.getAndSet(null);
+    if (replaceWriterRequest == null) {
       return false;
     }
-    this.replaceWriterRequest = null;
-    if (replaceWriterRequestToUse.shutdown) {
-      this.processShutdown(replaceWriterRequestToUse);
+    if (replaceWriterRequest.shutdown) {
+      this.completeShutdownRequest(replaceWriterRequest);
     } else {
-      this.processReplaceWriter(replaceWriterRequestToUse);
+      this.completeReplaceWriterRequest(replaceWriterRequest);
     }
     return true;
   }
@@ -762,7 +763,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private void addReplaceWriterRequest(ReplaceWriterRequest request) {
-    this.replaceWriterRequest = request;
+    assert this.replaceWriterRequestRef.get() == null;
+    this.replaceWriterRequestRef.set(request);
     consumerScheduled.set(true);
     consumeExecutor.execute(consumer);
   }
@@ -801,11 +803,11 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       consumerScheduled.set(true);
       consumeExecutor.execute(consumer);
     } finally {
-      this.replaceWriterRequest = null;
+      this.replaceWriterRequestRef.set(null);
     }
   }
 
-  private void processReplaceWriter(ReplaceWriterRequest replaceWriterRequest) {
+  private void completeReplaceWriterRequest(ReplaceWriterRequest replaceWriterRequest) {
     try {
       Path oldPath = replaceWriterRequest.oldPath;
       AsyncWriter nextWriter = replaceWriterRequest.nextWriter;
@@ -838,11 +840,12 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
         consumeExecutor.shutdown();
       }
     } finally {
-      this.replaceWriterRequest = null;
+      this.replaceWriterRequestRef.set(null);
+      ;
     }
   }
 
-  private void processShutdown(ReplaceWriterRequest replaceWriterRequest) {
+  private void completeShutdownRequest(ReplaceWriterRequest replaceWriterRequest) {
     try {
       closeWriter(this.writer, replaceWriterRequest.oldPath);
       this.writer = null;
