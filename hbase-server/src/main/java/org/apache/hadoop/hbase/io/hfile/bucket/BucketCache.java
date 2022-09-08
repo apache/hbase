@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -65,6 +67,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
@@ -235,6 +238,8 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
+  private String prefetchedFileListPath;
+
   private static final String FILE_VERIFY_ALGORITHM =
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
@@ -273,6 +278,7 @@ public class BucketCache implements BlockCache, HeapSize {
     this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
     this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
     this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.prefetchedFileListPath = conf.get(PREFETCH_PERSISTENCE_PATH_KEY);
 
     sanityCheckConfigs();
 
@@ -451,6 +457,9 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean inMemory, boolean wait) {
     if (!cacheEnabled) {
       return;
+    }
+    if (cacheKey.getBlockType() == null && cachedItem.getBlockType() != null) {
+      cacheKey.setBlockType(cachedItem.getBlockType());
     }
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
@@ -1187,6 +1196,9 @@ public class BucketCache implements BlockCache, HeapSize {
       fos.write(ProtobufMagic.PB_MAGIC);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
     }
+    if (prefetchedFileListPath != null) {
+      PrefetchExecutor.persistToFile(prefetchedFileListPath);
+    }
   }
 
   /**
@@ -1198,6 +1210,9 @@ public class BucketCache implements BlockCache, HeapSize {
       return;
     }
     assert !cacheEnabled;
+    if (prefetchedFileListPath != null) {
+      PrefetchExecutor.retrieveFromFile(prefetchedFileListPath);
+    }
 
     try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
@@ -1402,6 +1417,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
+    PrefetchExecutor.removePrefetchedFileWhileEvict(hfileName);
     Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
       true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
