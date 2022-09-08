@@ -302,11 +302,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         LOG.info("Re-Initializing compactions because user switched on compactions");
         reInitializeCompactionsExecutors();
       }
-    } else {
-      LOG.info("Interrupting running compactions because user switched off compactions");
-      interrupt();
+      setCompactionsEnabled(onOrOff);
+      return;
     }
+
     setCompactionsEnabled(onOrOff);
+    LOG.info("Interrupting running compactions because user switched off compactions");
+    interrupt();
   }
 
   private void requestCompactionInternal(HRegion region, String why, int priority,
@@ -322,6 +324,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private void requestCompactionInternal(HRegion region, HStore store, String why, int priority,
     boolean selectNow, CompactionLifeCycleTracker tracker,
     CompactionCompleteTracker completeTracker, User user) throws IOException {
+    if (!this.isCompactionsEnabled()) {
+      LOG.info("Ignoring compaction request for " + region + ",because compaction is disabled.");
+      return;
+    }
+
     if (
       this.server.isStopped() || (region.getTableDescriptor() != null
         && !region.getTableDescriptor().isCompactionEnabled())
