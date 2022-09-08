@@ -22,3 +22,4 @@ linklint/
 **/.checkstyle
 .java-version
 tmp
+**/.flattened-pom.xml
