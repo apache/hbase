@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
@@ -254,7 +253,8 @@ public class TestHFileBlockIndex {
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
     FSDataOutputStream outputStream = fs.create(path);
-    HFileBlockIndex.BlockIndexWriter biw = new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
+    HFileBlockIndex.BlockIndexWriter biw =
+      new HFileBlockIndex.BlockIndexWriter(hbw, null, null, null);
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
       hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(RNG.nextInt(1000))));
       long blockOffset = outputStream.getPos();
@@ -432,7 +432,8 @@ public class TestHFileBlockIndex {
 
   @Test
   public void testBlockIndexChunk() throws IOException {
-    BlockIndexChunk c = new BlockIndexChunk();
+    BlockIndexChunk c = new HFileBlockIndex.BlockIndexChunkImpl();
+    HFileIndexBlockEncoder indexBlockEncoder = NoOpIndexBlockEncoder.INSTANCE;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     int N = 1000;
     int[] numSubEntriesAt = new int[N];
@@ -440,12 +441,12 @@ public class TestHFileBlockIndex {
     for (int i = 0; i < N; ++i) {
       baos.reset();
       DataOutputStream dos = new DataOutputStream(baos);
-      c.writeNonRoot(dos);
+      indexBlockEncoder.encode(c, false, dos);
       assertEquals(c.getNonRootSize(), dos.size());
 
       baos.reset();
       dos = new DataOutputStream(baos);
-      c.writeRoot(dos);
+      indexBlockEncoder.encode(c, true, dos);
       assertEquals(c.getRootSize(), dos.size());
 
       byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);

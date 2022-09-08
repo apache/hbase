@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
@@ -344,6 +345,11 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   @Override
   public DataBlockEncoding getDataBlockEncoding() {
     return delegatee.getDataBlockEncoding();
+  }
+
+  @Override
+  public IndexBlockEncoding getIndexBlockEncoding() {
+    return delegatee.getIndexBlockEncoding();
   }
 
   /**

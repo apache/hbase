@@ -1168,6 +1168,7 @@ public class HStore
       .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf))
       .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
+      .withIndexBlockEncoding(family.getIndexBlockEncoding())
       .withCreateTime(EnvironmentEdgeManager.currentTime())
       .withColumnFamily(getColumnFamilyDescriptor().getName())
       .withTableName(getTableName().getName()).withCellComparator(getComparator()).build();

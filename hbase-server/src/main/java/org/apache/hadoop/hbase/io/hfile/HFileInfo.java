@@ -362,17 +362,21 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
         context.getFileSize() - trailer.getTrailerSize());
       // Data index. We also read statistics about the block index written after
       // the root level.
-      this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReader(
-        trailer.createComparator(), trailer.getNumDataIndexLevels());
-      dataIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
+      HFileBlock dataBlockRootIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+      HFileBlock metaBlockIndex = blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX);
+      loadMetaInfo(blockIter, hfileContext);
+
+      HFileIndexBlockEncoder indexBlockEncoder =
+        HFileIndexBlockEncoderImpl.createFromFileInfo(this);
+      this.dataIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(
+        trailer.createComparator(), trailer.getNumDataIndexLevels(), indexBlockEncoder);
+      dataIndexReader.readMultiLevelIndexRoot(dataBlockRootIndex, trailer.getDataIndexCount());
       reader.setDataBlockIndexReader(dataIndexReader);
       // Meta index.
       this.metaIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
-      metaIndexReader.readRootIndex(blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
-        trailer.getMetaIndexCount());
+      metaIndexReader.readRootIndex(metaBlockIndex, trailer.getMetaIndexCount());
       reader.setMetaBlockIndexReader(metaIndexReader);
-      loadMetaInfo(blockIter, hfileContext);
+
       reader.setDataBlockEncoder(HFileDataBlockEncoderImpl.createFromFileInfo(this));
       // Load-On-Open info
       HFileBlock b;
