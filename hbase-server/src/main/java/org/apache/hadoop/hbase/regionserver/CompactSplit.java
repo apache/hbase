@@ -229,10 +229,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
    */
   private synchronized void requestSplit(final Region r, byte[] midKey, User user) {
     if (midKey == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Region " + r.getRegionInfo().getRegionNameAsString()
-          + " not splittable because midkey=null");
-      }
+      LOG.debug("Region " + r.getRegionInfo().getRegionNameAsString()
+        + " not splittable because midkey=null");
       return;
     }
     try {
@@ -241,9 +239,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         LOG.debug("Splitting " + r + ", " + this);
       }
     } catch (RejectedExecutionException ree) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Could not execute split for " + r, ree);
-      }
+      LOG.info("Could not execute split for " + r, ree);
     }
   }
 
@@ -316,9 +312,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     if (onOrOff) {
       // re-create executor pool if compactions are disabled.
       if (!isCompactionsEnabled()) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Re-Initializing compactions because user switched on compactions");
-        }
+        LOG.info("Re-Initializing compactions because user switched on compactions");
         reInitializeCompactionsExecutors();
       }
       setCompactionsEnabled(onOrOff);
@@ -326,9 +320,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     }
 
     setCompactionsEnabled(onOrOff);
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Interrupting running compactions because user switched off compactions");
-    }
+    LOG.info("Interrupting running compactions because user switched off compactions");
     interrupt();
   }
 
@@ -347,9 +339,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     boolean selectNow, CompactionLifeCycleTracker tracker,
     CompactionCompleteTracker completeTracker, User user) throws IOException {
     if (!this.isCompactionsEnabled()) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Ignoring compaction request for " + region + ",because compaction is disabled.");
-      }
+      LOG.info("Ignoring compaction request for " + region + ",because compaction is disabled.");
       return;
     }
 
@@ -372,9 +362,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         + " as an active space quota violation " + " policy disallows compactions.";
       tracker.notExecuted(store, reason);
       completeTracker.completed(store);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(reason);
-      }
+      LOG.debug(reason);
       return;
     }
 
@@ -437,10 +425,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   public synchronized void requestSystemCompaction(HRegion region, HStore store, String why,
     boolean giveUpIfRequestedOrCompacting) throws IOException {
     if (giveUpIfRequestedOrCompacting && isUnderCompaction(store)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Region {} store {} is under compaction now, skip to request compaction", region,
-          store.getColumnFamilyName());
-      }
+      LOG.debug("Region {} store {} is under compaction now, skip to request compaction", region,
+        store.getColumnFamilyName());
       return;
     }
     requestCompactionInternal(region, store, why, NO_PRIORITY, false,
@@ -452,9 +438,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     throws IOException {
     // don't even select for compaction if disableCompactions is set to true
     if (!isCompactionsEnabled()) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info(String.format("User has disabled compactions"));
-      }
+      LOG.info(String.format("User has disabled compactions"));
       return Optional.empty();
     }
     Optional<CompactionContext> compaction = store.requestCompaction(priority, tracker, user);
@@ -482,9 +466,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     while (!done) {
       try {
         done = t.awaitTermination(60, TimeUnit.SECONDS);
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Waiting for " + name + " to finish...");
-        }
+        LOG.info("Waiting for " + name + " to finish...");
         if (!done) {
           t.shutdownNow();
         }
@@ -764,10 +746,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     int largeThreads =
       Math.max(1, newConf.getInt(LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
     if (this.longCompactions.getCorePoolSize() != largeThreads) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Changing the value of " + LARGE_COMPACTION_THREADS + " from "
-          + this.longCompactions.getCorePoolSize() + " to " + largeThreads);
-      }
+      LOG.info("Changing the value of " + LARGE_COMPACTION_THREADS + " from "
+        + this.longCompactions.getCorePoolSize() + " to " + largeThreads);
       if (this.longCompactions.getCorePoolSize() < largeThreads) {
         this.longCompactions.setMaximumPoolSize(largeThreads);
         this.longCompactions.setCorePoolSize(largeThreads);
@@ -779,10 +759,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
     int smallThreads = newConf.getInt(SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
     if (this.shortCompactions.getCorePoolSize() != smallThreads) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Changing the value of " + SMALL_COMPACTION_THREADS + " from "
-          + this.shortCompactions.getCorePoolSize() + " to " + smallThreads);
-      }
+      LOG.info("Changing the value of " + SMALL_COMPACTION_THREADS + " from "
+        + this.shortCompactions.getCorePoolSize() + " to " + smallThreads);
       if (this.shortCompactions.getCorePoolSize() < smallThreads) {
         this.shortCompactions.setMaximumPoolSize(smallThreads);
         this.shortCompactions.setCorePoolSize(smallThreads);
@@ -794,10 +772,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
     int splitThreads = newConf.getInt(SPLIT_THREADS, SPLIT_THREADS_DEFAULT);
     if (this.splits.getCorePoolSize() != splitThreads) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Changing the value of " + SPLIT_THREADS + " from " + this.splits.getCorePoolSize()
-          + " to " + splitThreads);
-      }
+      LOG.info("Changing the value of " + SPLIT_THREADS + " from " + this.splits.getCorePoolSize()
+        + " to " + splitThreads);
       if (this.splits.getCorePoolSize() < splitThreads) {
         this.splits.setMaximumPoolSize(splitThreads);
         this.splits.setCorePoolSize(splitThreads);
