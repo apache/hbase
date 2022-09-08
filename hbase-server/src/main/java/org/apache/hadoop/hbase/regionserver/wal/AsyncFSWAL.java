@@ -204,7 +204,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private final AtomicReference<ReplaceWriterRequest> replaceWriterRequestRef =
     new AtomicReference<ReplaceWriterRequest>(null);
 
-  private boolean alreadyProcessedShutdown = false;
+  private boolean alreadyShutdown = false;
 
   public AsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
     Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists, String prefix,
@@ -605,6 +605,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private void consume() {
+    if (this.alreadyShutdown) {
+      return;
+    }
     if (this.writer == null) {
       this.completeRolling();
       return;
@@ -649,7 +652,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       drainNonMarkerEditsAndFailSyncs();
     }
     appendAndSync();
-    if (this.alreadyProcessedShutdown) {
+    if (this.alreadyShutdown) {
       return;
     }
     if (hasConsumerTask.get()) {
@@ -886,7 +889,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       LOG.error("shut down error!", exception);
       replaceWriterRequest.future.completeExceptionally(exception);
     } finally {
-      this.alreadyProcessedShutdown = true;
+      this.alreadyShutdown = true;
     }
   }
 
