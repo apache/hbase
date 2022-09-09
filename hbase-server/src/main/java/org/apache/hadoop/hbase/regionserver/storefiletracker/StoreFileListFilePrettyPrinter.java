@@ -61,6 +61,9 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   private final String regionOption = "r";
   private final String tableNameOption = "t";
 
+  private final String helpMsg = "sft [--f=</path/to/tracker/file> | --t=<namespace:"
+    + "tablename|tablename> --r=<regionname> --cf=<columnfamily> ]";
+
   private String namespace;
   private String regionName;
   private String columnFamily;
@@ -96,9 +99,7 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
   public boolean parseOptions(String[] args) throws ParseException, IOException {
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
-      formatter
-        .printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|tablename>"
-          + " --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
+      formatter.printHelp(helpMsg, options, true);
       return false;
     }
 
@@ -111,22 +112,19 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
       regionName = cmd.getOptionValue(regionOption);
       if (StringUtils.isEmpty(regionName)) {
         err.println("Region name is not specified.");
-        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
-          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
+        formatter.printHelp(helpMsg, options, true);
         System.exit(1);
       }
       columnFamily = cmd.getOptionValue(columnFamilyOption);
       if (StringUtils.isEmpty(columnFamily)) {
         err.println("Column family is not specified.");
-        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
-          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
+        formatter.printHelp(helpMsg, options, true);
         System.exit(1);
       }
       String tableNameWtihNS = cmd.getOptionValue(tableNameOption);
       if (StringUtils.isEmpty(tableNameWtihNS)) {
         err.println("Table name is not specified.");
-        formatter.printHelp("sft [--file=</path/to/tracker/file> | --table=<namespace:tablename|"
-          + "tablename> --region=<regionname> [--columnFamily=<columnfamily>] ]", options, true);
+        formatter.printHelp(helpMsg, options, true);
         System.exit(1);
       }
       TableName tn = TableName.valueOf(tableNameWtihNS);
