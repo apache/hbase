@@ -37,12 +37,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ConnectionRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -70,18 +72,18 @@ import org.junit.rules.TestRule;
 
 public abstract class AbstractTestAsyncTableScan {
 
-  protected static final OpenTelemetryClassRule otelClassRule = OpenTelemetryClassRule.create();
-  protected static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder()
+  protected static final OpenTelemetryClassRule OTEL_CLASS_RULE = OpenTelemetryClassRule.create();
+  protected static final MiniClusterRule MINI_CLUSTER_RULE = MiniClusterRule.newBuilder()
     .setMiniClusterOption(StartMiniClusterOption.builder().numWorkers(3).build()).build();
 
-  protected static final ConnectionRule connectionRule =
-    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
+  protected static final ConnectionRule CONN_RULE =
+    ConnectionRule.createAsyncConnectionRule(MINI_CLUSTER_RULE::createAsyncConnection);
 
   private static final class Setup extends ExternalResource {
     @Override
     protected void before() throws Throwable {
-      final HBaseTestingUtility testingUtil = miniClusterRule.getTestingUtility();
-      final AsyncConnection conn = connectionRule.getAsyncConnection();
+      final HBaseTestingUtility testingUtil = MINI_CLUSTER_RULE.getTestingUtility();
+      final AsyncConnection conn = CONN_RULE.getAsyncConnection();
 
       byte[][] splitKeys = new byte[8][];
       for (int i = 111; i < 999; i += 111) {
@@ -99,11 +101,11 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   @ClassRule
-  public static final TestRule classRule = RuleChain.outerRule(otelClassRule)
-    .around(miniClusterRule).around(connectionRule).around(new Setup());
+  public static final TestRule classRule = RuleChain.outerRule(OTEL_CLASS_RULE)
+    .around(MINI_CLUSTER_RULE).around(CONN_RULE).around(new Setup());
 
   @Rule
-  public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(otelClassRule);
+  public final OpenTelemetryTestRule otelTestRule = new OpenTelemetryTestRule(OTEL_CLASS_RULE);
 
   @Rule
   public final TestName testName = new TestName();
@@ -136,11 +138,11 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   private static AsyncTable<?> getRawTable() {
-    return connectionRule.getAsyncConnection().getTable(TABLE_NAME);
+    return CONN_RULE.getAsyncConnection().getTable(TABLE_NAME);
   }
 
   private static AsyncTable<?> getTable() {
-    return connectionRule.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
+    return CONN_RULE.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
   }
 
   private static List<Pair<String, Supplier<Scan>>> getScanCreator() {
@@ -198,16 +200,20 @@ public abstract class AbstractTestAsyncTableScan {
   }
 
   protected static void waitForSpan(final Matcher<SpanData> parentSpanMatcher) {
-    final Configuration conf = miniClusterRule.getTestingUtility().getConfiguration();
+    final Configuration conf = MINI_CLUSTER_RULE.getTestingUtility().getConfiguration();
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(
-      "Span for test failed to complete.", otelClassRule::getSpans, hasItem(parentSpanMatcher)));
+      "Span for test failed to complete.", OTEL_CLASS_RULE::getSpans, hasItem(parentSpanMatcher)));
+  }
+
+  protected static Stream<SpanData> spanStream() {
+    return OTEL_CLASS_RULE.getSpans().stream().filter(Objects::nonNull);
   }
 
   @Test
   public void testScanAll() throws Exception {
     List<Result> results = doScan(createScan(), -1);
     // make sure all scanners are closed at RS side
-    miniClusterRule.getTestingUtility().getHBaseCluster().getRegionServerThreads().stream()
+    MINI_CLUSTER_RULE.getTestingUtility().getHBaseCluster().getRegionServerThreads().stream()
       .map(JVMClusterUtil.RegionServerThread::getRegionServer).forEach(
         rs -> assertEquals(
           "The scanner count of " + rs.getServerName() + " is "
