@@ -844,7 +844,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
     } finally {
       this.replaceWriterRequestRef.set(null);
-      ;
     }
   }
 
