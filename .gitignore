@@ -24,3 +24,4 @@ linklint/
 *.log
 **/*.log
 tmp
+**/.flattened-pom.xml
