@@ -22,15 +22,12 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -99,20 +96,19 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
+    waitForSpan(scanOperationSpanMatcher);
   }
 
   @Override
@@ -122,20 +118,19 @@ public class TestAsyncTableScanAll extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
         hasException(exceptionMatcher), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
+    waitForSpan(scanOperationSpanMatcher);
   }
 }
