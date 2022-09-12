@@ -93,7 +93,7 @@ public class CacheConfig {
   public static final String DROP_BEHIND_CACHE_COMPACTION_KEY =
     "hbase.hfile.drop.behind.compaction";
 
-  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file-list.path";
+  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file.list.path";
 
   // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
