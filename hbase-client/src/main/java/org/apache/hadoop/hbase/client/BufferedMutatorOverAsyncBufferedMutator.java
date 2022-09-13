@@ -76,6 +76,9 @@ class BufferedMutatorOverAsyncBufferedMutator implements BufferedMutator {
 
   @Override
   public void mutate(Mutation mutation) throws IOException {
+    if (!(mutation instanceof Put) && !(mutation instanceof Delete)) {
+      throw new IOException("Only supports Put and Delete mutation");
+    }
     mutate(Collections.singletonList(mutation));
   }
 
