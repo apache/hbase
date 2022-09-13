@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.monitoring;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -224,6 +226,26 @@ public class TestTaskMonitor {
     assertEquals("status3", task.getStatusJournal().get(1).getStatus());
     task.prettyPrintJournal();
     tm.shutdown();
+  }
+
+  @Test
+  public void testTaskGroup() {
+    TaskGroup group = TaskGroup.createTaskGroup(true);
+    group.addTask("task1");
+    MonitoredTask task2 = group.addTask("task2");
+    task2.setStatus("task2 status2");
+    task2.setStatus("task2 status3");
+    group.addTask("task3");
+    group.markComplete("group complete");
+    Collection<MonitoredTask> tasks = group.getTasks();
+    assertNotNull(tasks);
+    assertEquals(tasks.size(), 3);
+    for (MonitoredTask task : tasks) {
+      if (task.getDescription().equals("task2")) {
+        assertEquals(task.getStatusJournal().size(), 3);
+        task.prettyPrintJournal();
+      }
+    }
   }
 
   @Test
