@@ -22,16 +22,13 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -83,7 +80,7 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     AsyncTable<?> table =
-      connectionRule.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
+      CONN_RULE.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
     List<Result> results = new ArrayList<>();
     // these tests batch settings with the sample data result in each result being
     // split in two. so we must allow twice the expected results in order to reach
@@ -112,19 +109,17 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
-    assertThat(spans,
-      hasItem(allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
-        hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
+    waitForSpan(allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
+      hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded()));
   }
 
   @Override
@@ -134,20 +129,19 @@ public class TestAsyncTableScanner extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
         hasException(exceptionMatcher), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
+    waitForSpan(scanOperationSpanMatcher);
   }
 }
