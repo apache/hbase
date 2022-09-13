@@ -841,7 +841,7 @@ if [ "${DEBUG}" = "true" ]; then
 fi
 
 # resolve the command arguments
-read -r -a CMD_ARGS <<< "$@"
+CMD_ARGS=("$@")
 if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
   CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
 fi
