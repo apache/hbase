@@ -244,14 +244,12 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   private void runTestSingle(TableName table) throws IOException {
 
     List<String> backupIds = new ArrayList<String>();
-    List<Integer> tableSizes = new ArrayList<Integer>();
 
     try (Connection conn = util.getConnection(); Admin admin = conn.getAdmin();
       BackupAdmin client = new BackupAdminImpl(conn);) {
 
       // #0- insert some data to table 'table'
       loadData(table, rowsInIteration);
-      tableSizes.add(rowsInIteration);
 
       // #1 - create full backup for table first
       LOG.info("create full backup image for {}", table);
@@ -270,7 +268,6 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
 
         // Load data
         loadData(table, rowsInIteration);
-        tableSizes.add(rowsInIteration * count);
         // Do incremental backup
         builder = new BackupRequest.Builder();
         request = builder.withBackupType(BackupType.INCREMENTAL).withTableList(tables)
@@ -322,6 +319,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   /**
+   * Check if backup is succeeded
    * @param backupId pass backup ID to check status of
    * @return status of backup
    */
@@ -429,6 +427,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   /**
+   * Main method
    * @param args argument list
    */
   public static void main(String[] args) throws Exception {
