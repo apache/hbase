@@ -239,8 +239,14 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(this.hFileContext.getCellComparator(),
-        lastCell, cell);
+      int keyComp = 0;
+      if (hFileContext.getIndexBlockEncoding() == IndexBlockEncoding.PREFIX_TREE) {
+        keyComp = this.hFileContext.getCellComparator().compareRows(lastCell, cell);
+      } else {
+        keyComp =
+          PrivateCellUtil.compareKeyIgnoresMvcc(this.hFileContext.getCellComparator(), lastCell,
+            cell);
+      }
       if (keyComp > 0) {
         String message = getLexicalErrorMessage(cell);
         throw new IOException(message);
