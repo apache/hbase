@@ -243,9 +243,8 @@ public class HFileWriterImpl implements HFile.Writer {
       if (hFileContext.getIndexBlockEncoding() == IndexBlockEncoding.PREFIX_TREE) {
         keyComp = this.hFileContext.getCellComparator().compareRows(lastCell, cell);
       } else {
-        keyComp =
-          PrivateCellUtil.compareKeyIgnoresMvcc(this.hFileContext.getCellComparator(), lastCell,
-            cell);
+        keyComp = PrivateCellUtil.compareKeyIgnoresMvcc(this.hFileContext.getCellComparator(),
+          lastCell, cell);
       }
       if (keyComp > 0) {
         String message = getLexicalErrorMessage(cell);

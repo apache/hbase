@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.yetus.audience.InterfaceAudience;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.List;
 
 @InterfaceAudience.Private
 public interface IndexBlockEncoder {
@@ -51,7 +51,8 @@ public interface IndexBlockEncoder {
   IndexEncodedSeeker createSeeker();
 
   /**
-   * An interface which enable to seek while underlying data is encoded. It works on one HFile Index Block.
+   * An interface which enable to seek while underlying data is encoded. It works on one HFile Index
+   * Block.
    */
   interface IndexEncodedSeeker extends HeapSize {
     /**

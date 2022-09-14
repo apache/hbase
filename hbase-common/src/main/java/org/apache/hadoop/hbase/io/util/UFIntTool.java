@@ -15,39 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.io.util;
-
-import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.yetus.audience.InterfaceAudience;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * UFInt is an abbreviation for Unsigned Fixed-width Integer.
- *
- * This class converts between positive ints and 1-4 bytes that represent the int.  All input ints
- * must be positive.  Max values stored in N bytes are:
- *
- * N=1: 2^8  =&gt;           256
- * N=2: 2^16 =&gt;        65,536
- * N=3: 2^24 =&gt;    16,777,216
- * N=4: 2^31 =&gt; 2,147,483,648 (Integer.MAX_VALUE)
- *
- * This was created to get most of the memory savings of a variable length integer when encoding
- * an array of input integers, but to fix the number of bytes for each integer to the number needed
- * to store the maximum integer in the array.  This enables a binary search to be performed on the
- * array of encoded integers.
- *
- * PrefixTree nodes often store offsets into a block that can fit into 1 or 2 bytes.  Note that if
- * the maximum value of an array of numbers needs 2 bytes, then it's likely that a majority of the
- * numbers will also require 2 bytes.
- *
- * warnings:
- *  * no input validation for max performance
- *  * no negatives
+ * UFInt is an abbreviation for Unsigned Fixed-width Integer. This class converts between positive
+ * ints and 1-4 bytes that represent the int. All input ints must be positive. Max values stored in
+ * N bytes are: N=1: 2^8 =&gt; 256 N=2: 2^16 =&gt; 65,536 N=3: 2^24 =&gt; 16,777,216 N=4: 2^31 =&gt;
+ * 2,147,483,648 (Integer.MAX_VALUE) This was created to get most of the memory savings of a
+ * variable length integer when encoding an array of input integers, but to fix the number of bytes
+ * for each integer to the number needed to store the maximum integer in the array. This enables a
+ * binary search to be performed on the array of encoded integers. PrefixTree nodes often store
+ * offsets into a block that can fit into 1 or 2 bytes. Note that if the maximum value of an array
+ * of numbers needs 2 bytes, then it's likely that a majority of the numbers will also require 2
+ * bytes. warnings: * no input validation for max performance * no negatives
  */
 @InterfaceAudience.Private
 public class UFIntTool {
@@ -78,18 +64,11 @@ public class UFIntTool {
     }
   }
 
-  private static final long[] MASKS = new long[] {
-    (long) 255,
-    (long) 255 << 8,
-    (long) 255 << 16,
-    (long) 255 << 24,
-    (long) 255 << 32,
-    (long) 255 << 40,
-    (long) 255 << 48,
-    (long) 255 << 56
-  };
+  private static final long[] MASKS = new long[] { (long) 255, (long) 255 << 8, (long) 255 << 16,
+    (long) 255 << 24, (long) 255 << 32, (long) 255 << 40, (long) 255 << 48, (long) 255 << 56 };
 
-  public static void writeBytes(int outputWidth, final long value, OutputStream os) throws IOException {
+  public static void writeBytes(int outputWidth, final long value, OutputStream os)
+    throws IOException {
     for (int i = outputWidth - 1; i >= 0; --i) {
       os.write((byte) ((value & MASKS[i]) >>> (8 * i)));
     }

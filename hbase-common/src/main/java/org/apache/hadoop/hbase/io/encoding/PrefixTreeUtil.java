@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.util.UFIntTool;
@@ -26,11 +31,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 
 @InterfaceAudience.Private
 public class PrefixTreeUtil {
@@ -39,7 +39,6 @@ public class PrefixTreeUtil {
 
   /**
    * Build tree from begin
-   *
    * @return the tree
    */
   public static TokenizerNode buildPrefixTree(List<byte[]> rowKeys) {
@@ -73,10 +72,9 @@ public class PrefixTreeUtil {
 
   /**
    * Calculate max common prefix
-   *
    * @return the max common prefix num bytes
    */
-  static int  maxCommonPrefix(List<byte[]> rowKeys, int start, int end, int startPos) {
+  static int maxCommonPrefix(List<byte[]> rowKeys, int start, int end, int startPos) {
     // only one entry.
     if (start == end) {
       return rowKeys.get(start).length - startPos;
@@ -105,10 +103,9 @@ public class PrefixTreeUtil {
 
   /**
    * No common prefix split it.
-   *
    */
-  static void constructAndSplitChild(TokenizerNode node, List<byte[]> rowKeys, int start,
-    int end, int startPos) {
+  static void constructAndSplitChild(TokenizerNode node, List<byte[]> rowKeys, int start, int end,
+    int startPos) {
     int middle = start;
     for (int i = start + 1; i <= end; i++) {
       if (startPos > rowKeys.get(i).length - 1) {
@@ -129,10 +126,9 @@ public class PrefixTreeUtil {
 
   /**
    * Get max common prefix as node and build children.
-   *
    */
-  static TokenizerNode constructCommonNodeAndChild(TokenizerNode node, List<byte[]> rowKeys, int start,
-    int end, int startPos) {
+  static TokenizerNode constructCommonNodeAndChild(TokenizerNode node, List<byte[]> rowKeys,
+    int start, int end, int startPos) {
     int common = maxCommonPrefix(rowKeys, start, end, startPos);
     if (common > 0) {
       TokenizerNode child = new TokenizerNode();
@@ -205,8 +201,7 @@ public class PrefixTreeUtil {
   }
 
   public static void serializePrefixTree(TokenizerNode node, PrefixTreeDataWidth dataWidth,
-    ByteArrayOutputStream outputStream)
-    throws IOException {
+    ByteArrayOutputStream outputStream) throws IOException {
     TokenizerNodeMeta meta = new TokenizerNodeMeta();
     PrefixTreeUtil.getNodeMetaInfo(node, meta);
     int totalLength = 0;
@@ -236,17 +231,19 @@ public class PrefixTreeUtil {
     for (int i = meta.leafNodes.size() - 1; i >= 0; i--) {
       TokenizerNode leaf = meta.leafNodes.get(i);
       // no children
-      int leafNodeWidth = dataWidth.nodeDataLengthWidth + leaf.nodeData.length + dataWidth.fanOutWidth
-        + dataWidth.occurrencesWidth + leaf.numOccurrences * dataWidth.indexWidth;
+      int leafNodeWidth =
+        dataWidth.nodeDataLengthWidth + leaf.nodeData.length + dataWidth.fanOutWidth
+          + dataWidth.occurrencesWidth + leaf.numOccurrences * dataWidth.indexWidth;
       negativeIndex += leafNodeWidth;
       leaf.nodeWidth = leafNodeWidth;
       leaf.negativeIndex = negativeIndex;
     }
     for (int i = meta.nonLeafNodes.size() - 1; i >= 0; i--) {
       TokenizerNode nonLeaf = meta.nonLeafNodes.get(i);
-      int leafNodeWidth = dataWidth.nodeDataLengthWidth + nonLeaf.nodeData.length + dataWidth.fanOutWidth
-        + nonLeaf.children.size() + nonLeaf.children.size() * dataWidth.childNodeOffsetWidth
-        + dataWidth.occurrencesWidth + nonLeaf.numOccurrences * dataWidth.indexWidth;
+      int leafNodeWidth =
+        dataWidth.nodeDataLengthWidth + nonLeaf.nodeData.length + dataWidth.fanOutWidth
+          + nonLeaf.children.size() + nonLeaf.children.size() * dataWidth.childNodeOffsetWidth
+          + dataWidth.occurrencesWidth + nonLeaf.numOccurrences * dataWidth.indexWidth;
       negativeIndex += leafNodeWidth;
       nonLeaf.nodeWidth = leafNodeWidth;
       nonLeaf.negativeIndex = negativeIndex;
@@ -270,7 +267,8 @@ public class PrefixTreeUtil {
       os.write(child.nodeData[0]);
     }
     for (TokenizerNode child : node.children) {
-      UFIntTool.writeBytes(dataWidth.childNodeOffsetWidth, node.negativeIndex - child.negativeIndex, os);
+      UFIntTool.writeBytes(dataWidth.childNodeOffsetWidth, node.negativeIndex - child.negativeIndex,
+        os);
     }
     UFIntTool.writeBytes(dataWidth.occurrencesWidth, node.numOccurrences, os);
     for (int i = 0; i < node.numOccurrences; i++) {
@@ -278,8 +276,7 @@ public class PrefixTreeUtil {
     }
   }
 
-  public static void serialize(DataOutput out, PrefixTreeDataWidth dataWidth) throws
-    IOException {
+  public static void serialize(DataOutput out, PrefixTreeDataWidth dataWidth) throws IOException {
     out.writeByte(dataWidth.nodeDataLengthWidth);
     out.writeByte(dataWidth.fanOutWidth);
     out.writeByte(dataWidth.occurrencesWidth);
@@ -297,14 +294,13 @@ public class PrefixTreeUtil {
 
   /**
    * Get the node index, that search key >= index and search key < (index + 1)
-   *
    */
   public static int search(ByteBuffer data, int bbStartPos, byte[] skey, int keyStartPos,
     PrefixTreeDataWidth meta) {
     int nodeDataLength = getNodeDataLength(data, bbStartPos, meta);
-    int cs =
-      ByteBufferUtils.compareTo(skey, keyStartPos, Math.min(skey.length - keyStartPos, nodeDataLength),
-        data, bbStartPos + meta.nodeDataLengthWidth, nodeDataLength);
+    int cs = ByteBufferUtils.compareTo(skey, keyStartPos,
+      Math.min(skey.length - keyStartPos, nodeDataLength), data,
+      bbStartPos + meta.nodeDataLengthWidth, nodeDataLength);
 
     int pos = bbStartPos + meta.nodeDataLengthWidth + nodeDataLength;
     int fanOut = getNodeFanOut(data, pos, meta);
@@ -350,7 +346,7 @@ public class PrefixTreeUtil {
           }
         }
       } else {
-        //skey.length == keyStartPos + nodeDataLength
+        // skey.length == keyStartPos + nodeDataLength
         if (numOccurrences > 0) {
           // == current node and current node is a leaf node.
           return getNodeIndex(data, pos, 0, meta);
@@ -366,7 +362,7 @@ public class PrefixTreeUtil {
           if (numOccurrences == 1) {
             return getNodeIndex(data, pos, 0, meta);
           } else {
-            //TODO
+            // TODO
             throw new IllegalStateException(
               "numOccurrences = " + numOccurrences + " > 1 not expected.");
           }
@@ -403,8 +399,8 @@ public class PrefixTreeUtil {
   }
 
   static int getNodeOffset(ByteBuffer data, int offset, int index, PrefixTreeDataWidth meta) {
-    int nodeOffset =
-      (int) UFIntTool.fromBytes(data, offset + (index * meta.childNodeOffsetWidth), meta.childNodeOffsetWidth);
+    int nodeOffset = (int) UFIntTool.fromBytes(data, offset + (index * meta.childNodeOffsetWidth),
+      meta.childNodeOffsetWidth);
     return nodeOffset;
   }
 
@@ -416,7 +412,6 @@ public class PrefixTreeUtil {
 
   /**
    * Get the node's first leaf node
-   *
    */
   static int getFirstLeafNode(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta) {
     int dataLength = getNodeDataLength(data, bbStartPos, meta);
@@ -438,14 +433,13 @@ public class PrefixTreeUtil {
 
   /**
    * Get the node's last leaf node
-   *
    */
   static int getLastLeafNode(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta) {
     int dataLength = getNodeDataLength(data, bbStartPos, meta);
     int pos = bbStartPos + meta.nodeDataLengthWidth + dataLength;
     int fanOut = getNodeFanOut(data, pos, meta);
     pos += meta.fanOutWidth + fanOut + fanOut * meta.childNodeOffsetWidth;
-    //int numOccurrences = getNodeNumOccurrences(data, pos, meta);
+    // int numOccurrences = getNodeNumOccurrences(data, pos, meta);
     pos += meta.occurrencesWidth;
     if (fanOut == 0) {
       return getNodeIndex(data, pos, 0, meta);
@@ -477,11 +471,13 @@ public class PrefixTreeUtil {
     return -(low + 1); // key not found.
   }
 
-  public static byte[] get(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth dataWidth, int index) {
+  public static byte[] get(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth dataWidth,
+    int index) {
     return get(data, bbStartPos, dataWidth, index, new byte[0]);
   }
 
-  static byte[] get(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta, int index, byte[] prefix) {
+  static byte[] get(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta, int index,
+    byte[] prefix) {
     int dataLength = getNodeDataLength(data, bbStartPos, meta);
     byte[] bdata = new byte[dataLength];
     ByteBuffer dup = data.duplicate();
@@ -517,7 +513,8 @@ public class PrefixTreeUtil {
     }
   }
 
-  static int locateWhichChild(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta, int index, int fanOut, int nodeOffsetStartPos) {
+  static int locateWhichChild(ByteBuffer data, int bbStartPos, PrefixTreeDataWidth meta, int index,
+    int fanOut, int nodeOffsetStartPos) {
     for (int i = 0; i < fanOut; i++) {
       int nodeOffset = getNodeOffset(data, nodeOffsetStartPos, i, meta);
       int lastLeafNode = getLastLeafNode(data, bbStartPos + nodeOffset, meta);
@@ -543,8 +540,8 @@ public class PrefixTreeUtil {
     public ArrayList<TokenizerNode> children = new ArrayList<>();
 
     /*
-     * A count of occurrences in the input byte[]s, not the trie structure. 0 for branch nodes, 1+ for
-     * nubs and leaves.
+     * A count of occurrences in the input byte[]s, not the trie structure. 0 for branch nodes, 1+
+     * for nubs and leaves.
      */
     public int numOccurrences = 0;
 
@@ -553,8 +550,8 @@ public class PrefixTreeUtil {
     public List<KeyValue.KeyOnlyKeyValue> keys = null;
 
     /*
-     * A positive value indicating how many bytes before the end of the block this node will start. If
-     * the section is 55 bytes and negativeOffset is 9, then the node will start at 46.
+     * A positive value indicating how many bytes before the end of the block this node will start.
+     * If the section is 55 bytes and negativeOffset is 9, then the node will start at 46.
      */
     public int negativeIndex = 0;
 

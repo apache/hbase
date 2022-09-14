@@ -212,14 +212,13 @@ public class HFileIndexBlockEncoderImpl implements HFileIndexBlockEncoder {
               // this also accounts for ENCODED_DATA
               expectedBlockType = BlockType.DATA;
             }
-            block =
-              cachingBlockReader.readBlock(currentOffset, currentOnDiskSize, shouldCache, pread,
-                isCompaction, true, expectedBlockType, expectedDataBlockEncoding);
+            block = cachingBlockReader.readBlock(currentOffset, currentOnDiskSize, shouldCache,
+              pread, isCompaction, true, expectedBlockType, expectedDataBlockEncoding);
           }
 
           if (block == null) {
-            throw new IOException(
-              "Failed to read block at offset " + currentOffset + ", onDiskSize=" + currentOnDiskSize);
+            throw new IOException("Failed to read block at offset " + currentOffset
+              + ", onDiskSize=" + currentOnDiskSize);
           }
 
           // Found a data block, break the loop and check our level in the tree.
@@ -230,9 +229,8 @@ public class HFileIndexBlockEncoderImpl implements HFileIndexBlockEncoder {
           // Not a data block. This must be a leaf-level or intermediate-level
           // index block. We don't allow going deeper than searchTreeLevel.
           if (++lookupLevel > searchTreeLevel) {
-            throw new IOException(
-              "Search Tree Level overflow: lookupLevel=" + lookupLevel + ", searchTreeLevel="
-                + searchTreeLevel);
+            throw new IOException("Search Tree Level overflow: lookupLevel=" + lookupLevel
+              + ", searchTreeLevel=" + searchTreeLevel);
           }
 
           // Locate the entry corresponding to the given key in the non-root
@@ -265,9 +263,8 @@ public class HFileIndexBlockEncoderImpl implements HFileIndexBlockEncoder {
         if (block != null) {
           block.release();
         }
-        throw new IOException(
-          "Reached a data block at level " + lookupLevel + " but the number of levels is "
-            + searchTreeLevel);
+        throw new IOException("Reached a data block at level " + lookupLevel
+          + " but the number of levels is " + searchTreeLevel);
       }
 
       // set the next indexed key for the current block.
