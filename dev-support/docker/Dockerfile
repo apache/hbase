@@ -75,10 +75,10 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
 ENV SPOTBUGS_VERSION '4.7.2'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA256 '4967c72396e34b86b9458d0c34c5ed185770a009d357df8e63951ee2844f769f'
+ENV SPOTBUGS_SHA512 '8dd0634c0e5760ade8b2cc3e1d988ed58921dbcbd7568a5a6b4c078d2b2d03c54ebb918329d9832e7e76de23e2e865ff2242cde9ac67d8971f71eea0d43ff0c5'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
-  echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
+  echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
 
 FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
 ENV HADOLINT_VERSION '1.17.5'
