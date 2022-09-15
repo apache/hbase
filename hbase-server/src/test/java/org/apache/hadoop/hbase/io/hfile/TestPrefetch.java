@@ -162,12 +162,14 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-        boolean isCached = blockCache.getBlock(key, true, false, true) != null;
-        if (block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-            || block.getBlockType() == BlockType.INTERMEDIATE_INDEX) {
-          assertTrue(isCached);
-        }
-      });
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(isCached);
+      }
+    });
   }
 
   private void readStoreFileCacheOnly(Path storeFilePath) throws Exception {
@@ -180,17 +182,17 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-        boolean isCached = blockCache.getBlock(key, true, false, true) != null;
-        if (block.getBlockType() == BlockType.DATA) {
-          assertFalse(block.isUnpacked());
-        } else if (
-          block.getBlockType() == BlockType.ROOT_INDEX
-            || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
-        ) {
-          assertTrue(block.isUnpacked());
-        }
-        assertTrue(isCached);
-      });
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (block.getBlockType() == BlockType.DATA) {
+        assertFalse(block.isUnpacked());
+      } else if (
+        block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(block.isUnpacked());
+      }
+      assertTrue(isCached);
+    });
   }
 
   private void readStoreFile(Path storeFilePath,
