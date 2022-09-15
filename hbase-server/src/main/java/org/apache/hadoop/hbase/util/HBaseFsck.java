@@ -983,11 +983,8 @@ public class HBaseFsck extends Configured implements Closeable {
           start = CellUtil.cloneRow(startKv.get());
           Optional<Cell> endKv = hf.getLastKey();
           end = CellUtil.cloneRow(endKv.get());
-        } catch (IOException ioe) {
+        } catch (Exception ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");
-          continue;
-        } catch (NullPointerException ioe) {
-          LOG.warn("Orphan file " + hfile + " is possibly corrupted HFile, skipping");
           continue;
         } finally {
           if (hf != null) {
