@@ -561,14 +561,10 @@ public class ReplicationSource implements ReplicationSourceInterface {
     }
 
     if (!this.isSourceActive()) {
+      // this means the server is shutting down or the source is terminated, just give up
+      // initializing
       setSourceStartupStatus(false);
-      if (Thread.currentThread().isInterrupted()) {
-        // If source is not running and thread is interrupted this means someone has tried to
-        // remove this peer.
-        return;
-      }
-      retryStartup.set(!this.abortOnError);
-      throw new IllegalStateException("Source should be active.");
+      return;
     }
 
     sleepMultiplier = 1;
@@ -589,15 +585,11 @@ public class ReplicationSource implements ReplicationSourceInterface {
       }
     }
 
-    if(!this.isSourceActive()) {
+    if (!this.isSourceActive()) {
+      // this means the server is shutting down or the source is terminated, just give up
+      // initializing
       setSourceStartupStatus(false);
-      if (Thread.currentThread().isInterrupted()) {
-        // If source is not running and thread is interrupted this means someone has tried to
-        // remove this peer.
-        return;
-      }
-      retryStartup.set(!this.abortOnError);
-      throw new IllegalStateException("Source should be active.");
+      return;
     }
 
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
