@@ -126,7 +126,7 @@ public class HConnectionTestingUtility {
       RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(RpcRetryingCallerFactory
-      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, asyncProcess.connection.getConnectionMetrics()));
+      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, null));
     Mockito.when(c.getRpcControllerFactory()).thenReturn(Mockito.mock(RpcControllerFactory.class));
     Table t = Mockito.mock(Table.class);
     Mockito.when(c.getTable((TableName) Mockito.any())).thenReturn(t);
