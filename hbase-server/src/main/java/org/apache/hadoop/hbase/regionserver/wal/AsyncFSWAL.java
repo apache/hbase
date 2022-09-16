@@ -201,8 +201,8 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
    * {@link AbstractFSWAL#rollWriterLock}, there is at most one method call at the same time,so we
    * could just use a simple variable to save the request.
    */
-  private final AtomicReference<ReplaceWriterRequest> replaceWriterRequestRef =
-    new AtomicReference<ReplaceWriterRequest>(null);
+  private final AtomicReference<RollingRequest> rollingRequestRef =
+    new AtomicReference<RollingRequest>(null);
 
   private boolean alreadyShutdown = false;
 
@@ -277,7 +277,7 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private boolean waitingRoll() {
-    return this.replaceWriterRequestRef.get() != null;
+    return this.rollingRequestRef.get() != null;
   }
 
   private static boolean writerBroken(int epochAndState) {
@@ -289,14 +289,17 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   }
 
   private boolean completeRolling() {
-    ReplaceWriterRequest replaceWriterRequest = this.replaceWriterRequestRef.getAndSet(null);
-    if (replaceWriterRequest == null) {
+    /**
+     * Poll the request.
+     */
+    RollingRequest rollingRequest = this.rollingRequestRef.getAndSet(null);
+    if (rollingRequest == null) {
       return false;
     }
-    if (replaceWriterRequest.shutdown) {
-      this.completeShutdownRequest(replaceWriterRequest);
+    if (rollingRequest.shutdown) {
+      this.completeShutdown(rollingRequest);
     } else {
-      this.completeReplaceWriterRequest(replaceWriterRequest);
+      this.completeReplaceWriter(rollingRequest);
     }
     return true;
   }
@@ -765,9 +768,9 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     return createAsyncWriter(fs, path);
   }
 
-  private void addReplaceWriterRequest(ReplaceWriterRequest request) {
-    assert this.replaceWriterRequestRef.get() == null;
-    this.replaceWriterRequestRef.set(request);
+  private void addRollingRequest(RollingRequest request) {
+    assert this.rollingRequestRef.get() == null;
+    this.rollingRequestRef.set(request);
     consumerScheduled.set(true);
     consumeExecutor.execute(consumer);
   }
@@ -798,22 +801,22 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       Preconditions.checkNotNull(nextWriter);
       AsyncWriter oldWriter = this.writer;
       long oldFileLen = oldWriter == null ? 0 : oldWriter.getLength();
-      ReplaceWriterRequest request = new ReplaceWriterRequest(oldPath, nextWriter, false);
-      addReplaceWriterRequest(request);
+      RollingRequest request = new RollingRequest(oldPath, nextWriter, false);
+      addRollingRequest(request);
       FutureUtils.get(request.future);
       logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
       rollRequested.set(false);
       consumerScheduled.set(true);
       consumeExecutor.execute(consumer);
     } finally {
-      this.replaceWriterRequestRef.set(null);
+      this.rollingRequestRef.set(null);
     }
   }
 
-  private void completeReplaceWriterRequest(ReplaceWriterRequest replaceWriterRequest) {
+  private void completeReplaceWriter(RollingRequest rollingRequest) {
     try {
-      Path oldPath = replaceWriterRequest.oldPath;
-      AsyncWriter nextWriter = replaceWriterRequest.nextWriter;
+      Path oldPath = rollingRequest.oldPath;
+      AsyncWriter nextWriter = rollingRequest.nextWriter;
       closeWriter(this.writer, oldPath);
       this.writer = nextWriter;
       if (nextWriter instanceof AsyncProtobufLogWriter) {
@@ -826,30 +829,30 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       int nextEpoch = currentEpoch == MAX_EPOCH ? 0 : currentEpoch + 1;
       // set a new epoch and also clear waitingRoll and writerBroken
       this.epochAndState = nextEpoch << 2;
-      replaceWriterRequest.future.complete(true);
+      rollingRequest.future.complete(true);
     } catch (Exception exception) {
       LOG.error("processReplaceWriter error!", exception);
-      replaceWriterRequest.future.completeExceptionally(exception);
+      rollingRequest.future.completeExceptionally(exception);
     }
   }
 
   @Override
   protected void doShutdown() throws IOException {
     try {
-      ReplaceWriterRequest request = new ReplaceWriterRequest(getOldPath(), null, true);
-      addReplaceWriterRequest(request);
+      RollingRequest request = new RollingRequest(getOldPath(), null, true);
+      addRollingRequest(request);
       FutureUtils.get(request.future);
       if (!(consumeExecutor instanceof EventLoop)) {
         consumeExecutor.shutdown();
       }
     } finally {
-      this.replaceWriterRequestRef.set(null);
+      this.rollingRequestRef.set(null);
     }
   }
 
-  private void completeShutdownRequest(ReplaceWriterRequest replaceWriterRequest) {
+  private void completeShutdown(RollingRequest rollingRequest) {
     try {
-      closeWriter(this.writer, replaceWriterRequest.oldPath);
+      closeWriter(this.writer, rollingRequest.oldPath);
       this.writer = null;
       closeExecutor.shutdown();
       try {
@@ -883,10 +886,10 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
       }
       // and fail them
       syncFutures.forEach(f -> markFutureDoneAndOffer(f, f.getTxid(), error));
-      replaceWriterRequest.future.complete(true);
+      rollingRequest.future.complete(true);
     } catch (Exception exception) {
       LOG.error("shut down error!", exception);
-      replaceWriterRequest.future.completeExceptionally(exception);
+      rollingRequest.future.completeExceptionally(exception);
     } finally {
       this.alreadyShutdown = true;
     }
@@ -916,13 +919,13 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     return output != null && output.isBroken();
   }
 
-  static class ReplaceWriterRequest {
+  static class RollingRequest {
     private final CompletableFuture<Boolean> future;
     private final Path oldPath;
     private final AsyncWriter nextWriter;
     private final boolean shutdown;
 
-    ReplaceWriterRequest(Path oldPath, AsyncWriter nextWriter, boolean shutdown) {
+    RollingRequest(Path oldPath, AsyncWriter nextWriter, boolean shutdown) {
       this.oldPath = oldPath;
       this.nextWriter = nextWriter;
       this.future = new CompletableFuture<Boolean>();
