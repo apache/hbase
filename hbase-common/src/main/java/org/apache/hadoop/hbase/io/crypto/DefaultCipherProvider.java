@@ -30,6 +30,8 @@ public final class DefaultCipherProvider implements CipherProvider {
 
   private static DefaultCipherProvider instance;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static DefaultCipherProvider getInstance() {
     if (instance != null) {
       return instance;

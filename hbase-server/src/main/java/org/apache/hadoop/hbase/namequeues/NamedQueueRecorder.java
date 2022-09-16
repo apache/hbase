@@ -43,7 +43,7 @@ public class NamedQueueRecorder {
   private final Disruptor<RingBufferEnvelope> disruptor;
   private final LogEventHandler logEventHandler;
 
-  private static NamedQueueRecorder namedQueueRecorder;
+  private static volatile NamedQueueRecorder namedQueueRecorder;
   private static boolean isInit = false;
   private static final Object LOCK = new Object();
 
@@ -71,6 +71,8 @@ public class NamedQueueRecorder {
     this.disruptor.start();
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static NamedQueueRecorder getInstance(Configuration conf) {
     if (namedQueueRecorder != null) {
       return namedQueueRecorder;
