@@ -400,7 +400,7 @@ public class HMobStore extends HStore {
   private MobCell readCell(List<Path> locations, String fileName, Cell search,
     boolean cacheMobBlocks, long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {
     FileSystem fs = getFileSystem();
-    Throwable throwable = null;
+    IOException ioe = null;
     for (Path location : locations) {
       MobFile file = null;
       Path path = new Path(location, fileName);
@@ -411,7 +411,7 @@ public class HMobStore extends HStore {
           : file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {
         mobFileCache.evictFile(fileName);
-        throwable = e;
+        ioe = e;
         if (
           (e instanceof FileNotFoundException) || (e.getCause() instanceof FileNotFoundException)
         ) {
@@ -422,14 +422,6 @@ public class HMobStore extends HStore {
         } else {
           throw e;
         }
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        mobFileCache.evictFile(fileName);
-        LOG.debug("Fail to read the cell", e);
-        throwable = e;
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        mobFileCache.evictFile(fileName);
-        LOG.debug("Fail to read the cell", e);
-        throwable = e;
       } finally {
         if (file != null) {
           mobFileCache.closeFile(file);
@@ -441,18 +433,15 @@ public class HMobStore extends HStore {
     if (readEmptyValueOnMobCellMiss) {
       return null;
     } else if (
-      (throwable instanceof FileNotFoundException)
-        || (throwable.getCause() instanceof FileNotFoundException)
+      (ioe instanceof FileNotFoundException) || (ioe.getCause() instanceof FileNotFoundException)
     ) {
       // The region is re-opened when FileNotFoundException is thrown.
       // This is not necessary when MOB files cannot be found, because the store files
       // in a region only contain the references to MOB files and a re-open on a region
       // doesn't help fix the lost MOB files.
-      throw new DoNotRetryIOException(throwable);
-    } else if (throwable instanceof IOException) {
-      throw (IOException) throwable;
+      throw new DoNotRetryIOException(ioe);
     } else {
-      throw new IOException(throwable);
+      throw ioe;
     }
   }
 
