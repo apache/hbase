@@ -76,6 +76,8 @@ public final class BloomFilterUtil {
    * This gets used in {@link #contains(ByteBuff, int, int, Hash, int, HashKey)}
    * @param random The random number source to use, or null to compute actual hashes
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EI_EXPOSE_STATIC_REP2",
+      justification = "ignore for now, improve TestCompoundBloomFilter later")
   public static void setRandomGeneratorForTest(Random random) {
     randomGeneratorForTest = random;
   }
