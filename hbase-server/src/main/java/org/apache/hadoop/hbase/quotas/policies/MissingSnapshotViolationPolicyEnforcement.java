@@ -39,6 +39,8 @@ public final class MissingSnapshotViolationPolicyEnforcement
   private MissingSnapshotViolationPolicyEnforcement() {
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static SpaceViolationPolicyEnforcement getInstance() {
     return SINGLETON;
   }

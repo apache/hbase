@@ -1036,31 +1036,19 @@ public final class RequestConverter {
   }
 
   /**
-   * @see #buildRollWALWriterRequest()
-   */
-  private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST =
-    RollWALWriterRequest.newBuilder().build();
-
-  /**
    * Create a new RollWALWriterRequest
    * @return a ReplicateWALEntryRequest
    */
   public static RollWALWriterRequest buildRollWALWriterRequest() {
-    return ROLL_WAL_WRITER_REQUEST;
+    return RollWALWriterRequest.getDefaultInstance();
   }
-
-  /**
-   * @see #buildGetServerInfoRequest()
-   */
-  private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
-    GetServerInfoRequest.newBuilder().build();
 
   /**
    * Create a new GetServerInfoRequest
    * @return a GetServerInfoRequest
    */
   public static GetServerInfoRequest buildGetServerInfoRequest() {
-    return GET_SERVER_INFO_REQUEST;
+    return GetServerInfoRequest.getDefaultInstance();
   }
 
   /**
@@ -1458,17 +1446,11 @@ public final class RequestConverter {
   }
 
   /**
-   * @see #buildCatalogScanRequest
-   */
-  private static final RunCatalogScanRequest CATALOG_SCAN_REQUEST =
-    RunCatalogScanRequest.newBuilder().build();
-
-  /**
    * Creates a request for running a catalog scan
    * @return A {@link RunCatalogScanRequest}
    */
   public static RunCatalogScanRequest buildCatalogScanRequest() {
-    return CATALOG_SCAN_REQUEST;
+    return RunCatalogScanRequest.getDefaultInstance();
   }
 
   /**
@@ -1480,31 +1462,19 @@ public final class RequestConverter {
   }
 
   /**
-   * @see #buildIsCatalogJanitorEnabledRequest()
-   */
-  private static final IsCatalogJanitorEnabledRequest IS_CATALOG_JANITOR_ENABLED_REQUEST =
-    IsCatalogJanitorEnabledRequest.newBuilder().build();
-
-  /**
    * Creates a request for querying the master whether the catalog janitor is enabled
    * @return A {@link IsCatalogJanitorEnabledRequest}
    */
   public static IsCatalogJanitorEnabledRequest buildIsCatalogJanitorEnabledRequest() {
-    return IS_CATALOG_JANITOR_ENABLED_REQUEST;
+    return IsCatalogJanitorEnabledRequest.getDefaultInstance();
   }
-
-  /**
-   * @see #buildRunCleanerChoreRequest()
-   */
-  private static final RunCleanerChoreRequest CLEANER_CHORE_REQUEST =
-    RunCleanerChoreRequest.newBuilder().build();
 
   /**
    * Creates a request for running cleaner chore
    * @return A {@link RunCleanerChoreRequest}
    */
   public static RunCleanerChoreRequest buildRunCleanerChoreRequest() {
-    return CLEANER_CHORE_REQUEST;
+    return RunCleanerChoreRequest.getDefaultInstance();
   }
 
   /**
@@ -1516,17 +1486,11 @@ public final class RequestConverter {
   }
 
   /**
-   * @see #buildIsCleanerChoreEnabledRequest()
-   */
-  private static final IsCleanerChoreEnabledRequest IS_CLEANER_CHORE_ENABLED_REQUEST =
-    IsCleanerChoreEnabledRequest.newBuilder().build();
-
-  /**
    * Creates a request for querying the master whether the cleaner chore is enabled
    * @return A {@link IsCleanerChoreEnabledRequest}
    */
   public static IsCleanerChoreEnabledRequest buildIsCleanerChoreEnabledRequest() {
-    return IS_CLEANER_CHORE_ENABLED_REQUEST;
+    return IsCleanerChoreEnabledRequest.getDefaultInstance();
   }
 
   /**
@@ -1746,34 +1710,25 @@ public final class RequestConverter {
     return builder.build();
   }
 
-  private static final GetSpaceQuotaRegionSizesRequest GET_SPACE_QUOTA_REGION_SIZES_REQUEST =
-    GetSpaceQuotaRegionSizesRequest.newBuilder().build();
-
   /**
    * Returns a {@link GetSpaceQuotaRegionSizesRequest} object.
    */
   public static GetSpaceQuotaRegionSizesRequest buildGetSpaceQuotaRegionSizesRequest() {
-    return GET_SPACE_QUOTA_REGION_SIZES_REQUEST;
+    return GetSpaceQuotaRegionSizesRequest.getDefaultInstance();
   }
-
-  private static final GetSpaceQuotaSnapshotsRequest GET_SPACE_QUOTA_SNAPSHOTS_REQUEST =
-    GetSpaceQuotaSnapshotsRequest.newBuilder().build();
 
   /**
    * Returns a {@link GetSpaceQuotaSnapshotsRequest} object.
    */
   public static GetSpaceQuotaSnapshotsRequest buildGetSpaceQuotaSnapshotsRequest() {
-    return GET_SPACE_QUOTA_SNAPSHOTS_REQUEST;
+    return GetSpaceQuotaSnapshotsRequest.getDefaultInstance();
   }
-
-  private static final GetQuotaStatesRequest GET_QUOTA_STATES_REQUEST =
-    GetQuotaStatesRequest.newBuilder().build();
 
   /**
    * Returns a {@link GetQuotaStatesRequest} object.
    */
   public static GetQuotaStatesRequest buildGetQuotaStatesRequest() {
-    return GET_QUOTA_STATES_REQUEST;
+    return GetQuotaStatesRequest.getDefaultInstance();
   }
 
   public static DecommissionRegionServersRequest
