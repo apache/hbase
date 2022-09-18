@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.SyncFailedException;
@@ -140,6 +141,10 @@ public final class ClientExceptionsUtil {
    * For test only. Usually you should use the {@link #isConnectionException(Throwable)} method
    * below.
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "test only")
   public static Set<Class<? extends Throwable>> getConnectionExceptionTypes() {
     return CONNECTION_EXCEPTION_TYPES;
   }

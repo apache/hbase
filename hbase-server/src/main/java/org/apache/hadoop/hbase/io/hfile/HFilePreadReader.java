@@ -73,10 +73,6 @@ public class HFilePreadReader extends HFileReaderImpl {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
-          } catch (NullPointerException e) {
-            LOG.warn(
-              "Stream moved/closed or prefetch cancelled?" + getPathOffsetEndStr(path, offset, end),
-              e);
           } catch (Exception e) {
             // Other exceptions are interesting
             LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
