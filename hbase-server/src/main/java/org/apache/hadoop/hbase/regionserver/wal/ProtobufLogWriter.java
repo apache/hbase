@@ -64,15 +64,10 @@ public class ProtobufLogWriter extends AbstractProtobufLogWriter implements FSHL
   @Override
   public void close() throws IOException {
     if (this.output != null) {
-      try {
-        if (!trailerWritten) {
-          writeWALTrailer();
-        }
-        this.output.close();
-      } catch (NullPointerException npe) {
-        // Can get a NPE coming up from down in DFSClient$DFSOutputStream#close
-        LOG.warn(npe.toString(), npe);
+      if (!trailerWritten) {
+        writeWALTrailer();
       }
+      this.output.close();
       this.output = null;
     }
   }

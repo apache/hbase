@@ -483,8 +483,9 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    * @param conf configuration
    * @return WAL Reader instance
    */
-  public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-    throws IOException {
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
+      justification = "HDFS-4380")
+  public static WAL.Reader openReader(Path path, Configuration conf) throws IOException {
     long retryInterval = 2000; // 2 sec
     int maxAttempts = 30;
     int attempt = 0;

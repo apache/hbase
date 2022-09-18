@@ -145,6 +145,8 @@ public final class PrefetchExecutor {
     return true;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
+      justification = "false positive, try-with-resources ensures close is called.")
   public static void persistToFile(String path) throws IOException {
     prefetchedFileListPath = path;
     if (prefetchedFileListPath == null) {
