@@ -1474,17 +1474,11 @@ public final class ProtobufUtil {
   }
 
   /**
-   * @see #buildGetServerInfoRequest()
-   */
-  private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
-    GetServerInfoRequest.newBuilder().build();
-
-  /**
    * Create a new GetServerInfoRequest
    * @return a GetServerInfoRequest
    */
   public static GetServerInfoRequest buildGetServerInfoRequest() {
-    return GET_SERVER_INFO_REQUEST;
+    return GetServerInfoRequest.getDefaultInstance();
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {

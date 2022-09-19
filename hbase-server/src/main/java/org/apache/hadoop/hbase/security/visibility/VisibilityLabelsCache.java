@@ -74,9 +74,11 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * Creates the singleton instance, if not yet present, and returns the same. nn * @return
-   * Singleton instance of VisibilityLabelsCache n
+   * Creates the singleton instance, if not yet present, and returns the same.
+   * @return Singleton instance of VisibilityLabelsCache
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public synchronized static VisibilityLabelsCache createAndGet(ZKWatcher watcher,
     Configuration conf) throws IOException {
     // VisibilityLabelService#init() for different regions (in same RS) passes same instance of
@@ -95,6 +97,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
    * @return Singleton instance of VisibilityLabelsCache n * when this is called before calling
    *         {@link #createAndGet(ZKWatcher, Configuration)}
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static VisibilityLabelsCache get() {
     // By the time this method is called, the singleton instance of VisibilityLabelsCache should
     // have been created.

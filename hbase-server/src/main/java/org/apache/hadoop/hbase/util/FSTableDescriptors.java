@@ -190,6 +190,8 @@ public class FSTableDescriptors implements TableDescriptors {
    * {@link #fsvisited} is not {@code true}, i.e, we haven't done a full scan yet, to see if a newer
    * file has been created since the cached one was read.
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
+      justification = "Fixed in newer minor releases, not a blocker, just keep it as is for now")
   @Override
   @Nullable
   public TableDescriptor get(TableName tableName) {
