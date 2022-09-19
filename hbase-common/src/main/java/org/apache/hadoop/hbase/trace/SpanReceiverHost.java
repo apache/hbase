@@ -59,6 +59,8 @@ public class SpanReceiverHost {
 
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "by design")
   public static Configuration getConfiguration() {
     synchronized (SingletonHolder.INSTANCE.lock) {
       if (SingletonHolder.INSTANCE.host == null || SingletonHolder.INSTANCE.host.conf == null) {

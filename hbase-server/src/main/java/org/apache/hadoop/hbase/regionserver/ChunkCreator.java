@@ -114,7 +114,8 @@ public class ChunkCreator {
    * @param heapMemoryManager      the heapmemory manager
    * @return singleton MSLABChunkCreator
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "LI_LAZY_INIT_STATIC",
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value = { "LI_LAZY_INIT_STATIC", "MS_EXPOSE_REP" },
       justification = "Method is called by single thread at the starting of RS")
   public static ChunkCreator initialize(int chunkSize, boolean offheap, long globalMemStoreSize,
     float poolSizePercentage, float initialCountPercentage, HeapMemoryManager heapMemoryManager,
@@ -127,6 +128,8 @@ public class ChunkCreator {
     return instance;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static ChunkCreator getInstance() {
     return instance;
   }
