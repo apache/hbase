@@ -367,10 +367,6 @@ public final class BlockIOUtils {
         } catch (InvocationTargetException e) {
           throw new IOException("Encountered an exception when invoking ByteBuffer positioned read"
             + " when trying to read " + bytesRead + " bytes from position " + position, e);
-        } catch (NullPointerException e) {
-          throw new IOException("something is null");
-        } catch (Exception e) {
-          throw e;
         }
         if (ret < 0) {
           throw new IOException("Premature EOF from inputStream (positional read returned " + ret

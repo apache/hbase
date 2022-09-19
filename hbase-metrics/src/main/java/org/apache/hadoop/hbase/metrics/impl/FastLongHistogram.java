@@ -138,6 +138,8 @@ public class FastLongHistogram {
     /**
      * Computes the quantiles give the ratios.
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "FL_FLOATS_AS_LOOP_COUNTERS",
+        justification = "valid usage")
     public long[] getQuantiles(double[] quantiles) {
       if (!hasData) {
         // No data yet.
@@ -264,10 +266,6 @@ public class FastLongHistogram {
     bins.add(min, 1);
     bins.add(max, 1);
     this.bins = new Bins(bins, numOfBins, 0.01, 0.999);
-  }
-
-  private FastLongHistogram(Bins bins) {
-    this.bins = bins;
   }
 
   /**
