@@ -1083,7 +1083,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * and its encoding vs. {@code expectedDataBlockEncoding}. Unpacks the block as necessary.
    */
   private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
-    boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
+    boolean updateCacheMetrics, BlockType expectedBlockType,
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
@@ -1188,7 +1188,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
       cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
       HFileBlock cachedBlock =
-        getCachedBlock(cacheKey, cacheBlock, false, true, true, BlockType.META, null);
+        getCachedBlock(cacheKey, cacheBlock, false, true, BlockType.META, null);
       if (cachedBlock != null) {
         assert cachedBlock.isUnpacked() : "Packed block leak.";
         // Return a distinct 'shallow copy' of the block,
@@ -1235,6 +1235,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, final boolean cacheBlock,
     boolean pread, final boolean isCompaction, boolean updateCacheMetrics,
     BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+    return readBlock(dataBlockOffset, onDiskBlockSize, cacheBlock, pread, isCompaction,
+      updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding, false);
+  }
+
+  @Override
+  public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, final boolean cacheBlock,
+    boolean pread, final boolean isCompaction, boolean updateCacheMetrics,
+    BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding, boolean cacheOnly)
+    throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException(path + " block index not loaded");
     }
@@ -1259,17 +1268,18 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     try (Scope traceScope = span.makeCurrent()) {
       while (true) {
         // Check cache for block. If found return.
-        if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
+        if (cacheConf.shouldReadBlockFromCache(expectedBlockType) && !cacheOnly) {
           if (useLock) {
             lockEntry = offsetLock.getLockEntry(dataBlockOffset);
           }
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
-          HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
-            updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
+          HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics,
+            expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("From Cache " + cachedBlock);
+              LOG.trace("Block for file {} is coming from Cache {}",
+                Bytes.toString(cachedBlock.getHFileContext().getTableName()), cachedBlock);
             }
             span.addEvent("blockCacheHit");
             assert cachedBlock.isUnpacked() : "Packed block leak.";
@@ -1306,14 +1316,30 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
           !isCompaction, shouldUseHeap(expectedBlockType));
         validateBlockType(hfileBlock, expectedBlockType);
-        HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
+        final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
+        final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
 
+        // Don't need the unpacked block back and we're storing the block in the cache compressed
+        if (cacheOnly && cacheCompressed && cacheOnRead) {
+          LOG.debug("Skipping decompression of block in prefetch");
+          // Cache the block if necessary
+          cacheConf.getBlockCache().ifPresent(cache -> {
+            if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+              cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory());
+            }
+          });
+
+          if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
+            HFile.DATABLOCK_READ_COUNT.increment();
+          }
+          return hfileBlock;
+        }
+        HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
-            cache.cacheBlock(cacheKey,
-              cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
+            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
               cacheConf.isInMemory());
           }
         });
