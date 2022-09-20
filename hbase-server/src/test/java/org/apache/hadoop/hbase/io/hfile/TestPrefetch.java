@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,6 +38,7 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -112,6 +117,51 @@ public class TestPrefetch {
   }
 
   private void readStoreFile(Path storeFilePath) throws Exception {
+    readStoreFile(storeFilePath, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(isCached);
+      }
+    });
+  }
+
+  private void readStoreFileCacheOnly(Path storeFilePath) throws Exception {
+    readStoreFile(storeFilePath, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null, true);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (block.getBlockType() == BlockType.DATA) {
+        assertFalse(block.isUnpacked());
+      } else if (
+        block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(block.isUnpacked());
+      }
+      assertTrue(isCached);
+    });
+  }
+
+  private void readStoreFile(Path storeFilePath,
+    BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
+    BiConsumer<BlockCacheKey, HFileBlock> validationFunction) throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
 
@@ -119,29 +169,36 @@ public class TestPrefetch {
       // Sleep for a bit
       Thread.sleep(1000);
     }
-
-    // Check that all of the data blocks were preloaded
-    BlockCache blockCache = cacheConf.getBlockCache().get();
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
+      HFileBlock block = readFunction.apply(reader, offset);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
-      boolean isCached = blockCache.getBlock(blockCacheKey, true, false, true) != null;
-      if (
-        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
-      ) {
-        assertTrue(isCached);
-      }
+      validationFunction.accept(blockCacheKey, block);
       offset += block.getOnDiskSizeWithHeader();
     }
   }
 
+  @Test
+  public void testPrefetchCompressed() throws Exception {
+    conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
+    readStoreFileCacheOnly(storeFile);
+    conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
+
+  }
+
   private Path writeStoreFile(String fname) throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    return writeStoreFile(fname, meta);
+  }
+
+  private Path writeStoreFile(String fname, HFileContext context) throws IOException {
+    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeFileParentDir).withFileContext(meta).build();
+      .withOutputDir(storeFileParentDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {

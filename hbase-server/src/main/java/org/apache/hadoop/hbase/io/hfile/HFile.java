@@ -373,6 +373,10 @@ public final class HFile {
     HFileBlock readBlock(long offset, long onDiskBlockSize, boolean cacheBlock, final boolean pread,
       final boolean isCompaction, final boolean updateCacheMetrics, BlockType expectedBlockType,
       DataBlockEncoding expectedDataBlockEncoding) throws IOException;
+
+    HFileBlock readBlock(long offset, long onDiskBlockSize, boolean cacheBlock, final boolean pread,
+      final boolean isCompaction, final boolean updateCacheMetrics, BlockType expectedBlockType,
+      DataBlockEncoding expectedDataBlockEncoding, boolean cacheOnly) throws IOException;
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */
