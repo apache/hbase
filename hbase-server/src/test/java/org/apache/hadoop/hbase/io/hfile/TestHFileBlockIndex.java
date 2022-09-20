@@ -175,6 +175,14 @@ public class TestHFileBlockIndex {
     public HFileBlock readBlock(long offset, long onDiskSize, boolean cacheBlock, boolean pread,
       boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
       DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+      return readBlock(offset, onDiskSize, cacheBlock, pread, isCompaction, updateCacheMetrics,
+        expectedBlockType, expectedDataBlockEncoding, false);
+    }
+
+    @Override
+    public HFileBlock readBlock(long offset, long onDiskSize, boolean cacheBlock, boolean pread,
+      boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
+      DataBlockEncoding expectedDataBlockEncoding, boolean cacheOnly) throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize && pread == prevPread) {
         hitCount += 1;
         return prevBlock;
