@@ -654,11 +654,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </%java>
     <tr>
         <td><% tableName.getNamespaceAsString() %></td>
-        <td><a href=table.jsp?name=<% encodedTableName %>><% URLEncoder.encode(tableName.getQualifierAsString()) %></a> </td>
+        <%if (tableState.isDisabledOrDisabling()) %> <td><a style="color:red;" href=table.jsp?name=<% encodedTableName %>><% URLEncoder.encode(tableName.getQualifierAsString()) %></a></td> <%else><td><a href=table.jsp?name=<% encodedTableName %>><% URLEncoder.encode(tableName.getQualifierAsString()) %></a></td> </%if>
         <%if (frags != null) %>
             <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
-        <td><% tableState.getState() %></td>
+        <%if (tableState.isDisabledOrDisabling()) %> <td style="color:red;"><% tableState.getState().name() %></td> <%else><td><% tableState.getState() %></td> </%if>
         <td><% openRegionsCount %></td>
         <%if (openingRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=OPENING"><% openingRegionsCount %></td> <%else><td><% openingRegionsCount %></td> </%if>
         <%if (closedRegionsCount > 0) %> <td><a href="/table.jsp?name=hbase%3Ameta&scan_table=<% encodedTableName %>&scan_region_state=CLOSED"><% closedRegionsCount %></td> <%else><td><% closedRegionsCount %></td> </%if>
