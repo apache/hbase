@@ -1220,8 +1220,8 @@ public class TestHStoreFile {
   public void testDataBlockSizeCompressed() throws Exception {
     conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR,
       PreviousBlockCompressionRatePredicator.class.getName());
-    testDataBlockSizeWithCompressionRatePredicator(11,
-      (s, c) -> (c > 1 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
+    testDataBlockSizeWithCompressionRatePredicator(12,
+      (s, c) -> (c > 2 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
   }
 
   @Test
@@ -1238,7 +1238,8 @@ public class TestHStoreFile {
     cacheConf = new CacheConfig(conf);
     HFileContext meta =
       new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
-        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo)
+        .withBytesPerCheckSum(CKBYTES)
+        .withDataBlockEncoding(dataBlockEncoderAlgo)
         .withCompression(Compression.Algorithm.GZ).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
