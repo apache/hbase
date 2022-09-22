@@ -1238,8 +1238,7 @@ public class TestHStoreFile {
     cacheConf = new CacheConfig(conf);
     HFileContext meta =
       new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
-        .withBytesPerCheckSum(CKBYTES)
-        .withDataBlockEncoding(dataBlockEncoderAlgo)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo)
         .withCompression(Compression.Algorithm.GZ).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
