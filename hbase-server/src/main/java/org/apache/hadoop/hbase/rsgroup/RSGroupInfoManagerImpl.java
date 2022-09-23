@@ -1143,29 +1143,49 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
     Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager()
-      .getRegionStates().getRegionAssignments().entrySet()) {
-      RegionInfo region = entry.getKey();
-      TableName tn = region.getTable();
-      ServerName server = entry.getValue();
-      if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
-        if (
-          tableStateManager.isTableState(tn, TableState.State.DISABLED, TableState.State.DISABLING)
-        ) {
-          continue;
-        }
-        if (region.isSplitParent()) {
-          continue;
-        }
-        result.computeIfAbsent(tn, k -> new HashMap<>())
-          .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
-      }
-    }
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
-      if (rsGroupInfo.containsServer(serverName.getAddress())) {
-        for (Map<ServerName, List<RegionInfo>> map : result.values()) {
-          map.computeIfAbsent(serverName, k -> Collections.emptyList());
+    if (!masterServices.getConfiguration().getBoolean(
+      HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false)) {
+      Map<ServerName, List<RegionInfo>> serverMap =
+        new HashMap<>();
+      for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
+        if (rsGroupInfo.containsServer(serverName.getAddress())) {
+          serverMap.put(serverName, new ArrayList<>());
+        }
+      }
+      for (Map.Entry<RegionInfo, ServerName> entry :
+        masterServices.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
+        TableName currTable = entry.getKey().getTable();
+        ServerName currServer = entry.getValue();
+        RegionInfo currRegion = entry.getKey();
+        if (isTableInGroup(currTable, groupName, tablesInGroupCache)) {
+          if (!serverMap.containsKey(currServer)) {
+            serverMap.put(currServer, new ArrayList<>());
+          }
+          serverMap.get(currServer).add(currRegion);
+        }
+      }
+      result.put(HConstants.ENSEMBLE_TABLE_NAME, serverMap);
+    } else {
+      for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager().getRegionStates().getRegionAssignments().entrySet()) {
+        RegionInfo region = entry.getKey();
+        TableName tn = region.getTable();
+        ServerName server = entry.getValue();
+        if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
+          if (tableStateManager.isTableState(tn, TableState.State.DISABLED, TableState.State.DISABLING)) {
+            continue;
+          }
+          if (region.isSplitParent()) {
+            continue;
+          }
+          result.computeIfAbsent(tn, k -> new HashMap<>()).computeIfAbsent(server, k -> new ArrayList<>()).add(region);
+        }
+      }
+      for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
+        if (rsGroupInfo.containsServer(serverName.getAddress())) {
+          for (Map<ServerName, List<RegionInfo>> map : result.values()) {
+            map.computeIfAbsent(serverName, k -> Collections.emptyList());
+          }
         }
       }
     }
