@@ -32,8 +32,11 @@ import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 
@@ -56,6 +59,7 @@ public final class X509TestContext {
 
   private final X509Certificate trustStoreCertificate;
   private final char[] trustStorePassword;
+  private final KeyPair trustStoreKeyPair;
   private File trustStoreJksFile;
   private File trustStorePemFile;
   private File trustStorePkcs12File;
@@ -91,6 +95,8 @@ public final class X509TestContext {
     if (!tempDir.isDirectory()) {
       throw new IllegalArgumentException("Not a directory: " + tempDir);
     }
+
+    this.trustStoreKeyPair = trustStoreKeyPair;
     this.trustStorePassword = requireNonNull(trustStorePassword);
     this.keyStoreKeyPair = requireNonNull(keyStoreKeyPair);
     this.keyStorePassword = requireNonNull(keyStorePassword);
@@ -104,14 +110,57 @@ public final class X509TestContext {
     X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
     nameBuilder.addRDN(BCStyle.CN,
       MethodHandles.lookup().lookupClass().getCanonicalName() + " Zookeeper Test");
-    keyStoreCertificate = X509TestHelpers.newCert(trustStoreCertificate, trustStoreKeyPair,
-      nameBuilder.build(), keyStoreKeyPair.getPublic());
+    keyStoreCertificate = newCert(nameBuilder.build());
     trustStorePkcs12File = null;
     trustStorePemFile = null;
     trustStoreJksFile = null;
     keyStorePkcs12File = null;
     keyStorePemFile = null;
     keyStoreJksFile = null;
+  }
+
+  /**
+   * Used by {@link #cloneWithNewKeystoreCert(X509Certificate)}. Should set all fields except
+   * generated keystore path fields
+   */
+  private X509TestContext(File tempDir, Configuration conf, X509Certificate trustStoreCertificate,
+    char[] trustStorePassword, KeyPair trustStoreKeyPair, File trustStoreJksFile,
+    File trustStorePemFile, File trustStorePkcs12File, KeyPair keyStoreKeyPair,
+    char[] keyStorePassword, X509Certificate keyStoreCertificate) {
+    this.tempDir = tempDir;
+    this.conf = conf;
+    this.trustStoreCertificate = trustStoreCertificate;
+    this.trustStorePassword = trustStorePassword;
+    this.trustStoreKeyPair = trustStoreKeyPair;
+    this.trustStoreJksFile = trustStoreJksFile;
+    this.trustStorePemFile = trustStorePemFile;
+    this.trustStorePkcs12File = trustStorePkcs12File;
+    this.keyStoreKeyPair = keyStoreKeyPair;
+    this.keyStoreCertificate = keyStoreCertificate;
+    this.keyStorePassword = keyStorePassword;
+    keyStorePkcs12File = null;
+    keyStorePemFile = null;
+    keyStoreJksFile = null;
+  }
+
+  /**
+   * Generates a new certificate using this context's CA and keystoreKeyPair. By default, the cert
+   * will have localhost in the subjectAltNames. This can be overridden by passing one or more
+   * string arguments after the cert name. The expectation for those arguments is that they are
+   * valid DNS names.
+   */
+  public X509Certificate newCert(X500Name name, String... subjectAltNames)
+    throws GeneralSecurityException, IOException, OperatorCreationException {
+    if (subjectAltNames.length == 0) {
+      return X509TestHelpers.newCert(trustStoreCertificate, trustStoreKeyPair, name,
+        keyStoreKeyPair.getPublic());
+    }
+    GeneralName[] names = new GeneralName[subjectAltNames.length];
+    for (int i = 0; i < subjectAltNames.length; i++) {
+      names[i] = new GeneralName(GeneralName.dNSName, subjectAltNames[i]);
+    }
+    return X509TestHelpers.newCert(trustStoreCertificate, trustStoreKeyPair, name,
+      keyStoreKeyPair.getPublic(), new GeneralNames(names));
   }
 
   public File getTempDir() {
@@ -347,14 +396,29 @@ public final class X509TestContext {
    */
   public void setConfigurations(KeyStoreFileType keyStoreFileType,
     KeyStoreFileType trustStoreFileType) throws IOException {
-    conf.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION,
-      this.getKeyStoreFile(keyStoreFileType).getAbsolutePath());
-    conf.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD, String.valueOf(this.getKeyStorePassword()));
-    conf.set(X509Util.TLS_CONFIG_KEYSTORE_TYPE, keyStoreFileType.getPropertyValue());
+    setKeystoreConfigurations(keyStoreFileType, conf);
     conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION,
       this.getTrustStoreFile(trustStoreFileType).getAbsolutePath());
     conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD, String.valueOf(this.getTrustStorePassword()));
     conf.set(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE, trustStoreFileType.getPropertyValue());
+  }
+
+  /**
+   * Sets the KeyStore-related SSL system properties onto the given Configuration such that X509Util
+   * can be used to create SSL Contexts using that KeyStore. This can be used in special
+   * circumstances to inject a "bad" certificate where the keystore doesn't match the CA in the
+   * truststore. Or use it to create a connection without a truststore.
+   * @see #setConfigurations(KeyStoreFileType, KeyStoreFileType) which sets both keystore and
+   *      truststore and is more applicable to general use. nnn
+   */
+  public void setKeystoreConfigurations(KeyStoreFileType keyStoreFileType, Configuration confToSet)
+    throws IOException {
+
+    confToSet.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION,
+      this.getKeyStoreFile(keyStoreFileType).getAbsolutePath());
+    confToSet.set(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD,
+      String.valueOf(this.getKeyStorePassword()));
+    confToSet.set(X509Util.TLS_CONFIG_KEYSTORE_TYPE, keyStoreFileType.getPropertyValue());
   }
 
   public void clearConfigurations() {
@@ -364,6 +428,21 @@ public final class X509TestContext {
     conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION);
     conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_PASSWORD);
     conf.unset(X509Util.TLS_CONFIG_TRUSTSTORE_TYPE);
+  }
+
+  /**
+   * Creates a clone of the current context, but injecting the passed certificate as the KeyStore
+   * cert. The new context's keystore path fields are nulled, so the next call to
+   * {@link #setConfigurations(KeyStoreFileType, KeyStoreFileType)},
+   * {@link #setKeystoreConfigurations(KeyStoreFileType, Configuration)} , or
+   * {@link #getKeyStoreFile(KeyStoreFileType)} will create a new keystore with this certificate in
+   * place.
+   * @param cert the cert to replace
+   */
+  public X509TestContext cloneWithNewKeystoreCert(X509Certificate cert) {
+    return new X509TestContext(tempDir, conf, trustStoreCertificate, trustStorePassword,
+      trustStoreKeyPair, trustStoreJksFile, trustStorePemFile, trustStorePkcs12File,
+      keyStoreKeyPair, keyStorePassword, cert);
   }
 
   /**
