@@ -95,6 +95,7 @@
                   <artifact>org.apache.hbase:hbase-endpoint</artifact>
                   <includes>
                     <include>org/apache/hadoop/hbase/client/coprocessor/**</include>
+                    <include>org/apache/hadoop/hbase/protobuf/generated/**</include>
                   </includes>
                 </filter>
                 <filter>
