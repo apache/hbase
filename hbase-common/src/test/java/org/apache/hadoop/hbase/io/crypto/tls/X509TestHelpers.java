@@ -127,6 +127,25 @@ final class X509TestHelpers {
   public static X509Certificate newCert(X509Certificate caCert, KeyPair caKeyPair,
     X500Name certSubject, PublicKey certPublicKey)
     throws IOException, OperatorCreationException, GeneralSecurityException {
+    return newCert(caCert, caKeyPair, certSubject, certPublicKey, getLocalhostSubjectAltNames());
+  }
+
+  /**
+   * Using the private key of the given CA key pair and the Subject of the given CA cert as the
+   * Issuer, issues a new cert with the given subject and public key. The returned certificate,
+   * combined with the private key half of the <code>certPublicKey</code>, should be used as the key
+   * store.
+   * @param caCert          the certificate of the CA that's doing the signing.
+   * @param caKeyPair       the key pair of the CA. The private key will be used to sign. The public
+   *                        key must match the public key in the <code>caCert</code>.
+   * @param certSubject     the subject field of the new cert being issued.
+   * @param certPublicKey   the public key of the new cert being issued.
+   * @param subjectAltNames the subject alternative names to use, or null if none
+   * @return a new certificate signed by the CA's private key.
+   */
+  public static X509Certificate newCert(X509Certificate caCert, KeyPair caKeyPair,
+    X500Name certSubject, PublicKey certPublicKey, GeneralNames subjectAltNames)
+    throws IOException, OperatorCreationException, GeneralSecurityException {
     if (!caKeyPair.getPublic().equals(caCert.getPublicKey())) {
       throw new IllegalArgumentException(
         "CA private key does not match the public key in " + "the CA cert");
@@ -140,7 +159,9 @@ final class X509TestHelpers {
     builder.addExtension(Extension.extendedKeyUsage, true, new ExtendedKeyUsage(
       new KeyPurposeId[] { KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth }));
 
-    builder.addExtension(Extension.subjectAlternativeName, false, getLocalhostSubjectAltNames());
+    if (subjectAltNames != null) {
+      builder.addExtension(Extension.subjectAlternativeName, false, subjectAltNames);
+    }
     return buildAndSignCertificate(caKeyPair.getPrivate(), builder);
   }
 
