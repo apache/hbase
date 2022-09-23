@@ -933,7 +933,7 @@ public class HFileBlock implements Cacheable {
       // We need to cache the unencoded/uncompressed size before changing the block state
       int rawBlockSize = 0;
       if (this.getEncodingState() != null) {
-        rawBlockSize = blockSizeWritten();
+        rawBlockSize = encodedBlockSizeWritten();
       }
       // We need to set state before we can package the block up for cache-on-write. In a way, the
       // block is ready, but not yet encoded or compressed.
