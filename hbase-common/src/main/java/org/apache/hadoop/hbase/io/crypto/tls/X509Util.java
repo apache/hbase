@@ -62,7 +62,9 @@ public final class X509Util {
   private static final Logger LOG = LoggerFactory.getLogger(X509Util.class);
   private static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
-  // Config
+  //
+  // Common tls configs across both server and client
+  //
   static final String CONFIG_PREFIX = "hbase.rpc.tls.";
   public static final String TLS_CONFIG_PROTOCOL = CONFIG_PREFIX + "protocol";
   public static final String TLS_CONFIG_KEYSTORE_LOCATION = CONFIG_PREFIX + "keystore.location";
@@ -73,20 +75,32 @@ public final class X509Util {
   static final String TLS_CONFIG_TRUSTSTORE_PASSWORD = CONFIG_PREFIX + "truststore.password";
   public static final String TLS_CONFIG_CLR = CONFIG_PREFIX + "clr";
   public static final String TLS_CONFIG_OCSP = CONFIG_PREFIX + "ocsp";
+  public static final String TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED =
+    CONFIG_PREFIX + "host-verification.reverse-dns.enabled";
   private static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
   private static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
+  public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
-  public static final String HBASE_CLIENT_NETTY_TLS_ENABLED = "hbase.client.netty.tls.enabled";
+  //
+  // Server-side specific configs
+  //
   public static final String HBASE_SERVER_NETTY_TLS_ENABLED = "hbase.server.netty.tls.enabled";
-
+  public static final String HBASE_SERVER_NETTY_TLS_CLIENT_AUTH_MODE =
+    "hbase.server.netty.tls.client.auth.mode";
+  public static final String HBASE_SERVER_NETTY_TLS_VERIFY_CLIENT_HOSTNAME =
+    "hbase.server.netty.tls.verify.client.hostname";
   public static final String HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT =
     "hbase.server.netty.tls.supportplaintext";
 
+  //
+  // Client-side specific configs
+  //
+  public static final String HBASE_CLIENT_NETTY_TLS_ENABLED = "hbase.client.netty.tls.enabled";
+  public static final String HBASE_CLIENT_NETTY_TLS_VERIFY_SERVER_HOSTNAME =
+    "hbase.client.netty.tls.verify.server.hostname";
   public static final String HBASE_CLIENT_NETTY_TLS_HANDSHAKETIMEOUT =
     "hbase.client.netty.tls.handshaketimeout";
   public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
-
-  public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   private static String[] getGCMCiphers() {
     return new String[] { "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
@@ -109,6 +123,47 @@ public final class X509Util {
   // Note that this performance assumption might not hold true for architectures other than x86_64.
   private static final String[] DEFAULT_CIPHERS_JAVA9 =
     ObjectArrays.concat(getGCMCiphers(), getCBCCiphers(), String.class);
+
+  /**
+   * Enum specifying the client auth requirement of server-side TLS sockets created by this
+   * X509Util.
+   * <ul>
+   * <li>NONE - do not request a client certificate.</li>
+   * <li>WANT - request a client certificate, but allow anonymous clients to connect.</li>
+   * <li>NEED - require a client certificate, disconnect anonymous clients.</li>
+   * </ul>
+   * If the config property is not set, the default value is NEED.
+   */
+  public enum ClientAuth {
+    NONE(org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth.NONE),
+    WANT(org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth.OPTIONAL),
+    NEED(org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth.REQUIRE);
+
+    private final org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth nettyAuth;
+
+    ClientAuth(org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth nettyAuth) {
+      this.nettyAuth = nettyAuth;
+    }
+
+    /**
+     * Converts a property value to a ClientAuth enum. If the input string is empty or null, returns
+     * <code>ClientAuth.NEED</code>.
+     * @param prop the property string.
+     * @return the ClientAuth.
+     * @throws IllegalArgumentException if the property value is not "NONE", "WANT", "NEED", or
+     *                                  empty/null.
+     */
+    public static ClientAuth fromPropertyValue(String prop) {
+      if (prop == null || prop.length() == 0) {
+        return NEED;
+      }
+      return ClientAuth.valueOf(prop.toUpperCase());
+    }
+
+    public org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth toNettyClientAuth() {
+      return nettyAuth;
+    }
+  }
 
   private X509Util() {
     // disabled
@@ -158,11 +213,16 @@ public final class X509Util {
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
 
+    boolean verifyServerHostname =
+      config.getBoolean(HBASE_CLIENT_NETTY_TLS_VERIFY_SERVER_HOSTNAME, true);
+    boolean allowReverseDnsLookup = config.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true);
+
     if (trustStoreLocation.isEmpty()) {
       LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
     } else {
-      sslContextBuilder.trustManager(createTrustManager(trustStoreLocation, trustStorePassword,
-        trustStoreType, sslCrlEnabled, sslOcspEnabled));
+      sslContextBuilder
+        .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
+          sslCrlEnabled, sslOcspEnabled, verifyServerHostname, allowReverseDnsLookup));
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
@@ -195,16 +255,24 @@ public final class X509Util {
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
 
+    ClientAuth clientAuth =
+      ClientAuth.fromPropertyValue(config.get(HBASE_SERVER_NETTY_TLS_CLIENT_AUTH_MODE));
+    boolean verifyClientHostname =
+      config.getBoolean(HBASE_SERVER_NETTY_TLS_VERIFY_CLIENT_HOSTNAME, true);
+    boolean allowReverseDnsLookup = config.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true);
+
     if (trustStoreLocation.isEmpty()) {
       LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
     } else {
-      sslContextBuilder.trustManager(createTrustManager(trustStoreLocation, trustStorePassword,
-        trustStoreType, sslCrlEnabled, sslOcspEnabled));
+      sslContextBuilder
+        .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
+          sslCrlEnabled, sslOcspEnabled, verifyClientHostname, allowReverseDnsLookup));
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
     sslContextBuilder.protocols(getEnabledProtocols(config));
     sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+    sslContextBuilder.clientAuth(clientAuth.toNettyClientAuth());
 
     return sslContextBuilder.build();
   }
@@ -252,19 +320,23 @@ public final class X509Util {
   /**
    * Creates a trust manager by loading the trust store from the given file of the given type,
    * optionally decrypting it using the given password.
-   * @param trustStoreLocation the location of the trust store file.
-   * @param trustStorePassword optional password to decrypt the trust store (only applies to JKS
-   *                           trust stores). If empty, assumes the trust store is not encrypted.
-   * @param trustStoreType     must be JKS, PEM, PKCS12, BCFKS or null. If null, attempts to
-   *                           autodetect the trust store type from the file extension (e.g. .jks /
-   *                           .pem).
-   * @param crlEnabled         enable CRL (certificate revocation list) checks.
-   * @param ocspEnabled        enable OCSP (online certificate status protocol) checks.
+   * @param trustStoreLocation    the location of the trust store file.
+   * @param trustStorePassword    optional password to decrypt the trust store (only applies to JKS
+   *                              trust stores). If empty, assumes the trust store is not encrypted.
+   * @param trustStoreType        must be JKS, PEM, PKCS12, BCFKS or null. If null, attempts to
+   *                              autodetect the trust store type from the file extension (e.g. .jks
+   *                              / .pem).
+   * @param crlEnabled            enable CRL (certificate revocation list) checks.
+   * @param ocspEnabled           enable OCSP (online certificate status protocol) checks.
+   * @param verifyHostName        if true, ssl peer hostname must match name in certificate
+   * @param allowReverseDnsLookup if true, allow falling back to reverse dns lookup in verifying
+   *                              hostname
    * @return the trust manager.
    * @throws TrustManagerException if something goes wrong.
    */
   static X509TrustManager createTrustManager(String trustStoreLocation, char[] trustStorePassword,
-    String trustStoreType, boolean crlEnabled, boolean ocspEnabled) throws TrustManagerException {
+    String trustStoreType, boolean crlEnabled, boolean ocspEnabled, boolean verifyHostName,
+    boolean allowReverseDnsLookup) throws TrustManagerException {
 
     if (trustStorePassword == null) {
       trustStorePassword = EMPTY_CHAR_ARRAY;
@@ -297,7 +369,8 @@ public final class X509Util {
 
       for (final TrustManager tm : tmf.getTrustManagers()) {
         if (tm instanceof X509ExtendedTrustManager) {
-          return (X509ExtendedTrustManager) tm;
+          return new HBaseTrustManager((X509ExtendedTrustManager) tm, verifyHostName,
+            allowReverseDnsLookup);
         }
       }
       throw new TrustManagerException("Couldn't find X509TrustManager");
