@@ -187,6 +187,8 @@ public abstract class AbstractTestMutualTls {
         x509TestContext.cloneWithNewKeystoreCert(cert)
           .setKeystoreConfigurations(KeyStoreFileType.JKS, confToSet);
         break;
+      default:
+        break;
     }
   }
 
