@@ -606,8 +606,8 @@ class BalancerClusterState {
       Deque<BalancerRegionLoad> regionLoadList = regionLoads[regionIndex];
 
       // Found the region load. Find the prefetch ratio for this region load
-      prefetchRatio = regionLoadList.isEmpty() ? 0.0f :
-        regionLoadList.getLast().getPrefetchCacheRatio();
+      prefetchRatio =
+        regionLoadList == null ? 0.0f : regionLoadList.getLast().getPrefetchCacheRatio();
       break;
     }
     return prefetchRatio;

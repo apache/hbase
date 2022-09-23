@@ -67,7 +67,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   private static final String REGION_KEY = "testRegion";
 
   // Mapping of prefetch test -> expected prefetch
-  private float[] expectedPrefetch = { 0.0f, 1.0f, 0.5f, 0.75f, 0.0f};
+  private float[] expectedPrefetch = { 0.0f, 1.0f, 0.5f, 0.75f, 0.0f };
 
   /**
    * Data set to testPrefetchCost: [test][0][0] = mapping of server to number of regions it hosts
@@ -76,18 +76,18 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
    */
   private int[][][] clusterRegionPrefetchMocks = new int[][][] {
     // Test 1: each region is entirely on server that hosts it
-    new int[][] {
-      new int[] { 2, 1, 1},
-      new int[] { 2, 0, 0, 100 }, // region 0 is hosted and entirely prefethced on server 2
+    new int[][] { new int[] { 2, 1, 1 }, new int[] { 2, 0, 0, 100 }, // region 0 is hosted and
+                                                                     // entirely prefethced on
+                                                                     // server 2
       new int[] { 0, 100, 0, 0 }, // region 1 is hosted and entirely prefetched on server 0
       new int[] { 0, 100, 0, 0 }, // region 2 is hosted and entirely prefetched on server 0
       new int[] { 1, 0, 100, 0 }, // region 3 is hosted and entirely prefetched on server 1
     },
 
     // Test 2: each region is 0% local on the server that hosts it
-    new int[][] {
-      new int[] { 1, 2, 1 },
-      new int[] { 0, 0, 0, 100 }, // region 0 is hosted and entirely prefetched on server 2
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 0, 0, 100 }, // region 0 is hosted and
+                                                                     // entirely prefetched on
+                                                                     // server 2
       new int[] { 1, 100, 0, 0 }, // region 1 is hosted and prefetched entirely on server 0
       new int[] { 1, 100, 0, 0 }, // region 2 is hosted and prefetched entirely on server 0
       new int[] { 2, 0, 100, 0 }, // region 3 is hosted and prefetched entirely on server 1
@@ -95,33 +95,17 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
     // Test 3: each region is 25% prefetched on the server that hosts it while 50% prefetched
     // on some other server
-    new int[][] {
-      new int[] { 1, 2, 1 },
-      new int[] { 0, 25, 0, 50 },
-      new int[] { 1, 50, 25, 0 },
-      new int[] { 1, 50, 25, 0 },
-      new int[] { 2, 0, 50, 25 },
-    },
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 25, 0, 50 }, new int[] { 1, 50, 25, 0 },
+      new int[] { 1, 50, 25, 0 }, new int[] { 2, 0, 50, 25 }, },
 
     // Test 4: each region is 25% prefetched on the server that hosts it and 100% prefetched
     // on some other server
-    new int[][] {
-      new int[] { 1, 2, 1 },
-      new int[] { 0, 25, 0, 100 },
-      new int[] { 1, 100, 25, 0 },
-      new int[] { 1, 100, 25, 0 },
-      new int[] { 2, 0, 100, 25 },
-    },
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 25, 0, 100 }, new int[] { 1, 100, 25, 0 },
+      new int[] { 1, 100, 25, 0 }, new int[] { 2, 0, 100, 25 }, },
 
     // Test 5: each region is 75% prefetched on all the servers
-    new int[][] {
-      new int[] { 1, 2, 1 },
-      new int[] { 0, 75, 75, 75 },
-      new int[] { 1, 75, 75, 75 },
-      new int[] { 1, 75, 75, 75 },
-      new int[] { 2, 75, 75, 75 },
-    },
-  };
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 75, 75, 75 }, new int[] { 1, 75, 75, 75 },
+      new int[] { 1, 75, 75, 75 }, new int[] { 2, 75, 75, 75 }, }, };
 
   // Mapping of locality test -> expected locality
   private float[] expectedLocalities = { 1.0f, 0.0f, 0.50f, 0.25f, 1.0f };
@@ -714,8 +698,9 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
   private class MockClusterForPrefetch extends BalancerClusterState {
     private int[][] regionServerPrefetch = null; // [region][server] = prefetch percent
+
     public MockClusterForPrefetch(int[][] regions) {
-      // regions[0]  is an array where index = serverIndex and value = number of regions
+      // regions[0] is an array where index = serverIndex and value = number of regions
       super(mockClusterServers(regions[0], 1), null, null, null);
       regionServerPrefetch = new int[regions.length - 1][];
       for (int i = 1; i < regions.length; i++) {
@@ -731,7 +716,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
     @Override
     public float getOrComputeWeightedPrefetchRatio(int region, int server) {
-      return getRegionSizeMB(region) * regionServerPrefetch[region][server]/100.0f;
+      return getRegionSizeMB(region) * regionServerPrefetch[region][server] / 100.0f;
     }
 
     @Override
@@ -741,7 +726,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
     @Override
     protected float getRegionServerPrefetchRatio(int region, int regionServerIndex) {
-      return regionServerPrefetch[region][regionServerIndex]/100.0f;
+      return regionServerPrefetch[region][regionServerIndex] / 100.0f;
     }
   }
 

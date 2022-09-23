@@ -543,7 +543,9 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
-      public float getPrefetchCacheRatio() { return 0.0f; }
+      public float getPrefetchCacheRatio() {
+        return 0.0f;
+      }
     };
     return regionMetrics;
   }

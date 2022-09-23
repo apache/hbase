@@ -80,8 +80,7 @@ public final class RegionMetricsBuilder {
           ClusterStatusProtos.StoreSequenceId::getSequenceId)))
       .setUncompressedStoreFileSize(
         new Size(regionLoadPB.getStoreUncompressedSizeMB(), Size.Unit.MEGABYTE))
-      .setPrefetchCacheRatio(regionLoadPB.getPrefetchCacheRatio())
-      .build();
+      .setPrefetchCacheRatio(regionLoadPB.getPrefetchCacheRatio()).build();
   }
 
   private static List<ClusterStatusProtos.StoreSequenceId>
@@ -121,8 +120,7 @@ public final class RegionMetricsBuilder {
       .addAllStoreCompleteSequenceId(toStoreSequenceId(regionMetrics.getStoreSequenceId()))
       .setStoreUncompressedSizeMB(
         (int) regionMetrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE))
-      .setPrefetchCacheRatio(regionMetrics.getPrefetchCacheRatio())
-      .build();
+      .setPrefetchCacheRatio(regionMetrics.getPrefetchCacheRatio()).build();
   }
 
   public static RegionMetricsBuilder newBuilder(byte[] name) {

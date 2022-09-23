@@ -65,5 +65,7 @@ class BalancerRegionLoad {
     return storefileSizeMB;
   }
 
-  public float getPrefetchCacheRatio() { return prefetchCacheRatio; }
+  public float getPrefetchCacheRatio() {
+    return prefetchCacheRatio;
+  }
 }

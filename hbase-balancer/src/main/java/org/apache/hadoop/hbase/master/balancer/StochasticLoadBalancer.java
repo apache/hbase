@@ -156,7 +156,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private PrefetchCacheCostFunction prefetchCacheCost;
   private PrefetchBasedCandidateGenerator prefetchCandidateGenerator;
 
-
   protected List<CandidateGenerator> candidateGenerators;
 
   public enum GeneratorType {
@@ -460,8 +459,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionHDFSBlockLocationFinder finder = null;
-    if ((this.localityCost != null) || (this.rackLocalityCost != null) ||
-      (this.prefetchCacheCost != null)) {
+    if (
+      (this.localityCost != null) || (this.rackLocalityCost != null)
+        || (this.prefetchCacheCost != null)
+    ) {
       finder = this.regionFinder;
     }
 

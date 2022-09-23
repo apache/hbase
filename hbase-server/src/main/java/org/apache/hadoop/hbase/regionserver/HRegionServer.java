@@ -1543,7 +1543,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long blocksTotalWeight = hdfsBd.getUniqueBlocksTotalWeight();
     long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(serverName.getHostname());
     long blocksLocalWithSsdWeight = hdfsBd.getBlocksLocalWithSsdWeight(serverName.getHostname());
-    float ratioOfFilesAlreadyCached = filesAlreadyPrefetched/storefiles;
+
+    float ratioOfFilesAlreadyCached =
+      (storefiles == 0) ? 0 : filesAlreadyPrefetched / ((float) storefiles);
+
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }

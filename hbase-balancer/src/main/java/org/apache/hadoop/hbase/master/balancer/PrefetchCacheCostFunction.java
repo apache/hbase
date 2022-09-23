@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Compute the cost of a potential cluster configuration based on
- * the number of HFile's already cached in the bucket cache
+ * Compute the cost of a potential cluster configuration based on the number of HFile's already
+ * cached in the bucket cache
  */
 @InterfaceAudience.Private
 public class PrefetchCacheCostFunction extends CostFunction {
@@ -47,13 +46,12 @@ public class PrefetchCacheCostFunction extends CostFunction {
     bestPrefetchRatio = 0.0f;
 
     for (int region = 0; region < cluster.numRegions; region++) {
-      prefetchRatio += cluster.getOrComputeWeightedPrefetchRatio(region,
-        cluster.regionIndexToServerIndex[region]);
+      prefetchRatio +=
+        cluster.getOrComputeWeightedPrefetchRatio(region, cluster.regionIndexToServerIndex[region]);
       bestPrefetchRatio += cluster.getOrComputeWeightedPrefetchRatio(region,
         cluster.getOrComputeServerWithBestPrefetchRatio()[region]);
     }
-    prefetchRatio = bestPrefetchRatio == 0.0f ? 1.0f :
-      prefetchRatio/bestPrefetchRatio;
+    prefetchRatio = bestPrefetchRatio == 0.0f ? 1.0f : prefetchRatio / bestPrefetchRatio;
   }
 
   @Override
@@ -66,8 +64,7 @@ public class PrefetchCacheCostFunction extends CostFunction {
     float oldServerPrefetch = getWeightedPrefetchRatio(region, oldServer);
     float newServerPrefetch = getWeightedPrefetchRatio(region, newServer);
     float prefetchDelta = newServerPrefetch - oldServerPrefetch;
-    float normalizeDelta = bestPrefetchRatio == 0.0f ? 0.0f :
-      prefetchDelta/bestPrefetchRatio;
+    float normalizeDelta = bestPrefetchRatio == 0.0f ? 0.0f : prefetchDelta / bestPrefetchRatio;
     prefetchRatio += normalizeDelta;
   }
 

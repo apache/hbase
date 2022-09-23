@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.Optional;
@@ -23,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-class PrefetchBasedCandidateGenerator extends CandidateGenerator{
+class PrefetchBasedCandidateGenerator extends CandidateGenerator {
   @Override
   BalanceAction generate(BalancerClusterState cluster) {
     // iterate through regions until you find one that is not on ideal host
@@ -33,11 +32,9 @@ class PrefetchBasedCandidateGenerator extends CandidateGenerator{
       for (int i = 0; i < cluster.numRegions; i++) {
         int region = (startIndex + i) % cluster.numRegions;
         int currentServer = cluster.regionIndexToServerIndex[region];
-        if (
-          currentServer != cluster.getOrComputeServerWithBestPrefetchRatio()[region]
-        ) {
-          Optional<BalanceAction> potential = tryMoveOrSwap(cluster,
-            currentServer, region, cluster.getOrComputeServerWithBestPrefetchRatio()[region]);
+        if (currentServer != cluster.getOrComputeServerWithBestPrefetchRatio()[region]) {
+          Optional<BalanceAction> potential = tryMoveOrSwap(cluster, currentServer, region,
+            cluster.getOrComputeServerWithBestPrefetchRatio()[region]);
           if (potential.isPresent()) {
             return potential.get();
           }
@@ -47,8 +44,8 @@ class PrefetchBasedCandidateGenerator extends CandidateGenerator{
     return BalanceAction.NULL_ACTION;
   }
 
-  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster,
-    int fromServer, int fromRegion, int toServer) {
+  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster, int fromServer,
+    int fromRegion, int toServer) {
     // Try move first. We know apriori fromRegion has the highest locality on toServer
     if (cluster.serverHasTooFewRegions(toServer)) {
       return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
