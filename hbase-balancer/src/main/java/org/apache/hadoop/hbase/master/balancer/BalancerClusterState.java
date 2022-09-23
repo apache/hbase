@@ -115,6 +115,11 @@ class BalancerClusterState {
   // Maps localityType -> region -> [server|rack]Index with highest locality
   private int[][] regionsToMostLocalEntities;
 
+  // Maps region -> serverIndex -> prefetch ratio of a region on a server
+  private float[][] regionServerPrefetchRatio;
+  // Maps region -> serverIndex with best prefect ratio
+  private int[] regionServerWithBestPrefetchRatio;
+
   static class DefaultRackManager extends RackManager {
     @Override
     public String getRack(ServerName server) {
@@ -551,6 +556,61 @@ class BalancerClusterState {
   enum LocalityType {
     SERVER,
     RACK
+  }
+
+  public float getOrComputeWeightedPrefetchRatio(int region, int server) {
+    return getRegionSizeMB(region) * getOrComputeRegionPrefetchRatio()[region][server];
+  }
+
+  private float[][] getOrComputeRegionPrefetchRatio() {
+    if (regionServerWithBestPrefetchRatio == null || regionServerPrefetchRatio == null) {
+      computeRegionServerPrefetchRatio();
+    }
+    return regionServerPrefetchRatio;
+  }
+
+  public int[] getOrComputeServerWithBestPrefetchRatio() {
+    if (regionServerWithBestPrefetchRatio == null || regionServerPrefetchRatio == null) {
+      computeRegionServerPrefetchRatio();
+    }
+    return regionServerWithBestPrefetchRatio;
+  }
+
+  private void computeRegionServerPrefetchRatio() {
+    regionServerPrefetchRatio = new float[numRegions][numServers];
+    regionServerWithBestPrefetchRatio = new int[numRegions];
+
+    for (int region = 0; region < numRegions; region++) {
+      float bestPrefetchRatio = 0.0f;
+      int serverWithBestPrefetchRatio = 0;
+      for (int server = 0; server < numServers; server++) {
+        float prefetchRatio = getRegionServerPrefetchRatio(region, server);
+        regionServerPrefetchRatio[region][server] = prefetchRatio;
+        if (prefetchRatio > bestPrefetchRatio) {
+          serverWithBestPrefetchRatio = server;
+          bestPrefetchRatio = prefetchRatio;
+        }
+      }
+      regionServerWithBestPrefetchRatio[region] = serverWithBestPrefetchRatio;
+    }
+  }
+
+  protected float getRegionServerPrefetchRatio(int region, int server) {
+    float prefetchRatio = 0.0f;
+
+    // For every region on this region server get the region load
+    for (int regionIndex : regionsPerServer[server]) {
+      if (region != regionIndex) {
+        continue;
+      }
+      Deque<BalancerRegionLoad> regionLoadList = regionLoads[regionIndex];
+
+      // Found the region load. Find the prefetch ratio for this region load
+      prefetchRatio = regionLoadList.isEmpty() ? 0.0f :
+        regionLoadList.getLast().getPrefetchCacheRatio();
+      break;
+    }
+    return prefetchRatio;
   }
 
   public void doAction(BalanceAction action) {

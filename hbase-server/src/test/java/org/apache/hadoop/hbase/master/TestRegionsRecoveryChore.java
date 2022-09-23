@@ -541,6 +541,9 @@ public class TestRegionsRecoveryChore {
       public CompactionState getCompactionState() {
         return null;
       }
+
+      @Override
+      public float getPrefetchCacheRatio() { return 0.0f; }
     };
     return regionMetrics;
   }

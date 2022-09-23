@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -1493,6 +1494,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long totalStaticBloomSize = 0L;
     long totalCompactingKVs = 0L;
     long currentCompactedKVs = 0L;
+    int filesAlreadyPrefetched = 0;
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1514,6 +1516,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       rootLevelIndexSize += store.getStorefilesRootLevelIndexSize();
       totalStaticIndexSize += store.getTotalStaticIndexSize();
       totalStaticBloomSize += store.getTotalStaticBloomSize();
+      Collection<HStoreFile> filesInStore = store.getStorefiles();
+      if (!filesInStore.isEmpty()) {
+        for (HStoreFile hStoreFile : filesInStore) {
+          if (PrefetchExecutor.isFilePrefetched(hStoreFile.getPath().getName())) {
+            filesAlreadyPrefetched++;
+          }
+        }
+      }
     }
 
     int unitMB = 1024 * 1024;
@@ -1533,6 +1543,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long blocksTotalWeight = hdfsBd.getUniqueBlocksTotalWeight();
     long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(serverName.getHostname());
     long blocksLocalWithSsdWeight = hdfsBd.getBlocksLocalWithSsdWeight(serverName.getHostname());
+    float ratioOfFilesAlreadyCached = filesAlreadyPrefetched/storefiles;
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1556,7 +1567,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setDataLocalityForSsd(dataLocalityForSsd).setBlocksLocalWeight(blocksLocalWeight)
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
-      .setLastMajorCompactionTs(r.getOldestHfileTs(true));
+      .setLastMajorCompactionTs(r.getOldestHfileTs(true))
+      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached);
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }

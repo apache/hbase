@@ -177,6 +177,9 @@ message RegionLoad {
     MAJOR = 2;
     MAJOR_AND_MINOR = 3;
   }
+
+  /** The prefetch cache ratio for region */
+  optional float prefetch_cache_ratio = 28;
 }
 
 message UserLoad {

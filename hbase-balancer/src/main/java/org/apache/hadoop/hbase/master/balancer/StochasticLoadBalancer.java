@@ -153,6 +153,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
+  private PrefetchCacheCostFunction prefetchCacheCost;
+  private PrefetchBasedCandidateGenerator prefetchCandidateGenerator;
+
 
   protected List<CandidateGenerator> candidateGenerators;
 
@@ -160,7 +163,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     RANDOM,
     LOAD,
     LOCALITY,
-    RACK
+    RACK,
+    PREFETCH
   }
 
   /**
@@ -221,6 +225,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
     candidateGenerators.add(GeneratorType.RACK.ordinal(),
       new RegionReplicaRackCandidateGenerator());
+    candidateGenerators.add(GeneratorType.PREFETCH.ordinal(), prefetchCandidateGenerator);
     return candidateGenerators;
   }
 
@@ -237,6 +242,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
+    prefetchCacheCost = new PrefetchCacheCostFunction(conf);
+    prefetchCandidateGenerator = new PrefetchBasedCandidateGenerator();
 
     this.candidateGenerators = createCandidateGenerators();
 
@@ -256,6 +263,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(new WriteRequestCostFunction(conf));
     addCostFunction(new MemStoreSizeCostFunction(conf));
     addCostFunction(new StoreFileCostFunction(conf));
+    addCostFunction(prefetchCacheCost);
     loadCustomCostFunctions(conf);
 
     curFunctionCosts = new double[costFunctions.size()];
@@ -452,7 +460,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionHDFSBlockLocationFinder finder = null;
-    if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
+    if ((this.localityCost != null) || (this.rackLocalityCost != null) ||
+      (this.prefetchCacheCost != null)) {
       finder = this.regionFinder;
     }
 
