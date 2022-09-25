@@ -639,9 +639,15 @@ public class HRegionServer extends Thread
       initNamedQueueRecorder(conf);
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
-      String hostName = StringUtils.isBlank(useThisHostnameInstead)
-        ? this.rpcServices.isa.getHostName()
-        : this.useThisHostnameInstead;
+
+      // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+      // see HBASE-27304 for details.
+      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+      String isaHostName =
+        useIp ? rpcServices.isa.getAddress().getHostAddress() : rpcServices.isa.getHostName();
+      String hostName =
+        StringUtils.isBlank(useThisHostnameInstead) ? isaHostName : useThisHostnameInstead;
       serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
 
       rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);

@@ -1658,6 +1658,22 @@ public final class HConstants {
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
 
+  /**
+   * In some scenarios, such as the elastic scaling scenario on the cloud, the HBase client may not
+   * be able to resolve the hostname of the newly added node. If the network is interconnected, the
+   * client can actually access the HBase cluster nodes through ip. However, since the HBase client
+   * obtains the Master/RS address info from or the ZK or the meta table, so the Master/RS of the
+   * HBase cluster needs to expose the service with ip instead of the hostname. Therefore, We can
+   * use hostname by default, but at the same time, we can also provide a config to support whether
+   * to use ip for Master/RS service. See HBASE-27304 for details.
+   */
+  public final static String HBASE_SERVER_USEIP_ENABLED_KEY = "hbase.server.useip.enabled";
+
+  /**
+   * Default value of {@link #HBASE_SERVER_USEIP_ENABLED_KEY}
+   */
+  public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
