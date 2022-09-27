@@ -3233,7 +3233,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         // the time limit to be less than the allowable minimum (could cause an
         // immediate timeout before scanning any data).
         timeLimitDelta = Math.max(timeLimitDelta / 2, minimumScanTimeLimitDelta);
-        LOG.info("Final timeLimitDelta of {}", timeLimitDelta);
         return now + timeLimitDelta;
       }
     }
