@@ -427,10 +427,8 @@ public class ProtobufLogReader extends ReaderBase {
     } catch (EOFException eof) {
       // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
       if (originalPosition < 0) {
-        LOG.debug(
-          "Encountered a malformed edit, but can't seek back to last good position "
-            + "because originalPosition is negative. last offset={}",
-          this.inputStream.getPos());
+        LOG.debug("Encountered a malformed edit, but can't seek back to last good position "
+          + "because originalPosition is negative. last offset={}", this.inputStream.getPos());
         throw eof;
       }
       // If stuck at the same place and we got an exception, lets go back at the beginning.
