@@ -430,7 +430,7 @@ public class ProtobufLogReader extends ReaderBase {
         LOG.debug(
           "Encountered a malformed edit, but can't seek back to last good position "
             + "because originalPosition is negative. last offset={}",
-          this.inputStream.getPos(), eof);
+          this.inputStream.getPos());
         throw eof;
       }
       // If stuck at the same place and we got an exception, lets go back at the beginning.
@@ -446,7 +446,7 @@ public class ProtobufLogReader extends ReaderBase {
         // Else restore our position to original location in hope that next time through we will
         // read successfully.
         LOG.debug("Encountered a malformed edit, seeking back to last good position in file, "
-          + "from {} to {}", inputStream.getPos(), originalPosition, eof);
+          + "from {} to {}", inputStream.getPos(), originalPosition);
         seekOnFs(originalPosition);
       }
       return false;
