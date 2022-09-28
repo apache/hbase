@@ -1077,7 +1077,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   /**
    * Try to acquire the share lock on global.
-   * @see #wakeGlobalExclusiveLock(Procedure)
+   * @see #wakeGlobalExclusiveLock(Procedure, String)
    * @param procedure the procedure trying to acquire the lock
    * @return true if the procedure has to wait for global to be available
    */
@@ -1100,7 +1100,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   /**
    * Wake the procedures waiting for global.
-   * @see #waitGlobalExclusiveLock(Procedure)
+   * @see #waitGlobalExclusiveLock(Procedure, String)
    * @param procedure the procedure releasing the lock
    */
   public void wakeGlobalExclusiveLock(Procedure<?> procedure, String globalId) {
