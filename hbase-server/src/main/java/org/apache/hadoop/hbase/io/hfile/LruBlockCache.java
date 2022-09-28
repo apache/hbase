@@ -477,6 +477,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
     cacheBlock(cacheKey, buf, false);
   }
 
+  @Override public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlock(cacheKey, buf, inMemory);
+  }
+
   /**
    * Helper function that updates the local size counter and also updates any per-cf or
    * per-blocktype metrics it can discern from given {@link LruCachedBlock}

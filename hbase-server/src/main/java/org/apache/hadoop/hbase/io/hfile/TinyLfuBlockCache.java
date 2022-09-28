@@ -182,6 +182,11 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     cacheBlock(cacheKey, value);
   }
 
+  @Override public void cacheBlock(BlockCacheKey cacheKey, Cacheable value, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlock(cacheKey, value);
+  }
+
   @Override
   public void cacheBlock(BlockCacheKey key, Cacheable value) {
     if (value.heapSize() > maxBlockSize) {

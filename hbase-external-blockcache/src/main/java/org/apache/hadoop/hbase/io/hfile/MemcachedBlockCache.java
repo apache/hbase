@@ -111,6 +111,11 @@ public class MemcachedBlockCache implements BlockCache {
     cacheBlock(cacheKey, buf);
   }
 
+  @Override public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlock(cacheKey, buf, inMemory);
+  }
+
   @SuppressWarnings("FutureReturnValueIgnored")
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {

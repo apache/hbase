@@ -651,6 +651,11 @@ public class TestHeapMemoryManager {
 
     }
 
+    @Override public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      boolean waitWhenCache) {
+
+    }
+
     @Override
     public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
       boolean updateCacheMetrics) {

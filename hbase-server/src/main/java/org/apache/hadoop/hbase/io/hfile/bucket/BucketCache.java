@@ -248,6 +248,10 @@ public class BucketCache implements BlockCache, HeapSize {
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
+  private static final String QUEUE_ADDITION_WAIT_TIME =
+    "hbase.bucketcache.queue.addition.waittime";
+  private static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
+  private long queueAdditionWaitTime;
   /**
    * Use {@link java.security.MessageDigest} class's encryption algorithms to check persistent file
    * integrity, default algorithm is MD5
@@ -288,6 +292,8 @@ public class BucketCache implements BlockCache, HeapSize {
     this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
     this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
     this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.queueAdditionWaitTime = conf.getLong(QUEUE_ADDITION_WAIT_TIME,
+      DEFAULT_QUEUE_ADDITION_WAIT_TIME);
     this.prefetchedFileListPath = conf.get(PREFETCH_PERSISTENCE_PATH_KEY);
 
     sanityCheckConfigs();
@@ -436,6 +442,18 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
+   * Cache the block with the specified name and buffer.
+   * @param cacheKey   block's cache key
+   * @param cachedItem block buffer
+   * @param inMemory   if block is in-memory
+   */
+  @Override
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, waitWhenCache && queueAdditionWaitTime > 0);
+  }
+
+  /**
    * Cache the block to ramCache
    * @param cacheKey   block's cache key
    * @param cachedItem block buffer
@@ -491,7 +509,7 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean successfulAddition = false;
     if (wait) {
       try {
-        successfulAddition = bq.offer(re, DEFAULT_CACHE_WAIT_TIME, TimeUnit.MILLISECONDS);
+        successfulAddition = bq.offer(re,  queueAdditionWaitTime, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
