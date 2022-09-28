@@ -604,8 +604,10 @@ public final class ConnectionUtils {
     resp.getResults().forEach((regionName, regionResult) -> {
       ClientProtos.RegionLoadStats stat = regionResult.getStat();
       if (stat == null) {
-        LOG.error("No ClientProtos.RegionLoadStats found for server={}, region={}", serverName,
-          Bytes.toStringBinary(regionName));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No ClientProtos.RegionLoadStats found for server={}, region={}", serverName,
+            Bytes.toStringBinary(regionName));
+        }
         return;
       }
       RegionLoadStats regionLoadStats = ProtobufUtil.createRegionLoadStats(stat);
