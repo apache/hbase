@@ -172,8 +172,8 @@ public class PrefixTreeUtil {
     meta.totalNodeDataLength += node.nodeData.length;
     meta.countNodeDataNum++;
 
-    if (node.children.size() > meta.maxChildNum) {
-      meta.maxChildNum = node.children.size();
+    if (node.children.size() > meta.maxFanOut) {
+      meta.maxFanOut = node.children.size();
     }
     meta.totalChildNum += node.children.size();
     meta.countChildNum++;
@@ -191,7 +191,7 @@ public class PrefixTreeUtil {
     }
     if (node.children.isEmpty()) {
       meta.leafNodes.add(node);
-      meta.countIndexNum++;
+      meta.totalIndexNum++;
     } else {
       meta.nonLeafNodes.add(node);
     }
@@ -209,7 +209,7 @@ public class PrefixTreeUtil {
     totalLength += meta.totalNodeDataLength;
     totalLength += dataWidth.nodeDataLengthWidth * meta.countNodeDataNum;
 
-    dataWidth.fanOutWidth = UFIntTool.numBytes(meta.maxChildNum);
+    dataWidth.fanOutWidth = UFIntTool.numBytes(meta.maxFanOut);
     // fan Out
     totalLength += dataWidth.fanOutWidth * meta.countChildNum;
     // fan Byte
@@ -222,7 +222,7 @@ public class PrefixTreeUtil {
     totalLength += dataWidth.occurrencesWidth * meta.countNumOccurrences;
 
     dataWidth.indexWidth = UFIntTool.numBytes(meta.maxIndex);
-    totalLength += dataWidth.indexWidth * meta.countIndexNum;
+    totalLength += dataWidth.indexWidth * meta.totalIndexNum;
 
     dataWidth.childNodeOffsetWidth = UFIntTool.numBytes(totalLength);
 
@@ -525,6 +525,9 @@ public class PrefixTreeUtil {
     throw new IllegalStateException("Unexpected unable to find index=" + index);
   }
 
+  /**
+   * Used only when serialize for build the prefix tree.
+   */
   public static class TokenizerNode {
 
     public byte[] nodeData = null;
@@ -549,6 +552,9 @@ public class PrefixTreeUtil {
 
     public List<KeyValue.KeyOnlyKeyValue> keys = null;
 
+    public int qualifierLength = 0;
+    public int qualifierNum = 0;
+
     /*
      * A positive value indicating how many bytes before the end of the block this node will start.
      * If the section is 55 bytes and negativeOffset is 9, then the node will start at 46.
@@ -564,7 +570,7 @@ public class PrefixTreeUtil {
     public int totalNodeDataLength = 0;
     public int countNodeDataNum = 0;
 
-    public int maxChildNum = 0;
+    public int maxFanOut = 0;
     public int totalChildNum = 0;
     public int countChildNum = 0;
 
@@ -572,7 +578,11 @@ public class PrefixTreeUtil {
     public int countNumOccurrences = 0;
 
     public int maxIndex = 0;
-    public int countIndexNum = 0;
+    public int totalIndexNum = 0;
+
+    public int maxQualifierLength = 0;
+    public int countQualifierNum = 0;
+    public int totalQualifierLength = 0;
 
     public ArrayList<TokenizerNode> nonLeafNodes = new ArrayList<>();
 
@@ -589,5 +599,7 @@ public class PrefixTreeUtil {
     public int indexWidth = 0;
 
     public int childNodeOffsetWidth = 0;
+
+    public int qualifierLengthWidth = 0;
   }
 }

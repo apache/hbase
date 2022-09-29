@@ -33,7 +33,7 @@ public enum IndexBlockEncoding {
   /** Disable index block encoding. */
   NONE(0, null),
   // id 1 is reserved for the PREFIX_TREE algorithm to be added later
-  PREFIX_TREE(1, "org.apache.hadoop.hbase.io.encoding.PrefixTreeIndexBlockEncoder");
+  PREFIX_TREE(1, "org.apache.hadoop.hbase.io.encoding.PrefixTreeIndexBlockEncoderV2");
 
   private final short id;
   private final byte[] idInBytes;
