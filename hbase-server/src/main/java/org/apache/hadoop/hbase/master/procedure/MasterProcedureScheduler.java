@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -95,16 +96,20 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     (n, k) -> n.compareKey((String) k);
   private final static AvlKeyComparator<MetaQueue> META_QUEUE_KEY_COMPARATOR =
     (n, k) -> n.compareKey((TableName) k);
+  private final static AvlKeyComparator<GlobalQueue> GLOBAL_QUEUE_KEY_COMPARATOR =
+    (n, k) -> n.compareKey((String) k);
 
   private final FairQueue<ServerName> serverRunQueue = new FairQueue<>();
   private final FairQueue<TableName> tableRunQueue = new FairQueue<>();
   private final FairQueue<String> peerRunQueue = new FairQueue<>();
   private final FairQueue<TableName> metaRunQueue = new FairQueue<>();
+  private final FairQueue<String> globalRunQueue = new FairQueue<>();
 
   private final ServerQueue[] serverBuckets = new ServerQueue[128];
   private TableQueue tableMap = null;
   private PeerQueue peerMap = null;
   private MetaQueue metaMap = null;
+  private GlobalQueue globalMap = null;
 
   private final SchemaLocking locking;
 
@@ -128,6 +133,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       doAdd(serverRunQueue, getServerQueue(spi.getServerName(), spi), proc, addFront);
     } else if (isPeerProcedure(proc)) {
       doAdd(peerRunQueue, getPeerQueue(getPeerId(proc)), proc, addFront);
+    } else if (isGlobalProcedure(proc)) {
+      doAdd(globalRunQueue, getGlobalQueue(getGlobalId(proc)), proc, addFront);
     } else {
       // TODO: at the moment we only have Table and Server procedures
       // if you are implementing a non-table/non-server procedure, you have two options: create
@@ -163,14 +170,19 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   @Override
   protected boolean queueHasRunnables() {
-    return metaRunQueue.hasRunnables() || tableRunQueue.hasRunnables()
-      || serverRunQueue.hasRunnables() || peerRunQueue.hasRunnables();
+    return globalRunQueue.hasRunnables() || metaRunQueue.hasRunnables()
+      || tableRunQueue.hasRunnables() || serverRunQueue.hasRunnables()
+      || peerRunQueue.hasRunnables();
   }
 
   @Override
   protected Procedure dequeue() {
-    // meta procedure is always the first priority
-    Procedure<?> pollResult = doPoll(metaRunQueue);
+    // pull global first
+    Procedure<?> pollResult = doPoll(globalRunQueue);
+    // then meta procedure
+    if (pollResult == null) {
+      pollResult = doPoll(metaRunQueue);
+    }
     // For now, let server handling have precedence over table handling; presumption is that it
     // is more important handling crashed servers than it is running the
     // enabling/disabling tables, etc.
@@ -268,6 +280,14 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     clear(peerMap, peerRunQueue, PEER_QUEUE_KEY_COMPARATOR);
     peerMap = null;
 
+    // Remove Meta
+    clear(metaMap, metaRunQueue, META_QUEUE_KEY_COMPARATOR);
+    metaMap = null;
+
+    // Remove Global
+    clear(globalMap, globalRunQueue, GLOBAL_QUEUE_KEY_COMPARATOR);
+    globalMap = null;
+
     assert size() == 0 : "expected queue size to be 0, got " + size();
   }
 
@@ -300,6 +320,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     count += queueSize(tableMap);
     count += queueSize(peerMap);
     count += queueSize(metaMap);
+    count += queueSize(globalMap);
     return count;
   }
 
@@ -500,6 +521,51 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static boolean isMetaProcedure(Procedure<?> proc) {
     return proc instanceof MetaProcedureInterface;
+  }
+
+  // ============================================================================
+  // Global Queue Lookup Helpers
+  // ============================================================================
+  private GlobalQueue getGlobalQueue(String globalId) {
+    GlobalQueue node = AvlTree.get(globalMap, globalId, GLOBAL_QUEUE_KEY_COMPARATOR);
+    if (node != null) {
+      return node;
+    }
+    node = new GlobalQueue(globalId, locking.getGlobalLock(globalId));
+    globalMap = AvlTree.insert(globalMap, node);
+    return node;
+  }
+
+  private void removeGlobalQueue(String globalId) {
+    globalMap = AvlTree.remove(globalMap, globalId, GLOBAL_QUEUE_KEY_COMPARATOR);
+    locking.removeGlobalLock(globalId);
+  }
+
+  private void tryCleanupGlobalQueue(String globalId, Procedure<?> procedure) {
+    schedLock();
+    try {
+      GlobalQueue queue = AvlTree.get(globalMap, globalId, GLOBAL_QUEUE_KEY_COMPARATOR);
+      if (queue == null) {
+        return;
+      }
+
+      final LockAndQueue lock = locking.getGlobalLock(globalId);
+      if (queue.isEmpty() && lock.tryExclusiveLock(procedure)) {
+        removeFromRunQueue(globalRunQueue, queue,
+          () -> "clean up global queue after " + procedure + " completed");
+        removeGlobalQueue(globalId);
+      }
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  private static boolean isGlobalProcedure(Procedure<?> proc) {
+    return proc instanceof GlobalProcedureInterface;
+  }
+
+  private static String getGlobalId(Procedure<?> proc) {
+    return ((GlobalProcedureInterface) proc).getGlobalId();
   }
 
   // ============================================================================
@@ -999,6 +1065,51 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       final LockAndQueue lock = locking.getMetaLock();
       lock.releaseExclusiveLock(procedure);
       addToRunQueue(metaRunQueue, getMetaQueue(), () -> procedure + " released exclusive lock");
+      int waitingCount = wakeWaitingProcedures(lock);
+      wakePollIfNeeded(waitingCount);
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  // ============================================================================
+  // Global Locking Helpers
+  // ============================================================================
+  /**
+   * Try to acquire the share lock on global.
+   * @see #wakeGlobalExclusiveLock(Procedure, String)
+   * @param procedure the procedure trying to acquire the lock
+   * @return true if the procedure has to wait for global to be available
+   */
+  public boolean waitGlobalExclusiveLock(Procedure<?> procedure, String globalId) {
+    schedLock();
+    try {
+      final LockAndQueue lock = locking.getGlobalLock(globalId);
+      if (lock.tryExclusiveLock(procedure)) {
+        removeFromRunQueue(globalRunQueue, getGlobalQueue(globalId),
+          () -> procedure + " held shared lock");
+        return false;
+      }
+      waitProcedure(lock, procedure);
+      logLockedResource(LockedResourceType.GLOBAL, HConstants.EMPTY_STRING);
+      return true;
+    } finally {
+      schedUnlock();
+    }
+  }
+
+  /**
+   * Wake the procedures waiting for global.
+   * @see #waitGlobalExclusiveLock(Procedure, String)
+   * @param procedure the procedure releasing the lock
+   */
+  public void wakeGlobalExclusiveLock(Procedure<?> procedure, String globalId) {
+    schedLock();
+    try {
+      final LockAndQueue lock = locking.getGlobalLock(globalId);
+      lock.releaseExclusiveLock(procedure);
+      addToRunQueue(globalRunQueue, getGlobalQueue(globalId),
+        () -> procedure + " released shared lock");
       int waitingCount = wakeWaitingProcedures(lock);
       wakePollIfNeeded(waitingCount);
     } finally {
