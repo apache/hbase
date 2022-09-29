@@ -15,17 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * Procedure interface for global operations, such as migration.
+ */
 @InterfaceAudience.Private
-public enum LockedResourceType {
-  SERVER,
-  NAMESPACE,
-  TABLE,
-  REGION,
-  PEER,
-  META,
-  GLOBAL
+public interface GlobalProcedureInterface {
+
+  String getGlobalId();
 }
