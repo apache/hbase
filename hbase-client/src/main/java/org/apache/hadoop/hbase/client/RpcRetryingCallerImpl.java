@@ -67,12 +67,6 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   private final MetricsConnection metrics;
 
   public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
-    int startLogErrorsCnt) {
-    this(pause, pauseForServerOverloaded, retries,
-      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt, 0, null);
-  }
-
-  public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
     RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout,
     MetricsConnection metricsConnection) {
     this.pause = pause;

@@ -39,10 +39,6 @@ public class RpcRetryingCallerFactory {
     this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null);
   }
 
-  public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
-    this(conf, interceptor, null);
-  }
-
   public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor,
     MetricsConnection metrics) {
     this.conf = conf;
