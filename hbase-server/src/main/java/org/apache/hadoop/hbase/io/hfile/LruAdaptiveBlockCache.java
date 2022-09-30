@@ -552,11 +552,6 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     }
   }
 
-  @Override public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
-    boolean waitWhenCache) {
-    cacheBlock(cacheKey, buf, inMemory);
-  }
-
   /**
    * Sanity-checking for parity between actual block cache content and metrics. Intended only for
    * use with TRACE level logging and -ea JVM.

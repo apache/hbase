@@ -60,7 +60,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
     boolean waitWhenCache) {
     boolean metaBlock = isMetaBlock(buf.getBlockType());
     if (metaBlock) {
-      l1Cache.cacheBlock(cacheKey, buf, inMemory, waitWhenCache);
+      l1Cache.cacheBlock(cacheKey, buf, inMemory);
     } else {
       l2Cache.cacheBlock(cacheKey, buf, inMemory, waitWhenCache);
     }

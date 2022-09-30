@@ -175,13 +175,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
-  /**
-   * Used in tests. If this flag is false and the cache speed is very fast, bucket cache will skip
-   * some blocks when caching. If the flag is true, we will wait until blocks are flushed to
-   * IOEngine.
-   */
-  boolean wait_when_cache = false;
-
   private final BucketCacheStats cacheStats = new BucketCacheStats();
 
   private final String persistencePath;
@@ -438,7 +431,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, false);
   }
 
   /**

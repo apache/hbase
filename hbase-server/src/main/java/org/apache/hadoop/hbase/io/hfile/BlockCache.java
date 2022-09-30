@@ -42,7 +42,10 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @param waitWhenCache Whether to wait for the cache to be flushed mainly when BucketCache
    *                     is configured.
    */
-  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory, boolean waitWhenCache);
+  default void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlock(cacheKey, buf, inMemory);
+  }
 
   /**
    * Add block to cache (defaults to not in-memory).
