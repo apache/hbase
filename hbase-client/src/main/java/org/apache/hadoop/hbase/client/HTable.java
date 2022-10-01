@@ -298,6 +298,10 @@ public class HTable implements Table {
    */
   @Override
   public ResultScanner getScanner(Scan scan) throws IOException {
+    // Clone to avoid modifying user object from scan internals.
+    // See https://issues.apache.org/jira/browse/HBASE-27402.
+    scan = new Scan(scan);
+
     final Span span =
       new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(scan).build();
     try (Scope ignored = span.makeCurrent()) {
