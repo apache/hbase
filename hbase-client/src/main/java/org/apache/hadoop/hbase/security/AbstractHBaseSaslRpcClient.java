@@ -50,7 +50,7 @@ public abstract class AbstractHBaseSaslRpcClient {
    * @param token           token to use if needed by the authentication method
    * @param serverAddr      the address of the hbase service
    * @param securityInfo    the security details for the remote hbase service
-   * @param fallbackAllowed does the client allow fallback to simple authentication n
+   * @param fallbackAllowed does the client allow fallback to simple authentication
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
     SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,
@@ -66,7 +66,7 @@ public abstract class AbstractHBaseSaslRpcClient {
    * @param serverAddr      the address of the hbase service
    * @param securityInfo    the security details for the remote hbase service
    * @param fallbackAllowed does the client allow fallback to simple authentication
-   * @param rpcProtection   the protection level ("authentication", "integrity" or "privacy") n
+   * @param rpcProtection   the protection level ("authentication", "integrity" or "privacy")
    */
   protected AbstractHBaseSaslRpcClient(Configuration conf,
     SaslClientAuthenticationProvider provider, Token<? extends TokenIdentifier> token,

@@ -145,7 +145,7 @@ public class CompoundConfiguration extends Configuration {
   /**
    * Add Bytes map to config list. This map is generally created by HTableDescriptor or
    * HColumnDescriptor, but can be abstractly used. The added configuration overrides the previous
-   * ones if there are name collisions. n * Bytes map
+   * ones if there are name collisions. Bytes map
    * @return this, for builder pattern
    */
   public CompoundConfiguration addBytesMap(final Map<Bytes, Bytes> map) {

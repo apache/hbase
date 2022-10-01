@@ -60,7 +60,7 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public TableInfoModel(String name) {
     this.name = name;

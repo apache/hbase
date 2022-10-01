@@ -25,8 +25,7 @@ class RpcSchedulerContext extends RpcScheduler.Context {
   private final RpcServer rpcServer;
 
   /**
-   * n
-   */
+   *   */
   RpcSchedulerContext(final RpcServer rpcServer) {
     this.rpcServer = rpcServer;
   }

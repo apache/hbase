@@ -32,7 +32,7 @@ public interface ProtobufMessageHandler {
   /**
    * Initialize the model from a protobuf representation.
    * @param message the raw bytes of the protobuf message
-   * @return reference to self for convenience n
+   * @return reference to self for convenience
    */
   ProtobufMessageHandler getObjectFromMessage(byte[] message) throws IOException;
 }

@@ -1159,8 +1159,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       /**
-       * nn * @return Return new byte array that has <code>ordinal</code> as prefix on front taking
-       * up Bytes.SIZEOF_SHORT bytes followed by <code>r</code>
+       * @return Return new byte array that has <code>ordinal</code> as prefix on front taking up
+       *         Bytes.SIZEOF_SHORT bytes followed by <code>r</code>
        */
       public static byte[] addPrefixFlag(final int ordinal, final byte[] r) {
         byte[] prefix = Bytes.toBytes((short) ordinal);
@@ -1174,17 +1174,15 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       /**
-       * n * @return Type from the Counts enum of this row. Reads prefix added by
-       * {@link #addPrefixFlag(int, byte[])}
+       * @return Type from the Counts enum of this row. Reads prefix added by
+       *         {@link #addPrefixFlag(int, byte[])}
        */
       public static VerifyCounts whichType(final byte[] bs) {
         int ordinal = Bytes.toShort(bs, 0, Bytes.SIZEOF_SHORT);
         return VerifyCounts.values()[ordinal];
       }
 
-      /**
-       * n * @return Row bytes minus the type flag.
-       */
+      /** Returns Row bytes minus the type flag. */
       public static byte[] getRowOnly(BytesWritable bw) {
         byte[] bytes = new byte[bw.getLength() - Bytes.SIZEOF_SHORT];
         System.arraycopy(bw.getBytes(), Bytes.SIZEOF_SHORT, bytes, 0, bytes.length);
@@ -1273,7 +1271,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       /**
        * Dump out extra info around references if there are any. Helps debugging.
-       * @return StringBuilder filled with references if any. n
+       * @return StringBuilder filled with references if any.
        */
       @SuppressWarnings("JavaUtilDate")
       private StringBuilder dumpExtraInfoOnRefs(final BytesWritable key, final Context context,
@@ -1425,8 +1423,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
 
     /**
-     * Verify the values in the Counters against the expected number of entries written. n *
-     * Expected number of referenced entrires n * The Job's Counters object
+     * Verify the values in the Counters against the expected number of entries written. Expected
+     * number of referenced entrires The Job's Counters object
      * @return True if the values match what's expected, false otherwise
      */
     protected boolean verifyExpectedValues(long expectedReferenced, Counters counters) {
@@ -1454,7 +1452,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
     /**
      * Verify that the Counters don't contain values which indicate an outright failure from the
-     * Reducers. n * The Job's counters
+     * Reducers. The Job's counters
      * @return True if the "bad" counter objects are 0, false otherwise
      */
     protected boolean verifyUnexpectedValues(Counters counters) {

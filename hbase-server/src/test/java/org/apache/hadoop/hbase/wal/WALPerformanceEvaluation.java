@@ -372,7 +372,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   /**
    * Verify the content of the WAL file. Verify that the file has expected number of edits.
-   * @param wals may not be null n * @return Count of edits. n
+   * @param wals may not be null
+   * @return Count of edits.
    */
   private long verify(final WALFactory wals, final Path wal, final boolean verbose)
     throws IOException {
@@ -536,7 +537,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
 
   /**
    * The guts of the {@link #main} method. Call this method to avoid the {@link #main(String[])}
-   * System.exit. nnn
+   * System.exit.
    */
   static int innerMain(final Configuration c, final String[] args) throws Exception {
     return ToolRunner.run(c, new WALPerformanceEvaluation(), args);

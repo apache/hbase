@@ -167,7 +167,7 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   /**
-   * Set up cell block codecs n
+   * Set up cell block codecs
    */
   private void setupCellBlockCodecs() throws FatalConnectionException {
     // TODO: Plug in other supported decoders.
@@ -500,8 +500,8 @@ abstract class ServerRpcConnection implements Closeable {
   protected abstract void doRespond(RpcResponse resp) throws IOException;
 
   /**
-   * n * Has the request header and the request param and optionally encoded data buffer all in this
-   * one array.
+   * Has the request header and the request param and optionally encoded data buffer all in this one
+   * array.
    * <p/>
    * Will be overridden in tests.
    */

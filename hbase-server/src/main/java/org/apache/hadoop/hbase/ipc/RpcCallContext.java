@@ -68,7 +68,7 @@ public interface RpcCallContext {
 
   /**
    * Sets a callback which has to be executed at the end of this RPC call. Such a callback is an
-   * optional one for any Rpc call. n
+   * optional one for any Rpc call.
    */
   void setCallBack(RpcCallback callback);
 

@@ -632,7 +632,7 @@ public class TestRegionObserverInterface {
   }
 
   /**
-   * Tests overriding compaction handling via coprocessor hooks n
+   * Tests overriding compaction handling via coprocessor hooks
    */
   @Test
   public void testCompactionOverride() throws Exception {

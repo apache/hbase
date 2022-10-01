@@ -215,7 +215,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
    * @param parent     the parent class loader for exempted classes
    * @param pathPrefix a prefix used in temp path name to store the jar file locally
    * @param conf       the configuration used to create the class loader, if needed
-   * @return a CoprocessorClassLoader for the coprocessor jar path n
+   * @return a CoprocessorClassLoader for the coprocessor jar path
    */
   public static CoprocessorClassLoader getClassLoader(final Path path, final ClassLoader parent,
     final String pathPrefix, final Configuration conf) throws IOException {

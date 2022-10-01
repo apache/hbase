@@ -50,7 +50,7 @@ public class PreviousBlockCompressionRatePredicator implements BlockCompressedSi
   /**
    * Returns <b>true</b> if the passed uncompressed size is larger than the limit calculated by
    * <code>updateLatestBlockSizes</code>.
-   * @param uncompressed true if the block should be finished. n
+   * @param uncompressed true if the block should be finished.
    */
   @Override
   public boolean shouldFinishBlock(int uncompressed) {

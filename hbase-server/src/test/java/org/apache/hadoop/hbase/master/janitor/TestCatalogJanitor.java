@@ -354,7 +354,7 @@ public class TestCatalogJanitor {
   }
 
   /**
-   * Test that we correctly archive all the storefiles when a region is deleted n
+   * Test that we correctly archive all the storefiles when a region is deleted
    */
   @Test
   public void testSplitParentFirstComparator() {

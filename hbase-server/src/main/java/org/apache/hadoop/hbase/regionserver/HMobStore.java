@@ -176,7 +176,7 @@ public class HMobStore extends HStore {
    * @param compression  The compression algorithm.
    * @param startKey     The start key.
    * @param isCompaction If the writer is used in compaction.
-   * @return The writer for the mob file. n
+   * @return The writer for the mob file.
    */
   public StoreFileWriter createWriterInTmp(Date date, long maxKeyCount,
     Compression.Algorithm compression, byte[] startKey, boolean isCompaction) throws IOException {
@@ -195,7 +195,7 @@ public class HMobStore extends HStore {
    * @param compression  The compression algorithm.
    * @param startKey     The start key.
    * @param isCompaction If the writer is used in compaction.
-   * @return The writer for the mob file. n
+   * @return The writer for the mob file.
    */
   public StoreFileWriter createWriter(Date date, long maxKeyCount,
     Compression.Algorithm compression, byte[] startKey, boolean isCompaction,
@@ -216,7 +216,7 @@ public class HMobStore extends HStore {
    * @param compression  The compression algorithm.
    * @param startKey     The start key.
    * @param isCompaction If the writer is used in compaction.
-   * @return The writer for the mob file. n
+   * @return The writer for the mob file.
    */
   public StoreFileWriter createWriterInTmp(String date, Path basePath, long maxKeyCount,
     Compression.Algorithm compression, byte[] startKey, boolean isCompaction,
@@ -235,7 +235,7 @@ public class HMobStore extends HStore {
    * @param maxKeyCount  The key count.
    * @param compression  The compression algorithm.
    * @param isCompaction If the writer is used in compaction.
-   * @return The writer for the mob file. n
+   * @return The writer for the mob file.
    */
 
   public StoreFileWriter createWriterInTmp(MobFileName mobFileName, Path basePath, long maxKeyCount,
@@ -251,7 +251,7 @@ public class HMobStore extends HStore {
   /**
    * Commits the mob file.
    * @param sourceFile The source file.
-   * @param targetPath The directory path where the source file is renamed to. n
+   * @param targetPath The directory path where the source file is renamed to.
    */
   public void commitFile(final Path sourceFile, Path targetPath) throws IOException {
     if (sourceFile == null) {
@@ -298,7 +298,7 @@ public class HMobStore extends HStore {
    * DefaultMobStoreCompactor where we can read empty value for the missing cell.
    * @param reference   The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
-   * @return The cell found in the mob file. n
+   * @return The cell found in the mob file.
    */
   public MobCell resolve(Cell reference, boolean cacheBlocks) throws IOException {
     return resolve(reference, cacheBlocks, -1, true);
@@ -311,7 +311,7 @@ public class HMobStore extends HStore {
    * @param cacheBlocks                 Whether the scanner should cache blocks.
    * @param readEmptyValueOnMobCellMiss should return empty mob cell if reference can not be
    *                                    resolved.
-   * @return The cell found in the mob file. n
+   * @return The cell found in the mob file.
    */
   public MobCell resolve(Cell reference, boolean cacheBlocks, boolean readEmptyValueOnMobCellMiss)
     throws IOException {
@@ -326,7 +326,7 @@ public class HMobStore extends HStore {
    * @param readPt                      the read point.
    * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is missing or
    *                                    corrupt.
-   * @return The cell found in the mob file. n
+   * @return The cell found in the mob file.
    */
   public MobCell resolve(Cell reference, boolean cacheBlocks, long readPt,
     boolean readEmptyValueOnMobCellMiss) throws IOException {
@@ -395,7 +395,7 @@ public class HMobStore extends HStore {
    * @param readPt                      the read point.
    * @param readEmptyValueOnMobCellMiss Whether return null value when the mob file is missing or
    *                                    corrupt.
-   * @return The found cell. Null if there's no such a cell. n
+   * @return The found cell. Null if there's no such a cell.
    */
   private MobCell readCell(List<Path> locations, String fileName, Cell search,
     boolean cacheMobBlocks, long readPt, boolean readEmptyValueOnMobCellMiss) throws IOException {

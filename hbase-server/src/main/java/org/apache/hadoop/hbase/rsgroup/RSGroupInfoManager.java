@@ -112,7 +112,7 @@ public interface RSGroupInfoManager {
   /**
    * Rename rsgroup
    * @param oldName old rsgroup name
-   * @param newName new rsgroup name n
+   * @param newName new rsgroup name
    */
   void renameRSGroup(String oldName, String newName) throws IOException;
 

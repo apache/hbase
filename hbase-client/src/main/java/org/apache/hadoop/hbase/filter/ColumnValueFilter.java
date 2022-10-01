@@ -69,8 +69,7 @@ public class ColumnValueFilter extends FilterBase {
   }
 
   /**
-   * n
-   */
+   *   */
   public CompareOperator getCompareOperator() {
     return op;
   }

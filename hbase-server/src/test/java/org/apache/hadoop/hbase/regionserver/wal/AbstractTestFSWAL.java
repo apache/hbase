@@ -202,7 +202,7 @@ public abstract class AbstractTestFSWAL {
 
   /**
    * tests the log comparator. Ensure that we are not mixing meta logs with non-meta logs (throws
-   * exception if we do). Comparison is based on the timestamp present in the wal name. n
+   * exception if we do). Comparison is based on the timestamp present in the wal name.
    */
   @Test
   public void testWALComparator() throws Exception {
@@ -259,7 +259,7 @@ public abstract class AbstractTestFSWAL {
    * <p>
    * This method tests this behavior by inserting edits and rolling the wal enough times to reach
    * the max number of logs threshold. It checks whether we get the "right regions and stores" for
-   * flush on rolling the wal. n
+   * flush on rolling the wal.
    */
   @Test
   public void testFindMemStoresEligibleForFlush() throws Exception {
@@ -403,8 +403,8 @@ public abstract class AbstractTestFSWAL {
    * Test flush for sure has a sequence id that is beyond the last edit appended. We do this by
    * slowing appends in the background ring buffer thread while in foreground we call flush. The
    * addition of the sync over HRegion in flush should fix an issue where flush was returning before
-   * all of its appends had made it out to the WAL (HBASE-11109). n * @see
-   * <a href="https://issues.apache.org/jira/browse/HBASE-11109">HBASE-11109</a>
+   * all of its appends had made it out to the WAL (HBASE-11109).
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11109">HBASE-11109</a>
    */
   @Test
   public void testFlushSequenceIdIsGreaterThanAllEditsInHFile() throws IOException {

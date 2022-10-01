@@ -95,7 +95,7 @@ public abstract class BaseDecoder implements Codec.Decoder {
   /**
    * Extract a Cell.
    * @return a parsed Cell or throws an Exception. EOFException or a generic IOException maybe
-   *         thrown if EOF is reached prematurely. Does not return null. n
+   *         thrown if EOF is reached prematurely. Does not return null.
    */
   @NonNull
   protected abstract Cell parseCell() throws IOException;

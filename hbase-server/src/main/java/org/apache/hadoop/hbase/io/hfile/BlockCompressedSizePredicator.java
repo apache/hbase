@@ -52,7 +52,7 @@ public interface BlockCompressedSizePredicator {
   /**
    * Decides if the block should be finished based on the comparison of its uncompressed size
    * against an adjusted size based on a predicated compression factor.
-   * @param uncompressed true if the block should be finished. n
+   * @param uncompressed true if the block should be finished.
    */
   boolean shouldFinishBlock(int uncompressed);
 

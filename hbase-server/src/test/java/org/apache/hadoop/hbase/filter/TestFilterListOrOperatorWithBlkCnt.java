@@ -70,8 +70,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   public TestName name = new TestName();
 
   /**
-   * n
-   */
+   *   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     long blkSize = 4096;
@@ -85,8 +84,7 @@ public class TestFilterListOrOperatorWithBlkCnt {
   }
 
   /**
-   * n
-   */
+   *   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();

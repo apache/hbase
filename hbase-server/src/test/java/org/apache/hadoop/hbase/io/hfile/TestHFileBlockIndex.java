@@ -498,7 +498,7 @@ public class TestHFileBlockIndex {
   }
 
   /**
-   * to check if looks good when midKey on a leaf index block boundary n
+   * to check if looks good when midKey on a leaf index block boundary
    */
   @Test
   public void testMidKeyOnLeafIndexBlockBoundary() throws IOException {
@@ -555,7 +555,6 @@ public class TestHFileBlockIndex {
   /**
    * Testing block index through the HFile writer/reader APIs. Allows to test setting index block
    * size through configuration, intermediate-level index blocks, and caching index blocks on write.
-   * n
    */
   @Test
   public void testHFileWriterAndReader() throws IOException {

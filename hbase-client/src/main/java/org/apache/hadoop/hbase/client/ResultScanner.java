@@ -86,7 +86,7 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * setting (or hbase.client.scanner.caching in hbase-site.xml).
    * @param nbRows number of rows to return
    * @return Between zero and nbRows rowResults. Scan is done if returned array is of zero-length
-   *         (We never return null). n
+   *         (We never return null).
    */
   default Result[] next(int nbRows) throws IOException {
     List<Result> resultSets = new ArrayList<>(nbRows);

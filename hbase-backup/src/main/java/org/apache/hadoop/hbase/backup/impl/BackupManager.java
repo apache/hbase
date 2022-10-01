@@ -165,7 +165,7 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get configuration n
+   * Get configuration
    */
   Configuration getConf() {
     return conf;
@@ -192,7 +192,8 @@ public class BackupManager implements Closeable {
    * @param tableList     table list
    * @param targetRootDir root dir
    * @param workers       number of parallel workers
-   * @param bandwidth     bandwidth per worker in MB per sec n * @throws BackupException exception
+   * @param bandwidth     bandwidth per worker in MB per sec
+   * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
     String targetRootDir, int workers, long bandwidth) throws BackupException {

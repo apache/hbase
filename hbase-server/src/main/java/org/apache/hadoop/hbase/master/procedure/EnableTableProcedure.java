@@ -242,7 +242,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
    * Action before any real action of enabling table. Set the exception in the procedure instead of
    * throwing it. This approach is to deal with backward compatible with 1.0.
    * @param env MasterProcedureEnv
-   * @return whether the table passes the necessary checks n
+   * @return whether the table passes the necessary checks
    */
   private boolean prepareEnable(final MasterProcedureEnv env) throws IOException {
     boolean canTableBeEnabled = true;
@@ -278,7 +278,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
   /**
    * Action before enabling table.
    * @param env   MasterProcedureEnv
-   * @param state the procedure state nn
+   * @param state the procedure state
    */
   private void preEnable(final MasterProcedureEnv env, final EnableTableState state)
     throws IOException, InterruptedException {
@@ -288,7 +288,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
   /**
    * Mark table state to Enabling
    * @param env       MasterProcedureEnv
-   * @param tableName the target table n
+   * @param tableName the target table
    */
   protected static void setTableStateToEnabling(final MasterProcedureEnv env,
     final TableName tableName) throws IOException {
@@ -300,7 +300,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
 
   /**
    * Mark table state to Enabled
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   protected static void setTableStateToEnabled(final MasterProcedureEnv env,
     final TableName tableName) throws IOException {
@@ -313,7 +313,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
   /**
    * Action after enabling table.
    * @param env   MasterProcedureEnv
-   * @param state the procedure state nn
+   * @param state the procedure state
    */
   private void postEnable(final MasterProcedureEnv env, final EnableTableState state)
     throws IOException, InterruptedException {
@@ -323,7 +323,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
   /**
    * Coprocessor Action.
    * @param env   MasterProcedureEnv
-   * @param state the procedure state nn
+   * @param state the procedure state
    */
   private void runCoprocessorAction(final MasterProcedureEnv env, final EnableTableState state)
     throws IOException, InterruptedException {

@@ -368,7 +368,7 @@ public final class FanOutOneBlockAsyncDFSOutputSaslHelper {
        * Create a ByteString from byte array without copying (wrap), and then set it as the payload
        * for the builder.
        * @param builder builder for HDFS DataTransferEncryptorMessage.
-       * @param payload byte array of payload. n
+       * @param payload byte array of payload.
        */
       static void wrapAndSetPayload(DataTransferEncryptorMessageProto.Builder builder,
         byte[] payload) throws IOException {

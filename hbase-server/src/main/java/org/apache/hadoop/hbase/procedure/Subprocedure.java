@@ -230,7 +230,7 @@ abstract public class Subprocedure implements Callable<Void> {
    * etc) to satisfy the Procedures barrier condition. For example, this would be where to make all
    * the regions on a RS on the quiescent for an procedure that required all regions to be globally
    * quiesed. Users should override this method. If a quiescent is not required, this is overkill
-   * but can still be used to execute a procedure on all members and to propagate any exceptions. n
+   * but can still be used to execute a procedure on all members and to propagate any exceptions.
    */
   abstract public void acquireBarrier() throws ForeignException;
 
@@ -240,19 +240,19 @@ abstract public class Subprocedure implements Callable<Void> {
    * have been quiesced, and procedures that require this precondition could be implemented here.
    * The implementation should also collect the result of the subprocedure as data to be returned to
    * the coordinator upon successful completion. Users should override this method.
-   * @return the data the subprocedure wants to return to coordinator side. n
+   * @return the data the subprocedure wants to return to coordinator side.
    */
   abstract public byte[] insideBarrier() throws ForeignException;
 
   /**
    * Users should override this method. This implementation of this method should rollback and
    * cleanup any temporary or partially completed state that the {@link #acquireBarrier()} may have
-   * created. n
+   * created.
    */
   abstract public void cleanup(Exception e);
 
   /**
-   * Method to cancel the Subprocedure by injecting an exception from and external source. n
+   * Method to cancel the Subprocedure by injecting an exception from and external source.
    */
   public void cancel(String msg, Throwable cause) {
     LOG.error(msg, cause);
@@ -278,7 +278,7 @@ abstract public class Subprocedure implements Callable<Void> {
   //
 
   /**
-   * Wait for the reached global barrier notification. Package visibility for testing nn
+   * Wait for the reached global barrier notification. Package visibility for testing
    */
   void waitForReachedGlobalBarrier() throws ForeignException, InterruptedException {
     Procedure.waitForLatch(inGlobalBarrier, monitor, wakeFrequency,
@@ -286,7 +286,7 @@ abstract public class Subprocedure implements Callable<Void> {
   }
 
   /**
-   * Waits until the entire procedure has globally completed, or has been aborted. nn
+   * Waits until the entire procedure has globally completed, or has been aborted.
    */
   public void waitForLocallyCompleted() throws ForeignException, InterruptedException {
     Procedure.waitForLatch(releasedLocalBarrier, monitor, wakeFrequency,

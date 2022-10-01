@@ -64,7 +64,7 @@ public class MobTestUtil {
   }
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. n * n
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
    */
   private static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {

@@ -81,8 +81,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   * n
-   */
+   *   */
   public RegionInfo getRegion() {
     return regionInfo;
   }

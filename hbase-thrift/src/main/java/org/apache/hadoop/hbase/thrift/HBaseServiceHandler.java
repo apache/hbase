@@ -66,7 +66,7 @@ public abstract class HBaseServiceHandler {
   }
 
   /**
-   * Creates and returns a Table instance from a given table name. n * name of table
+   * Creates and returns a Table instance from a given table name. name of table
    * @return Table object
    * @throws IOException if getting the table fails
    */

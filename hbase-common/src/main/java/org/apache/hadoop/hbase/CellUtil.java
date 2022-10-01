@@ -77,7 +77,8 @@ public final class CellUtil {
   /**
    * Makes a column in family:qualifier form from separate byte arrays.
    * <p>
-   * Not recommended for usage as this is old-style API. nn * @return family:qualifier
+   * Not recommended for usage as this is old-style API.
+   * @return family:qualifier
    */
   public static byte[] makeColumn(byte[] family, byte[] qualifier) {
     return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
@@ -292,9 +293,7 @@ public final class CellUtil {
     return destinationOffset + vlen;
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterables</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterables</code> */
   public static CellScanner
     createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
@@ -320,17 +319,15 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterable</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterable</code> */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
     if (cellIterable == null) return null;
     return createCellScanner(cellIterable.iterator());
   }
 
   /**
-   * n * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code>
-   * is null
+   * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   *         null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
     if (cells == null) return null;
@@ -352,9 +349,7 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellArray</code>
-   */
+  /** Returns CellScanner interface over <code>cellArray</code> */
   public static CellScanner createCellScanner(final Cell[] cellArray) {
     return new CellScanner() {
       private final Cell[] cells = cellArray;

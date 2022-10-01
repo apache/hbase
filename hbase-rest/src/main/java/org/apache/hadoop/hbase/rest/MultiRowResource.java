@@ -44,7 +44,8 @@ public class MultiRowResource extends ResourceBase implements Constants {
   String[] columns = null;
 
   /**
-   * Constructor nn * @throws java.io.IOException
+   * Constructor
+   * @throws java.io.IOException
    */
   public MultiRowResource(TableResource tableResource, String versions, String columnsStr)
     throws IOException {

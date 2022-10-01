@@ -80,7 +80,7 @@ public class FavoredNodesPlan {
 
   /**
    * Return the position of the server in the favoredNodes list. Assumes the favoredNodes list is of
-   * size 3. n
+   * size 3.
    */
   public static Position getFavoredServerPosition(List<ServerName> favoredNodes,
     ServerName server) {
