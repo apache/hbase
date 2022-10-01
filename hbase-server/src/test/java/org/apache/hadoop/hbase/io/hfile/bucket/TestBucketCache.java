@@ -341,7 +341,8 @@ public class TestBucketCache {
         bucketCache.cacheBlock(block.getBlockName(), block.getBlock());
       }
       for (HFileBlockPair block : blocks) {
-        cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(), false);
+        cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(),
+          false);
       }
       usedSize = bucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedSize);
@@ -403,7 +404,8 @@ public class TestBucketCache {
         bucketCache.cacheBlock(block.getBlockName(), block.getBlock());
       }
       for (HFileBlockPair block : blocks) {
-        cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(), false);
+        cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(),
+          false);
       }
       usedSize = bucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedSize);
@@ -833,17 +835,17 @@ public class TestBucketCache {
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 10);
       // Add blocks
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
-        bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(),
-          false, true);
+        bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false,
+          true);
       }
 
       // Max wait for 10 seconds.
       long timeout = 10000;
       // Wait for blocks size to match the number of blocks.
-      while(bucketCache.backingMap.size() != 10 ) {
+      while (bucketCache.backingMap.size() != 10) {
         if (timeout <= 0) break;
         Threads.sleep(100);
-        timeout=-100;
+        timeout = -100;
       }
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         assertTrue(bucketCache.backingMap.containsKey(hfileBlockPair.getBlockName()));
