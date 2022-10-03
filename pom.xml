@@ -2238,19 +2238,6 @@
               <exclude>**/package-info.java</exclude>
             </excludes>
             <!--
-              e.g., remove the following lines:
-              "* @param paramName"
-              "* @throws ExceptionType"
-              "* @return returnType"'
-              Multiline to allow anchors on newlines
-            -->
-            <replaceRegex>
-              <name>Remove unhelpful javadoc stubs</name>
-              <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
-              <!-- spotless manve plugin does not allow empty here, so use \n -->
-              <replacement>\n</replacement>
-            </replaceRegex>
-            <!--
               e.g., rewrite
               /** @return blabla */
               or
