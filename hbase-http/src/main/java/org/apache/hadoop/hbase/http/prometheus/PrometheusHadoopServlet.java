@@ -41,10 +41,7 @@ public class PrometheusHadoopServlet extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-    String tmpStr = req.getParameter("description");
-    boolean description = tmpStr != null && tmpStr.equals("true");
-
-    writeMetrics(resp.getWriter(), description);
+    writeMetrics(resp.getWriter(), "true".equals(req.getParameter("description")));
   }
 
   static String toPrometheusName(String metricRecordName, String metricName) {
@@ -70,11 +67,11 @@ public class PrometheusHadoopServlet extends HttpServlet {
 
           if (desc) {
             String description = metrics.description();
-            if (!description.isEmpty()) writer.append("# HELP ").append(description).append("\n");
+            if (!description.isEmpty()) writer.append("# HELP ").append(description).append('\n');
           }
 
           writer.append("# TYPE ").append(key).append(" ")
-            .append(metrics.type().toString().toLowerCase()).append("\n").append(key).append("{");
+            .append(metrics.type().toString().toLowerCase()).append('\n').append(key).append("{");
 
           /* add tags */
           String sep = "";
