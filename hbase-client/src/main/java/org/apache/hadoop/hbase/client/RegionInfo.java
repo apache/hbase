@@ -63,14 +63,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  */
 @InterfaceAudience.Public
 public interface RegionInfo extends Comparable<RegionInfo> {
-  /**
-   * @deprecated since 2.3.2/3.0.0; to be removed in 4.0.0 with no replacement (for internal use).
-   */
-  @Deprecated
-  @InterfaceAudience.Private
-  // Not using RegionInfoBuilder intentionally to avoid a static loading deadlock: HBASE-24896
-  RegionInfo UNDEFINED =
-    new MutableRegionInfo(0, TableName.valueOf("__UNDEFINED__"), RegionInfo.DEFAULT_REPLICA_ID);
 
   /**
    * Separator used to demarcate the encodedName in a region name in the new format. See description
