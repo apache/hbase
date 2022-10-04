@@ -167,13 +167,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
-  /**
-   * Used in tests. If this flag is false and the cache speed is very fast, bucket cache will skip
-   * some blocks when caching. If the flag is true, we will wait until blocks are flushed to
-   * IOEngine.
-   */
-  boolean wait_when_cache = false;
-
   private final BucketCacheStats cacheStats = new BucketCacheStats();
 
   private final String persistencePath;
@@ -239,6 +232,10 @@ public class BucketCache implements BlockCache, HeapSize {
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
+  private static final String QUEUE_ADDITION_WAIT_TIME =
+    "hbase.bucketcache.queue.addition.waittime";
+  private static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
+  private long queueAdditionWaitTime;
   /**
    * Use {@link java.security.MessageDigest} class's encryption algorithms to check persistent file
    * integrity, default algorithm is MD5
@@ -273,6 +270,8 @@ public class BucketCache implements BlockCache, HeapSize {
     this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
     this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
     this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.queueAdditionWaitTime =
+      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
 
     sanityCheckConfigs();
 
@@ -415,7 +414,19 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, false);
+  }
+
+  /**
+   * Cache the block with the specified name and buffer.
+   * @param cacheKey   block's cache key
+   * @param cachedItem block buffer
+   * @param inMemory   if block is in-memory
+   */
+  @Override
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, waitWhenCache && queueAdditionWaitTime > 0);
   }
 
   /**
@@ -471,7 +482,7 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean successfulAddition = false;
     if (wait) {
       try {
-        successfulAddition = bq.offer(re, DEFAULT_CACHE_WAIT_TIME, TimeUnit.MILLISECONDS);
+        successfulAddition = bq.offer(re, queueAdditionWaitTime, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }

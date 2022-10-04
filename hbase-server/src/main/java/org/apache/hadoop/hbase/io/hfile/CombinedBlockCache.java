@@ -53,11 +53,17 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+    cacheBlock(cacheKey, buf, inMemory, false);
+  }
+
+  @Override
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+    boolean waitWhenCache) {
     boolean metaBlock = buf.getBlockType().getCategory() != BlockType.BlockCategory.DATA;
     if (metaBlock) {
       l1Cache.cacheBlock(cacheKey, buf, inMemory);
     } else {
-      l2Cache.cacheBlock(cacheKey, buf, inMemory);
+      l2Cache.cacheBlock(cacheKey, buf, inMemory, waitWhenCache);
     }
   }
 
