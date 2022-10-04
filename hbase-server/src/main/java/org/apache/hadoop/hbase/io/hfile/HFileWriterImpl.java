@@ -541,7 +541,7 @@ public class HFileWriterImpl implements HFile.Writer {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
       try {
         cache.cacheBlock(new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
-          cacheFormatBlock);
+          cacheFormatBlock, cacheConf.isInMemory(), true);
       } finally {
         // refCnt will auto increase when block add to Cache, see RAMCache#putIfAbsent
         cacheFormatBlock.release();
