@@ -664,24 +664,24 @@ public class KeyValueUtil {
   }
 
   /**
-   * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
-   *         index members to KeyValues.
+   * Returns a KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b) {
     return createKeyValueFromKey(b, 0, b.length);
   }
 
   /**
-   * @return A KeyValue made of a byte buffer that holds the key-only part. Needed to convert hfile
-   *         index members to KeyValues.
+   * Return a KeyValue made of a byte buffer that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final ByteBuffer bb) {
     return createKeyValueFromKey(bb.array(), bb.arrayOffset(), bb.limit());
   }
 
   /**
-   * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
-   *         index members to KeyValues.
+   * Return a KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b, final int o, final int l) {
     byte[] newb = new byte[l + KeyValue.ROW_OFFSET];

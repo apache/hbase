@@ -309,8 +309,8 @@ public interface MasterServices extends Server {
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
 
   /**
-   * @return the timestamp of the last successful major compaction for the passed region or 0 if no
-   *         HFile resulting from a major compaction exists
+   * Returns the timestamp of the last successful major compaction for the passed region or 0 if no
+   * HFile resulting from a major compaction exists
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 

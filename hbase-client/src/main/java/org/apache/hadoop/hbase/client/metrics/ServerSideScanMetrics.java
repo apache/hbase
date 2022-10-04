@@ -59,8 +59,6 @@ public class ServerSideScanMetrics {
    */
   public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
-  /**
-   *   */
   public void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {
@@ -78,8 +76,6 @@ public class ServerSideScanMetrics {
     return this.counters.get(counterName);
   }
 
-  /**
-   *   */
   public void addToCounter(String counterName, long delta) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {

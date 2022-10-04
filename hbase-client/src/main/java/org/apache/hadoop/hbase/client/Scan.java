@@ -637,14 +637,12 @@ public class Scan extends Query {
     return this.caching;
   }
 
-  /**
-   *   */
+  /** Returns TimeRange */
   public TimeRange getTimeRange() {
     return this.tr;
   }
 
-  /**
-   *   */
+  /** Returns RowFilter */
   @Override
   public Filter getFilter() {
     return filter;

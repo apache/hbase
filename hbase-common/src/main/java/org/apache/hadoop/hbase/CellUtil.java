@@ -326,8 +326,8 @@ public final class CellUtil {
   }
 
   /**
-   * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
-   *         null
+   * Returns CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   * null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
     if (cells == null) return null;

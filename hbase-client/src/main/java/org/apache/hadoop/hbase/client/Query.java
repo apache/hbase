@@ -47,8 +47,6 @@ public abstract class Query extends OperationWithAttributes {
   protected Map<byte[], TimeRange> colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   protected Boolean loadColumnFamiliesOnDemand = null;
 
-  /**
-   *   */
   public Filter getFilter() {
     return filter;
   }

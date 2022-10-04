@@ -363,7 +363,6 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
    * @param n     Number of ranges after splitting. Pass 1 means no split for the range Pass 2 if
    *              you want to split the range in two;
    * @return A list of TableSplit, the size of the list is {@code n}
-   * @throws IllegalArgumentIOException
    */
   protected List<InputSplit> createNInputSplitsUniform(InputSplit split, int n)
     throws IllegalArgumentIOException {

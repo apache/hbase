@@ -1947,8 +1947,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * @return A region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
-   *         when done.
+   * Return a region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * when done.
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
     Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)

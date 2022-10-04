@@ -195,7 +195,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   /**
    * @param sn Name of this mock regionserver
-   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
     throws ZooKeeperConnectionException, IOException {

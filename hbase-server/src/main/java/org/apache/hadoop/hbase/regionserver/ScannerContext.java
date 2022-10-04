@@ -55,7 +55,7 @@ public class ScannerContext {
   /**
    * A different set of progress fields. Only include batch, dataSize and heapSize. Compare to
    * LimitFields, ProgressFields doesn't contain time field. As we save a deadline in LimitFields,
-   * so use {@link EnvironmentEdgeManager.currentTime()} directly when check time limit.
+   * so use {@link EnvironmentEdgeManager#currentTime()} directly when check time limit.
    */
   ProgressFields progress;
 

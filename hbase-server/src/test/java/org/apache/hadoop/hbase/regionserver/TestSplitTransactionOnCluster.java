@@ -1004,7 +1004,6 @@ public class TestSplitTransactionOnCluster {
   /**
    * Ensure single table region is not on same server as the single hbase:meta table region.
    * @return Index of the server hosting the single table region
-   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   private int ensureTableRegionNotOnSameServerAsMeta(final Admin admin, final RegionInfo hri)
     throws IOException, MasterNotRunningException, ZooKeeperConnectionException,

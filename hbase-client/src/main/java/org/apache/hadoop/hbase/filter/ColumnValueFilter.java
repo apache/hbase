@@ -68,8 +68,7 @@ public class ColumnValueFilter extends FilterBase {
     this.comparator = Preconditions.checkNotNull(comparator, "Comparator should not be null");
   }
 
-  /**
-   *   */
+  /** Returns operator */
   public CompareOperator getCompareOperator() {
     return op;
   }

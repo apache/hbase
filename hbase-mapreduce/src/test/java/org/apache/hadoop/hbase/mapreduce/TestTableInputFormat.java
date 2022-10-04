@@ -276,7 +276,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming NotServingRegionException using newer mapreduce api
-   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test
   public void testTableRecordReaderScannerTimeoutMapreduce()
@@ -287,7 +286,6 @@ public class TestTableInputFormat {
 
   /**
    * Run test assuming NotServingRegionException using newer mapreduce api
-   * @throws org.apache.hadoop.hbase.NotServingRegionException
    */
   @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()

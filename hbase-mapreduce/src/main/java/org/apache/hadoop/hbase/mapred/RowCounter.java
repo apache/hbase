@@ -102,8 +102,6 @@ public class RowCounter extends Configured implements Tool {
     return 0;
   }
 
-  /**
-   *   */
   public static void main(String[] args) throws Exception {
     int errCode = ToolRunner.run(HBaseConfiguration.create(), new RowCounter(), args);
     System.exit(errCode);

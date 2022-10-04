@@ -61,17 +61,14 @@ public abstract class ColumnInterpreter<T, S, P extends Message, Q extends Messa
   /**
    * returns the maximum value for this type T
    */
-
   public abstract T getMaxValue();
 
   public abstract T getMinValue();
 
-  /**
-   *   */
+  /** Returns multiplication */
   public abstract S multiply(S o1, S o2);
 
-  /**
-   *   */
+  /** Returns increment */
   public abstract S increment(S o);
 
   /**

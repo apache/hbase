@@ -1159,8 +1159,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       /**
-       * @return Return new byte array that has <code>ordinal</code> as prefix on front taking up
-       *         Bytes.SIZEOF_SHORT bytes followed by <code>r</code>
+       * Returns new byte array that has <code>ordinal</code> as prefix on front taking up
+       * Bytes.SIZEOF_SHORT bytes followed by <code>r</code>
        */
       public static byte[] addPrefixFlag(final int ordinal, final byte[] r) {
         byte[] prefix = Bytes.toBytes((short) ordinal);
@@ -1174,8 +1174,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       /**
-       * @return Type from the Counts enum of this row. Reads prefix added by
-       *         {@link #addPrefixFlag(int, byte[])}
+       * Returns type from the Counts enum of this row. Reads prefix added by
+       * {@link #addPrefixFlag(int, byte[])}
        */
       public static VerifyCounts whichType(final byte[] bs) {
         int ordinal = Bytes.toShort(bs, 0, Bytes.SIZEOF_SHORT);
