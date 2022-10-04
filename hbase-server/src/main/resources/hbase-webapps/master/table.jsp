@@ -232,7 +232,7 @@
 <%  return;
   } %>
 
-<% // table split/compact/merge actions
+<% // table split/major compact/compact/merge actions
   if ( !readOnly && action != null ) { %>
     <div class="container-fluid content">
       <div class="row inner_header">
@@ -248,6 +248,20 @@
         admin.split(TableName.valueOf(fqtn));
       }
 %>    Split request accepted. <%
+    } else if (action.equals("major compact")) {
+      if (key != null && key.length() > 0) {
+        List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn)).get();
+        byte[] row = Bytes.toBytes(key);
+
+        for (RegionInfo region : regions) {
+          if (region.containsRow(row)) {
+            admin.majorCompactRegion(region.getRegionName());
+          }
+        }
+      } else {
+        admin.majorCompact(TableName.valueOf(fqtn));
+      }
+%>    major Compact request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
         List<RegionInfo> regions = admin.getRegions(TableName.valueOf(fqtn)).get();
@@ -1146,69 +1160,86 @@
         </tr>
       </table>
 
-        <% if (!readOnly) { %>
-      <p><hr/></p>
-      Actions:
-      <p>
-      <center>
-        <table class="table" style="border: 0;" width="95%" >
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="compact" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-              </td>
-              <td>
-                This action will force a compaction of all regions of the table, or,
-                if a key is supplied, only the region containing the
-                given key.
-              </td>
-            </form>
-          </tr>
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="split" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
-              </td>
-              <td>
-                This action will force a split of all eligible
-                regions of the table, or, if a key is supplied, only the region containing the
-                given key. An eligible region is one that does not contain any references to
-                other regions. Split requests for noneligible regions will be ignored.
-              </td>
-            </form>
-          </tr>
-          <tr>
-            <form method="get">
-              <input type="hidden" name="action" value="merge" />
-              <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
-              <td class="centered">
-                <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
-              </td>
-              <td style="text-align: center;">
-                <input type="text" name="left" size="40" placeholder="Region Key (required)" />
-                <input type="text" name="right" size="40" placeholder="Region Key (required)" />
-              </td>
-              <td>
-                This action will merge two regions of the table, Merge requests for
-                noneligible regions will be ignored.
-              </td>
-            </form>
-          </tr>
-        </table>
-      </center>
-      </p>
-        <% } %>
-  </div>
+<% if (!readOnly) { %>
+<p><hr/></p>
+Actions:
+<p>
+<center>
+<table class="table" style="border: 0;" width="95%" >
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="major compact" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Major Compact" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+    This action will force a major compaction of all regions of the table, or,
+    if a key is supplied, only the region major containing the
+    given key.
+  </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="compact" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+    This action will force a compaction of all regions of the table, or,
+    if a key is supplied, only the region containing the
+    given key.
+  </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="split" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="key" size="40" placeholder="Row Key (optional)" />
+  </td>
+  <td>
+      This action will force a split of all eligible
+      regions of the table, or, if a key is supplied, only the region containing the
+      given key. An eligible region is one that does not contain any references to
+      other regions. Split requests for noneligible regions will be ignored.
+  </td>
+  </form>
+</tr>
+<tr>
+  <form method="get">
+  <input type="hidden" name="action" value="merge" />
+  <input type="hidden" name="name" value="<%= escaped_fqtn %>" />
+  <td class="centered">
+    <input style="font-size: 12pt; width: 10em" type="submit" value="Merge" class="btn" />
+  </td>
+  <td style="text-align: center;">
+    <input type="text" name="left" size="40" placeholder="Region Key (required)" />
+    <input type="text" name="right" size="40" placeholder="Region Key (required)" />
+  </td>
+  <td>
+    This action will merge two regions of the table, Merge requests for
+    noneligible regions will be ignored.
+  </td>
+  </form>
+</tr>
+</table>
+</center>
+</p>
+<% } %>
+</div>
 </div>
 
 <jsp:include page="footer.jsp" />
