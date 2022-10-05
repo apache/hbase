@@ -173,7 +173,6 @@ public class JMXJsonServlet extends HttpServlet {
         // Should we output description on each attribute and bean?
         boolean description = "true".equals(request.getParameter(INCLUDE_DESCRIPTION));
 
-
         // query per mbean attribute
         String getmethod = request.getParameter("get");
         if (getmethod != null) {
