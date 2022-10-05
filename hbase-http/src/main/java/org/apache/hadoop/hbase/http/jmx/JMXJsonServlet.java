@@ -171,8 +171,8 @@ public class JMXJsonServlet extends HttpServlet {
         }
         beanWriter = this.jsonBeanWriter.open(writer);
         // Should we output description on each attribute and bean?
-        String tmpStr = request.getParameter(INCLUDE_DESCRIPTION);
-        boolean description = tmpStr != null && tmpStr.length() > 0;
+        boolean description = "true".equals(request.getParameter(INCLUDE_DESCRIPTION));
+
 
         // query per mbean attribute
         String getmethod = request.getParameter("get");
