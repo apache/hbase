@@ -672,9 +672,10 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public CompletableFuture<Void> deleteTable(TableName tableName) {
+  public CompletableFuture<Void> deleteTable(TableName tableName, boolean archive) {
     return this.<DeleteTableRequest, DeleteTableResponse> procedureCall(tableName,
-      RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce()),
+      RequestConverter.buildDeleteTableRequest(tableName, ng.getNonceGroup(), ng.newNonce(),
+        archive),
       (s, c, req, done) -> s.deleteTable(c, req, done), (resp) -> resp.getProcId(),
       new DeleteTableProcedureBiConsumer(tableName));
   }

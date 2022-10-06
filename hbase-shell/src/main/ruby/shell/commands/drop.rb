@@ -22,14 +22,17 @@ module Shell
     class Drop < Command
       def help
         <<-EOF
-Drop the named table. Table must first be disabled:
+Drop the named table. Table must first be disabled: 
   hbase> drop 't1'
   hbase> drop 'ns1:t1'
+By default archive is enabled, you can swith off it by set it to false:
+  hbase> drop 't1',false
+  hbase> drop 'ns1:t1',false
 EOF
       end
 
-      def command(table)
-        admin.drop(table)
+      def command(table,archive=true)
+        admin.drop(table,archive)
       end
     end
   end

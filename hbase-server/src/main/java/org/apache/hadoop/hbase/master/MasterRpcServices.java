@@ -831,7 +831,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     throws ServiceException {
     try {
       long procId = server.deleteTable(ProtobufUtil.toTableName(request.getTableName()),
-        request.getNonceGroup(), request.getNonce());
+        request.getNonceGroup(), request.getNonce(), request.getArchive());
       return DeleteTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
