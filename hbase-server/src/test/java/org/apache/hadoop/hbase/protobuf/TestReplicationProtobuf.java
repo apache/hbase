@@ -41,7 +41,7 @@ public class TestReplicationProtobuf {
     HBaseClassTestRule.forClass(TestReplicationProtobuf.class);
 
   /**
-   * Little test to check we can basically convert list of a list of KVs into a CellScanner n
+   * Little test to check we can basically convert list of a list of KVs into a CellScanner
    */
   @Test
   public void testGetCellScanner() throws IOException {

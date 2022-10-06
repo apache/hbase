@@ -795,7 +795,7 @@ public class TestHStore {
   }
 
   /**
-   * Test to ensure correctness when using Stores with multiple timestamps n
+   * Test to ensure correctness when using Stores with multiple timestamps
    */
   @Test
   public void testMultipleTimestamps() throws IOException {

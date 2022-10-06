@@ -138,7 +138,8 @@ public final class CellUtil {
   /**
    * Returns tag value in a new byte array. If server-side, use {@link Tag#getValueArray()} with
    * appropriate {@link Tag#getValueOffset()} and {@link Tag#getValueLength()} instead to save on
-   * allocations. n * @return tag value in a new byte array.
+   * allocations.
+   * @return tag value in a new byte array.
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -151,7 +152,8 @@ public final class CellUtil {
   /**
    * Makes a column in family:qualifier form from separate byte arrays.
    * <p>
-   * Not recommended for usage as this is old-style API. nn * @return family:qualifier
+   * Not recommended for usage as this is old-style API.
+   * @return family:qualifier
    */
   public static byte[] makeColumn(byte[] family, byte[] qualifier) {
     return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
@@ -367,7 +369,8 @@ public final class CellUtil {
   }
 
   /**
-   * Copies the tags info into the tag portion of the cell nnn * @return position after tags
+   * Copies the tags info into the tag portion of the cell
+   * @return position after tags
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0.
    */
   @Deprecated
@@ -385,7 +388,8 @@ public final class CellUtil {
   }
 
   /**
-   * Copies the tags info into the tag portion of the cell nnn * @return position after tags
+   * Copies the tags info into the tag portion of the cell
+   * @return position after tags
    * @deprecated As of HBase-2.0. Will be removed in 3.0.
    */
   @Deprecated
@@ -427,7 +431,7 @@ public final class CellUtil {
   }
 
   /**
-   * n * @return cell's qualifier wrapped into a ByteBuffer.
+   * @return cell's qualifier wrapped into a ByteBuffer.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -509,8 +513,8 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row. Other fields defaulted. n * @return Cell with passed row but
-   * all other fields are arbitrary
+   * Create a Cell with specific row. Other fields defaulted.
+   * @return Cell with passed row but all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -520,8 +524,8 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row and value. Other fields are defaulted. nn * @return Cell with
-   * passed row and value but all other fields are arbitrary
+   * Create a Cell with specific row and value. Other fields are defaulted.
+   * @return Cell with passed row and value but all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -536,8 +540,8 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row. Other fields defaulted. nnn * @return Cell with passed row but
-   * all other fields are arbitrary
+   * Create a Cell with specific row. Other fields defaulted.
+   * @return Cell with passed row but all other fields are arbitrary
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use {@link CellBuilder}
    *             instead
    */
@@ -580,9 +584,7 @@ public final class CellUtil {
     return PrivateCellUtil.createCell(cell, value, tags);
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterables</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterables</code> */
   public static CellScanner
     createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
@@ -608,17 +610,15 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterable</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterable</code> */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
     if (cellIterable == null) return null;
     return createCellScanner(cellIterable.iterator());
   }
 
   /**
-   * n * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code>
-   * is null
+   * Returns CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   * null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
     if (cells == null) return null;
@@ -640,9 +640,7 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellArray</code>
-   */
+  /** Returns CellScanner interface over <code>cellArray</code> */
   public static CellScanner createCellScanner(final Cell[] cellArray) {
     return new CellScanner() {
       private final Cell[] cells = cellArray;
@@ -698,7 +696,7 @@ public final class CellUtil {
   }
 
   /**
-   * nn * @return True if the rows in <code>left</code> and <code>right</code> Cells match
+   * @return True if the rows in <code>left</code> and <code>right</code> Cells match
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Instead use
    *             {@link #matchingRows(Cell, Cell)}
    */
@@ -818,8 +816,8 @@ public final class CellUtil {
   }
 
   /**
-   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal n * @param buf
-   * the serialized keyvalue format byte[]
+   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal
+   * @param buf the serialized keyvalue format byte[]
    * @return true if the qualifier matches, false otherwise
    */
   public static boolean matchingQualifier(final Cell left, final byte[] buf) {
@@ -830,8 +828,8 @@ public final class CellUtil {
   }
 
   /**
-   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal n * @param buf
-   * the serialized keyvalue format byte[]
+   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal
+   * @param buf    the serialized keyvalue format byte[]
    * @param offset the offset of the qualifier in the byte[]
    * @param length the length of the qualifier in the byte[]
    * @return true if the qualifier matches, false otherwise
@@ -983,8 +981,9 @@ public final class CellUtil {
   /**
    * Estimate based on keyvalue's serialization format in the RPC layer. Note that there is an extra
    * SIZEOF_INT added to the size here that indicates the actual length of the cell for cases where
-   * cell's are serialized in a contiguous format (For eg in RPCs). n * @return Estimate of the
-   * <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the actual cell length.
+   * cell's are serialized in a contiguous format (For eg in RPCs).
+   * @return Estimate of the <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the
+   *         actual cell length.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
   @Deprecated
@@ -1002,16 +1001,15 @@ public final class CellUtil {
   }
 
   /**
-   * n * @return Sum of the lengths of all the elements in a Cell; does not count in any
-   * infrastructure
+   * Returns Sum of the lengths of all the elements in a Cell; does not count in any infrastructure
    */
   private static int getSumOfCellElementLengths(final Cell cell) {
     return getSumOfCellKeyElementLengths(cell) + cell.getValueLength() + cell.getTagsLength();
   }
 
   /**
-   * n * @return Sum of all elements that make up a key; does not include infrastructure, tags or
-   * values.
+   * @return Sum of all elements that make up a key; does not include infrastructure, tags or
+   *         values.
    */
   private static int getSumOfCellKeyElementLengths(final Cell cell) {
     return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
@@ -1035,7 +1033,8 @@ public final class CellUtil {
    * This is an estimate of the heap space occupied by a cell. When the cell is of type
    * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
    * cases we just consider the bytes occupied by the cell components ie. row, CF, qualifier,
-   * timestamp, type, value and tags. n * @return estimate of the heap space
+   * timestamp, type, value and tags.
+   * @return estimate of the heap space
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
    *             {@link RawCell#getTags()}
    */
@@ -1046,7 +1045,8 @@ public final class CellUtil {
 
   /********************* tags *************************************/
   /**
-   * Util method to iterate through the tags nnn * @return iterator for the tags
+   * Util method to iterate through the tags
+   * @return iterator for the tags
    * @deprecated As of 2.0.0 and will be removed in 3.0.0 Instead use
    *             {@link PrivateCellUtil#tagsIterator(Cell)}
    */
@@ -1125,8 +1125,8 @@ public final class CellUtil {
 
   /**
    * Sets the given seqId to the cell. Marked as audience Private as of 1.2.0. Setting a Cell
-   * sequenceid is an internal implementation detail not for general public use. nn * @throws
-   * IOException when the passed cell is not of type {@link ExtendedCell}
+   * sequenceid is an internal implementation detail not for general public use.
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -1135,8 +1135,8 @@ public final class CellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell. nn * @throws IOException when the passed cell is not of
-   * type {@link ExtendedCell}
+   * Sets the given timestamp to the cell.
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
    */
   @Deprecated
@@ -1145,7 +1145,8 @@ public final class CellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell. n * @param ts buffer containing the timestamp value
+   * Sets the given timestamp to the cell.
+   * @param ts       buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be a LimitedPrivate API in HBase-3.0.
@@ -1157,7 +1158,8 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}. nn * @return True if cell timestamp is modified.
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
@@ -1168,7 +1170,8 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell iff current timestamp is
-   * {@link HConstants#LATEST_TIMESTAMP}. n * @param ts buffer containing the timestamp value
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @param ts       buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    * @return True if cell timestamp is modified.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
@@ -1182,8 +1185,8 @@ public final class CellUtil {
   /**
    * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
    * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
-   * timestamp&gt;&lt;1 byte type&gt; nn * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
-   * n
+   * timestamp&gt;&lt;1 byte type&gt;
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
@@ -1219,7 +1222,8 @@ public final class CellUtil {
    * Writes the row from the given cell to the output stream excluding the common prefix
    * @param out     The dataoutputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param rlength the row length n * @deprecated As of 2.0. Will be removed in hbase-3.0
+   * @param rlength the row length
+   * @deprecated As of 2.0. Will be removed in hbase-3.0
    */
   @Deprecated
   public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
@@ -1233,9 +1237,7 @@ public final class CellUtil {
     }
   }
 
-  /**
-   * n * @return The Key portion of the passed <code>cell</code> as a String.
-   */
+  /** Returns The Key portion of the passed <code>cell</code> as a String. */
   public static String getCellKeyAsString(Cell cell) {
     return getCellKeyAsString(cell,
       c -> Bytes.toStringBinary(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
@@ -1275,9 +1277,9 @@ public final class CellUtil {
   /**
    * This method exists just to encapsulate how we serialize keys. To be replaced by a factory that
    * we query to figure what the Cell implementation is and then, what serialization engine to use
-   * and further, how to serialize the key for inclusion in hfile index. TODO. n * @return The key
-   * portion of the Cell serialized in the old-school KeyValue way or null if passed a null
-   * <code>cell</code>
+   * and further, how to serialize the key for inclusion in hfile index. TODO.
+   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if passed
+   *         a null <code>cell</code>
    * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
@@ -1289,8 +1291,8 @@ public final class CellUtil {
   }
 
   /**
-   * Write rowkey excluding the common part. nnnnn * @deprecated As of HBase-2.0. Will be removed in
-   * HBase-3.0
+   * Write rowkey excluding the common part.
+   * @deprecated As of HBase-2.0. Will be removed in HBase-3.0
    */
   @Deprecated
   public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
@@ -1494,7 +1496,8 @@ public final class CellUtil {
   }
 
   /**
-   * Compares the row of two keyvalues for equality nn * @return True if rows match.
+   * Compares the row of two keyvalues for equality
+   * @return True if rows match.
    */
   public static boolean matchingRows(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
@@ -1526,8 +1529,8 @@ public final class CellUtil {
   }
 
   /**
-   * Compares the row and column of two keyvalues for equality nn * @return True if same row and
-   * column.
+   * Compares the row and column of two keyvalues for equality
+   * @return True if same row and column.
    */
   public static boolean matchingRowColumn(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();

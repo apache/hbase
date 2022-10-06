@@ -72,7 +72,7 @@ public class MultiVersionConcurrencyControl {
   }
 
   /**
-   * Step the MVCC forward on to a new read/write basis. n
+   * Step the MVCC forward on to a new read/write basis.
    */
   public void advanceTo(long newStartPoint) {
     while (true) {
@@ -172,7 +172,7 @@ public class MultiVersionConcurrencyControl {
    * this even if the write has FAILED (AFTER backing out the write transaction changes completely)
    * so we can clean up the outstanding transaction. How much is the read point advanced? Let S be
    * the set of all write numbers that are completed. Set the read point to the highest numbered
-   * write of S. n *
+   * write of S.
    * @return true if e is visible to MVCC readers (that is, readpoint >= e.writeNumber)
    */
   public boolean complete(WriteEntry writeEntry) {

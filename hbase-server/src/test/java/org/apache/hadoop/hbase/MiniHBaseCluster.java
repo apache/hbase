@@ -60,7 +60,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   /**
    * Start a MiniHBaseCluster.
    * @param conf             Configuration to be used for cluster
-   * @param numRegionServers initial number of region servers to start. n
+   * @param numRegionServers initial number of region servers to start.
    */
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
     throws IOException, InterruptedException {
@@ -71,7 +71,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * Start a MiniHBaseCluster.
    * @param conf             Configuration to be used for cluster
    * @param numMasters       initial number of masters to start.
-   * @param numRegionServers initial number of region servers to start. n
+   * @param numRegionServers initial number of region servers to start.
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numRegionServers)
     throws IOException, InterruptedException {
@@ -95,7 +95,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * @param rsPorts Ports that RegionServer should use; pass ports if you want to test cluster
    *                restart where for sure the regionservers come up on same address+port (but just
    *                with different startcode); by default mini hbase clusters choose new arbitrary
-   *                ports on each cluster start. nn
+   *                ports on each cluster start.
    */
   public MiniHBaseCluster(Configuration conf, int numMasters, int numAlwaysStandByMasters,
     int numRegionServers, List<Integer> rsPorts, Class<? extends HMaster> masterClass,
@@ -137,9 +137,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
 
     /*
-     * n * @param currentfs We return this if we did not make a new one.
+     * @param currentfs We return this if we did not make a new one.
      * @param uniqueName Same name used to help identify the created fs.
-     * @return A new fs instance if we are up on DistributeFileSystem. n
+     * @return A new fs instance if we are up on DistributeFileSystem.
      */
 
     @Override
@@ -398,7 +398,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Starts a region server thread running n * @return New RegionServerThread
+   * Starts a region server thread running
+   * @return New RegionServerThread
    */
   public JVMClusterUtil.RegionServerThread startRegionServer() throws IOException {
     final Configuration newConf = HBaseConfiguration.create(conf);
@@ -486,7 +487,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Suspend the specified region server
-   * @param serverNumber Used as index into a list. n
+   * @param serverNumber Used as index into a list.
    */
   public JVMClusterUtil.RegionServerThread suspendRegionServer(int serverNumber) {
     JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
@@ -497,7 +498,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Resume the specified region server
-   * @param serverNumber Used as index into a list. n
+   * @param serverNumber Used as index into a list.
    */
   public JVMClusterUtil.RegionServerThread resumeRegionServer(int serverNumber) {
     JVMClusterUtil.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
@@ -508,7 +509,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Wait for the specified region server to stop. Removes this thread from list of running threads.
-   * n * @return Name of region server that just went down.
+   * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(final int serverNumber) {
     return this.hbaseCluster.waitOnRegionServer(serverNumber);
@@ -608,8 +609,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Wait for the specified master to stop. Removes this thread from list of running threads. n
-   * * @return Name of master that just went down.
+   * Wait for the specified master to stop. Removes this thread from list of running threads.
+   * @return Name of master that just went down.
    */
   public String waitOnMaster(final int serverNumber) {
     return this.hbaseCluster.waitOnMaster(serverNumber);
@@ -617,7 +618,7 @@ public class MiniHBaseCluster extends HBaseCluster {
 
   /**
    * Blocks until there is an active master and that master has completed initialization.
-   * @return true if an active master becomes available. false if there are no masters left. n
+   * @return true if an active master becomes available. false if there are no masters left.
    */
   @Override
   public boolean waitForActiveAndReadyMaster(long timeout) throws IOException {
@@ -723,7 +724,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Call flushCache on all regions on all participating regionservers. n
+   * Call flushCache on all regions on all participating regionservers.
    */
   public void compact(boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
@@ -736,7 +737,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Call flushCache on all regions of the specified table. n
+   * Call flushCache on all regions of the specified table.
    */
   public void compact(TableName tableName, boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t : this.hbaseCluster.getRegionServers()) {
@@ -769,7 +770,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   /**
-   * Grab a numbered region server of your choice. n * @return region server
+   * Grab a numbered region server of your choice.
+   * @return region server
    */
   public HRegionServer getRegionServer(int serverNumber) {
     return hbaseCluster.getRegionServer(serverNumber);

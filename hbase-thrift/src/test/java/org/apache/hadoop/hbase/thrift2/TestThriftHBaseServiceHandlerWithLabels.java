@@ -439,8 +439,9 @@ public class TestThriftHBaseServiceHandlerWithLabels {
   }
 
   /**
-   * Padding numbers to make comparison of sort order easier in a for loop n * The number to pad. n
-   * * The length to pad up to.
+   * Padding numbers to make comparison of sort order easier in a for loop The number to pad.
+   * @param n   The number to pad.
+   * @param pad The length to pad up to.
    * @return The padded number as a string.
    */
   private String pad(int n, byte pad) {

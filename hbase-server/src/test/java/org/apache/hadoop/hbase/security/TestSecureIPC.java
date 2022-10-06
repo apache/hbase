@@ -185,7 +185,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client qops. n
+   * Test various combinations of Server and Client qops.
    */
   @Test
   public void testSaslWithCommonQop() throws Exception {
@@ -214,7 +214,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test sasl encryption with Crypto AES. n
+   * Test sasl encryption with Crypto AES.
    */
   @Test
   public void testSaslWithCryptoAES() throws Exception {
@@ -224,7 +224,7 @@ public class TestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client configuration for Crypto AES. n
+   * Test various combinations of Server and Client configuration for Crypto AES.
    */
   @Test
   public void testDifferentConfWithCryptoAES() throws Exception {

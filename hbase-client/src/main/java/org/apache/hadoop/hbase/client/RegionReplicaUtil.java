@@ -51,7 +51,8 @@ public class RegionReplicaUtil {
   /**
    * Returns the RegionInfo for the given replicaId. RegionInfo's correspond to a range of a table,
    * but more than one "instance" of the same range can be deployed which are differentiated by the
-   * replicaId. n * @param replicaId the replicaId to use
+   * replicaId.
+   * @param replicaId the replicaId to use
    * @return an RegionInfo object corresponding to the same range (table, start and end key), but
    *         for the given replicaId.
    */
@@ -84,7 +85,7 @@ public class RegionReplicaUtil {
   }
 
   /**
-   * Removes the non-default replicas from the passed regions collection n
+   * Removes the non-default replicas from the passed regions collection
    */
   public static void removeNonDefaultRegions(Collection<RegionInfo> regions) {
     Iterator<RegionInfo> iterator = regions.iterator();

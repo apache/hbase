@@ -84,8 +84,8 @@ public class VisibilityUtils {
   private static final ExpressionExpander EXP_EXPANDER = new ExpressionExpander();
 
   /**
-   * Creates the labels data to be written to zookeeper. n * @return Bytes form of labels and their
-   * ordinal details to be written to zookeeper.
+   * Creates the labels data to be written to zookeeper.
+   * @return Bytes form of labels and their ordinal details to be written to zookeeper.
    */
   public static byte[] getDataToWriteToZooKeeper(Map<String, Integer> existingLabels) {
     VisibilityLabelsRequest.Builder visReqBuilder = VisibilityLabelsRequest.newBuilder();
@@ -99,8 +99,8 @@ public class VisibilityUtils {
   }
 
   /**
-   * Creates the user auth data to be written to zookeeper. n * @return Bytes form of user auths
-   * details to be written to zookeeper.
+   * Creates the user auth data to be written to zookeeper.
+   * @return Bytes form of user auths details to be written to zookeeper.
    */
   public static byte[] getUserAuthsDataToWriteToZooKeeper(Map<String, List<Integer>> userAuths) {
     MultiUserAuthorizations.Builder builder = MultiUserAuthorizations.newBuilder();
@@ -117,8 +117,8 @@ public class VisibilityUtils {
 
   /**
    * Reads back from the zookeeper. The data read here is of the form written by
-   * writeToZooKeeper(Map&lt;byte[], Integer&gt; entries). n * @return Labels and their ordinal
-   * details n
+   * writeToZooKeeper(Map&lt;byte[], Integer&gt; entries).
+   * @return Labels and their ordinal details
    */
   public static List<VisibilityLabel> readLabelsFromZKData(byte[] data)
     throws DeserializationException {
@@ -136,7 +136,8 @@ public class VisibilityUtils {
   }
 
   /**
-   * Reads back User auth data written to zookeeper. n * @return User auth details n
+   * Reads back User auth data written to zookeeper.
+   * @return User auth details
    */
   public static MultiUserAuthorizations readUserAuthsFromZKData(byte[] data)
     throws DeserializationException {
@@ -157,8 +158,8 @@ public class VisibilityUtils {
    * @param conf The configuration to use
    * @return Stack of ScanLabelGenerator instances. ScanLabelGenerator classes can be specified in
    *         Configuration as comma separated list using key
-   *         "hbase.regionserver.scan.visibility.label.generator.class" n * when any of the
-   *         specified ScanLabelGenerator class can not be loaded.
+   *         "hbase.regionserver.scan.visibility.label.generator.class" when any of the specified
+   *         ScanLabelGenerator class can not be loaded.
    */
   public static List<ScanLabelGenerator> getScanLabelGenerators(Configuration conf) {
     // There can be n SLG specified as comma separated in conf
@@ -216,8 +217,8 @@ public class VisibilityUtils {
   /**
    * Extracts and partitions the visibility tags and nonVisibility Tags
    * @param cell       - the cell for which we would extract and partition the visibility and non
-   *                   visibility tags n * - all the visibilty tags of type
-   *                   TagType.VISIBILITY_TAG_TYPE would be added to this list
+   *                   visibility tags - all the visibilty tags of type TagType.VISIBILITY_TAG_TYPE
+   *                   would be added to this list
    * @param nonVisTags - all the non visibility tags would be added to this list
    * @return - the serailization format of the tag. Can be null if no tags are found or if there is
    *         no visibility tag found
@@ -361,8 +362,8 @@ public class VisibilityUtils {
 
   /**
    * This will sort the passed labels in ascending oder and then will write one after the other to
-   * the passed stream. n * Unsorted label ordinals n * Stream where to write the labels. n * When
-   * IOE during writes to Stream.
+   * the passed stream. Unsorted label ordinals Stream where to write the labels. When IOE during
+   * writes to Stream.
    */
   private static void writeLabelOrdinalsToStream(List<Integer> labelOrdinals, DataOutputStream dos)
     throws IOException {

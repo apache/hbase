@@ -170,7 +170,7 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   /**
-   * Set up cell block codecs n
+   * Set up cell block codecs
    */
   private void setupCellBlockCodecs(final ConnectionHeader header) throws FatalConnectionException {
     // TODO: Plug in other supported decoders.
@@ -193,7 +193,7 @@ abstract class ServerRpcConnection implements Closeable {
   }
 
   /**
-   * Set up cipher for rpc encryption with Apache Commons Crypto n
+   * Set up cipher for rpc encryption with Apache Commons Crypto
    */
   private void setupCryptoCipher(final ConnectionHeader header,
     RPCProtos.ConnectionHeaderResponse.Builder chrBuilder) throws FatalConnectionException {
@@ -571,8 +571,10 @@ abstract class ServerRpcConnection implements Closeable {
   protected abstract void doRespond(RpcResponse resp) throws IOException;
 
   /**
-   * n * Has the request header and the request param and optionally encoded data buffer all in this
-   * one array. nn
+   * Has the request header and the request param and optionally encoded data buffer all in this one
+   * array.
+   * <p/>
+   * Will be overridden in tests.
    */
   protected void processRequest(ByteBuff buf) throws IOException, InterruptedException {
     long totalRequestSize = buf.limit();

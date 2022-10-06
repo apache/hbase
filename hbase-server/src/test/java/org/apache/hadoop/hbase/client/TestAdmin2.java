@@ -138,7 +138,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * Test for hadoop-1581 'HBASE: Unopenable tablename bug'. n
+   * Test for hadoop-1581 'HBASE: Unopenable tablename bug'.
    */
   @Test
   public void testTableNameClash() throws Exception {
@@ -156,7 +156,7 @@ public class TestAdmin2 extends TestAdminBase {
   /***
    * HMaster.createTable used to be kind of synchronous call Thus creating of table with lots of
    * regions can cause RPC timeout After the fix to make createTable truly async, RPC timeout
-   * shouldn't be an issue anymore n
+   * shouldn't be an issue anymore
    */
   @Test
   public void testCreateTableRPCTimeOut() throws Exception {
@@ -179,7 +179,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * Test read only tables n
+   * Test read only tables
    */
   @Test
   public void testReadOnlyTable() throws Exception {
@@ -195,7 +195,7 @@ public class TestAdmin2 extends TestAdminBase {
 
   /**
    * Test that user table names can contain '-' and '.' so long as they do not start with same.
-   * HBASE-771 n
+   * HBASE-771
    */
   @Test
   public void testTableNames() throws IOException {
@@ -219,7 +219,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * For HADOOP-2579 n
+   * For HADOOP-2579
    */
   @Test(expected = TableExistsException.class)
   public void testTableExistsExceptionWithATable() throws IOException {
@@ -229,7 +229,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * Can't disable a table if the table isn't in enabled state n
+   * Can't disable a table if the table isn't in enabled state
    */
   @Test(expected = TableNotEnabledException.class)
   public void testTableNotEnabledExceptionWithATable() throws IOException {

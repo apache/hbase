@@ -320,7 +320,8 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   /**
    * Adds the mutations to labels region and set the results to the finalOpStatus. finalOpStatus
    * might have some entries in it where the OpStatus is FAILURE. We will leave those and set in
-   * others in the order. nn * @return whether we need a ZK update or not.
+   * others in the order.
+   * @return whether we need a ZK update or not.
    */
   private boolean mutateLabelsRegion(List<Mutation> mutations, OperationStatus[] finalOpStatus)
     throws IOException {
@@ -687,7 +688,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   }
 
   /**
-   * n * - all the visibility tags associated with the current Cell
+   * - all the visibility tags associated with the current Cell
    * @return - the modified visibility expression as byte[]
    */
   private byte[] createModifiedVisExpression(final List<Tag> tags) throws IOException {

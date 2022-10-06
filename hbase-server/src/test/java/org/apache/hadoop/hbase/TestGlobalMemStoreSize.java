@@ -69,7 +69,7 @@ public class TestGlobalMemStoreSize {
 
   /**
    * Test the global mem store size in the region server is equal to sum of each region's mem store
-   * size n
+   * size
    */
   @Test
   public void testGlobalMemStore() throws Exception {
@@ -148,7 +148,7 @@ public class TestGlobalMemStoreSize {
   }
 
   /**
-   * Flush and log stats on flush nnn
+   * Flush and log stats on flush
    */
   private void flush(final HRegion r, final HRegionServer server) throws IOException {
     LOG.info("Flush " + r.toString() + " on " + server.getServerName() + ", " + r.flush(true)

@@ -97,7 +97,8 @@ public class ValueFilter extends CompareFilter {
 
   /**
    * @param pbBytes A pb serialized {@link ValueFilter} instance
-   * @return An instance of {@link ValueFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link ValueFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ValueFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ValueFilter proto;

@@ -33,7 +33,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationTracker {
 
   /**
-   * Register a replication listener to receive replication events. n
+   * Register a replication listener to receive replication events.
    */
   void registerListener(ReplicationListener listener);
 

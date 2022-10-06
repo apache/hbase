@@ -93,7 +93,8 @@ public class ThrottledInputStream extends InputStream {
 
   /**
    * Read bytes starting from the specified position. This requires rawStream is an instance of
-   * {@link PositionedReadable}. nnnn * @return the number of bytes read
+   * {@link PositionedReadable}.
+   * @return the number of bytes read
    */
   public int read(long position, byte[] buffer, int offset, int length) throws IOException {
     if (!(rawStream instanceof PositionedReadable)) {

@@ -36,7 +36,7 @@ public interface MetricsThriftServerSource extends ExceptionTrackingSource, JvmP
   String ACTIVE_WORKER_COUNT_KEY = "numActiveWorkers";
 
   /**
-   * Add how long an operation was in the queue. n
+   * Add how long an operation was in the queue.
    */
   void incTimeInQueue(long time);
 

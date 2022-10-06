@@ -73,7 +73,8 @@ public class JVMClusterUtil {
    * Creates a {@link RegionServerThread}. Call 'start' on the returned thread to make it run.
    * @param c     Configuration to use.
    * @param hrsc  Class to create.
-   * @param index Used distinguishing the object returned. n * @return Region server added.
+   * @param index Used distinguishing the object returned.
+   * @return Region server added.
    */
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(final Configuration c,
     final Class<? extends HRegionServer> hrsc, final int index) throws IOException {
@@ -113,7 +114,8 @@ public class JVMClusterUtil {
    * Creates a {@link MasterThread}. Call 'start' on the returned thread to make it run.
    * @param c     Configuration to use.
    * @param hmc   Class to create.
-   * @param index Used distinguishing the object returned. n * @return Master added.
+   * @param index Used distinguishing the object returned.
+   * @return Master added.
    */
   public static JVMClusterUtil.MasterThread createMasterThread(final Configuration c,
     final Class<? extends HMaster> hmc, final int index) throws IOException {
@@ -148,7 +150,7 @@ public class JVMClusterUtil {
 
   /**
    * Start the cluster. Waits until there is a primary master initialized and returns its address.
-   * nn * @return Address to use contacting primary master.
+   * @return Address to use contacting primary master.
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
     final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
@@ -229,8 +231,7 @@ public class JVMClusterUtil {
   }
 
   /**
-   * nn
-   */
+   *   */
   public static void shutdown(final List<MasterThread> masters,
     final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");

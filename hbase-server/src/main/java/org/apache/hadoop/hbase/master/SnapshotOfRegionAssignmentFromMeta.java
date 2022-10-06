@@ -96,7 +96,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
   }
 
   /**
-   * Initialize the region assignment snapshot by scanning the hbase:meta table n
+   * Initialize the region assignment snapshot by scanning the hbase:meta table
    */
   public void initialize() throws IOException {
     LOG.info("Start to scan the hbase:meta for the current region assignment " + "snappshot");

@@ -289,7 +289,7 @@ public class TestHeapSize {
 
   /**
    * Testing the classes that implements HeapSize and are a part of 0.20. Some are not tested here
-   * for example BlockIndex which is tested in TestHFile since it is a non public class n
+   * for example BlockIndex which is tested in TestHFile since it is a non public class
    */
   @Test
   public void testSizes() throws IOException {

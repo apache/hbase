@@ -193,7 +193,7 @@ public final class UnsafeAccess {
 
   /**
    * Reads a int value at the given Object's offset considering it was written in big-endian format.
-   * nn * @return int value at offset
+   * @return int value at offset
    */
   public static int toInt(Object ref, long offset) {
     if (LITTLE_ENDIAN) {
@@ -295,7 +295,7 @@ public final class UnsafeAccess {
 
   // APIs to copy data. This will be direct memory location copy and will be much faster
   /**
-   * Copies the bytes from given array's offset to length part into the given buffer. nnnnn
+   * Copies the bytes from given array's offset to length part into the given buffer.
    */
   public static void copy(byte[] src, int srcOffset, ByteBuffer dest, int destOffset, int length) {
     long destAddress = destOffset;

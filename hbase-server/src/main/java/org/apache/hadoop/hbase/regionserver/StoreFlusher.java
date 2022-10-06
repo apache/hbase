@@ -69,8 +69,8 @@ abstract class StoreFlusher {
   }
 
   /**
-   * Creates the scanner for flushing snapshot. Also calls coprocessors. n * @return The scanner;
-   * null if coprocessor is canceling the flush.
+   * Creates the scanner for flushing snapshot. Also calls coprocessors.
+   * @return The scanner; null if coprocessor is canceling the flush.
    */
   protected final InternalScanner createScanner(List<KeyValueScanner> snapshotScanners,
     FlushLifeCycleTracker tracker) throws IOException {

@@ -102,7 +102,8 @@ public class FamilyFilter extends CompareFilter {
 
   /**
    * @param pbBytes A pb serialized {@link FamilyFilter} instance
-   * @return An instance of {@link FamilyFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link FamilyFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static FamilyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FamilyFilter proto;

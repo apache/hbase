@@ -65,7 +65,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   protected KVScannerComparator comparator;
 
   /**
-   * Constructor. This KeyValueHeap will handle closing of passed in KeyValueScanners. nn
+   * Constructor. This KeyValueHeap will handle closing of passed in KeyValueScanners.
    */
   public KeyValueHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator)
     throws IOException {
@@ -73,7 +73,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Constructor. nnn
+   * Constructor.
    */
   KeyValueHeap(List<? extends KeyValueScanner> scanners, KVScannerComparator comparator)
     throws IOException {
@@ -170,7 +170,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     protected CellComparator kvComparator;
 
     /**
-     * Constructor n
+     * Constructor
      */
     public KVScannerComparator(CellComparator kvComparator) {
       this.kvComparator = kvComparator;
@@ -190,15 +190,15 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     }
 
     /**
-     * Compares two KeyValue nn * @return less than 0 if left is smaller, 0 if equal etc..
+     * Compares two KeyValue
+     * @return less than 0 if left is smaller, 0 if equal etc..
      */
     public int compare(Cell left, Cell right) {
       return this.kvComparator.compare(left, right);
     }
 
     /**
-     * n
-     */
+     *     */
     public CellComparator getComparator() {
       return this.kvComparator;
     }
@@ -232,7 +232,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * This function (and {@link #reseek(Cell)}) does not do multi-column Bloom filter and lazy-seek
    * optimizations. To enable those, call {@link #requestSeek(Cell, boolean, boolean)}.
    * @param seekKey KeyValue to seek at or after
-   * @return true if KeyValues exist at or after specified key, false if not n
+   * @return true if KeyValues exist at or after specified key, false if not
    */
   @Override
   public boolean seek(Cell seekKey) throws IOException {

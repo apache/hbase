@@ -30,7 +30,7 @@ public interface RegionStateListener {
   // state than introduce a whole new listening mechanism? St.Ack
   /**
    * Process region split event.
-   * @param hri An instance of RegionInfo n
+   * @param hri An instance of RegionInfo
    */
   void onRegionSplit(RegionInfo hri) throws IOException;
 
@@ -42,7 +42,7 @@ public interface RegionStateListener {
   void onRegionSplitReverted(RegionInfo hri) throws IOException;
 
   /**
-   * Process region merge event. n
+   * Process region merge event.
    */
   void onRegionMerged(RegionInfo mergedRegion) throws IOException;
 }

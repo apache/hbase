@@ -69,7 +69,7 @@ public class EncodedDataBlock {
   /**
    * Create a buffer which will be encoded using dataBlockEncoder.
    * @param dataBlockEncoder Algorithm used for compression.
-   * @param encoding         encoding type used nn
+   * @param encoding         encoding type used
    */
   public EncodedDataBlock(DataBlockEncoder dataBlockEncoder, DataBlockEncoding encoding,
     byte[] rawKVs, HFileContext meta) {
@@ -174,7 +174,7 @@ public class EncodedDataBlock {
    * @param inputBuffer Array to be compressed.
    * @param offset      Offset to beginning of the data.
    * @param length      Length to be compressed.
-   * @return Size of compressed data in bytes. n
+   * @return Size of compressed data in bytes.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification = "No sure what findbugs wants but looks to me like no NPE")

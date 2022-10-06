@@ -60,7 +60,7 @@ public interface StoreFileManager {
 
   /**
    * Remove the compacted files
-   * @param compactedFiles the list of compacted files n
+   * @param compactedFiles the list of compacted files
    */
   void removeCompactedFiles(Collection<HStoreFile> compactedFiles) throws IOException;
 
@@ -137,7 +137,7 @@ public interface StoreFileManager {
 
   /**
    * Gets the split point for the split of this set of store files (approx. middle).
-   * @return The mid-point if possible. n
+   * @return The mid-point if possible.
    */
   Optional<byte[]> getSplitPoint() throws IOException;
 

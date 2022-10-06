@@ -207,7 +207,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * @param b Use passed bytes as backing array for this instance. nn
+   * @param b Use passed bytes as backing array for this instance.
    */
   public void set(final byte[] b, final int offset, final int length) {
     this.bytes = b;
@@ -240,8 +240,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * n
-   */
+   *   */
   public int getOffset() {
     return this.offset;
   }
@@ -272,8 +271,9 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Compares the bytes in this object to the specified byte array n * @return Positive if left is
-   * bigger than right, 0 if they are equal, and negative if left is smaller than right.
+   * Compares the bytes in this object to the specified byte array
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
    */
   public int compareTo(final byte[] that) {
     return BYTES_RAWCOMPARATOR.compare(this.bytes, this.offset, this.length, that, 0, that.length);
@@ -589,7 +589,8 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Write a printable representation of a byte array.
-   * @param b byte array n * @see #toStringBinary(byte[], int, int)
+   * @param b byte array
+   * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte[] b) {
     if (b == null) return "null";
@@ -1143,7 +1144,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Convert a BigDecimal value to a byte array n * @return the byte array
+   * Convert a BigDecimal value to a byte array
+   * @return the byte array
    */
   public static byte[] toBytes(BigDecimal val) {
     byte[] valueBytes = val.unscaledValue().toByteArray();
@@ -1154,14 +1156,16 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Converts a byte array to a BigDecimal n * @return the char value
+   * Converts a byte array to a BigDecimal
+   * @return the char value
    */
   public static BigDecimal toBigDecimal(byte[] bytes) {
     return toBigDecimal(bytes, 0, bytes.length);
   }
 
   /**
-   * Converts a byte array to a BigDecimal value nnn * @return the char value
+   * Converts a byte array to a BigDecimal value
+   * @return the char value
    */
   public static BigDecimal toBigDecimal(byte[] bytes, int offset, final int length) {
     if (bytes == null || length < SIZEOF_INT + 1 || (offset + length > bytes.length)) {
@@ -2244,7 +2248,7 @@ public class Bytes implements Comparable<Bytes> {
    * Copy the byte array given in parameter and return an instance of a new byte array with the same
    * length and the same content.
    * @param bytes the byte array to copy from
-   * @return a copy of the given designated byte array nn
+   * @return a copy of the given designated byte array
    */
   public static byte[] copy(byte[] bytes, final int offset, final int length) {
     if (bytes == null) return null;
@@ -2423,7 +2427,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Fill given array with zeros at the specified position. nnn
+   * Fill given array with zeros at the specified position.
    */
   public static void zero(byte[] b, int offset, int length) {
     checkPositionIndex(offset, b.length, "offset");
@@ -2506,7 +2510,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Create a byte array which is multiple given bytes nn * @return byte array
+   * Create a byte array which is multiple given bytes
+   * @return byte array
    */
   public static byte[] multiple(byte[] srcBytes, int multiNum) {
     if (multiNum <= 0) {
@@ -2561,7 +2566,7 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Create a byte array from a string of hash digits. The length of the string must be a multiple
-   * of 2 n
+   * of 2
    */
   public static byte[] fromHex(String hex) {
     checkArgument(hex.length() % 2 == 0, "length must be a multiple of 2");

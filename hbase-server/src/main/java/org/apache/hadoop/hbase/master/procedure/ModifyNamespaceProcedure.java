@@ -179,7 +179,7 @@ public class ModifyNamespaceProcedure
 
   /**
    * Action before any real action of adding namespace.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private boolean prepareModify(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(newNsDescriptor.getName()) == false) {
@@ -201,7 +201,7 @@ public class ModifyNamespaceProcedure
 
   /**
    * Insert/update the row into namespace table
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void insertIntoNSTable(final MasterProcedureEnv env) throws IOException {
     getTableNamespaceManager(env).insertIntoNSTable(newNsDescriptor);
@@ -209,7 +209,7 @@ public class ModifyNamespaceProcedure
 
   /**
    * Update ZooKeeper.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void updateZKNamespaceManager(final MasterProcedureEnv env) throws IOException {
     getTableNamespaceManager(env).updateZKNamespaceManager(newNsDescriptor);
@@ -221,7 +221,7 @@ public class ModifyNamespaceProcedure
 
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it. n
+   * retrieve it.
    */
   private Boolean isTraceEnabled() {
     if (traceEnabled == null) {

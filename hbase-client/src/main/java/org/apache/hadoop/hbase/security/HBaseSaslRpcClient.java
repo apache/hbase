@@ -86,7 +86,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
    * Do client side SASL authentication with server via the given InputStream and OutputStream
    * @param inS  InputStream to use
    * @param outS OutputStream to use
-   * @return true if connection is set up, or false if needs to switch to simple Auth. n
+   * @return true if connection is set up, or false if needs to switch to simple Auth.
    */
   public boolean saslConnect(InputStream inS, OutputStream outS) throws IOException {
     DataInputStream inStream = new DataInputStream(new BufferedInputStream(inS));
@@ -185,7 +185,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
   /**
    * Get a SASL wrapped InputStream. Can be called only after saslConnect() has been called.
-   * @return a SASL wrapped InputStream n
+   * @return a SASL wrapped InputStream
    */
   public InputStream getInputStream() throws IOException {
     if (!saslClient.isComplete()) {
@@ -248,7 +248,7 @@ public class HBaseSaslRpcClient extends AbstractHBaseSaslRpcClient {
 
   /**
    * Get a SASL wrapped OutputStream. Can be called only after saslConnect() has been called.
-   * @return a SASL wrapped OutputStream n
+   * @return a SASL wrapped OutputStream
    */
   public OutputStream getOutputStream() throws IOException {
     if (!saslClient.isComplete()) {

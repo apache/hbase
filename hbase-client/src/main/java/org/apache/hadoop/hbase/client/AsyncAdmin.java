@@ -198,7 +198,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> enableTable(TableName tableName);
 
   /**
-   * Disable a table. The table has to be in enabled state for it to be disabled. n
+   * Disable a table. The table has to be in enabled state for it to be disabled.
    */
   CompletableFuture<Void> disableTable(TableName tableName);
 
@@ -1098,7 +1098,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> stopMaster();
 
   /**
-   * Stop the designated regionserver. n
+   * Stop the designated regionserver.
    */
   CompletableFuture<Void> stopRegionServer(ServerName serverName);
 
@@ -1126,19 +1126,20 @@ public interface AsyncAdmin {
   CompletableFuture<Void> rollWALWriter(ServerName serverName);
 
   /**
-   * Clear compacting queues on a region server. n * @param queues the set of queue name
+   * Clear compacting queues on a region server.
+   * @param queues the set of queue name
    */
   CompletableFuture<Void> clearCompactionQueues(ServerName serverName, Set<String> queues);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver. n * @return a
-   * list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver.
+   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName);
 
   /**
-   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table. nn
-   * * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
+   * Get a list of {@link RegionMetrics} of all regions hosted on a region seerver for a table.
+   * @return a list of {@link RegionMetrics} wrapped by {@link CompletableFuture}
    */
   CompletableFuture<List<RegionMetrics>> getRegionMetrics(ServerName serverName,
     TableName tableName);
@@ -1285,8 +1286,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
-   * Turn the cleaner chore on/off. n * @return Previous cleaner state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the cleaner chore on/off.
+   * @return Previous cleaner state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> cleanerChoreSwitch(boolean on);
 
@@ -1305,8 +1306,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> runCleanerChore();
 
   /**
-   * Turn the catalog janitor on/off. n * @return the previous state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the catalog janitor on/off.
+   * @return the previous state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> catalogJanitorSwitch(boolean on);
 

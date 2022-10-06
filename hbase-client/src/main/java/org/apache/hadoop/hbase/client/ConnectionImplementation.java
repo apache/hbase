@@ -599,7 +599,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   /**
-   * If choreService has not been created yet, create the ChoreService. n
+   * If choreService has not been created yet, create the ChoreService.
    */
   synchronized ChoreService getChoreService() {
     if (choreService == null) {

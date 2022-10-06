@@ -358,8 +358,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * Set whether the tags should be compressed along with DataBlockEncoding. When no
-   * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
-   * invocation)
+   * DataBlockEncoding is been used, this is having no effect.
+   * @return this (for chained invocation)
    */
   public HColumnDescriptor setCompressTags(boolean value) {
     getDelegateeForModification().setCompressTags(value);
@@ -668,8 +668,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
-   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code> n * @see
-   *         #toByteArray()
+   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code>
+   * @see #toByteArray()
    */
   public static HColumnDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
     ColumnFamilyDescriptor desc = ColumnFamilyDescriptorBuilder.parseFrom(bytes);
@@ -713,7 +713,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Set the encryption algorithm for use with this family n
+   * Set the encryption algorithm for use with this family
    */
   public HColumnDescriptor setEncryptionType(String value) {
     getDelegateeForModification().setEncryptionType(value);

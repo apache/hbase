@@ -51,14 +51,14 @@ public interface InternalScanner extends Closeable {
 
   /**
    * Grab the next row's worth of values.
-   * @param result return output array n * @return true if more rows exist after this one, false if
-   *               scanner is done
+   * @param result return output array
+   * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
   boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException;
 
   /**
-   * Closes the scanner and releases any resources it has allocated n
+   * Closes the scanner and releases any resources it has allocated
    */
   @Override
   void close() throws IOException;

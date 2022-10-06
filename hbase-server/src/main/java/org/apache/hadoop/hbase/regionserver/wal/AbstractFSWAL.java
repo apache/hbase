@@ -549,7 +549,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   /**
    * This is a convenience method that computes a new filename with a given file-number.
-   * @param filenum to use n
+   * @param filenum to use
    */
   protected Path computeFilename(final long filenum) {
     if (filenum < 0) {
@@ -561,7 +561,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
 
   /**
    * This is a convenience method that computes a new filename with a given using the current WAL
-   * file-number n
+   * file-number
    */
   public Path getCurrentFileName() {
     return computeFilename(this.filenum.get());

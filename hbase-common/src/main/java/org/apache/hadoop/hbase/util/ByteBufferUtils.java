@@ -573,7 +573,7 @@ public final class ByteBufferUtils {
 
   /**
    * Read integer from stream coded in 7 bits and increment position.
-   * @return the integer that has been read n
+   * @return the integer that has been read
    */
   public static int readCompressedInt(InputStream input) throws IOException {
     int result = 0;
@@ -606,7 +606,7 @@ public final class ByteBufferUtils {
   /**
    * Read long which was written to fitInBytes bytes and increment position.
    * @param fitInBytes In how many bytes given long is stored.
-   * @return The value of parsed long. n
+   * @return The value of parsed long.
    */
   public static long readLong(InputStream in, final int fitInBytes) throws IOException {
     long tmpLong = 0;
@@ -684,7 +684,7 @@ public final class ByteBufferUtils {
 
   /**
    * Copy from one buffer to another from given offset. This will be absolute positional copying and
-   * won't affect the position of any of the buffers. nnnnn
+   * won't affect the position of any of the buffers.
    */
   public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
     int destinationOffset, int length) {
@@ -854,8 +854,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Copy the given number of bytes from specified offset into a new byte[] nnn * @return a new
-   * byte[] containing the bytes in the specified range
+   * Copy the given number of bytes from specified offset into a new byte[]
+   * @return a new byte[] containing the bytes in the specified range
    */
   public static byte[] toBytes(ByteBuffer buffer, int offset, int length) {
     byte[] output = new byte[length];
@@ -878,7 +878,7 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * n * ByteBuffer to hash n * offset to start from n * length to hash
+   * ByteBuffer to hash offset to start from length to hash
    */
   public static int hashCode(ByteBuffer buf, int offset, int length) {
     int hash = 1;
@@ -960,7 +960,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Reads a short value at the given buffer's offset. nn * @return short value at offset
+   * Reads a short value at the given buffer's offset.
+   * @return short value at offset
    */
   public static short toShort(ByteBuffer buffer, int offset) {
     return ConverterHolder.BEST_CONVERTER.toShort(buffer, offset);
@@ -974,7 +975,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Reads an int value at the given buffer's offset. nn * @return int value at offset
+   * Reads an int value at the given buffer's offset.
+   * @return int value at offset
    */
   public static int toInt(ByteBuffer buffer, int offset) {
     return ConverterHolder.BEST_CONVERTER.toInt(buffer, offset);
@@ -985,7 +987,7 @@ public final class ByteBufferUtils {
    * @param buf    The ByteBuffer
    * @param offset Offset to int value
    * @param length Number of bytes used to store the int value.
-   * @return the int value n * if there's not enough bytes left in the buffer after the given offset
+   * @return the int value if there's not enough bytes left in the buffer after the given offset
    */
   public static int readAsInt(ByteBuffer buf, int offset, final int length) {
     if (offset + length > buf.limit()) {
@@ -1001,7 +1003,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Reads a long value at the given buffer's offset. nn * @return long value at offset
+   * Reads a long value at the given buffer's offset.
+   * @return long value at offset
    */
   public static long toLong(ByteBuffer buffer, int offset) {
     return ConverterHolder.BEST_CONVERTER.toLong(buffer, offset);
@@ -1022,7 +1025,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Reads a double value at the given buffer's offset. n * @param offset offset where double is
+   * Reads a double value at the given buffer's offset.
+   * @param offset offset where double is
    * @return double value at offset
    */
   public static double toDouble(ByteBuffer buffer, int offset) {
@@ -1030,7 +1034,8 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Reads a BigDecimal value at the given buffer's offset. nn * @return BigDecimal value at offset
+   * Reads a BigDecimal value at the given buffer's offset.
+   * @return BigDecimal value at offset
    */
   public static BigDecimal toBigDecimal(ByteBuffer buffer, int offset, int length) {
     if (buffer == null || length < Bytes.SIZEOF_INT + 1 || (offset + length > buffer.limit())) {
@@ -1081,7 +1086,6 @@ public final class ByteBufferUtils {
   /**
    * Copies the bytes from given array's offset to length part into the given buffer. Puts the bytes
    * to buffer's current position. This also advances the position in the 'out' buffer by 'length'
-   * nnnn
    */
   public static void copyFromArrayToBuffer(ByteBuffer out, byte[] in, int inOffset, int length) {
     if (out.hasArray()) {
@@ -1099,7 +1103,7 @@ public final class ByteBufferUtils {
 
   /**
    * Copies bytes from given array's offset to length part into the given buffer. Puts the bytes to
-   * buffer's given position. This doesn't affact the position of buffer. nnnn
+   * buffer's given position. This doesn't affact the position of buffer.
    */
   public static void copyFromArrayToBuffer(ByteBuffer out, int outOffset, byte[] in, int inOffset,
     int length) {
@@ -1116,7 +1120,7 @@ public final class ByteBufferUtils {
 
   /**
    * Copies specified number of bytes from given offset of 'in' ByteBuffer to the array. This
-   * doesn't affact the position of buffer. nnnnn
+   * doesn't affact the position of buffer.
    */
   public static void copyFromBufferToArray(byte[] out, ByteBuffer in, int sourceOffset,
     int destinationOffset, int length) {

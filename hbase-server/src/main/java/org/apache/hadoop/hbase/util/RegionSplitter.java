@@ -146,15 +146,14 @@ public class RegionSplitter {
    */
   public interface SplitAlgorithm {
     /**
-     * Split a pre-existing region into 2 regions. n * first row (inclusive) n * last row
-     * (exclusive)
+     * Split a pre-existing region into 2 regions. first row (inclusive) last row (exclusive)
      * @return the split row to use
      */
     byte[] split(byte[] start, byte[] end);
 
     /**
-     * Split an entire table. n * number of regions to split the table into n * user input is
-     * validated at this time. may throw a runtime exception in response to a parse failure
+     * Split an entire table. number of regions to split the table into user input is validated at
+     * this time. may throw a runtime exception in response to a parse failure
      * @return array of split keys for the initial regions of the table. The length of the returned
      *         array should be numRegions-1.
      */
@@ -188,7 +187,7 @@ public class RegionSplitter {
 
     /**
      * In HBase, the last row is represented by an empty byte array. Set this value to help the
-     * split code understand how to evenly divide the first region. n * raw user input (may throw
+     * split code understand how to evenly divide the first region. raw user input (may throw
      * RuntimeException on parse failure)
      */
     void setFirstRow(String userInput);
@@ -196,19 +195,19 @@ public class RegionSplitter {
     /**
      * In HBase, the last row is represented by an empty byte array. Set this value to help the
      * split code understand how to evenly divide the last region. Note that this last row is
-     * inclusive for all rows sharing the same prefix. n * raw user input (may throw
-     * RuntimeException on parse failure)
+     * inclusive for all rows sharing the same prefix. raw user input (may throw RuntimeException on
+     * parse failure)
      */
     void setLastRow(String userInput);
 
     /**
-     * n * user or file input for row
+     * user or file input for row
      * @return byte array representation of this row for HBase
      */
     byte[] strToRow(String input);
 
     /**
-     * n * byte array representing a row in HBase
+     * byte array representing a row in HBase
      * @return String to use for debug &amp; file printing
      */
     String rowToStr(byte[] row);
@@ -252,10 +251,9 @@ public class RegionSplitter {
    * </ul>
    * There are three SplitAlgorithms built into RegionSplitter, HexStringSplit, DecimalStringSplit,
    * and UniformSplit. These are different strategies for choosing region boundaries. See their
-   * source code for details. n * Usage: RegionSplitter &lt;TABLE&gt; &lt;SPLITALGORITHM&gt; &lt;-c
+   * source code for details. Usage: RegionSplitter &lt;TABLE&gt; &lt;SPLITALGORITHM&gt; &lt;-c
    * &lt;# regions&gt; -f &lt;family:family:...&gt; | -r [-o &lt;# outstanding splits&gt;]&gt; [-D
-   * &lt;conf.param=value&gt;] n * HBase IO problem n * user requested exit n * problem parsing user
-   * input
+   * &lt;conf.param=value&gt;] HBase IO problem user requested exit problem parsing user input
    */
   @SuppressWarnings("static-access")
   public static void main(String[] args) throws IOException, InterruptedException, ParseException {
@@ -376,8 +374,8 @@ public class RegionSplitter {
   }
 
   /**
-   * Alternative getCurrentNrHRS which is no longer available. n * @return Rough count of
-   * regionservers out on cluster.
+   * Alternative getCurrentNrHRS which is no longer available.
+   * @return Rough count of regionservers out on cluster.
    * @throws IOException if a remote or network exception occurs
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
@@ -714,7 +712,7 @@ public class RegionSplitter {
   }
 
   /**
-   * nn * @return A Pair where first item is table dir and second is the split file.
+   * @return A Pair where first item is table dir and second is the split file.
    * @throws IOException if a remote or network exception occurs
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,

@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ProcedureCoordinatorRpcs extends Closeable {
 
   /**
-   * Initialize and start threads necessary to connect an implementation's rpc mechanisms. n
-   * * @return true if succeed, false if encountered initialization errors.
+   * Initialize and start threads necessary to connect an implementation's rpc mechanisms.
+   * @return true if succeed, false if encountered initialization errors.
    */
   boolean start(final ProcedureCoordinator listener);
 

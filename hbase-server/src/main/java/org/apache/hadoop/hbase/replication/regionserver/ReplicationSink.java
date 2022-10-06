@@ -346,9 +346,7 @@ public class ReplicationSink {
       .append(Bytes.toString(family)).append(Path.SEPARATOR).append(storeFile).toString();
   }
 
-  /**
-   * nn * @return True if we have crossed over onto a new row or type
-   */
+  /** Returns True if we have crossed over onto a new row or type */
   private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
     return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
       || !CellUtil.matchingRows(previousCell, cell);
@@ -359,8 +357,8 @@ public class ReplicationSink {
   }
 
   /**
-   * Simple helper to a map from key to (a list of) values TODO: Make a general utility method nnnn
-   * * @return the list of values corresponding to key1 and key2
+   * Simple helper to a map from key to (a list of) values TODO: Make a general utility method
+   * @return the list of values corresponding to key1 and key2
    */
   private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2, List<V>>> map, K1 key1, K2 key2,
     V value) {
@@ -457,7 +455,7 @@ public class ReplicationSink {
   }
 
   /**
-   * Get replication Sink Metrics n
+   * Get replication Sink Metrics
    */
   public MetricsSink getSinkMetrics() {
     return this.metrics;

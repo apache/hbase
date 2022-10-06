@@ -80,7 +80,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
   int evictBlocksByHfileName(String hfileName);
 
   /**
-   * Get the statistics for this block cache. n
+   * Get the statistics for this block cache.
    */
   CacheStats getStats();
 

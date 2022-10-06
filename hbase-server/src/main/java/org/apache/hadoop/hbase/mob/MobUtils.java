@@ -264,9 +264,9 @@ public final class MobUtils {
   }
 
   /**
-   * Sets the attribute of caching blocks in the scan. n * The current scan. n * True, set the
-   * attribute of caching blocks into the scan, the scanner with this scan caches blocks. False, the
-   * scanner doesn't cache blocks for this scan.
+   * Sets the attribute of caching blocks in the scan. The current scan. True, set the attribute of
+   * caching blocks into the scan, the scanner with this scan caches blocks. False, the scanner
+   * doesn't cache blocks for this scan.
    */
   public static void setCacheMobBlocks(Scan scan, boolean cacheBlocks) {
     scan.setAttribute(MobConstants.MOB_CACHE_BLOCKS, Bytes.toBytes(cacheBlocks));
@@ -451,8 +451,8 @@ public final class MobUtils {
 
   /**
    * Gets the RegionInfo of the mob files. This is a dummy region. The mob files are not saved in a
-   * region in HBase. This is only used in mob snapshot. It's internally used only. n * @return A
-   * dummy mob region info.
+   * region in HBase. This is only used in mob snapshot. It's internally used only.
+   * @return A dummy mob region info.
    */
   public static RegionInfo getMobRegionInfo(TableName tableName) {
     return RegionInfoBuilder.newBuilder(tableName).setStartKey(MobConstants.MOB_REGION_NAME_BYTES)

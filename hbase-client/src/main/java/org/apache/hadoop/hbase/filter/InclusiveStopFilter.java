@@ -93,8 +93,8 @@ public class InclusiveStopFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link InclusiveStopFilter} instance
-   * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link InclusiveStopFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static InclusiveStopFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {

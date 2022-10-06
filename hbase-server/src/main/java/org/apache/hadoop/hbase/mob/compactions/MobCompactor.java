@@ -59,7 +59,7 @@ public abstract class MobCompactor {
 
   /**
    * Compacts the mob files for the current column family.
-   * @return The paths of new mob files generated in the compaction. n
+   * @return The paths of new mob files generated in the compaction.
    */
   public List<Path> compact() throws IOException {
     return compact(false);
@@ -68,7 +68,7 @@ public abstract class MobCompactor {
   /**
    * Compacts the mob files by compaction type for the current column family.
    * @param allFiles Whether add all mob files into the compaction.
-   * @return The paths of new mob files generated in the compaction. n
+   * @return The paths of new mob files generated in the compaction.
    */
   public List<Path> compact(boolean allFiles) throws IOException {
     return compact(Arrays.asList(fs.listStatus(mobFamilyDir)), allFiles);
@@ -78,7 +78,7 @@ public abstract class MobCompactor {
    * Compacts the candidate mob files.
    * @param files    The candidate mob files.
    * @param allFiles Whether add all mob files into the compaction.
-   * @return The paths of new mob files generated in the compaction. n
+   * @return The paths of new mob files generated in the compaction.
    */
   public abstract List<Path> compact(List<FileStatus> files, boolean allFiles) throws IOException;
 }

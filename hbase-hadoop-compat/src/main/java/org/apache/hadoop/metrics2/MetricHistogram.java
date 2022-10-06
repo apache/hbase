@@ -41,7 +41,7 @@ public interface MetricHistogram {
   String NINETY_NINE_POINT_NINETH_PERCENTILE_METRIC_NAME = "_99.9th_percentile";
 
   /**
-   * Add a single value to a histogram's stream of values. n
+   * Add a single value to a histogram's stream of values.
    */
   void add(long value);
 

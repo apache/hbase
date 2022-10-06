@@ -94,7 +94,7 @@ public abstract class Operation {
   /**
    * Produces a string representation of this Operation. It defaults to a JSON representation, but
    * falls back to a string representation of the fingerprint and details in the case of a JSON
-   * encoding failure. n
+   * encoding failure.
    */
   @Override
   public String toString() {

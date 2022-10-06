@@ -172,8 +172,8 @@ public class TestImportExport {
   }
 
   /**
-   * Runs an export job with the specified command line args n * @return true if job completed
-   * successfully nnn
+   * Runs an export job with the specified command line args
+   * @return true if job completed successfully
    */
   protected boolean runExport(String[] args) throws Throwable {
     // need to make a copy of the configuration because to make sure different temp dirs are used.
@@ -186,8 +186,8 @@ public class TestImportExport {
   }
 
   /**
-   * Runs an import job with the specified command line args n * @return true if job completed
-   * successfully nnn
+   * Runs an import job with the specified command line args
+   * @return true if job completed successfully
    */
   boolean runImport(String[] args) throws Throwable {
     // need to make a copy of the configuration because to make sure different temp dirs are used.
@@ -196,7 +196,7 @@ public class TestImportExport {
   }
 
   /**
-   * Test simple replication case with column mapping n
+   * Test simple replication case with column mapping
    */
   @Test
   public void testSimpleCase() throws Throwable {
@@ -248,7 +248,7 @@ public class TestImportExport {
   }
 
   /**
-   * Test export hbase:meta table n
+   * Test export hbase:meta table
    */
   @Test
   public void testMetaExport() throws Throwable {
@@ -258,7 +258,7 @@ public class TestImportExport {
   }
 
   /**
-   * Test import data from 0.94 exported file n
+   * Test import data from 0.94 exported file
    */
   @Test
   public void testImport94Table() throws Throwable {
@@ -509,7 +509,7 @@ public class TestImportExport {
   /**
    * Count the number of keyvalues in the specified table with the given filter
    * @param table the table to scan
-   * @return the number of keyvalues found n
+   * @return the number of keyvalues found
    */
   private int getCount(Table table, Filter filter) throws IOException {
     Scan scan = new Scan();

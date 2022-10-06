@@ -43,7 +43,7 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
   }
 
   /**
-   * Constructor nnnn
+   * Constructor
    */
   public TableSplit(TableName tableName, byte[] startRow, byte[] endRow, final String location) {
     this.m_tableName = tableName;

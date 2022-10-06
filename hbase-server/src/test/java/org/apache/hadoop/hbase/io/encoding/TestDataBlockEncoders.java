@@ -114,7 +114,7 @@ public class TestDataBlockEncoders {
   }
 
   /**
-   * Test data block encoding of empty KeyValue. n * On test failure.
+   * Test data block encoding of empty KeyValue. On test failure.
    */
   @Test
   public void testEmptyKeyValues() throws IOException {
@@ -138,7 +138,7 @@ public class TestDataBlockEncoders {
   }
 
   /**
-   * Test KeyValues with negative timestamp. n * On test failure.
+   * Test KeyValues with negative timestamp. On test failure.
    */
   @Test
   public void testNegativeTimestamps() throws IOException {
@@ -289,7 +289,7 @@ public class TestDataBlockEncoders {
   }
 
   /**
-   * Test whether the decompression of first key is implemented correctly. n
+   * Test whether the decompression of first key is implemented correctly.
    */
   @Test
   public void testFirstKeyInBlockOnSample() throws IOException {

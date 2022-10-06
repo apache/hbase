@@ -455,9 +455,7 @@ public class FSTableDescriptors implements TableDescriptors {
     return Integer.parseInt(m.group(2));
   }
 
-  /**
-   * n * @return Name of tableinfo file.
-   */
+  /** Returns Name of tableinfo file. */
   static String getTableInfoFileName(final int sequenceid) {
     return TABLEINFO_FILE_PREFIX + "." + formatTableInfoSequenceId(sequenceid);
   }

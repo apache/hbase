@@ -848,7 +848,7 @@ public class TableMapReduceUtil {
    * @param my_class        the class to find.
    * @param fs              the FileSystem with which to qualify the returned path.
    * @param packagedClasses a map of class name to path.
-   * @return a jar file that contains the class. n
+   * @return a jar file that contains the class.
    */
   private static Path findOrCreateJar(Class<?> my_class, FileSystem fs,
     Map<String, String> packagedClasses) throws IOException {
@@ -897,7 +897,7 @@ public class TableMapReduceUtil {
    * that is not the first thing on the class path that has a class with the same name. Looks first
    * on the classpath and then in the <code>packagedClasses</code> map.
    * @param my_class the class to find.
-   * @return a jar file that contains the class, or null. n
+   * @return a jar file that contains the class, or null.
    */
   private static String findContainingJar(Class<?> my_class, Map<String, String> packagedClasses)
     throws IOException {

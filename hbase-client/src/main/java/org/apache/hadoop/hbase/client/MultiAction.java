@@ -60,7 +60,7 @@ public final class MultiAction {
   /**
    * Add an Action to this container based on it's regionName. If the regionName is wrong, the
    * initial execution will fail, but will be automatically retried after looking up the correct
-   * region. nn
+   * region.
    */
   public void add(byte[] regionName, Action a) {
     add(regionName, Collections.singletonList(a));
@@ -69,7 +69,8 @@ public final class MultiAction {
   /**
    * Add an Action to this container based on it's regionName. If the regionName is wrong, the
    * initial execution will fail, but will be automatically retried after looking up the correct
-   * region. n * @param actionList list of actions to add for the region
+   * region.
+   * @param actionList list of actions to add for the region
    */
   public void add(byte[] regionName, List<Action> actionList) {
     List<Action> rsActions = actions.get(regionName);

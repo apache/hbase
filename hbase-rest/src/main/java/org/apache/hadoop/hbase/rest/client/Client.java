@@ -254,7 +254,7 @@ public class Client {
    * @param method  the transaction method
    * @param headers HTTP header values to send
    * @param path    the properly urlencoded path
-   * @return the HTTP response code n
+   * @return the HTTP response code
    */
   public HttpResponse executePathOnly(Cluster cluster, HttpUriRequest method, Header[] headers,
     String path) throws IOException {
@@ -308,7 +308,7 @@ public class Client {
    * @param method  the transaction method
    * @param headers HTTP header values to send
    * @param uri     a properly urlencoded URI
-   * @return the HTTP response code n
+   * @return the HTTP response code
    */
   public HttpResponse executeURI(HttpUriRequest method, Header[] headers, String uri)
     throws IOException {
@@ -347,7 +347,7 @@ public class Client {
    * @param method  the HTTP method
    * @param headers HTTP header values to send
    * @param path    the properly urlencoded path or URI
-   * @return the HTTP response code n
+   * @return the HTTP response code
    */
   public HttpResponse execute(Cluster cluster, HttpUriRequest method, Header[] headers, String path)
     throws IOException {
@@ -406,7 +406,7 @@ public class Client {
   /**
    * Send a HEAD request
    * @param path the path or URI
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response head(String path) throws IOException {
     return head(cluster, path, null);
@@ -417,7 +417,7 @@ public class Client {
    * @param cluster the cluster definition
    * @param path    the path or URI
    * @param headers the HTTP headers to include in the request
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response head(Cluster cluster, String path, Header[] headers) throws IOException {
     HttpHead method = new HttpHead(path);
@@ -432,7 +432,7 @@ public class Client {
   /**
    * Send a GET request
    * @param path the path or URI
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(String path) throws IOException {
     return get(cluster, path);
@@ -442,7 +442,7 @@ public class Client {
    * Send a GET request
    * @param cluster the cluster definition
    * @param path    the path or URI
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(Cluster cluster, String path) throws IOException {
     return get(cluster, path, EMPTY_HEADER_ARRAY);
@@ -452,7 +452,7 @@ public class Client {
    * Send a GET request
    * @param path   the path or URI
    * @param accept Accept header value
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(String path, String accept) throws IOException {
     return get(cluster, path, accept);
@@ -463,7 +463,7 @@ public class Client {
    * @param cluster the cluster definition
    * @param path    the path or URI
    * @param accept  Accept header value
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(Cluster cluster, String path, String accept) throws IOException {
     Header[] headers = new Header[1];
@@ -475,7 +475,7 @@ public class Client {
    * Send a GET request
    * @param path    the path or URI
    * @param headers the HTTP headers to include in the request, <tt>Accept</tt> must be supplied
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(String path, Header[] headers) throws IOException {
     return get(cluster, path, headers);
@@ -521,7 +521,7 @@ public class Client {
    * @param c       the cluster definition
    * @param path    the path or URI
    * @param headers the HTTP headers to include in the request
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response get(Cluster c, String path, Header[] headers) throws IOException {
     if (httpGet != null) {
@@ -538,7 +538,7 @@ public class Client {
    * @param path        the path or URI
    * @param contentType the content MIME type
    * @param content     the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response put(String path, String contentType, byte[] content) throws IOException {
     return put(cluster, path, contentType, content);
@@ -550,7 +550,7 @@ public class Client {
    * @param contentType the content MIME type
    * @param content     the content bytes
    * @param extraHdr    extra Header to send
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response put(String path, String contentType, byte[] content, Header extraHdr)
     throws IOException {
@@ -599,7 +599,7 @@ public class Client {
    * @param path    the path or URI
    * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response put(String path, Header[] headers, byte[] content) throws IOException {
     return put(cluster, path, headers, content);
@@ -611,7 +611,7 @@ public class Client {
    * @param path    the path or URI
    * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response put(Cluster cluster, String path, Header[] headers, byte[] content)
     throws IOException {
@@ -632,7 +632,7 @@ public class Client {
    * @param path        the path or URI
    * @param contentType the content MIME type
    * @param content     the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response post(String path, String contentType, byte[] content) throws IOException {
     return post(cluster, path, contentType, content);
@@ -644,7 +644,7 @@ public class Client {
    * @param contentType the content MIME type
    * @param content     the content bytes
    * @param extraHdr    additional Header to send
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response post(String path, String contentType, byte[] content, Header extraHdr)
     throws IOException {
@@ -693,7 +693,7 @@ public class Client {
    * @param path    the path or URI
    * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response post(String path, Header[] headers, byte[] content) throws IOException {
     return post(cluster, path, headers, content);
@@ -705,7 +705,7 @@ public class Client {
    * @param path    the path or URI
    * @param headers the HTTP headers to include, <tt>Content-Type</tt> must be supplied
    * @param content the content bytes
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response post(Cluster cluster, String path, Header[] headers, byte[] content)
     throws IOException {
@@ -724,7 +724,7 @@ public class Client {
   /**
    * Send a DELETE request
    * @param path the path or URI
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response delete(String path) throws IOException {
     return delete(cluster, path);
@@ -734,7 +734,7 @@ public class Client {
    * Send a DELETE request
    * @param path     the path or URI
    * @param extraHdr additional Header to send
-   * @return a Response object with response detail n
+   * @return a Response object with response detail
    */
   public Response delete(String path, Header extraHdr) throws IOException {
     return delete(cluster, path, extraHdr);

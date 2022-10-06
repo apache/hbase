@@ -45,7 +45,7 @@ public class EncryptionTest {
   }
 
   /**
-   * Check that the configured key provider can be loaded and initialized, or throw an exception. nn
+   * Check that the configured key provider can be loaded and initialized, or throw an exception.
    */
   public static void testKeyProvider(final Configuration conf) throws IOException {
     String providerClassName =
@@ -67,7 +67,6 @@ public class EncryptionTest {
 
   /**
    * Check that the configured cipher provider can be loaded and initialized, or throw an exception.
-   * nn
    */
   public static void testCipherProvider(final Configuration conf) throws IOException {
     String providerClassName =

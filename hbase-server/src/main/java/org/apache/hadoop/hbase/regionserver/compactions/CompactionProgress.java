@@ -47,7 +47,7 @@ public class CompactionProgress {
   }
 
   /**
-   * getter for calculated percent complete n
+   * getter for calculated percent complete
    */
   public float getProgressPct() {
     return (float) currentCompactedKVs / getTotalCompactingKVs();

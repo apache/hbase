@@ -767,7 +767,7 @@ public class MasterCoprocessorHost
   /**
    * Invoked just before calling the split region procedure
    * @param tableName the table where the region belongs to
-   * @param splitRow  the split point n
+   * @param splitRow  the split point
    */
   public void preSplitRegion(final TableName tableName, final byte[] splitRow) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
@@ -782,7 +782,7 @@ public class MasterCoprocessorHost
    * Invoked just before a split
    * @param tableName the table where the region belongs to
    * @param splitRow  the split point
-   * @param user      the user n
+   * @param user      the user
    */
   public void preSplitRegionAction(final TableName tableName, final byte[] splitRow,
     final User user) throws IOException {
@@ -798,7 +798,7 @@ public class MasterCoprocessorHost
    * Invoked just after a split
    * @param regionInfoA the new left-hand daughter region
    * @param regionInfoB the new right-hand daughter region
-   * @param user        the user n
+   * @param user        the user
    */
   public void postCompletedSplitRegionAction(final RegionInfo regionInfoA,
     final RegionInfo regionInfoB, final User user) throws IOException {
@@ -811,8 +811,8 @@ public class MasterCoprocessorHost
   }
 
   /**
-   * This will be called before update META step as part of split table region procedure. nn
-   * * @param user the user n
+   * This will be called before update META step as part of split table region procedure.
+   * @param user the user
    */
   public void preSplitBeforeMETAAction(final byte[] splitKey, final List<Mutation> metaEntries,
     final User user) throws IOException {
@@ -826,7 +826,7 @@ public class MasterCoprocessorHost
 
   /**
    * This will be called after update META step as part of split table region procedure.
-   * @param user the user n
+   * @param user the user
    */
   public void preSplitAfterMETAAction(final User user) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
@@ -839,7 +839,7 @@ public class MasterCoprocessorHost
 
   /**
    * Invoked just after the rollback of a failed split
-   * @param user the user n
+   * @param user the user
    */
   public void postRollBackSplitRegionAction(final User user) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation(user) {
@@ -853,7 +853,7 @@ public class MasterCoprocessorHost
   /**
    * Invoked just before a merge
    * @param regionsToMerge the regions to merge
-   * @param user           the user n
+   * @param user           the user
    */
   public void preMergeRegionsAction(final RegionInfo[] regionsToMerge, final User user)
     throws IOException {
@@ -869,7 +869,7 @@ public class MasterCoprocessorHost
    * Invoked after completing merge regions operation
    * @param regionsToMerge the regions to merge
    * @param mergedRegion   the new merged region
-   * @param user           the user n
+   * @param user           the user
    */
   public void postCompletedMergeRegionsAction(final RegionInfo[] regionsToMerge,
     final RegionInfo mergedRegion, final User user) throws IOException {
@@ -885,7 +885,7 @@ public class MasterCoprocessorHost
    * Invoked before merge regions operation writes the new region to hbase:meta
    * @param regionsToMerge the regions to merge
    * @param metaEntries    the meta entry
-   * @param user           the user n
+   * @param user           the user
    */
   public void preMergeRegionsCommit(final RegionInfo[] regionsToMerge,
     final @MetaMutationAnnotation List<Mutation> metaEntries, final User user) throws IOException {
@@ -901,7 +901,7 @@ public class MasterCoprocessorHost
    * Invoked after merge regions operation writes the new region to hbase:meta
    * @param regionsToMerge the regions to merge
    * @param mergedRegion   the new merged region
-   * @param user           the user n
+   * @param user           the user
    */
   public void postMergeRegionsCommit(final RegionInfo[] regionsToMerge,
     final RegionInfo mergedRegion, final User user) throws IOException {
@@ -916,7 +916,7 @@ public class MasterCoprocessorHost
   /**
    * Invoked after rollback merge regions operation
    * @param regionsToMerge the regions to merge
-   * @param user           the user n
+   * @param user           the user
    */
   public void postRollBackMergeRegionsAction(final RegionInfo[] regionsToMerge, final User user)
     throws IOException {

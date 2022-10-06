@@ -79,22 +79,19 @@ public class ColumnPaginationFilter extends FilterBase {
   }
 
   /**
-   * n
-   */
+   *   */
   public int getLimit() {
     return limit;
   }
 
   /**
-   * n
-   */
+   *   */
   public int getOffset() {
     return offset;
   }
 
   /**
-   * n
-   */
+   *   */
   public byte[] getColumnOffset() {
     return columnOffset;
   }
@@ -174,8 +171,8 @@ public class ColumnPaginationFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link ColumnPaginationFilter} instance
-   * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link ColumnPaginationFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ColumnPaginationFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {

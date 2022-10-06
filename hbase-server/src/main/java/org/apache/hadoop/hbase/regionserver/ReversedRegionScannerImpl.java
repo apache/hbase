@@ -36,8 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 class ReversedRegionScannerImpl extends RegionScannerImpl {
 
   /**
-   * nnnn
-   */
+   *   */
   ReversedRegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
     throws IOException {
     region.super(scan, additionalScanners, region);

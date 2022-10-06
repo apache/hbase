@@ -66,22 +66,22 @@ public class SimpleMutableByteRange extends AbstractByteRange {
 
   /**
    * Create a new {@code ByteRange} over a new backing array of size {@code capacity}. The range's
-   * offset and length are 0 and {@code capacity}, respectively. n * the size of the backing array.
+   * offset and length are 0 and {@code capacity}, respectively. the size of the backing array.
    */
   public SimpleMutableByteRange(int capacity) {
     this(new byte[capacity]);
   }
 
   /**
-   * Create a new {@code ByteRange} over the provided {@code bytes}. n * The array to wrap.
+   * Create a new {@code ByteRange} over the provided {@code bytes}. The array to wrap.
    */
   public SimpleMutableByteRange(byte[] bytes) {
     set(bytes);
   }
 
   /**
-   * Create a new {@code ByteRange} over the provided {@code bytes}. n * The array to wrap. n * The
-   * offset into {@code bytes} considered the beginning of this range. n * The length of this range.
+   * Create a new {@code ByteRange} over the provided {@code bytes}. The array to wrap. The offset
+   * into {@code bytes} considered the beginning of this range. The length of this range.
    */
   public SimpleMutableByteRange(byte[] bytes, int offset, int length) {
     set(bytes, offset, length);

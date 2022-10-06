@@ -102,8 +102,8 @@ public final class ZKConfig {
   }
 
   /**
-   * Return the ZK Quorum servers string given the specified configuration n * @return Quorum
-   * servers String
+   * Return the ZK Quorum servers string given the specified configuration
+   * @return Quorum servers String
    */
   private static String getZKQuorumServersStringFromHbaseConfig(Configuration conf) {
     String defaultClientPort = Integer.toString(
@@ -165,8 +165,8 @@ public final class ZKConfig {
 
   /**
    * Separate the given key into the three configurations it should contain: hbase.zookeeper.quorum,
-   * hbase.zookeeper.client.port and zookeeper.znode.parent n * @return the three configuration in
-   * the described order n
+   * hbase.zookeeper.client.port and zookeeper.znode.parent
+   * @return the three configuration in the described order
    */
   public static ZKClusterKey transformClusterKey(String key) throws IOException {
     String[] parts = key.split(":");

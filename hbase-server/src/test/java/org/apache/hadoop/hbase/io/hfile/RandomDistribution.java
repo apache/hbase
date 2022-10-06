@@ -51,7 +51,7 @@ public class RandomDistribution {
 
     /**
      * Generate random integers from min (inclusive) to max (exclusive) following even distribution.
-     * n * The basic random number generator. n * Minimum integer n * maximum integer (exclusive).
+     * The basic random number generator. Minimum integer maximum integer (exclusive).
      */
     public Flat(Random random, int min, int max) {
       if (min >= max) {
@@ -82,17 +82,16 @@ public class RandomDistribution {
     private final ArrayList<Double> v;
 
     /**
-     * Constructor n * The random number generator. n * minimum integer (inclusvie) n * maximum
-     * integer (exclusive) n * parameter sigma. (sigma > 1.0)
+     * Constructor The random number generator. minimum integer (inclusvie) maximum integer
+     * (exclusive) parameter sigma. (sigma > 1.0)
      */
     public Zipf(Random r, int min, int max, double sigma) {
       this(r, min, max, sigma, DEFAULT_EPSILON);
     }
 
     /**
-     * Constructor. n * The random number generator. n * minimum integer (inclusvie) n * maximum
-     * integer (exclusive) n * parameter sigma. (sigma > 1.0) n * Allowable error percentage (0 <
-     * epsilon < 1.0).
+     * Constructor. The random number generator. minimum integer (inclusvie) maximum integer
+     * (exclusive) parameter sigma. (sigma > 1.0) Allowable error percentage (0 < epsilon < 1.0).
      */
     public Zipf(Random r, int min, int max, double sigma, double epsilon) {
       if ((max <= min) || (sigma <= 1) || (epsilon <= 0) || (epsilon >= 0.5)) {
@@ -178,8 +177,8 @@ public class RandomDistribution {
 
     /**
      * Generate random integers from min (inclusive) to max (exclusive) following Binomial
-     * distribution. n * The basic random number generator. n * Minimum integer n * maximum integer
-     * (exclusive). n * parameter.
+     * distribution. The basic random number generator. Minimum integer maximum integer (exclusive).
+     * parameter.
      */
     public Binomial(Random random, int min, int max, double p) {
       if (min >= max) {

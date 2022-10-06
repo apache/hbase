@@ -142,7 +142,7 @@ public class TestSerialization {
   }
 
   /**
-   * Test RegionInfo serialization n
+   * Test RegionInfo serialization
    */
   @Test
   public void testRegionInfo() throws Exception {

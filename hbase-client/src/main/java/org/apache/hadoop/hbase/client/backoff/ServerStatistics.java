@@ -33,7 +33,7 @@ public class ServerStatistics {
 
   /**
    * Good enough attempt. Last writer wins. It doesn't really matter which one gets to update, as
-   * something gets set nn
+   * something gets set
    */
   public void update(byte[] region, RegionLoadStats currentStats) {
     RegionStatistics regionStat = this.stats.get(region);

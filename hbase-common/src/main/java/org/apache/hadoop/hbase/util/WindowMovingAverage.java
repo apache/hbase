@@ -73,7 +73,7 @@ public class WindowMovingAverage extends MovingAverage {
 
   /**
    * Get statistics at index.
-   * @param index index of bar n
+   * @param index index of bar
    */
   protected long getStatisticsAtIndex(int index) {
     if (index < 0 || index >= getNumberOfStatistics()) {

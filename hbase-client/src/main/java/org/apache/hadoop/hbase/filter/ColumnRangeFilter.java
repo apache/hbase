@@ -164,8 +164,8 @@ public class ColumnRangeFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link ColumnRangeFilter} instance
-   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link ColumnRangeFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static ColumnRangeFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.ColumnRangeFilter proto;

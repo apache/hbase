@@ -94,7 +94,7 @@ public final class SnapshotTestingUtils {
   }
 
   /**
-   * Assert that we don't have any snapshots lists n * if the admin operation fails
+   * Assert that we don't have any snapshots lists if the admin operation fails
    */
   public static void assertNoSnapshots(Admin admin) throws IOException {
     assertEquals("Have some previous snapshots", 0, admin.listSnapshots().size());

@@ -82,7 +82,8 @@ public class MobSnapshotTestingUtils {
   }
 
   /**
-   * Create a Mob table. nnn * @return An Table instance for the created table. n
+   * Create a Mob table.
+   * @return An Table instance for the created table.
    */
   public static Table createMobTable(final HBaseTestingUtility util, final TableName tableName,
     final byte[]... families) throws IOException {

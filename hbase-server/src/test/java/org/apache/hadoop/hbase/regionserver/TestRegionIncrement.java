@@ -171,7 +171,7 @@ public class TestRegionIncrement {
   }
 
   /**
-   * Have each thread update its own Cell. Avoid contention with another thread. nn
+   * Have each thread update its own Cell. Avoid contention with another thread.
    */
   @Test
   public void testUnContendedSingleCellIncrement() throws IOException, InterruptedException {
@@ -208,7 +208,7 @@ public class TestRegionIncrement {
   }
 
   /**
-   * Have each thread update its own Cell. Avoid contention with another thread. This is nn
+   * Have each thread update its own Cell. Avoid contention with another thread. This is
    */
   @Test
   public void testContendedAcrossCellsIncrement() throws IOException, InterruptedException {

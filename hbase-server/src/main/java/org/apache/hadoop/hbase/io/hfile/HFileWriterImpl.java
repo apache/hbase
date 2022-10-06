@@ -558,8 +558,8 @@ public class HFileWriterImpl implements HFile.Writer {
    * Add a meta block to the end of the file. Call before close(). Metadata blocks are expensive.
    * Fill one with a bunch of serialized data rather than do a metadata block per metadata instance.
    * If metadata is small, consider adding to file info using
-   * {@link #appendFileInfo(byte[], byte[])} n * name of the block n * will call readFields to get
-   * data later (DO NOT REUSE)
+   * {@link #appendFileInfo(byte[], byte[])} name of the block will call readFields to get data
+   * later (DO NOT REUSE)
    */
   @Override
   public void appendMetaBlock(String metaBlockName, Writable content) {
@@ -705,7 +705,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /**
    * Add key/value to file. Keys must be added in an order that agrees with the Comparator passed on
-   * construction. n * Cell to add. Cannot be empty nor null.
+   * construction. Cell to add. Cannot be empty nor null.
    */
   @Override
   public void append(final Cell cell) throws IOException {

@@ -254,7 +254,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
   }
 
   /***
-   * Write a table's access controls to the permissions mirror in zookeeper nn
+   * Write a table's access controls to the permissions mirror in zookeeper
    */
   public void writeToZookeeper(byte[] entry, byte[] permsData) {
     String entryName = Bytes.toString(entry);
@@ -271,7 +271,7 @@ public class ZKPermissionWatcher extends ZKListener implements Closeable {
   }
 
   /***
-   * Delete the acl notify node of table n
+   * Delete the acl notify node of table
    */
   public void deleteTableACLNode(final TableName tableName) {
     String zkNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, ACL_NODE);

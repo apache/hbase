@@ -161,8 +161,8 @@ public class TestGetClosestAtOrBefore {
   }
 
   /*
-   * nnn * @param answer Pass -1 if we're not to find anything.
-   * @return Row found. n
+   * @param answer Pass -1 if we're not to find anything.
+   * @return Row found.
    */
   private byte[] findRow(final Region mr, final char table, final int rowToFind, final int answer)
     throws IOException {

@@ -30,6 +30,7 @@ import java.util.Random;
 import java.util.SortedMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -148,7 +149,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Remove the @Ignore to try out timeout and retry asettings n
+   * Remove the @Ignore to try out timeout and retry asettings
    */
   @Ignore
   @Test
@@ -179,7 +180,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Test that operation timeout prevails over rpc default timeout and retries, etc. n
+   * Test that operation timeout prevails over rpc default timeout and retries, etc.
    */
   @Test
   public void testRpcTimeout() throws IOException {
@@ -560,8 +561,8 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * @param name region name or encoded region name. n * @return True if we are dealing with a
-   *             hbase:meta region.
+   * @param name region name or encoded region name.
+   * @return True if we are dealing with a hbase:meta region.
    */
   static boolean isMetaRegion(final byte[] name, final RegionSpecifierType type) {
     switch (type) {
@@ -616,8 +617,9 @@ public class TestClientNoCluster extends Configured implements Tool {
 
   /**
    * Format passed integer. Zero-pad. Copied from hbase-server PE class and small amendment. Make
-   * them share. n * @return Returns zero-prefixed 10-byte wide decimal version of passed number
-   * (Does absolute in case number is negative).
+   * them share.
+   * @return Returns zero-prefixed 10-byte wide decimal version of passed number (Does absolute in
+   *         case number is negative).
    */
   private static byte[] format(final long number) {
     byte[] b = new byte[10];
@@ -629,9 +631,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     return b;
   }
 
-  /**
-   * nn * @return <code>count</code> regions
-   */
+  /** Returns <code>count</code> regions */
   private static HRegionInfo[] makeHRegionInfos(final byte[] tableName, final int count,
     final long namespaceSpan) {
     byte[] startKey = HConstants.EMPTY_BYTE_ARRAY;
@@ -651,9 +651,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     return hris;
   }
 
-  /**
-   * n * @return Return <code>count</code> servernames.
-   */
+  /** Returns Return <code>count</code> servernames. */
   private static ServerName[] makeServerNames(final int count) {
     ServerName[] sns = new ServerName[count];
     for (int i = 0; i < count; i++) {
@@ -696,7 +694,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   /**
-   * Code for each 'client' to run. nnnn
+   * Code for each 'client' to run.
    */
   static void cycle(int id, final Configuration c, final Connection sharedConnection)
     throws IOException {
@@ -819,7 +817,7 @@ public class TestClientNoCluster extends Configured implements Tool {
 
   /**
    * Run a client instance against a faked up server.
-   * @param args TODO n
+   * @param args TODO
    */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(HBaseConfiguration.create(), new TestClientNoCluster(), args));

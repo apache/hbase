@@ -90,7 +90,7 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   /**
    * Calls {@link #AnnotationReadingPriorityFunction(RSRpcServices, Class)} using the result of
-   * {@code rpcServices#getClass()} n * The RPC server implementation
+   * {@code rpcServices#getClass()} The RPC server implementation
    */
   public AnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     this(rpcServices, rpcServices.getClass());
@@ -98,8 +98,8 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   /**
    * Constructs the priority function given the RPC server implementation and the annotations on the
-   * methods in the provided {@code clz}. n * The RPC server implementation n * The concrete RPC
-   * server implementation's class
+   * methods in the provided {@code clz}. The RPC server implementation The concrete RPC server
+   * implementation's class
    */
   public AnnotationReadingPriorityFunction(final RSRpcServices rpcServices,
     Class<? extends RSRpcServices> clz) {
@@ -158,8 +158,9 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
   }
 
   /**
-   * See if the method has an annotation. n * @return Return the priority from the annotation. If
-   * there isn't an annotation, this returns something below zero.
+   * See if the method has an annotation.
+   * @return Return the priority from the annotation. If there isn't an annotation, this returns
+   *         something below zero.
    */
   protected int getAnnotatedPriority(RequestHeader header) {
     String methodName = header.getMethodName();
@@ -232,8 +233,8 @@ public class AnnotationReadingPriorityFunction implements PriorityFunction {
   }
 
   /**
-   * Based on the request content, returns the deadline of the request. nn * @return Deadline of
-   * this request. 0 now, otherwise msec of 'delay'
+   * Based on the request content, returns the deadline of the request.
+   * @return Deadline of this request. 0 now, otherwise msec of 'delay'
    */
   @Override
   public long getDeadline(RequestHeader header, Message param) {

@@ -142,8 +142,8 @@ public class JMXJsonServlet extends HttpServlet {
   }
 
   /**
-   * Process a GET request for the specified resource. n * The servlet request we are processing n *
-   * The servlet response we are creating
+   * Process a GET request for the specified resource. The servlet request we are processing The
+   * servlet response we are creating
    */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {

@@ -210,7 +210,7 @@ public abstract class TableInputFormatBase implements InputFormat<ImmutableBytes
   /**
    * Allows subclasses to initialize the table information.
    * @param connection The Connection to the HBase cluster. MUST be unmanaged. We will close.
-   * @param tableName  The {@link TableName} of the table to process. n
+   * @param tableName  The {@link TableName} of the table to process.
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
     if (this.table != null || this.connection != null) {
@@ -240,7 +240,7 @@ public abstract class TableInputFormatBase implements InputFormat<ImmutableBytes
   }
 
   /**
-   * Allows subclasses to set the {@link TableRecordReader}. n * to provide other
+   * Allows subclasses to set the {@link TableRecordReader}. to provide other
    * {@link TableRecordReader} implementations.
    */
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
@@ -248,7 +248,7 @@ public abstract class TableInputFormatBase implements InputFormat<ImmutableBytes
   }
 
   /**
-   * Allows subclasses to set the {@link Filter} to be used. n
+   * Allows subclasses to set the {@link Filter} to be used.
    */
   protected void setRowFilter(Filter rowFilter) {
     this.rowFilter = rowFilter;
@@ -272,7 +272,7 @@ public abstract class TableInputFormatBase implements InputFormat<ImmutableBytes
 
   /**
    * Close the Table and related objects that were initialized via
-   * {@link #initializeTable(Connection, TableName)}. n
+   * {@link #initializeTable(Connection, TableName)}.
    */
   protected void closeTable() throws IOException {
     close(table, connection);

@@ -97,7 +97,7 @@ public class HFilePerformanceEvaluation {
 
   /**
    * Add any supported codec or cipher to test the HFile read/write performance. Specify "none" to
-   * disable codec or cipher or both. n
+   * disable codec or cipher or both.
    */
   private void runBenchmarks() throws Exception {
     final Configuration conf = new Configuration();
@@ -163,9 +163,9 @@ public class HFilePerformanceEvaluation {
   }
 
   /**
-   * Write a test HFile with the given codec & cipher nnn * @param codec "none", "lzo", "gz",
-   * "snappy"
-   * @param cipher "none", "aes" n
+   * Write a test HFile with the given codec & cipher
+   * @param codec  "none", "lzo", "gz", "snappy"
+   * @param cipher "none", "aes"
    */
   private void runWriteBenchmark(Configuration conf, FileSystem fs, Path mf, String codec,
     String cipher) throws Exception {
@@ -179,7 +179,8 @@ public class HFilePerformanceEvaluation {
   }
 
   /**
-   * Run all the read benchmarks for the test HFile nnn * @param codec "none", "lzo", "gz", "snappy"
+   * Run all the read benchmarks for the test HFile
+   * @param codec  "none", "lzo", "gz", "snappy"
    * @param cipher "none", "aes"
    */
   private void runReadBenchmark(final Configuration conf, final FileSystem fs, final Path mf,
@@ -296,7 +297,7 @@ public class HFilePerformanceEvaluation {
 
     /**
      * Run benchmark
-     * @return elapsed time. n
+     * @return elapsed time.
      */
     long run() throws Exception {
       long elapsedTime;
@@ -513,8 +514,7 @@ public class HFilePerformanceEvaluation {
   }
 
   /**
-   * nnn
-   */
+   *   */
   public static void main(String[] args) throws Exception {
     new HFilePerformanceEvaluation().runBenchmarks();
   }

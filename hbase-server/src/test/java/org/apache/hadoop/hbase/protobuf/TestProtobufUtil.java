@@ -84,7 +84,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test basic Get conversions. n
+   * Test basic Get conversions.
    */
   @Test
   public void testGet() throws IOException {
@@ -116,7 +116,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test Append Mutate conversions. n
+   * Test Append Mutate conversions.
    */
   @Test
   public void testAppend() throws IOException {
@@ -175,7 +175,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test Delete Mutate conversions. n
+   * Test Delete Mutate conversions.
    */
   @Test
   public void testDelete() throws IOException {
@@ -217,7 +217,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test Increment Mutate conversions. n
+   * Test Increment Mutate conversions.
    */
   @Test
   public void testIncrement() throws IOException {
@@ -270,7 +270,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test Put Mutate conversions. n
+   * Test Put Mutate conversions.
    */
   @Test
   public void testPut() throws IOException {
@@ -315,7 +315,7 @@ public class TestProtobufUtil {
   }
 
   /**
-   * Test basic Scan conversions. n
+   * Test basic Scan conversions.
    */
   @Test
   public void testScan() throws IOException {

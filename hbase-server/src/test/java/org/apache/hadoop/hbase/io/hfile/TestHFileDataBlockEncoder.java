@@ -134,7 +134,7 @@ public class TestHFileDataBlockEncoder {
   }
 
   /**
-   * Test encoding. n
+   * Test encoding.
    */
   @Test
   public void testEncoding() throws IOException {
@@ -144,7 +144,7 @@ public class TestHFileDataBlockEncoder {
 
   /**
    * Test encoding with offheap keyvalue. This test just verifies if the encoders work with DBB and
-   * does not use the getXXXArray() API n
+   * does not use the getXXXArray() API
    */
   @Test
   public void testEncodingWithOffheapKeyValue() throws IOException {

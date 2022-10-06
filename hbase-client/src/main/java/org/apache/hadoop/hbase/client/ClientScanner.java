@@ -91,7 +91,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
    * @param conf       The {@link Configuration} to use.
    * @param scan       {@link Scan} to use in this scanner
    * @param tableName  The table that we wish to scan
-   * @param connection Connection identifying the cluster n
+   * @param connection Connection identifying the cluster
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
     ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,

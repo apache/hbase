@@ -78,8 +78,8 @@ public class LongComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * @return true if and only if the fields of the comparator that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   boolean areSerializedFieldsEqual(LongComparator other) {
     if (other == this) return true;

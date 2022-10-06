@@ -178,7 +178,8 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Get the number of slave clusters the local cluster has.
-   * @return number of slave clusters n * @deprecated
+   * @return number of slave clusters
+   * @deprecated
    */
   @Deprecated
   public int getPeersCount() throws IOException {
@@ -222,8 +223,9 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Append the replicable table-cf config of the specified peer
    * @param id       a short that identifies the cluster
-   * @param tableCfs table-cfs config str nn * @deprecated as release of 2.0.0, and it will be
-   *                 removed in 3.0.0, use {@link #appendPeerTableCFs(String, Map)} instead.
+   * @param tableCfs table-cfs config str
+   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0, use
+   *             {@link #appendPeerTableCFs(String, Map)} instead.
    */
   @Deprecated
   public void appendPeerTableCFs(String id, String tableCfs)
@@ -234,7 +236,7 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Append the replicable table-cf config of the specified peer
    * @param id       a short that identifies the cluster
-   * @param tableCfs A map from tableName to column family names nn
+   * @param tableCfs A map from tableName to column family names
    */
   @Deprecated
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
@@ -245,8 +247,9 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Remove some table-cfs from table-cfs config of the specified peer
    * @param id      a short name that identifies the cluster
-   * @param tableCf table-cfs config str nn * @deprecated as release of 2.0.0, and it will be
-   *                removed in 3.0.0, use {@link #removePeerTableCFs(String, Map)} instead.
+   * @param tableCf table-cfs config str
+   * @deprecated as release of 2.0.0, and it will be removed in 3.0.0, use
+   *             {@link #removePeerTableCFs(String, Map)} instead.
    */
   @Deprecated
   public void removePeerTableCFs(String id, String tableCf)
@@ -257,7 +260,7 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Remove some table-cfs from config of the specified peer
    * @param id       a short name that identifies the cluster
-   * @param tableCfs A map from tableName to column family names nn
+   * @param tableCfs A map from tableName to column family names
    */
   @Deprecated
   public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)

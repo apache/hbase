@@ -183,7 +183,7 @@ public abstract class TimeRangeTracker {
   /**
    * @param data the serialization data. It can't be null!
    * @return An instance of NonSyncTimeRangeTracker filled w/ the content of serialized
-   *         NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>. n
+   *         NonSyncTimeRangeTracker in <code>timeRangeTrackerBytes</code>.
    */
   public static TimeRangeTracker parseFrom(final byte[] data) throws IOException {
     return parseFrom(data, Type.NON_SYNC);

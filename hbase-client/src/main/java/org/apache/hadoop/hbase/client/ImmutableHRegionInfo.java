@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ImmutableHRegionInfo extends HRegionInfo {
 
   /*
-   * Creates an immutable copy of an HRegionInfo. n
+   * Creates an immutable copy of an HRegionInfo.
    */
   public ImmutableHRegionInfo(RegionInfo other) {
     super(other);

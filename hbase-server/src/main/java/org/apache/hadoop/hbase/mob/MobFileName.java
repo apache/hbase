@@ -48,8 +48,9 @@ public final class MobFileName {
   private static final int UUID_END_INDEX = 72;
 
   /**
-   * n * The start key. n * The string of the latest timestamp of cells in this file, the format is
-   * yyyymmdd. n * The uuid
+   * @param startKey The start key.
+   * @paran Date The string of the latest timestamp of cells in this file, the format is yyyymmdd.
+   * @param uuid The uuid
    */
   private MobFileName(byte[] startKey, String date, String uuid) {
     this.startKey = MD5Hash.getMD5AsHex(startKey, 0, startKey.length);
@@ -59,8 +60,10 @@ public final class MobFileName {
   }
 
   /**
-   * n * The md5 hex string of the start key. n * The string of the latest timestamp of cells in
-   * this file, the format is yyyymmdd. n * The uuid
+   * @param startKey The md5 hex string of the start key.
+   * @param date     The string of the latest timestamp of cells in this file, the format is
+   *                 yyyymmdd.
+   * @param uuid     The uuid
    */
   private MobFileName(String startKey, String date, String uuid) {
     this.startKey = startKey;
@@ -70,9 +73,11 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
-   * the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid The uuid.
+   * Creates an instance of MobFileName
+   * @param startKey The md5 hex string of the start key.
+   * @param date     The string of the latest timestamp of cells in this file, the format is
+   *                 yyyymmdd.
+   * @param uuid     The uuid.
    * @return An instance of a MobFileName.
    */
   public static MobFileName create(byte[] startKey, String date, String uuid) {
@@ -80,9 +85,11 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
-   * the latest timestamp of cells in this file, the format is yyyymmdd.
-   * @param uuid The uuid.
+   * Creates an instance of MobFileName
+   * @param startKey The md5 hex string of the start key.
+   * @param date     The string of the latest timestamp of cells in this file, the format is
+   *                 yyyymmdd.
+   * @param uuid     The uuid.
    * @return An instance of a MobFileName.
    */
   public static MobFileName create(String startKey, String date, String uuid) {
@@ -105,7 +112,7 @@ public final class MobFileName {
 
   /**
    * get startKey from MobFileName.
-   * @param fileName file name. n
+   * @param fileName file name.
    */
   public static String getStartKeyFromName(final String fileName) {
     return fileName.substring(0, STARTKEY_END_INDEX);
@@ -113,7 +120,7 @@ public final class MobFileName {
 
   /**
    * get date from MobFileName.
-   * @param fileName file name. n
+   * @param fileName file name.
    */
   public static String getDateFromName(final String fileName) {
     return fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);

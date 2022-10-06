@@ -72,7 +72,7 @@ public class DefaultCompactor extends Compactor<StoreFileWriter> {
    *                       generated {@link CompactionRequestImpl}.
    * @param isMajor        true to major compact (prune all deletes, max versions, etc)
    * @return Product of compaction or an empty list if all cells expired or deleted and nothing \
-   *         made it through the compaction. n
+   *         made it through the compaction.
    */
   public List<Path> compactForTesting(Collection<HStoreFile> filesToCompact, boolean isMajor)
     throws IOException {
