@@ -69,7 +69,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange
 
   /**
    * Update the beginning of this range. {@code offset + length} may not be greater than
-   * {@code bytes.length}. Resets {@code position} to 0. n * the new start of this range.
+   * {@code bytes.length}. Resets {@code position} to 0. the new start of this range.
    * @return this.
    */
   @Override
@@ -82,7 +82,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange
   /**
    * Update the length of this range. {@code offset + length} should not be greater than
    * {@code bytes.length}. If {@code position} is greater than the new {@code length}, sets
-   * {@code position} to {@code length}. n * The new length of this range.
+   * {@code position} to {@code length}. The new length of this range.
    * @return this.
    */
   @Override

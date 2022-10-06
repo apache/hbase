@@ -70,7 +70,8 @@ public class TableRecordReader extends RecordReader<ImmutableBytesWritable, Resu
 
   /**
    * Returns the current key.
-   * @return The current key. n * @throws InterruptedException When the job is aborted.
+   * @return The current key.
+   * @throws InterruptedException When the job is aborted.
    * @see org.apache.hadoop.mapreduce.RecordReader#getCurrentKey()
    */
   @Override

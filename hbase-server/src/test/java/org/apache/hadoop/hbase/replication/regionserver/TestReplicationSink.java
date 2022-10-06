@@ -157,7 +157,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a whole batch of entries n
+   * Insert a whole batch of entries
    */
   @Test
   public void testBatchSink() throws Exception {
@@ -174,7 +174,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a mix of puts and deletes n
+   * Insert a mix of puts and deletes
    */
   @Test
   public void testMixedPutDelete() throws Exception {
@@ -234,7 +234,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert to 2 different tables n
+   * Insert to 2 different tables
    */
   @Test
   public void testMixedPutTables() throws Exception {
@@ -258,7 +258,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert then do different types of deletes n
+   * Insert then do different types of deletes
    */
   @Test
   public void testMixedDeletes() throws Exception {
@@ -285,7 +285,7 @@ public class TestReplicationSink {
 
   /**
    * Puts are buffered, but this tests when a delete (not-buffered) is applied before the actual Put
-   * that creates it. n
+   * that creates it.
    */
   @Test
   public void testApplyDeleteBeforePut() throws Exception {

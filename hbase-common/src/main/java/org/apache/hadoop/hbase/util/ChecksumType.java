@@ -85,8 +85,8 @@ public enum ChecksumType {
   }
 
   /**
-   * Cannot rely on enum ordinals . They change if item is removed or moved. Do our own codes. n
-   * * @return Type associated with passed code.
+   * Cannot rely on enum ordinals . They change if item is removed or moved. Do our own codes.
+   * @return Type associated with passed code.
    */
   public static ChecksumType codeToType(final byte b) {
     for (ChecksumType t : ChecksumType.values()) {
@@ -98,8 +98,8 @@ public enum ChecksumType {
   }
 
   /**
-   * Map a checksum name to a specific type. Do our own names. n * @return Type associated with
-   * passed code.
+   * Map a checksum name to a specific type. Do our own names.
+   * @return Type associated with passed code.
    */
   public static ChecksumType nameToType(final String name) {
     for (ChecksumType t : ChecksumType.values()) {

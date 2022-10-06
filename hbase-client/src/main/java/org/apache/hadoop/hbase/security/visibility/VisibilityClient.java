@@ -55,7 +55,7 @@ public class VisibilityClient {
   /**
    * Return true if cell visibility features are supported and enabled
    * @param connection The connection to use
-   * @return true if cell visibility features are supported and enabled, false otherwise n
+   * @return true if cell visibility features are supported and enabled, false otherwise
    */
   public static boolean isCellVisibilityEnabled(Connection connection) throws IOException {
     return connection.getAdmin().getSecurityCapabilities()
@@ -63,8 +63,8 @@ public class VisibilityClient {
   }
 
   /**
-   * Utility method for adding label to the system. nnnn * @deprecated Use
-   * {@link #addLabel(Connection,String)} instead.
+   * Utility method for adding label to the system.
+   * @deprecated Use {@link #addLabel(Connection,String)} instead.
    */
   @Deprecated
   public static VisibilityLabelsResponse addLabel(Configuration conf, final String label)
@@ -75,7 +75,7 @@ public class VisibilityClient {
   }
 
   /**
-   * Utility method for adding label to the system. nnnn
+   * Utility method for adding label to the system.
    */
   public static VisibilityLabelsResponse addLabel(Connection connection, final String label)
     throws Throwable {
@@ -83,8 +83,8 @@ public class VisibilityClient {
   }
 
   /**
-   * Utility method for adding labels to the system. nnnn * @deprecated Use
-   * {@link #addLabels(Connection,String[])} instead.
+   * Utility method for adding labels to the system.
+   * @deprecated Use {@link #addLabels(Connection,String[])} instead.
    */
   @Deprecated
   public static VisibilityLabelsResponse addLabels(Configuration conf, final String[] labels)
@@ -95,7 +95,7 @@ public class VisibilityClient {
   }
 
   /**
-   * Utility method for adding labels to the system. nnnn
+   * Utility method for adding labels to the system.
    */
   public static VisibilityLabelsResponse addLabels(Connection connection, final String[] labels)
     throws Throwable {
@@ -133,8 +133,8 @@ public class VisibilityClient {
   }
 
   /**
-   * Sets given labels globally authorized for the user. nnnnn * @deprecated Use
-   * {@link #setAuths(Connection,String[],String)} instead.
+   * Sets given labels globally authorized for the user.
+   * @deprecated Use {@link #setAuths(Connection,String[],String)} instead.
    */
   @Deprecated
   public static VisibilityLabelsResponse setAuths(Configuration conf, final String[] auths,
@@ -145,7 +145,7 @@ public class VisibilityClient {
   }
 
   /**
-   * Sets given labels globally authorized for the user. nnnnn
+   * Sets given labels globally authorized for the user.
    */
   public static VisibilityLabelsResponse setAuths(Connection connection, final String[] auths,
     final String user) throws Throwable {
@@ -153,8 +153,8 @@ public class VisibilityClient {
   }
 
   /**
-   * Returns labels, the given user is globally authorized for. n * @deprecated Use
-   * {@link #getAuths(Connection,String)} instead.
+   * Returns labels, the given user is globally authorized for.
+   * @deprecated Use {@link #getAuths(Connection,String)} instead.
    */
   @Deprecated
   public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
@@ -216,7 +216,7 @@ public class VisibilityClient {
    * Retrieve the list of visibility labels defined in the system.
    * @param connection The Connection instance to use.
    * @param regex      The regular expression to filter which labels are returned.
-   * @return labels The list of visibility labels defined in the system. n
+   * @return labels The list of visibility labels defined in the system.
    */
   public static ListLabelsResponse listLabels(Connection connection, final String regex)
     throws Throwable {
@@ -252,8 +252,8 @@ public class VisibilityClient {
   }
 
   /**
-   * Removes given labels from user's globally authorized list of labels. nnnnn * @deprecated Use
-   * {@link #clearAuths(Connection,String[],String)} instead.
+   * Removes given labels from user's globally authorized list of labels.
+   * @deprecated Use {@link #clearAuths(Connection,String[],String)} instead.
    */
   @Deprecated
   public static VisibilityLabelsResponse clearAuths(Configuration conf, final String[] auths,
@@ -264,7 +264,7 @@ public class VisibilityClient {
   }
 
   /**
-   * Removes given labels from user's globally authorized list of labels. nnnnn
+   * Removes given labels from user's globally authorized list of labels.
    */
   public static VisibilityLabelsResponse clearAuths(Connection connection, final String[] auths,
     final String user) throws Throwable {

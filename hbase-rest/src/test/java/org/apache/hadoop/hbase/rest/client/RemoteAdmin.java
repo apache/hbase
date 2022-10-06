@@ -52,7 +52,7 @@ public class RemoteAdmin {
   private static volatile Unmarshaller versionClusterUnmarshaller;
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public RemoteAdmin(Client client, Configuration conf) {
     this(client, conf, null);
@@ -69,7 +69,7 @@ public class RemoteAdmin {
   }
 
   /**
-   * Constructor nnn
+   * Constructor
    */
   public RemoteAdmin(Client client, Configuration conf, String accessToken) {
     this.client = client;
@@ -89,8 +89,8 @@ public class RemoteAdmin {
   }
 
   /**
-   * @return string representing the rest api's version n * if the endpoint does not exist, there is
-   *         a timeout, or some other general failure mode
+   * @return string representing the rest api's version if the endpoint does not exist, there is a
+   *         timeout, or some other general failure mode
    */
   public VersionModel getRestVersion() throws IOException {
 
@@ -169,8 +169,8 @@ public class RemoteAdmin {
   }
 
   /**
-   * @return string representing the cluster's version n * if the endpoint does not exist, there is
-   *         a timeout, or some other general failure mode
+   * @return string representing the cluster's version if the endpoint does not exist, there is a
+   *         timeout, or some other general failure mode
    */
   public StorageClusterVersionModel getClusterVersion() throws IOException {
 
@@ -336,8 +336,8 @@ public class RemoteAdmin {
   }
 
   /**
-   * @return string representing the cluster's version n * if the endpoint does not exist, there is
-   *         a timeout, or some other general failure mode
+   * @return string representing the cluster's version if the endpoint does not exist, there is a
+   *         timeout, or some other general failure mode
    */
   public TableListModel getTableList() throws IOException {
 

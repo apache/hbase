@@ -118,13 +118,13 @@ public interface RowProcessor<S extends Message, T extends Message> {
    * This method should return any additional data that is needed on the server side to construct
    * the RowProcessor. The server will pass this to the {@link #initialize(Message msg)} method. If
    * there is no RowProcessor specific data then null should be returned.
-   * @return the PB message n
+   * @return the PB message
    */
   S getRequestData() throws IOException;
 
   /**
    * This method should initialize any field(s) of the RowProcessor with a parsing of the passed
-   * message bytes (used on the server side). nn
+   * message bytes (used on the server side).
    */
   void initialize(S msg) throws IOException;
 

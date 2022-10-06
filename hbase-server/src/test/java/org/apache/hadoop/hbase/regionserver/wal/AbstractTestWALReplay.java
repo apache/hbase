@@ -181,8 +181,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * n
-   */
+   *   */
   @Test
   public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
     final TableName tableName = TableName.valueOf("testReplayEditsAfterRegionMovedWithMultiCF");
@@ -258,8 +257,8 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * Tests for hbase-2727. n * @see
-   * <a href="https://issues.apache.org/jira/browse/HBASE-2727">HBASE-2727</a>
+   * Tests for hbase-2727.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2727">HBASE-2727</a>
    */
   @Test
   public void test2727() throws Exception {
@@ -321,7 +320,6 @@ public abstract class AbstractTestWALReplay {
 
   /**
    * Test case of HRegion that is only made out of bulk loaded files. Assert that we don't 'crash'.
-   * nnnnn
    */
   @Test
   public void testRegionMadeOfBulkLoadedFilesOnly() throws IOException, SecurityException,
@@ -378,7 +376,7 @@ public abstract class AbstractTestWALReplay {
   /**
    * HRegion test case that is made of a major compacted HFile (created with three bulk loaded
    * files) and an edit in the memstore. This is for HBASE-10958 "[dataloss] Bulk loading with
-   * seqids can prevent some log entries from being replayed" nnnnn
+   * seqids can prevent some log entries from being replayed"
    */
   @Test
   public void testCompactedBulkLoadedFiles() throws IOException, SecurityException,
@@ -439,7 +437,7 @@ public abstract class AbstractTestWALReplay {
 
   /**
    * Test writing edits into an HRegion, closing it, splitting logs, opening Region again. Verify
-   * seqids. nnnnn
+   * seqids.
    */
   @Test
   public void testReplayEditsWrittenViaHRegion() throws IOException, SecurityException,
@@ -532,7 +530,7 @@ public abstract class AbstractTestWALReplay {
    * The way we get around this is by flushing at the region level, and then deleting the recently
    * flushed store file for one of the Stores. This would put us back in the situation where all but
    * that store got flushed and the region died. We restart Region again, and verify that the edits
-   * were replayed. nnnnn
+   * were replayed.
    */
   @Test
   public void testReplayEditsAfterPartialFlush() throws IOException, SecurityException,
@@ -614,7 +612,6 @@ public abstract class AbstractTestWALReplay {
   /**
    * Test that we could recover the data correctly after aborting flush. In the test, first we abort
    * flush after writing some data, then writing more data and flush again, at last verify the data.
-   * n
    */
   @Test
   public void testReplayEditsAfterAbortingFlush() throws IOException {
@@ -707,7 +704,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * Create an HRegion with the result of a WAL split and test we only see the good edits n
+   * Create an HRegion with the result of a WAL split and test we only see the good edits
    */
   @Test
   public void testReplayEditsWrittenIntoWAL() throws Exception {
@@ -1143,7 +1140,8 @@ public abstract class AbstractTestWALReplay {
   }
 
   /*
-   * Run the split. Verify only single split file made. n * @return The single split file made n
+   * Run the split. Verify only single split file made.
+   * @return The single split file made
    */
   private Path runWALSplit(final Configuration c) throws IOException {
     List<Path> splits =

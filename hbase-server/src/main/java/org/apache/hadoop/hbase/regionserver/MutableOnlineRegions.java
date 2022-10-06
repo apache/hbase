@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface MutableOnlineRegions extends OnlineRegions {
 
   /**
-   * Add to online regions. n
+   * Add to online regions.
    */
   void addRegion(final HRegion r);
 

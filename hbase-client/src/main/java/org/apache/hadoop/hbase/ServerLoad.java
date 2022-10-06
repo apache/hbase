@@ -393,7 +393,7 @@ public class ServerLoad implements ServerMetrics {
   }
 
   /**
-   * Call directly from client such as hbase shell n
+   * Call directly from client such as hbase shell
    */
   @Override
   public ReplicationLoadSink getReplicationLoadSink() {

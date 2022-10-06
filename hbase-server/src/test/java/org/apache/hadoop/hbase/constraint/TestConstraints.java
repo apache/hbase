@@ -101,7 +101,7 @@ public class TestConstraints {
   }
 
   /**
-   * Test that Constraints are properly enabled, disabled, and removed n
+   * Test that Constraints are properly enabled, disabled, and removed
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -135,7 +135,7 @@ public class TestConstraints {
   }
 
   /**
-   * Test that when we update a constraint the ordering is not modified. n
+   * Test that when we update a constraint the ordering is not modified.
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -157,7 +157,7 @@ public class TestConstraints {
 
   /**
    * Test that if a constraint hasn't been set that there are no problems with attempting to remove
-   * it. n * on failure.
+   * it. on failure.
    */
   @Test
   public void testRemoveUnsetConstraint() throws Throwable {

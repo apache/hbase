@@ -197,8 +197,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
 
     /**
-     * Path of file where regions will be written to during unloading/read from during loading n
-     * * @return RegionMoverBuilder object
+     * Path of file where regions will be written to during unloading/read from during loading
+     * @return RegionMoverBuilder object
      */
     public RegionMoverBuilder filename(String filename) {
       this.filename = filename;
@@ -243,7 +243,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      * effort mode,each region movement is tried once.This can be used during graceful shutdown as
      * even if we have a stuck region,upon shutdown it'll be reassigned anyway.
      * <p>
-     * n * @return RegionMoverBuilder object
+     * @return RegionMoverBuilder object
      */
     public RegionMoverBuilder ack(boolean ack) {
       this.ack = ack;

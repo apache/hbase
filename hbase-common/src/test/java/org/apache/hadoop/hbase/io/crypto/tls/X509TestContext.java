@@ -409,7 +409,7 @@ public final class X509TestContext {
    * circumstances to inject a "bad" certificate where the keystore doesn't match the CA in the
    * truststore. Or use it to create a connection without a truststore.
    * @see #setConfigurations(KeyStoreFileType, KeyStoreFileType) which sets both keystore and
-   *      truststore and is more applicable to general use. nnn
+   *      truststore and is more applicable to general use.
    */
   public void setKeystoreConfigurations(KeyStoreFileType keyStoreFileType, Configuration confToSet)
     throws IOException {

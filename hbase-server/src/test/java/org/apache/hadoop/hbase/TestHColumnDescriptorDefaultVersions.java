@@ -57,7 +57,7 @@ public class TestHColumnDescriptorDefaultVersions {
   private static final byte[] FAMILY = Bytes.toBytes("cf0");
 
   /**
-   * Start up a mini cluster and put a small table of empty regions into it. n
+   * Start up a mini cluster and put a small table of empty regions into it.
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {

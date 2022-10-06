@@ -59,7 +59,7 @@ public class CellCreator {
    * @param value     column value
    * @param voffset   value offset
    * @param vlength   value length
-   * @return created Cell n
+   * @return created Cell
    */
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
     byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
@@ -83,7 +83,8 @@ public class CellCreator {
    * @param voffset       value offset
    * @param vlength       value length
    * @param visExpression visibility expression to be associated with cell
-   * @return created Cell n * @deprecated since 0.98.9
+   * @return created Cell
+   * @deprecated since 0.98.9
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-10560">HBASE-10560</a>
    */
   @Deprecated
@@ -111,7 +112,8 @@ public class CellCreator {
    * @param timestamp version timestamp
    * @param value     column value
    * @param voffset   value offset
-   * @param vlength   value length n * @return created Cell n
+   * @param vlength   value length
+   * @return created Cell
    */
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
     byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,

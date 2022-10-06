@@ -99,8 +99,8 @@ public class SecureBulkLoadClient {
   }
 
   /**
-   * Securely bulk load a list of HFiles using client protocol. nnnnnn * @return true if all are
-   * loaded n
+   * Securely bulk load a list of HFiles using client protocol.
+   * @return true if all are loaded
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
@@ -110,8 +110,8 @@ public class SecureBulkLoadClient {
   }
 
   /**
-   * Securely bulk load a list of HFiles using client protocol. nnnnnnn * @return true if all are
-   * loaded n
+   * Securely bulk load a list of HFiles using client protocol.
+   * @return true if all are loaded
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,

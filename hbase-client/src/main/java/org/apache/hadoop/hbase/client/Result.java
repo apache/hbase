@@ -186,7 +186,7 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Method for retrieving the row key that corresponds to the row from which this Result was
-   * created. n
+   * created.
    */
   public byte[] getRow() {
     if (this.row == null) {
@@ -227,8 +227,9 @@ public class Result implements CellScannable, CellScanner {
    * or Get) only requested 1 version the list will contain at most 1 entry. If the column did not
    * exist in the result set (either the column does not exist or the column was not selected in the
    * query) the list will be empty. Also see getColumnLatest which returns just a Cell
-   * @param family the family n * @return a list of Cells for this column or empty list if the
-   *               column did not exist in the result set
+   * @param family the family
+   * @return a list of Cells for this column or empty list if the column did not exist in the result
+   *         set
    */
   public List<Cell> getColumnCells(byte[] family, byte[] qualifier) {
     List<Cell> result = new ArrayList<>();
@@ -324,7 +325,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * The Cell for the most recent timestamp for a given column. nn *
+   * The Cell for the most recent timestamp for a given column.
    * @return the Cell for the column, or null if no value exists in the row or none have been
    *         selected in the query (Get/Scan)
    */
@@ -677,8 +678,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * n
-   */
+   *   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -800,7 +800,8 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Get total size of raw cells n * @return Total size.
+   * Get total size of raw cells
+   * @return Total size.
    */
   public static long getTotalSizeOfCells(Result result) {
     long size = 0;
@@ -816,7 +817,7 @@ public class Result implements CellScannable, CellScanner {
   /**
    * Copy another Result into this one. Needed for the old Mapred framework
    * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT (which is supposed
-   *                                       to be immutable). n
+   *                                       to be immutable).
    */
   public void copyFrom(Result other) {
     checkReadonly();

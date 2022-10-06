@@ -66,7 +66,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
   /**
    * Writes the block index chunk in the non-root index block format. This format contains the
    * number of entries, an index of integer offsets for quick binary search on variable-length
-   * records, and tuples of block offset, on-disk block size, and the first key for each entry. nn
+   * records, and tuples of block offset, on-disk block size, and the first key for each entry.
    */
   private void writeNonRoot(BlockIndexChunk blockIndexChunk, DataOutput out) throws IOException {
     // The number of entries in the block.
@@ -103,7 +103,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
    * similar to the {@link HFile} version 1 block index format, except that we store on-disk size of
    * the block instead of its uncompressed size.
    * @param out the data output stream to write the block index to. Typically a stream writing into
-   *            an {@link HFile} block. n
+   *            an {@link HFile} block.
    */
   private void writeRoot(BlockIndexChunk blockIndexChunk, DataOutput out) throws IOException {
     for (int i = 0; i < blockIndexChunk.getNumEntries(); ++i) {
@@ -443,8 +443,8 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
     }
 
     /**
-     * The indexed key at the ith position in the nonRootIndex. The position starts at 0. n * @param
-     * i the ith position
+     * The indexed key at the ith position in the nonRootIndex. The position starts at 0.
+     * @param i the ith position
      * @return The indexed key at the ith position in the nonRootIndex.
      */
     protected byte[] getNonRootIndexedKey(ByteBuff nonRootIndex, int i) {

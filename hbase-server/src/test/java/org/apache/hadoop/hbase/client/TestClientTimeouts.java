@@ -86,7 +86,7 @@ public class TestClientTimeouts {
 
   /**
    * Test that a client that fails an RPC to the master retries properly and doesn't throw any
-   * unexpected exceptions. n
+   * unexpected exceptions.
    */
   @Test
   public void testAdminTimeout() throws Exception {

@@ -66,16 +66,16 @@ public class ProcedureMember implements Closeable {
   }
 
   /**
-   * Default thread pool for the procedure n * @param procThreads the maximum number of threads to
-   * allow in the pool
+   * Default thread pool for the procedure
+   * @param procThreads the maximum number of threads to allow in the pool
    */
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads) {
     return defaultPool(memberName, procThreads, KEEP_ALIVE_MILLIS_DEFAULT);
   }
 
   /**
-   * Default thread pool for the procedure n * @param procThreads the maximum number of threads to
-   * allow in the pool
+   * Default thread pool for the procedure
+   * @param procThreads     the maximum number of threads to allow in the pool
    * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
    */
   public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
@@ -97,7 +97,7 @@ public class ProcedureMember implements Closeable {
   /**
    * This is separated from execution so that we can detect and handle the case where the
    * subprocedure is invalid and inactionable due to bad info (like DISABLED snapshot type being
-   * sent here) nnn
+   * sent here)
    */
   public Subprocedure createSubprocedure(String opName, byte[] data) {
     return builder.buildSubprocedure(opName, data);
@@ -188,7 +188,7 @@ public class ProcedureMember implements Closeable {
   /**
    * Shutdown the threadpool, and wait for upto timeoutMs millis before bailing
    * @param timeoutMs timeout limit in millis
-   * @return true if successfully, false if bailed due to timeout. n
+   * @return true if successfully, false if bailed due to timeout.
    */
   boolean closeAndWait(long timeoutMs) throws InterruptedException {
     pool.shutdown();

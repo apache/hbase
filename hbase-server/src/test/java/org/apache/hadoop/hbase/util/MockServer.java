@@ -57,7 +57,7 @@ public class MockServer implements Server {
 
   /**
    * @param htu Testing utility to use
-   * @param zkw If true, create a zkw. nn
+   * @param zkw If true, create a zkw.
    */
   public MockServer(final HBaseTestingUtility htu, final boolean zkw)
     throws ZooKeeperConnectionException, IOException {

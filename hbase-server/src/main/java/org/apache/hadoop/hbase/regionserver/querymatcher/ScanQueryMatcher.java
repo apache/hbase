@@ -137,9 +137,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
     this.columns = columns;
   }
 
-  /**
-   * nn * @return true if the cell is expired
-   */
+  /** Returns true if the cell is expired */
   private static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp,
     final long now) {
     // Look for a TTL tag first. Use it instead of the family setting if
@@ -261,7 +259,7 @@ public abstract class ScanQueryMatcher implements ShipperListener {
   protected abstract void reset();
 
   /**
-   * Set the row when there is change in row n
+   * Set the row when there is change in row
    */
   public void setToNewRow(Cell currentRow) {
     this.currentRow = currentRow;

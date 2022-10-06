@@ -59,7 +59,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * A private method used to re-establish a zookeeper session with a peer cluster. n
+   * A private method used to re-establish a zookeeper session with a peer cluster.
    */
   protected void reconnect(KeeperException ke) {
     if (

@@ -259,7 +259,7 @@ public class ExecutorService {
     }
 
     /**
-     * Submit the event to the queue for handling. n
+     * Submit the event to the queue for handling.
      */
     void submit(final EventHandler event) {
       // If there is a listener for this type, make sure we call the before

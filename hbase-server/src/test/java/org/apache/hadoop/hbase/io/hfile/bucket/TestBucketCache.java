@@ -312,8 +312,7 @@ public class TestBucketCache {
       bucketCache.cacheBlock(block.getBlockName(), block.getBlock());
     }
     for (HFileBlockPair block : blocks) {
-      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(),
-        false);
+      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(), false);
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
     assertNotEquals(0, usedSize);

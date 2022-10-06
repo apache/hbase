@@ -356,7 +356,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   }
 
   /**
-   * Get the name of the table n
+   * Get the name of the table
    */
   @Override
   public TableName getTableName() {
@@ -728,7 +728,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * org.apache.hadoop.hbase.coprocessor.RegionCoprocessor. It won't check if the class can be
    * loaded or not. Whether a coprocessor is loadable or not will be determined when a region is
    * opened.
-   * @param className Full class name. n
+   * @param className Full class name.
    */
   public HTableDescriptor addCoprocessor(String className) throws IOException {
     getDelegateeForModification().setCoprocessor(className);
@@ -744,7 +744,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    *                    classloader.
    * @param className   Full class name.
    * @param priority    Priority
-   * @param kvs         Arbitrary key-value parameter pairs passed into the coprocessor. n
+   * @param kvs         Arbitrary key-value parameter pairs passed into the coprocessor.
    */
   public HTableDescriptor addCoprocessor(String className, Path jarFilePath, int priority,
     final Map<String, String> kvs) throws IOException {
@@ -760,7 +760,7 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
    * loaded or not. Whether a coprocessor is loadable or not will be determined when a region is
    * opened.
    * @param specStr The Coprocessor specification all in in one String formatted so matches
-   *                {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN} n
+   *                {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
    */
   public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
     getDelegateeForModification().setCoprocessorWithSpec(specStr);
@@ -844,8 +844,8 @@ public class HTableDescriptor implements TableDescriptor, Comparable<HTableDescr
   /**
    * Parse the serialized representation of a {@link HTableDescriptor}
    * @param bytes A pb serialized {@link HTableDescriptor} instance with pb magic prefix
-   * @return An instance of {@link HTableDescriptor} made from <code>bytes</code> nn * @see
-   *         #toByteArray()
+   * @return An instance of {@link HTableDescriptor} made from <code>bytes</code>
+   * @see #toByteArray()
    */
   public static HTableDescriptor parseFrom(final byte[] bytes)
     throws DeserializationException, IOException {

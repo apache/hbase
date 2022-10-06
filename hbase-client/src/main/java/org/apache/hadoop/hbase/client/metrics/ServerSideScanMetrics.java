@@ -35,8 +35,8 @@ public class ServerSideScanMetrics {
   private final Map<String, AtomicLong> counters = new HashMap<>();
 
   /**
-   * Create a new counter with the specified name n * @return {@link AtomicLong} instance for the
-   * counter with counterName
+   * Create a new counter with the specified name
+   * @return {@link AtomicLong} instance for the counter with counterName
    */
   protected AtomicLong createCounter(String counterName) {
     AtomicLong c = new AtomicLong(0);
@@ -75,9 +75,6 @@ public class ServerSideScanMetrics {
    */
   public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
 
-  /**
-   * nn
-   */
   public void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {
@@ -85,23 +82,16 @@ public class ServerSideScanMetrics {
     }
   }
 
-  /**
-   * n * @return true if a counter exists with the counterName
-   */
+  /** Returns true if a counter exists with the counterName */
   public boolean hasCounter(String counterName) {
     return this.counters.containsKey(counterName);
   }
 
-  /**
-   * n * @return {@link AtomicLong} instance for this counter name, null if counter does not exist.
-   */
+  /** Returns {@link AtomicLong} instance for this counter name, null if counter does not exist. */
   public AtomicLong getCounter(String counterName) {
     return this.counters.get(counterName);
   }
 
-  /**
-   * nn
-   */
   public void addToCounter(String counterName, long delta) {
     AtomicLong c = this.counters.get(counterName);
     if (c != null) {

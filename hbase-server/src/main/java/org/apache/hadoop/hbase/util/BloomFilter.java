@@ -46,8 +46,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * number of bits in the Bloom filter (bitSize) n denotes the number of elements inserted into the
  * Bloom filter (maxKeys) k represents the number of hash functions used (nbHash) e represents the
  * desired false positive rate for the bloom (err) If we fix the error rate (e) and know the number
- * of entries, then the optimal bloom size m = -(n * ln(err) / (ln(2)^2) ~= n * ln(err) / ln(0.6185)
- * The probability of false positives is minimized when k = m/n ln(2).
+ * of entries, then the optimal bloom size m = -(n * ln(err) / (ln(2)^2) ~= ln(err) / ln(0.6185) The
+ * probability of false positives is minimized when k = m/n ln(2).
  * @see BloomFilter The general behavior of a filter
  * @see <a href="http://portal.acm.org/citation.cfm?id=362692&dl=ACM&coll=portal"> Space/Time
  *      Trade-Offs in Hash Coding with Allowable Errors</a>

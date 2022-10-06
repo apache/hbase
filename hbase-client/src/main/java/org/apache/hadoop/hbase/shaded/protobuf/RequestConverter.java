@@ -193,7 +193,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a client increment nnnnnn * @return a mutate request
+   * Create a protocol buffer MutateRequest for a client increment
+   * @return a mutate request
    */
   public static MutateRequest buildIncrementRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final long amount, final Durability durability,
@@ -227,7 +228,7 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer MutateRequest for a conditioned put/delete/increment/append
-   * @return a mutate request n
+   * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final byte[] row,
     final byte[] family, final byte[] qualifier, final CompareOperator op, final byte[] value,
@@ -247,7 +248,7 @@ public final class RequestConverter {
 
   /**
    * Create a protocol buffer MultiRequest for conditioned row mutations
-   * @return a multi request n
+   * @return a multi request
    */
   public static ClientProtos.MultiRequest buildMultiRequest(final byte[] regionName,
     final byte[] row, final byte[] family, final byte[] qualifier, final CompareOperator op,
@@ -304,7 +305,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a put nn * @return a mutate request n
+   * Create a protocol buffer MutateRequest for a put
+   * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final Put put)
     throws IOException {
@@ -316,7 +318,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for an append nn * @return a mutate request n
+   * Create a protocol buffer MutateRequest for an append
+   * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final Append append,
     long nonceGroup, long nonce) throws IOException {
@@ -332,7 +335,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a client increment nn * @return a mutate request
+   * Create a protocol buffer MutateRequest for a client increment
+   * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final Increment increment,
     final long nonceGroup, final long nonce) throws IOException {
@@ -348,7 +352,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MutateRequest for a delete nn * @return a mutate request n
+   * Create a protocol buffer MutateRequest for a delete
+   * @return a mutate request
    */
   public static MutateRequest buildMutateRequest(final byte[] regionName, final Delete delete)
     throws IOException {
@@ -368,7 +373,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer ScanRequest for a client Scan nnnn * @return a scan request n
+   * Create a protocol buffer ScanRequest for a client Scan
+   * @return a scan request
    */
   public static ScanRequest buildScanRequest(byte[] regionName, Scan scan, int numberOfRows,
     boolean closeScanner) throws IOException {
@@ -388,7 +394,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer ScanRequest for a scanner id nnn * @return a scan request
+   * Create a protocol buffer ScanRequest for a scanner id
+   * @return a scan request
    */
   public static ScanRequest buildScanRequest(long scannerId, int numberOfRows, boolean closeScanner,
     boolean trackMetrics) {
@@ -403,7 +410,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer ScanRequest for a scanner id nnnn * @return a scan request
+   * Create a protocol buffer ScanRequest for a scanner id
+   * @return a scan request
    */
   public static ScanRequest buildScanRequest(long scannerId, int numberOfRows, boolean closeScanner,
     long nextCallSeq, boolean trackMetrics, boolean renew, int limitOfRows) {
@@ -423,7 +431,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer bulk load request nnnnn * @return a bulk load request
+   * Create a protocol buffer bulk load request
+   * @return a bulk load request
    */
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
@@ -433,7 +442,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer bulk load request nnnnnn * @return a bulk load request
+   * Create a protocol buffer bulk load request
+   * @return a bulk load request
    */
   public static BulkLoadHFileRequest buildBulkLoadHFileRequest(
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
@@ -490,7 +500,7 @@ public final class RequestConverter {
    * @param mutationBuilder     mutationBuilder to be used to build mutation.
    * @param nonceGroup          nonceGroup to be applied.
    * @param indexMap            Map of created RegionAction to the original index for a
-   *                            RowMutations/CheckAndMutate within the original list of actions n
+   *                            RowMutations/CheckAndMutate within the original list of actions
    */
   public static void buildRegionActions(final byte[] regionName, final List<Action> actions,
     final MultiRequest.Builder multiRequestBuilder, final RegionAction.Builder regionActionBuilder,
@@ -653,7 +663,7 @@ public final class RequestConverter {
    * @param mutationBuilder     mutationBuilder to be used to build mutation.
    * @param nonceGroup          nonceGroup to be applied.
    * @param indexMap            Map of created RegionAction to the original index for a
-   *                            RowMutations/CheckAndMutate within the original list of actions n
+   *                            RowMutations/CheckAndMutate within the original list of actions
    */
   public static void buildNoDataRegionActions(final byte[] regionName,
     final Iterable<Action> actions, final List<CellScannable> cells,
@@ -1021,7 +1031,8 @@ public final class RequestConverter {
   /**
    * Create a CompactRegionRequest for a given region name
    * @param regionName the name of the region to get info
-   * @param major      indicator if it is a major compaction n * @return a CompactRegionRequest
+   * @param major      indicator if it is a major compaction
+   * @return a CompactRegionRequest
    */
   public static CompactRegionRequest buildCompactRegionRequest(byte[] regionName, boolean major,
     byte[] columnFamily) {
@@ -1079,7 +1090,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer AddColumnRequest nn * @return an AddColumnRequest
+   * Create a protocol buffer AddColumnRequest
+   * @return an AddColumnRequest
    */
   public static AddColumnRequest buildAddColumnRequest(final TableName tableName,
     final ColumnFamilyDescriptor column, final long nonceGroup, final long nonce) {
@@ -1092,7 +1104,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer DeleteColumnRequest nn * @return a DeleteColumnRequest
+   * Create a protocol buffer DeleteColumnRequest
+   * @return a DeleteColumnRequest
    */
   public static DeleteColumnRequest buildDeleteColumnRequest(final TableName tableName,
     final byte[] columnName, final long nonceGroup, final long nonce) {
@@ -1105,7 +1118,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer ModifyColumnRequest nn * @return an ModifyColumnRequest
+   * Create a protocol buffer ModifyColumnRequest
+   * @return an ModifyColumnRequest
    */
   public static ModifyColumnRequest buildModifyColumnRequest(final TableName tableName,
     final ColumnFamilyDescriptor column, final long nonceGroup, final long nonce) {
@@ -1131,7 +1145,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer MoveRegionRequest nn * @return A MoveRegionRequest
+   * Create a protocol buffer MoveRegionRequest
+   * @return A MoveRegionRequest
    */
   public static MoveRegionRequest buildMoveRegionRequest(byte[] encodedRegionName,
     ServerName destServerName) {
@@ -1172,7 +1187,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Create a protocol buffer AssignRegionRequest n * @return an AssignRegionRequest
+   * Create a protocol buffer AssignRegionRequest
+   * @return an AssignRegionRequest
    */
   public static AssignRegionRequest buildAssignRegionRequest(final byte[] regionName) {
     AssignRegionRequest.Builder builder = AssignRegionRequest.newBuilder();
@@ -1181,7 +1197,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer UnassignRegionRequest n * @return an UnassignRegionRequest
+   * Creates a protocol buffer UnassignRegionRequest
+   * @return an UnassignRegionRequest
    */
   public static UnassignRegionRequest buildUnassignRegionRequest(final byte[] regionName) {
     UnassignRegionRequest.Builder builder = UnassignRegionRequest.newBuilder();
@@ -1190,7 +1207,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer OfflineRegionRequest n * @return an OfflineRegionRequest
+   * Creates a protocol buffer OfflineRegionRequest
+   * @return an OfflineRegionRequest
    */
   public static OfflineRegionRequest buildOfflineRegionRequest(final byte[] regionName) {
     OfflineRegionRequest.Builder builder = OfflineRegionRequest.newBuilder();
@@ -1199,7 +1217,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer DeleteTableRequest n * @return a DeleteTableRequest
+   * Creates a protocol buffer DeleteTableRequest
+   * @return a DeleteTableRequest
    */
   public static DeleteTableRequest buildDeleteTableRequest(final TableName tableName,
     final long nonceGroup, final long nonce) {
@@ -1227,7 +1246,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer EnableTableRequest n * @return an EnableTableRequest
+   * Creates a protocol buffer EnableTableRequest
+   * @return an EnableTableRequest
    */
   public static EnableTableRequest buildEnableTableRequest(final TableName tableName,
     final long nonceGroup, final long nonce) {
@@ -1239,7 +1259,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer DisableTableRequest n * @return a DisableTableRequest
+   * Creates a protocol buffer DisableTableRequest
+   * @return a DisableTableRequest
    */
   public static DisableTableRequest buildDisableTableRequest(final TableName tableName,
     final long nonceGroup, final long nonce) {
@@ -1251,7 +1272,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer CreateTableRequest nn * @return a CreateTableRequest
+   * Creates a protocol buffer CreateTableRequest
+   * @return a CreateTableRequest
    */
   public static CreateTableRequest buildCreateTableRequest(final TableDescriptor tableDescriptor,
     final byte[][] splitKeys, final long nonceGroup, final long nonce) {
@@ -1268,7 +1290,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer ModifyTableRequest nn * @return a ModifyTableRequest
+   * Creates a protocol buffer ModifyTableRequest
+   * @return a ModifyTableRequest
    */
   public static ModifyTableRequest buildModifyTableRequest(final TableName tableName,
     final TableDescriptor tableDesc, final long nonceGroup, final long nonce) {
@@ -1292,7 +1315,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer GetSchemaAlterStatusRequest n * @return a GetSchemaAlterStatusRequest
+   * Creates a protocol buffer GetSchemaAlterStatusRequest
+   * @return a GetSchemaAlterStatusRequest
    */
   public static GetSchemaAlterStatusRequest
     buildGetSchemaAlterStatusRequest(final TableName tableName) {
@@ -1302,7 +1326,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer GetTableDescriptorsRequest n * @return a GetTableDescriptorsRequest
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   * @return a GetTableDescriptorsRequest
    */
   public static GetTableDescriptorsRequest
     buildGetTableDescriptorsRequest(final List<TableName> tableNames) {
@@ -1409,7 +1434,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer SetBalancerRunningRequest nn * @return a SetBalancerRunningRequest
+   * Creates a protocol buffer SetBalancerRunningRequest
+   * @return a SetBalancerRunningRequest
    */
   public static SetBalancerRunningRequest buildSetBalancerRunningRequest(boolean on,
     boolean synchronous) {
@@ -1494,8 +1520,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a request for querying the master the last flushed sequence Id for a region n * @return
-   * A {@link GetLastFlushedSequenceIdRequest}
+   * Creates a request for querying the master the last flushed sequence Id for a region
+   * @return A {@link GetLastFlushedSequenceIdRequest}
    */
   public static GetLastFlushedSequenceIdRequest
     buildGetLastFlushedSequenceIdRequest(byte[] regionName) {
@@ -1546,7 +1572,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer SetNormalizerRunningRequest n * @return a SetNormalizerRunningRequest
+   * Creates a protocol buffer SetNormalizerRunningRequest
+   * @return a SetNormalizerRunningRequest
    */
   public static SetNormalizerRunningRequest buildSetNormalizerRunningRequest(boolean on) {
     return SetNormalizerRunningRequest.newBuilder().setOn(on).build();
@@ -1654,7 +1681,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer CreateNamespaceRequest n * @return a CreateNamespaceRequest
+   * Creates a protocol buffer CreateNamespaceRequest
+   * @return a CreateNamespaceRequest
    */
   public static CreateNamespaceRequest
     buildCreateNamespaceRequest(final NamespaceDescriptor descriptor) {
@@ -1664,7 +1692,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer ModifyNamespaceRequest n * @return a ModifyNamespaceRequest
+   * Creates a protocol buffer ModifyNamespaceRequest
+   * @return a ModifyNamespaceRequest
    */
   public static ModifyNamespaceRequest
     buildModifyNamespaceRequest(final NamespaceDescriptor descriptor) {
@@ -1674,7 +1703,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer DeleteNamespaceRequest n * @return a DeleteNamespaceRequest
+   * Creates a protocol buffer DeleteNamespaceRequest
+   * @return a DeleteNamespaceRequest
    */
   public static DeleteNamespaceRequest buildDeleteNamespaceRequest(final String name) {
     DeleteNamespaceRequest.Builder builder = DeleteNamespaceRequest.newBuilder();
@@ -1683,8 +1713,8 @@ public final class RequestConverter {
   }
 
   /**
-   * Creates a protocol buffer GetNamespaceDescriptorRequest n * @return a
-   * GetNamespaceDescriptorRequest
+   * Creates a protocol buffer GetNamespaceDescriptorRequest
+   * @return a GetNamespaceDescriptorRequest
    */
   public static GetNamespaceDescriptorRequest
     buildGetNamespaceDescriptorRequest(final String name) {
@@ -1801,7 +1831,7 @@ public final class RequestConverter {
 
   /**
    * Creates IsSnapshotCleanupEnabledRequest to determine if auto snapshot cleanup based on TTL
-   * expiration is turned on n
+   * expiration is turned on
    */
   public static IsSnapshotCleanupEnabledRequest buildIsSnapshotCleanupEnabledRequest() {
     return IsSnapshotCleanupEnabledRequest.newBuilder().build();

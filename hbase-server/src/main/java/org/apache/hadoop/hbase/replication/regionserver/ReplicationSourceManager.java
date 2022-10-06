@@ -362,7 +362,7 @@ public class ReplicationSourceManager {
    * Close the previous replication sources of this peer id and open new sources to trigger the new
    * replication state changes or new replication config changes. Here we don't need to change
    * replication queue storage and only to enqueue all logs to the new replication source
-   * @param peerId the id of the replication peer n
+   * @param peerId the id of the replication peer
    */
   public void refreshSources(String peerId) throws IOException {
     String terminateMessage = "Peer " + peerId

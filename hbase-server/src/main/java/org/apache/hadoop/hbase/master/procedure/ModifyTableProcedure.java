@@ -279,7 +279,7 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
 
   /**
    * Check conditions before any real action of modifying a table.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void prepareModify(final MasterProcedureEnv env) throws IOException {
     // Checks whether the table exists

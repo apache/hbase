@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @Deprecated
 class UnmodifyableHRegionInfo extends HRegionInfo {
   /*
-   * Creates an unmodifyable copy of an HRegionInfo n
+   * Creates an unmodifyable copy of an HRegionInfo
    */
   UnmodifyableHRegionInfo(HRegionInfo info) {
     super(info);

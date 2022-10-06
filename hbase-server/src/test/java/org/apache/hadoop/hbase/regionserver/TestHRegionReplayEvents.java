@@ -1139,7 +1139,7 @@ public class TestHRegionReplayEvents {
 
   /**
    * Tests that a region opened in secondary mode would not write region open / close events to its
-   * WAL. n
+   * WAL.
    */
   @Test
   public void testSecondaryRegionDoesNotWriteRegionEventsToWAL() throws IOException {
@@ -1650,7 +1650,7 @@ public class TestHRegionReplayEvents {
   /**
    * Puts a total of numRows + numRowsAfterFlush records indexed with numeric row keys. Does a flush
    * every flushInterval number of records. Then it puts numRowsAfterFlush number of more rows but
-   * does not execute flush after n
+   * does not execute flush after
    */
   private void putDataWithFlushes(HRegion region, int flushInterval, int numRows,
     int numRowsAfterFlush) throws IOException {

@@ -63,7 +63,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
 
   /**
    * Constructor to use if namespace does not exist in HBASE.
-   * @param namespaceName the namespace name. n
+   * @param namespaceName the namespace name.
    */
   public NamespacesInstanceModel(String namespaceName) throws IOException {
     this(null, namespaceName);
@@ -72,7 +72,7 @@ public class NamespacesInstanceModel implements Serializable, ProtobufMessageHan
   /**
    * Constructor
    * @param admin         the administrative API
-   * @param namespaceName the namespace name. n
+   * @param namespaceName the namespace name.
    */
   public NamespacesInstanceModel(Admin admin, String namespaceName) throws IOException {
     this.namespaceName = namespaceName;

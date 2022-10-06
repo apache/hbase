@@ -168,7 +168,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
    * @param writer               The store file writer.
    * @param status               Task that represents the flush operation and may be updated with
    *                             status.
-   * @param throughputController A controller to avoid flush too fast. n
+   * @param throughputController A controller to avoid flush too fast.
    */
   protected void performMobFlush(MemStoreSnapshot snapshot, long cacheFlushId,
     InternalScanner scanner, StoreFileWriter writer, MonitoredTask status,

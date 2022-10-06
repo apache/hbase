@@ -82,7 +82,7 @@ public class ByteBufferOutputStream extends OutputStream implements ByteBufferWr
   }
 
   /**
-   * This flips the underlying BB so be sure to use it _last_! n
+   * This flips the underlying BB so be sure to use it _last_!
    */
   public ByteBuffer getByteBuffer() {
     curBuf.flip();

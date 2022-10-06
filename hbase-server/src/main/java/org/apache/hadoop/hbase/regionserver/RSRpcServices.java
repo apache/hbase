@@ -964,7 +964,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   }
 
   /**
-   * Execute a list of mutations. nnn
+   * Execute a list of mutations.
    */
   private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
     final OperationQuota quota, final List<ClientProtos.Action> mutations, final CellScanner cells,
@@ -1136,9 +1136,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
 
   /**
    * Execute a list of Put/Delete mutations. The function returns OperationStatus instead of
-   * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse. nnn
-   * * @return an array of OperationStatus which internally contains the OperationStatusCode and the
-   * exceptionMessage if any n
+   * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse.
+   * @return an array of OperationStatus which internally contains the OperationStatusCode and the
+   *         exceptionMessage if any
    */
   private OperationStatus[] doReplayBatchOp(final HRegion region,
     final List<MutationReplay> mutations, long replaySeqId) throws IOException {
@@ -1613,7 +1613,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   }
 
   /*
-   * Check if an OOME and, if so, abort immediately to avoid creating more objects. n *
+   * Check if an OOME and, if so, abort immediately to avoid creating more objects.
    * @return True if we OOME'd and are aborting.
    */
   @Override
@@ -1644,7 +1644,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Close a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1676,7 +1676,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Compact a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1740,7 +1740,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Flush a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1920,7 +1920,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Get some information of the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -2021,7 +2021,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
    * errors are put in the response as FAILED_OPENING.
    * </p>
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -2202,7 +2202,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
    * that the given mutations will be durable on the receiving RS if this method returns without any
    * exception.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.REPLAY_QOS)
@@ -2331,7 +2331,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Roll the WAL writer of the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   public RollWALWriterResponse rollWALWriter(final RpcController controller,
@@ -2352,7 +2352,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Stop the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -2541,7 +2541,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Get data from a table.
    * @param controller the RPC controller
-   * @param request    the get request n
+   * @param request    the get request
    */
   @Override
   public GetResponse get(final RpcController controller, final GetRequest request)
@@ -2722,7 +2722,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
    * @param rpcc    the RPC controller
-   * @param request the multi request n
+   * @param request the multi request
    */
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
@@ -3517,7 +3517,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
   /**
    * Scan data in a table.
    * @param controller the RPC controller
-   * @param request    the scan request n
+   * @param request    the scan request
    */
   @Override
   public ScanResponse scan(final RpcController controller, final ScanRequest request)

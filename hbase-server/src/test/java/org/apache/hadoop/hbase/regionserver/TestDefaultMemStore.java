@@ -160,7 +160,7 @@ public class TestDefaultMemStore {
   }
 
   /**
-   * Test memstore snapshot happening while scanning. n
+   * Test memstore snapshot happening while scanning.
    */
   @Test
   public void testScanAcrossSnapshot() throws IOException {
@@ -236,7 +236,7 @@ public class TestDefaultMemStore {
   }
 
   /**
-   * A simple test which verifies the 3 possible states when scanning across snapshot. nn
+   * A simple test which verifies the 3 possible states when scanning across snapshot.
    */
   @Test
   public void testScanAcrossSnapshot2() throws IOException, CloneNotSupportedException {
@@ -528,7 +528,7 @@ public class TestDefaultMemStore {
   }
 
   /**
-   * Test memstore snapshots n
+   * Test memstore snapshots
    */
   @Test
   public void testSnapshotting() throws IOException {
@@ -566,7 +566,7 @@ public class TestDefaultMemStore {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Test getNextRow from memstore n
+   * Test getNextRow from memstore
    */
   @Test
   public void testGetNextRow() throws Exception {
@@ -816,7 +816,7 @@ public class TestDefaultMemStore {
 
   /**
    * Add keyvalues with a fixed memstoreTs, and checks that memstore size is decreased as older
-   * keyvalues are deleted from the memstore. n
+   * keyvalues are deleted from the memstore.
    */
   @Test
   public void testUpsertMemstoreSize() throws Exception {
@@ -860,7 +860,7 @@ public class TestDefaultMemStore {
 
   /**
    * Tests that the timeOfOldestEdit is updated correctly for the various edit operations in
-   * memstore. n
+   * memstore.
    */
   @Test
   public void testUpdateToTimeOfOldestEdit() throws Exception {
@@ -901,7 +901,7 @@ public class TestDefaultMemStore {
   /**
    * Tests the HRegion.shouldFlush method - adds an edit in the memstore and checks that shouldFlush
    * returns true, and another where it disables the periodic flush functionality and tests whether
-   * shouldFlush returns false. n
+   * shouldFlush returns false.
    */
   @Test
   public void testShouldFlush() throws Exception {
@@ -1004,7 +1004,7 @@ public class TestDefaultMemStore {
   /**
    * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
    * @param hmc Instance to add rows to.
-   * @return How many rows we added. n
+   * @return How many rows we added.
    */
   protected int addRows(final AbstractMemStore hmc) {
     return addRows(hmc, HConstants.LATEST_TIMESTAMP);
@@ -1013,7 +1013,7 @@ public class TestDefaultMemStore {
   /**
    * Adds {@link #ROW_COUNT} rows and {@link #QUALIFIER_COUNT}
    * @param hmc Instance to add rows to.
-   * @return How many rows we added. n
+   * @return How many rows we added.
    */
   protected int addRows(final MemStore hmc, final long ts) {
     for (int i = 0; i < ROW_COUNT; i++) {

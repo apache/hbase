@@ -206,7 +206,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> enableTable(TableName tableName);
 
   /**
-   * Disable a table. The table has to be in enabled state for it to be disabled. n
+   * Disable a table. The table has to be in enabled state for it to be disabled.
    */
   CompletableFuture<Void> disableTable(TableName tableName);
 
@@ -1134,7 +1134,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> stopMaster();
 
   /**
-   * Stop the designated regionserver. n
+   * Stop the designated regionserver.
    */
   CompletableFuture<Void> stopRegionServer(ServerName serverName);
 
@@ -1336,8 +1336,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
-   * Turn the cleaner chore on/off. n * @return Previous cleaner state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the cleaner chore on/off.
+   * @return Previous cleaner state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> cleanerChoreSwitch(boolean on);
 
@@ -1356,8 +1356,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> runCleanerChore();
 
   /**
-   * Turn the catalog janitor on/off. n * @return the previous state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the catalog janitor on/off.
+   * @return the previous state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> catalogJanitorSwitch(boolean on);
 

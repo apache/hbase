@@ -60,14 +60,14 @@ public class NamespacesInstanceResource extends ResourceBase {
   boolean queryTables = false;
 
   /**
-   * Constructor for standard NamespaceInstanceResource. n
+   * Constructor for standard NamespaceInstanceResource.
    */
   public NamespacesInstanceResource(String namespace) throws IOException {
     this(namespace, false);
   }
 
   /**
-   * Constructor for querying namespace table list via NamespaceInstanceResource. n
+   * Constructor for querying namespace table list via NamespaceInstanceResource.
    */
   public NamespacesInstanceResource(String namespace, boolean queryTables) throws IOException {
     super();

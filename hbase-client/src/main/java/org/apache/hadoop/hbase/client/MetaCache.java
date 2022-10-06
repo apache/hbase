@@ -186,9 +186,7 @@ public class MetaCache {
     }
   }
 
-  /**
-   * n * @return Map of cached locations for passed <code>tableName</code>
-   */
+  /** Returns Map of cached locations for passed <code>tableName</code> */
   private ConcurrentNavigableMap<byte[], RegionLocations>
     getTableLocations(final TableName tableName) {
     // find the map of cached locations for this table
@@ -287,7 +285,7 @@ public class MetaCache {
 
   /**
    * Delete a cached location, no matter what it is. Called when we were told to not use cache.
-   * @param tableName tableName n
+   * @param tableName tableName
    */
   public void clearCache(final TableName tableName, final byte[] row) {
     ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);

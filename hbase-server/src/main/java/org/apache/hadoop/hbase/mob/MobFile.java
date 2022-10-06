@@ -49,7 +49,7 @@ public class MobFile {
 
   /**
    * Internal use only. This is used by the sweeper.
-   * @return The store file scanner. n
+   * @return The store file scanner.
    */
   public StoreFileScanner getScanner() throws IOException {
     List<HStoreFile> sfs = new ArrayList<>();
@@ -64,7 +64,7 @@ public class MobFile {
    * Reads a cell from the mob file.
    * @param search         The cell need to be searched in the mob file.
    * @param cacheMobBlocks Should this scanner cache blocks.
-   * @return The cell in the mob file. n
+   * @return The cell in the mob file.
    */
   public MobCell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
     return readCell(search, cacheMobBlocks, sf.getMaxMemStoreTS());
@@ -75,7 +75,7 @@ public class MobFile {
    * @param search         The cell need to be searched in the mob file.
    * @param cacheMobBlocks Should this scanner cache blocks.
    * @param readPt         the read point.
-   * @return The cell in the mob file. n
+   * @return The cell in the mob file.
    */
   public MobCell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
     StoreFileScanner scanner = null;
@@ -108,7 +108,7 @@ public class MobFile {
   }
 
   /**
-   * Opens the underlying reader. It's not thread-safe. Use MobFileCache.openFile() instead. n
+   * Opens the underlying reader. It's not thread-safe. Use MobFileCache.openFile() instead.
    */
   public void open() throws IOException {
     sf.initReader();
@@ -116,7 +116,7 @@ public class MobFile {
 
   /**
    * Closes the underlying reader, but do no evict blocks belonging to this file. It's not
-   * thread-safe. Use MobFileCache.closeFile() instead. n
+   * thread-safe. Use MobFileCache.closeFile() instead.
    */
   public void close() throws IOException {
     if (sf != null) {
@@ -131,7 +131,7 @@ public class MobFile {
    * @param path      The path of the underlying StoreFile.
    * @param conf      The configuration.
    * @param cacheConf The CacheConfig.
-   * @return An instance of the MobFile. n
+   * @return An instance of the MobFile.
    */
   public static MobFile create(FileSystem fs, Path path, Configuration conf, CacheConfig cacheConf)
     throws IOException {

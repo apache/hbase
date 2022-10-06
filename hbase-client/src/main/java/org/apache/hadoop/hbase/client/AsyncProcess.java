@@ -198,7 +198,7 @@ class AsyncProcess {
    * The submitted task may be not accomplished at all if there are too many running tasks or other
    * limits.
    * @param <CResult> The class to cast the result
-   * @param task      The setting and data n
+   * @param task      The setting and data
    */
   public <CResult> AsyncRequestFuture submit(AsyncProcessTask<CResult> task)
     throws InterruptedIOException {

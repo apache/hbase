@@ -65,7 +65,7 @@ public class CellCodecWithTags implements Codec {
     }
 
     /**
-     * Write int length followed by array bytes. nnnn
+     * Write int length followed by array bytes.
      */
     private void write(final byte[] bytes, final int offset, final int length) throws IOException {
       this.out.write(Bytes.toBytes(length));

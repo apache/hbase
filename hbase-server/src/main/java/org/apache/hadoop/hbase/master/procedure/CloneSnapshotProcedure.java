@@ -385,7 +385,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
 
   /**
    * Action before cloning from snapshot.
-   * @param env MasterProcedureEnv nn
+   * @param env MasterProcedureEnv
    */
   private void preCloneSnapshot(final MasterProcedureEnv env)
     throws IOException, InterruptedException {
@@ -409,7 +409,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
 
   /**
    * Action after cloning from snapshot.
-   * @param env MasterProcedureEnv nn
+   * @param env MasterProcedureEnv
    */
   private void postCloneSnapshot(final MasterProcedureEnv env)
     throws IOException, InterruptedException {
@@ -423,7 +423,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
 
   /**
    * Create regions in file system.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private List<RegionInfo> createFilesystemLayout(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, final List<RegionInfo> newRegions) throws IOException {
@@ -480,7 +480,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
 
   /**
    * Create region layout in file system.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private List<RegionInfo> createFsLayout(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, List<RegionInfo> newRegions,
@@ -509,7 +509,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
 
   /**
    * Add regions to hbase:meta table.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void addRegionsToMeta(final MasterProcedureEnv env) throws IOException {
     newRegions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, newRegions);

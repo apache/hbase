@@ -93,7 +93,8 @@ public abstract class RegionSplitPolicy extends Configured {
   }
 
   /**
-   * Create the RegionSplitPolicy configured for the given table. nn * @return a RegionSplitPolicy n
+   * Create the RegionSplitPolicy configured for the given table.
+   * @return a RegionSplitPolicy
    */
   public static RegionSplitPolicy create(HRegion region, Configuration conf) throws IOException {
     Preconditions.checkNotNull(region, "Region should not be null.");

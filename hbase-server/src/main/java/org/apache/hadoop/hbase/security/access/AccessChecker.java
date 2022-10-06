@@ -458,7 +458,7 @@ public class AccessChecker {
 
   /**
    * Retrieve the groups of the given user.
-   * @param user User name n
+   * @param user User name
    */
   public static List<String> getUserGroups(String user) {
     try {

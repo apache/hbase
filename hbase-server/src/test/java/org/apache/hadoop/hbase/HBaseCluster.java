@@ -391,7 +391,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   public abstract void close() throws IOException;
 
   /**
-   * Wait for the namenode. n
+   * Wait for the namenode.
    */
   public void waitForNamenodeAvailable() throws InterruptedException {
   }

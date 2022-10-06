@@ -41,7 +41,8 @@ public interface MemStore {
   MemStoreSnapshot snapshot();
 
   /**
-   * Clears the current snapshot of the Memstore. nn * @see #snapshot()
+   * Clears the current snapshot of the Memstore.
+   * @see #snapshot()
    */
   void clearSnapshot(long id) throws UnexpectedStateException;
 
@@ -59,14 +60,16 @@ public interface MemStore {
   MemStoreSize getSnapshotSize();
 
   /**
-   * Write an update n * @param memstoreSizing The delta in memstore size will be passed back via
-   * this. This will include both data size and heap overhead delta.
+   * Write an update
+   * @param memstoreSizing The delta in memstore size will be passed back via this. This will
+   *                       include both data size and heap overhead delta.
    */
   void add(final Cell cell, MemStoreSizing memstoreSizing);
 
   /**
-   * Write the updates n * @param memstoreSizing The delta in memstore size will be passed back via
-   * this. This will include both data size and heap overhead delta.
+   * Write the updates
+   * @param memstoreSizing The delta in memstore size will be passed back via this. This will
+   *                       include both data size and heap overhead delta.
    */
   void add(Iterable<Cell> cells, MemStoreSizing memstoreSizing);
 
@@ -83,8 +86,8 @@ public interface MemStore {
    * visible. May want to change this so it is atomic across all KeyValues.
    * <p>
    * This is called under row lock, so Get operations will still see updates atomically. Scans will
-   * only see each KeyValue update as atomic. n * @param readpoint readpoint below which we can
-   * safely remove duplicate Cells.
+   * only see each KeyValue update as atomic.
+   * @param readpoint      readpoint below which we can safely remove duplicate Cells.
    * @param memstoreSizing The delta in memstore size will be passed back via this. This will
    *                       include both data size and heap overhead delta.
    */

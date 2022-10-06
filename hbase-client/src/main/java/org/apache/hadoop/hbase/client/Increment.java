@@ -92,7 +92,8 @@ public class Increment extends Mutation {
 
   /**
    * Add the specified KeyValue to this operation.
-   * @param cell individual Cell n * @throws java.io.IOException e
+   * @param cell individual Cell
+   * @throws java.io.IOException e
    */
   @Override
   public Increment add(Cell cell) throws IOException {
@@ -121,7 +122,7 @@ public class Increment extends Mutation {
   }
 
   /**
-   * Gets the TimeRange used for this increment. n
+   * Gets the TimeRange used for this increment.
    */
   public TimeRange getTimeRange() {
     return this.tr;
@@ -139,7 +140,7 @@ public class Increment extends Mutation {
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
-   * @throws IOException if invalid time range n
+   * @throws IOException if invalid time range
    */
   public Increment setTimeRange(long minStamp, long maxStamp) throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
@@ -209,8 +210,7 @@ public class Increment extends Mutation {
   }
 
   /**
-   * n
-   */
+   *   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

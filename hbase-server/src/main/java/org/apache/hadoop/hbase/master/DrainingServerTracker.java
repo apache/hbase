@@ -64,7 +64,7 @@ public class DrainingServerTracker extends ZKListener {
   /**
    * Starts the tracking of draining RegionServers.
    * <p>
-   * All Draining RSs will be tracked after this method is called. n
+   * All Draining RSs will be tracked after this method is called.
    */
   public void start() throws KeeperException, IOException {
     watcher.registerListener(this);

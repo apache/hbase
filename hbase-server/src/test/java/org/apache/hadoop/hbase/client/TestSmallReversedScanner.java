@@ -73,7 +73,7 @@ public class TestSmallReversedScanner {
   }
 
   /**
-   * all rowKeys are fit in the last region. n
+   * all rowKeys are fit in the last region.
    */
   @Test
   public void testSmallReversedScan01() throws IOException {
@@ -116,7 +116,7 @@ public class TestSmallReversedScanner {
   /**
    * Corner case: HBase has 4 regions, (-oo,b),[b,c),[c,d),[d,+oo), and only rowKey with
    * byte[]={0x00} locate in region (-oo,b) . test whether reversed small scanner will return
-   * infinity results with RowKey={0x00}. n
+   * infinity results with RowKey={0x00}.
    */
   @Test
   public void testSmallReversedScan02() throws IOException {

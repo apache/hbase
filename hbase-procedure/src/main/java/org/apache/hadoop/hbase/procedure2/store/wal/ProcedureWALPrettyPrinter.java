@@ -144,8 +144,7 @@ public class ProcedureWALPrettyPrinter extends Configured implements Tool {
 
   /**
    * Pass one or more log file names and formatting options and it will dump out a text version of
-   * the contents on <code>stdout</code>. n * Command line arguments n * Thrown upon file system
-   * errors etc.
+   * the contents on <code>stdout</code>. Command line arguments Thrown upon file system errors etc.
    */
   @Override
   public int run(final String[] args) throws IOException {

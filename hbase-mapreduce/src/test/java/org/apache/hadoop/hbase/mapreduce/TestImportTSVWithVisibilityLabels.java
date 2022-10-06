@@ -315,8 +315,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   /**
    * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
    * <code>Tool</code> instance so that other tests can inspect it for further validation as
-   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. n *
-   * Any arguments to pass BEFORE inputFile path is appended.
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. Any
+   * arguments to pass BEFORE inputFile path is appended.
    * @param expectedKVCount Expected KV count. pass -1 to skip the kvcount check
    * @return The Tool instance used to run the test.
    */
@@ -460,7 +460,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    * Method returns the total KVs in given hfile
    * @param fs File System
    * @param p  HFile path
-   * @return KV count in the given hfile n
+   * @return KV count in the given hfile
    */
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();

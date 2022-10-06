@@ -60,9 +60,9 @@ public final class BloomFilterUtil {
   }
 
   /**
-   * nn * @return the number of bits for a Bloom filter than can hold the given number of keys and
-   * provide the given error rate, assuming that the optimal number of hash functions is used and it
-   * does not have to be an integer.
+   * @return the number of bits for a Bloom filter than can hold the given number of keys and
+   *         provide the given error rate, assuming that the optimal number of hash functions is
+   *         used and it does not have to be an integer.
    */
   public static long computeBitSize(long maxKeys, double errorRate) {
     return (long) Math.ceil(maxKeys * (-Math.log(errorRate) / LOG2_SQUARED));
@@ -85,8 +85,8 @@ public final class BloomFilterUtil {
   /**
    * The maximum number of keys we can put into a Bloom filter of a certain size to maintain the
    * given error rate, assuming the number of hash functions is chosen optimally and does not even
-   * have to be an integer (hence the "ideal" in the function name). nn * @return maximum number of
-   * keys that can be inserted into the Bloom filter
+   * have to be an integer (hence the "ideal" in the function name).
+   * @return maximum number of keys that can be inserted into the Bloom filter
    * @see #computeMaxKeys(long, double, int) for a more precise estimate
    */
   public static long idealMaxKeys(long bitSize, double errorRate) {
@@ -97,9 +97,9 @@ public final class BloomFilterUtil {
 
   /**
    * The maximum number of keys we can put into a Bloom filter of a certain size to get the given
-   * error rate, with the given number of hash functions. nnn * @return the maximum number of keys
-   * that can be inserted in a Bloom filter to maintain the target error rate, if the number of hash
-   * functions is provided.
+   * error rate, with the given number of hash functions.
+   * @return the maximum number of keys that can be inserted in a Bloom filter to maintain the
+   *         target error rate, if the number of hash functions is provided.
    */
   public static long computeMaxKeys(long bitSize, double errorRate, int hashCount) {
     return (long) (-bitSize * 1.0 / hashCount
@@ -110,7 +110,8 @@ public final class BloomFilterUtil {
    * Computes the actual error rate for the given number of elements, number of bits, and number of
    * hash functions. Taken directly from the
    * <a href= "http://en.wikipedia.org/wiki/Bloom_filter#Probability_of_false_positives" > Wikipedia
-   * Bloom filter article</a>. nnn * @return the actual error rate
+   * Bloom filter article</a>.
+   * @return the actual error rate
    */
   public static double actualErrorRate(long maxKeys, long bitSize, int functionCount) {
     return Math
@@ -118,8 +119,8 @@ public final class BloomFilterUtil {
   }
 
   /**
-   * Increases the given byte size of a Bloom filter until it can be folded by the given factor. nn
-   * * @return Foldable byte size
+   * Increases the given byte size of a Bloom filter until it can be folded by the given factor.
+   * @return Foldable byte size
    */
   public static int computeFoldableByteSize(long bitSize, int foldFactor) {
     long byteSizeLong = (bitSize + 7) / 8;
@@ -150,8 +151,8 @@ public final class BloomFilterUtil {
    * @param byteSizeHint the desired number of bytes for the Bloom filter bit array. Will be
    *                     increased so that folding is possible.
    * @param errorRate    target false positive rate of the Bloom filter
-   * @param hashType     Bloom filter hash function type nn * @return the new Bloom filter of the
-   *                     desired size
+   * @param hashType     Bloom filter hash function type
+   * @return the new Bloom filter of the desired size
    */
   public static BloomFilterChunk createBySize(int byteSizeHint, double errorRate, int hashType,
     int foldFactor, BloomType bloomType) {

@@ -61,7 +61,7 @@ public class SchemaResource extends ResourceBase {
   TableResource tableResource;
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public SchemaResource(TableResource tableResource) throws IOException {
     super();

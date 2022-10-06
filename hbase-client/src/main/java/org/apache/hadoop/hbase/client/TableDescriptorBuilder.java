@@ -940,7 +940,7 @@ public class TableDescriptorBuilder {
     }
 
     /**
-     * Get the name of the table n
+     * Get the name of the table
      */
     @Override
     public TableName getTableName() {
@@ -1353,7 +1353,8 @@ public class TableDescriptorBuilder {
      * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
      * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
      * region is opened.
-     * @param className Full class name. n * @return the modifyable TD
+     * @param className Full class name.
+     * @return the modifyable TD
      */
     public ModifyableTableDescriptor setCoprocessor(String className) throws IOException {
       return setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(className)
@@ -1401,8 +1402,8 @@ public class TableDescriptorBuilder {
      * org.apache.hadoop.hbase.coprocessor.RegionObserver or Endpoint. It won't check if the class
      * can be loaded or not. Whether a coprocessor is loadable or not will be determined when a
      * region is opened.
-     * @param specStr The Coprocessor specification all in in one String n * @return the modifyable
-     *                TD
+     * @param specStr The Coprocessor specification all in in one String
+     * @return the modifyable TD
      * @deprecated used by HTableDescriptor and admin.rb. As of release 2.0.0, this will be removed
      *             in HBase 3.0.0.
      */
@@ -1550,8 +1551,8 @@ public class TableDescriptorBuilder {
     /**
      * Parse the serialized representation of a {@link ModifyableTableDescriptor}
      * @param bytes A pb serialized {@link ModifyableTableDescriptor} instance with pb magic prefix
-     * @return An instance of {@link ModifyableTableDescriptor} made from <code>bytes</code> n
-     *         * @see #toByteArray()
+     * @return An instance of {@link ModifyableTableDescriptor} made from <code>bytes</code>
+     * @see #toByteArray()
      */
     private static TableDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
       if (!ProtobufUtil.isPBMagicPrefix(bytes)) {

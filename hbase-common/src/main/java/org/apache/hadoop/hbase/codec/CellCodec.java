@@ -62,7 +62,7 @@ public class CellCodec implements Codec {
     }
 
     /**
-     * Write int length followed by array bytes. nnnn
+     * Write int length followed by array bytes.
      */
     private void write(final byte[] bytes, final int offset, final int length) throws IOException {
       // TODO add BB backed os check and do for write. Pass Cell

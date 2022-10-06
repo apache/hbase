@@ -436,7 +436,7 @@ public class TestConnectionImplementation {
 
   /**
    * Test that the connection to the dead server is cut immediately when we receive the
-   * notification. n
+   * notification.
    */
   @Test
   public void testConnectionCut() throws Exception {
@@ -532,7 +532,7 @@ public class TestConnectionImplementation {
   }
 
   /**
-   * Test that when we delete a location using the first row of a region that we really delete it. n
+   * Test that when we delete a location using the first row of a region that we really delete it.
    */
   @Test
   public void testRegionCaching() throws Exception {
@@ -719,7 +719,7 @@ public class TestConnectionImplementation {
   }
 
   /**
-   * Test that Connection or Pool are not closed when managed externally n
+   * Test that Connection or Pool are not closed when managed externally
    */
   @Test
   public void testConnectionManagement() throws Exception {

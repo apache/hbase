@@ -129,8 +129,8 @@ public class HTableMultiplexer {
 
   /**
    * The put request will be buffered by its corresponding buffer queue. Return false if the queue
-   * is already full. nn * @return true if the request can be accepted by its corresponding buffer
-   * queue.
+   * is already full.
+   * @return true if the request can be accepted by its corresponding buffer queue.
    */
   public boolean put(TableName tableName, final Put put) {
     return put(tableName, put, this.maxAttempts);
@@ -138,7 +138,8 @@ public class HTableMultiplexer {
 
   /**
    * The puts request will be buffered by their corresponding buffer queue. Return the list of puts
-   * which could not be queued. nn * @return the list of puts which could not be queued
+   * which could not be queued.
+   * @return the list of puts which could not be queued
    */
   public List<Put> put(TableName tableName, final List<Put> puts) {
     if (puts == null) return null;

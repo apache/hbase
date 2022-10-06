@@ -51,36 +51,27 @@ import org.apache.yetus.audience.InterfaceStability;
 public abstract class ColumnInterpreter<T, S, P extends Message, Q extends Message,
   R extends Message> {
 
-  /**
-   * nnn * @return value of type T n
-   */
+  /** Returns value of type T */
   public abstract T getValue(byte[] colFamily, byte[] colQualifier, Cell c) throws IOException;
 
-  /**
-   * nn * @return sum or non null value among (if either of them is null); otherwise returns a null.
-   */
+  /** Returns sum or non null value among (if either of them is null); otherwise returns a null. */
   public abstract S add(S l1, S l2);
 
   /**
-   * returns the maximum value for this type T n
+   * returns the maximum value for this type T
    */
-
   public abstract T getMaxValue();
 
   public abstract T getMinValue();
 
-  /**
-   * nnn
-   */
+  /** Returns multiplication */
   public abstract S multiply(S o1, S o2);
 
-  /**
-   * nn
-   */
+  /** Returns increment */
   public abstract S increment(S o);
 
   /**
-   * provides casting opportunity between the data types. nn
+   * provides casting opportunity between the data types.
    */
   public abstract S castToReturnType(T o);
 
@@ -95,7 +86,7 @@ public abstract class ColumnInterpreter<T, S, P extends Message, Q extends Messa
 
   /**
    * used for computing average of &lt;S&gt; data values. Not providing the divide method that takes
-   * two &lt;S&gt; values as it is not needed as of now. nnn
+   * two &lt;S&gt; values as it is not needed as of now.
    */
   public abstract double divideForAvg(S o, Long l);
 
@@ -111,37 +102,37 @@ public abstract class ColumnInterpreter<T, S, P extends Message, Q extends Messa
 
   /**
    * This method should initialize any field(s) of the ColumnInterpreter with a parsing of the
-   * passed message bytes (used on the server side). n
+   * passed message bytes (used on the server side).
    */
   public abstract void initialize(P msg);
 
   /**
-   * This method gets the PB message corresponding to the cell type n * @return the PB message for
-   * the cell-type instance
+   * This method gets the PB message corresponding to the cell type
+   * @return the PB message for the cell-type instance
    */
   public abstract Q getProtoForCellType(T t);
 
   /**
-   * This method gets the PB message corresponding to the cell type n * @return the cell-type
-   * instance from the PB message
+   * This method gets the PB message corresponding to the cell type
+   * @return the cell-type instance from the PB message
    */
   public abstract T getCellValueFromProto(Q q);
 
   /**
-   * This method gets the PB message corresponding to the promoted type n * @return the PB message
-   * for the promoted-type instance
+   * This method gets the PB message corresponding to the promoted type
+   * @return the PB message for the promoted-type instance
    */
   public abstract R getProtoForPromotedType(S s);
 
   /**
-   * This method gets the promoted type from the proto message n * @return the promoted-type
-   * instance from the PB message
+   * This method gets the promoted type from the proto message
+   * @return the promoted-type instance from the PB message
    */
   public abstract S getPromotedValueFromProto(R r);
 
   /**
    * The response message comes as type S. This will convert/cast it to T. In some sense, performs
-   * the opposite of {@link #castToReturnType(Object)} nn
+   * the opposite of {@link #castToReturnType(Object)}
    */
   public abstract T castToCellType(S response);
 }

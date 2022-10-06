@@ -662,9 +662,8 @@ public class CellComparatorImpl implements CellComparator {
   /**
    * Compares the row part of the cell with a simple plain byte[] like the stopRow in Scan. This
    * should be used with context where for hbase:meta cells the
-   * {{@link MetaCellComparator#META_COMPARATOR} should be used n * the cell to be compared n * the
-   * kv serialized byte[] to be compared with n * the offset in the byte[] n * the length in the
-   * byte[]
+   * {{@link MetaCellComparator#META_COMPARATOR} should be used the cell to be compared the kv
+   * serialized byte[] to be compared with the offset in the byte[] the length in the byte[]
    * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger than byte[], -1
    *         otherwise
    */

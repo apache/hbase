@@ -139,7 +139,7 @@ public class RestCsrfPreventionFilter implements Filter {
     String getHeader(String header);
 
     /**
-     * Returns the method. n
+     * Returns the method.
      */
     String getMethod();
 

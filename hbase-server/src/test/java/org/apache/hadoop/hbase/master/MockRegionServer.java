@@ -194,8 +194,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   private final Map<Long, RegionNameAndIndex> scannersAndOffsets = new HashMap<>();
 
   /**
-   * @param sn Name of this mock regionserver n * @throws
-   *           org.apache.hadoop.hbase.ZooKeeperConnectionException
+   * @param sn Name of this mock regionserver
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
     throws ZooKeeperConnectionException, IOException {
@@ -223,7 +222,7 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   /**
-   * Use this method to set what a scanner will reply as we next through nn
+   * Use this method to set what a scanner will reply as we next through
    */
   void setNextResults(final byte[] regionName, final Result[] rs) {
     this.nexts.put(regionName, rs);

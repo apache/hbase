@@ -133,7 +133,7 @@ public interface ColumnFamilyDescriptor {
   int getMinVersions();
 
   /**
-   * Get the mob compact partition policy for this family n
+   * Get the mob compact partition policy for this family
    */
   MobCompactPartitionPolicy getMobCompactPartitionPolicy();
 

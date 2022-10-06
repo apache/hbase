@@ -482,7 +482,7 @@ public class MasterProcedureTestingUtility {
   public interface StepHook {
     /**
      * @param step Step no. at which this will be executed
-     * @return false if test should fail otherwise true n
+     * @return false if test should fail otherwise true
      */
     boolean execute(int step) throws IOException;
   }

@@ -55,7 +55,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
   private final TreeSet<byte[]> splits = new TreeSet<>(BYTES_COMPARATOR);
 
   /**
-   * This is a map from start key to regions with the same start key. Invariant: This always have n
+   * This is a map from start key to regions with the same start key. Invariant: This always have *
    * values in total
    */
   private final Multimap<byte[], R> starts = ArrayListMultimap.create();
