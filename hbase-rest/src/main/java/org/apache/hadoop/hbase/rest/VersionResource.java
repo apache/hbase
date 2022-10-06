@@ -53,7 +53,7 @@ public class VersionResource extends ResourceBase {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public VersionResource() throws IOException {
     super();

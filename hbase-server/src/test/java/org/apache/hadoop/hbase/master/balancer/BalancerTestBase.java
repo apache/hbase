@@ -326,8 +326,8 @@ public class BalancerTestBase {
 
   /**
    * This assumes the RegionPlan HSI instances are the same ones in the map, so actually no need to
-   * even pass in the map, but I think it's clearer. nn * @return a list of all added
-   * {@link ServerAndLoad} values.
+   * even pass in the map, but I think it's clearer.
+   * @return a list of all added {@link ServerAndLoad} values.
    */
   protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list, List<RegionPlan> plans,
     Map<ServerName, List<RegionInfo>> servers) {

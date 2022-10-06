@@ -59,7 +59,8 @@ public class RegionInfoDisplay {
   }
 
   /**
-   * Get the start key for display. Optionally hide the real start key. nn * @return the startkey
+   * Get the start key for display. Optionally hide the real start key.
+   * @return the startkey
    */
   public static byte[] getStartKeyForDisplay(RegionInfo ri, Configuration conf) {
     boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
@@ -68,15 +69,16 @@ public class RegionInfoDisplay {
   }
 
   /**
-   * Get the region name for display. Optionally hide the start key. nn * @return region name as
-   * String
+   * Get the region name for display. Optionally hide the start key.
+   * @return region name as String
    */
   public static String getRegionNameAsStringForDisplay(RegionInfo ri, Configuration conf) {
     return Bytes.toStringBinary(getRegionNameForDisplay(ri, conf));
   }
 
   /**
-   * Get the region name for display. Optionally hide the start key. nn * @return region name bytes
+   * Get the region name for display. Optionally hide the start key.
+   * @return region name bytes
    */
   public static byte[] getRegionNameForDisplay(RegionInfo ri, Configuration conf) {
     boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);

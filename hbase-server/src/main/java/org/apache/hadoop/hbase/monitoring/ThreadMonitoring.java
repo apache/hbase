@@ -44,7 +44,7 @@ public abstract class ThreadMonitoring {
   }
 
   /**
-   * Print all of the thread's information and stack traces. nnn
+   * Print all of the thread's information and stack traces.
    */
   public static void appendThreadInfo(StringBuilder sb, ThreadInfo info, String indent) {
     boolean contention = threadBean.isThreadContentionMonitoringEnabled();

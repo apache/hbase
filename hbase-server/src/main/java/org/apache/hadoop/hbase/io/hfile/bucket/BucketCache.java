@@ -367,7 +367,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Get the IOEngine from the IO engine name nnn * @return the IOEngine n
+   * Get the IOEngine from the IO engine name
+   * @return the IOEngine
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity, String persistencePath)
     throws IOException {
@@ -1550,7 +1551,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Only used in test n
+   * Only used in test
    */
   void stopWriterThreads() throws InterruptedException {
     for (WriterThread writerThread : writerThreads) {

@@ -145,7 +145,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   /**
    * Read off the wire. If there is not enough data to read, update the connection state with what
    * we have and returns.
-   * @return Returns -1 if failure (and caller will close connection), else zero or more. nn
+   * @return Returns -1 if failure (and caller will close connection), else zero or more.
    */
   public int readAndProcess() throws IOException, InterruptedException {
     // If we have not read the connection setup preamble, look to see if that is on the wire.

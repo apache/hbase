@@ -60,7 +60,7 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * We make a copy of the passed in row key to keep local. nnn
+   * We make a copy of the passed in row key to keep local.
    */
   public Put(byte[] rowArray, int rowOffset, int rowLength) {
     this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
@@ -88,7 +88,7 @@ public class Put extends Mutation implements HeapSize {
   }
 
   /**
-   * We make a copy of the passed in row key to keep local. nnnn
+   * We make a copy of the passed in row key to keep local.
    */
   public Put(byte[] rowArray, int rowOffset, int rowLength, long ts) {
     checkRow(rowArray, rowOffset, rowLength);
@@ -155,7 +155,7 @@ public class Put extends Mutation implements HeapSize {
    * Add the specified column and value to this Put operation.
    * @param family    family name
    * @param qualifier column qualifier
-   * @param value     column value n
+   * @param value     column value
    */
   public Put addColumn(byte[] family, byte[] qualifier, byte[] value) {
     return addColumn(family, qualifier, this.ts, value);
@@ -178,7 +178,7 @@ public class Put extends Mutation implements HeapSize {
    * @param family    family name
    * @param qualifier column qualifier
    * @param ts        version timestamp
-   * @param value     column value n
+   * @param value     column value
    */
   public Put addColumn(byte[] family, byte[] qualifier, long ts, byte[] value) {
     if (ts < 0) {
@@ -222,7 +222,7 @@ public class Put extends Mutation implements HeapSize {
    * @param family    family name
    * @param qualifier column qualifier
    * @param ts        version timestamp
-   * @param value     column value n
+   * @param value     column value
    */
   public Put addColumn(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
     if (ts < 0) {
@@ -255,7 +255,8 @@ public class Put extends Mutation implements HeapSize {
   /**
    * Add the specified KeyValue to this Put operation. Operation assumes that the passed KeyValue is
    * immutable and its backing array will not be modified for the duration of this Put.
-   * @param cell individual cell n * @throws java.io.IOException e
+   * @param cell individual cell
+   * @throws java.io.IOException e
    */
   @Override
   public Put add(Cell cell) throws IOException {

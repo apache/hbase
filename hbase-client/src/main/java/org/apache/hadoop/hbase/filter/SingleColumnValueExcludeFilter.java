@@ -109,9 +109,9 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn * @deprecated Since 2.0.0. Will be
-   * removed in 3.0.0. Use
-   * {@link #SingleColumnValueExcludeFilter(byte[], byte[], CompareOperator, ByteArrayComparable, boolean, boolean)}
+   * Constructor for protobuf deserialization only.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   *             {@link #SingleColumnValueExcludeFilter(byte[], byte[], CompareOperator, ByteArrayComparable, boolean, boolean)}
    */
   @Deprecated
   protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
@@ -122,7 +122,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn
+   * Constructor for protobuf deserialization only.
    */
   protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
     final CompareOperator op, ByteArrayComparable comparator, final boolean filterIfMissing,

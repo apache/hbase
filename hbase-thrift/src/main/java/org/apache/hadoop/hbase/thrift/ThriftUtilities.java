@@ -48,7 +48,9 @@ public class ThriftUtilities {
 
   /**
    * This utility method creates a new Hbase HColumnDescriptor object based on a Thrift
-   * ColumnDescriptor "struct". n * Thrift ColumnDescriptor object nn
+   * ColumnDescriptor "struct".
+   * @param in Thrift ColumnDescriptor object
+   * @throws IllegalArgument if the column name is empty
    */
   static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in) throws IllegalArgument {
     Compression.Algorithm comp =
@@ -67,7 +69,7 @@ public class ThriftUtilities {
 
   /**
    * This utility method creates a new Thrift ColumnDescriptor "struct" based on an Hbase
-   * HColumnDescriptor object. n * Hbase HColumnDescriptor object
+   * HColumnDescriptor object. Hbase HColumnDescriptor object
    * @return Thrift ColumnDescriptor
    */
   static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
@@ -84,7 +86,7 @@ public class ThriftUtilities {
 
   /**
    * This utility method creates a list of Thrift TCell "struct" based on an Hbase Cell object. The
-   * empty list is returned if the input is null. n * Hbase Cell object
+   * empty list is returned if the input is null. Hbase Cell object
    * @return Thrift TCell array
    */
   static public List<TCell> cellFromHBase(Cell in) {
@@ -116,10 +118,10 @@ public class ThriftUtilities {
 
   /**
    * This utility method creates a list of Thrift TRowResult "struct" based on an Hbase RowResult
-   * object. The empty list is returned if the input is null. n * Hbase RowResult object n * This
-   * boolean dictates if row data is returned in a sorted order sortColumns = True will set
-   * TRowResult's sortedColumns member which is an ArrayList of TColumn struct sortColumns = False
-   * will set TRowResult's columns member which is a map of columnName and TCell struct
+   * object. The empty list is returned if the input is null. Hbase RowResult object This boolean
+   * dictates if row data is returned in a sorted order sortColumns = True will set TRowResult's
+   * sortedColumns member which is an ArrayList of TColumn struct sortColumns = False will set
+   * TRowResult's columns member which is a map of columnName and TCell struct
    * @return Thrift TRowResult array
    */
   static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
@@ -154,8 +156,8 @@ public class ThriftUtilities {
 
   /**
    * This utility method creates a list of Thrift TRowResult "struct" based on an array of Hbase
-   * RowResult objects. The empty list is returned if the input is null. n * Array of Hbase
-   * RowResult objects
+   * RowResult objects. The empty list is returned if the input is null. Array of Hbase RowResult
+   * objects
    * @return Thrift TRowResult array
    */
   static public List<TRowResult> rowResultFromHBase(Result[] in) {

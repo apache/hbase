@@ -71,8 +71,7 @@ public final class VersionInfoUtil {
   }
 
   /**
-   * n * @return the passed-in <code>version</code> int as a version String (e.g. 0x0103004 is
-   * 1.3.4)
+   * Returns the passed-in <code>version</code> int as a version String (e.g. 0x0103004 is 1.3.4)
    */
   public static String versionNumberToString(final int version) {
     return String.format("%d.%d.%d", ((version >> 20) & 0xff), ((version >> 12) & 0xff),

@@ -134,8 +134,8 @@ public class DirectMemoryUtils {
    * Every once a while, the JVM checks the reference queue and cleans the DirectByteBuffers.
    * However, as this doesn't happen immediately after discarding all references to a
    * DirectByteBuffer, it's easy to OutOfMemoryError yourself using DirectByteBuffers. This function
-   * explicitly calls the Cleaner method of a DirectByteBuffer. n * The DirectByteBuffer that will
-   * be "cleaned". Utilizes reflection.
+   * explicitly calls the Cleaner method of a DirectByteBuffer. The DirectByteBuffer that will be
+   * "cleaned". Utilizes reflection.
    */
   public static void destroyDirectByteBuffer(ByteBuffer toBeDestroyed)
     throws IllegalArgumentException, IllegalAccessException, InvocationTargetException,

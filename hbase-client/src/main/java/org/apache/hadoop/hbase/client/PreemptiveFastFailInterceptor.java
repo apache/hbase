@@ -132,7 +132,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   /**
    * Handles failures encountered when communicating with a server. Updates the FailureInfo in
    * repeatedFailuresMap to reflect the failure. Throws RepeatedConnectException if the client is in
-   * Fast fail mode. nn * - the throwable to be handled. n
+   * Fast fail mode. - the throwable to be handled.
    */
   protected void handleFailureToServer(ServerName serverName, Throwable t) {
     if (serverName == null || t == null) {
@@ -201,7 +201,8 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   /**
    * Checks to see if we are in the Fast fail mode for requests to the server. If a client is unable
    * to contact a server for more than fastFailThresholdMilliSec the client will get into fast fail
-   * mode. n * @return true if the client is in fast fail mode for the server.
+   * mode.
+   * @return true if the client is in fast fail mode for the server.
    */
   private boolean inFastFailMode(ServerName server) {
     FailureInfo fInfo = repeatedFailuresMap.get(server);
@@ -225,7 +226,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
    * Check to see if the client should try to connnect to the server, inspite of knowing that it is
    * in the fast fail mode. The idea here is that we want just one client thread to be actively
    * trying to reconnect, while all the other threads trying to reach the server will short circuit.
-   * n * @return true if the client should try to connect to the server.
+   * @return true if the client should try to connect to the server.
    */
   protected boolean shouldRetryInspiteOfFastFail(FailureInfo fInfo) {
     // We believe that the server is down, But, we want to have just one
@@ -246,7 +247,7 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
   }
 
   /**
-   * This function updates the Failure info for a particular server after the attempt to nnnn
+   * This function updates the Failure info for a particular server after the attempt to
    */
   private void updateFailureInfoForServer(ServerName server, FailureInfo fInfo, boolean didTry,
     boolean couldNotCommunicate, boolean retryDespiteFastFailMode) {

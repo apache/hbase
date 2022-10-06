@@ -179,7 +179,7 @@ public abstract class User {
 
   /**
    * Wraps an underlying {@code UserGroupInformation} instance.
-   * @param ugi The base Hadoop user n
+   * @param ugi The base Hadoop user
    */
   public static User create(UserGroupInformation ugi) {
     if (ugi == null) {

@@ -124,7 +124,7 @@ public class TestRegionReplicaFailover {
 
   /**
    * Tests the case where if there is some data in the primary region, reopening the region replicas
-   * (enable/disable table, etc) makes the region replicas readable. n
+   * (enable/disable table, etc) makes the region replicas readable.
    */
   @Test
   public void testSecondaryRegionWithNonEmptyRegion() throws IOException {

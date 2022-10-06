@@ -65,7 +65,7 @@ public class ReplicationPeers {
    * Method called after a peer has been connected. It will create a ReplicationPeer to track the
    * newly connected cluster.
    * @param peerId a short that identifies the cluster
-   * @return whether a ReplicationPeer was successfully created n
+   * @return whether a ReplicationPeer was successfully created
    */
   public boolean addPeer(String peerId) throws ReplicationException {
     if (this.peerCache.containsKey(peerId)) {

@@ -150,7 +150,7 @@ public final class ClientExceptionsUtil {
   /**
    * Translates exception for preemptive fast fail checks.
    * @param t exception to check
-   * @return translated exception n
+   * @return translated exception
    */
   public static Throwable translatePFFE(Throwable t) throws IOException {
     if (t instanceof NoSuchMethodError) {

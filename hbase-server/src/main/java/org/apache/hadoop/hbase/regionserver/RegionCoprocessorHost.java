@@ -330,7 +330,7 @@ public class RegionCoprocessorHost
 
   /**
    * Sanity check the table coprocessor attributes of the supplied schema. Will throw an exception
-   * if there is a problem. nnn
+   * if there is a problem.
    */
   public static void testTableCoprocessorAttrs(final Configuration conf, final TableDescriptor htd)
     throws IOException {
@@ -568,7 +568,7 @@ public class RegionCoprocessorHost
    * @param store      The store where compaction is being requested
    * @param candidates The currently available store files
    * @param tracker    used to track the life cycle of a compaction
-   * @param user       the user n
+   * @param user       the user
    */
   public boolean preCompactSelection(final HStore store, final List<HStoreFile> candidates,
     final CompactionLifeCycleTracker tracker, final User user) throws IOException {
@@ -633,7 +633,7 @@ public class RegionCoprocessorHost
    * @param tracker  used to track the life cycle of a compaction
    * @param request  the compaction request
    * @param user     the user
-   * @return Scanner to use (cannot be null!) n
+   * @return Scanner to use (cannot be null!)
    */
   public InternalScanner preCompact(final HStore store, final InternalScanner scanner,
     final ScanType scanType, final CompactionLifeCycleTracker tracker,
@@ -662,7 +662,7 @@ public class RegionCoprocessorHost
    * @param resultFile the new store file written during compaction
    * @param tracker    used to track the life cycle of a compaction
    * @param request    the compaction request
-   * @param user       the user n
+   * @param user       the user
    */
   public void postCompact(final HStore store, final HStoreFile resultFile,
     final CompactionLifeCycleTracker tracker, final CompactionRequest request, final User user)
@@ -696,7 +696,7 @@ public class RegionCoprocessorHost
 
   /**
    * Invoked before a memstore flush
-   * @return Scanner to use (cannot be null!) n
+   * @return Scanner to use (cannot be null!)
    */
   public InternalScanner preFlush(HStore store, InternalScanner scanner,
     FlushLifeCycleTracker tracker) throws IOException {
@@ -717,7 +717,7 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked before a memstore flush n
+   * Invoked before a memstore flush
    */
   public void preFlush(FlushLifeCycleTracker tracker) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
@@ -729,7 +729,7 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked after a memstore flush n
+   * Invoked after a memstore flush
    */
   public void postFlush(FlushLifeCycleTracker tracker) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new RegionObserverOperationWithoutResult() {
@@ -796,7 +796,7 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * Invoked after a memstore flush n
+   * Invoked after a memstore flush
    */
   public void postFlush(HStore store, HStoreFile storeFile, FlushLifeCycleTracker tracker)
     throws IOException {
@@ -1278,8 +1278,8 @@ public class RegionCoprocessorHost
   /**
    * @param s       the scanner
    * @param results the result set returned by the region server
-   * @param limit   the maximum number of results to return n * @return 'has more' indication to
-   *                give to client
+   * @param limit   the maximum number of results to return
+   * @return 'has more' indication to give to client
    * @exception IOException Exception
    */
   public boolean postScannerNext(final InternalScanner s, final List<Result> results,
@@ -1301,7 +1301,7 @@ public class RegionCoprocessorHost
    * filter.
    * @param s          the scanner
    * @param curRowCell The cell in the current row which got filtered out
-   * @return whether more rows are available for the scanner or not n
+   * @return whether more rows are available for the scanner or not
    */
   public boolean postScannerFilterRow(final InternalScanner s, final Cell curRowCell)
     throws IOException {
@@ -1462,7 +1462,7 @@ public class RegionCoprocessorHost
 
   /**
    * @param familyPaths pairs of { CF, file path } submitted for bulk load
-   * @param map         Map of CF to List of file paths for the final loaded files n
+   * @param map         Map of CF to List of file paths for the final loaded files
    */
   public void postBulkLoadHFile(final List<Pair<byte[], String>> familyPaths,
     Map<byte[], List<Path>> map) throws IOException {
@@ -1499,10 +1499,10 @@ public class RegionCoprocessorHost
    * @param fs   fileystem to read from
    * @param p    path to the file
    * @param in   {@link FSDataInputStreamWrapper}
-   * @param size Full size of the file n * @param r original reference file. This will be not null
-   *             only when reading a split file.
+   * @param size Full size of the file
+   * @param r    original reference file. This will be not null only when reading a split file.
    * @return a Reader instance to use instead of the base reader if overriding default behavior,
-   *         null otherwise n
+   *         null otherwise
    */
   public StoreFileReader preStoreFileReaderOpen(final FileSystem fs, final Path p,
     final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,
@@ -1523,10 +1523,10 @@ public class RegionCoprocessorHost
    * @param fs     fileystem to read from
    * @param p      path to the file
    * @param in     {@link FSDataInputStreamWrapper}
-   * @param size   Full size of the file n * @param r original reference file. This will be not null
-   *               only when reading a split file.
+   * @param size   Full size of the file
+   * @param r      original reference file. This will be not null only when reading a split file.
    * @param reader the base reader instance
-   * @return The reader to use n
+   * @return The reader to use
    */
   public StoreFileReader postStoreFileReaderOpen(final FileSystem fs, final Path p,
     final FSDataInputStreamWrapper in, final long size, final CacheConfig cacheConf,

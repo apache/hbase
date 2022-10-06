@@ -139,7 +139,7 @@ public class TestThriftServer {
   /**
    * Runs all of the tests under a single JUnit test method. We consolidate all testing to one
    * method because HBaseClusterTestCase is prone to OutOfMemoryExceptions when there are three or
-   * more JUnit test methods. n
+   * more JUnit test methods.
    */
   @Test
   public void testAll() throws Exception {
@@ -159,7 +159,7 @@ public class TestThriftServer {
 
   /**
    * Tests for creating, enabling, disabling, and deleting tables. Also tests that creating a table
-   * with an invalid column name yields an IllegalArgument exception. n
+   * with an invalid column name yields an IllegalArgument exception.
    */
   public void doTestTableCreateDrop() throws Exception {
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
@@ -189,7 +189,7 @@ public class TestThriftServer {
   /**
    * TODO: These counts are supposed to be zero but sometimes they are not, they are equal to the
    * passed in maybe. Investigate why. My guess is they are set by the test that runs just previous
-   * to this one. Sometimes they are cleared. Sometimes not. nnnn
+   * to this one. Sometimes they are cleared. Sometimes not.
    */
   private int getCurrentCount(final String name, final int maybe, final ThriftMetrics metrics) {
     int currentCount = 0;
@@ -321,7 +321,7 @@ public class TestThriftServer {
 
   /**
    * Tests adding a series of Mutations and BatchMutations, including a delete mutation. Also tests
-   * data retrieval, and getting back multiple versions. n
+   * data retrieval, and getting back multiple versions.
    */
   public void doTestTableMutations() throws Exception {
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
@@ -393,7 +393,7 @@ public class TestThriftServer {
 
   /**
    * Similar to testTableMutations(), except Mutations are applied with specific timestamps and data
-   * retrieval uses these timestamps to extract specific versions of data. n
+   * retrieval uses these timestamps to extract specific versions of data.
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
@@ -470,7 +470,7 @@ public class TestThriftServer {
 
   /**
    * Tests the four different scanner-opening methods (with and without a stoprow, with and without
-   * a timestamp). n
+   * a timestamp).
    */
   public void doTestTableScanners() throws Exception {
     // Setup
@@ -588,7 +588,7 @@ public class TestThriftServer {
   }
 
   /**
-   * For HBASE-2556 Tests for GetTableRegions n
+   * For HBASE-2556 Tests for GetTableRegions
    */
   public void doTestGetTableRegions() throws Exception {
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
@@ -647,7 +647,7 @@ public class TestThriftServer {
   }
 
   /**
-   * Appends the value to a cell and checks that the cell value is updated properly. n
+   * Appends the value to a cell and checks that the cell value is updated properly.
    */
   public static void doTestAppend() throws Exception {
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
@@ -678,7 +678,7 @@ public class TestThriftServer {
 
   /**
    * Check that checkAndPut fails if the cell does not exist, then put in the cell, then check that
-   * the checkAndPut succeeds. n
+   * the checkAndPut succeeds.
    */
   public static void doTestCheckAndPut() throws Exception {
     ThriftHBaseServiceHandler handler = new ThriftHBaseServiceHandler(UTIL.getConfiguration(),
@@ -870,7 +870,7 @@ public class TestThriftServer {
   /**
    * Asserts that the passed scanner is exhausted, and then closes the scanner.
    * @param scannerId the scanner to close
-   * @param handler   the HBaseServiceHandler interfacing to HBase n
+   * @param handler   the HBaseServiceHandler interfacing to HBase
    */
   private void closeScanner(int scannerId, ThriftHBaseServiceHandler handler) throws Exception {
     handler.scannerGet(scannerId);

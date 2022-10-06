@@ -39,12 +39,13 @@ public interface HFileScanner extends Shipper, Closeable {
   /**
    * SeekTo or just before the passed <code>cell</code>. Examine the return code to figure whether
    * we found the cell or not. Consider the cell stream of all the cells in the file,
-   * <code>c[0] .. c[n]</code>, where there are n cells in the file. n * @return -1, if cell &lt;
-   * c[0], no position; 0, such that c[i] = cell and scanner is left in position i; and 1, such that
-   * c[i] &lt; cell, and scanner is left in position i. The scanner will position itself between
-   * c[i] and c[i+1] where c[i] &lt; cell &lt;= c[i+1]. If there is no cell c[i+1] greater than or
-   * equal to the input cell, then the scanner will position itself at the end of the file and
-   * next() will return false when it is called. n
+   * <code>c[0] .. c[n]</code>, where there are n cells in the file.
+   * @return -1, if cell &lt; c[0], no position; 0, such that c[i] = cell and scanner is left in
+   *         position i; and 1, such that c[i] &lt; cell, and scanner is left in position i. The
+   *         scanner will position itself between c[i] and c[i+1] where c[i] &lt; cell &lt;= c[i+1].
+   *         If there is no cell c[i+1] greater than or equal to the input cell, then the scanner
+   *         will position itself at the end of the file and next() will return false when it is
+   *         called.
    */
   int seekTo(Cell cell) throws IOException;
 
@@ -59,7 +60,7 @@ public interface HFileScanner extends Shipper, Closeable {
    * false when it is called.
    * @param cell Cell to find (should be non-null)
    * @return -1, if cell &lt; c[0], no position; 0, such that c[i] = cell and scanner is left in
-   *         position i; and 1, such that c[i] &lt; cell, and scanner is left in position i. n
+   *         position i; and 1, such that c[i] &lt; cell, and scanner is left in position i.
    */
   int reseekTo(Cell cell) throws IOException;
 
@@ -69,20 +70,20 @@ public interface HFileScanner extends Shipper, Closeable {
    * @param cell Cell to find
    * @return false if cell &lt;= c[0] or true with scanner in position 'i' such that: c[i] &lt;
    *         cell. Furthermore: there may be a c[i+1], such that c[i] &lt; cell &lt;= c[i+1] but
-   *         there may also NOT be a c[i+1], and next() will return false (EOF). n
+   *         there may also NOT be a c[i+1], and next() will return false (EOF).
    */
   boolean seekBefore(Cell cell) throws IOException;
 
   /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and the current key and
-   *         value are undefined. n
+   *         value are undefined.
    */
   boolean seekTo() throws IOException;
 
   /**
    * Scans to the next entry in the file.
-   * @return Returns false if you are at the end otherwise true if more in file. n
+   * @return Returns false if you are at the end otherwise true if more in file.
    */
   boolean next() throws IOException;
 

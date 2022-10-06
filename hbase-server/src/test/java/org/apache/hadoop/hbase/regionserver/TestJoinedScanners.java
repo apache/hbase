@@ -192,7 +192,8 @@ public class TestJoinedScanners {
   private static Options options = new Options();
 
   /**
-   * Command line interface: n * @throws IOException if there is a bug while reading from disk
+   * Command line interface:
+   * @throws IOException if there is a bug while reading from disk
    */
   public static void main(final String[] args) throws Exception {
     Option encodingOption =

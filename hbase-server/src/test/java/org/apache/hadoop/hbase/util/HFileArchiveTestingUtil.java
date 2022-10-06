@@ -85,7 +85,7 @@ public class HFileArchiveTestingUtil {
    * Compare the archived files to the files in the original directory
    * @param expected original files that should have been archived
    * @param actual   files that were archived
-   * @param fs       filessystem on which the archiving took place n
+   * @param fs       filessystem on which the archiving took place
    */
   public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
     FileSystem fs) throws IOException {
@@ -98,7 +98,7 @@ public class HFileArchiveTestingUtil {
    * @param actual         files that were archived
    * @param fs             {@link FileSystem} on which the archiving took place
    * @param hasTimedBackup <tt>true</tt> if we expect to find an archive backup directory with a
-   *                       copy of the files in the archive directory (and the original files). n
+   *                       copy of the files in the archive directory (and the original files).
    */
   public static void assertArchiveEqualToOriginal(FileStatus[] expected, FileStatus[] actual,
     FileSystem fs, boolean hasTimedBackup) throws IOException {

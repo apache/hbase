@@ -136,9 +136,7 @@ public class ReplicationProtbufUtil {
     return new Pair<>(builder.build(), getCellScanner(allCells, size));
   }
 
-  /**
-   * n * @return <code>cells</code> packaged as a CellScanner
-   */
+  /** Returns <code>cells</code> packaged as a CellScanner */
   static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
     return new SizedCellScanner() {
       private final Iterator<List<? extends Cell>> entries = cells.iterator();

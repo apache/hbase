@@ -211,7 +211,6 @@ public class TestReplicationAdmin {
 
   /**
    * Simple testing of adding and removing peers, basically shows that all interactions with ZK work
-   * n
    */
   @Test
   public void testAddRemovePeer() throws Exception {
@@ -319,7 +318,7 @@ public class TestReplicationAdmin {
   }
 
   /**
-   * basic checks that when we add a peer that it is enabled, and that we can disable n
+   * basic checks that when we add a peer that it is enabled, and that we can disable
    */
   @Test
   public void testEnableDisable() throws Exception {

@@ -295,7 +295,7 @@ public class AssignmentVerificationReport {
   }
 
   /**
-   * Use this to project the dispersion scores nnn
+   * Use this to project the dispersion scores
    */
   public void fillUpDispersion(TableName tableName, SnapshotOfRegionAssignmentFromMeta snapshot,
     FavoredNodesPlan newPlan) {
@@ -567,7 +567,8 @@ public class AssignmentVerificationReport {
 
   /**
    * Return the number of regions based on the position (primary/secondary/ tertiary) assigned to
-   * their favored nodes n * @return the number of regions
+   * their favored nodes
+   * @return the number of regions
    */
   int getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position position) {
     return favoredNodes[position.ordinal()];

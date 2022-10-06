@@ -225,7 +225,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * compaction.
    * @param store   who we scan
    * @param scan    the spec
-   * @param columns which columns we are scanning n
+   * @param columns which columns we are scanning
    */
   public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
     long readPt) throws IOException {
@@ -384,8 +384,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Seek the specified scanners with the given key nn * @param isLazy true if using lazy seek
-   * @param isParallelSeek true if using parallel seek n
+   * Seek the specified scanners with the given key
+   * @param isLazy         true if using lazy seek
+   * @param isParallelSeek true if using parallel seek
    */
   protected void seekScanners(List<? extends KeyValueScanner> scanners, Cell seekKey,
     boolean isLazy, boolean isParallelSeek) throws IOException {
@@ -530,8 +531,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Get the next row of values from this Store. nn * @return true if there are more rows, false if
-   * scanner is done
+   * Get the next row of values from this Store.
+   * @return true if there are more rows, false if scanner is done
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
@@ -1050,7 +1051,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Check whether scan as expected order nnnn
+   * Check whether scan as expected order
    */
   protected void checkScanOrder(Cell prevKV, Cell kv, CellComparator comparator)
     throws IOException {
@@ -1064,8 +1065,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Do a reseek in a normal StoreScanner(scan forward) n * @return true if scanner has values left,
-   * false if end of scanner n
+   * Do a reseek in a normal StoreScanner(scan forward)
+   * @return true if scanner has values left, false if end of scanner
    */
   protected boolean seekAsDirection(Cell kv) throws IOException {
     return reseek(kv);
@@ -1156,7 +1157,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /**
    * Seek storefiles in parallel to optimize IO latency as much as possible
    * @param scanners the list {@link KeyValueScanner}s to be read from
-   * @param kv       the KeyValue on which the operation is being requested n
+   * @param kv       the KeyValue on which the operation is being requested
    */
   private void parallelSeek(final List<? extends KeyValueScanner> scanners, final Cell kv)
     throws IOException {

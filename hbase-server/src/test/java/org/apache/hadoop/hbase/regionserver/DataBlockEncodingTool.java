@@ -388,7 +388,7 @@ public class DataBlockEncodingTool {
    * @param name      Name of algorithm.
    * @param buffer    Buffer to be compressed.
    * @param offset    Position of the beginning of the data.
-   * @param length    Length of data in buffer. n
+   * @param length    Length of data in buffer.
    */
   public void benchmarkAlgorithm(Compression.Algorithm algorithm, String name, byte[] buffer,
     int offset, int length) throws IOException {
@@ -521,7 +521,7 @@ public class DataBlockEncodingTool {
   }
 
   /**
-   * Display statistics of different compression algorithms. n
+   * Display statistics of different compression algorithms.
    */
   public void displayStatistics() throws IOException {
     final String comprAlgo = compressionAlgorithmName.toUpperCase(Locale.ROOT);

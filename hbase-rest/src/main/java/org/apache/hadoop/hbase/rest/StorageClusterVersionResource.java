@@ -45,7 +45,7 @@ public class StorageClusterVersionResource extends ResourceBase {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public StorageClusterVersionResource() throws IOException {
     super();

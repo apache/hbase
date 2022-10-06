@@ -211,7 +211,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   }
 
   /**
-   * Read the attributes from Hadoop->HBase->Master->Balancer in JMX n
+   * Read the attributes from Hadoop->HBase->Master->Balancer in JMX
    */
   private Set<String> readJmxMetrics() throws IOException {
     JMXConnector connector = null;

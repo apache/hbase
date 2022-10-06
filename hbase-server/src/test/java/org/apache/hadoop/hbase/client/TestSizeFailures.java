@@ -158,7 +158,7 @@ public class TestSizeFailures {
   }
 
   /**
-   * Count the number of rows and the number of entries from a scanner n * The Scanner
+   * Count the number of rows and the number of entries from a scanner The Scanner
    * @return An entry where the first item is rows observed and the second is entries observed.
    */
   private Entry<Long, Long> sumTable(ResultScanner scanner) {

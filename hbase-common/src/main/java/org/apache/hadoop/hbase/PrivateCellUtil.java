@@ -1019,7 +1019,7 @@ public final class PrivateCellUtil {
    * Writes the row from the given cell to the output stream excluding the common prefix
    * @param out     The dataoutputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param rlength the row length n
+   * @param rlength the row length
    */
   public static void writeRowSkippingBytes(DataOutputStream out, Cell cell, short rlength,
     int commonPrefix) throws IOException {
@@ -1207,7 +1207,6 @@ public final class PrivateCellUtil {
 
   /**
    * Compares only the key portion of a cell. It does not include the sequence id/mvcc of the cell
-   * nn
    * @return an int greater than 0 if left &gt; than right lesser than 0 if left &lt; than right
    *         equal to 0 if left is equal to right
    */
@@ -2168,7 +2167,7 @@ public final class PrivateCellUtil {
   /**
    * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
    * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
-   * timestamp&gt;&lt;1 byte type&gt; nnn
+   * timestamp&gt;&lt;1 byte type&gt;
    */
   public static void writeFlatKey(Cell cell, DataOutput out) throws IOException {
     short rowLen = cell.getRowLength();
@@ -2200,7 +2199,7 @@ public final class PrivateCellUtil {
   /**
    * Deep clones the given cell if the cell supports deep cloning
    * @param cell the cell to be cloned
-   * @return the cloned cell n
+   * @return the cloned cell
    */
   public static Cell deepClone(Cell cell) throws CloneNotSupportedException {
     if (cell instanceof ExtendedCell) {
@@ -2214,7 +2213,7 @@ public final class PrivateCellUtil {
    * @param cell     the cell to be written
    * @param out      the outputstream
    * @param withTags if tags are to be written or not
-   * @return the total bytes written n
+   * @return the total bytes written
    */
   public static int writeCell(Cell cell, OutputStream out, boolean withTags) throws IOException {
     if (cell instanceof ExtendedCell) {
@@ -2289,8 +2288,8 @@ public final class PrivateCellUtil {
 
   /**
    * Sets the given seqId to the cell. Marked as audience Private as of 1.2.0. Setting a Cell
-   * sequenceid is an internal implementation detail not for general public use. nn * @throws
-   * IOException when the passed cell is not of type {@link ExtendedCell}
+   * sequenceid is an internal implementation detail not for general public use.
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static void setSequenceId(Cell cell, long seqId) throws IOException {
     if (cell instanceof ExtendedCell) {
@@ -2302,8 +2301,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Sets the given timestamp to the cell. nn * @throws IOException when the passed cell is not of
-   * type {@link ExtendedCell}
+   * Sets the given timestamp to the cell.
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   public static void setTimestamp(Cell cell, long ts) throws IOException {
     if (cell instanceof ExtendedCell) {
@@ -2359,7 +2358,7 @@ public final class PrivateCellUtil {
    * Writes the row from the given cell to the output stream
    * @param out     The outputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param rlength the row length n
+   * @param rlength the row length
    */
   public static void writeRow(OutputStream out, Cell cell, short rlength) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2374,7 +2373,7 @@ public final class PrivateCellUtil {
    * Writes the family from the given cell to the output stream
    * @param out     The outputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param flength the family length n
+   * @param flength the family length
    */
   public static void writeFamily(OutputStream out, Cell cell, byte flength) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2389,7 +2388,7 @@ public final class PrivateCellUtil {
    * Writes the qualifier from the given cell to the output stream
    * @param out     The outputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param qlength the qualifier length n
+   * @param qlength the qualifier length
    */
   public static void writeQualifier(OutputStream out, Cell cell, int qlength) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2405,7 +2404,7 @@ public final class PrivateCellUtil {
    * Writes the qualifier from the given cell to the output stream excluding the common prefix
    * @param out     The dataoutputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param qlength the qualifier length n
+   * @param qlength the qualifier length
    */
   public static void writeQualifierSkippingBytes(DataOutputStream out, Cell cell, int qlength,
     int commonPrefix) throws IOException {
@@ -2424,7 +2423,7 @@ public final class PrivateCellUtil {
    * Writes the value from the given cell to the output stream
    * @param out     The outputstream to which the data has to be written
    * @param cell    The cell whose contents has to be written
-   * @param vlength the value length n
+   * @param vlength the value length
    */
   public static void writeValue(OutputStream out, Cell cell, int vlength) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2439,7 +2438,7 @@ public final class PrivateCellUtil {
    * Writes the tag from the given cell to the output stream
    * @param out        The outputstream to which the data has to be written
    * @param cell       The cell whose contents has to be written
-   * @param tagsLength the tag length n
+   * @param tagsLength the tag length
    */
   public static void writeTags(OutputStream out, Cell cell, int tagsLength) throws IOException {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2472,7 +2471,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Converts the rowkey bytes of the given cell into an int value n * @return rowkey as int
+   * Converts the rowkey bytes of the given cell into an int value
+   * @return rowkey as int
    */
   public static int getRowAsInt(Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2483,7 +2483,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Converts the value bytes of the given cell into a long value n * @return value as long
+   * Converts the value bytes of the given cell into a long value
+   * @return value as long
    */
   public static long getValueAsLong(Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2494,7 +2495,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Converts the value bytes of the given cell into a int value n * @return value as int
+   * Converts the value bytes of the given cell into a int value
+   * @return value as int
    */
   public static int getValueAsInt(Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2505,7 +2507,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Converts the value bytes of the given cell into a double value n * @return value as double
+   * Converts the value bytes of the given cell into a double value
+   * @return value as double
    */
   public static double getValueAsDouble(Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2516,7 +2519,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Converts the value bytes of the given cell into a BigDecimal n * @return value as BigDecimal
+   * Converts the value bytes of the given cell into a BigDecimal
+   * @return value as BigDecimal
    */
   public static BigDecimal getValueAsBigDecimal(Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2737,8 +2741,9 @@ public final class PrivateCellUtil {
   /**
    * Estimate based on keyvalue's serialization format in the RPC layer. Note that there is an extra
    * SIZEOF_INT added to the size here that indicates the actual length of the cell for cases where
-   * cell's are serialized in a contiguous format (For eg in RPCs). n * @return Estimate of the
-   * <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the actual cell length.
+   * cell's are serialized in a contiguous format (For eg in RPCs).
+   * @return Estimate of the <code>cell</code> size in bytes plus an extra SIZEOF_INT indicating the
+   *         actual cell length.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
     return cell.getSerializedSize() + Bytes.SIZEOF_INT;
@@ -2758,9 +2763,9 @@ public final class PrivateCellUtil {
   /**
    * This method exists just to encapsulate how we serialize keys. To be replaced by a factory that
    * we query to figure what the Cell implementation is and then, what serialization engine to use
-   * and further, how to serialize the key for inclusion in hfile index. TODO. n * @return The key
-   * portion of the Cell serialized in the old-school KeyValue way or null if passed a null
-   * <code>cell</code>
+   * and further, how to serialize the key for inclusion in hfile index. TODO.
+   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if passed
+   *         a null <code>cell</code>
    */
   public static byte[] getCellKeySerializedAsKeyValueKey(final Cell cell) {
     if (cell == null) return null;
@@ -2770,8 +2775,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Create a Cell that is smaller than all other possible Cells for the given Cell's row. n
-   * * @return First possible Cell on passed Cell's row.
+   * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
+   * @return First possible Cell on passed Cell's row.
    */
   public static Cell createFirstOnRow(final Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2835,8 +2840,8 @@ public final class PrivateCellUtil {
 
   /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell's rk:cf and
-   * passed qualifier. nnnn * @return Last possible Cell on passed Cell's rk:cf and passed
-   * qualifier.
+   * passed qualifier.
+   * @return Last possible Cell on passed Cell's rk:cf and passed qualifier.
    */
   public static Cell createFirstOnRowCol(final Cell cell, byte[] qArray, int qoffest, int qlength) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2856,7 +2861,7 @@ public final class PrivateCellUtil {
    * Creates the first cell with the row/family/qualifier of this cell and the given timestamp. Uses
    * the "maximum" type that guarantees that the new cell is the lowest possible for this
    * combination of row, family, qualifier, and timestamp. This cell's own timestamp is ignored.
-   * @param cell - cell n
+   * @param cell - cell
    */
   public static Cell createFirstOnRowColTS(Cell cell, long ts) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2874,8 +2879,8 @@ public final class PrivateCellUtil {
   }
 
   /**
-   * Create a Cell that is larger than all other possible Cells for the given Cell's row. n
-   * * @return Last possible Cell on passed Cell's row.
+   * Create a Cell that is larger than all other possible Cells for the given Cell's row.
+   * @return Last possible Cell on passed Cell's row.
    */
   public static Cell createLastOnRow(final Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {
@@ -2892,7 +2897,8 @@ public final class PrivateCellUtil {
   /**
    * Create a Cell that is larger than all other possible Cells for the given Cell's rk:cf:q. Used
    * in creating "fake keys" for the multi-column Bloom filter optimization to skip the row/column
-   * we already know is not in the file. n * @return Last possible Cell on passed Cell's rk:cf:q.
+   * we already know is not in the file.
+   * @return Last possible Cell on passed Cell's rk:cf:q.
    */
   public static Cell createLastOnRowCol(final Cell cell) {
     if (cell instanceof ByteBufferExtendedCell) {

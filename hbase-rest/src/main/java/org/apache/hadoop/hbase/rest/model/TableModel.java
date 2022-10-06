@@ -48,7 +48,7 @@ public class TableModel implements Serializable {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public TableModel(String name) {
     super();

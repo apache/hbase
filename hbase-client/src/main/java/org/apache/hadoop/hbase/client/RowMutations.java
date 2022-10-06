@@ -39,8 +39,8 @@ public class RowMutations implements Row {
 
   /**
    * Create a {@link RowMutations} with the specified mutations.
-   * @param mutations the mutations to send n * @throws IOException if any row in mutations is
-   *                  different to another
+   * @param mutations the mutations to send
+   * @throws IOException if any row in mutations is different to another
    */
   public static RowMutations of(List<? extends Mutation> mutations) throws IOException {
     if (CollectionUtils.isEmpty(mutations)) {

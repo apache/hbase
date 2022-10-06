@@ -57,7 +57,7 @@ public class TagCompressionContext {
    * @param out    Stream to which the compressed tags to be written
    * @param in     Source where tags are available
    * @param offset Offset for the tags bytes
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void compressTags(OutputStream out, byte[] in, int offset, int length) throws IOException {
     int pos = offset;
@@ -76,7 +76,7 @@ public class TagCompressionContext {
    * @param out    Stream to which the compressed tags to be written
    * @param in     Source buffer where tags are available
    * @param offset Offset for the tags byte buffer
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void compressTags(OutputStream out, ByteBuffer in, int offset, int length)
     throws IOException {
@@ -101,7 +101,7 @@ public class TagCompressionContext {
    * @param src    Stream where the compressed tags are available
    * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void uncompressTags(InputStream src, byte[] dest, int offset, int length)
     throws IOException {
@@ -133,7 +133,7 @@ public class TagCompressionContext {
    * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
    * @param length Length of all tag bytes
-   * @return bytes count read from source to uncompress all tags. n
+   * @return bytes count read from source to uncompress all tags.
    */
   public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length) throws IOException {
     int srcBeginPos = src.position();

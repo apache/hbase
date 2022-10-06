@@ -692,12 +692,12 @@ public class HFileArchiver {
 
     /**
      * @return if this is a directory, returns all the children in the directory, otherwise returns
-     *         an empty list n
+     *         an empty list
      */
     abstract Collection<File> getChildren() throws IOException;
 
     /**
-     * close any outside readers of the file n
+     * close any outside readers of the file
      */
     abstract void close() throws IOException;
 
@@ -708,7 +708,8 @@ public class HFileArchiver {
     abstract Path getPath();
 
     /**
-     * Move the file to the given destination n * @return <tt>true</tt> on success n
+     * Move the file to the given destination
+     * @return <tt>true</tt> on success
      */
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();

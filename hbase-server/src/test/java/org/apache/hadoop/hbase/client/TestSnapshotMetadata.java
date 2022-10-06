@@ -242,7 +242,7 @@ public class TestSnapshotMetadata {
 
   /**
    * Verify that when the table is empty, making metadata changes after the restore does not affect
-   * the restored table's original metadata n
+   * the restored table's original metadata
    */
   @Test
   public void testDescribeOnEmptyTableMatchesAfterMetadataChangeAndRestore() throws Exception {

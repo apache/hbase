@@ -505,7 +505,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   /**
    * @param s the JSON representation of the filter
-   * @return the filter n
+   * @return the filter
    */
   public static Filter buildFilter(String s) throws Exception {
     FilterModel model =
@@ -516,7 +516,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
 
   /**
    * @param filter the filter
-   * @return the JSON representation of the filter n
+   * @return the JSON representation of the filter
    */
   public static String stringifyFilter(final Filter filter) throws Exception {
     return getJasonProvider().locateMapper(FilterModel.class, MediaType.APPLICATION_JSON_TYPE)
@@ -526,7 +526,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   private static final byte[] COLUMN_DIVIDER = Bytes.toBytes(":");
 
   /**
-   * @param scan the scan specification n
+   * @param scan the scan specification
    */
   public static ScannerModel fromScan(Scan scan) throws Exception {
     ScannerModel model = new ScannerModel();

@@ -168,7 +168,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for batch of scan n
+   * Test from client side for batch of scan
    */
   @Test
   public void testScanBatch() throws Exception {
@@ -344,7 +344,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Run through a variety of test configurations with a small scan nnnnn
+   * Run through a variety of test configurations with a small scan
    */
   private void testSmallScan(Table table, boolean reversed, int rows, int columns)
     throws Exception {
@@ -385,7 +385,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for get with maxResultPerCF set n
+   * Test from client side for get with maxResultPerCF set
    */
   @Test
   public void testGetMaxResults() throws Exception {
@@ -502,7 +502,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for scan with maxResultPerCF set n
+   * Test from client side for scan with maxResultPerCF set
    */
   @Test
   public void testScanMaxResults() throws Exception {
@@ -550,7 +550,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for get with rowOffset n
+   * Test from client side for get with rowOffset
    */
   @Test
   public void testGetRowOffset() throws Exception {
@@ -666,7 +666,7 @@ public class TestScannersFromClientSide {
   }
 
   /**
-   * Test from client side for scan while the region is reopened on the same region server. n
+   * Test from client side for scan while the region is reopened on the same region server.
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {

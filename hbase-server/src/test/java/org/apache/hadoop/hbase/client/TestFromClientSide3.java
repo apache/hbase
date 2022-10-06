@@ -989,7 +989,7 @@ public class TestFromClientSide3 {
    * to assure cells in memstore are stamped with seqid/mvcc. If cells without mvcc(A.K.A mvcc=0)
    * are put into memstore, then a scanner with a smaller readpoint can see these data, which
    * disobey the multi version concurrency control rules. This test case is to reproduce this
-   * scenario. n
+   * scenario.
    */
   @Test
   public void testMVCCUsingMVCCPreAssign() throws IOException, InterruptedException {

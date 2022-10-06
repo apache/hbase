@@ -80,7 +80,7 @@ public interface MetricsRESTSource extends BaseSource, JvmPauseMonitorSource {
   void incrementSucessfulPutRequests(int inc);
 
   /**
-   * Increment the number of successful Delete requests. n
+   * Increment the number of successful Delete requests.
    */
   void incrementSucessfulDeleteRequests(int inc);
 

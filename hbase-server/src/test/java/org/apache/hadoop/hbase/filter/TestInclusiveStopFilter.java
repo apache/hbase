@@ -52,7 +52,7 @@ public class TestInclusiveStopFilter {
   }
 
   /**
-   * Tests identification of the stop row n
+   * Tests identification of the stop row
    */
   @Test
   public void testStopRowIdentification() throws Exception {
@@ -60,7 +60,7 @@ public class TestInclusiveStopFilter {
   }
 
   /**
-   * Tests serialization n
+   * Tests serialization
    */
   @Test
   public void testSerialization() throws Exception {

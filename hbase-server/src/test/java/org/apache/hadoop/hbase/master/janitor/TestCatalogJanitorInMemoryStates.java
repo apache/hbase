@@ -173,8 +173,8 @@ public class TestCatalogJanitorInMemoryStates {
 
   /*
    * Wait on region split. May return because we waited long enough on the split and it didn't
-   * happen. Caller should check. n * @return Daughter regions; caller needs to check table actually
-   * split.
+   * happen. Caller should check.
+   * @return Daughter regions; caller needs to check table actually split.
    */
   private PairOfSameType<RegionInfo> waitOnDaughters(final RegionInfo r) throws IOException {
     long start = EnvironmentEdgeManager.currentTime();

@@ -104,9 +104,10 @@ class CellBlockBuilder {
 
   /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
-   * <code>compressor</code>. nnn * @return Null or byte buffer filled with a cellblock filled with
-   * passed-in Cells encoded using passed in <code>codec</code> and/or <code>compressor</code>; the
-   * returned buffer has been flipped and is ready for reading. Use limit to find total size. n
+   * <code>compressor</code>.
+   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
+   *         passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has
+   *         been flipped and is ready for reading. Use limit to find total size.
    */
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
     final CellScanner cellScanner) throws IOException {

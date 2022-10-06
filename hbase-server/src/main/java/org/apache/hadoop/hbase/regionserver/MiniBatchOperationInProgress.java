@@ -66,9 +66,7 @@ public class MiniBatchOperationInProgress<T> {
     return this.lastIndexExclusive - this.firstIndex;
   }
 
-  /**
-   * n * @return The operation(Mutation) at the specified position.
-   */
+  /** Returns The operation(Mutation) at the specified position. */
   public T getOperation(int index) {
     return operations[getAbsoluteIndex(index)];
   }
@@ -76,29 +74,25 @@ public class MiniBatchOperationInProgress<T> {
   /**
    * Sets the status code for the operation(Mutation) at the specified position. By setting this
    * status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} can make HRegion to skip
-   * Mutations. nn
+   * Mutations.
    */
   public void setOperationStatus(int index, OperationStatus opStatus) {
     this.retCodeDetails[getAbsoluteIndex(index)] = opStatus;
   }
 
-  /**
-   * n * @return Gets the status code for the operation(Mutation) at the specified position.
-   */
+  /** Returns Gets the status code for the operation(Mutation) at the specified position. */
   public OperationStatus getOperationStatus(int index) {
     return this.retCodeDetails[getAbsoluteIndex(index)];
   }
 
   /**
-   * Sets the walEdit for the operation(Mutation) at the specified position. nn
+   * Sets the walEdit for the operation(Mutation) at the specified position.
    */
   public void setWalEdit(int index, WALEdit walEdit) {
     this.walEditsFromCoprocessors[getAbsoluteIndex(index)] = walEdit;
   }
 
-  /**
-   * n * @return Gets the walEdit for the operation(Mutation) at the specified position.
-   */
+  /** Returns Gets the walEdit for the operation(Mutation) at the specified position. */
   public WALEdit getWalEdit(int index) {
     return this.walEditsFromCoprocessors[getAbsoluteIndex(index)];
   }

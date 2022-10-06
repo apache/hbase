@@ -717,7 +717,7 @@ public class MergeTableRegionsProcedure
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
    * retrieve it.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private ServerName getServerName(final MasterProcedureEnv env) {
     if (regionLocation == null) {

@@ -79,7 +79,7 @@ public class TestMultiTableInputFormatBase {
   /**
    * Test getSplits only puts up one Connection. In past it has put up many Connections. Each
    * Connection setup comes with a fresh new cache so we have to do fresh hit on hbase:meta. Should
-   * only do one Connection when doing getSplits even if a MultiTableInputFormat. n
+   * only do one Connection when doing getSplits even if a MultiTableInputFormat.
    */
   @Test
   public void testMRSplitsConnectionCount() throws IOException {

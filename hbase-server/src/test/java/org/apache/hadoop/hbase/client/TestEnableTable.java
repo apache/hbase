@@ -77,7 +77,7 @@ public class TestEnableTable {
   /**
    * We were only clearing rows that had a hregioninfo column in hbase:meta. Mangled rows that were
    * missing the hregioninfo because of error were being left behind messing up any subsequent table
-   * made with the same name. HBASE-12980 nn
+   * made with the same name. HBASE-12980
    */
   @Test
   public void testDeleteForSureClearsAllTableRowsFromMeta()

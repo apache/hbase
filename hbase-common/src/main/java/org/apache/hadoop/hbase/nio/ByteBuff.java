@@ -85,7 +85,8 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   public abstract int position();
 
   /**
-   * Sets this ByteBuff's position to the given value. n * @return this object
+   * Sets this ByteBuff's position to the given value.
+   * @return this object
    */
   public abstract ByteBuff position(int position);
 
@@ -184,7 +185,7 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   public abstract byte get();
 
   /**
-   * Fetches the byte at the given index. Does not change position of the underlying ByteBuffers n
+   * Fetches the byte at the given index. Does not change position of the underlying ByteBuffers
    * @return the byte at the given index
    */
   public abstract byte get(int index);
@@ -244,7 +245,8 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
   public abstract ByteBuff put(byte[] src, int offset, int length);
 
   /**
-   * Copies from the given byte[] to this ByteBuff n * @return this ByteBuff
+   * Copies from the given byte[] to this ByteBuff
+   * @return this ByteBuff
    * @param src source byte array
    * @return this ByteBuff
    */
@@ -269,14 +271,15 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    * Fetches the short value at the given index. Does not change position of the underlying
    * ByteBuffers. The caller is sure that the index will be after the current position of this
    * ByteBuff. So even if the current short does not fit in the current item we can safely move to
-   * the next item and fetch the remaining bytes forming the short n * @return the short value at
-   * the given index
+   * the next item and fetch the remaining bytes forming the short
+   * @return the short value at the given index
    */
   public abstract short getShort(int index);
 
   /**
    * Fetches the short value at the given offset from current position. Does not change position of
-   * the underlying ByteBuffers. n * @return the short value at the given index.
+   * the underlying ByteBuffers.
+   * @return the short value at the given index.
    */
   public abstract short getShortAfterPosition(int offset);
 
@@ -319,13 +322,15 @@ public abstract class ByteBuff implements HBaseReferenceCounted {
    * Fetches the long at the given index. Does not change position of the underlying ByteBuffers.
    * The caller is sure that the index will be after the current position of this ByteBuff. So even
    * if the current long does not fit in the current item we can safely move to the next item and
-   * fetch the remaining bytes forming the long n * @return the long value at the given index
+   * fetch the remaining bytes forming the long
+   * @return the long value at the given index
    */
   public abstract long getLong(int index);
 
   /**
    * Fetches the long value at the given offset from current position. Does not change position of
-   * the underlying ByteBuffers. n * @return the long value at the given index.
+   * the underlying ByteBuffers.
+   * @return the long value at the given index.
    */
   public abstract long getLongAfterPosition(int offset);
 

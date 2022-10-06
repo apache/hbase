@@ -396,9 +396,6 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     return pool.getSize();
   }
 
-  /**
-   * n
-   */
   public boolean setEnabled(final boolean enabled) {
     return this.enabled.getAndSet(enabled);
   }

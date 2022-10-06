@@ -79,7 +79,7 @@ public class TestWALMethods {
 
   /**
    * Assert that getSplitEditFilesSorted returns files in expected order and that it skips
-   * moved-aside files. n
+   * moved-aside files.
    */
   @Test
   public void testGetSplitEditFilesSorted() throws IOException {

@@ -436,6 +436,7 @@ public final class MobUtils {
   /**
    * Gets the RegionInfo of the mob files. This is a dummy region. The mob files are not saved in a
    * region in HBase. It's internally used only.
+   * @return A dummy mob region info.
    */
   public static RegionInfo getMobRegionInfo(TableName tableName) {
     return RegionInfoBuilder.newBuilder(tableName).setStartKey(MobConstants.MOB_REGION_NAME_BYTES)

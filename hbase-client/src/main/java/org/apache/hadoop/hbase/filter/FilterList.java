@@ -84,7 +84,7 @@ final public class FilterList extends FilterBase {
 
   /**
    * Constructor that takes a var arg number of {@link Filter}s. The default operator MUST_PASS_ALL
-   * is assumed. n
+   * is assumed.
    */
   public FilterList(final Filter... filters) {
     this(Operator.MUST_PASS_ALL, Arrays.asList(filters));
@@ -108,14 +108,14 @@ final public class FilterList extends FilterBase {
   }
 
   /**
-   * Get the operator. n
+   * Get the operator.
    */
   public Operator getOperator() {
     return operator;
   }
 
   /**
-   * Get the filters. n
+   * Get the filters.
    */
   public List<Filter> getFilters() {
     return filterListBase.getFilters();

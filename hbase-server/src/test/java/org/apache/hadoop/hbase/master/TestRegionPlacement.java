@@ -342,7 +342,7 @@ public class TestRegionPlacement {
   /**
    * To verify the region assignment status. It will check the assignment plan consistency between
    * hbase:meta and region servers. Also it will verify weather the number of region movement and
-   * the number regions on the primary region server are expected nnnnn
+   * the number regions on the primary region server are expected
    */
   private void verifyRegionAssignment(FavoredNodesPlan plan, int regionMovementNum,
     int numRegionsOnPrimaryRS) throws InterruptedException, IOException {
@@ -403,7 +403,7 @@ public class TestRegionPlacement {
   /**
    * Verify the number of user regions is assigned to the primary region server based on the plan is
    * expected
-   * @param expectedNum the expected number of assigned regions n
+   * @param expectedNum the expected number of assigned regions
    */
   private void verifyRegionOnPrimaryRS(int expectedNum) throws IOException {
     lastRegionOnPrimaryRSCount = getNumRegionisOnPrimaryRS();
@@ -413,7 +413,7 @@ public class TestRegionPlacement {
   }
 
   /**
-   * Verify all the online region servers has been updated to the latest assignment plan nn
+   * Verify all the online region servers has been updated to the latest assignment plan
    */
   private void verifyRegionServerUpdated(FavoredNodesPlan plan) throws IOException {
     // Verify all region servers contain the correct favored nodes information
@@ -461,7 +461,7 @@ public class TestRegionPlacement {
    * Check whether regions are assigned to servers consistent with the explicit hints that are
    * persisted in the hbase:meta table. Also keep track of the number of the regions are assigned to
    * the primary region server.
-   * @return the number of regions are assigned to the primary region server n
+   * @return the number of regions are assigned to the primary region server
    */
   private int getNumRegionisOnPrimaryRS() throws IOException {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
@@ -528,7 +528,7 @@ public class TestRegionPlacement {
   /**
    * Create a table with specified table name and region number.
    * @param tableName the name of the table to be created
-   * @param regionNum number of regions to create n
+   * @param regionNum number of regions to create
    */
   private static void createTable(TableName tableName, int regionNum) throws IOException {
     int expectedRegions = regionNum;

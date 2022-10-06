@@ -275,7 +275,7 @@ public class ClusterStatus implements ClusterMetrics {
   }
 
   /**
-   * n * @return Server's load or null if not found.
+   * @return Server's load or null if not found.
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 Use
    *             {@link #getLiveServerMetrics} instead.
    */

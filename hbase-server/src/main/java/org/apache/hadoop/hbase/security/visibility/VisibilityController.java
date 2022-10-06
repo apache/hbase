@@ -1012,9 +1012,7 @@ public class VisibilityController implements MasterCoprocessor, RegionCoprocesso
     }
   }
 
-  /**
-   * n * @return NameValuePair of the exception name to stringified version os exception.
-   */
+  /** Returns NameValuePair of the exception name to stringified version os exception. */
   // Copied from ResponseConverter and made private. Only used in here.
   private static NameBytesPair buildException(final Throwable t) {
     NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();

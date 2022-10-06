@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class ImmutableHColumnDescriptor extends HColumnDescriptor {
   /*
-   * Create an unmodifyable copy of an HColumnDescriptor n
+   * Create an unmodifyable copy of an HColumnDescriptor
    */
   ImmutableHColumnDescriptor(final HColumnDescriptor desc) {
     super(desc, false);

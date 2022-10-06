@@ -137,7 +137,7 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Verify the region placement is consistent with the assignment plan nnn
+   * Verify the region placement is consistent with the assignment plan
    */
   public List<AssignmentVerificationReport> verifyRegionPlacement(boolean isDetailMode)
     throws IOException {
@@ -169,10 +169,11 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Generate the assignment plan for the existing table nnnn * @param
-   * munkresForSecondaryAndTertiary if set on true the assignment plan for the tertiary and
-   * secondary will be generated with Munkres algorithm, otherwise will be generated using
-   * placeSecondaryAndTertiaryRS n
+   * Generate the assignment plan for the existing table
+   * @param munkresForSecondaryAndTertiary if set on true the assignment plan for the tertiary and
+   *                                       secondary will be generated with Munkres algorithm,
+   *                                       otherwise will be generated using
+   *                                       placeSecondaryAndTertiaryRS
    */
   private void genAssignmentPlan(TableName tableName,
     SnapshotOfRegionAssignmentFromMeta assignmentSnapshot,
@@ -571,7 +572,7 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Print the assignment plan to the system output stream n
+   * Print the assignment plan to the system output stream
    */
   public static void printAssignmentPlan(FavoredNodesPlan plan) {
     if (plan == null) return;
@@ -614,7 +615,7 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Update the assignment plan to all the region servers nn
+   * Update the assignment plan to all the region servers
    */
   private void updateAssignmentPlanToRegionServers(FavoredNodesPlan plan) throws IOException {
     LOG.info("Start to update the region servers with the new assignment plan");
@@ -730,7 +731,7 @@ public class RegionPlacementMaintainer {
    * as a string) also prints the baseline locality
    * @param movesPerTable     - how many primary regions will move per table
    * @param regionLocalityMap - locality map from FS
-   * @param newPlan           - new assignment plan n
+   * @param newPlan           - new assignment plan
    */
   public void checkDifferencesWithOldPlan(Map<TableName, Integer> movesPerTable,
     Map<String, Map<String, Float>> regionLocalityMap, FavoredNodesPlan newPlan)

@@ -158,7 +158,7 @@ public class TestMajorCompaction {
   }
 
   /**
-   * Run compaction and flushing memstore Assert deletes get cleaned up. n
+   * Run compaction and flushing memstore Assert deletes get cleaned up.
    */
   @Test
   public void testMajorCompaction() throws Exception {
@@ -417,7 +417,7 @@ public class TestMajorCompaction {
   /**
    * Test that on a major compaction, if all cells are expired or deleted, then we'll end up with no
    * product. Make sure scanner over region returns right answer in this case - and that it just
-   * basically works. n
+   * basically works.
    */
   @Test
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {

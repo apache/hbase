@@ -50,7 +50,7 @@ public class TimestampTestBase {
 
   /*
    * Run test that delete works according to description in <a
-   * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>. nnn
+   * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>.
    */
   public static void doTestDelete(final Table table, FlushCache flusher) throws IOException {
     // Add values at various timestamps (Values are timestampes as bytes).
@@ -112,7 +112,7 @@ public class TimestampTestBase {
   /*
    * Assert that returned versions match passed in timestamps and that results are returned in the
    * right order. Assert that values when converted to longs match the corresponding passed
-   * timestamp. nnn
+   * timestamp.
    */
   public static void assertVersions(final Table incommon, final long[] tss) throws IOException {
     // Assert that 'latest' is what we expect.
@@ -158,7 +158,7 @@ public class TimestampTestBase {
   }
 
   /*
-   * Run test scanning different timestamps. nnn
+   * Run test scanning different timestamps.
    */
   public static void doTestTimestampScanning(final Table incommon, final FlushCache flusher)
     throws IOException {
@@ -178,7 +178,8 @@ public class TimestampTestBase {
   }
 
   /*
-   * Assert that the scan returns only values < timestamp. nn * @return Count of items scanned. n
+   * Assert that the scan returns only values < timestamp.
+   * @return Count of items scanned.
    */
   public static int assertScanContentTimestamp(final Table in, final long ts) throws IOException {
     Scan scan = new Scan(HConstants.EMPTY_START_ROW);
@@ -217,7 +218,7 @@ public class TimestampTestBase {
   }
 
   /*
-   * Put values. nnnn
+   * Put values.
    */
   public static void put(final Table loader, final byte[] bytes, final long ts) throws IOException {
     Put put = new Put(ROW, ts);

@@ -56,8 +56,8 @@ public interface ClusterConnection extends Connection {
   /**
    * Use this api to check if the table has been created with the specified number of splitkeys
    * which was used while creating the given table. Note : If this api is used after a table's
-   * region gets splitted, the api may return false. n * tableName n * splitKeys used while creating
-   * table n * if a remote or network exception occurs
+   * region gets splitted, the api may return false. tableName splitKeys used while creating table
+   * if a remote or network exception occurs
    */
   boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException;
 
@@ -260,7 +260,7 @@ public interface ClusterConnection extends Connection {
    * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}. This
    * RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
    * intercepted with the configured {@link RetryingCallerInterceptor}
-   * @param conf configuration n
+   * @param conf configuration
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
 

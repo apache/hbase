@@ -106,7 +106,7 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Check the region's underlying store files, open the files that have not been opened yet, and
-   * remove the store file readers for store files no longer available. n
+   * remove the store file readers for store files no longer available.
    */
   boolean refreshStoreFiles() throws IOException;
 
@@ -216,7 +216,7 @@ public interface Region extends ConfigurationObserver {
    * read lock and checks if the region is closing or closed.
    * <p>
    * {@link #closeRegionOperation} MUST then always be called after the operation has completed,
-   * whether it succeeded or failed. n
+   * whether it succeeded or failed.
    */
   // TODO Exposing this and closeRegionOperation() as we have getRowLock() exposed.
   // Remove if we get rid of exposing getRowLock().
@@ -228,18 +228,18 @@ public interface Region extends ConfigurationObserver {
    * <p>
    * {@link #closeRegionOperation} MUST then always be called after the operation has completed,
    * whether it succeeded or failed.
-   * @param op The operation is about to be taken on the region n
+   * @param op The operation is about to be taken on the region
    */
   void startRegionOperation(Operation op) throws IOException;
 
   /**
-   * Closes the region operation lock. n
+   * Closes the region operation lock.
    */
   void closeRegionOperation() throws IOException;
 
   /**
    * Closes the region operation lock. This needs to be called in the finally block corresponding to
-   * the try block of {@link #startRegionOperation(Operation)} n
+   * the try block of {@link #startRegionOperation(Operation)}
    */
   void closeRegionOperation(Operation op) throws IOException;
 
@@ -281,7 +281,8 @@ public interface Region extends ConfigurationObserver {
   // Region operations
 
   /**
-   * Perform one or more append operations on a row. n * @return result of the operation n
+   * Perform one or more append operations on a row.
+   * @return result of the operation
    */
   Result append(Append append) throws IOException;
 
@@ -292,7 +293,7 @@ public interface Region extends ConfigurationObserver {
    * previous operation in the same batch when performing the operations in the batch.
    * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the OperationStatusCode and the
-   *         exceptionMessage if any. n
+   *         exceptionMessage if any.
    */
   OperationStatus[] batchMutate(Mutation[] mutations) throws IOException;
 
@@ -452,7 +453,7 @@ public interface Region extends ConfigurationObserver {
   CheckAndMutateResult checkAndMutate(CheckAndMutate checkAndMutate) throws IOException;
 
   /**
-   * Deletes the specified cells/row. nn
+   * Deletes the specified cells/row.
    */
   void delete(Delete delete) throws IOException;
 
@@ -476,7 +477,8 @@ public interface Region extends ConfigurationObserver {
    * specified by the {@link Scan}.
    * <p>
    * This Iterator must be closed by the caller.
-   * @param scan configured {@link Scan} n * @throws IOException read exceptions
+   * @param scan configured {@link Scan}
+   * @throws IOException read exceptions
    */
   RegionScanner getScanner(Scan scan) throws IOException;
 
@@ -488,8 +490,8 @@ public interface Region extends ConfigurationObserver {
    * <p>
    * This Iterator must be closed by the caller.
    * @param scan               configured {@link Scan}
-   * @param additionalScanners Any additional scanners to be used n * @throws IOException read
-   *                           exceptions
+   * @param additionalScanners Any additional scanners to be used
+   * @throws IOException read exceptions
    */
   RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException;
 
@@ -497,7 +499,8 @@ public interface Region extends ConfigurationObserver {
   CellComparator getCellComparator();
 
   /**
-   * Perform one or more increment operations on a row. n * @return result of the operation n
+   * Perform one or more increment operations on a row.
+   * @return result of the operation
    */
   Result increment(Increment increment) throws IOException;
 
@@ -505,7 +508,7 @@ public interface Region extends ConfigurationObserver {
    * Performs multiple mutations atomically on a single row.
    * @param mutations object that specifies the set of mutations to perform atomically
    * @return results of Increment/Append operations. If no Increment/Append operations, it returns
-   *         null n
+   *         null
    */
   Result mutateRow(RowMutations mutations) throws IOException;
 
@@ -518,7 +521,7 @@ public interface Region extends ConfigurationObserver {
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce      Optional nonce of the operation (unique random id to ensure "more
    *                   idempotence") If multiple rows are locked care should be taken that
-   *                   <code>rowsToLock</code> is sorted in order to avoid deadlocks. n
+   *                   <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    */
   // TODO Should not be exposing with params nonceGroup, nonce. Change when doing the jira for
   // Changing processRowsWithLocks and RowProcessor
@@ -567,7 +570,7 @@ public interface Region extends ConfigurationObserver {
     throws IOException;
 
   /**
-   * Puts some data in the table. nn
+   * Puts some data in the table.
    */
   void put(Put put) throws IOException;
 

@@ -462,7 +462,7 @@ public abstract class TestReplicationSourceManager {
   /**
    * Test whether calling removePeer() on a ReplicationSourceManager that failed on initializing the
    * corresponding ReplicationSourceInterface correctly cleans up the corresponding replication
-   * queue and ReplicationPeer. See HBASE-16096. n
+   * queue and ReplicationPeer. See HBASE-16096.
    */
   @Test
   public void testPeerRemovalCleanup() throws Exception {
@@ -555,8 +555,8 @@ public abstract class TestReplicationSourceManager {
   }
 
   /**
-   * Add a peer and wait for it to initialize nn * @param waitForSource Whether to wait for
-   * replication source to initialize n
+   * Add a peer and wait for it to initialize
+   * @param waitForSource Whether to wait for replication source to initialize
    */
   private void addPeerAndWait(final String peerId, final ReplicationPeerConfig peerConfig,
     final boolean waitForSource) throws Exception {
@@ -594,7 +594,7 @@ public abstract class TestReplicationSourceManager {
   }
 
   /**
-   * Remove a peer and wait for it to get cleaned up nn
+   * Remove a peer and wait for it to get cleaned up
    */
   private void removePeerAndWait(final String peerId) throws Exception {
     final ReplicationPeers rp = manager.getReplicationPeers();

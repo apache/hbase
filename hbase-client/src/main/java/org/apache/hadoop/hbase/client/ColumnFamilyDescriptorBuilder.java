@@ -866,8 +866,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set whether the tags should be compressed along with DataBlockEncoding. When no
-     * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
-     * invocation)
+     * DataBlockEncoding is been used, this is having no effect.
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setCompressTags(boolean compressTags) {
       return setValue(COMPRESS_TAGS_BYTES, String.valueOf(compressTags));

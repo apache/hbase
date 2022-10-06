@@ -42,7 +42,7 @@ public class TestPageFilter {
   static final int ROW_LIMIT = 3;
 
   /**
-   * test page size filter n
+   * test page size filter
    */
   @Test
   public void testPageSize() throws Exception {
@@ -51,7 +51,7 @@ public class TestPageFilter {
   }
 
   /**
-   * Test filter serialization n
+   * Test filter serialization
    */
   @Test
   public void testSerialization() throws Exception {

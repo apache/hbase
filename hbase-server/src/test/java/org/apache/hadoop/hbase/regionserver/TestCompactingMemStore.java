@@ -152,7 +152,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   }
 
   /**
-   * A simple test which verifies the 3 possible states when scanning across snapshot. nn
+   * A simple test which verifies the 3 possible states when scanning across snapshot.
    */
   @Override
   @Test
@@ -194,7 +194,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   }
 
   /**
-   * Test memstore snapshots n
+   * Test memstore snapshots
    */
   @Override
   @Test
@@ -213,7 +213,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Test getNextRow from memstore n
+   * Test getNextRow from memstore
    */
   @Override
   @Test
@@ -300,7 +300,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
   /**
    * Add keyvalues with a fixed memstoreTs, and checks that memstore size is decreased as older
-   * keyvalues are deleted from the memstore. n
+   * keyvalues are deleted from the memstore.
    */
   @Override
   @Test
@@ -338,7 +338,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
 
   /**
    * Tests that the timeOfOldestEdit is updated correctly for the various edit operations in
-   * memstore. n
+   * memstore.
    */
   @Override
   @Test

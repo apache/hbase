@@ -66,7 +66,7 @@ public class LocalHBaseCluster {
   private final Class<? extends HRegionServer> regionServerClass;
 
   /**
-   * Constructor. nn
+   * Constructor.
    */
   public LocalHBaseCluster(final Configuration conf) throws IOException {
     this(conf, DEFAULT_NO);
@@ -75,7 +75,7 @@ public class LocalHBaseCluster {
   /**
    * Constructor.
    * @param conf            Configuration to use. Post construction has the master's address.
-   * @param noRegionServers Count of regionservers to start. n
+   * @param noRegionServers Count of regionservers to start.
    */
   public LocalHBaseCluster(final Configuration conf, final int noRegionServers) throws IOException {
     this(conf, 1, 0, noRegionServers, getMasterImplementation(conf),
@@ -86,7 +86,7 @@ public class LocalHBaseCluster {
    * Constructor.
    * @param conf            Configuration to use. Post construction has the active master address.
    * @param noMasters       Count of masters to start.
-   * @param noRegionServers Count of regionservers to start. n
+   * @param noRegionServers Count of regionservers to start.
    */
   public LocalHBaseCluster(final Configuration conf, final int noMasters, final int noRegionServers)
     throws IOException {
@@ -116,7 +116,7 @@ public class LocalHBaseCluster {
    * Constructor.
    * @param conf            Configuration to use. Post construction has the master's address.
    * @param noMasters       Count of masters to start.
-   * @param noRegionServers Count of regionservers to start. nnn
+   * @param noRegionServers Count of regionservers to start.
    */
   @SuppressWarnings("unchecked")
   public LocalHBaseCluster(final Configuration conf, final int noMasters,
@@ -240,9 +240,7 @@ public class LocalHBaseCluster {
     });
   }
 
-  /**
-   * n * @return region server
-   */
+  /** Returns region server */
   public HRegionServer getRegionServer(int serverNumber) {
     return regionThreads.get(serverNumber).getRegionServer();
   }
@@ -427,7 +425,7 @@ public class LocalHBaseCluster {
   }
 
   /**
-   * Test things basically work. nn
+   * Test things basically work.
    */
   public static void main(String[] args) throws IOException {
     Configuration conf = HBaseConfiguration.create();

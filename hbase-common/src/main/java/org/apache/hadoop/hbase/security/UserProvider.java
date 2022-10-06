@@ -181,7 +181,7 @@ public class UserProvider extends BaseConfigurable {
 
   /**
    * Wraps an underlying {@code UserGroupInformation} instance.
-   * @param ugi The base Hadoop user n
+   * @param ugi The base Hadoop user
    */
   public User create(UserGroupInformation ugi) {
     if (ugi == null) {
