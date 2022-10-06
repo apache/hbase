@@ -1642,10 +1642,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
-   * in a Scanner. Letting go of your references to the scanner is sufficient. Store configuration.
-   * True if we should cache blocks read in by this scanner. Use positional read rather than
-   * seek+read if true (pread is better for random reads, seek+read is better scanning). is scanner
-   * being used for a compaction?
+   * in a Scanner. Letting go of your references to the scanner is sufficient.
+   * @param conf         Store configuration.
+   * @param cacheBlocks  True if we should cache blocks read in by this scanner.
+   * @param pread        Use positional read rather than seek+read if true (pread is better for
+   *                     random reads, seek+read is better scanning).
+   * @param isCompaction is scanner being used for a compaction?
    * @return Scanner on this file.
    */
   @Override
