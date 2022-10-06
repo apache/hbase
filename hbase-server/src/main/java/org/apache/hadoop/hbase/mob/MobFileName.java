@@ -51,8 +51,11 @@ public final class MobFileName {
   public static final String REGION_SEP = "_";
 
   /**
-   * The start key. The string of the latest timestamp of cells in this file, the format is
-   * yyyymmdd. The uuid
+   * Creates an instance of MobFileName
+   * @param startKey   The start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
+   * @param uuid       The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(byte[] startKey, String date, String uuid, String regionName) {
@@ -64,8 +67,11 @@ public final class MobFileName {
   }
 
   /**
-   * The md5 hex string of the start key. The string of the latest timestamp of cells in this file,
-   * the format is yyyymmdd. The uuid
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
+   * @param uuid       The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(String startKey, String date, String uuid, String regionName) {
@@ -77,8 +83,10 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName The md5 hex string of the start key. The string of the
-   * latest timestamp of cells in this file, the format is yyyymmdd.
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
    * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
@@ -88,8 +96,10 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName The md5 hex string of the start key. The string of the
-   * latest timestamp of cells in this file, the format is yyyymmdd.
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
    * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
