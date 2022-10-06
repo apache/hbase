@@ -374,7 +374,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements SplitLog
    * in a cluster.
    * <p>
    * Synchronization using <code>taskReadySeq</code> ensures that it will try to grab every task
-   * that has been put up n
+   * that has been put up
    */
   @Override
   public void taskLoop() throws InterruptedException {
@@ -534,7 +534,7 @@ public class ZkSplitLogWorkerCoordination extends ZKListener implements SplitLog
    */
   /**
    * endTask() can fail and the only way to recover out of it is for the
-   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to timeout the task node. nn
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to timeout the task node.
    */
   @Override
   public void endTask(SplitLogTask slt, LongAdder ctr, SplitTaskDetails details) {

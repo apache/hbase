@@ -78,7 +78,7 @@ public class DistributedHBaseCluster extends HBaseClusterInterface {
   }
 
   /**
-   * Returns a ClusterStatus for this HBase cluster n
+   * Returns a ClusterStatus for this HBase cluster
    */
   @Override
   public ClusterMetrics getClusterMetrics() throws IOException {

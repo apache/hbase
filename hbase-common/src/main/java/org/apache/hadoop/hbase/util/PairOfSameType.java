@@ -42,14 +42,14 @@ public class PairOfSameType<T> implements Iterable<T> {
   }
 
   /**
-   * Return the first element stored in the pair. n
+   * Return the first element stored in the pair.
    */
   public T getFirst() {
     return first;
   }
 
   /**
-   * Return the second element stored in the pair. n
+   * Return the second element stored in the pair.
    */
   public T getSecond() {
     return second;

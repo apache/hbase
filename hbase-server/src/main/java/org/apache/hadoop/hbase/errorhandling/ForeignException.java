@@ -49,7 +49,7 @@ public class ForeignException extends IOException {
 
   /**
    * Create a new ForeignException that can be serialized. It is assumed that this came form a local
-   * source. nn
+   * source.
    */
   public ForeignException(String source, Throwable cause) {
     super(cause);
@@ -60,7 +60,7 @@ public class ForeignException extends IOException {
 
   /**
    * Create a new ForeignException that can be serialized. It is assumed that this is locally
-   * generated. nn
+   * generated.
    */
   public ForeignException(String source, String msg) {
     super(new IllegalArgumentException(msg));
@@ -146,8 +146,8 @@ public class ForeignException extends IOException {
   }
 
   /**
-   * Takes a series of bytes and tries to generate an ForeignException instance for it. n * @return
-   * the ForeignExcpetion instance
+   * Takes a series of bytes and tries to generate an ForeignException instance for it.
+   * @return the ForeignExcpetion instance
    * @throws InvalidProtocolBufferException if there was deserialization problem this is thrown.
    */
   public static ForeignException deserialize(byte[] bytes) throws IOException {

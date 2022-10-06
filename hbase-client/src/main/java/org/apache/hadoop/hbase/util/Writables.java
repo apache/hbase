@@ -91,7 +91,7 @@ public class Writables {
    * @return The passed Writable after its readFields has been called fed by the passed
    *         <code>bytes</code> array or IllegalArgumentException if passed null or an empty
    *         <code>bytes</code> array.
-   * @throws IOException e n
+   * @throws IOException e
    */
   public static Writable getWritable(final byte[] bytes, final Writable w) throws IOException {
     return getWritable(bytes, 0, bytes.length, w);
@@ -107,7 +107,7 @@ public class Writables {
    * @return The passed Writable after its readFields has been called fed by the passed
    *         <code>bytes</code> array or IllegalArgumentException if passed null or an empty
    *         <code>bytes</code> array.
-   * @throws IOException e n
+   * @throws IOException e
    */
   public static Writable getWritable(final byte[] bytes, final int offset, final int length,
     final Writable w) throws IOException {

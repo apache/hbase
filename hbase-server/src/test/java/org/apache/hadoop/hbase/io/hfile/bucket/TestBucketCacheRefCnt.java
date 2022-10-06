@@ -317,8 +317,6 @@ public class TestBucketCacheRefCnt {
    *    by Thread2 and the content of Block1 would be overwritten after it is freed, which may
    *    cause a serious error.
    * </pre>
-   *
-   * n
    */
   @Test
   public void testReplacingBlockAndGettingBlockConcurrently() throws Exception {

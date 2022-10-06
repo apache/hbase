@@ -74,14 +74,14 @@ public class Pair<T1, T2> implements Serializable {
   }
 
   /**
-   * Return the first element stored in the pair. n
+   * Return the first element stored in the pair.
    */
   public T1 getFirst() {
     return first;
   }
 
   /**
-   * Return the second element stored in the pair. n
+   * Return the second element stored in the pair.
    */
   public T2 getSecond() {
     return second;

@@ -1110,7 +1110,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   /**
    * Get the number of regions of the table that have been updated by the alter.
    * @return Pair indicating the number of regions updated Pair.getFirst is the regions that are yet
-   *         to be updated Pair.getSecond is the total number of regions of the table n
+   *         to be updated Pair.getSecond is the total number of regions of the table
    */
   @Override
   public GetSchemaAlterStatusResponse getSchemaAlterStatus(RpcController controller,
@@ -1137,7 +1137,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
    * Get list of TableDescriptors for requested tables.
    * @param c   Unused (set to null).
    * @param req GetTableDescriptorsRequest that contains: - tableNames: requested tables, or if
-   *            empty, all are requested. nn
+   *            empty, all are requested.
    */
   @Override
   public GetTableDescriptorsResponse getTableDescriptors(RpcController c,
@@ -1174,7 +1174,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   /**
    * Get list of userspace table names
    * @param controller Unused (set to null).
-   * @param req        GetTableNamesRequest nn
+   * @param req        GetTableNamesRequest
    */
   @Override
   public GetTableNamesResponse getTableNames(RpcController controller, GetTableNamesRequest req)

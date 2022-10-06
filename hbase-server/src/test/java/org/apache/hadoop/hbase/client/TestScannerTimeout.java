@@ -97,7 +97,7 @@ public class TestScannerTimeout {
 
   /**
    * Test that scanner can continue even if the region server it was reading from failed. Before
-   * 2772, it reused the same scanner id. n
+   * 2772, it reused the same scanner id.
    */
   @Test
   public void test2772() throws Exception {
@@ -127,7 +127,7 @@ public class TestScannerTimeout {
 
   /**
    * Test that scanner won't miss any rows if the region server it was reading from failed. Before
-   * 3686, it would skip rows in the scan. n
+   * 3686, it would skip rows in the scan.
    */
   @Test
   public void test3686a() throws Exception {
@@ -170,7 +170,7 @@ public class TestScannerTimeout {
 
   /**
    * Make sure that no rows are lost if the scanner timeout is longer on the client than the server,
-   * and the scan times out on the server but not the client. n
+   * and the scan times out on the server but not the client.
    */
   @Test
   public void test3686b() throws Exception {

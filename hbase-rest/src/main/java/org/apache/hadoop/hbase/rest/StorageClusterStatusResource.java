@@ -51,7 +51,7 @@ public class StorageClusterStatusResource extends ResourceBase {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public StorageClusterStatusResource() throws IOException {
     super();

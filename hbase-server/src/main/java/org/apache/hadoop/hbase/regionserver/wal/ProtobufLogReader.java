@@ -271,7 +271,7 @@ public class ProtobufLogReader extends ReaderBase {
    * </ul>
    * <p>
    * In case the trailer size > this.trailerMaxSize, it is read after a WARN message.
-   * @return true if a valid trailer is present n
+   * @return true if a valid trailer is present
    */
   private boolean setTrailerIfPresent() {
     try {

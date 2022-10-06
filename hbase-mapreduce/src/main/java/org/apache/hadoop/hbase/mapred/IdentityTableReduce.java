@@ -38,7 +38,7 @@ public class IdentityTableReduce extends MapReduceBase
   private static final Logger LOG = LoggerFactory.getLogger(IdentityTableReduce.class.getName());
 
   /**
-   * No aggregation, output pairs of (key, record) nnnnn
+   * No aggregation, output pairs of (key, record)
    */
   public void reduce(ImmutableBytesWritable key, Iterator<Put> values,
     OutputCollector<ImmutableBytesWritable, Put> output, Reporter reporter) throws IOException {

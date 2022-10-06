@@ -64,7 +64,7 @@ public interface RpcServerInterface {
   void addCallSize(long diff);
 
   /**
-   * Refresh authentication manager policy. n
+   * Refresh authentication manager policy.
    */
   void refreshAuthManager(Configuration conf, PolicyProvider pp);
 

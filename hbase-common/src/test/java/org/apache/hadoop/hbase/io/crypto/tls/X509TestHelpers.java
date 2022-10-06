@@ -371,7 +371,7 @@ final class X509TestHelpers {
    * @param cert        the certificate to serialize.
    * @param keyPassword an optional password to encrypt the trust store. If empty or null, the cert
    *                    will not be encrypted.
-   * @return the serialized bytes of the BCFKS trust store. nn
+   * @return the serialized bytes of the BCFKS trust store.
    */
   public static byte[] certToBCFKSTrustStoreBytes(X509Certificate cert, char[] keyPassword)
     throws IOException, GeneralSecurityException {
@@ -434,7 +434,7 @@ final class X509TestHelpers {
    * @param privateKey  the private key to serialize.
    * @param keyPassword an optional key password. If empty or null, the private key will not be
    *                    encrypted.
-   * @return the serialized bytes of the BCFKS key store. nn
+   * @return the serialized bytes of the BCFKS key store.
    */
   public static byte[] certAndPrivateKeyToBCFKSBytes(X509Certificate cert, PrivateKey privateKey,
     char[] keyPassword) throws IOException, GeneralSecurityException {

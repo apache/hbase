@@ -34,8 +34,7 @@ public class NotAllMetaRegionsOnlineException extends DoNotRetryIOException {
   }
 
   /**
-   * n
-   */
+   *   */
   public NotAllMetaRegionsOnlineException(String message) {
     super(message);
   }

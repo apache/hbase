@@ -34,14 +34,14 @@ public class TableRecordReader implements RecordReader<ImmutableBytesWritable, R
   private TableRecordReaderImpl recordReaderImpl = new TableRecordReaderImpl();
 
   /**
-   * Restart from survivable exceptions by creating a new scanner. nn
+   * Restart from survivable exceptions by creating a new scanner.
    */
   public void restart(byte[] firstRow) throws IOException {
     this.recordReaderImpl.restart(firstRow);
   }
 
   /**
-   * Build the scanner. Not done in constructor to allow for extension. n
+   * Build the scanner. Not done in constructor to allow for extension.
    */
   public void init() throws IOException {
     this.recordReaderImpl.restart(this.recordReaderImpl.getStartRow());
@@ -82,26 +82,28 @@ public class TableRecordReader implements RecordReader<ImmutableBytesWritable, R
     this.recordReaderImpl.setRowFilter(rowFilter);
   }
 
+  @Override
   public void close() {
     this.recordReaderImpl.close();
   }
 
   /**
-   * n *
    * @see org.apache.hadoop.mapred.RecordReader#createKey()
    */
+  @Override
   public ImmutableBytesWritable createKey() {
     return this.recordReaderImpl.createKey();
   }
 
   /**
-   * n *
    * @see org.apache.hadoop.mapred.RecordReader#createValue()
    */
+  @Override
   public Result createValue() {
     return this.recordReaderImpl.createValue();
   }
 
+  @Override
   public long getPos() {
 
     // This should be the ordinal tuple in the range;
@@ -109,6 +111,7 @@ public class TableRecordReader implements RecordReader<ImmutableBytesWritable, R
     return this.recordReaderImpl.getPos();
   }
 
+  @Override
   public float getProgress() {
     // Depends on the total number of tuples and getPos
     return this.recordReaderImpl.getPos();
@@ -117,8 +120,9 @@ public class TableRecordReader implements RecordReader<ImmutableBytesWritable, R
   /**
    * @param key   HStoreKey as input key.
    * @param value MapWritable as input value
-   * @return true if there was more data n
+   * @return true if there was more data
    */
+  @Override
   public boolean next(ImmutableBytesWritable key, Result value) throws IOException {
     return this.recordReaderImpl.next(key, value);
   }

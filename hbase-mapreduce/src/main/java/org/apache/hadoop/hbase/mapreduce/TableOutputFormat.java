@@ -90,7 +90,8 @@ public class TableOutputFormat<KEY> extends OutputFormat<KEY, Mutation> implemen
     private BufferedMutator mutator;
 
     /**
-     * n *
+     *
+    *
      */
     public TableRecordWriter() throws IOException {
       String tableName = conf.get(OUTPUT_TABLE);

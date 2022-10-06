@@ -58,8 +58,8 @@ public class KeyValueUtil {
 
   /**
    * Returns number of bytes this cell's key part would have been used if serialized as in
-   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type. n * @return the
-   * key length
+   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type.
+   * @return the key length
    */
   public static int keyLength(final Cell cell) {
     return keyLength(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength());
@@ -96,8 +96,8 @@ public class KeyValueUtil {
   }
 
   /**
-   * The position will be set to the beginning of the new ByteBuffer n * @return the Bytebuffer
-   * containing the key part of the cell
+   * The position will be set to the beginning of the new ByteBuffer
+   * @return the Bytebuffer containing the key part of the cell
    */
   public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
@@ -107,8 +107,8 @@ public class KeyValueUtil {
   }
 
   /**
-   * Copies the key to a new KeyValue n * @return the KeyValue that consists only the key part of
-   * the incoming cell
+   * Copies the key to a new KeyValue
+   * @return the KeyValue that consists only the key part of the incoming cell
    */
   public static KeyValue toNewKeyCell(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
@@ -203,7 +203,7 @@ public class KeyValueUtil {
 
   /**
    * Creates a new KeyValue object positioned in the supplied ByteBuffer and sets the ByteBuffer's
-   * position to the start of the next KeyValue. Does not allocate a new array or copy data. nnn
+   * position to the start of the next KeyValue. Does not allocate a new array or copy data.
    */
   public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion,
     boolean includesTags) {
@@ -236,7 +236,8 @@ public class KeyValueUtil {
 
   /**
    * Decrement the timestamp. For tests (currently wasteful) Remember timestamps are sorted reverse
-   * chronologically. n * @return previous key
+   * chronologically.
+   * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
     return createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
@@ -246,9 +247,8 @@ public class KeyValueUtil {
   /**
    * Create a KeyValue for the specified row, family and qualifier that would be larger than or
    * equal to all other possible KeyValues that have the same row, family, qualifier. Used for
-   * reseeking. Should NEVER be returned to a client. n * row key n * row offset n * row length n *
-   * family name n * family offset n * family length n * column qualifier n * qualifier offset n *
-   * qualifier length
+   * reseeking. Should NEVER be returned to a client. row key row offset row length family name
+   * family offset family length column qualifier qualifier offset qualifier length
    * @return Last possible key on passed row, family, qualifier.
    */
   public static KeyValue createLastOnRow(final byte[] row, final int roffset, final int rlength,
@@ -408,11 +408,11 @@ public class KeyValueUtil {
 
   /*************** misc **********************************/
   /**
-   * n * @return <code>cell</code> if it is an object of class {@link KeyValue} else we will return
-   * a new {@link KeyValue} instance made from <code>cell</code> Note: Even if the cell is an object
-   * of any of the subclass of {@link KeyValue}, we will create a new {@link KeyValue} object
-   * wrapping same buffer. This API is used only with MR based tools which expect the type to be
-   * exactly KeyValue. That is the reason for doing this way.
+   * @return <code>cell</code> if it is an object of class {@link KeyValue} else we will return a
+   *         new {@link KeyValue} instance made from <code>cell</code> Note: Even if the cell is an
+   *         object of any of the subclass of {@link KeyValue}, we will create a new
+   *         {@link KeyValue} object wrapping same buffer. This API is used only with MR based tools
+   *         which expect the type to be exactly KeyValue. That is the reason for doing this way.
    * @deprecated without any replacement.
    */
   @Deprecated
@@ -444,8 +444,9 @@ public class KeyValueUtil {
   }
 
   /**
-   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable. nn
-   * * @return Length written on stream n * @see #create(DataInput) for the inverse function
+   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable.
+   * @return Length written on stream
+   * @see #create(DataInput) for the inverse function
    */
   public static long write(final KeyValue kv, final DataOutput out) throws IOException {
     // This is how the old Writables write used to serialize KVs. Need to figure
@@ -639,7 +640,7 @@ public class KeyValueUtil {
    * @param in       inputStream to read.
    * @param withTags whether the keyvalue should include tags are not
    * @return Created KeyValue OR if we find a length of zero, we will return null which can be
-   *         useful marking a stream as done. n
+   *         useful marking a stream as done.
    */
   public static KeyValue createKeyValueFromInputStream(InputStream in, boolean withTags)
     throws IOException {
@@ -663,24 +664,24 @@ public class KeyValueUtil {
   }
 
   /**
-   * n * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert
-   * hfile index members to KeyValues.
+   * Returns a KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b) {
     return createKeyValueFromKey(b, 0, b.length);
   }
 
   /**
-   * n * @return A KeyValue made of a byte buffer that holds the key-only part. Needed to convert
-   * hfile index members to KeyValues.
+   * Return a KeyValue made of a byte buffer that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final ByteBuffer bb) {
     return createKeyValueFromKey(bb.array(), bb.arrayOffset(), bb.limit());
   }
 
   /**
-   * nnn * @return A KeyValue made of a byte array that holds the key-only part. Needed to convert
-   * hfile index members to KeyValues.
+   * Return a KeyValue made of a byte array that holds the key-only part. Needed to convert hfile
+   * index members to KeyValues.
    */
   public static KeyValue createKeyValueFromKey(final byte[] b, final int o, final int l) {
     byte[] newb = new byte[l + KeyValue.ROW_OFFSET];
@@ -691,19 +692,19 @@ public class KeyValueUtil {
   }
 
   /**
-   * n * Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes copied
-   * from the steam.
+   * Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes copied from
+   * the steam.
    * @return KeyValue created by deserializing from <code>in</code> OR if we find a length of zero,
-   *         we will return null which can be useful marking a stream as done. n
+   *         we will return null which can be useful marking a stream as done.
    */
   public static KeyValue create(final DataInput in) throws IOException {
     return create(in.readInt(), in);
   }
 
   /**
-   * Create a KeyValue reading <code>length</code> from <code>in</code> nn * @return Created
-   * KeyValue OR if we find a length of zero, we will return null which can be useful marking a
-   * stream as done. n
+   * Create a KeyValue reading <code>length</code> from <code>in</code>
+   * @return Created KeyValue OR if we find a length of zero, we will return null which can be
+   *         useful marking a stream as done.
    */
   public static KeyValue create(int length, final DataInput in) throws IOException {
 

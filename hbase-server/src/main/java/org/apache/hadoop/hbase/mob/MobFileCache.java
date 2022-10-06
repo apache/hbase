@@ -195,7 +195,7 @@ public class MobFileCache {
    * @param fs        The current file system.
    * @param path      The file path.
    * @param cacheConf The current MobCacheConfig
-   * @return A opened mob file. n
+   * @return A opened mob file.
    */
   public MobFile openFile(FileSystem fs, Path path, CacheConfig cacheConf) throws IOException {
     if (!isCacheEnabled) {

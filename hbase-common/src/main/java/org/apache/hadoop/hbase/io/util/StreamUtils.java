@@ -118,8 +118,8 @@ public class StreamUtils {
   }
 
   /**
-   * Reads a varInt value stored in an array. n * Input array where the varInt is available n *
-   * Offset in the input array where varInt is available
+   * Reads a varInt value stored in an array. Input array where the varInt is available Offset in
+   * the input array where varInt is available
    * @return A pair of integers in which first value is the actual decoded varInt value and second
    *         value as number of bytes taken by this varInt for it's storage in the input array.
    * @throws IOException When varint is malformed and not able to be read correctly

@@ -577,7 +577,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   /**
-   * get NamedQueue Provider to add different logs to ringbuffer n
+   * get NamedQueue Provider to add different logs to ringbuffer
    */
   public NamedQueueRecorder getNamedQueueRecorder() {
     return this.namedQueueRecorder;

@@ -55,7 +55,7 @@ public class RegionsResource extends ResourceBase {
   TableResource tableResource;
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public RegionsResource(TableResource tableResource) throws IOException {
     super();

@@ -110,8 +110,7 @@ public class MemStoreFlusher implements FlushRequester {
   };
 
   /**
-   * nn
-   */
+   *   */
   public MemStoreFlusher(final Configuration conf, final HRegionServer server) {
     super();
     this.conf = conf;
@@ -536,8 +535,9 @@ public class MemStoreFlusher implements FlushRequester {
 
   /**
    * A flushRegion that checks store file count. If too many, puts the flush on delay queue to retry
-   * later. n * @return true if the region was successfully flushed, false otherwise. If false,
-   * there will be accompanying log messages explaining why the region was not flushed.
+   * later.
+   * @return true if the region was successfully flushed, false otherwise. If false, there will be
+   *         accompanying log messages explaining why the region was not flushed.
    */
   private boolean flushRegion(final FlushRegionEntry fqe) {
     HRegion region = fqe.region;
@@ -790,7 +790,7 @@ public class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Register a MemstoreFlushListener n
+   * Register a MemstoreFlushListener
    */
   @Override
   public void registerFlushRequestListener(final FlushRequestListener listener) {
@@ -798,8 +798,8 @@ public class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Unregister the listener from MemstoreFlushListeners n * @return true when passed listener is
-   * unregistered successfully.
+   * Unregister the listener from MemstoreFlushListeners
+   * @return true when passed listener is unregistered successfully.
    */
   @Override
   public boolean unregisterFlushRequestListener(final FlushRequestListener listener) {
@@ -807,7 +807,7 @@ public class MemStoreFlusher implements FlushRequester {
   }
 
   /**
-   * Sets the global memstore limit to a new size. n
+   * Sets the global memstore limit to a new size.
    */
   @Override
   public void setGlobalMemStoreLimit(long globalMemStoreSize) {
@@ -843,9 +843,7 @@ public class MemStoreFlusher implements FlushRequester {
       this.tracker = tracker;
     }
 
-    /**
-     * n * @return True if we have been delayed > <code>maximumWait</code> milliseconds.
-     */
+    /** Returns True if we have been delayed > <code>maximumWait</code> milliseconds. */
     public boolean isMaximumWait(final long maximumWait) {
       return (EnvironmentEdgeManager.currentTime() - this.createTime) > maximumWait;
     }

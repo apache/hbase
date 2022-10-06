@@ -210,7 +210,7 @@ public class HStoreFile implements StoreFile {
    *                       actually present in the HFile, because column family configuration might
    *                       change. If this is {@link BloomType#NONE}, the existing Bloom filter is
    *                       ignored.
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false. n
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica) throws IOException {
@@ -567,7 +567,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * @param evictOnClose whether to evict blocks belonging to this file n
+   * @param evictOnClose whether to evict blocks belonging to this file
    */
   public synchronized void closeStoreFile(boolean evictOnClose) throws IOException {
     if (this.initialReader != null) {
@@ -577,7 +577,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Delete this file n
+   * Delete this file
    */
   public void deleteStoreFile() throws IOException {
     boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;

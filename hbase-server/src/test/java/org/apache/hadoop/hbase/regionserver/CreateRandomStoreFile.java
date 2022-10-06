@@ -81,7 +81,7 @@ public class CreateRandomStoreFile {
   /**
    * Runs the tools.
    * @param args command-line arguments
-   * @return true in case of success n
+   * @return true in case of success
    */
   public boolean run(String[] args) throws IOException {
     options.addOption(OUTPUT_DIR_OPTION, "output_dir", true, "Output directory");

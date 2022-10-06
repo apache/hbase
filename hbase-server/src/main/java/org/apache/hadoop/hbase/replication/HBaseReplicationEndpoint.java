@@ -123,7 +123,7 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * A private method used to re-establish a zookeeper session with a peer cluster. n
+   * A private method used to re-establish a zookeeper session with a peer cluster.
    */
   private void reconnect(KeeperException ke) {
     if (
@@ -296,8 +296,8 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   /**
-   * Report that a {@code SinkPeer} successfully replicated a chunk of data. n * The SinkPeer that
-   * had a failed replication attempt on it
+   * Report that a {@code SinkPeer} successfully replicated a chunk of data. The SinkPeer that had a
+   * failed replication attempt on it
    */
   protected synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
     badReportCounts.remove(sinkPeer.getServerName());

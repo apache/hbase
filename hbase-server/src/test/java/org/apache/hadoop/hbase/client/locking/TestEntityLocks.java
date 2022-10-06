@@ -115,7 +115,7 @@ public class TestEntityLocks {
   }
 
   /**
-   * Test basic lock function - requestLock, await, unlock. n
+   * Test basic lock function - requestLock, await, unlock.
    */
   @Test
   public void testEntityLock() throws Exception {

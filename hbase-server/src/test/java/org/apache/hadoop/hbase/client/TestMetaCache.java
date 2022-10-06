@@ -308,7 +308,7 @@ public class TestMetaCache {
 
     /**
      * Throw some exceptions. Mostly throw exceptions which do not clear meta cache. Periodically
-     * throw NotSevingRegionException which clears the meta cache. n
+     * throw NotSevingRegionException which clears the meta cache.
      */
     private void throwSomeExceptions(FakeRSRpcServices rpcServices,
       HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {
