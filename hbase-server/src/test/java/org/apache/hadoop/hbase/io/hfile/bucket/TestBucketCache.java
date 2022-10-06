@@ -813,11 +813,6 @@ public class TestBucketCache {
     }
   }
 
-  /**
-   * This test is for HBASE-26295, {@link BucketEntry} which is restored from a persistence file
-   * could not be freed even if corresponding {@link HFileBlock} is evicted from
-   * {@link BucketCache}.
-   */
   @Test
   public void testBlockAdditionWaitWhenCache() throws Exception {
     try {
@@ -845,7 +840,7 @@ public class TestBucketCache {
       while (bucketCache.backingMap.size() != 10) {
         if (timeout <= 0) break;
         Threads.sleep(100);
-        timeout = -100;
+        timeout -= 100;
       }
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         assertTrue(bucketCache.backingMap.containsKey(hfileBlockPair.getBlockName()));
