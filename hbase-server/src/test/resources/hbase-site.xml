@@ -279,7 +279,7 @@
   </property>
   <property>
     <name>hbase.bucketcache.queue.addition.waittime</name>
-    <value>100</value>
+    <value>1000</value>
     <description>Default is 0</description>
   </property>
 </configuration>

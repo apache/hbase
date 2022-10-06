@@ -1342,7 +1342,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         cacheConf.getBlockCache().ifPresent(cache -> {
           if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
-            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked, cacheOnly);
+            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
+              cacheConf.isInMemory(), cacheOnly);
           }
         });
         if (unpacked != hfileBlock) {
