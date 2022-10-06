@@ -693,7 +693,7 @@ public class TestBucketCache {
       while (bucketCache.backingMap.size() != 10) {
         if (timeout <= 0) break;
         Threads.sleep(100);
-        timeout = -100;
+        timeout -= 100;
       }
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         assertTrue(bucketCache.backingMap.containsKey(hfileBlockPair.getBlockName()));
