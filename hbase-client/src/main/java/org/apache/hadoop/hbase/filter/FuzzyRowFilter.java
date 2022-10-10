@@ -74,6 +74,8 @@ public class FuzzyRowFilter extends FilterBase {
    */
   private RowTracker tracker;
 
+  private boolean filterRow = true;
+
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
     List<Pair<byte[], byte[]>> fuzzyKeyDataCopy = new ArrayList<>(fuzzyKeysData.size());
 
@@ -159,6 +161,7 @@ public class FuzzyRowFilter extends FilterBase {
         c.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
         lastFoundIndex = index;
+        filterRow = false;
         return ReturnCode.INCLUDE;
       }
     }
@@ -640,5 +643,15 @@ public class FuzzyRowFilter extends FilterBase {
   @Override
   public int hashCode() {
     return Objects.hash(this.fuzzyKeysData);
+  }
+
+  @Override
+  public boolean filterRow() {
+    return filterRow;
+  }
+
+  @Override
+  public void reset() {
+    filterRow = true;
   }
 }
