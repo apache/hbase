@@ -258,7 +258,7 @@ public class TestHBaseConfiguration {
     }
 
     /**
-     * Wrapper to fetch the configured {@code List<CredentialProvider>}s. n * Configuration with
+     * Wrapper to fetch the configured {@code List<CredentialProvider>}s. Configuration with
      * GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS defined
      * @return List of CredentialProviders, or null if they could not be loaded
      */
@@ -283,8 +283,8 @@ public class TestHBaseConfiguration {
 
     /**
      * Create a CredentialEntry using the configured Providers. If multiple CredentialProviders are
-     * configured, the first will be used. n * Configuration for the CredentialProvider n *
-     * CredentialEntry name (alias) n * The credential
+     * configured, the first will be used. Configuration for the CredentialProvider CredentialEntry
+     * name (alias) The credential
      */
     public void createEntry(Configuration conf, String name, char[] credential) throws Exception {
       if (!isHadoopCredentialProviderAvailable()) {
@@ -303,8 +303,8 @@ public class TestHBaseConfiguration {
 
     /**
      * Create a CredentialEntry with the give name and credential in the credentialProvider. The
-     * credentialProvider argument must be an instance of Hadoop CredentialProvider. n * Instance of
-     * CredentialProvider n * CredentialEntry name (alias) n * The credential to store
+     * credentialProvider argument must be an instance of Hadoop CredentialProvider. Instance of
+     * CredentialProvider CredentialEntry name (alias) The credential to store
      */
     private void createEntryInProvider(Object credentialProvider, String name, char[] credential)
       throws Exception {

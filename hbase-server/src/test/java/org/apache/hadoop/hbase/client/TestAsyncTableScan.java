@@ -24,13 +24,11 @@ import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.has
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasStatusWithCode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.startsWith;
 
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -76,7 +74,7 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     AsyncTable<ScanResultConsumer> table =
-      connectionRule.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
+      CONN_RULE.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
     List<Result> results;
     if (closeAfter > 0) {
       // these tests batch settings with the sample data result in each result being
@@ -108,38 +106,31 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.OK), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
-    final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
-
-    final Matcher<SpanData> onScanMetricsCreatedMatcher =
-      hasName("TracedScanResultConsumer#onScanMetricsCreated");
-    assertThat(spans, hasItem(onScanMetricsCreatedMatcher));
-    spans.stream().filter(onScanMetricsCreatedMatcher::matches).forEach(span -> assertThat(span,
-      allOf(onScanMetricsCreatedMatcher, hasParentSpanId(scanOperationSpanId), hasEnded())));
+    waitForSpan(scanOperationSpanMatcher);
+    final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> onNextMatcher = hasName("TracedScanResultConsumer#onNext");
-    assertThat(spans, hasItem(onNextMatcher));
-    spans.stream().filter(onNextMatcher::matches)
+    waitForSpan(onNextMatcher);
+    spanStream().filter(onNextMatcher::matches)
       .forEach(span -> assertThat(span, allOf(onNextMatcher, hasParentSpanId(scanOperationSpanId),
         hasStatusWithCode(StatusCode.OK), hasEnded())));
 
     final Matcher<SpanData> onCompleteMatcher = hasName("TracedScanResultConsumer#onComplete");
-    assertThat(spans, hasItem(onCompleteMatcher));
-    spans.stream().filter(onCompleteMatcher::matches)
+    waitForSpan(onCompleteMatcher);
+    spanStream().filter(onCompleteMatcher::matches)
       .forEach(span -> assertThat(span, allOf(onCompleteMatcher,
         hasParentSpanId(scanOperationSpanId), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
@@ -151,27 +142,26 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 
-    final List<SpanData> spans =
-      otelClassRule.getSpans().stream().filter(Objects::nonNull).collect(Collectors.toList());
     if (logger.isDebugEnabled()) {
-      StringTraceRenderer stringTraceRenderer = new StringTraceRenderer(spans);
+      StringTraceRenderer stringTraceRenderer =
+        new StringTraceRenderer(spanStream().collect(Collectors.toList()));
       stringTraceRenderer.render(logger::debug);
     }
 
-    final String parentSpanId = spans.stream().filter(parentSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    final String parentSpanId =
+      spanStream().filter(parentSpanMatcher::matches).map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> scanOperationSpanMatcher =
       allOf(hasName(startsWith("SCAN " + TABLE_NAME.getNameWithNamespaceInclAsString())),
         hasParentSpanId(parentSpanId), hasStatusWithCode(StatusCode.ERROR),
         hasException(exceptionMatcher), hasEnded());
-    assertThat(spans, hasItem(scanOperationSpanMatcher));
-    final String scanOperationSpanId = spans.stream().filter(scanOperationSpanMatcher::matches)
-      .map(SpanData::getSpanId).findAny().orElseThrow(AssertionError::new);
+    waitForSpan(scanOperationSpanMatcher);
+    final String scanOperationSpanId = spanStream().filter(scanOperationSpanMatcher::matches)
+      .map(SpanData::getSpanId).findAny().get();
 
     final Matcher<SpanData> onErrorMatcher = hasName("TracedScanResultConsumer#onError");
-    assertThat(spans, hasItem(onErrorMatcher));
-    spans.stream().filter(onErrorMatcher::matches)
+    waitForSpan(onErrorMatcher);
+    spanStream().filter(onErrorMatcher::matches)
       .forEach(span -> assertThat(span, allOf(onErrorMatcher, hasParentSpanId(scanOperationSpanId),
         hasStatusWithCode(StatusCode.OK), hasEnded())));
   }

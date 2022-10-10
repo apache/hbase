@@ -95,7 +95,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * File IO engine is always able to support persistent storage for the cache n
+   * File IO engine is always able to support persistent storage for the cache
    */
   @Override
   public boolean isPersistent() {
@@ -109,7 +109,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   /**
    * Transfers data from the given byte buffer to file
    * @param srcBuffer the given byte buffer from which bytes are to be read
-   * @param offset    The offset in the file where the first byte to be written n
+   * @param offset    The offset in the file where the first byte to be written
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
@@ -122,7 +122,7 @@ public abstract class FileMmapIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * Sync the data to file after writing n
+   * Sync the data to file after writing
    */
   @Override
   public void sync() throws IOException {

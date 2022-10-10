@@ -42,7 +42,7 @@ public class TestDeleteTimeStamp {
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
 
   /*
-   * Test for verifying that the timestamp in delete object is being honored. n
+   * Test for verifying that the timestamp in delete object is being honored.
    */
   @Test
   public void testTimeStamp() {

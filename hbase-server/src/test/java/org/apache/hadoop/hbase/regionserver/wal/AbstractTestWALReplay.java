@@ -185,8 +185,7 @@ public abstract class AbstractTestWALReplay {
   }
 
   /**
-   * n
-   */
+   *   */
   @Test
   public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
     final TableName tableName = TableName.valueOf("testReplayEditsAfterRegionMovedWithMultiCF");

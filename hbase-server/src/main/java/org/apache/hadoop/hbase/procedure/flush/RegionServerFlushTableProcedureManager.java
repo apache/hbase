@@ -109,7 +109,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
   /**
    * Close <tt>this</tt> and all running tasks
-   * @param force forcefully stop all running tasks n
+   * @param force forcefully stop all running tasks
    */
   @Override
   public void stop(boolean force) throws IOException {
@@ -126,8 +126,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
   /**
    * If in a running state, creates the specified subprocedure to flush table regions. Because this
    * gets the local list of regions to flush and not the set the master had, there is a possibility
-   * of a race where regions may be missed. nn * @return Subprocedure to submit to the
-   * ProcedureMember.
+   * of a race where regions may be missed.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(String table, String family) {
 
@@ -164,8 +164,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
   /**
    * Get the list of regions to flush for the table on this server It is possible that if a region
-   * moves somewhere between the calls we'll miss the region. n * @return the list of online
-   * regions. Empty list is returned if no regions. n
+   * moves somewhere between the calls we'll miss the region.
+   * @return the list of online regions. Empty list is returned if no regions.
    */
   private List<HRegion> getRegionsToFlush(String table) throws IOException {
     return (List<HRegion>) rss.getRegions(TableName.valueOf(table));
@@ -235,7 +235,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     /**
      * Wait for all of the currently outstanding tasks submitted via {@link #submitTask(Callable)}.
      * This *must* be called after all tasks are submitted via submitTask.
-     * @return <tt>true</tt> on success, <tt>false</tt> otherwise n
+     * @return <tt>true</tt> on success, <tt>false</tt> otherwise
      */
     boolean waitForOutstandingTasks() throws ForeignException, InterruptedException {
       LOG.debug("Waiting for local region flush to finish.");
@@ -279,7 +279,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
 
     /**
      * This attempts to cancel out all pending and in progress tasks. Does not interrupt the running
-     * tasks itself. An ongoing HRegion.flush() should not be interrupted (see HBASE-13877). n
+     * tasks itself. An ongoing HRegion.flush() should not be interrupted (see HBASE-13877).
      */
     void cancelTasks() throws InterruptedException {
       Collection<Future<Void>> tasks = futures;

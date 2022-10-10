@@ -511,7 +511,7 @@ public class ReplicationSink {
   }
 
   /**
-   * Get replication Sink Metrics n
+   * Get replication Sink Metrics
    */
   public MetricsSink getSinkMetrics() {
     return this.metrics;

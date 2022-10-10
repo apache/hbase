@@ -177,7 +177,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * Test read only tables n
+   * Test read only tables
    */
   @Test
   public void testReadOnlyTable() throws Exception {

@@ -31,7 +31,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -145,15 +144,18 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
     final String n = Thread.currentThread().getName();
 
     StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<Runnable>(COMPARATOR);
+    // Since the StealJobQueue inner uses the PriorityBlockingQueue,
+    // which is an unbounded blocking queue, we remove the RejectedExecutionHandler for
+    // the long and short compaction thread pool executors since HBASE-27332.
+    // If anyone who what to change the StealJobQueue to a bounded queue,
+    // please add the rejection handler back.
     this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads, 60, TimeUnit.SECONDS,
       stealJobQueue,
       new ThreadFactoryBuilder().setNameFormat(n + "-longCompactions-%d").setDaemon(true).build());
-    this.longCompactions.setRejectedExecutionHandler(new Rejection());
     this.longCompactions.prestartAllCoreThreads();
     this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads, 60, TimeUnit.SECONDS,
       stealJobQueue.getStealFromQueue(),
       new ThreadFactoryBuilder().setNameFormat(n + "-shortCompactions-%d").setDaemon(true).build());
-    this.shortCompactions.setRejectedExecutionHandler(new Rejection());
   }
 
   @Override
@@ -313,11 +315,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         LOG.info("Re-Initializing compactions because user switched on compactions");
         reInitializeCompactionsExecutors();
       }
-    } else {
-      LOG.info("Interrupting running compactions because user switched off compactions");
-      interrupt();
+      setCompactionsEnabled(onOrOff);
+      return;
     }
+
     setCompactionsEnabled(onOrOff);
+    LOG.info("Interrupting running compactions because user switched off compactions");
+    interrupt();
   }
 
   private void requestCompactionInternal(HRegion region, String why, int priority,
@@ -334,6 +338,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   protected void requestCompactionInternal(HRegion region, HStore store, String why, int priority,
     boolean selectNow, CompactionLifeCycleTracker tracker,
     CompactionCompleteTracker completeTracker, User user) throws IOException {
+    if (!this.isCompactionsEnabled()) {
+      LOG.info("Ignoring compaction request for " + region + ",because compaction is disabled.");
+      return;
+    }
+
     if (
       this.server.isStopped() || (region.getTableDescriptor() != null
         && !region.getTableDescriptor().isCompactionEnabled())
@@ -382,6 +391,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       // pool; we will do selection there, and move to large pool if necessary.
       pool = shortCompactions;
     }
+
+    // A simple implementation for under compaction marks.
+    // Since this method is always called in the synchronized methods, we do not need to use the
+    // boolean result to make sure that exactly the one that added here will be removed
+    // in the next steps.
+    underCompactionStores.add(getStoreNameForUnderCompaction(store));
     pool.execute(
       new CompactionRunner(store, region, compaction, tracker, completeTracker, pool, user));
     if (LOG.isDebugEnabled()) {
@@ -390,7 +405,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
           + "store size is {}",
         getStoreNameForUnderCompaction(store), priority, underCompactionStores.size());
     }
-    underCompactionStores.add(getStoreNameForUnderCompaction(store));
     region.incrementCompactionsQueuedCount();
     if (LOG.isDebugEnabled()) {
       String type = (pool == shortCompactions) ? "Small " : "Large ";
@@ -716,22 +730,6 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       ex.printStackTrace(pw);
       pw.flush();
       return sw.toString();
-    }
-  }
-
-  /**
-   * Cleanup class to use when rejecting a compaction request from the queue.
-   */
-  private static class Rejection implements RejectedExecutionHandler {
-    @Override
-    public void rejectedExecution(Runnable runnable, ThreadPoolExecutor pool) {
-      if (runnable instanceof CompactionRunner) {
-        CompactionRunner runner = (CompactionRunner) runnable;
-        LOG.debug("Compaction Rejected: " + runner);
-        if (runner.compaction != null) {
-          runner.store.cancelRequestedCompaction(runner.compaction);
-        }
-      }
     }
   }
 

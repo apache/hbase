@@ -79,7 +79,7 @@ public class TestHalfStoreFileReader {
    * may or may not be a 'next' in the scanner/file. A bug in the half file scanner was returning -1
    * at the end of the bottom half, and that was causing the infrastructure above to go null causing
    * NPEs and other problems. This test reproduces that failure, and also tests both the bottom and
-   * top of the file while we are at it. n
+   * top of the file while we are at it.
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {

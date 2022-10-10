@@ -104,20 +104,21 @@ public interface ColumnTracker extends ShipperListener {
   ColumnCount getColumnHint();
 
   /**
-   * Retrieve the MatchCode for the next row or column n
+   * Retrieve the MatchCode for the next row or column
    */
   MatchCode getNextRowOrNextColumn(Cell cell);
 
   /**
    * Give the tracker a chance to declare it's done based on only the timestamp to allow an early
-   * out. n * @return <code>true</code> to early out based on timestamp.
+   * out.
+   * @return <code>true</code> to early out based on timestamp.
    */
   boolean isDone(long timestamp);
 
   /**
    * This method is used to inform the column tracker that we are done with this column. We may get
    * this information from external filters or timestamp range and we then need to indicate this
-   * information to tracker. It is currently implemented for ExplicitColumnTracker. n
+   * information to tracker. It is currently implemented for ExplicitColumnTracker.
    */
   default void doneWithColumn(Cell cell) {
   }

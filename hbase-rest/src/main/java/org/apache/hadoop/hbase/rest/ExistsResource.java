@@ -41,7 +41,7 @@ public class ExistsResource extends ResourceBase {
   TableResource tableResource;
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public ExistsResource(TableResource tableResource) throws IOException {
     super();

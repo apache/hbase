@@ -141,7 +141,7 @@ public class ProxyUserAuthenticationFilter extends AuthenticationFilter {
 
   /**
    * The purpose of this function is to get the doAs parameter of a http request case insensitively
-   * n * @return doAs parameter if exists or null otherwise
+   * @return doAs parameter if exists or null otherwise
    */
   public static String getDoasFromHeader(final HttpServletRequest request) {
     String doas = null;

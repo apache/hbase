@@ -2350,8 +2350,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /**
    * Cause the server to exit without closing the regions it is serving, the log it is using and
    * without notifying the master. Used unit testing and on catastrophic events such as HDFS is
-   * yanked out from under hbase or we OOME. n * the reason we are aborting n * the exception that
-   * caused the abort, or null
+   * yanked out from under hbase or we OOME. the reason we are aborting the exception that caused
+   * the abort, or null
    */
   @Override
   public void abort(String reason, Throwable cause) {
@@ -2562,7 +2562,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /*
    * Let the master know we're here Run initialization using parameters passed us by the master.
    * @return A Map of key/value configurations we got from the Master else null if we failed to
-   * register. n
+   * register.
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) {

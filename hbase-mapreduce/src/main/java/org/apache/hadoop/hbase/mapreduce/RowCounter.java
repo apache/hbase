@@ -248,7 +248,7 @@ public class RowCounter extends AbstractHBaseTool {
    * Sets filter {@link FilterBase} to the {@link Scan} instance. If provided rowRangeList contains
    * more than one element, method sets filter which is instance of {@link MultiRowRangeFilter}.
    * Otherwise, method sets filter which is instance of {@link FirstKeyOnlyFilter}. If rowRangeList
-   * contains exactly one element, startRow and stopRow are set to the scan. nn
+   * contains exactly one element, startRow and stopRow are set to the scan.
    */
   private static void setScanFilter(Scan scan, List<MultiRowRangeFilter.RowRange> rowRangeList) {
     final int size = rowRangeList == null ? 0 : rowRangeList.size();

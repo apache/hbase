@@ -98,7 +98,7 @@ public class TestWALOpenAfterDNRollingStart {
    * all datanode restarted (rolling upgrade, for example). Before this patch, low replication
    * detection is only used when syncing wal. But if the wal haven't had any entry whiten, it will
    * never know all the replica of the wal is broken(because of dn restarting). And this wal can
-   * never be open n
+   * never be open
    */
   @Test
   public void test() throws Exception {

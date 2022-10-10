@@ -49,15 +49,20 @@ import java.util.regex.Pattern;
 
 /**
  * Immutable implementation of a record in a WARC file. You create a {@link WARCRecord} by parsing
- * it out of a {@link DataInput} stream. The file format is documented in the [ISO
- * Standard](http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf). In a nutshell, it's
- * a textual format consisting of lines delimited by `\r\n`. Each record has the following
- * structure: 1. A line indicating the WARC version number, such as `WARC/1.0`. 2. Several header
- * lines (in key-value format, similar to HTTP or email headers), giving information about the
- * record. The header is terminated by an empty line. 3. A body consisting of raw bytes (the number
- * of bytes is indicated in one of the headers). 4. A final separator of `\r\n\r\n` before the next
- * record starts. There are various different types of records, as documented on
- * {@link Header#getRecordType()}.
+ * it out of a {@link DataInput} stream.
+ * <p/>
+ * The file format is documented in the
+ * <a href="http://bibnum.bnf.fr/WARC/WARC_ISO_28500_version1_latestdraft.pdf">ISO Standard</a>. In
+ * a nutshell, it's a textual format consisting of lines delimited by `\r\n`. Each record has the
+ * following structure:
+ * <ol>
+ * <li>A line indicating the WARC version number, such as `WARC/1.0`.</li>
+ * <li>Several header lines (in key-value format, similar to HTTP or email headers), giving
+ * information about the record. The header is terminated by an empty line.
+ * <li>A body consisting of raw bytes (the number of bytes is indicated in one of the headers).
+ * <li>A final separator of `\r\n\r\n` before the next record starts.
+ * </ol>
+ * There are various different types of records, as documented on {@link Header#getRecordType()}.
  */
 public class WARCRecord {
 
@@ -176,9 +181,11 @@ public class WARCRecord {
   /**
    * Contains the parsed headers of a {@link WARCRecord}. Each record contains a number of headers
    * in key-value format, where some header keys are standardised, but nonstandard ones can be
-   * added. The documentation of the methods in this class is excerpted from the [WARC 1.0
-   * specification](http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf). Please see
-   * the specification for more detail.
+   * added.
+   * <p/>
+   * The documentation of the methods in this class is excerpted from the
+   * <a href="http://bibnum.bnf.fr/WARC/WARC_ISO_28500_version1_latestdraft.pdf">WARC 1.0
+   * specification</a>. Please see the specification for more detail.
    */
   public final static class Header {
     private final Map<String, String> fields;
@@ -190,56 +197,69 @@ public class WARCRecord {
     /**
      * Returns the type of WARC record (the value of the `WARC-Type` header field). WARC 1.0 defines
      * the following record types: (for full definitions, see the
-     * [spec](http://bibnum.bnf.fr/warc/WARC_ISO_28500_version1_latestdraft.pdf)) * `warcinfo`:
-     * Describes the records that follow it, up through end of file, end of input, or until next
-     * `warcinfo` record. Typically, this appears once and at the beginning of a WARC file. For a
-     * web archive, it often contains information about the web crawl which generated the following
-     * records. The format of this descriptive record block may vary, though the use of the
-     * `"application/warc-fields"` content-type is recommended. (...) * `response`: The record
-     * should contain a complete scheme-specific response, including network protocol information
-     * where possible. For a target-URI of the `http` or `https` schemes, a `response` record block
-     * should contain the full HTTP response received over the network, including headers. That is,
-     * it contains the 'Response' message defined by section 6 of HTTP/1.1 (RFC2616). The WARC
-     * record's Content-Type field should contain the value defined by HTTP/1.1,
+     * <a href="http://bibnum.bnf.fr/WARC/WARC_ISO_28500_version1_latestdraft.pdf">spec</a>.
+     * <ul>
+     * <li>`warcinfo`: Describes the records that follow it, up through end of file, end of input,
+     * or until next `warcinfo` record. Typically, this appears once and at the beginning of a WARC
+     * file. For a web archive, it often contains information about the web crawl which generated
+     * the following records.
+     * <p/>
+     * The format of this descriptive record block may vary, though the use of the
+     * `"application/warc-fields"` content-type is recommended. (...)</li>
+     * <li>`response`: The record should contain a complete scheme-specific response, including
+     * network protocol information where possible. For a target-URI of the `http` or `https`
+     * schemes, a `response` record block should contain the full HTTP response received over the
+     * network, including headers. That is, it contains the 'Response' message defined by section 6
+     * of HTTP/1.1 (RFC2616).
+     * <p/>
+     * The WARC record's Content-Type field should contain the value defined by HTTP/1.1,
      * `"application/http;msgtype=response"`. The payload of the record is defined as its
-     * 'entity-body' (per RFC2616), with any transfer-encoding removed. * `resource`: The record
-     * contains a resource, without full protocol response information. For example: a file directly
-     * retrieved from a locally accessible repository or the result of a networked retrieval where
-     * the protocol information has been discarded. For a target-URI of the `http` or `https`
-     * schemes, a `resource` record block shall contain the returned 'entity-body' (per RFC2616,
-     * with any transfer-encodings removed), possibly truncated. * `request`: The record holds the
-     * details of a complete scheme-specific request, including network protocol information where
-     * possible. For a target-URI of the `http` or `https` schemes, a `request` record block should
-     * contain the full HTTP request sent over the network, including headers. That is, it contains
-     * the 'Request' message defined by section 5 of HTTP/1.1 (RFC2616). The WARC record's
-     * Content-Type field should contain the value defined by HTTP/1.1,
+     * 'entity-body' (per RFC2616), with any transfer-encoding removed.</li>
+     * <li>`resource`: The record contains a resource, without full protocol response information.
+     * For example: a file directly retrieved from a locally accessible repository or the result of
+     * a networked retrieval where the protocol information has been discarded. For a target-URI of
+     * the `http` or `https` schemes, a `resource` record block shall contain the returned
+     * 'entity-body' (per RFC2616, with any transfer-encodings removed), possibly truncated.</li>
+     * <li>`request`: The record holds the details of a complete scheme-specific request, including
+     * network protocol information where possible. For a target-URI of the `http` or `https`
+     * schemes, a `request` record block should contain the full HTTP request sent over the network,
+     * including headers. That is, it contains the 'Request' message defined by section 5 of
+     * HTTP/1.1 (RFC2616).
+     * <p/>
+     * The WARC record's Content-Type field should contain the value defined by HTTP/1.1,
      * `"application/http;msgtype=request"`. The payload of a `request` record with a target-URI of
      * scheme `http` or `https` is defined as its 'entity-body' (per RFC2616), with any
-     * transfer-encoding removed. * `metadata`: The record contains content created in order to
-     * further describe, explain, or accompany a harvested resource, in ways not covered by other
-     * record types. A `metadata` record will almost always refer to another record of another type,
-     * with that other record holding original harvested or transformed content. The format of the
-     * metadata record block may vary. The `"application/warc-fields"` format may be used. *
-     * `revisit`: The record describes the revisitation of content already archived, and might
+     * transfer-encoding removed.</li>
+     * <li>`metadata`: The record contains content created in order to further describe, explain, or
+     * accompany a harvested resource, in ways not covered by other record types. A `metadata`
+     * record will almost always refer to another record of another type, with that other record
+     * holding original harvested or transformed content.
+     * <p/>
+     * The format of the metadata record block may vary. The `"application/warc-fields"` format may
+     * be used.</li>
+     * <li>`revisit`: The record describes the revisitation of content already archived, and might
      * include only an abbreviated content body which has to be interpreted relative to a previous
      * record. Most typically, a `revisit` record is used instead of a `response` or `resource`
      * record to indicate that the content visited was either a complete or substantial duplicate of
-     * material previously archived. A `revisit` record shall contain a WARC-Profile field which
-     * determines the interpretation of the record's fields and record block. Please see the
-     * specification for details. * `conversion`: The record shall contain an alternative version of
-     * another record's content that was created as the result of an archival process. Typically,
-     * this is used to hold content transformations that maintain viability of content after widely
-     * available rendering tools for the originally stored format disappear. As needed, the original
-     * content may be migrated (transformed) to a more viable format in order to keep the
-     * information usable with current tools while minimizing loss of information. * `continuation`:
-     * Record blocks from `continuation` records must be appended to corresponding prior record
-     * blocks (eg. from other WARC files) to create the logically complete full-sized original
-     * record. That is, `continuation` records are used when a record that would otherwise cause a
-     * WARC file size to exceed a desired limit is broken into segments. A continuation record shall
-     * contain the named fields `WARC-Segment-Origin-ID` and `WARC-Segment-Number`, and the last
-     * `continuation` record of a series shall contain a `WARC-Segment-Total-Length` field. Please
-     * see the specification for details. * Other record types may be added in future, so this list
-     * is not exclusive.
+     * material previously archived.
+     * <p/>
+     * A `revisit` record shall contain a WARC-Profile field which determines the interpretation of
+     * the record's fields and record block. Please see the specification for details.</li>
+     * <li>`conversion`: The record shall contain an alternative version of another record's content
+     * that was created as the result of an archival process. Typically, this is used to hold
+     * content transformations that maintain viability of content after widely available rendering
+     * tools for the originally stored format disappear. As needed, the original content may be
+     * migrated (transformed) to a more viable format in order to keep the information usable with
+     * current tools while minimizing loss of information.</li>
+     * <li>`continuation`: Record blocks from `continuation` records must be appended to
+     * corresponding prior record blocks (eg. from other WARC files) to create the logically
+     * complete full-sized original record. That is, `continuation` records are used when a record
+     * that would otherwise cause a WARC file size to exceed a desired limit is broken into
+     * segments. A continuation record shall contain the named fields `WARC-Segment-Origin-ID` and
+     * `WARC-Segment-Number`, and the last `continuation` record of a series shall contain a
+     * `WARC-Segment-Total-Length` field. Please see the specification for details.</li>
+     * <li>Other record types may be added in future, so this list is not exclusive.</li>
+     * </ul>
      * @return The record's `WARC-Type` header field, as a string.
      */
     public String getRecordType() {
@@ -272,8 +292,10 @@ public class WARCRecord {
      * The MIME type (RFC2045) of the information contained in the record's block. For example, in
      * HTTP request and response records, this would be `application/http` as per section 19.1 of
      * RFC2616 (or `application/http; msgtype=request` and `application/http; msgtype=response`
-     * respectively). In particular, the content-type is *not* the value of the HTTP Content-Type
-     * header in an HTTP response, but a MIME type to describe the full archived HTTP message (hence
+     * respectively).
+     * <p/>
+     * In particular, the content-type is *not* the value of the HTTP Content-Type header in an HTTP
+     * response, but a MIME type to describe the full archived HTTP message (hence
      * `application/http` if the block contains request or response headers).
      * @return The record's `Content-Type` header field, as a string.
      */

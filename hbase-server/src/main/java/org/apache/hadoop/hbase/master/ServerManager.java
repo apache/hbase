@@ -219,8 +219,13 @@ public class ServerManager {
     // in, it should have been removed from serverAddressToServerInfo and queued
     // for processing by ProcessServerShutdown.
 
+    // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+    // see HBASE-27304 for details.
+    boolean useIp = master.getConfiguration().getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+      HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+    String isaHostName = useIp ? ia.getHostAddress() : ia.getHostName();
     final String hostname =
-      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : ia.getHostName();
+      request.hasUseThisHostnameInstead() ? request.getUseThisHostnameInstead() : isaHostName;
     ServerName sn = ServerName.valueOf(hostname, request.getPort(), request.getServerStartCode());
     checkClockSkew(sn, request.getServerCurrentTime());
     checkIsDead(sn, "STARTUP");
@@ -348,8 +353,8 @@ public class ServerManager {
    * Checks if the clock skew between the server and the master. If the clock skew exceeds the
    * configured max, it will throw an exception; if it exceeds the configured warning threshold, it
    * will log a warning but start normally.
-   * @param serverName Incoming servers's name n * @throws ClockOutOfSyncException if the skew
-   *                   exceeds the configured max value
+   * @param serverName Incoming servers's name
+   * @throws ClockOutOfSyncException if the skew exceeds the configured max value
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
     throws ClockOutOfSyncException {
@@ -443,9 +448,7 @@ public class ServerManager {
     return builder.build();
   }
 
-  /**
-   * n * @return ServerMetrics if serverName is known else null
-   */
+  /** Returns ServerMetrics if serverName is known else null */
   public ServerMetrics getLoad(final ServerName serverName) {
     return this.onlineServers.get(serverName);
   }
@@ -651,8 +654,8 @@ public class ServerManager {
   }
 
   /**
-   * Add the server to the drain list. n * @return True if the server is added or the server is
-   * already on the drain list.
+   * Add the server to the drain list.
+   * @return True if the server is added or the server is already on the drain list.
    */
   public synchronized boolean addServerToDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online. ServerName is of the form:
@@ -739,7 +742,7 @@ public class ServerManager {
    * the master is stopped - the 'hbase.master.wait.on.regionservers.maxtostart' number of region
    * servers is reached - the 'hbase.master.wait.on.regionservers.mintostart' is reached AND there
    * have been no new region server in for 'hbase.master.wait.on.regionservers.interval' time AND
-   * the 'hbase.master.wait.on.regionservers.timeout' is reached n
+   * the 'hbase.master.wait.on.regionservers.timeout' is reached
    */
   public void waitForRegionServers(MonitoredTask status) throws InterruptedException {
     final long interval =

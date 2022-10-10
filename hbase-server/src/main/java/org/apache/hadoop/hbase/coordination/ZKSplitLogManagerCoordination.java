@@ -139,7 +139,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener
    * It is possible for a task to stay in UNASSIGNED state indefinitely - say SplitLogManager wants
    * to resubmit a task. It forces the task to UNASSIGNED state but it dies before it could create
    * the RESCAN task node to signal the SplitLogWorkers to pick up the task. To prevent this
-   * scenario the SplitLogManager resubmits all orphan and UNASSIGNED tasks at startup. n
+   * scenario the SplitLogManager resubmits all orphan and UNASSIGNED tasks at startup.
    */
   private void handleUnassignedTask(String path) {
     if (ZKSplitLog.isRescanNode(watcher, path)) {
@@ -551,7 +551,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener
      * partially done tasks are present. taskname is the name of the task that was put up in
      * zookeeper.
      * <p>
-     * nn * @return DONE if task completed successfully, ERR otherwise
+     * @return DONE if task completed successfully, ERR otherwise
      */
     Status finish(ServerName workerName, String taskname);
   }

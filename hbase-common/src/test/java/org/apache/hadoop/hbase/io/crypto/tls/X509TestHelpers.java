@@ -127,6 +127,25 @@ final class X509TestHelpers {
   public static X509Certificate newCert(X509Certificate caCert, KeyPair caKeyPair,
     X500Name certSubject, PublicKey certPublicKey)
     throws IOException, OperatorCreationException, GeneralSecurityException {
+    return newCert(caCert, caKeyPair, certSubject, certPublicKey, getLocalhostSubjectAltNames());
+  }
+
+  /**
+   * Using the private key of the given CA key pair and the Subject of the given CA cert as the
+   * Issuer, issues a new cert with the given subject and public key. The returned certificate,
+   * combined with the private key half of the <code>certPublicKey</code>, should be used as the key
+   * store.
+   * @param caCert          the certificate of the CA that's doing the signing.
+   * @param caKeyPair       the key pair of the CA. The private key will be used to sign. The public
+   *                        key must match the public key in the <code>caCert</code>.
+   * @param certSubject     the subject field of the new cert being issued.
+   * @param certPublicKey   the public key of the new cert being issued.
+   * @param subjectAltNames the subject alternative names to use, or null if none
+   * @return a new certificate signed by the CA's private key.
+   */
+  public static X509Certificate newCert(X509Certificate caCert, KeyPair caKeyPair,
+    X500Name certSubject, PublicKey certPublicKey, GeneralNames subjectAltNames)
+    throws IOException, OperatorCreationException, GeneralSecurityException {
     if (!caKeyPair.getPublic().equals(caCert.getPublicKey())) {
       throw new IllegalArgumentException(
         "CA private key does not match the public key in " + "the CA cert");
@@ -140,7 +159,9 @@ final class X509TestHelpers {
     builder.addExtension(Extension.extendedKeyUsage, true, new ExtendedKeyUsage(
       new KeyPurposeId[] { KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth }));
 
-    builder.addExtension(Extension.subjectAlternativeName, false, getLocalhostSubjectAltNames());
+    if (subjectAltNames != null) {
+      builder.addExtension(Extension.subjectAlternativeName, false, subjectAltNames);
+    }
     return buildAndSignCertificate(caKeyPair.getPrivate(), builder);
   }
 
@@ -262,7 +283,7 @@ final class X509TestHelpers {
    * @throws OperatorCreationException if constructing the encryptor from the given password fails.
    */
   public static String pemEncodeCertAndPrivateKey(X509Certificate cert, PrivateKey privateKey,
-    String keyPassword) throws IOException, OperatorCreationException {
+    char[] keyPassword) throws IOException, OperatorCreationException {
     return pemEncodeX509Certificate(cert) + "\n" + pemEncodePrivateKey(privateKey, keyPassword);
   }
 
@@ -276,16 +297,16 @@ final class X509TestHelpers {
    * @throws IOException               if converting the key to PEM format fails.
    * @throws OperatorCreationException if constructing the encryptor from the given password fails.
    */
-  public static String pemEncodePrivateKey(PrivateKey key, String password)
+  public static String pemEncodePrivateKey(PrivateKey key, char[] password)
     throws IOException, OperatorCreationException {
     StringWriter stringWriter = new StringWriter();
     JcaPEMWriter pemWriter = new JcaPEMWriter(stringWriter);
     OutputEncryptor encryptor = null;
-    if (password != null && password.length() > 0) {
+    if (password != null && password.length > 0) {
       encryptor =
         new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
-          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG)
-          .setPasssword(password.toCharArray()).build();
+          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG).setPasssword(password)
+          .build();
     }
     pemWriter.writeObject(new JcaPKCS8Generator(key, encryptor));
     pemWriter.close();
@@ -318,7 +339,7 @@ final class X509TestHelpers {
    *                    will not be encrypted.
    * @return the serialized bytes of the JKS trust store.
    */
-  public static byte[] certToJavaTrustStoreBytes(X509Certificate cert, String keyPassword)
+  public static byte[] certToJavaTrustStoreBytes(X509Certificate cert, char[] keyPassword)
     throws IOException, GeneralSecurityException {
     KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     return certToTrustStoreBytes(cert, keyPassword, trustStore);
@@ -335,19 +356,35 @@ final class X509TestHelpers {
    *                    will not be encrypted.
    * @return the serialized bytes of the PKCS12 trust store.
    */
-  public static byte[] certToPKCS12TrustStoreBytes(X509Certificate cert, String keyPassword)
+  public static byte[] certToPKCS12TrustStoreBytes(X509Certificate cert, char[] keyPassword)
     throws IOException, GeneralSecurityException {
     KeyStore trustStore = KeyStore.getInstance("PKCS12");
     return certToTrustStoreBytes(cert, keyPassword, trustStore);
   }
 
-  private static byte[] certToTrustStoreBytes(X509Certificate cert, String keyPassword,
+  /**
+   * Encodes the given X509Certificate as a BCFKS TrustStore, optionally protecting the cert with a
+   * password (though it's unclear why one would do this since certificates only contain public
+   * information and do not need to be kept secret). Returns the byte array encoding of the trust
+   * store, which may be written to a file and loaded to instantiate the trust store at a later
+   * point or in another process.
+   * @param cert        the certificate to serialize.
+   * @param keyPassword an optional password to encrypt the trust store. If empty or null, the cert
+   *                    will not be encrypted.
+   * @return the serialized bytes of the BCFKS trust store.
+   */
+  public static byte[] certToBCFKSTrustStoreBytes(X509Certificate cert, char[] keyPassword)
+    throws IOException, GeneralSecurityException {
+    KeyStore trustStore = KeyStore.getInstance("BCFKS");
+    return certToTrustStoreBytes(cert, keyPassword, trustStore);
+  }
+
+  private static byte[] certToTrustStoreBytes(X509Certificate cert, char[] keyPassword,
     KeyStore trustStore) throws IOException, GeneralSecurityException {
-    char[] keyPasswordChars = keyPassword == null ? new char[0] : keyPassword.toCharArray();
-    trustStore.load(null, keyPasswordChars);
+    trustStore.load(null, keyPassword);
     trustStore.setCertificateEntry(cert.getSubjectDN().toString(), cert);
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    trustStore.store(outputStream, keyPasswordChars);
+    trustStore.store(outputStream, keyPassword);
     outputStream.flush();
     byte[] result = outputStream.toByteArray();
     outputStream.close();
@@ -366,7 +403,7 @@ final class X509TestHelpers {
    * @return the serialized bytes of the JKS key store.
    */
   public static byte[] certAndPrivateKeyToJavaKeyStoreBytes(X509Certificate cert,
-    PrivateKey privateKey, String keyPassword) throws IOException, GeneralSecurityException {
+    PrivateKey privateKey, char[] keyPassword) throws IOException, GeneralSecurityException {
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     return certAndPrivateKeyToBytes(cert, privateKey, keyPassword, keyStore);
   }
@@ -383,18 +420,34 @@ final class X509TestHelpers {
    * @return the serialized bytes of the PKCS12 key store.
    */
   public static byte[] certAndPrivateKeyToPKCS12Bytes(X509Certificate cert, PrivateKey privateKey,
-    String keyPassword) throws IOException, GeneralSecurityException {
+    char[] keyPassword) throws IOException, GeneralSecurityException {
     KeyStore keyStore = KeyStore.getInstance("PKCS12");
     return certAndPrivateKeyToBytes(cert, privateKey, keyPassword, keyStore);
   }
 
+  /**
+   * Encodes the given X509Certificate and private key as a BCFKS KeyStore, optionally protecting
+   * the private key (and possibly the cert?) with a password. Returns the byte array encoding of
+   * the key store, which may be written to a file and loaded to instantiate the key store at a
+   * later point or in another process.
+   * @param cert        the X509 certificate to serialize.
+   * @param privateKey  the private key to serialize.
+   * @param keyPassword an optional key password. If empty or null, the private key will not be
+   *                    encrypted.
+   * @return the serialized bytes of the BCFKS key store.
+   */
+  public static byte[] certAndPrivateKeyToBCFKSBytes(X509Certificate cert, PrivateKey privateKey,
+    char[] keyPassword) throws IOException, GeneralSecurityException {
+    KeyStore keyStore = KeyStore.getInstance("BCFKS");
+    return certAndPrivateKeyToBytes(cert, privateKey, keyPassword, keyStore);
+  }
+
   private static byte[] certAndPrivateKeyToBytes(X509Certificate cert, PrivateKey privateKey,
-    String keyPassword, KeyStore keyStore) throws IOException, GeneralSecurityException {
-    char[] keyPasswordChars = keyPassword == null ? new char[0] : keyPassword.toCharArray();
-    keyStore.load(null, keyPasswordChars);
-    keyStore.setKeyEntry("key", privateKey, keyPasswordChars, new Certificate[] { cert });
+    char[] keyPassword, KeyStore keyStore) throws IOException, GeneralSecurityException {
+    keyStore.load(null, keyPassword);
+    keyStore.setKeyEntry("key", privateKey, keyPassword, new Certificate[] { cert });
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    keyStore.store(outputStream, keyPasswordChars);
+    keyStore.store(outputStream, keyPassword);
     outputStream.flush();
     byte[] result = outputStream.toByteArray();
     outputStream.close();

@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -67,6 +68,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
@@ -116,6 +118,17 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     setConf(builder.conf);
     this.conn = ConnectionFactory.createConnection(conf);
     this.admin = conn.getAdmin();
+
+    // if the hostname of master is ip, it indicates that the master/RS has enabled use-ip, we need
+    // to resolve the current hostname to ip to ensure that the RegionMover logic can be executed
+    // normally, see HBASE-27304 for details.
+    ServerName master = admin.getClusterMetrics(EnumSet.of(Option.MASTER)).getMasterName();
+    if (InetAddresses.isInetAddress(master.getHostname())) {
+      if (!InetAddresses.isInetAddress(this.hostname)) {
+        this.hostname = InetAddress.getByName(this.hostname).getHostAddress();
+      }
+    }
+
     // Only while running unit tests, builder.rackManager will not be null for the convenience of
     // providing custom rackManager. Otherwise for regular workflow/user triggered action,
     // builder.rackManager is supposed to be null. Hence, setter of builder.rackManager is
@@ -187,8 +200,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     }
 
     /**
-     * Path of file where regions will be written to during unloading/read from during loading n
-     * * @return RegionMoverBuilder object
+     * Path of file where regions will be written to during unloading/read from during loading
+     * @return RegionMoverBuilder object
      */
     public RegionMoverBuilder filename(String filename) {
       this.filename = filename;
@@ -233,7 +246,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      * effort mode,each region movement is tried once.This can be used during graceful shutdown as
      * even if we have a stuck region,upon shutdown it'll be reassigned anyway.
      * <p>
-     * n * @return RegionMoverBuilder object
+     * @return RegionMoverBuilder object
      */
     public RegionMoverBuilder ack(boolean ack) {
       this.ack = ack;

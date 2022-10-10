@@ -73,12 +73,12 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 #
 
 FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
-ENV SPOTBUGS_VERSION '4.2.2'
+ENV SPOTBUGS_VERSION '4.7.2'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA256 '4967c72396e34b86b9458d0c34c5ed185770a009d357df8e63951ee2844f769f'
+ENV SPOTBUGS_SHA512 '8dd0634c0e5760ade8b2cc3e1d988ed58921dbcbd7568a5a6b4c078d2b2d03c54ebb918329d9832e7e76de23e2e865ff2242cde9ac67d8971f71eea0d43ff0c5'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
-  echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
+  echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
 
 FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
 ENV HADOLINT_VERSION '1.17.5'
@@ -96,23 +96,16 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
-FROM BASE_IMAGE AS OPENJDK7_DOWNLOAD_IMAGE
-ENV OPENJDK7_URL 'https://cdn.azul.com/zulu/bin/zulu7.36.0.5-ca-jdk7.0.252-linux_x64.tar.gz'
-ENV OPENJDK7_SHA256 'e0f34c242e6d456dac3e2c8a9eaeacfa8ea75c4dfc3e8818190bf0326e839d82'
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl --location --fail --silent --show-error --output /tmp/zuluopenjdk7.tar.gz "${OPENJDK7_URL}" && \
-  echo "${OPENJDK7_SHA256} */tmp/zuluopenjdk7.tar.gz" | sha256sum -c -
-
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u282b08.tar.gz'
-ENV OPENJDK8_SHA256 'e6e6e0356649b9696fa5082cfcb0663d4bef159fc22d406e3a012e71fce83a5c'
+ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_linux_hotspot_8u345b01.tar.gz'
+ENV OPENJDK8_SHA256 'ed6c9db3719895584fb1fd69fc79c29240977675f26631911c5a1dbce07b7d58'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
 FROM BASE_IMAGE AS OPENJDK11_DOWNLOAD_IMAGE
-ENV OPENJDK11_URL 'https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.10%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.10_9.tar.gz'
-ENV OPENJDK11_SHA256 'ae78aa45f84642545c01e8ef786dfd700d2226f8b12881c844d6a1f71789cb99'
+ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16.1%2B1/OpenJDK11U-jdk_x64_linux_hotspot_11.0.16.1_1.tar.gz'
+ENV OPENJDK11_SHA256 '5f6b513757d386352cf91514ed5859d1ab59364b4453e1f1c57152ba2039b8e2'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
@@ -148,14 +141,6 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
 # when updating java or maven versions here, consider also updating
 # `dev-support/hbase_docker/Dockerfile` as well.
 #
-
-# hadolint ignore=DL3010
-COPY --from=OPENJDK7_DOWNLOAD_IMAGE /tmp/zuluopenjdk7.tar.gz /tmp/zuluopenjdk7.tar.gz
-RUN mkdir -p /usr/lib/jvm && \
-  tar xzf /tmp/zuluopenjdk7.tar.gz -C /usr/lib/jvm && \
-  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/zuluopenjdk7.tar.gz | head -n1)")" /usr/lib/jvm/java-7-zuluopenjdk && \
-  ln -s /usr/lib/jvm/java-7-zuluopenjdk /usr/lib/jvm/java-7 && \
-  rm /tmp/zuluopenjdk7.tar.gz
 
 # hadolint ignore=DL3010
 COPY --from=OPENJDK8_DOWNLOAD_IMAGE /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz

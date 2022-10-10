@@ -175,7 +175,7 @@ public class TestWALFactory {
   }
 
   /**
-   * Just write multiple logs then split. Before fix for HADOOP-2283, this would fail. n
+   * Just write multiple logs then split. Before fix for HADOOP-2283, this would fail.
    */
   @Test
   public void testSplit() throws IOException {
@@ -231,7 +231,7 @@ public class TestWALFactory {
   }
 
   /**
-   * Test new HDFS-265 sync. n
+   * Test new HDFS-265 sync.
    */
   @Test
   public void Broken_testSync() throws Exception {
@@ -604,7 +604,7 @@ public class TestWALFactory {
   }
 
   /**
-   * Test that we can visit entries before they are appended n
+   * Test that we can visit entries before they are appended
    */
   @Test
   public void testVisitors() throws Exception {

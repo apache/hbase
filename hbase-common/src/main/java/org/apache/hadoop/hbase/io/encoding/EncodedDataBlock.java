@@ -181,7 +181,7 @@ public class EncodedDataBlock {
    * @param inputBuffer Array to be compressed.
    * @param offset      Offset to beginning of the data.
    * @param length      Length to be compressed.
-   * @return Size of compressed data in bytes. n
+   * @return Size of compressed data in bytes.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification = "No sure what findbugs wants but looks to me like no NPE")

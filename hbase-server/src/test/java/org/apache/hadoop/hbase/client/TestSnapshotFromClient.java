@@ -168,7 +168,6 @@ public class TestSnapshotFromClient {
 
   /**
    * Test HBaseAdmin#deleteSnapshots(String) which deletes snapshots whose names match the parameter
-   * n
    */
   @Test
   public void testSnapshotDeletionWithRegex() throws Exception {
@@ -204,7 +203,7 @@ public class TestSnapshotFromClient {
   }
 
   /**
-   * Test snapshotting a table that is offline n
+   * Test snapshotting a table that is offline
    */
   @Test
   public void testOfflineTableSnapshot() throws Exception {

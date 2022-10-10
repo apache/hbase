@@ -84,7 +84,7 @@ public class RegionReplicaUtil {
   }
 
   /**
-   * Removes the non-default replicas from the passed regions collection n
+   * Removes the non-default replicas from the passed regions collection
    */
   public static void removeNonDefaultRegions(Collection<RegionInfo> regions) {
     Iterator<RegionInfo> iterator = regions.iterator();

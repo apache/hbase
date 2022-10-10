@@ -450,8 +450,8 @@ public class AccessControlUtil {
    * It's also called by the shell, in case you want to find references.
    * @param protocol      the AccessControlService protocol proxy
    * @param userShortName the short name of the user to grant permissions
-   * @param actions       the permissions to be granted n * @deprecated Use
-   *                      {@link Admin#grant(UserPermission, boolean)} instead.
+   * @param actions       the permissions to be granted
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -478,8 +478,8 @@ public class AccessControlUtil {
    * @param tableName     optional table name
    * @param f             optional column family
    * @param q             optional qualifier
-   * @param actions       the permissions to be granted n * @deprecated Use
-   *                      {@link Admin#grant(UserPermission, boolean)} instead.
+   * @param actions       the permissions to be granted
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -504,8 +504,8 @@ public class AccessControlUtil {
    * @param controller RpcController
    * @param protocol   the AccessControlService protocol proxy
    * @param namespace  the short name of the user to grant permissions
-   * @param actions    the permissions to be granted n * @deprecated Use
-   *                   {@link Admin#grant(UserPermission, boolean)} instead.
+   * @param actions    the permissions to be granted
+   * @deprecated Use {@link Admin#grant(UserPermission, boolean)} instead.
    */
   @Deprecated
   public static void grant(RpcController controller,
@@ -621,9 +621,8 @@ public class AccessControlUtil {
    * A utility used to get user's global permissions based on the specified user name.
    * @param controller RpcController
    * @param protocol   the AccessControlService protocol proxy
-   * @param userName   User name, if empty then all user permissions will be retrieved. n
-   *                   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)}
-   *                   instead.
+   * @param userName   User name, if empty then all user permissions will be retrieved.
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
@@ -651,8 +650,8 @@ public class AccessControlUtil {
    * It's also called by the shell, in case you want to find references.
    * @param controller RpcController
    * @param protocol   the AccessControlService protocol proxy
-   * @param t          optional table name n * @deprecated Use
-   *                   {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   * @param t          optional table name
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
@@ -668,9 +667,8 @@ public class AccessControlUtil {
    * @param t               optional table name
    * @param columnFamily    Column family
    * @param columnQualifier Column qualifier
-   * @param userName        User name, if empty then all user permissions will be retrieved. n
-   *                        * @deprecated Use
-   *                        {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   * @param userName        User name, if empty then all user permissions will be retrieved.
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
@@ -708,8 +706,8 @@ public class AccessControlUtil {
    * It's also called by the shell, in case you want to find references.
    * @param controller RpcController
    * @param protocol   the AccessControlService protocol proxy
-   * @param namespace  name of the namespace n * @deprecated Use
-   *                   {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
+   * @param namespace  name of the namespace
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
@@ -722,9 +720,8 @@ public class AccessControlUtil {
    * @param controller RpcController
    * @param protocol   the AccessControlService protocol proxy
    * @param namespace  name of the namespace
-   * @param userName   User name, if empty then all user permissions will be retrieved. n
-   *                   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)}
-   *                   instead.
+   * @param userName   User name, if empty then all user permissions will be retrieved.
+   * @deprecated Use {@link Admin#getUserPermissions(GetUserPermissionsRequest)} instead.
    */
   @Deprecated
   public static List<UserPermission> getUserPermissions(RpcController controller,
@@ -762,8 +759,8 @@ public class AccessControlUtil {
    *                        will not be considered if columnFamily is passed as null or empty.
    * @param userName        User name, it shouldn't be null or empty.
    * @param actions         Actions
-   * @return true if access allowed, otherwise false n * @deprecated Use
-   *         {@link Admin#hasUserPermissions(String, List)} instead.
+   * @return true if access allowed, otherwise false
+   * @deprecated Use {@link Admin#hasUserPermissions(String, List)} instead.
    */
   @Deprecated
   public static boolean hasPermission(RpcController controller,

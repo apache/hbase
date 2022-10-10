@@ -30,14 +30,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ServerName;
 @InterfaceAudience.Private
 public interface FavoredNodesForRegion {
   /**
-   * Used to update the favored nodes mapping when required. nn
+   * Used to update the favored nodes mapping when required.
    */
   void updateRegionFavoredNodesMapping(String encodedRegionName, List<ServerName> favoredNodes);
 
   /**
    * Get the favored nodes mapping for this region. Used when the HDFS create API is invoked to pass
-   * in favored nodes hints for new region files. n * @return array containing the favored nodes'
-   * InetSocketAddresses
+   * in favored nodes hints for new region files.
+   * @return array containing the favored nodes' InetSocketAddresses
    */
   InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName);
 }

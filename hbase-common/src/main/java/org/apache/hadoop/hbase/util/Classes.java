@@ -27,10 +27,9 @@ public class Classes {
 
   /**
    * Equivalent of {@link Class#forName(String)} which also returns classes for primitives like
-   * <code>boolean</code>, etc. n * The name of the class to retrieve. Can be either a normal class
-   * or a primitive class.
-   * @return The class specified by <code>className</code> n * If the requested class can not be
-   *         found.
+   * <code>boolean</code>, etc. The name of the class to retrieve. Can be either a normal class or a
+   * primitive class.
+   * @return The class specified by <code>className</code> If the requested class can not be found.
    */
   public static Class<?> extendedForName(String className) throws ClassNotFoundException {
     Class<?> valueType;

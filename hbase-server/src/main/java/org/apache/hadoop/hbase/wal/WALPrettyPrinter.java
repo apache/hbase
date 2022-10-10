@@ -142,8 +142,8 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * sets the region by which output will be filtered n * when nonnegative, serves as a filter; only
-   * log entries with this sequence id will be printed
+   * sets the region by which output will be filtered when nonnegative, serves as a filter; only log
+   * entries with this sequence id will be printed
    */
   public void setSequenceFilter(long sequence) {
     this.sequence = sequence;
@@ -158,23 +158,23 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * sets the region by which output will be filtered n * when not null, serves as a filter; only
-   * log entries from this region will be printed
+   * sets the region by which output will be filtered when not null, serves as a filter; only log
+   * entries from this region will be printed
    */
   public void setRegionFilter(String region) {
     this.region = region;
   }
 
   /**
-   * sets the row key by which output will be filtered n * when not null, serves as a filter; only
-   * log entries from this row will be printed
+   * sets the row key by which output will be filtered when not null, serves as a filter; only log
+   * entries from this row will be printed
    */
   public void setRowFilter(String row) {
     this.row = row;
   }
 
   /**
-   * sets the rowPrefix key prefix by which output will be filtered n * when not null, serves as a
+   * sets the rowPrefix key prefix by which output will be filtered when not null, serves as a
    * filter; only log entries with rows having this prefix will be printed
    */
   public void setRowPrefixFilter(String rowPrefix) {
@@ -189,8 +189,8 @@ public class WALPrettyPrinter {
   }
 
   /**
-   * sets the position to start seeking the WAL file n * initial position to start seeking the given
-   * WAL file
+   * sets the position to start seeking the WAL file initial position to start seeking the given WAL
+   * file
    */
   public void setPosition(long position) {
     this.position = position;
@@ -226,9 +226,8 @@ public class WALPrettyPrinter {
 
   /**
    * reads a log file and outputs its contents, one transaction at a time, as specified by the
-   * currently configured options n * the HBase configuration relevant to this log file n * the path
-   * of the log file to be read n * may be unable to access the configured filesystem or requested
-   * file.
+   * currently configured options the HBase configuration relevant to this log file the path of the
+   * log file to be read may be unable to access the configured filesystem or requested file.
    */
   public void processFile(final Configuration conf, final Path p) throws IOException {
     FileSystem fs = p.getFileSystem(conf);
@@ -408,8 +407,7 @@ public class WALPrettyPrinter {
 
   /**
    * Pass one or more log file names and formatting options and it will dump out a text version of
-   * the contents on <code>stdout</code>. n * Command line arguments n * Thrown upon file system
-   * errors etc.
+   * the contents on <code>stdout</code>. Command line arguments Thrown upon file system errors etc.
    */
   public static void run(String[] args) throws IOException {
     // create options

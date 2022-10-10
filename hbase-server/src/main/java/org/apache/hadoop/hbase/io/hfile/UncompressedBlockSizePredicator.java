@@ -39,7 +39,7 @@ public class UncompressedBlockSizePredicator implements BlockCompressedSizePredi
   /**
    * Dummy implementation that always returns true. This means, we will be only considering the
    * block uncompressed size for deciding when to finish a block.
-   * @param uncompressed true if the block should be finished. n
+   * @param uncompressed true if the block should be finished.
    */
   @Override
   public boolean shouldFinishBlock(int uncompressed) {

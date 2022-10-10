@@ -846,8 +846,8 @@
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
-    <spotbugs.version>4.2.2</spotbugs.version>
-    <spotbugs.maven.version>4.2.0</spotbugs.maven.version>
+    <spotbugs.version>4.7.2</spotbugs.version>
+    <spotbugs.maven.version>4.7.2.0</spotbugs.maven.version>
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
@@ -855,7 +855,7 @@
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
-    <brotli4j.version>1.7.1</brotli4j.version>
+    <brotli4j.version>1.8.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
@@ -2102,6 +2102,32 @@
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <configuration>
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+            <phase>process-resources</phase>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <phase>clean</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
@@ -2708,19 +2734,6 @@
               <exclude>**/generated/*</exclude>
               <exclude>**/package-info.java</exclude>
             </excludes>
-            <!--
-              e.g., remove the following lines:
-              "* @param paramName"
-              "* @throws ExceptionType"
-              "* @return returnType"'
-              Multiline to allow anchors on newlines
-            -->
-            <replaceRegex>
-              <name>Remove unhelpful javadoc stubs</name>
-              <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
-              <!-- spotless manve plugin does not allow empty here, so use \n -->
-              <replacement>\n</replacement>
-            </replaceRegex>
             <!--
               e.g., rewrite
               /** @return blabla */
@@ -3365,6 +3378,10 @@
             <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
               </exclusion>
@@ -3424,6 +3441,22 @@
             <version>${hadoop-three.version}</version>
             <type>test-jar</type>
             <exclusions>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
@@ -3944,6 +3977,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>bouncycastle</groupId>
+                <artifactId>bcprov-jdk15</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

@@ -77,7 +77,7 @@ public class MemorySizeUtil {
 
   /**
    * Checks whether we have enough heap memory left out after portion for Memstore and Block cache.
-   * We need atleast 20% of heap left out for other RS functions. n
+   * We need atleast 20% of heap left out for other RS functions.
    */
   public static void checkForClusterFreeHeapMemoryLimit(Configuration conf) {
     if (conf.get(MEMSTORE_SIZE_OLD_KEY) != null) {
@@ -102,7 +102,7 @@ public class MemorySizeUtil {
   }
 
   /**
-   * Retrieve global memstore configured size as percentage of total heap. nn
+   * Retrieve global memstore configured size as percentage of total heap.
    */
   public static float getGlobalMemStoreHeapPercent(final Configuration c,
     final boolean logInvalid) {
@@ -178,7 +178,8 @@ public class MemorySizeUtil {
 
   /**
    * Returns the onheap global memstore limit based on the config
-   * 'hbase.regionserver.global.memstore.size'. n * @return the onheap global memstore limt
+   * 'hbase.regionserver.global.memstore.size'.
+   * @return the onheap global memstore limt
    */
   public static long getOnheapGlobalMemStoreSize(Configuration conf) {
     long max = -1L;
@@ -191,7 +192,7 @@ public class MemorySizeUtil {
   }
 
   /**
-   * Retrieve configured size for on heap block cache as percentage of total heap. n
+   * Retrieve configured size for on heap block cache as percentage of total heap.
    */
   public static float getBlockCacheHeapPercent(final Configuration conf) {
     // L1 block cache is always on heap

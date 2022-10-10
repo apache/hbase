@@ -41,7 +41,7 @@ public interface ExtendedCell extends RawCell, HeapSize {
    * &lt;tags&gt;</code>
    * @param out      Stream to which cell has to be written
    * @param withTags Whether to write tags.
-   * @return how many bytes are written. n
+   * @return how many bytes are written.
    */
   // TODO remove the boolean param once HBASE-16706 is done.
   default int write(OutputStream out, boolean withTags) throws IOException {

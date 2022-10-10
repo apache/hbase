@@ -177,7 +177,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {
@@ -1220,8 +1220,8 @@ public class TestHStoreFile {
   public void testDataBlockSizeCompressed() throws Exception {
     conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR,
       PreviousBlockCompressionRatePredicator.class.getName());
-    testDataBlockSizeWithCompressionRatePredicator(11,
-      (s, c) -> (c > 1 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
+    testDataBlockSizeWithCompressionRatePredicator(12,
+      (s, c) -> (c > 2 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
   }
 
   @Test

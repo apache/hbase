@@ -99,7 +99,7 @@ public enum DataBlockEncoding {
   /**
    * Writes id bytes to the given array starting from offset.
    * @param dest   output array
-   * @param offset starting offset of the output array n
+   * @param offset starting offset of the output array
    */
   // System.arraycopy is static native. Nothing we can do this until we have minimum JDK 9.
   @SuppressWarnings("UnsafeFinalization")

@@ -57,7 +57,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               // next header, will not have happened...so, pass in the onDiskSize gotten from the
               // cached block. This 'optimization' triggers extremely rarely I'd say.
               HFileBlock block = readBlock(offset, onDiskSizeOfNextBlock, /* cacheBlock= */true,
-                /* pread= */true, false, false, null, null);
+                /* pread= */true, false, false, null, null, true);
               try {
                 onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
                 offset += block.getOnDiskSizeWithHeader();
@@ -73,10 +73,6 @@ public class HFilePreadReader extends HFileReaderImpl {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
-          } catch (NullPointerException e) {
-            LOG.warn(
-              "Stream moved/closed or prefetch cancelled?" + getPathOffsetEndStr(path, offset, end),
-              e);
           } catch (Exception e) {
             // Other exceptions are interesting
             LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);

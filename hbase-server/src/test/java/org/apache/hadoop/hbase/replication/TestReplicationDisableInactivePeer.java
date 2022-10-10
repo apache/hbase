@@ -46,7 +46,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
   /**
    * Test disabling an inactive peer. Add a peer which is inactive, trying to insert, disable the
    * peer, then activate the peer and make sure nothing is replicated. In Addition, enable the peer
-   * and check the updates are replicated. n
+   * and check the updates are replicated.
    */
   @Test
   public void testDisableInactivePeer() throws Exception {

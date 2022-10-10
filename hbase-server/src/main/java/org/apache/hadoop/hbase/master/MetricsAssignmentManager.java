@@ -55,7 +55,7 @@ public class MetricsAssignmentManager {
   }
 
   /**
-   * set new value for number of regions in transition. n
+   * set new value for number of regions in transition.
    */
   public void updateRITCount(final int ritCount) {
     assignmentManagerSource.setRIT(ritCount);
@@ -63,21 +63,21 @@ public class MetricsAssignmentManager {
 
   /**
    * update RIT count that are in this state for more than the threshold as defined by the property
-   * rit.metrics.threshold.time. n
+   * rit.metrics.threshold.time.
    */
   public void updateRITCountOverThreshold(final int ritCountOverThreshold) {
     assignmentManagerSource.setRITCountOverThreshold(ritCountOverThreshold);
   }
 
   /**
-   * update the timestamp for oldest region in transition metrics. n
+   * update the timestamp for oldest region in transition metrics.
    */
   public void updateRITOldestAge(final long timestamp) {
     assignmentManagerSource.setRITOldestAge(timestamp);
   }
 
   /**
-   * update the duration metrics of region is transition n
+   * update the duration metrics of region is transition
    */
   public void updateRitDuration(long duration) {
     assignmentManagerSource.updateRitDuration(duration);

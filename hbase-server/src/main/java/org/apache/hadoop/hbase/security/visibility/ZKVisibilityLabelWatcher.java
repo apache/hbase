@@ -131,8 +131,8 @@ public class ZKVisibilityLabelWatcher extends ZKListener {
   }
 
   /**
-   * Write a labels mirror or user auths mirror into zookeeper n * @param labelsOrUserAuths true for
-   * writing labels and false for user auths.
+   * Write a labels mirror or user auths mirror into zookeeper
+   * @param labelsOrUserAuths true for writing labels and false for user auths.
    */
   public void writeToZookeeper(byte[] data, boolean labelsOrUserAuths) {
     String znode = this.labelZnode;

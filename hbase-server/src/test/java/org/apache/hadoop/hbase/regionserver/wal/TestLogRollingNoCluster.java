@@ -79,7 +79,7 @@ public class TestLogRollingNoCluster {
 
   /**
    * Spin up a bunch of threads and have them all append to a WAL. Roll the WAL frequently to try
-   * and trigger NPE. nn
+   * and trigger NPE.
    */
   @Test
   public void testContendedLogRolling() throws Exception {

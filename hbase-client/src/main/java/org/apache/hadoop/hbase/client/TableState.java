@@ -42,7 +42,7 @@ public class TableState {
 
     /**
      * Covert from PB version of State
-     * @param state convert from n
+     * @param state convert from
      */
     public static State convert(HBaseProtos.TableState.State state) {
       State ret;
@@ -66,7 +66,7 @@ public class TableState {
     }
 
     /**
-     * Covert to PB version of State n
+     * Covert to PB version of State
      */
     public HBaseProtos.TableState.State convert() {
       HBaseProtos.TableState.State state;
@@ -140,7 +140,7 @@ public class TableState {
   }
 
   /**
-   * Table name for state n
+   * Table name for state
    */
   public TableName getTableName() {
     return tableName;
@@ -168,7 +168,7 @@ public class TableState {
   }
 
   /**
-   * Covert to PB version of TableState n
+   * Covert to PB version of TableState
    */
   public HBaseProtos.TableState convert() {
     return HBaseProtos.TableState.newBuilder().setState(this.state.convert()).build();
@@ -177,7 +177,7 @@ public class TableState {
   /**
    * Covert from PB version of TableState
    * @param tableName  table this state of
-   * @param tableState convert from n
+   * @param tableState convert from
    */
   public static TableState convert(TableName tableName, HBaseProtos.TableState tableState) {
     TableState.State state = State.convert(tableState.getState());

@@ -182,13 +182,14 @@ public class ChoreService {
    * @param chore The Chore to be rescheduled. If the chore is not scheduled with this ChoreService
    *              yet then this call is equivalent to a call to scheduleChore.
    */
-  private void rescheduleChore(ScheduledChore chore) {
+  private void rescheduleChore(ScheduledChore chore, boolean immediately) {
     if (scheduledChores.containsKey(chore)) {
       ScheduledFuture<?> future = scheduledChores.get(chore);
       future.cancel(false);
     }
-    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(),
-      chore.getPeriod(), chore.getTimeUnit());
+    // set initial delay to 0 as we want to run it immediately
+    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(chore,
+      immediately ? 0 : chore.getPeriod(), chore.getPeriod(), chore.getTimeUnit());
     scheduledChores.put(chore, future);
   }
 
@@ -244,7 +245,7 @@ public class ChoreService {
       allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void triggerNow(ScheduledChore chore) {
     assert chore.getChoreService() == this;
-    rescheduleChore(chore);
+    rescheduleChore(chore, true);
   }
 
   /** Returns number of chores that this service currently has scheduled */
@@ -343,7 +344,7 @@ public class ChoreService {
     // the chore is NOT rescheduled, future executions of this chore will be delayed more and
     // more on each iteration. This hurts us because the ScheduledThreadPoolExecutor allocates
     // idle threads to chores based on how delayed they are.
-    rescheduleChore(chore);
+    rescheduleChore(chore, false);
     printChoreDetails("onChoreMissedStartTime", chore);
   }
 

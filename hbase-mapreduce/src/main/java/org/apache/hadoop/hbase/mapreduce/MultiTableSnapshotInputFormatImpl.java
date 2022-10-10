@@ -78,7 +78,7 @@ public class MultiTableSnapshotInputFormatImpl {
    * Return the list of splits extracted from the scans/snapshots pushed to conf by
    * {@link #setInput(Configuration, Map, Path)}
    * @param conf Configuration to determine splits from
-   * @return Return the list of splits extracted from the scans/snapshots pushed to conf n
+   * @return Return the list of splits extracted from the scans/snapshots pushed to conf
    */
   public List<TableSnapshotInputFormatImpl.InputSplit> getSplits(Configuration conf)
     throws IOException {
@@ -112,7 +112,7 @@ public class MultiTableSnapshotInputFormatImpl {
    * Retrieve the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration by
    * {@link #setSnapshotToScans(Configuration, Map)}
    * @param conf Configuration to extract name -&gt; list&lt;scan&gt; mappings from.
-   * @return the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration n
+   * @return the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration
    */
   public Map<String, Collection<Scan>> getSnapshotsToScans(Configuration conf) throws IOException {
 
@@ -136,7 +136,7 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Push snapshotScans to conf (under the key {@link #SNAPSHOT_TO_SCANS_KEY}) nnn
+   * Push snapshotScans to conf (under the key {@link #SNAPSHOT_TO_SCANS_KEY})
    */
   public void setSnapshotToScans(Configuration conf, Map<String, Collection<Scan>> snapshotScans)
     throws IOException {
@@ -161,7 +161,7 @@ public class MultiTableSnapshotInputFormatImpl {
    * Retrieve the directories into which snapshots have been restored from
    * ({@link #RESTORE_DIRS_KEY})
    * @param conf Configuration to extract restore directories from
-   * @return the directories into which snapshots have been restored from n
+   * @return the directories into which snapshots have been restored from
    */
   public Map<String, Path> getSnapshotDirs(Configuration conf) throws IOException {
     List<Map.Entry<String, String>> kvps = ConfigurationUtil.getKeyValues(conf, RESTORE_DIRS_KEY);

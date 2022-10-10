@@ -490,7 +490,7 @@ public final class AuthManager {
   }
 
   /**
-   * Last modification logical time n
+   * Last modification logical time
    */
   public long getMTime() {
     return mtime.get();
