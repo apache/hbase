@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -143,11 +144,13 @@ class ReplicationSourceWALReader extends Thread {
           }
           batch = tryAdvanceStreamAndCreateWALBatch(entryStream);
           if (batch == null) {
+            LOG.info("RSS batch null");
             // got no entries and didn't advance position in WAL
             handleEmptyWALEntryBatch();
             entryStream.reset(); // reuse stream
             continue;
           }
+          LOG.info("RSS batch not null");
           // if we have already switched a file, skip reading and put it directly to the ship queue
           if (!batch.isEndOfFile()) {
             readWALEntries(entryStream, batch);
@@ -347,6 +350,10 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   protected final Entry filterEntry(Entry entry) {
+    // Always replicate if this edit is Replication Marker edit.
+    if (WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
+      return entry;
+    }
     Entry filtered = filter.filter(entry);
     if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
       LOG.trace("Filtered entry for replication: {}", entry);

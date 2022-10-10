@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.NoRegionWALEdit;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -44,7 +43,7 @@ public class TestWALEdit {
 
   /**
    * Tests that
-   * {@link org.apache.hadoop.hbase.wal.NoRegionWALEdit#createReplicationMarkerEdit(byte[], long)}
+   * {@link org.apache.hadoop.hbase.wal.WALEdit#createReplicationMarkerEdit(byte[], long)}
    * method is creating WALEdit with correct family and qualifier.
    */
   @Test
@@ -52,7 +51,7 @@ public class TestWALEdit {
     long timestamp = EnvironmentEdgeManager.currentTime();
 
     byte[] rowkey = ReplicationMarkerChore.getRowKey(RS_NAME, timestamp);
-    WALEdit edit = NoRegionWALEdit.createReplicationMarkerEdit(rowkey, timestamp);
+    WALEdit edit = WALEdit.createReplicationMarkerEdit(rowkey, timestamp);
     assertEquals(1, edit.getCells().size());
     Cell cell = edit.getCells().get(0);
     assertTrue(CellUtil.matchingFamily(cell, METAFAMILY));

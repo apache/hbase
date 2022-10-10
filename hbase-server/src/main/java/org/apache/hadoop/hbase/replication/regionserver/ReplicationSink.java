@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_INFO_FAMILY;
+import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_TABLE_NAME;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.RS_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.TIMESTAMP_COLUMN;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.WAL_NAME_COLUMN;
@@ -243,6 +244,7 @@ public class ReplicationSink {
             if (put == null) {
               continue;
             }
+            table = REPLICATION_SINK_TRACKER_TABLE_NAME;
             List<UUID> clusterIds = new ArrayList<>();
             for (HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()) {
               clusterIds.add(toUUID(clusterId));

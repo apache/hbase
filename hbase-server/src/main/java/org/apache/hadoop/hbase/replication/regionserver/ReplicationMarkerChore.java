@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator.REPLICATION_SINK_TRACKER_TABLE_NAME;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
@@ -60,6 +63,7 @@ public class ReplicationMarkerChore extends ScheduledChore {
   private final Configuration conf;
   private final RegionServerServices rsServices;
   private WAL wal;
+  Random random = new Random();
 
   public static final String REPLICATION_MARKER_ENABLED_KEY =
     "hbase.regionserver.replication.marker.enabled";
@@ -95,8 +99,18 @@ public class ReplicationMarkerChore extends ScheduledChore {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Creating replication marker edit.");
     }
+
+    // This creates a new ArrayList of all the online regions for every call.
+    List<HRegion> regions = rsServices.getRegions();
+
+    if (regions.isEmpty()) {
+      LOG.info("There are no online regions for this server, so skipping adding replication marker"
+        + " rows for this regionserver");
+      return;
+    }
+    HRegion region = regions.get(random.nextInt(regions.size()));
     try {
-      WALUtil.writeReplicationMarkerAndSync(wal, MVCC, REGION_INFO, rowKey, timeStamp);
+      WALUtil.writeReplicationMarkerAndSync(wal, MVCC, region.getRegionInfo(), rowKey, timeStamp);
     } catch (IOException ioe) {
       LOG.error("Exception while sync'ing replication tracker edit", ioe);
       // TODO: Should we stop region server or add a metric and keep going.

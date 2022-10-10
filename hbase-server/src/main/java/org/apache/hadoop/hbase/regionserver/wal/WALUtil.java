@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationS
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.wal.NoRegionWALEdit;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -248,6 +247,6 @@ public class WALUtil {
     NavigableMap<byte[], Integer> replicationScope = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     replicationScope.put(WALEdit.METAFAMILY, REPLICATION_SCOPE_GLOBAL);
     writeMarker(wal, replicationScope, regionInfo,
-      NoRegionWALEdit.createReplicationMarkerEdit(rowKey, timestamp), mvcc, null, null);
+      WALEdit.createReplicationMarkerEdit(rowKey, timestamp), mvcc, null, null);
   }
 }
