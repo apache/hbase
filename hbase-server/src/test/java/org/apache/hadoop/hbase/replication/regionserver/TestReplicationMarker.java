@@ -202,7 +202,7 @@ public class TestReplicationMarker {
     return row;
   }
 
-  class ReplicationSinkTrackerRow {
+  static class ReplicationSinkTrackerRow {
     private String region_server_name;
     private String wal_name;
     private long timestamp;

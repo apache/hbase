@@ -350,7 +350,7 @@ class ReplicationSourceWALReader extends Thread {
 
   protected final Entry filterEntry(Entry entry) {
     // Always replicate if this edit is Replication Marker edit.
-    if (WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
+    if (entry != null && WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
       return entry;
     }
     Entry filtered = filter.filter(entry);
