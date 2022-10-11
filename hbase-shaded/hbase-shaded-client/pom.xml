@@ -83,6 +83,7 @@
                   <exclude>org.apache.htrace:*</exclude>
                   <exclude>org.apache.yetus:*</exclude>
                   <exclude>log4j:*</exclude>
+                  <exclude>ch.qos.reload4j:*</exclude>
                   <exclude>commons-logging:*</exclude>
                   <exclude>org.javassist:*</exclude>
                   <exclude>io.opentelemetry:*</exclude>

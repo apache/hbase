@@ -104,6 +104,7 @@
               <exclude>commons-logging:commons-logging</exclude>
               <exclude>jline:jline</exclude>
               <exclude>log4j:log4j</exclude>
+              <exclude>ch.qos.reload4j:reload4j</exclude>
               <exclude>org.apache.hbase:hbase-shaded-client-byo-hadoop</exclude>
               <exclude>org.apache.hbase:hbase-shaded-client</exclude>
               <exclude>org.apache.hbase:hbase-shaded-mapreduce</exclude>
@@ -209,12 +210,12 @@
       <includes>
         <include>com.github.stephenc.findbugs:findbugs-annotations</include>
         <include>commons-logging:commons-logging</include>
-        <include>log4j:log4j</include>
+        <include>ch.qos.reload4j:reload4j</include>
         <include>org.apache.htrace:htrace-core4</include>
         <include>org.apache.htrace:htrace-core</include>
         <include>org.apache.yetus:audience-annotations</include>
         <include>org.slf4j:slf4j-api</include>
-        <include>org.slf4j:slf4j-log4j12</include>
+        <include>org.slf4j:slf4j-reload4j</include>
       </includes>
     </dependencySet>
     <dependencySet>

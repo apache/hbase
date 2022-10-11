@@ -55,13 +55,13 @@
     </dependency>
     <!-- put the log implementations to optional -->
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>ch.qos.reload4j</groupId>
+      <artifactId>reload4j</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
+      <artifactId>slf4j-reload4j</artifactId>
       <optional>true</optional>
     </dependency>
   </dependencies>
@@ -117,6 +117,7 @@
                     <exclude>org.apache.htrace:*</exclude>
                     <exclude>org.apache.yetus:*</exclude>
                     <exclude>log4j:*</exclude>
+                    <exclude>ch.qos.reload4j:*</exclude>
                     <exclude>commons-logging:*</exclude>
                     <exclude>org.javassist:*</exclude>
                     <exclude>io.opentelemetry:*</exclude>
