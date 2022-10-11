@@ -49,7 +49,7 @@ public class TestWALEventTrackerTableAccessor {
     byte[] rowKeyBytes = WALEventTrackerTableAccessor.getRowKey(payload);
 
     String rowKeyBytesStr = Bytes.toString(rowKeyBytes);
-    String[] fields = rowKeyBytesStr.split(WALEventTrackerTableAccessor.DELIMITER);
+    String[] fields = rowKeyBytesStr.split(WALEventTrackerTableAccessor.DELIMITER, -1);
     // This is the format of rowkey: walName_timestamp_walState;
     assertEquals(walName, fields[0]);
     assertEquals(timeStamp, Long.valueOf(fields[1]).longValue());
