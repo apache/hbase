@@ -82,7 +82,7 @@ public abstract class LoadTestDataGenerator {
   }
 
   /**
-   * initialize the LoadTestDataGenerator n * init args
+   * initialize the LoadTestDataGenerator init args
    */
   public void initialize(String[] args) {
     this.args = args;
@@ -140,16 +140,16 @@ public abstract class LoadTestDataGenerator {
   public abstract boolean verify(byte[] rowKey, byte[] cf, byte[] column, byte[] value);
 
   /**
-   * Giving a chance for the LoadTestDataGenerator to change the Mutation load. nn * @return updated
-   * Mutation n
+   * Giving a chance for the LoadTestDataGenerator to change the Mutation load.
+   * @return updated Mutation
    */
   public Mutation beforeMutate(long rowkeyBase, Mutation m) throws IOException {
     return m;
   }
 
   /**
-   * Giving a chance for the LoadTestDataGenerator to change the Get load. nn * @return updated Get
-   * n
+   * Giving a chance for the LoadTestDataGenerator to change the Get load.
+   * @return updated Get
    */
   public Get beforeGet(long rowkeyBase, Get get) throws IOException {
     return get;

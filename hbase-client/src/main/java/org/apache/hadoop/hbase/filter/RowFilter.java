@@ -116,7 +116,8 @@ public class RowFilter extends CompareFilter {
 
   /**
    * @param pbBytes A pb serialized {@link RowFilter} instance
-   * @return An instance of {@link RowFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link RowFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static RowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.RowFilter proto;

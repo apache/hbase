@@ -38,14 +38,14 @@ public interface CellOutputStream {
    * Implementation must copy the entire state of the Cell. If the written Cell is modified
    * immediately after the write method returns, the modifications must have absolutely no effect on
    * the copy of the Cell that was added in the write.
-   * @param cell Cell to write out n
+   * @param cell Cell to write out
    */
   void write(Cell cell) throws IOException;
 
   /**
    * Let the implementation decide what to do. Usually means writing accumulated data into a byte[]
    * that can then be read from the implementation to be sent to disk, put in the block cache, or
-   * sent over the network. n
+   * sent over the network.
    */
   void flush() throws IOException;
 }

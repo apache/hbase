@@ -153,7 +153,7 @@ public class TestCompaction {
   }
 
   /**
-   * Verify that you can stop a long-running compaction (used during RS shutdown) n
+   * Verify that you can stop a long-running compaction (used during RS shutdown)
    */
   @Test
   public void testInterruptCompactionBySize() throws Exception {
@@ -778,7 +778,7 @@ public class TestCompaction {
    * We set compaction.kv.max to 10 so compaction will scan 10 versions each round, meanwhile we set
    * keepSeqIdPeriod=0 in {@link DummyCompactor} so all 10 versions of hfile2 will be written out
    * with seqId cleaned (set to 0) including cell-B, then when scanner goes to cell-A it will cause
-   * a scan out-of-order assertion error before HBASE-16931 n * if error occurs during the test
+   * a scan out-of-order assertion error before HBASE-16931 if error occurs during the test
    */
   @Test
   public void testCompactionSeqId() throws Exception {

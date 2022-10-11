@@ -120,7 +120,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
   }
 
   /**
-   * Test that the server is alive once started n * on failure
+   * Test that the server is alive once started on failure
    */
   @Ignore("Hangs on occasion; see HBASE-14430")
   @Test

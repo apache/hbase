@@ -109,7 +109,8 @@ public class KeyOnlyFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link KeyOnlyFilter} instance
-   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link KeyOnlyFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static KeyOnlyFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.KeyOnlyFilter proto;

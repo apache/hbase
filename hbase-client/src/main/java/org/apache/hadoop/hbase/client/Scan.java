@@ -326,7 +326,7 @@ public class Scan extends Query {
    * Get all columns from the specified family.
    * <p>
    * Overrides previous calls to addColumn for this family.
-   * @param family family name n
+   * @param family family name
    */
   public Scan addFamily(byte[] family) {
     familyMap.remove(family);
@@ -339,7 +339,7 @@ public class Scan extends Query {
    * <p>
    * Overrides previous calls to addFamily for this family.
    * @param family    family name
-   * @param qualifier column qualifier n
+   * @param qualifier column qualifier
    */
   public Scan addColumn(byte[] family, byte[] qualifier) {
     NavigableSet<byte[]> set = familyMap.get(family);
@@ -361,7 +361,7 @@ public class Scan extends Query {
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @see #setMaxVersions()
-   * @see #setMaxVersions(int) n
+   * @see #setMaxVersions(int)
    */
   public Scan setTimeRange(long minStamp, long maxStamp) throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
@@ -374,8 +374,9 @@ public class Scan extends Query {
    * number of versions beyond the defaut.
    * @param timestamp version timestamp
    * @see #setMaxVersions()
-   * @see #setMaxVersions(int) n * @deprecated As of release 2.0.0, this will be removed in HBase
-   *      3.0.0. Use {@link #setTimestamp(long)} instead
+   * @see #setMaxVersions(int)
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #setTimestamp(long)} instead
    */
   @Deprecated
   public Scan setTimeStamp(long timestamp) throws IOException {
@@ -388,7 +389,7 @@ public class Scan extends Query {
    * number of versions beyond the defaut.
    * @param timestamp version timestamp
    * @see #setMaxVersions()
-   * @see #setMaxVersions(int) n
+   * @see #setMaxVersions(int)
    */
   public Scan setTimestamp(long timestamp) {
     try {
@@ -412,9 +413,9 @@ public class Scan extends Query {
    * <p>
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
-   * @param startRow row to start scanner at or after n * @throws IllegalArgumentException if
-   *                 startRow does not meet criteria for a row key (when length exceeds
-   *                 {@link HConstants#MAX_ROW_LENGTH})
+   * @param startRow row to start scanner at or after
+   * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStartRow(byte[])}
    *             instead. This method may change the inclusive of the stop row to keep compatible
    *             with the old behavior.
@@ -436,9 +437,9 @@ public class Scan extends Query {
    * <p>
    * If the specified row does not exist, the Scanner will start from the next closest row after the
    * specified row.
-   * @param startRow row to start scanner at or after n * @throws IllegalArgumentException if
-   *                 startRow does not meet criteria for a row key (when length exceeds
-   *                 {@link HConstants#MAX_ROW_LENGTH})
+   * @param startRow row to start scanner at or after
+   * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan withStartRow(byte[] startRow) {
     return withStartRow(startRow, true);
@@ -450,9 +451,9 @@ public class Scan extends Query {
    * If the specified row does not exist, or the {@code inclusive} is {@code false}, the Scanner
    * will start from the next closest row after the specified row.
    * @param startRow  row to start scanner at or after
-   * @param inclusive whether we should include the start row when scan n * @throws
-   *                  IllegalArgumentException if startRow does not meet criteria for a row key
-   *                  (when length exceeds {@link HConstants#MAX_ROW_LENGTH})
+   * @param inclusive whether we should include the start row when scan
+   * @throws IllegalArgumentException if startRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan withStartRow(byte[] startRow, boolean inclusive) {
     if (Bytes.len(startRow) > HConstants.MAX_ROW_LENGTH) {
@@ -472,9 +473,9 @@ public class Scan extends Query {
    * <b>Note:</b> When doing a filter for a rowKey <u>Prefix</u> use
    * {@link #setRowPrefixFilter(byte[])}. The 'trailing 0' will not yield the desired result.
    * </p>
-   * @param stopRow row to end at (exclusive) n * @throws IllegalArgumentException if stopRow does
-   *                not meet criteria for a row key (when length exceeds
-   *                {@link HConstants#MAX_ROW_LENGTH})
+   * @param stopRow row to end at (exclusive)
+   * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #withStopRow(byte[])} instead.
    *             This method may change the inclusive of the stop row to keep compatible with the
    *             old behavior.
@@ -499,9 +500,9 @@ public class Scan extends Query {
    * <b>Note:</b> When doing a filter for a rowKey <u>Prefix</u> use
    * {@link #setRowPrefixFilter(byte[])}. The 'trailing 0' will not yield the desired result.
    * </p>
-   * @param stopRow row to end at (exclusive) n * @throws IllegalArgumentException if stopRow does
-   *                not meet criteria for a row key (when length exceeds
-   *                {@link HConstants#MAX_ROW_LENGTH})
+   * @param stopRow row to end at (exclusive)
+   * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan withStopRow(byte[] stopRow) {
     return withStopRow(stopRow, false);
@@ -513,9 +514,9 @@ public class Scan extends Query {
    * The scan will include rows that are lexicographically less than (or equal to if
    * {@code inclusive} is {@code true}) the provided stopRow.
    * @param stopRow   row to end at
-   * @param inclusive whether we should include the stop row when scan n * @throws
-   *                  IllegalArgumentException if stopRow does not meet criteria for a row key (when
-   *                  length exceeds {@link HConstants#MAX_ROW_LENGTH})
+   * @param inclusive whether we should include the stop row when scan
+   * @throws IllegalArgumentException if stopRow does not meet criteria for a row key (when length
+   *                                  exceeds {@link HConstants#MAX_ROW_LENGTH})
    */
   public Scan withStopRow(byte[] stopRow, boolean inclusive) {
     if (Bytes.len(stopRow) > HConstants.MAX_ROW_LENGTH) {
@@ -543,7 +544,7 @@ public class Scan extends Query {
    * <b>NOTE: Doing a {@link #setStartRow(byte[])} and/or {@link #setStopRow(byte[])} after this
    * method will yield undefined results.</b>
    * </p>
-   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.) n
+   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
    */
   public Scan setRowPrefixFilter(byte[] rowPrefix) {
     if (rowPrefix == null) {
@@ -557,9 +558,9 @@ public class Scan extends Query {
   }
 
   /**
-   * Get all available versions. n * @deprecated since 2.0.0 and will be removed in 3.0.0. It is
-   * easy to misunderstand with column family's max versions, so use {@link #readAllVersions()}
-   * instead.
+   * Get all available versions.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *             family's max versions, so use {@link #readAllVersions()} instead.
    * @see #readAllVersions()
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
@@ -570,9 +571,9 @@ public class Scan extends Query {
 
   /**
    * Get up to the specified number of versions of each column.
-   * @param maxVersions maximum versions for each column n * @deprecated since 2.0.0 and will be
-   *                    removed in 3.0.0. It is easy to misunderstand with column family's max
-   *                    versions, so use {@link #readVersions(int)} instead.
+   * @param maxVersions maximum versions for each column
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. It is easy to misunderstand with column
+   *             family's max versions, so use {@link #readVersions(int)} instead.
    * @see #readVersions(int)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-17125">HBASE-17125</a>
    */
@@ -582,7 +583,7 @@ public class Scan extends Query {
   }
 
   /**
-   * Get all available versions. n
+   * Get all available versions.
    */
   public Scan readAllVersions() {
     this.maxVersions = Integer.MAX_VALUE;
@@ -591,7 +592,7 @@ public class Scan extends Query {
 
   /**
    * Get up to the specified number of versions of each column.
-   * @param versions specified number of versions for each column n
+   * @param versions specified number of versions for each column
    */
   public Scan readVersions(int versions) {
     this.maxVersions = versions;
@@ -669,7 +670,7 @@ public class Scan extends Query {
 
   /**
    * Setting the familyMap
-   * @param familyMap map of family to qualifier n
+   * @param familyMap map of family to qualifier
    */
   public Scan setFamilyMap(Map<byte[], NavigableSet<byte[]>> familyMap) {
     this.familyMap = familyMap;
@@ -677,7 +678,7 @@ public class Scan extends Query {
   }
 
   /**
-   * Getting the familyMap n
+   * Getting the familyMap
    */
   public Map<byte[], NavigableSet<byte[]>> getFamilyMap() {
     return this.familyMap;
@@ -752,16 +753,12 @@ public class Scan extends Query {
     return this.caching;
   }
 
-  /**
-   * n
-   */
+  /** Returns TimeRange */
   public TimeRange getTimeRange() {
     return this.tr;
   }
 
-  /**
-   * n
-   */
+  /** Returns RowFilter */
   @Override
   public Filter getFilter() {
     return filter;
@@ -796,7 +793,7 @@ public class Scan extends Query {
    * Set whether this scan is a reversed one
    * <p>
    * This is false by default which means forward(normal) scan.
-   * @param reversed if true, scan will be backward order n
+   * @param reversed if true, scan will be backward order
    */
   public Scan setReversed(boolean reversed) {
     this.reversed = reversed;
@@ -815,7 +812,8 @@ public class Scan extends Query {
    * Setting whether the caller wants to see the partial results when server returns
    * less-than-expected cells. It is helpful while scanning a huge row to prevent OOM at client. By
    * default this value is false and the complete results will be assembled client side before being
-   * delivered to the caller. nn * @see Result#mayHaveMoreCellsInRow()
+   * delivered to the caller.
+   * @see Result#mayHaveMoreCellsInRow()
    * @see #setBatch(int)
    */
   public Scan setAllowPartialResults(final boolean allowPartialResults) {
@@ -839,7 +837,7 @@ public class Scan extends Query {
 
   /**
    * Compile the table and column family (i.e. schema) information into a String. Useful for parsing
-   * and aggregation by debugging, logging, and administration tools. n
+   * and aggregation by debugging, logging, and administration tools.
    */
   @Override
   public Map<String, Object> getFingerprint() {
@@ -861,7 +859,7 @@ public class Scan extends Query {
    * Compile the details beyond the scope of getFingerprint (row, columns, timestamps, etc.) into a
    * Map along with the fingerprinted information. Useful for debugging, logging, and administration
    * tools.
-   * @param maxCols a limit on the number of columns output prior to truncation n
+   * @param maxCols a limit on the number of columns output prior to truncation
    */
   @Override
   public Map<String, Object> toMap(int maxCols) {
@@ -942,11 +940,12 @@ public class Scan extends Query {
    * non-compaction read request https://issues.apache.org/jira/browse/HBASE-7266 On the other hand,
    * if setting it true, we would do openScanner,next,closeScanner in one RPC call. It means the
    * better performance for small scan. [HBASE-9488]. Generally, if the scan range is within one
-   * data block(64KB), it could be considered as a small scan. n * @deprecated since 2.0.0 and will
-   * be removed in 3.0.0. Use {@link #setLimit(int)} and {@link #setReadType(ReadType)} instead. And
-   * for the one rpc optimization, now we will also fetch data when openScanner, and if the number
-   * of rows reaches the limit then we will close the scanner automatically which means we will fall
-   * back to one rpc.
+   * data block(64KB), it could be considered as a small scan.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0. Use {@link #setLimit(int)} and
+   *             {@link #setReadType(ReadType)} instead. And for the one rpc optimization, now we
+   *             will also fetch data when openScanner, and if the number of rows reaches the limit
+   *             then we will close the scanner automatically which means we will fall back to one
+   *             rpc.
    * @see #setLimit(int)
    * @see #setReadType(ReadType)
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-17045">HBASE-17045</a>
@@ -1065,7 +1064,7 @@ public class Scan extends Query {
    * reaches this value.
    * <p>
    * This condition will be tested at last, after all other conditions such as stopRow, filter, etc.
-   * @param limit the limit of rows for this scan n
+   * @param limit the limit of rows for this scan
    */
   public Scan setLimit(int limit) {
     this.limit = limit;
@@ -1074,7 +1073,7 @@ public class Scan extends Query {
 
   /**
    * Call this when you only want to get one row. It will set {@code limit} to {@code 1}, and also
-   * set {@code readType} to {@link ReadType#PREAD}. n
+   * set {@code readType} to {@link ReadType#PREAD}.
    */
   public Scan setOneRowLimit() {
     return setLimit(1).setReadType(ReadType.PREAD);
@@ -1096,7 +1095,7 @@ public class Scan extends Query {
    * Set the read type for this scan.
    * <p>
    * Notice that we may choose to use pread even if you specific {@link ReadType#STREAM} here. For
-   * example, we will always use pread if this is a get scan. n
+   * example, we will always use pread if this is a get scan.
    */
   public Scan setReadType(ReadType readType) {
     this.readType = readType;

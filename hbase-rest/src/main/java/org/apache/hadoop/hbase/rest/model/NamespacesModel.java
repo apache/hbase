@@ -57,7 +57,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
 
   /**
    * Constructor
-   * @param admin the administrative API n
+   * @param admin the administrative API
    */
   public NamespacesModel(Admin admin) throws IOException {
     NamespaceDescriptor[] nds = admin.listNamespaceDescriptors();

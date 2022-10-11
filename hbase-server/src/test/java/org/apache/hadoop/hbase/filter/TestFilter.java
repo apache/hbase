@@ -542,7 +542,7 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a {@link Filter} that uses the
-   * {@link Filter#filterRow()} method. See HBASE-2258. n
+   * {@link Filter#filterRow()} method. See HBASE-2258.
    */
   @Test
   public void testWhileMatchFilterWithFilterRow() throws Exception {
@@ -598,7 +598,7 @@ public class TestFilter {
 
   /**
    * The following test is to ensure old(such as hbase0.94) filterRow() can be correctly fired in
-   * 0.96+ code base. See HBASE-10366 n
+   * 0.96+ code base. See HBASE-10366
    */
   @Test
   public void test94FilterRowCompatibility() throws Exception {
@@ -614,7 +614,7 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a {@link Filter} that uses the
-   * {@link Filter#filterRowKey(Cell)} method. See HBASE-2258. n
+   * {@link Filter#filterRowKey(Cell)} method. See HBASE-2258.
    */
   @Test
   public void testWhileMatchFilterWithFilterRowKey() throws Exception {
@@ -639,7 +639,7 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a {@link Filter} that uses the
-   * {@link Filter#filterCell(Cell)} method. See HBASE-2258. n
+   * {@link Filter#filterCell(Cell)} method. See HBASE-2258.
    */
   @Test
   public void testWhileMatchFilterWithFilterCell() throws Exception {

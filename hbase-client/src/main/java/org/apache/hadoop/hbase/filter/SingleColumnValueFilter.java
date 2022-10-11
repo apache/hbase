@@ -155,10 +155,10 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn * @deprecated Since 2.0.0. Will be
-   * removed in 3.0.0. Use
-   * {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable, boolean, boolean)}
-   * instead.
+   * Constructor for protobuf deserialization only.
+   * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
+   *             {@link #SingleColumnValueFilter(byte[], byte[], CompareOperator, ByteArrayComparable, boolean, boolean)}
+   *             instead.
    */
   @Deprecated
   protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
@@ -169,7 +169,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn
+   * Constructor for protobuf deserialization only.
    */
   protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
     final CompareOperator op, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,
@@ -180,8 +180,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * n * @deprecated since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()}
-   * instead.
+   * @deprecated since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()} instead.
    */
   @Deprecated
   public CompareOp getOperator() {

@@ -199,7 +199,7 @@ class RegionLocationFinder {
 
   /**
    * return TableDescriptor for a given tableName
-   * @param tableName the table name nn
+   * @param tableName the table name
    */
   protected TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     TableDescriptor tableDescriptor = null;

@@ -54,7 +54,7 @@ public class TimestampsFilter extends FilterBase {
   long minTimestamp = Long.MAX_VALUE;
 
   /**
-   * Constructor for filter that retains only the specified timestamps in the list. n
+   * Constructor for filter that retains only the specified timestamps in the list.
    */
   public TimestampsFilter(List<Long> timestamps) {
     this(timestamps, false);

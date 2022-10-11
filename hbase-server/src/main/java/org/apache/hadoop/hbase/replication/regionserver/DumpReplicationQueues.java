@@ -146,7 +146,7 @@ public class DumpReplicationQueues extends Configured implements Tool {
   }
 
   /**
-   * Main nn
+   * Main
    */
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();

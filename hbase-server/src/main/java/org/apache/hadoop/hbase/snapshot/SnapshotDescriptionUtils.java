@@ -93,8 +93,7 @@ public final class SnapshotDescriptionUtils {
   public static class CompletedSnaphotDirectoriesFilter extends FSUtils.BlackListDirFilter {
 
     /**
-     * n
-     */
+     *     */
     public CompletedSnaphotDirectoriesFilter(FileSystem fs) {
       super(fs, Collections.singletonList(SNAPSHOT_TMP_DIR_NAME));
     }

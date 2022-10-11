@@ -166,7 +166,7 @@ public interface TableDescriptor {
   String getRegionSplitPolicyClassName();
 
   /**
-   * Get the name of the table n
+   * Get the name of the table
    */
   TableName getTableName();
 

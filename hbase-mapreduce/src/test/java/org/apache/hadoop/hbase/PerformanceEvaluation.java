@@ -261,7 +261,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   interface Status {
     /**
      * Sets status
-     * @param msg status message n
+     * @param msg status message
      */
     void setStatus(final String msg) throws IOException;
   }
@@ -539,7 +539,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /*
    * Run a mapreduce job. Run as many maps as asked-for clients. Before we start up the job, write
    * out an input file with instruction per client regards which row they are to start on.
-   * @param cmd Command to run. n
+   * @param cmd Command to run.
    */
   static Job doMapReduce(TestOptions opts, final Configuration conf)
     throws IOException, InterruptedException, ClassNotFoundException {
@@ -590,7 +590,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /*
    * Write input file of offsets-per-client for the mapreduce job.
    * @param c Configuration
-   * @return Directory that contains file written whose name is JOB_INPUT_FILENAME n
+   * @return Directory that contains file written whose name is JOB_INPUT_FILENAME
    */
   static Path writeInputFile(final Configuration c, final TestOptions opts) throws IOException {
     return writeInputFile(c, opts, new Path("."));
@@ -1344,7 +1344,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     /*
      * Run test
-     * @return Elapsed time. n
+     * @return Elapsed time.
      */
     long test() throws IOException, InterruptedException {
       testSetup();
@@ -2438,8 +2438,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   /*
-   * Format passed integer. n * @return Returns zero-prefixed ROW_LENGTH-byte wide decimal version
-   * of passed number (Does absolute in case number is negative).
+   * Format passed integer.
+   * @return Returns zero-prefixed ROW_LENGTH-byte wide decimal version of passed number (Does
+   * absolute in case number is negative).
    */
   public static byte[] format(final int number) {
     byte[] b = new byte[ROW_LENGTH];

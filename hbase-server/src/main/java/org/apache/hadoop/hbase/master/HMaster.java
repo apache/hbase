@@ -2978,7 +2978,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Utility for constructing an instance of the passed HMaster class. n * @return HMaster instance.
+   * Utility for constructing an instance of the passed HMaster class.
+   * @return HMaster instance.
    */
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
     final Configuration conf) {

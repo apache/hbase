@@ -67,8 +67,8 @@ public class ShutdownHook {
    * <p>
    * To suppress all shutdown hook handling -- both the running of the regionserver hook and of the
    * hdfs hook code -- set {@link ShutdownHook#RUN_SHUTDOWN_HOOK} in {@link Configuration} to
-   * <code>false</code>. This configuration value is checked when the hook code runs. n * @param fs
-   * Instance of Filesystem used by the RegionServer
+   * <code>false</code>. This configuration value is checked when the hook code runs.
+   * @param fs           Instance of Filesystem used by the RegionServer
    * @param stop         Installed shutdown hook will call stop against this passed
    *                     <code>Stoppable</code> instance.
    * @param threadToJoin After calling stop on <code>stop</code> will then join this thread.
@@ -241,7 +241,7 @@ public class ShutdownHook {
   /**
    * Main to test basic functionality. Run with clean hadoop 0.20 and hadoop 0.21 and cloudera
    * patched hadoop to make sure our shutdown hook handling works for all compbinations. Pass
-   * '-Dhbase.shutdown.hook=false' to test turning off the running of shutdown hooks. nn
+   * '-Dhbase.shutdown.hook=false' to test turning off the running of shutdown hooks.
    */
   public static void main(final String[] args) throws IOException {
     Configuration conf = HBaseConfiguration.create();

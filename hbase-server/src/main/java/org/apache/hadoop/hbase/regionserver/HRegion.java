@@ -1077,7 +1077,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Open all Stores. nn * @return Highest sequenceId found out in a Store. n
+   * Open all Stores.
+   * @return Highest sequenceId found out in a Store.
    */
   private long initializeStores(CancelableProgressable reporter, MonitoredTask status)
     throws IOException {
@@ -1252,7 +1253,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param tableDescriptor TableDescriptor of the table
    * @param regionInfo      encoded name of the region
    * @param tablePath       the table directory
-   * @return The HDFS blocks distribution for the given region. n
+   * @return The HDFS blocks distribution for the given region.
    */
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
     TableDescriptor tableDescriptor, RegionInfo regionInfo, Path tablePath) throws IOException {
@@ -2096,7 +2097,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // upkeep.
   //////////////////////////////////////////////////////////////////////////////
   /**
-   * Do preparation for pending compaction. n
+   * Do preparation for pending compaction.
    */
   protected void doRegionCompactionPrep() throws IOException {
   }
@@ -2110,7 +2111,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * activities. The regionserver does not normally compact and split in parallel. However by
    * calling this method you may introduce unexpected and unhandled concurrency. Don't do this
    * unless you know what you are doing.
-   * @param majorCompaction True to force a major compaction regardless of thresholds n
+   * @param majorCompaction True to force a major compaction regardless of thresholds
    */
   public void compact(boolean majorCompaction) throws IOException {
     if (majorCompaction) {
@@ -2165,8 +2166,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * that no locking is necessary at this level because compaction only conflicts with a region
    * split, and that cannot happen because the region server does them sequentially and not in
    * parallel.
-   * @param compaction Compaction details, obtained by requestCompaction() n * @return whether the
-   *                   compaction completed
+   * @param compaction Compaction details, obtained by requestCompaction()
+   * @return whether the compaction completed
    */
   public boolean compact(CompactionContext compaction, HStore store,
     ThroughputController throughputController) throws IOException {
@@ -2779,8 +2780,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Writes a marker to WAL indicating a flush is requested but cannot be complete due to various
-   * reasons. Ignores exceptions from WAL. Returns whether the write succeeded. n * @return whether
-   * WAL write was successful
+   * reasons. Ignores exceptions from WAL. Returns whether the write succeeded.
+   * @return whether WAL write was successful
    */
   private boolean writeFlushRequestMarkerToWAL(WAL wal, boolean writeFlushWalMarker) {
     if (writeFlushWalMarker && wal != null && !writestate.readOnly) {
@@ -2951,7 +2952,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Method to safely get the next sequence number.
-   * @return Next sequence number unassociated with any actual edit. n
+   * @return Next sequence number unassociated with any actual edit.
    */
   protected long getNextSequenceId(final WAL wal) throws IOException {
     WriteEntry we = mvcc.begin();
@@ -3014,7 +3015,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Prepare a delete for a row mutation processor
-   * @param delete The passed delete is modified by this method. WARNING! n
+   * @param delete The passed delete is modified by this method. WARNING!
    */
   public void prepareDelete(Delete delete) throws IOException {
     // Check to see if this is a deleteRow insert
@@ -3053,7 +3054,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * This is used only by unit tests. Not required to be a public API.
-   * @param familyMap map of family to edits for the given family. n
+   * @param familyMap map of family to edits for the given family.
    */
   void delete(NavigableMap<byte[], List<Cell>> familyMap, Durability durability)
     throws IOException {
@@ -3066,7 +3067,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Set up correct timestamps in the KVs in Delete object.
    * <p>
-   * Caller should have the row and region locks. nnnn
+   * Caller should have the row and region locks.
    */
   public void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyMap,
     byte[] byteNow) throws IOException {
@@ -4888,7 +4889,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
-   * provided current timestamp. nn
+   * provided current timestamp.
    */
   private static void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
     throws IOException {
@@ -4984,7 +4985,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Add updates first to the wal and then add values to memstore. Warning: Assumption is caller has
    * lock on passed in row.
-   * @param edits Cell updates by column n
+   * @param edits Cell updates by column
    */
   void put(final byte[] row, byte[] family, List<Cell> edits) throws IOException {
     NavigableMap<byte[], List<Cell>> familyMap;
@@ -5027,7 +5028,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Check the collection of families for validity. nn
+   * Check the collection of families for validity.
    */
   public void checkFamilies(Collection<byte[]> families) throws NoSuchColumnFamilyException {
     for (byte[] family : families) {
@@ -5036,7 +5037,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Check the collection of families for valid timestamps n * @param now current timestamp n
+   * Check the collection of families for valid timestamps
+   * @param now current timestamp
    */
   public void checkTimestamps(final Map<byte[], List<Cell>> familyMap, long now)
     throws FailedSanityCheckException {
@@ -5062,7 +5064,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /*
-   * n * @return True if size is over the flush threshold
+   * @return True if size is over the flush threshold
    */
   private boolean isFlushSize(MemStoreSize size) {
     return size.getHeapSize() + size.getOffHeapSize() > getMemStoreFlushSize();
@@ -5801,7 +5803,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Replays the given flush descriptor by opening the flush files in stores and dropping the
-   * memstore snapshots if requested. nnnn
+   * memstore snapshots if requested.
    */
   private void replayFlushInStores(FlushDescriptor flush, PrepareFlushResult prepareFlushResult,
     boolean dropMemstoreSnapshot) throws IOException {
@@ -5894,7 +5896,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   /**
    * Drops the memstore contents after replaying a flush descriptor or region open event replay if
-   * the memstore edits have seqNums smaller than the given seq id n
+   * the memstore edits have seqNums smaller than the given seq id
    */
   private MemStoreSize dropMemStoreContentsForSeqId(long seqId, HStore store) throws IOException {
     MemStoreSizing totalFreedSize = new NonThreadSafeMemStoreSizing();
@@ -6336,7 +6338,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * make sure have been through lease recovery before get file status, so the file length can be
    * trusted.
    * @param p File to check.
-   * @return True if file was zero-length (and if so, we'll delete it in here). n
+   * @return True if file was zero-length (and if so, we'll delete it in here).
    */
   private static boolean isZeroLengthThenDelete(final FileSystem fs, final FileStatus stat,
     final Path p) throws IOException {
@@ -6421,7 +6423,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Get an exclusive ( write lock ) lock on a given row.
    * @param row Which row to lock.
-   * @return A locked RowLock. The lock is exclusive and already aqquired. n
+   * @return A locked RowLock. The lock is exclusive and already aqquired.
    */
   public RowLock getRowLock(byte[] row) throws IOException {
     return getRowLock(row, false);
@@ -6651,8 +6653,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * column families atomically.
    * @param familyPaths      List of Pair&lt;byte[] column family, String hfilePath&gt;
    * @param bulkLoadListener Internal hooks enabling massaging/preparation of a file about to be
-   *                         bulk loaded n * @return Map from family to List of store file paths if
-   *                         successful, null if failed recoverably
+   *                         bulk loaded
+   * @return Map from family to List of store file paths if successful, null if failed recoverably
    * @throws IOException if failed unrecoverably.
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
@@ -6669,7 +6671,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * Called before an HFile is actually loaded
      * @param family  family being loaded to
      * @param srcPath path of HFile
-     * @return final path to be used for actual loading n
+     * @return final path to be used for actual loading
      */
     String prepareBulkLoad(byte[] family, String srcPath, boolean copyFile, String customStaging)
       throws IOException;
@@ -6677,14 +6679,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     /**
      * Called after a successful HFile load
      * @param family  family being loaded to
-     * @param srcPath path of HFile n
+     * @param srcPath path of HFile
      */
     void doneBulkLoad(byte[] family, String srcPath) throws IOException;
 
     /**
      * Called after a failed HFile load
      * @param family  family being loaded to
-     * @param srcPath path of HFile n
+     * @param srcPath path of HFile
      */
     void failedBulkLoad(byte[] family, String srcPath) throws IOException;
   }
@@ -6692,11 +6694,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Attempts to atomically load a group of hfiles. This is critical for loading rows with multiple
    * column families atomically.
-   * @param familyPaths List of Pair&lt;byte[] column family, String hfilePath&gt; n * @param
-   *                    bulkLoadListener Internal hooks enabling massaging/preparation of a file
-   *                    about to be bulk loaded
-   * @param copyFile    always copy hfiles if true
-   * @param clusterIds  ids from clusters that had already handled the given bulkload event.
+   * @param familyPaths      List of Pair&lt;byte[] column family, String hfilePath&gt;
+   * @param bulkLoadListener Internal hooks enabling massaging/preparation of a file about to be
+   *                         bulk loaded
+   * @param copyFile         always copy hfiles if true
+   * @param clusterIds       ids from clusters that had already handled the given bulkload event.
    * @return Map from family to List of store file paths if successful, null if failed recoverably
    * @throws IOException if failed unrecoverably.
    */
@@ -7178,7 +7180,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * Fetches records with currentRow into results list, until next row, batchLimit (if not -1) is
      * reached, or remainingResultSize (if not -1) is reaced
      * @param heap KeyValueHeap to fetch data from.It must be positioned on correct row before call.
-     *             nn * @return state of last call to {@link KeyValueHeap#next()}
+     * @return state of last call to {@link KeyValueHeap#next()}
      */
     private boolean populateResult(List<Cell> results, KeyValueHeap heap,
       ScannerContext scannerContext, Cell currentRowCell) throws IOException {
@@ -7220,8 +7222,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     /**
      * Based on the nextKv in the heap, and the current row, decide whether or not there are more
      * cells to be read in the heap. If the row of the nextKv in the heap matches the current row
-     * then there are more cells to be read in the row. nn * @return true When there are more cells
-     * in the row to be read
+     * then there are more cells to be read in the row.
+     * @return true When there are more cells in the row to be read
      */
     private boolean moreCellsInRow(final Cell nextKv, Cell currentRowCell) {
       return nextKv != null && CellUtil.matchingRows(nextKv, currentRowCell);
@@ -7487,9 +7489,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       scannerContext.getMetrics().countOfRowsScanned.incrementAndGet();
     }
 
-    /**
-     * n * @return true when the joined heap may have data for the current row n
-     */
+    /** Returns true when the joined heap may have data for the current row */
     private boolean joinedHeapMayHaveData(Cell currentRowCell) throws IOException {
       Cell nextJoinedKv = joinedHeap.peek();
       boolean matchCurrentRow =
@@ -7721,7 +7721,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param wal  WAL for region to use. This method will call WAL#setSequenceNumber(long) passing
    *             the result of the call to HRegion#getMinSequenceId() to ensure the wal id is
    *             properly kept up. HRegionStore does this every time it opens a new region.
-   * @return new HRegion n
+   * @return new HRegion
    */
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf) throws IOException {
@@ -7739,7 +7739,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param conf       The Configuration object to use.
    * @param rsServices An interface we can request flushes against.
    * @param reporter   An interface we can report progress against.
-   * @return new HRegion n
+   * @return new HRegion
    */
   public static HRegion openHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf, final RegionServerServices rsServices,
@@ -7756,7 +7756,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *                the result of the call to HRegion#getMinSequenceId() to ensure the wal id is
    *                properly kept up. HRegionStore does this every time it opens a new region.
    * @param conf    The Configuration object to use.
-   * @return new HRegion n
+   * @return new HRegion
    */
   public static HRegion openHRegion(Path rootDir, final RegionInfo info, final TableDescriptor htd,
     final WAL wal, final Configuration conf) throws IOException {
@@ -7775,7 +7775,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param conf       The Configuration object to use.
    * @param rsServices An interface we can request flushes against.
    * @param reporter   An interface we can report progress against.
-   * @return new HRegion n
+   * @return new HRegion
    */
   public static HRegion openHRegion(final Path rootDir, final RegionInfo info,
     final TableDescriptor htd, final WAL wal, final Configuration conf,
@@ -8112,7 +8112,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param nonceGroup Optional nonce group of the operation (client Id)
    * @param nonce      Optional nonce of the operation (unique random id to ensure "more
    *                   idempotence") If multiple rows are locked care should be taken that
-   *                   <code>rowsToLock</code> is sorted in order to avoid deadlocks. n
+   *                   <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    */
   @Override
   public void mutateRowsWithLocks(Collection<Mutation> mutations, Collection<byte[]> rowsToLock,

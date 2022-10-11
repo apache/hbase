@@ -122,7 +122,7 @@ public class ProcessBasedLocalHBaseCluster {
 
   /**
    * Makes this local HBase cluster use a mini-DFS cluster. Must be called before
-   * {@link #startHBase()}. n
+   * {@link #startHBase()}.
    */
   public void startMiniDFS() throws Exception {
     if (testUtil == null) {

@@ -955,8 +955,8 @@ public class TestWALSplit {
   /**
    * Sets up a log splitter with a mock reader and writer. The mock reader generates a specified
    * number of edits spread across 5 regions. The mock writer optionally sleeps for each edit it is
-   * fed. * After the split is complete, verifies that the statistics show the correct number of
-   * edits output into each region.
+   * fed. After the split is complete, verifies that the statistics show the correct number of edits
+   * output into each region.
    * @param numFakeEdits   number of fake edits to push through pipeline
    * @param bufferSize     size of in-memory buffer
    * @param writerSlowness writer threads will sleep this many ms per edit

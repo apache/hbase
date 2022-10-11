@@ -52,7 +52,7 @@ public class ScannerResource extends ResourceBase {
   TableResource tableResource;
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public ScannerResource(TableResource tableResource) throws IOException {
     super();

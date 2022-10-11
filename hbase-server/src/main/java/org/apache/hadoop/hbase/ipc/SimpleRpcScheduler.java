@@ -55,10 +55,10 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
   private Abortable abortable = null;
 
   /**
-   * n * @param handlerCount the number of handler threads that will be used to process calls
+   * @param handlerCount            the number of handler threads that will be used to process calls
    * @param priorityHandlerCount    How many threads for priority handling.
-   * @param replicationHandlerCount How many threads for replication handling. n * @param priority
-   *                                Function to extract request priority.
+   * @param replicationHandlerCount How many threads for replication handling.
+   * @param priority                Function to extract request priority.
    */
   public SimpleRpcScheduler(Configuration conf, int handlerCount, int priorityHandlerCount,
     int replicationHandlerCount, int metaTransitionHandler, PriorityFunction priority,

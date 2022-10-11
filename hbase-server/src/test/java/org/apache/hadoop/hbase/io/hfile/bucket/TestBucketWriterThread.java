@@ -102,7 +102,7 @@ public class TestBucketWriterThread {
   }
 
   /**
-   * Test non-error case just works. nnn
+   * Test non-error case just works.
    */
   @Test
   public void testNonErrorCase() throws IOException, InterruptedException {
@@ -112,7 +112,7 @@ public class TestBucketWriterThread {
 
   /**
    * Pass through a too big entry and ensure it is cleared from queues and ramCache. Manually run
-   * the WriterThread. n
+   * the WriterThread.
    */
   @Test
   public void testTooBigEntry() throws InterruptedException {
@@ -124,7 +124,7 @@ public class TestBucketWriterThread {
 
   /**
    * Do IOE. Take the RAMQueueEntry that was on the queue, doctor it to throw exception, then put it
-   * back and process it. nn
+   * back and process it.
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -141,7 +141,7 @@ public class TestBucketWriterThread {
   }
 
   /**
-   * Do Cache full exception nn
+   * Do Cache full exception
    */
   @Test
   public void testCacheFullException() throws IOException, InterruptedException {

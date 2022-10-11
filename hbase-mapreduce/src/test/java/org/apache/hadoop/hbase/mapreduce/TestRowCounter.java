@@ -86,7 +86,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when no column was specified in command line arguments. n
+   * Test a case when no column was specified in command line arguments.
    */
   @Test
   public void testRowCounterNoColumn() throws Exception {
@@ -95,7 +95,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when the column specified in command line arguments is exclusive for few rows. n
+   * Test a case when the column specified in command line arguments is exclusive for few rows.
    */
   @Test
   public void testRowCounterExclusiveColumn() throws Exception {
@@ -105,7 +105,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when the column specified in command line arguments is one for which the qualifier
-   * contains colons. n
+   * contains colons.
    */
   @Test
   public void testRowCounterColumnWithColonInQualifier() throws Exception {
@@ -115,7 +115,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when the column specified in command line arguments is not part of first KV for a
-   * row. n
+   * row.
    */
   @Test
   public void testRowCounterHiddenColumn() throws Exception {
@@ -125,7 +125,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when the column specified in command line arguments is exclusive for few rows and
-   * also a row range filter is specified n
+   * also a row range filter is specified
    */
   @Test
   public void testRowCounterColumnAndRowRange() throws Exception {
@@ -134,7 +134,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when a range is specified with single range of start-end keys n
+   * Test a case when a range is specified with single range of start-end keys
    */
   @Test
   public void testRowCounterRowSingleRange() throws Exception {
@@ -143,7 +143,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when a range is specified with single range with end key only n
+   * Test a case when a range is specified with single range with end key only
    */
   @Test
   public void testRowCounterRowSingleRangeUpperBound() throws Exception {
@@ -152,7 +152,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when a range is specified with two ranges where one range is with end key only n
+   * Test a case when a range is specified with two ranges where one range is with end key only
    */
   @Test
   public void testRowCounterRowMultiRangeUpperBound() throws Exception {
@@ -161,7 +161,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when a range is specified with multiple ranges of start-end keys n
+   * Test a case when a range is specified with multiple ranges of start-end keys
    */
   @Test
   public void testRowCounterRowMultiRange() throws Exception {
@@ -171,7 +171,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when a range is specified with multiple ranges of start-end keys; one range is
-   * filled, another two are not n
+   * filled, another two are not
    */
   @Test
   public void testRowCounterRowMultiEmptyRange() throws Exception {
@@ -192,7 +192,7 @@ public class TestRowCounter {
   }
 
   /**
-   * Test a case when the timerange is specified with --starttime and --endtime options n
+   * Test a case when the timerange is specified with --starttime and --endtime options
    */
   @Test
   public void testRowCounterTimeRange() throws Exception {
@@ -240,7 +240,7 @@ public class TestRowCounter {
   /**
    * Run the RowCounter map reduce job and verify the row count.
    * @param args          the command line arguments to be used for rowcounter job.
-   * @param expectedCount the expected row count (result of map reduce job). n
+   * @param expectedCount the expected row count (result of map reduce job).
    */
   private void runRowCount(String[] args, int expectedCount) throws Exception {
     RowCounter rowCounter = new RowCounter();
@@ -432,7 +432,7 @@ public class TestRowCounter {
 
   /**
    * Writes TOTAL_ROWS number of distinct rows in to the table. Few rows have two columns, Few have
-   * one. nn
+   * one.
    */
   private static void writeRows(Table table, int totalRows, int rowsWithOneCol) throws IOException {
     final byte[] family = Bytes.toBytes(COL_FAM);

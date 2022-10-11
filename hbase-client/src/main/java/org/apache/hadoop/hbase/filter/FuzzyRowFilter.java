@@ -138,7 +138,8 @@ public class FuzzyRowFilter extends FilterBase {
 
   /**
    * We need to preprocess mask array, as since we treat 2's as unfixed positions and -1 (0xff) as
-   * fixed positions n * @return mask array
+   * fixed positions
+   * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
     if (!UNSAFE_UNALIGNED) {
@@ -300,8 +301,8 @@ public class FuzzyRowFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link FuzzyRowFilter} instance
-   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link FuzzyRowFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static FuzzyRowFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.FuzzyRowFilter proto;
@@ -628,8 +629,8 @@ public class FuzzyRowFilter extends FilterBase {
 
   /**
    * For forward scanner, next cell hint should not contain any trailing zeroes unless they are part
-   * of fuzzyKeyMeta hint = '\x01\x01\x01\x00\x00' will skip valid row '\x01\x01\x01' nn * @param
-   * toInc - position of incremented byte
+   * of fuzzyKeyMeta hint = '\x01\x01\x01\x00\x00' will skip valid row '\x01\x01\x01'
+   * @param toInc - position of incremented byte
    * @return trimmed version of result
    */
 

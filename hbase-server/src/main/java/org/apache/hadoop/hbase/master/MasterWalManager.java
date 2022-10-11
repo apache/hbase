@@ -155,8 +155,8 @@ public class MasterWalManager {
   }
 
   /**
-   * Get Servernames which are currently splitting; paths have a '-splitting' suffix. n * @throws
-   * IOException IOException
+   * Get Servernames which are currently splitting; paths have a '-splitting' suffix.
+   * @throws IOException IOException
    */
   public Set<ServerName> getSplittingServersFromWALDir() throws IOException {
     return getServerNamesFromWALDirPath(
@@ -165,7 +165,8 @@ public class MasterWalManager {
 
   /**
    * Get Servernames that COULD BE 'alive'; excludes those that have a '-splitting' suffix as these
-   * are already being split -- they cannot be 'alive'. n * @throws IOException IOException
+   * are already being split -- they cannot be 'alive'.
+   * @throws IOException IOException
    */
   public Set<ServerName> getLiveServersFromWALDir() throws IOException {
     return getServerNamesFromWALDirPath(

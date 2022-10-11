@@ -48,9 +48,8 @@ public class VisibilityLabelServiceManager {
   }
 
   /**
-   * n * @return singleton instance of {@link VisibilityLabelService}. The FQCN of the
-   * implementation class can be specified using
-   * "hbase.regionserver.visibility.label.service.class".
+   * @return singleton instance of {@link VisibilityLabelService}. The FQCN of the implementation
+   *         class can be specified using "hbase.regionserver.visibility.label.service.class".
    * @throws IOException When VLS implementation, as specified in conf, can not be loaded.
    */
   public VisibilityLabelService getVisibilityLabelService(Configuration conf) throws IOException {

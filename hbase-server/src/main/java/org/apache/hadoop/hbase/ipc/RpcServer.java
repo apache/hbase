@@ -255,11 +255,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Constructs a server listening on the named port and address.
-   * @param server      hosting instance of {@link Server}. We will do authentications if an
-   *                    instance else pass null for no authentication check.
-   * @param name        Used keying this rpc servers' metrics and for naming the Listener thread.
-   * @param services    A list of services.
-   * @param bindAddress Where to listen nn * @param reservoirEnabled Enable ByteBufferPool or not.
+   * @param server           hosting instance of {@link Server}. We will do authentications if an
+   *                         instance else pass null for no authentication check.
+   * @param name             Used keying this rpc servers' metrics and for naming the Listener
+   *                         thread.
+   * @param services         A list of services.
+   * @param bindAddress      Where to listen
+   * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public RpcServer(final Server server, final String name,
     final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
@@ -765,7 +767,6 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Returns the remote side ip address when invoked inside an RPC Returns null incase of an error.
-   * n
    */
   public static InetAddress getRemoteIp() {
     RpcCall call = CurCall.get();

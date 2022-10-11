@@ -72,7 +72,7 @@ public class TestResult extends TestCase {
   static final byte[] qual = Bytes.toBytes("qual");
 
   /**
-   * Run some tests to ensure Result acts like a proper CellScanner. n
+   * Run some tests to ensure Result acts like a proper CellScanner.
    */
   public void testResultAsCellScanner() throws IOException {
     Cell[] cells = genKVs(row, family, value, 1, 10);
@@ -439,7 +439,6 @@ public class TestResult extends TestCase {
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
-   * n
    */
   public void doReadBenchmark() throws Exception {
 
@@ -501,7 +500,7 @@ public class TestResult extends TestCase {
   }
 
   /**
-   * Calls non-functional test methods. n
+   * Calls non-functional test methods.
    */
   public static void main(String[] args) {
     TestResult testResult = new TestResult();

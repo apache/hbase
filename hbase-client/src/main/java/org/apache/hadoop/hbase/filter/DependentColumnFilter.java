@@ -231,8 +231,8 @@ public class DependentColumnFilter extends CompareFilter {
 
   /**
    * @param pbBytes A pb serialized {@link DependentColumnFilter} instance
-   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code> n * @see
-   *         #toByteArray
+   * @return An instance of {@link DependentColumnFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static DependentColumnFilter parseFrom(final byte[] pbBytes)
     throws DeserializationException {
@@ -259,8 +259,8 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   /**
-   * n * @return true if and only if the fields of the filter that are serialized are equal to the
-   * corresponding fields in other. Used for testing.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")

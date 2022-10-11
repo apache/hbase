@@ -110,7 +110,7 @@ public class SplitLogManager {
    * Its OK to construct this object even when region-servers are not online. It does lookup the
    * orphan tasks in coordination engine but it doesn't block waiting for them to be done.
    * @param master the master services
-   * @param conf   the HBase configuration n
+   * @param conf   the HBase configuration
    */
   public SplitLogManager(MasterServices master, Configuration conf) throws IOException {
     this.server = master;
@@ -180,7 +180,7 @@ public class SplitLogManager {
   /**
    * @param logDir one region sever wal dir path in .logs
    * @throws IOException if there was an error while splitting any log file
-   * @return cumulative size of the logfiles split n
+   * @return cumulative size of the logfiles split
    */
   public long splitLogDistributed(final Path logDir) throws IOException {
     List<Path> logDirs = new ArrayList<>();
@@ -377,9 +377,7 @@ public class SplitLogManager {
 
   }
 
-  /**
-   * nn * @return null on success, existing task on error
-   */
+  /** Returns null on success, existing task on error */
   private Task createTaskIfAbsent(String path, TaskBatch batch) {
     Task oldtask;
     // batch.installed is only changed via this function and

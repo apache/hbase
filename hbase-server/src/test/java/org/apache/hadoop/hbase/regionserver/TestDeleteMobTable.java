@@ -71,7 +71,7 @@ public class TestDeleteMobTable {
   }
 
   /**
-   * Generate the mob value. n * the size of the value
+   * Generate the mob value. the size of the value
    * @return the mob value generated
    */
   private static byte[] generateMobValue(int size) {

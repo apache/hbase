@@ -515,8 +515,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      * Within a loaded block, seek looking for the last key that is smaller than (or equal to?) the
      * key we are interested in. A note on the seekBefore: if you have seekBefore = true, AND the
      * first key in the block = key, then you'll get thrown exceptions. The caller has to check for
-     * that case and load the previous block as appropriate. n * the key to find n * find the key
-     * before the given key in case of exact match.
+     * that case and load the previous block as appropriate. the key to find find the key before the
+     * given key in case of exact match.
      * @return 0 in case of an exact key match, 1 in case of an inexact match, -2 in case of an
      *         inexact match and furthermore, the input key less than the first key of current
      *         block(e.g. using a faked index key)
@@ -1639,10 +1639,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
-   * in a Scanner. Letting go of your references to the scanner is sufficient. n * True if we should
-   * cache blocks read in by this scanner. n * Use positional read rather than seek+read if true
-   * (pread is better for random reads, seek+read is better scanning). n * is scanner being used for
-   * a compaction?
+   * in a Scanner. Letting go of your references to the scanner is sufficient.
+   * @param cacheBlocks  True if we should cache blocks read in by this scanner.
+   * @param pread        Use positional read rather than seek+read if true (pread is better for
+   *                     random reads, seek+read is better scanning).
+   * @param isCompaction is scanner being used for a compaction?
    * @return Scanner on this file.
    */
   @Override

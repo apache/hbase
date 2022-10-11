@@ -167,7 +167,8 @@ public abstract class User {
   }
 
   /**
-   * Executes the given action as the login user n * @return the result of the action n
+   * Executes the given action as the login user
+   * @return the result of the action
    */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
@@ -183,7 +184,7 @@ public abstract class User {
 
   /**
    * Wraps an underlying {@code UserGroupInformation} instance.
-   * @param ugi The base Hadoop user n
+   * @param ugi The base Hadoop user
    */
   public static User create(UserGroupInformation ugi) {
     if (ugi == null) {

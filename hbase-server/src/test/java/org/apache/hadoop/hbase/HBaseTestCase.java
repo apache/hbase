@@ -88,8 +88,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * n
-   */
+   *   */
   public HBaseTestCase(String name) {
     super(name);
   }
@@ -136,7 +135,8 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * @see HBaseTestingUtility#getBaseTestDir n * @return directory to use for this test
+   * @see HBaseTestingUtility#getBaseTestDir
+   * @return directory to use for this test
    */
   protected Path getUnitTestdir(String testName) {
     return testUtil.getDataTestDir(testName);
@@ -145,7 +145,7 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * You must call close on the returned region and then close on the log file it created. Do
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to close both the region and the WAL.
-   * nnn * @return An {@link HRegion} n
+   * @return An {@link HRegion}
    */
   public HRegion createNewHRegion(HTableDescriptor desc, byte[] startKey, byte[] endKey)
     throws IOException {
@@ -201,7 +201,8 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
-   * from 'aaa', 'aab', etc where key and value are the same. nnnn * @return count of what we added.
+   * from 'aaa', 'aab', etc where key and value are the same.
+   * @return count of what we added.
    */
   public static long addContent(final Region r, final byte[] columnFamily, final byte[] column)
     throws IOException {
@@ -221,7 +222,8 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
-   * from 'aaa', 'aab', etc where key and value are the same. n * @return count of what we added.
+   * from 'aaa', 'aab', etc where key and value are the same.
+   * @return count of what we added.
    */
   public static long addContent(final Table updater, final String columnFamily) throws IOException {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
@@ -235,7 +237,7 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
    * from 'aaa', 'aab', etc where key and value are the same.
-   * @return count of what we added. n
+   * @return count of what we added.
    */
   public static long addContent(final Table updater, final String columnFamily,
     final byte[] startKeyBytes, final byte[] endKey) throws IOException {
@@ -250,7 +252,7 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * Add content to region <code>r</code> on the passed column <code>column</code>. Adds data of the
    * from 'aaa', 'aab', etc where key and value are the same.
-   * @return count of what we added. n
+   * @return count of what we added.
    */
   public static long addContent(final Table updater, final String columnFamily, final String column,
     final byte[] startKeyBytes, final byte[] endKey, final long ts) throws IOException {
@@ -349,7 +351,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * Common method to close down a MiniDFSCluster and the associated file system n
+   * Common method to close down a MiniDFSCluster and the associated file system
    */
   public static void shutdownDfs(MiniDFSCluster cluster) {
     if (cluster != null) {
@@ -376,7 +378,6 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * You must call {@link #closeRootAndMeta()} when done after calling this method. It does cleanup.
-   * n
    */
   protected void createMetaRegion() throws IOException {
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);

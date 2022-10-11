@@ -82,9 +82,9 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   private BloomType bloomType;
 
   /**
-   * n * each chunk's size in bytes. The real chunk size might be different as required by the fold
-   * factor. n * target false positive rate n * hash function type to use n * maximum degree of
-   * folding allowed n * the bloom type
+   * each chunk's size in bytes. The real chunk size might be different as required by the fold
+   * factor. target false positive rate hash function type to use maximum degree of folding allowed
+   * the bloom type
    */
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate, int hashType,
     int maxFold, boolean cacheOnWrite, CellComparator comparator, BloomType bloomType) {

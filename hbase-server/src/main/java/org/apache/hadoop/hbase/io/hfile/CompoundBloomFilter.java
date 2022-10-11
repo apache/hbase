@@ -52,7 +52,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
   /**
    * De-serialization for compound Bloom filter metadata. Must be consistent with what
    * {@link CompoundBloomFilterWriter} does.
-   * @param meta serialized Bloom filter metadata without any magic blocks n
+   * @param meta serialized Bloom filter metadata without any magic blocks
    */
   public CompoundBloomFilter(DataInput meta, HFile.Reader reader) throws IOException {
     this.reader = reader;

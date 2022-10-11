@@ -241,7 +241,8 @@ public abstract class Filter {
    * Concrete implementers can signal a failure condition in their code by throwing an
    * {@link IOException}.
    * @param pbBytes A pb serialized {@link Filter} instance
-   * @return An instance of {@link Filter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link Filter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static Filter parseFrom(final byte[] pbBytes) throws DeserializationException {
     throw new DeserializationException(
@@ -250,9 +251,9 @@ public abstract class Filter {
 
   /**
    * Concrete implementers can signal a failure condition in their code by throwing an
-   * {@link IOException}. n * @return true if and only if the fields of the filter that are
-   * serialized are equal to the corresponding fields in other. Used for testing.
-   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
+   * {@link IOException}.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   abstract boolean areSerializedFieldsEqual(Filter other);
 

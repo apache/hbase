@@ -54,9 +54,9 @@ public class MultiResponse extends AbstractResponse {
   }
 
   /**
-   * Add the pair to the container, grouped by the regionName n * @param originalIndex the original
-   * index of the Action (request).
-   * @param resOrEx the result or error; will be empty for successful Put and Delete actions.
+   * Add the pair to the container, grouped by the regionName
+   * @param originalIndex the original index of the Action (request).
+   * @param resOrEx       the result or error; will be empty for successful Put and Delete actions.
    */
   public void add(byte[] regionName, int originalIndex, Object resOrEx) {
     getResult(regionName).addResult(originalIndex, resOrEx);

@@ -76,8 +76,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     boolean useWriteAheadLogging;
 
     /**
-     * n * HBaseConfiguration to used n * whether to use write ahead logging. This can be turned off
-     * ( <tt>false</tt>) to improve performance when bulk loading data.
+     * HBaseConfiguration to used whether to use write ahead logging. This can be turned off (
+     * <tt>false</tt>) to improve performance when bulk loading data.
      */
     public MultiTableRecordWriter(Configuration conf, boolean useWriteAheadLogging)
       throws IOException {
@@ -88,8 +88,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     }
 
     /**
-     * n * the name of the table, as a string
-     * @return the named mutator n * if there is a problem opening a table
+     * the name of the table, as a string
+     * @return the named mutator if there is a problem opening a table
      */
     BufferedMutator getBufferedMutator(ImmutableBytesWritable tableName) throws IOException {
       if (this.connection == null) {
@@ -115,8 +115,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     }
 
     /**
-     * Writes an action (Put or Delete) to the specified table. n * the table being updated. n * the
-     * update, either a put or a delete. n * if the action is not a put or a delete.
+     * Writes an action (Put or Delete) to the specified table. the table being updated. the update,
+     * either a put or a delete. if the action is not a put or a delete.
      */
     @Override
     public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {

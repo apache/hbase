@@ -62,7 +62,7 @@ public interface Tag {
   boolean hasArray();
 
   /**
-   * @return The array containing the value bytes. n * when {@link #hasArray()} return false. Use
+   * @return The array containing the value bytes. when {@link #hasArray()} return false. Use
    *         {@link #getValueByteBuffer()} in such situation
    */
   byte[] getValueArray();

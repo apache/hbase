@@ -90,7 +90,7 @@ public class RESTServlet implements Constants {
   /**
    * Constructor with existing configuration
    * @param conf         existing configuration
-   * @param userProvider the login user provider n
+   * @param userProvider the login user provider
    */
   RESTServlet(final Configuration conf, final UserProvider userProvider) throws IOException {
     this.realUser = userProvider.getCurrent().getUGI();

@@ -46,20 +46,20 @@ abstract class RetryingCallerInterceptor {
   public abstract RetryingCallerInterceptorContext createEmptyContext();
 
   /**
-   * Call this function in case we caught a failure during retries. n * : The context object that we
-   * obtained previously. n * : The exception that we caught in this particular try n
+   * Call this function in case we caught a failure during retries. : The context object that we
+   * obtained previously. : The exception that we caught in this particular try
    */
   public abstract void handleFailure(RetryingCallerInterceptorContext context, Throwable t)
     throws IOException;
 
   /**
-   * Call this function alongside the actual call done on the callable. nn
+   * Call this function alongside the actual call done on the callable.
    */
   public abstract void intercept(
     RetryingCallerInterceptorContext abstractRetryingCallerInterceptorContext) throws IOException;
 
   /**
-   * Call this function to update at the end of the retry. This is not necessary to happen. n
+   * Call this function to update at the end of the retry. This is not necessary to happen.
    */
   public abstract void updateFailureInfo(RetryingCallerInterceptorContext context);
 

@@ -542,7 +542,7 @@ public class TestScanner {
    * @param hri Region
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
-   * @return Count of rows found. n
+   * @return Count of rows found.
    */
   private int count(final Table countTable, final int flushIndex, boolean concurrent)
     throws IOException {

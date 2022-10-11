@@ -109,7 +109,7 @@ public final class JSONMetricUtil {
    * Method for building map used for constructing ObjectName. Mapping is done with arrays indices
    * @param keys   Map keys
    * @param values Map values
-   * @return Map or null if arrays are empty * or have different number of elements
+   * @return Map or null if arrays are empty or have different number of elements
    */
   public static Hashtable<String, String> buldKeyValueTable(String[] keys, String[] values) {
     if (keys.length != values.length) {

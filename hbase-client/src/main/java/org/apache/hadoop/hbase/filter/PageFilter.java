@@ -107,7 +107,8 @@ public class PageFilter extends FilterBase {
 
   /**
    * @param pbBytes A pb serialized {@link PageFilter} instance
-   * @return An instance of {@link PageFilter} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link PageFilter} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static PageFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     FilterProtos.PageFilter proto;

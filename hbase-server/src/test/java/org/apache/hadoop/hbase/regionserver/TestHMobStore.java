@@ -120,7 +120,7 @@ public class TestHMobStore {
   private final String DIR = TEST_UTIL.getDataTestDir("TestHMobStore").toString();
 
   /**
-   * Setup n
+   * Setup
    */
   @Before
   public void setUp() throws Exception {
@@ -204,7 +204,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting data from memstore n
+   * Getting data from memstore
    */
   @Test
   public void testGetFromMemStore() throws IOException {
@@ -237,7 +237,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting MOB data from files n
+   * Getting MOB data from files
    */
   @Test
   public void testGetFromFiles() throws IOException {
@@ -279,7 +279,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting the reference data from files n
+   * Getting the reference data from files
    */
   @Test
   public void testGetReferencesFromFiles() throws IOException {
@@ -323,7 +323,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting data from memstore and files n
+   * Getting data from memstore and files
    */
   @Test
   public void testGetFromMemStoreAndFiles() throws IOException {
@@ -365,7 +365,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Getting data from memstore and files n
+   * Getting data from memstore and files
    */
   @Test
   public void testMobCellSizeThreshold() throws IOException {
@@ -445,7 +445,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Flush the memstore nn
+   * Flush the memstore
    */
   private void flush(int storeFilesSize) throws IOException {
     flushStore(store, id++);
@@ -454,7 +454,7 @@ public class TestHMobStore {
   }
 
   /**
-   * Flush the memstore nnn
+   * Flush the memstore
    */
   private static void flushStore(HMobStore store, long id) throws IOException {
     StoreFlushContext storeFlushCtx = store.createFlushContext(id, FlushLifeCycleTracker.DUMMY);

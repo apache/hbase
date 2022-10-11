@@ -643,7 +643,7 @@ public class MetaTableAccessor {
   /**
    * @param connection connection we're using
    * @param serverName server whose regions we're interested in
-   * @return List of user regions installed on this server (does not include catalog regions). n
+   * @return List of user regions installed on this server (does not include catalog regions).
    */
   public static NavigableMap<RegionInfo, Result> getServerUserRegions(Connection connection,
     final ServerName serverName) throws IOException {

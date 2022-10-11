@@ -81,7 +81,7 @@ public final class BloomFilterFactory {
    * data.
    * @param meta   the byte array holding the Bloom filter's metadata, including version information
    * @param reader the {@link HFile} reader to use to lazily load Bloom filter blocks
-   * @return an instance of the correct type of Bloom filter n
+   * @return an instance of the correct type of Bloom filter
    */
   public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader)
     throws IllegalArgumentException, IOException {
@@ -129,10 +129,10 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new general (Row or RowCol) Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nnn * @param maxKeys an
-   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
-   * enabled.
-   * @param writer the HFile writer
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
+   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
+   *                Bloom filters are enabled.
+   * @param writer  the HFile writer
    * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
    *         create one.
    */
@@ -170,10 +170,10 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new Delete Family Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nn * @param maxKeys an
-   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
-   * enabled.
-   * @param writer the HFile writer
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
+   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
+   *                Bloom filters are enabled.
+   * @param writer  the HFile writer
    * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
    *         create one.
    */

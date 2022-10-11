@@ -95,7 +95,8 @@ public final class AuthUtil {
   /**
    * For kerberized cluster, return login user (from kinit or from keytab if specified). For
    * non-kerberized cluster, return system user.
-   * @param conf configuartion file n * @throws IOException login exception
+   * @param conf configuartion file
+   * @throws IOException login exception
    */
   @InterfaceAudience.Private
   public static User loginClient(Configuration conf) throws IOException {
@@ -155,7 +156,8 @@ public final class AuthUtil {
    * <p>
    * NOT recommend to use to method unless you're sure what you're doing, it is for canary only.
    * Please use User#loginClient.
-   * @param conf configuration file n * @throws IOException login exception
+   * @param conf configuration file
+   * @throws IOException login exception
    */
   private static User loginClientAsService(Configuration conf) throws IOException {
     UserProvider provider = UserProvider.instantiate(conf);

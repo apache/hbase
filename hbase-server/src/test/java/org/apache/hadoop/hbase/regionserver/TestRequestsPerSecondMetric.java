@@ -69,7 +69,7 @@ public class TestRequestsPerSecondMetric {
    * count. Next, we disable a table and all of its 25 regions will be closed. As part of region
    * close, his metric will also be removed from metricCache. prior to HBASE-23237, we do not
    * remove/reset his metric so we incorrectly compute (currentRequestCount - lastRequestCount)
-   * which result into negative value. nn
+   * which result into negative value.
    */
   public void testNoNegativeSignAtRequestsPerSecond() throws IOException, InterruptedException {
     final TableName TABLENAME = TableName.valueOf("t");

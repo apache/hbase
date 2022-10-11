@@ -129,7 +129,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * All regions have an assignment. nnn
+   * All regions have an assignment.
    */
   private void assertImmediateAssignment(List<RegionInfo> regions, List<ServerName> servers,
     Map<RegionInfo, ServerName> assignments) {
@@ -141,7 +141,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   /**
    * Tests the bulk assignment used during cluster startup. Round-robin. Should yield a balanced
    * cluster so same invariant as the load balancer holds, all servers holding either floor(avg) or
-   * ceiling(avg). n
+   * ceiling(avg).
    */
   @Test
   public void testBulkAssignment() throws Exception {
@@ -180,7 +180,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   }
 
   /**
-   * Test the cluster startup bulk assignment which attempts to retain assignment info. n
+   * Test the cluster startup bulk assignment which attempts to retain assignment info.
    */
   @Test
   public void testRetainAssignment() throws Exception {
@@ -407,7 +407,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * <li>If a region had an existing assignment to a server with the same address a a currently
    * online server, it will be assigned to it
    * </ul>
-   * nnn
    */
   private void assertRetainedAssignment(Map<RegionInfo, ServerName> existing,
     List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignment) {

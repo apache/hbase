@@ -96,9 +96,10 @@ public interface WALActionsListener {
   }
 
   /**
-   * n * @param logEdit TODO: Retire this in favor of
-   * {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} It only exists to get scope when
-   * replicating. Scope should be in the WALKey and not need us passing in a <code>htd</code>.
+   * @param logEdit TODO: Retire this in favor of
+   *                {@link #visitLogEntryBeforeWrite(RegionInfo, WALKey, WALEdit)} It only exists to
+   *                get scope when replicating. Scope should be in the WALKey and not need us
+   *                passing in a <code>htd</code>.
    * @throws IOException If failed to parse the WALEdit
    */
   default void visitLogEntryBeforeWrite(WALKey logKey, WALEdit logEdit) throws IOException {

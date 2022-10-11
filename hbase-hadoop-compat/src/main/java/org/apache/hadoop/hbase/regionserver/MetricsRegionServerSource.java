@@ -54,7 +54,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updatePut(long t);
 
   /**
-   * Update the PutBatch time histogram if a batch contains a Put op n
+   * Update the PutBatch time histogram if a batch contains a Put op
    */
   void updatePutBatch(long t);
 

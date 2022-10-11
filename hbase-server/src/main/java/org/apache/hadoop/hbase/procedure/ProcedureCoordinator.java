@@ -86,16 +86,16 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Default thread pool for the procedure n * @param opThreads the maximum number of threads to
-   * allow in the pool
+   * Default thread pool for the procedure
+   * @param opThreads the maximum number of threads to allow in the pool
    */
   public static ThreadPoolExecutor defaultPool(String coordName, int opThreads) {
     return defaultPool(coordName, opThreads, KEEP_ALIVE_MILLIS_DEFAULT);
   }
 
   /**
-   * Default thread pool for the procedure n * @param opThreads the maximum number of threads to
-   * allow in the pool
+   * Default thread pool for the procedure
+   * @param opThreads       the maximum number of threads to allow in the pool
    * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
    */
   public static ThreadPoolExecutor defaultPool(String coordName, int opThreads,
@@ -107,7 +107,7 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Shutdown the thread pools and release rpc resources n
+   * Shutdown the thread pools and release rpc resources
    */
   public void close() throws IOException {
     // have to use shutdown now to break any latch waiting
@@ -220,7 +220,8 @@ public class ProcedureCoordinator {
   }
 
   /**
-   * Exposed for hooking with unit tests. nnn * @return the newly created procedure
+   * Exposed for hooking with unit tests.
+   * @return the newly created procedure
    */
   Procedure createProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
     List<String> expectedMembers) {

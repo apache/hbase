@@ -75,7 +75,8 @@ public class BitComparator extends ByteArrayComparable {
 
   /**
    * @param pbBytes A pb serialized {@link BitComparator} instance
-   * @return An instance of {@link BitComparator} made from <code>bytes</code> n * @see #toByteArray
+   * @return An instance of {@link BitComparator} made from <code>bytes</code>
+   * @see #toByteArray
    */
   public static BitComparator parseFrom(final byte[] pbBytes) throws DeserializationException {
     ComparatorProtos.BitComparator proto;
@@ -89,8 +90,8 @@ public class BitComparator extends ByteArrayComparable {
   }
 
   /**
-   * n * @return true if and only if the fields of the comparator that are serialized are equal to
-   * the corresponding fields in other. Used for testing.
+   * @return true if and only if the fields of the comparator that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {

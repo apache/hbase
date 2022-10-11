@@ -31,9 +31,7 @@ public abstract class HashKey<T> {
     this.t = t;
   }
 
-  /**
-   * n * @return The byte at the given position in this HashKey
-   */
+  /** Returns The byte at the given position in this HashKey */
   public abstract byte get(int pos);
 
   /** Returns The number of bytes in this HashKey */

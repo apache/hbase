@@ -49,18 +49,18 @@ public interface FlushRequester {
   boolean requestDelayedFlush(HRegion region, long delay);
 
   /**
-   * Register a FlushRequestListener n
+   * Register a FlushRequestListener
    */
   void registerFlushRequestListener(final FlushRequestListener listener);
 
   /**
-   * Unregister the given FlushRequestListener n * @return true when passed listener is unregistered
-   * successfully.
+   * Unregister the given FlushRequestListener
+   * @return true when passed listener is unregistered successfully.
    */
   public boolean unregisterFlushRequestListener(final FlushRequestListener listener);
 
   /**
-   * Sets the global memstore limit to a new size. n
+   * Sets the global memstore limit to a new size.
    */
   public void setGlobalMemStoreLimit(long globalMemStoreSize);
 }

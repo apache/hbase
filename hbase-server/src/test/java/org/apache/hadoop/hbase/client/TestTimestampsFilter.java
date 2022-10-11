@@ -95,7 +95,7 @@ public class TestTimestampsFilter {
   /**
    * Test from client side for TimestampsFilter. The TimestampsFilter provides the ability to
    * request cells (KeyValues) whose timestamp/version is in the specified list of
-   * timestamps/version. n
+   * timestamps/version.
    */
   @Test
   public void testTimestampsFilter() throws Exception {
@@ -216,7 +216,7 @@ public class TestTimestampsFilter {
   }
 
   /**
-   * Test TimestampsFilter in the presence of version deletes. n
+   * Test TimestampsFilter in the presence of version deletes.
    */
   @Test
   public void testWithVersionDeletes() throws Exception {

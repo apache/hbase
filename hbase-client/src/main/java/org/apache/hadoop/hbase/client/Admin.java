@@ -532,9 +532,10 @@ public interface Admin extends Abortable, Closeable {
    * Disable table and wait on completion. May timeout eventually. Use
    * {@link #disableTableAsync(org.apache.hadoop.hbase.TableName)} and
    * {@link #isTableDisabled(org.apache.hadoop.hbase.TableName)} instead. The table has to be in
-   * enabled state for it to be disabled. n * @throws IOException There could be couple types of
-   * IOException TableNotFoundException means the table doesn't exist. TableNotEnabledException
-   * means the table isn't in enabled state.
+   * enabled state for it to be disabled.
+   * @throws IOException There could be couple types of IOException TableNotFoundException means the
+   *                     table doesn't exist. TableNotEnabledException means the table isn't in
+   *                     enabled state.
    */
   default void disableTable(TableName tableName) throws IOException {
     get(disableTableAsync(tableName), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
@@ -930,7 +931,7 @@ public interface Admin extends Abortable, Closeable {
    * then it returns. It does not wait on the completion of Compaction (it can take a while).
    * @param tableName   table to compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if a remote or network exception occurs n
+   * @throws IOException if a remote or network exception occurs
    */
   void compact(TableName tableName, CompactType compactType)
     throws IOException, InterruptedException;
@@ -942,7 +943,7 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName    table to compact
    * @param columnFamily column family within a table
    * @param compactType  {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if not a mob column family or if a remote or network exception occurs n
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
    */
   void compact(TableName tableName, byte[] columnFamily, CompactType compactType)
     throws IOException, InterruptedException;
@@ -991,7 +992,7 @@ public interface Admin extends Abortable, Closeable {
    * while).
    * @param tableName   table to compact
    * @param compactType {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if a remote or network exception occurs n
+   * @throws IOException if a remote or network exception occurs
    */
   void majorCompact(TableName tableName, CompactType compactType)
     throws IOException, InterruptedException;
@@ -1003,7 +1004,7 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName    table to compact
    * @param columnFamily column family within a table
    * @param compactType  {@link org.apache.hadoop.hbase.client.CompactType}
-   * @throws IOException if not a mob column family or if a remote or network exception occurs n
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
    */
   void majorCompact(TableName tableName, byte[] columnFamily, CompactType compactType)
     throws IOException, InterruptedException;
@@ -1014,10 +1015,10 @@ public interface Admin extends Abortable, Closeable {
    * can take a while).
    * @param sn    the region server name
    * @param major if it's major compaction
-   * @throws IOException if a remote or network exception occurs n * @deprecated As of release
-   *                     2.0.0, this will be removed in HBase 3.0.0. Use
-   *                     {@link #compactRegionServer(ServerName)} or
-   *                     {@link #majorCompactRegionServer(ServerName)}.
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #compactRegionServer(ServerName)} or
+   *             {@link #majorCompactRegionServer(ServerName)}.
    */
   @Deprecated
   default void compactRegionServer(ServerName sn, boolean major)
@@ -2642,7 +2643,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Return the set of supported security capabilities.
-   * @throws IOException if a remote or network exception occurs n
+   * @throws IOException if a remote or network exception occurs
    */
   List<SecurityCapability> getSecurityCapabilities() throws IOException;
 
@@ -2986,7 +2987,7 @@ public interface Admin extends Abortable, Closeable {
    * Clear compacting queues on a regionserver.
    * @param serverName the region server name
    * @param queues     the set of queue name
-   * @throws IOException if a remote or network exception occurs n
+   * @throws IOException if a remote or network exception occurs
    */
   void clearCompactionQueues(ServerName serverName, Set<String> queues)
     throws IOException, InterruptedException;

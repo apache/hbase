@@ -650,7 +650,7 @@ public class RestoreSnapshotHelper {
    * Clone region directory content from the snapshot info. Each region is encoded with the table
    * name, so the cloned region will have a different region name. Instead of copying the hfiles a
    * HFileLink is created.
-   * @param regionDir {@link Path} cloned dir n
+   * @param regionDir {@link Path} cloned dir
    */
   private void cloneRegion(final RegionInfo newRegionInfo, final Path regionDir,
     final RegionInfo snapshotRegionInfo, final SnapshotRegionManifest manifest) throws IOException {
@@ -697,7 +697,7 @@ public class RestoreSnapshotHelper {
    * Clone region directory content from the snapshot info. Each region is encoded with the table
    * name, so the cloned region will have a different region name. Instead of copying the hfiles a
    * HFileLink is created.
-   * @param region {@link HRegion} cloned n
+   * @param region {@link HRegion} cloned
    */
   private void cloneRegion(final HRegion region, final RegionInfo snapshotRegionInfo,
     final SnapshotRegionManifest manifest) throws IOException {
@@ -862,7 +862,7 @@ public class RestoreSnapshotHelper {
   }
 
   /**
-   * Copy the snapshot files for a snapshot scanner, discards meta changes. nnnnnn
+   * Copy the snapshot files for a snapshot scanner, discards meta changes.
    */
   public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
     Path rootDir, Path restoreDir, String snapshotName) throws IOException {

@@ -242,7 +242,7 @@ public class TestDateTieredCompactionPolicy extends AbstractTestDateTieredCompac
 
   /**
    * Major Compaction to check min max timestamp falling in the same window and also to check
-   * boundary condition in which case binary sort gives insertion point as length of the array n
+   * boundary condition in which case binary sort gives insertion point as length of the array
    */
   @Test
   public void checkMinMaxTimestampSameBoundary() throws IOException {

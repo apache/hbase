@@ -52,19 +52,19 @@ public interface IOEngine {
   /**
    * Transfers data from the given byte buffer to IOEngine
    * @param srcBuffer the given byte buffer from which bytes are to be read
-   * @param offset    The offset in the IO engine where the first byte to be written n
+   * @param offset    The offset in the IO engine where the first byte to be written
    */
   void write(ByteBuffer srcBuffer, long offset) throws IOException;
 
   /**
    * Transfers the data from the given MultiByteBuffer to IOEngine
    * @param srcBuffer the given MultiBytebufffers from which bytes are to be read
-   * @param offset    the offset in the IO engine where the first byte to be written n
+   * @param offset    the offset in the IO engine where the first byte to be written
    */
   void write(ByteBuff srcBuffer, long offset) throws IOException;
 
   /**
-   * Sync the data to IOEngine after writing n
+   * Sync the data to IOEngine after writing
    */
   void sync() throws IOException;
 

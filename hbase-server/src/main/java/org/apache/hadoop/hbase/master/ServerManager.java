@@ -180,7 +180,7 @@ public class ServerManager {
    * @param versionNumber the version number of the new regionserver
    * @param version       the version of the new regionserver, could contain strings like "SNAPSHOT"
    * @param ia            the InetAddress from which request is received
-   * @return The ServerName we know this server as. n
+   * @return The ServerName we know this server as.
    */
   ServerName regionServerStartup(RegionServerStartupRequest request, int versionNumber,
     String version, InetAddress ia) throws IOException {
@@ -205,7 +205,7 @@ public class ServerManager {
   }
 
   /**
-   * Updates last flushed sequence Ids for the regions on server sn nn
+   * Updates last flushed sequence Ids for the regions on server sn
    */
   private void updateLastFlushedSequenceIds(ServerName sn, ServerMetrics hsl) {
     for (Entry<byte[], RegionMetrics> entry : hsl.getRegionMetrics().entrySet()) {
@@ -320,8 +320,8 @@ public class ServerManager {
    * Checks if the clock skew between the server and the master. If the clock skew exceeds the
    * configured max, it will throw an exception; if it exceeds the configured warning threshold, it
    * will log a warning but start normally.
-   * @param serverName Incoming servers's name n * @throws ClockOutOfSyncException if the skew
-   *                   exceeds the configured max value
+   * @param serverName Incoming servers's name
+   * @throws ClockOutOfSyncException if the skew exceeds the configured max value
    */
   private void checkClockSkew(final ServerName serverName, final long serverCurrentTime)
     throws ClockOutOfSyncException {
@@ -412,9 +412,7 @@ public class ServerManager {
     return builder.build();
   }
 
-  /**
-   * n * @return ServerMetrics if serverName is known else null
-   */
+  /** Returns ServerMetrics if serverName is known else null */
   public ServerMetrics getLoad(final ServerName serverName) {
     return this.onlineServers.get(serverName);
   }
@@ -616,8 +614,8 @@ public class ServerManager {
   }
 
   /**
-   * Add the server to the drain list. n * @return True if the server is added or the server is
-   * already on the drain list.
+   * Add the server to the drain list.
+   * @return True if the server is added or the server is already on the drain list.
    */
   public synchronized boolean addServerToDrainList(final ServerName sn) {
     // Warn if the server (sn) is not online. ServerName is of the form:
@@ -705,8 +703,8 @@ public class ServerManager {
   }
 
   /**
-   * n * @return Admin interface for the remote regionserver named <code>sn</code> n * @throws
-   * RetriesExhaustedException wrapping a ConnectException if failed
+   * @return Admin interface for the remote regionserver named <code>sn</code>
+   * @throws RetriesExhaustedException wrapping a ConnectException if failed
    */
   public AdminService.BlockingInterface getRsAdmin(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
@@ -753,7 +751,7 @@ public class ServerManager {
    * the master is stopped - the 'hbase.master.wait.on.regionservers.maxtostart' number of region
    * servers is reached - the 'hbase.master.wait.on.regionservers.mintostart' is reached AND there
    * have been no new region server in for 'hbase.master.wait.on.regionservers.interval' time AND
-   * the 'hbase.master.wait.on.regionservers.timeout' is reached n
+   * the 'hbase.master.wait.on.regionservers.timeout' is reached
    */
   public void waitForRegionServers(MonitoredTask status) throws InterruptedException {
     final long interval =

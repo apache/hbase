@@ -128,7 +128,7 @@ public class TestMasterAddressTracker {
 
   /**
    * Unit tests that uses ZooKeeper but does not use the master-side methods but rather acts
-   * directly on ZK. n
+   * directly on ZK.
    */
   @Test
   public void testMasterAddressTrackerFromZK() throws Exception {

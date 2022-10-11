@@ -32,9 +32,9 @@ public interface HFileBlockDecodingContext {
   /**
    * Perform all actions that need to be done before the encoder's real decoding process.
    * Decompression needs to be done if {@link HFileContext#getCompression()} returns a valid
-   * compression algorithm. n * numBytes after block and encoding headers n * numBytes without
-   * header required to store the block after decompressing (not decoding) n * ByteBuffer pointed
-   * after the header but before the data n * on disk data to be decoded
+   * compression algorithm. numBytes after block and encoding headers numBytes without header
+   * required to store the block after decompressing (not decoding) ByteBuffer pointed after the
+   * header but before the data on disk data to be decoded
    */
   void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
     ByteBuff blockBufferWithoutHeader, ByteBuff onDiskBlock) throws IOException;

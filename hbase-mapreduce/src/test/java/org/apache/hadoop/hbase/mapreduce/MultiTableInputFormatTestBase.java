@@ -200,7 +200,7 @@ public abstract class MultiTableInputFormatTestBase {
   }
 
   /**
-   * Tests a MR scan using specific start and stop rows. nnn
+   * Tests a MR scan using specific start and stop rows.
    */
   private void testScan(String start, String stop, String last)
     throws IOException, InterruptedException, ClassNotFoundException {

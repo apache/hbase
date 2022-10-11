@@ -105,7 +105,8 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * Failure to do so will drop writes.
    * @param ignored Ignored filesystem
    * @param job     Current JobConf
-   * @param name    Name of the job n * @return The newly created writer instance.
+   * @param name    Name of the job
+   * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
    */
   @Override

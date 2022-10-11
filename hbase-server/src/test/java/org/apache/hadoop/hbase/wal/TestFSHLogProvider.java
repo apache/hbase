@@ -160,7 +160,7 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * used by TestDefaultWALProviderWithHLogKey n
+   * used by TestDefaultWALProviderWithHLogKey
    */
   WALKeyImpl getWalKey(final byte[] info, final TableName tableName, final long timestamp,
     NavigableMap<byte[], Integer> scopes) {
@@ -168,7 +168,7 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * helper method to simulate region flush for a WAL. nn
+   * helper method to simulate region flush for a WAL.
    */
   protected void flushRegion(WAL wal, byte[] regionEncodedName, Set<byte[]> flushedFamilyNames) {
     wal.startCacheFlush(regionEncodedName, flushedFamilyNames);
@@ -253,7 +253,6 @@ public class TestFSHLogProvider {
    * eligible for archiving if for all the regions which have entries in that wal file, have flushed
    * - past their maximum sequence id in that wal file.
    * <p>
-   * n
    */
   @Test
   public void testWALArchiving() throws IOException {
@@ -328,7 +327,7 @@ public class TestFSHLogProvider {
   }
 
   /**
-   * Write to a log file with three concurrent threads and verifying all data is written. n
+   * Write to a log file with three concurrent threads and verifying all data is written.
    */
   @Test
   public void testConcurrentWrites() throws Exception {

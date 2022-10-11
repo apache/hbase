@@ -86,8 +86,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Checks a path to see if it is a valid hfile. n * full Path to an HFile n * This is a
-   * connectivity related exception
+   * Checks a path to see if it is a valid hfile. full Path to an HFile This is a connectivity
+   * related exception
    */
   protected void checkHFile(Path p) throws IOException {
     HFile.Reader r = null;
@@ -121,7 +121,7 @@ public class HFileCorruptionChecker {
 
   /**
    * Given a path, generates a new path to where we move a corrupted hfile (bad trailer, no
-   * trailer). n * Path to a corrupt hfile (assumes that it is HBASE_DIR/ table /region/cf/file)
+   * trailer). Path to a corrupt hfile (assumes that it is HBASE_DIR/ table /region/cf/file)
    * @return path to where corrupted files are stored. This should be
    *         HBASE_DIR/.corrupt/table/region/cf/file.
    */
@@ -144,7 +144,7 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Check all files in a column family dir. n * column family directory n
+   * Check all files in a column family dir. column family directory
    */
   protected void checkColFamDir(Path cfDir) throws IOException {
     FileStatus[] statuses = null;
@@ -176,7 +176,7 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Check all files in a mob column family dir. n * mob column family directory n
+   * Check all files in a mob column family dir. mob column family directory
    */
   protected void checkMobColFamDir(Path cfDir) throws IOException {
     FileStatus[] statuses = null;
@@ -208,8 +208,8 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Checks a path to see if it is a valid mob file. n * full Path to a mob file. n * This is a
-   * connectivity related exception
+   * Checks a path to see if it is a valid mob file. full Path to a mob file. This is a connectivity
+   * related exception
    */
   protected void checkMobFile(Path p) throws IOException {
     HFile.Reader r = null;
@@ -243,7 +243,7 @@ public class HFileCorruptionChecker {
 
   /**
    * Checks all the mob files of a table.
-   * @param regionDir The mob region directory n
+   * @param regionDir The mob region directory
    */
   private void checkMobRegionDir(Path regionDir) throws IOException {
     if (!fs.exists(regionDir)) {
@@ -277,7 +277,7 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Check all column families in a region dir. n * region directory n
+   * Check all column families in a region dir. region directory
    */
   protected void checkRegionDir(Path regionDir) throws IOException {
     FileStatus[] statuses = null;
@@ -309,7 +309,7 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Check all the regiondirs in the specified tableDir n * path to a table n
+   * Check all the regiondirs in the specified tableDir path to a table
    */
   void checkTableDir(Path tableDir) throws IOException {
     List<FileStatus> rds =
@@ -488,7 +488,7 @@ public class HFileCorruptionChecker {
   }
 
   /**
-   * Print a human readable summary of hfile quarantining operations. n
+   * Print a human readable summary of hfile quarantining operations.
    */
   public void report(HbckErrorReporter out) {
     out.print("Checked " + hfilesChecked.get() + " hfile for corruption");

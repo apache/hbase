@@ -179,7 +179,7 @@ public class TestCopyTable {
   }
 
   /**
-   * Simple end-to-end test n
+   * Simple end-to-end test
    */
   @Test
   public void testCopyTable() throws Exception {

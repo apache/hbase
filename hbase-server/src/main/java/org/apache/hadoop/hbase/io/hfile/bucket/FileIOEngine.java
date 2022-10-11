@@ -110,7 +110,7 @@ public class FileIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * File IO engine is always able to support persistent storage for the cache n
+   * File IO engine is always able to support persistent storage for the cache
    */
   @Override
   public boolean isPersistent() {
@@ -162,7 +162,7 @@ public class FileIOEngine extends PersistentIOEngine {
   /**
    * Transfers data from the given byte buffer to file
    * @param srcBuffer the given byte buffer from which bytes are to be read
-   * @param offset    The offset in the file where the first byte to be written n
+   * @param offset    The offset in the file where the first byte to be written
    */
   @Override
   public void write(ByteBuffer srcBuffer, long offset) throws IOException {
@@ -170,7 +170,7 @@ public class FileIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * Sync the data to file after writing n
+   * Sync the data to file after writing
    */
   @Override
   public void sync() throws IOException {
@@ -254,8 +254,8 @@ public class FileIOEngine extends PersistentIOEngine {
   }
 
   /**
-   * Get the absolute offset in given file with the relative global offset. nn * @return the
-   * absolute offset
+   * Get the absolute offset in given file with the relative global offset.
+   * @return the absolute offset
    */
   private long getAbsoluteOffsetInFile(int fileNum, long globalOffset) {
     return globalOffset - fileNum * sizePerFile;

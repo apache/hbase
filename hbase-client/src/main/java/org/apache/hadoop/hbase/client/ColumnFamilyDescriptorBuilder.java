@@ -822,8 +822,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Set whether the tags should be compressed along with DataBlockEncoding. When no
-     * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
-     * invocation)
+     * DataBlockEncoding is been used, this is having no effect.
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setCompressTags(boolean compressTags) {
       return setValue(COMPRESS_TAGS_BYTES, String.valueOf(compressTags));
@@ -1201,7 +1201,7 @@ public class ColumnFamilyDescriptorBuilder {
      * @param bytes A pb serialized {@link ModifyableColumnFamilyDescriptor} instance with pb magic
      *              prefix
      * @return An instance of {@link ModifyableColumnFamilyDescriptor} made from <code>bytes</code>
-     *         n * @see #toByteArray()
+     * @see #toByteArray()
      */
     private static ColumnFamilyDescriptor parseFrom(final byte[] bytes)
       throws DeserializationException {
@@ -1247,8 +1247,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Remove a configuration setting represented by the key from the {@link #configuration} map. n
-     * * @return this (for chained invocation)
+     * Remove a configuration setting represented by the key from the {@link #configuration} map.
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor removeConfiguration(final String key) {
       return setConfiguration(key, null);
@@ -1260,8 +1260,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the encryption algorithm for use with this family n * @return this (for chained
-     * invocation)
+     * Set the encryption algorithm for use with this family
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionType(String algorithm) {
       return setValue(ENCRYPTION_BYTES, algorithm);
@@ -1273,7 +1273,8 @@ public class ColumnFamilyDescriptorBuilder {
     }
 
     /**
-     * Set the raw crypto key attribute for the family n * @return this (for chained invocation)
+     * Set the raw crypto key attribute for the family
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setEncryptionKey(byte[] keyBytes) {
       return setValue(ENCRYPTION_KEY_BYTES, new Bytes(keyBytes));
