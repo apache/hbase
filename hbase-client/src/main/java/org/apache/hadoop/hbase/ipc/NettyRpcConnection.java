@@ -315,7 +315,8 @@ class NettyRpcConnection extends RpcConnection {
 
         private void fail(Channel ch, Throwable error) {
           IOException ex = toIOE(error);
-          LOG.warn("Exception encountered while connecting to the server " + remoteId.getAddress(), ex);
+          LOG.warn("Exception encountered while connecting to the server " + remoteId.getAddress(),
+            ex);
           failInit(ch, ex);
           rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), error);
         }
