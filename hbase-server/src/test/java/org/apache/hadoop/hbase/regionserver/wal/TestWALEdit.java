@@ -43,8 +43,8 @@ public class TestWALEdit {
 
   /**
    * Tests that
-   * {@link org.apache.hadoop.hbase.wal.WALEdit#createReplicationMarkerEdit(byte[], long)}
-   * method is creating WALEdit with correct family and qualifier.
+   * {@link org.apache.hadoop.hbase.wal.WALEdit#createReplicationMarkerEdit(byte[], long)} method is
+   * creating WALEdit with correct family and qualifier.
    */
   @Test
   public void testCreateReplicationMarkerEdit() {
