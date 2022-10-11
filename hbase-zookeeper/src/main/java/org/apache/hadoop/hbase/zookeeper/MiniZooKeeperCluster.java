@@ -235,7 +235,9 @@ public class MiniZooKeeperCluster {
       while (true) {
         try {
           standaloneServerFactory = new NIOServerCnxnFactory();
-          standaloneServerFactory.configure(new InetSocketAddress(LOOPBACK_HOST, currentClientPort),
+          String bindAddr =
+            configuration.get("hbase.zookeeper.property.clientPortAddress", LOOPBACK_HOST);
+          standaloneServerFactory.configure(new InetSocketAddress(bindAddr, currentClientPort),
             configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
               HConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS));
         } catch (BindException e) {
