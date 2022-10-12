@@ -86,6 +86,7 @@ public class TestReplicationLogCleaner {
     when(rpm.listPeers(null)).thenReturn(new ArrayList<>());
     ReplicationQueueStorage rqs = mock(ReplicationQueueStorage.class);
     when(rpm.getQueueStorage()).thenReturn(rqs);
+    when(rpm.getQueueStorage().hasData()).thenReturn(true);
     when(rqs.listAllQueues()).thenReturn(new ArrayList<>());
     ServerManager sm = mock(ServerManager.class);
     when(services.getServerManager()).thenReturn(sm);
