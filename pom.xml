@@ -628,7 +628,7 @@
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.24.1</spotless.version>
+    <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
@@ -2414,6 +2414,19 @@
               <exclude>**/package-info.java</exclude>
             </excludes>
             <!--
+              e.g., remove the following lines:
+              "* @param paramName"
+              "* @throws ExceptionType"
+              "* @return returnType"'
+              Multiline to allow anchors on newlines
+              See https://errorprone.info/bugpattern/EmptyBlockTag
+            -->
+            <replaceRegex>
+              <name>Remove unhelpful javadoc stubs</name>
+              <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
+              <replacement/>
+            </replaceRegex>
+            <!--
               e.g., rewrite
               /** @return blabla */
               or
@@ -2422,7 +2435,8 @@
                */
               to
               /** Returns blabla */
-              See https://errorprone.info/bugpattern/EmptyBlockTag
+              See https://errorprone.info/bugpattern/MissingSummary
+              https://google.github.io/styleguide/javaguide.html#s7.2-summary-fragment
             -->
             <replaceRegex>
               <name>Purge single returns tag multi line</name>
