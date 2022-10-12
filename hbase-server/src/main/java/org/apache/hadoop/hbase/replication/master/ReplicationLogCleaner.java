@@ -76,6 +76,14 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
     if (this.getConf() == null) {
       return;
     }
+    try {
+      if (!rpm.getQueueStorage().hasData()) {
+        return;
+      }
+    } catch (ReplicationException e) {
+      LOG.error("Error occurred while executing queueStorage.hasData()", e);
+      return;
+    }
     canFilter = rpm.getReplicationLogCleanerBarrier().start();
     if (canFilter) {
       notFullyDeadServers = getNotFullyDeadServers.get();
