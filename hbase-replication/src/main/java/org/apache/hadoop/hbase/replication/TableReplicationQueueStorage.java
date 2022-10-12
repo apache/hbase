@@ -532,4 +532,13 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
       throw new ReplicationException("failed to getAllHFileRefs", e);
     }
   }
+
+  @Override
+  public boolean hasData() throws ReplicationException {
+    try {
+      return conn.getAdmin().getDescriptor(tableName) != null;
+    } catch (IOException e) {
+      throw new ReplicationException("failed to get replication queue table", e);
+    }
+  }
 }
