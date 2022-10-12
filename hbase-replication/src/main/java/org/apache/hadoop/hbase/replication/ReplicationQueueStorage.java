@@ -178,4 +178,10 @@ public interface ReplicationQueueStorage {
    * created hfile references during the call may not be included.
    */
   Set<String> getAllHFileRefs() throws ReplicationException;
+
+  /**
+   * Whether the replication queue table exists.
+   * @return Whether the replication queue table exists
+   */
+  boolean hasData() throws ReplicationException;
 }
