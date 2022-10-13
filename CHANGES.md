@@ -20,6 +20,60 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.15 - 2022-10-21
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27339](https://issues.apache.org/jira/browse/HBASE-27339) | Improve sasl connection failure log message to include server |  Minor | Client |
+| [HBASE-27365](https://issues.apache.org/jira/browse/HBASE-27365) | Minimise block addition failures due to no space in bucket cache writers queue by introducing wait time |  Major | BucketCache |
+| [HBASE-27391](https://issues.apache.org/jira/browse/HBASE-27391) | Downgrade ERROR log to DEBUG in ConnectionUtils.updateStats |  Major | . |
+| [HBASE-27370](https://issues.apache.org/jira/browse/HBASE-27370) | Avoid decompressing blocks when reading from bucket cache prefetch threads |  Major | . |
+| [HBASE-27332](https://issues.apache.org/jira/browse/HBASE-27332) | Remove RejectedExecutionHandler for long/short compaction thread pools |  Minor | Compaction |
+| [HBASE-27320](https://issues.apache.org/jira/browse/HBASE-27320) | hide some sensitive configuration information in the UI |  Minor | security, UI |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27420](https://issues.apache.org/jira/browse/HBASE-27420) | Failure while connecting to zk if HBase is running in standalone mode in a container |  Minor | Zookeeper |
+| [HBASE-27424](https://issues.apache.org/jira/browse/HBASE-27424) | Upgrade Jettison for CVE-2022-40149/40150 |  Major | . |
+| [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
+| [HBASE-27407](https://issues.apache.org/jira/browse/HBASE-27407) | Fixing check for "description" request param in JMXJsonServlet.java |  Minor | metrics |
+| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | . |
+| [HBASE-27393](https://issues.apache.org/jira/browse/HBASE-27393) | Frequent and not useful "Final timeLimitDelta" log lines |  Major | . |
+| [HBASE-27368](https://issues.apache.org/jira/browse/HBASE-27368) | Do not need to throw IllegalStateException when peer is not active in ReplicationSource.initialize |  Major | regionserver, Replication |
+| [HBASE-27362](https://issues.apache.org/jira/browse/HBASE-27362) | Fix some tests hung by CompactSplit.requestCompactionInternal ignoring compactionsEnabled check |  Major | Compaction |
+| [HBASE-22939](https://issues.apache.org/jira/browse/HBASE-22939) | SpaceQuotas- Bulkload from different hdfs failed when space quotas are turned on. |  Major | . |
+| [HBASE-27335](https://issues.apache.org/jira/browse/HBASE-27335) | HBase shell hang for a minute when quiting |  Major | shell |
+| [HBASE-25922](https://issues.apache.org/jira/browse/HBASE-25922) | Disabled sanity checks ignored on snapshot restore |  Minor | conf, snapshots |
+| [HBASE-27246](https://issues.apache.org/jira/browse/HBASE-27246) | RSGroupMappingScript#getRSGroup has thread safety problem |  Major | rsgroup |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27421](https://issues.apache.org/jira/browse/HBASE-27421) | Bump spotless plugin to 2.27.2 and reimplement the 'Remove unhelpful javadoc stubs' rule |  Major | documentation, pom |
+| [HBASE-27401](https://issues.apache.org/jira/browse/HBASE-27401) | Clean up current broken 'n's in our javadoc |  Major | documentation |
+| [HBASE-27403](https://issues.apache.org/jira/browse/HBASE-27403) | Remove 'Remove unhelpful javadoc stubs' spotless rule for now |  Major | documentation, pom |
+| [HBASE-27384](https://issues.apache.org/jira/browse/HBASE-27384) | Backport  HBASE-27064 to branch 2.4 |  Minor | Normalizer |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27411](https://issues.apache.org/jira/browse/HBASE-27411) |  Update and clean up bcprov-jdk15on dependency |  Minor | build |
+| [HBASE-27372](https://issues.apache.org/jira/browse/HBASE-27372) | Update java versions in our Dockerfiles |  Major | build, scripts |
+| [HBASE-27373](https://issues.apache.org/jira/browse/HBASE-27373) | Fix new spotbugs warnings after upgrading spotbugs to 4.7.2 |  Major | . |
+| [HBASE-27371](https://issues.apache.org/jira/browse/HBASE-27371) | Bump spotbugs version |  Major | build, pom |
+
+
 ## Release 2.4.14 - Unreleased (as of 2022-08-23)
 
 
