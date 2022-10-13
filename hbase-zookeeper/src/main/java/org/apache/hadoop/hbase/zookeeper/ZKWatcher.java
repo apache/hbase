@@ -735,7 +735,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   @Override
   public void close() {
-    LOG.info("ZKWatcher close started.");
     zkEventProcessor.shutdown();
     try {
       zkEventProcessor.awaitTermination(60, TimeUnit.SECONDS);
@@ -749,7 +748,6 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
         Thread.currentThread().interrupt();
       }
     }
-    LOG.info("ZKWatcher close finished.");
   }
 
   public Configuration getConfiguration() {
