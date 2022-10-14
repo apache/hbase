@@ -71,15 +71,16 @@ public class RpcRetryingCallerFactory {
       interceptor, startLogErrorsCnt, connectionConf.getRpcTimeout(), metrics);
   }
 
-  public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
+  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+    MetricsConnection metrics) {
     return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null,
-      null);
+      metrics);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-    ServerStatisticTracker stats) {
+    ServerStatisticTracker stats, MetricsConnection metrics) {
     return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats,
-      null);
+      metrics);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,

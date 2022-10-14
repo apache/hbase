@@ -645,7 +645,8 @@ public class HRegionServer extends Thread
       serverName = ServerName.valueOf(hostName, this.rpcServices.isa.getPort(), this.startcode);
 
       rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
-      rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
+      rpcRetryingCallerFactory =
+        RpcRetryingCallerFactory.instantiate(this.conf, clusterConnection.getConnectionMetrics());
 
       // login the zookeeper client principal (if using security)
       ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,

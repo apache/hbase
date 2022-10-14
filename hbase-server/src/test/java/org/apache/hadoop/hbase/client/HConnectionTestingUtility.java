@@ -123,7 +123,8 @@ public class HConnectionTestingUtility {
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     AsyncProcess asyncProcess = new AsyncProcess(c, conf,
-      RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
+      RpcRetryingCallerFactory.instantiate(conf, c.getConnectionMetrics()),
+      RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(RpcRetryingCallerFactory
       .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, null));

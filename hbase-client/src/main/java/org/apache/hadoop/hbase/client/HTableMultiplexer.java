@@ -422,7 +422,8 @@ public class HTableMultiplexer {
       this.addr = addr;
       this.multiplexer = htableMultiplexer;
       this.queue = new LinkedBlockingQueue<>(perRegionServerBufferQueueSize);
-      RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      RpcRetryingCallerFactory rpcCallerFactory =
+        RpcRetryingCallerFactory.instantiate(conf, conn.getConnectionMetrics());
       RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
         conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
