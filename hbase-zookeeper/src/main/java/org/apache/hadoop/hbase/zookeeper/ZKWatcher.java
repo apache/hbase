@@ -737,9 +737,11 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   public void close() {
     zkEventProcessor.shutdown();
     try {
-      zkEventProcessor.awaitTermination(60, TimeUnit.SECONDS);
+      if (!zkEventProcessor.awaitTermination(15, TimeUnit.SECONDS)) {
+        LOG.warn("ZKWatcher event processor has not finished to terminate.");
+        zkEventProcessor.shutdownNow();
+      }
     } catch (InterruptedException e) {
-      LOG.warn("ZKWatcher event processor has not finished to terminate.");
       Thread.currentThread().interrupt();
     } finally {
       try {
