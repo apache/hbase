@@ -370,11 +370,16 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
           rsWrap.getBlockCacheHitCount())
         .addCounter(Interns.info(BLOCK_CACHE_PRIMARY_HIT_COUNT, BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC),
           rsWrap.getBlockCachePrimaryHitCount())
+        .addCounter(Interns.info(BLOCK_CACHE_HIT_CACHING_COUNT, BLOCK_CACHE_HIT_CACHING_COUNT_DESC),
+          rsWrap.getBlockCacheHitCachingCount())
         .addCounter(Interns.info(BLOCK_CACHE_MISS_COUNT, BLOCK_COUNT_MISS_COUNT_DESC),
           rsWrap.getBlockCacheMissCount())
         .addCounter(
           Interns.info(BLOCK_CACHE_PRIMARY_MISS_COUNT, BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC),
           rsWrap.getBlockCachePrimaryMissCount())
+        .addCounter(
+          Interns.info(BLOCK_CACHE_MISS_CACHING_COUNT, BLOCK_COUNT_MISS_CACHING_COUNT_DESC),
+          rsWrap.getBlockCacheMissCachingCount())
         .addCounter(Interns.info(BLOCK_CACHE_EVICTION_COUNT, BLOCK_CACHE_EVICTION_COUNT_DESC),
           rsWrap.getBlockCacheEvictedCount())
         .addCounter(
