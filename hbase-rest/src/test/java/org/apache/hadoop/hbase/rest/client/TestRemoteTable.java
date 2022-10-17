@@ -575,47 +575,6 @@ public class TestRemoteTable {
   }
 
   /**
-   * Tests scanner with limitation limit the number of rows each scanner scan fetch at life time The
-   * number of rows returned should be equal to the limit
-   */
-  @Test
-  public void testLimitedScan() throws Exception {
-    int numTrials = 100;
-    int limit = 60;
-
-    // Truncate the test table for inserting test scenarios rows keys
-    TEST_UTIL.getAdmin().disableTable(TABLE);
-    TEST_UTIL.getAdmin().truncateTable(TABLE, false);
-    String row = "testrow";
-
-    try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
-      List<Put> puts = new ArrayList<>();
-      Put put = null;
-      for (int i = 1; i <= numTrials; i++) {
-        put = new Put(Bytes.toBytes(row + i));
-        put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, Bytes.toBytes("testvalue" + i));
-        puts.add(put);
-      }
-      table.put(puts);
-    }
-
-    remoteTable =
-      new RemoteHTable(new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
-        TEST_UTIL.getConfiguration(), TABLE.toBytes());
-
-    Scan scan = new Scan();
-    scan.setLimit(limit);
-    ResultScanner scanner = remoteTable.getScanner(scan);
-    Iterator<Result> resultIterator = scanner.iterator();
-    int counter = 0;
-    while (resultIterator.hasNext()) {
-      resultIterator.next();
-      counter++;
-    }
-    assertEquals(limit, counter);
-  }
-
-  /**
    * Tests keeping a HBase scanner alive for long periods of time. Each call to next() should reset
    * the ConnectionCache timeout for the scanner's connection.
    * @throws Exception if starting the servlet container or disabling or truncating the table fails
