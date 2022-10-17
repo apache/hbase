@@ -20,7 +20,7 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
-## Release 2.5.1 - Unreleased (as of 2022-10-13)
+## Release 2.5.1 - 2022-10-21
 
 
 
@@ -35,6 +35,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-27159](https://issues.apache.org/jira/browse/HBASE-27159) | Emit source metrics for BlockCacheExpressHitPercent |  Minor | BlockCache, metrics |
 | [HBASE-27339](https://issues.apache.org/jira/browse/HBASE-27339) | Improve sasl connection failure log message to include server |  Minor | Client |
 | [HBASE-27365](https://issues.apache.org/jira/browse/HBASE-27365) | Minimise block addition failures due to no space in bucket cache writers queue by introducing wait time |  Major | BucketCache |
 | [HBASE-27391](https://issues.apache.org/jira/browse/HBASE-27391) | Downgrade ERROR log to DEBUG in ConnectionUtils.updateStats |  Major | . |
@@ -51,6 +52,8 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-27426](https://issues.apache.org/jira/browse/HBASE-27426) | Region server abort with failing to list region servers. |  Major | Zookeeper |
+| [HBASE-27432](https://issues.apache.org/jira/browse/HBASE-27432) | TestUsersOperationsWithSecureHadoop fails affter HBASE-27411 |  Major | . |
 | [HBASE-27420](https://issues.apache.org/jira/browse/HBASE-27420) | Failure while connecting to zk if HBase is running in standalone mode in a container |  Minor | Zookeeper |
 | [HBASE-27424](https://issues.apache.org/jira/browse/HBASE-27424) | Upgrade Jettison for CVE-2022-40149/40150 |  Major | . |
 | [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
@@ -90,6 +93,7 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-27431](https://issues.apache.org/jira/browse/HBASE-27431) | Remove TestRemoteTable.testLimitedScan |  Trivial | REST, test |
 | [HBASE-27411](https://issues.apache.org/jira/browse/HBASE-27411) |  Update and clean up bcprov-jdk15on dependency |  Minor | build |
 | [HBASE-27372](https://issues.apache.org/jira/browse/HBASE-27372) | Update java versions in our Dockerfiles |  Major | build, scripts |
 | [HBASE-27373](https://issues.apache.org/jira/browse/HBASE-27373) | Fix new spotbugs warnings after upgrading spotbugs to 4.7.2 |  Major | . |
