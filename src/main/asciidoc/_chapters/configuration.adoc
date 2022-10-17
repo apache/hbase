@@ -317,12 +317,27 @@ link:https://hadoop.apache.org/cve_list.html[CVEs] so we drop the support in new
 
 [cols="1,2*^.^", options="header"]
 |===
-| | HBase-2.3.x | HBase-2.4.x
-|Hadoop-2.10.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+| | HBase-2.4.x | HBase-2.5.x
+|Hadoop-2.10.[0-1] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-2.10.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
 |Hadoop-3.1.0 | icon:times-circle[role="red"] | icon:times-circle[role="red"]
-|Hadoop-3.1.1+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.2.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
-|Hadoop-3.3.x | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.1.1+ | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-3.2.[0-2] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-3.2.3+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|Hadoop-3.3.[0-1] | icon:check-circle[role="green"] | icon:times-circle[role="red"]
+|Hadoop-3.3.2+ | icon:check-circle[role="green"] | icon:check-circle[role="green"]
+|===
+
+.Hadoop version support matrix for EOM 2.3+ release lines
+
+[cols="1,1*^.^", options="header"]
+|===
+| | HBase-2.3.x
+|Hadoop-2.10.x | icon:check-circle[role="green"]
+|Hadoop-3.1.0 | icon:times-circle[role="red"]
+|Hadoop-3.1.1+ | icon:check-circle[role="green"]
+|Hadoop-3.2.x | icon:check-circle[role="green"]
+|Hadoop-3.3.x | icon:check-circle[role="green"]
 |===
 
 .Hadoop version support matrix for EOM 2.x release lines
