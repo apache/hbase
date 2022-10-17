@@ -178,8 +178,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     // allocate a boundedcompletion pool of some multiple of number of replicas.
     // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
     ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
-      new ResultBoundedCompletionService<>(RpcRetryingCallerFactory
-        .instantiate(ScannerCallableWithReplicas.this.conf, cConnection.getConnectionMetrics()),
+      new ResultBoundedCompletionService<>(
+        RpcRetryingCallerFactory.instantiate(ScannerCallableWithReplicas.this.conf,
+          cConnection == null ? null : cConnection.getConnectionMetrics()),
         pool, regionReplication * 5);
 
     AtomicBoolean done = new AtomicBoolean(false);
@@ -381,9 +382,11 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       // and we can't invoke it multiple times at the same time)
       this.caller = ScannerCallableWithReplicas.this.caller;
       if (scan.getConsistency() == Consistency.TIMELINE) {
-        this.caller = RpcRetryingCallerFactory
-          .instantiate(ScannerCallableWithReplicas.this.conf, cConnection.getConnectionMetrics())
-          .<Result[]> newCaller();
+        this.caller =
+          RpcRetryingCallerFactory
+            .instantiate(ScannerCallableWithReplicas.this.conf,
+              cConnection == null ? null : cConnection.getConnectionMetrics())
+            .<Result[]> newCaller();
       }
     }
 
