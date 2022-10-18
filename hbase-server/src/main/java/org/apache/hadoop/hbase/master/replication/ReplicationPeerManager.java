@@ -21,7 +21,6 @@ import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -29,10 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -70,6 +69,7 @@ import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkLastPushedSeqId;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkReplicationQueueData;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -778,25 +778,38 @@ public class ReplicationPeerManager {
     }
   }
 
+  private interface ExceptionalRunnable {
+    void run() throws Exception;
+  }
+
+  private CompletableFuture<?> runAsync(ExceptionalRunnable task, ExecutorService executor) {
+    CompletableFuture<?> future = new CompletableFuture<>();
+    executor.execute(() -> {
+      try {
+        task.run();
+        future.complete(null);
+      } catch (Exception e) {
+        future.completeExceptionally(e);
+      }
+    });
+    return future;
+  }
+
   /**
-   * Submit the migration tasks to the given {@code executor} and return the futures.
+   * Submit the migration tasks to the given {@code executor}.
    */
-  List<Future<?>> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor)
-    throws IOException {
+  CompletableFuture<?> migrateQueuesFromZk(ZKWatcher zookeeper, ExecutorService executor) {
     // the replication queue table creation is asynchronous and will be triggered by addPeer, so
     // here we need to manually initialize it since we will not call addPeer.
-    initializeQueueStorage();
+    try {
+      initializeQueueStorage();
+    } catch (IOException e) {
+      return FutureUtils.failedFuture(e);
+    }
     ZKReplicationQueueStorageForMigration oldStorage =
       new ZKReplicationQueueStorageForMigration(zookeeper, conf);
-    return Arrays.asList(executor.submit(() -> {
-      migrateQueues(oldStorage);
-      return null;
-    }), executor.submit(() -> {
-      migrateLastPushedSeqIds(oldStorage);
-      return null;
-    }), executor.submit(() -> {
-      migrateHFileRefs(oldStorage);
-      return null;
-    }));
+    return CompletableFuture.allOf(runAsync(() -> migrateQueues(oldStorage), executor),
+      runAsync(() -> migrateLastPushedSeqIds(oldStorage), executor),
+      runAsync(() -> migrateHFileRefs(oldStorage), executor));
   }
 }
