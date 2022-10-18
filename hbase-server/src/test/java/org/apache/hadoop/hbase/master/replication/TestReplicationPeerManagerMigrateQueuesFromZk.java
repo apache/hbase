@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -146,9 +145,7 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
   @Test
   public void testNoPeers() throws Exception {
     prepareData();
-    for (Future<?> future : manager.migrateQueuesFromZk(UTIL.getZooKeeperWatcher(), EXECUTOR)) {
-      future.get(1, TimeUnit.MINUTES);
-    }
+    manager.migrateQueuesFromZk(UTIL.getZooKeeperWatcher(), EXECUTOR).get(1, TimeUnit.MINUTES);
     // should have called initializer
     verify(queueStorageInitializer).initialize();
     // should have not migrated any data since there is no peer
@@ -165,9 +162,7 @@ public class TestReplicationPeerManagerMigrateQueuesFromZk {
       // value is not used in this test, so just add a mock
       peers.put("peer_" + i, mock(ReplicationPeerDescription.class));
     }
-    for (Future<?> future : manager.migrateQueuesFromZk(UTIL.getZooKeeperWatcher(), EXECUTOR)) {
-      future.get(1, TimeUnit.MINUTES);
-    }
+    manager.migrateQueuesFromZk(UTIL.getZooKeeperWatcher(), EXECUTOR).get(1, TimeUnit.MINUTES);
     // should have called initializer
     verify(queueStorageInitializer).initialize();
     List<ReplicationQueueData> queueDatas = queueStorage.listAllQueues();
