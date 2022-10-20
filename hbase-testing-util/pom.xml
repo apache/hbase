@@ -172,6 +172,14 @@
           <scope>compile</scope>
           <exclusions>
             <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-core-asl</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-mapper-asl</artifactId>
+            </exclusion>
+            <exclusion>
               <groupId>javax.xml.bind</groupId>
               <artifactId>jaxb-api</artifactId>
             </exclusion>
@@ -279,6 +287,14 @@
             <exclusion>
               <groupId>javax.ws.rs</groupId>
               <artifactId>jsr311-api</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-core-asl</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-mapper-asl</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
