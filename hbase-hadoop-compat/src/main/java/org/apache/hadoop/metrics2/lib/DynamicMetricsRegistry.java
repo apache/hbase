@@ -19,6 +19,7 @@ package org.apache.hadoop.metrics2.lib;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -388,8 +389,9 @@ public class DynamicMetricsRegistry {
 
   public void removeHistogramMetrics(String baseName) {
     for (String suffix : histogramSuffixes) {
-      removeMetric(baseName + suffix);
+      helper.removeObjectName(baseName + suffix);
     }
+    metricsMap.remove(baseName);
   }
 
   /**
@@ -531,5 +533,10 @@ public class DynamicMetricsRegistry {
       helper.removeObjectName(name);
     }
     metricsMap.clear();
+  }
+
+  @VisibleForTesting
+  public ConcurrentMap<String, MutableMetric> getMetricsMap() {
+    return metricsMap;
   }
 }
