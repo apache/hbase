@@ -66,7 +66,17 @@ String compact = conf.get("hbase.regionserver.thrift.compact", "false");
                 <li class="active"><a href="/">Home</a></li>
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Metrics <span class="caret"></span>
+                  </a>
+                  <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    <li><a target="_blank" href="/jmx">JMX</a></li>
+                    <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
+                    <li><a target="_blank" href="/prometheus">Prometheus</a></li>
+                    <li><a target="_blank" href="/prometheus?description=true">Prometheus with description</a></li>
+                  </ul>
+                </li>
                 <li><a href="/prof">Profiler</a></li>
                 <% if (HBaseConfiguration.isShowConfInServlet()) { %>
                 <li><a href="/conf">HBase Configuration</a></li>
