@@ -104,8 +104,8 @@ RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
 FROM BASE_IMAGE AS OPENJDK11_DOWNLOAD_IMAGE
-ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16.1%2B1/OpenJDK11U-jdk_x64_linux_hotspot_11.0.16.1_1.tar.gz'
-ENV OPENJDK11_SHA256 '5f6b513757d386352cf91514ed5859d1ab59364b4453e1f1c57152ba2039b8e2'
+ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.16_8.tar.gz'
+ENV OPENJDK11_SHA256 '3fa9cb99229ede53d4efddb686106df77794e02b1f4defea6b70b2b53380a8c7'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
