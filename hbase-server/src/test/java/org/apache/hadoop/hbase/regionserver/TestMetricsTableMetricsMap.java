@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -26,10 +29,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-@Category({ RegionServerTests.class, SmallTests.class }) public class TestMetricsTableMetricsMap {
+@Category({ RegionServerTests.class, SmallTests.class })
+public class TestMetricsTableMetricsMap {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -43,7 +44,8 @@ import static org.junit.Assert.assertTrue;
   private MetricsRegionServer rsm;
   private MetricsTableAggregateSourceImpl agg;
 
-  @Before public void setUp() {
+  @Before
+  public void setUp() {
     Configuration conf = new Configuration();
 
     tableWrapper = new MetricsTableWrapperStub(tableName);
@@ -60,7 +62,8 @@ import static org.junit.Assert.assertTrue;
     }
   }
 
-  @Test public void testMetricsMap() throws InterruptedException {
+  @Test
+  public void testMetricsMap() throws InterruptedException {
     // do major compaction
     rsm.updateCompaction(tableName, true, 100, 200, 300, 400, 500);
 

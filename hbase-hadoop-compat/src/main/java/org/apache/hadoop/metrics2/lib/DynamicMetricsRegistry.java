@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
-import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -536,7 +536,7 @@ public class DynamicMetricsRegistry {
   }
 
   @RestrictedApi(explanation = "Should only be called in TestMetricsTableMetricsMap", link = "",
-    allowedOnPath = ".*/(DynamicMetricsRegistry|TestMetricsTableMetricsMap).java")
+      allowedOnPath = ".*/(DynamicMetricsRegistry|TestMetricsTableMetricsMap).java")
   public ConcurrentMap<String, MutableMetric> getMetricsMap() {
     return metricsMap;
   }
