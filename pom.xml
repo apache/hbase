@@ -38,7 +38,7 @@
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
-  <version>3.0.0-alpha-4-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
   <description>Apache HBase is the Hadoop database. Use it when you need
@@ -749,6 +749,7 @@
     </site>
   </distributionManagement>
   <properties>
+    <revision>3.0.0-alpha-4-SNAPSHOT</revision>
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
@@ -768,7 +769,8 @@
     <compileSource>1.8</compileSource>
     <releaseTarget>8</releaseTarget>
     <!-- Build dependencies -->
-    <maven.min.version>3.0.4</maven.min.version>
+    <!-- The $revision feature is introduced in 3.5.0 -->
+    <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <hadoop-three.version>3.2.4</hadoop-three.version>
