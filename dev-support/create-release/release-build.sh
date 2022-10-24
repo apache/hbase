@@ -134,7 +134,7 @@ if [[ "$1" == "tag" ]]; then
     jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
   fi
   shopt -u nocasematch
-  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}"
+  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}" "${PREV_VERSION}"
 
   cd "${PROJECT}"
 
@@ -145,9 +145,22 @@ if [[ "$1" == "tag" ]]; then
   # Create release version
   maven_set_version "$RELEASE_VERSION"
   find . -name pom.xml -exec git add {} \;
-  git add RELEASENOTES.md CHANGES.md
+  # Always put CHANGES.md and RELEASENOTES.md to parent directory, so later we do not need to
+  # check their position when generating release data. We can not put them under the source code
+  # directory because for 3.x+, CHANGES.md and RELEASENOTES.md are not tracked so later when
+  # generating src release tarball, we will reset the git repo
+  if [[ $(is_tracked "CHANGES.md") == 0 ]]; then
+    git add RELEASENOTES.md CHANGES.md
+    git commit -s -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
+    cp CHANGES.md ../
+    cp RELEASENOTES.md ../
+  else
+    # CHANGES.md is not tracked, should 3.x+
+    git commit -s -m "Preparing ${PROJECT} release $RELEASE_TAG"
+    mv CHANGES.md ../
+    mv RELEASENOTES.md ../
+  fi
 
-  git commit -s -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
   log "Creating tag $RELEASE_TAG at the head of $GIT_BRANCH"
   git tag -s -m "Via create-release" "$RELEASE_TAG"
 
@@ -237,8 +250,9 @@ if [[ "$1" == "publish-dist" ]]; then
 
   log "Copying release tarballs"
   cp "${PROJECT}"-*.tar.* "$svn_target/${DEST_DIR_NAME}/"
-  cp "${PROJECT}/CHANGES.md" "$svn_target/${DEST_DIR_NAME}/"
-  cp "${PROJECT}/RELEASENOTES.md" "$svn_target/${DEST_DIR_NAME}/"
+  cp "CHANGES.md" "$svn_target/${DEST_DIR_NAME}/"
+  cp "RELEASENOTES.md" "$svn_target/${DEST_DIR_NAME}/"
+
   shopt -s nocasematch
   # Generate api report only if project is hbase for now.
   if [ "${PROJECT}" == "hbase" ]; then
