@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.metrics.Interns;
@@ -388,8 +389,9 @@ public class DynamicMetricsRegistry {
 
   public void removeHistogramMetrics(String baseName) {
     for (String suffix : histogramSuffixes) {
-      removeMetric(baseName + suffix);
+      helper.removeObjectName(baseName + suffix);
     }
+    metricsMap.remove(baseName);
   }
 
   /**
@@ -531,5 +533,11 @@ public class DynamicMetricsRegistry {
       helper.removeObjectName(name);
     }
     metricsMap.clear();
+  }
+
+  @RestrictedApi(explanation = "Should only be called in TestMetricsTableMetricsMap", link = "",
+      allowedOnPath = ".*/(DynamicMetricsRegistry|TestMetricsTableMetricsMap).java")
+  public ConcurrentMap<String, MutableMetric> getMetricsMap() {
+    return metricsMap;
   }
 }
