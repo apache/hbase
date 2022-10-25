@@ -558,7 +558,12 @@
          comes in via hbase-thirdparty hbase-shaded-netty-->
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <audience-annotations.version>0.5.0</audience-annotations.version>
+    <audience-annotations.version>0.13.0</audience-annotations.version>
+    <!--
+      The version used when generating javadoc, 0.13.0 is the latest version which supports jdk8.
+      When building with jdk11, we will use 0.14.1, please see the build-with-jdk11 profile.
+    -->
+    <javadoc.audience-annotations.version>0.13.0</javadoc.audience-annotations.version>
     <avro.version>1.11.0</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.13</commons-codec.version>
@@ -711,8 +716,7 @@
         this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
     <build.id>${maven.build.timestamp}</build.id>
     <shell-executable>bash</shell-executable>
-    <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
-         property as of javadoc-plugin 3.0.0 -->
+    <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <javax.activation.version>1.2.0</javax.activation.version>
   </properties>
@@ -1558,8 +1562,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>${compileSource}</source>
-            <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
             <useIncrementalCompilation>false</useIncrementalCompilation>
@@ -2689,7 +2691,7 @@
               <docletArtifact>
                 <groupId>org.apache.yetus</groupId>
                 <artifactId>audience-annotations</artifactId>
-                <version>${audience-annotations.version}</version>
+                <version>${javadoc.audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>apidocs</destDir>
@@ -2746,7 +2748,7 @@
               <docletArtifact>
                 <groupId>org.apache.yetus</groupId>
                 <artifactId>audience-annotations</artifactId>
-                <version>${audience-annotations.version}</version>
+                <version>${javadoc.audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>testapidocs</destDir>
@@ -2847,18 +2849,17 @@
     <profile>
       <id>build-with-jdk8</id>
       <activation>
-        <jdk>[1.8,)</jdk>
+        <jdk>1.8</jdk>
       </activation>
-      <build>
-        <pluginManagement>
-          <plugins/>
-        </pluginManagement>
-      </build>
+      <properties>
+        <maven.compiler.source>${compileSource}</maven.compiler.source>
+        <maven.compiler.target>${compileSource}</maven.compiler.target>
+      </properties>
     </profile>
     <profile>
       <id>build-with-jdk11</id>
       <activation>
-        <jdk>[1.11,)</jdk>
+        <jdk>[11,)</jdk>
       </activation>
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
@@ -2878,8 +2879,36 @@
           TODO: replicate logic for windows
         -->
         <surefire.Xmx>2200m</surefire.Xmx>
+        <!--
+          com.sun.javadoc and com.sun.tools.doclets are both deprecated in java 11 and will
+          fail the javadoc generating, so we need to use yetus 0.14.1 where it uses jdk.javadoc
+          and jdk.javadoc.doclet instead
+        -->
+        <javadoc.audience-annotations.version>0.14.1</javadoc.audience-annotations.version>
       </properties>
       <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <version>${maven.javadoc.version}</version>
+              <configuration>
+                <source>${compileSource}</source>
+                <!--
+                  Need to add this option to ignore the source errors, epsecially that we reference
+                  test code in hbase-testing-util's main code.
+                -->
+                <additionalOptions>--ignore-source-errors</additionalOptions>
+                <additionalJOptions>
+                  <additionalJOption>-J-Xmx2G</additionalJOption>
+                  <additionalJOption>-J--add-exports</additionalJOption>
+                  <additionalJOption>-Jjdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+                </additionalJOptions>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
