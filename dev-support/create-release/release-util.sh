@@ -685,8 +685,38 @@ function kick_gpg_agent {
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
-  log "${MVN[@]}" versions:set -DnewVersion="$this_version"
-  "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+  local use_revision='false'
+  local -a version_splits=()
+  IFS='.' read -ar version_splits <<< "$(maven_get_version)"
+
+  # Do the right thing based on project and release line.
+  if [ "${PROJECT}" = 'hbase' ] ; then
+    if [ "${version_splits[0]}" -le 1 ] ; then
+      use_revision='false'
+    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -le 4 ] ; then
+      use_revision='false'
+    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -ge 5 ] ; then
+      use_revision='true'
+    elif [ "${version_splits[0]}" -ge 3 ] ; then
+      use_revision='true'
+    fi
+  elif [ "${PROJECT}" = 'hbase-thirdparty' ] ; then
+    use_revision='false'
+  elif [ "${PROJECT}" = 'hbase-connectors' ] ; then
+    use_revision='true'
+  elif [ "${PROJECT}" = 'hbase-filesystem' ] ; then
+    use_revision='false'
+  elif [ "${PROJECT}" = 'hbase-operator-tools' ] ; then
+    use_revision='false'
+  fi
+
+  if [ "${use_revision}" = 'false' ] ; then
+    log "${MVN[@]}" versions:set -DnewVersion="$this_version"
+    "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+  else
+    log "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false
+    "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false | grep -v "no value" # silence logs
+  fi
 }
 
 # Do maven command to read version from local pom
