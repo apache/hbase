@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +42,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ MediumTests.class, ReplicationTests.class })
 public class TestNonHBaseReplicationEndpoint {
@@ -86,11 +86,8 @@ public class TestNonHBaseReplicationEndpoint {
 
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
       .setReplicationEndpointImpl(NonHBaseReplicationEndpoint.class.getName())
-      .setReplicateAllUserTables(false).setTableCFsMap(new HashMap<TableName, List<String>>() {
-        {
-          put(tableName, new ArrayList<>());
-        }
-      }).build();
+      .setReplicateAllUserTables(false)
+      .setTableCFsMap(ImmutableMap.of(tableName, new ArrayList<>())).build();
 
     ADMIN.addReplicationPeer("1", peerConfig);
     loadData(table);
