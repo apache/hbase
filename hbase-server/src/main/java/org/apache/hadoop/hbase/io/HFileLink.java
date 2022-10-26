@@ -100,7 +100,7 @@ public class HFileLink extends FileLink {
     this.originPath = originPath;
     this.mobPath = mobPath;
     this.archivePath = archivePath;
-    setLocations(originPath, tempPath, mobPath, archivePath);
+    setLocations(originPath, archivePath, tempPath, mobPath);
   }
 
   /**
