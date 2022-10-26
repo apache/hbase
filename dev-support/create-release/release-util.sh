@@ -37,6 +37,10 @@ fi
 # Maven Profiles for publishing snapshots and release to Maven Central and Dist
 PUBLISH_PROFILES=("-P" "apache-release,release")
 
+# get the current directory, we want to use some python scripts to generate
+# CHANGES.md and RELEASENOTES.md
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 function error {
   log "Error: $*" >&2
   exit 1
@@ -183,7 +187,8 @@ function get_release_info {
     local RC_COUNT
     if [ "$REV" != 0 ]; then
       local PREV_REL_REV=$((REV - 1))
-      PREV_REL_TAG="rel/${SHORT_VERSION}.${PREV_REL_REV}"
+      PREV_VERSION=${SHORT_VERSION}.${PREV_REL_REV}
+      PREV_REL_TAG="rel/${PREV_VERSION}"
       if git ls-remote --tags "$ASF_REPO" "$PREV_REL_TAG" | grep -q "refs/tags/${PREV_REL_TAG}$" ; then
         RC_COUNT=0
         REV=$((REV + 1))
@@ -197,13 +202,16 @@ function get_release_info {
     else
       REV=$((REV + 1))
       NEXT_VERSION="${SHORT_VERSION}.${REV}-SNAPSHOT"
+      # not easy to calculate it, just leave it as empty and let users provide it
+      PREV_VERSION=""
       RC_COUNT=0
     fi
   fi
 
   RELEASE_VERSION="$(read_config "RELEASE_VERSION" "$RELEASE_VERSION")"
   NEXT_VERSION="$(read_config "NEXT_VERSION" "$NEXT_VERSION")"
-  export RELEASE_VERSION NEXT_VERSION
+  PREV_VERSION="$(read_config "PREV_VERSION" "$PREV_VERSION")"
+  export RELEASE_VERSION NEXT_VERSION PREV_VERSION
 
   RC_COUNT="$(read_config "RC_COUNT" "$RC_COUNT")"
   if [[ -z "${RELEASE_TAG}" ]]; then
@@ -259,6 +267,7 @@ Release details:
 GIT_BRANCH:      $GIT_BRANCH
 RELEASE_VERSION: $RELEASE_VERSION
 NEXT_VERSION:    $NEXT_VERSION
+PREV_VERSION:    $PREV_VERSION
 RELEASE_TAG:     $RELEASE_TAG $([[ "$GIT_REF" != "$RELEASE_TAG" ]] && printf "\n%s\n" "GIT_REF:         $GIT_REF")
 API_DIFF_TAG:    $API_DIFF_TAG
 ASF_USERNAME:    $ASF_USERNAME
@@ -528,6 +537,7 @@ function get_jira_name {
 function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
+  local previous_jira_fix_version="$3"
   local jira_project
   local timing_token
   timing_token="$(start_step)"
@@ -547,11 +557,17 @@ function update_releasenotes {
     sed -i -e \
         "/^## Release ${jira_fix_version}/,/^## Release/ {//!d; /^## Release ${jira_fix_version}/d;}" \
         "${project_dir}/CHANGES.md" || true
+  else
+    # should be hbase 3.x, will copy CHANGES.md from archive.a.o/dist
+    curl --location --fail --silent --show-error --output ${project_dir}/CHANGES.md "https://archive.apache.org/dist/hbase/${previous_jira_fix_version}/CHANGES.md"
   fi
   if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     sed -i -e \
         "/^# ${jira_project}  ${jira_fix_version} Release Notes/,/^# ${jira_project}/{//!d; /^# ${jira_project}  ${jira_fix_version} Release Notes/d;}" \
         "${project_dir}/RELEASENOTES.md" || true
+  else
+    # should be hbase 3.x, will copy CHANGES.md from archive.a.o/dist
+    curl --location --fail --silent --show-error --output ${project_dir}/RELEASENOTES.md "https://archive.apache.org/dist/hbase/${previous_jira_fix_version}/RELEASENOTES.md"
   fi
 
   # Yetus will not generate CHANGES if no JIRAs fixed against the release version
@@ -566,21 +582,12 @@ function update_releasenotes {
 
   # The releasedocmaker call above generates RELEASENOTES.X.X.X.md and CHANGELOG.X.X.X.md.
   if [ -f "${project_dir}/CHANGES.md" ]; then
-    # To insert into project's CHANGES.md...need to cut the top off the
-    # CHANGELOG.X.X.X.md file removing license and first line and then
-    # insert it after the license comment closing where we have a
-    # DO NOT REMOVE marker text!
-    sed -i -e '/## Release/,$!d' "${changelog}"
-    sed -i -e '2,${/^# HBASE Changelog/d;}' "${project_dir}/CHANGES.md"
-    sed -i -e "/DO NOT REMOVE/r ${changelog}" "${project_dir}/CHANGES.md"
+    $SELF/prepend_changes.py "${changelog}" "${project_dir}/CHANGES.md"
   else
     mv "${changelog}" "${project_dir}/CHANGES.md"
   fi
   if [ -f "${project_dir}/RELEASENOTES.md" ]; then
-    # Similar for RELEASENOTES but slightly different.
-    sed -i -e '/Release Notes/,$!d' "${releasenotes}"
-    sed -i -e '2,${/^# RELEASENOTES/d;}' "${project_dir}/RELEASENOTES.md"
-    sed -i -e "/DO NOT REMOVE/r ${releasenotes}" "${project_dir}/RELEASENOTES.md"
+    $SELF/prepend_releasenotes.py "${releasenotes}" "${project_dir}/RELEASENOTES.md"
   else
     mv "${releasenotes}" "${project_dir}/RELEASENOTES.md"
   fi
@@ -678,8 +685,38 @@ function kick_gpg_agent {
 # Do maven command to set version into local pom
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
-  log "${MVN[@]}" versions:set -DnewVersion="$this_version"
-  "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+  local use_revision='false'
+  local -a version_splits=()
+  IFS='.' read -ar version_splits <<< "$(maven_get_version)"
+
+  # Do the right thing based on project and release line.
+  if [ "${PROJECT}" = 'hbase' ] ; then
+    if [ "${version_splits[0]}" -le 1 ] ; then
+      use_revision='false'
+    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -le 4 ] ; then
+      use_revision='false'
+    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -ge 5 ] ; then
+      use_revision='true'
+    elif [ "${version_splits[0]}" -ge 3 ] ; then
+      use_revision='true'
+    fi
+  elif [ "${PROJECT}" = 'hbase-thirdparty' ] ; then
+    use_revision='false'
+  elif [ "${PROJECT}" = 'hbase-connectors' ] ; then
+    use_revision='true'
+  elif [ "${PROJECT}" = 'hbase-filesystem' ] ; then
+    use_revision='false'
+  elif [ "${PROJECT}" = 'hbase-operator-tools' ] ; then
+    use_revision='false'
+  fi
+
+  if [ "${use_revision}" = 'false' ] ; then
+    log "${MVN[@]}" versions:set -DnewVersion="$this_version"
+    "${MVN[@]}" versions:set -DnewVersion="$this_version" | grep -v "no value" # silence logs
+  else
+    log "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false
+    "${MVN[@]}" versions:set-property -Dproperty=revision -DnewVersion="$this_version" -DgenerateBackupPoms=false | grep -v "no value" # silence logs
+  fi
 }
 
 # Do maven command to read version from local pom
@@ -739,4 +776,10 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
 # * LINUX
 function get_host_os() {
   uname -s | tr '[:lower:]' '[:upper:]'
+}
+
+function is_tracked() {
+  local file=$1
+  git ls-files --error-unmatch "$file" &>/dev/null
+  return $?
 }
