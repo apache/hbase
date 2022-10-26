@@ -1885,6 +1885,12 @@ module Hbase
     def flush_master_store()
       @admin.flushMasterStore()
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of enable or disabled tables in hbase
+    def list_tables_by_state(isEnabled)
+      @admin.listTableNamesByState(isEnabled).map(&:getNameAsString)
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

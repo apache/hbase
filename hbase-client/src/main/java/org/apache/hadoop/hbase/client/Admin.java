@@ -159,6 +159,13 @@ public interface Admin extends Abortable, Closeable {
     throws IOException;
 
   /**
+   * List all enabled or disabled tables
+   * @param isEnabled is true means return enabled tables, false means return disabled tables
+   * @return a list of enabled or disabled tables
+   */
+  List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException;
+
+  /**
    * List all of the names of userspace tables.
    * @return TableName[] table names
    * @throws IOException if a remote or network exception occurs
@@ -183,6 +190,14 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   TableName[] listTableNames(Pattern pattern, boolean includeSysTables) throws IOException;
+
+  /**
+   * List all enabled or disabled table names
+   * @param isEnabled is true means return enabled table names, false means return disabled table
+   *                  names
+   * @return a list of enabled or disabled table names
+   */
+  List<TableName> listTableNamesByState(boolean isEnabled) throws IOException;
 
   /**
    * Get a table descriptor.
