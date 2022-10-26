@@ -85,7 +85,8 @@ public class DirectMemoryUtils {
     RuntimeMXBean runtimemxBean = ManagementFactory.getRuntimeMXBean();
     List<String> arguments = runtimemxBean.getInputArguments();
     long multiplier = 1; // for the byte case.
-    for (String s : arguments) {
+    for (int i = arguments.size() - 1; i >= 0; i--) {
+      String s = arguments.get(i);
       if (s.contains("-XX:MaxDirectMemorySize=")) {
         String memSize = s.toLowerCase(Locale.ROOT).replace("-xx:maxdirectmemorysize=", "").trim();
 
