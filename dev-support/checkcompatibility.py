@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -41,7 +41,7 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from collections import namedtuple
 try:
     import argparse
@@ -55,11 +55,11 @@ REPO_DIR = os.getcwd()
 
 
 def check_output(*popenargs, **kwargs):
-    """ Run command with arguments and return its output as a byte string.
-    Backported from Python 2.7 as it's implemented as pure python on stdlib.
-    >>> check_output(['/usr/bin/python', '--version'])
-    Python 2.6.2 """
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    """ Run command with arguments and return its output as a byte string. """
+    process = subprocess.Popen(stdout=subprocess.PIPE,
+                               universal_newlines=True,
+                               *popenargs,
+                               **kwargs)
     output, _ = process.communicate()
     retcode = process.poll()
     if retcode:
@@ -69,7 +69,7 @@ def check_output(*popenargs, **kwargs):
         error = subprocess.CalledProcessError(retcode, cmd)
         error.output = output
         raise error
-    return output
+    return output.strip()
 
 
 def get_repo_dir():
@@ -161,7 +161,7 @@ def checkout_java_acc(force):
     url = "https://github.com/lvc/japi-compliance-checker/archive/2.4.tar.gz"
     scratch_dir = get_scratch_dir()
     path = os.path.join(scratch_dir, os.path.basename(url))
-    jacc = urllib2.urlopen(url)
+    jacc = urllib.request.urlopen(url)
     with open(path, 'wb') as w:
         w.write(jacc.read())
 
@@ -196,8 +196,8 @@ def ascii_encode_dict(data):
     """ Iterate through a dictionary of data and convert all unicode to ascii.
     This method was taken from
     stackoverflow.com/questions/9590382/forcing-python-json-module-to-work-with-ascii """
-    ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x
-    return dict(map(ascii_encode, pair) for pair in data.items())
+    ascii_encode = lambda x: x.encode('ascii') if isinstance(x, str) else x
+    return dict(list(map(ascii_encode, pair)) for pair in list(data.items()))
 
 
 def process_json(path):
@@ -229,8 +229,8 @@ def compare_results(tool_results, known_issues, compare_warnings):
     unexpected_issues = [unexpected_issue(check=check,  issue_type=issue_type,
                                       known_count=known_count,
                                       observed_count=tool_results[check][issue_type])
-                     for check, known_issue_counts in known_issues.items()
-                        for issue_type, known_count in known_issue_counts.items()
+                     for check, known_issue_counts in list(known_issues.items())
+                        for issue_type, known_count in list(known_issue_counts.items())
                            if compare_tool_results_count(tool_results, check, issue_type, known_count)]
 
     if not compare_warnings:
@@ -309,14 +309,14 @@ def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations, skip_annot
         logging.info("Annotations are: %s", annotations)
         annotations_path = os.path.join(get_scratch_dir(), "annotations.txt")
         logging.info("Annotations path: %s", annotations_path)
-        with file(annotations_path, "w") as f:
+        with open(annotations_path, "w") as f:
             f.write('\n'.join(annotations))
         args.extend(["-annotations-list", annotations_path])
 
     if skip_annotations is not None:
         skip_annotations_path = os.path.join(
             get_scratch_dir(), "skip_annotations.txt")
-        with file(skip_annotations_path, "w") as f:
+        with open(skip_annotations_path, "w") as f:
             f.write('\n'.join(skip_annotations))
         args.extend(["-skip-annotations-list", skip_annotations_path])
 
