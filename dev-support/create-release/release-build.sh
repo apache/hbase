@@ -149,7 +149,7 @@ if [[ "$1" == "tag" ]]; then
   # check their position when generating release data. We can not put them under the source code
   # directory because for 3.x+, CHANGES.md and RELEASENOTES.md are not tracked so later when
   # generating src release tarball, we will reset the git repo
-  if [[ $(is_tracked "CHANGES.md") == 0 ]]; then
+  if is_tracked "CHANGES.md"; then
     git add RELEASENOTES.md CHANGES.md
     git commit -s -m "Preparing ${PROJECT} release $RELEASE_TAG; tagging and updates to CHANGES.md and RELEASENOTES.md"
     cp CHANGES.md ../

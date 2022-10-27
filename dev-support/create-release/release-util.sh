@@ -60,8 +60,11 @@ function read_config {
 }
 
 function parse_version {
-  grep -e '<version>.*</version>' | \
-    head -n 2 | tail -n 1 | cut -d'>' -f2 | cut -d '<' -f1
+  xmllint --xpath "//*[local-name()='project']/*[local-name()='version']/text()" -
+}
+
+function parse_revision {
+  xmllint --xpath "//*[local-name()='project']/*[local-name()='properties']/*[local-name()='revision']/text()" -
 }
 
 function banner {
@@ -135,6 +138,8 @@ function get_api_diff_version {
 # Get all branches that begin with 'branch-', the hbase convention for
 # release branches, sort them and then pop off the most recent.
 function get_release_info {
+  init_xmllint
+
   PROJECT="$(read_config "PROJECT" "$PROJECT")"
   export PROJECT
 
@@ -164,6 +169,14 @@ function get_release_info {
   local version
   version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
     parse_version)"
+  # We do not want to expand ${revision} here, see https://maven.apache.org/maven-ci-friendly.html
+  # If we use ${revision} as placeholder, we need to parse the revision property to
+  # get maven version
+  # shellcheck disable=SC2016
+  if [[ "${version}" == '${revision}' ]]; then
+    version="$(curl -s "$ASF_REPO_WEBUI;a=blob_plain;f=pom.xml;hb=refs/heads/$GIT_BRANCH" |
+      parse_revision)"
+  fi
   log "Current branch VERSION is $version."
 
   NEXT_VERSION="$version"
@@ -344,6 +357,17 @@ function init_locale {
   export LANG="$locale_value"
 }
 
+# Check whether xmllint is available
+function init_xmllint {
+  if ! [ -x "$(command -v xmllint)"  ]; then
+    log "Error: xmllint is not available, we need to use it for parsing pom.xml." >&2
+    log "Ubuntu: apt install libxml2-utils"
+    log "CentOS: yum install xmlstarlet"
+    log "Mac OS: brew install xmlstarlet"
+    exit 1
+  fi
+}
+
 # Initializes JAVA_VERSION to the version of the JVM in use.
 function init_java {
   if [ -z "$JAVA_HOME" ]; then
@@ -355,10 +379,10 @@ function init_java {
 }
 
 function init_python {
-  if ! [ -x "$(command -v python2)"  ]; then
-    error 'python2 needed by yetus. Install or add link? E.g: sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python2'
+  if ! [ -x "$(command -v python3)"  ]; then
+    error 'python3 needed by yetus and api report. Install or add link?'
   fi
-  log "python version: $(python2 --version)"
+  log "python3 version: $(python3 --version)"
 }
 
 # Set MVN
@@ -440,8 +464,8 @@ function git_clone_overwrite {
     log "Clone will be of the gitbox repo for ${PROJECT}."
     if [ -n "${ASF_USERNAME}" ] && [ -n "${ASF_PASSWORD}" ]; then
       # Ugly!
-      encoded_username=$(python -c "import urllib; print urllib.quote('''$ASF_USERNAME''', '')")
-      encoded_password=$(python -c "import urllib; print urllib.quote('''$ASF_PASSWORD''', '')")
+      encoded_username=$(python3 -c "from urllib.parse import quote; print(quote('''$ASF_USERNAME''', ''))")
+      encoded_password=$(python3 -c "from urllib.parse import quote; print(quote('''$ASF_PASSWORD''', ''))")
       GIT_REPO="https://$encoded_username:$encoded_password@${asf_repo}"
     else
       GIT_REPO="https://${asf_repo}"
@@ -533,7 +557,7 @@ function get_jira_name {
 # Update the CHANGES.md
 # DOES NOT DO COMMITS! Caller should do that.
 # requires yetus to have a defined home already.
-# yetus requires python2 to be on the path.
+# yetus requires python3 to be on the path.
 function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
@@ -686,28 +710,13 @@ function kick_gpg_agent {
 function maven_set_version { #input: <version_to_set>
   local this_version="$1"
   local use_revision='false'
-  local -a version_splits=()
-  IFS='.' read -ar version_splits <<< "$(maven_get_version)"
-
-  # Do the right thing based on project and release line.
-  if [ "${PROJECT}" = 'hbase' ] ; then
-    if [ "${version_splits[0]}" -le 1 ] ; then
-      use_revision='false'
-    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -le 4 ] ; then
-      use_revision='false'
-    elif [ "${version_splits[0]}" -eq 2 ] && [ "${version_splits[1]}" -ge 5 ] ; then
-      use_revision='true'
-    elif [ "${version_splits[0]}" -ge 3 ] ; then
-      use_revision='true'
-    fi
-  elif [ "${PROJECT}" = 'hbase-thirdparty' ] ; then
-    use_revision='false'
-  elif [ "${PROJECT}" = 'hbase-connectors' ] ; then
+  local maven_version
+  maven_version="$(parse_version < pom.xml)"
+  # We do not want to expand ${revision} here, see https://maven.apache.org/maven-ci-friendly.html
+  # If we use ${revision} as placeholder, the way to bump maven version will be different
+  # shellcheck disable=SC2016
+  if [[ "${maven_version}" == '${revision}' ]]; then
     use_revision='true'
-  elif [ "${PROJECT}" = 'hbase-filesystem' ] ; then
-    use_revision='false'
-  elif [ "${PROJECT}" = 'hbase-operator-tools' ] ; then
-    use_revision='false'
   fi
 
   if [ "${use_revision}" = 'false' ] ; then
