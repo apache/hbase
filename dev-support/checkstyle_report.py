@@ -30,7 +30,7 @@ from collections import defaultdict
 
 if len(sys.argv) != 3 :
   print("usage: %s checkstyle-result-master.xml checkstyle-result-patch.xml" % sys.argv[0])
-  exit(1)
+  sys.exit(1)
 
 def path_key(x):
   path = x.attrib['name']
@@ -40,8 +40,8 @@ def error_name(x):
   error_class = x.attrib['source']
   return error_class[error_class.rfind(".") + 1:]
 
-def print_row(path, error, master_errors, patch_errors):
-    print('%s\t%s\t%s\t%s' % (path,error, master_errors,patch_errors))
+def print_row(path, err, master_errors, patch_errors):
+  print('%s\t%s\t%s\t%s' % (path, err, master_errors, patch_errors))
 
 master = etree.parse(sys.argv[1])
 patch = etree.parse(sys.argv[2])
@@ -51,30 +51,30 @@ ret_value = 0
 
 for child in list(master.getroot()):
     if child.tag != 'file':
-        continue
+      continue
     file = path_key(child)
     for error_tag in list(child):
-        error = error_name(error_tag)
-        if (file, error) in master_dict:
-            master_dict[(file, error)] += 1
-        else:
-            master_dict[(file, error)] = 1
+      error = error_name(error_tag)
+      if (file, error) in master_dict:
+        master_dict[(file, error)] += 1
+      else:
+        master_dict[(file, error)] = 1
 
 for child in list(patch.getroot()):
-    if child.tag != 'file':
-        continue
-    temp_dict = defaultdict(int)
-    for error_tag in list(child):
-        error = error_name(error_tag)
-        if error in temp_dict:
-            temp_dict[error] += 1
-        else:
-            temp_dict[error] = 1
+  if child.tag != 'file':
+    continue
+  temp_dict = defaultdict(int)
+  for error_tag in list(child):
+    error = error_name(error_tag)
+    if error in temp_dict:
+      temp_dict[error] += 1
+    else:
+      temp_dict[error] = 1
 
-    file = path_key(child)
-    for error, count in temp_dict.items():
-        if count > master_dict[(file, error)]:
-            print_row(file, error, master_dict[(file, error)], count)
-            ret_value = 1
+  file = path_key(child)
+  for error, count in temp_dict.items():
+    if count > master_dict[(file, error)]:
+      print_row(file, error, master_dict[(file, error)], count)
+      ret_value = 1
 
 sys.exit(ret_value)

@@ -41,7 +41,9 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.request, urllib.error, urllib.parse
+import urllib.request
+import urllib.error
+import urllib.parse
 from collections import namedtuple
 try:
     import argparse

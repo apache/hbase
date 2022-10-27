@@ -21,7 +21,7 @@ from string import Template
 
 if len(sys.argv) != 2 :
   print("usage: %s <redirect url>" % sys.argv[0])
-  exit(1)
+  sys.exit(1)
 
 url = sys.argv[1].replace(" ", "%20")
 template = Template("""<html>
