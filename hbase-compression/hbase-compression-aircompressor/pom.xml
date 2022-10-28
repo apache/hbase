@@ -178,5 +178,17 @@
         </dependency>
       </dependencies>
     </profile>
+    <profile>
+      <!-- Aircompressor does not yet support big endian -->
+      <id>s390x-aircompressor-skip-tests</id>
+      <activation>
+        <os>
+          <arch>s390x</arch>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
   </profiles>
 </project>
