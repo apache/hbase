@@ -163,5 +163,17 @@
         </dependency>
       </dependencies>
     </profile>
+    <profile>
+      <!-- Brotli4j does not yet support s390x -->
+      <id>s390x-brotli-skip-tests</id>
+      <activation>
+        <os>
+          <arch>s390x</arch>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
   </profiles>
 </project>
