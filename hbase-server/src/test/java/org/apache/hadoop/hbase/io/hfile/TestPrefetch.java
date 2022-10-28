@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
 import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
+import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
@@ -38,6 +39,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,17 +49,25 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -226,6 +237,53 @@ public class TestPrefetch {
 
   }
 
+  @Test
+  public void testPrefetchSkipsRefs() throws Exception {
+    testPrefetchWhenRefs(true, c -> {
+      boolean isCached = c!=null;
+      assertFalse(isCached);
+    });
+  }
+
+  @Test
+  public void testPrefetchDoesntSkipRefs() throws Exception {
+    testPrefetchWhenRefs(false, c -> {
+      boolean isCached = c!=null;
+      assertTrue(isCached);
+    });
+  }
+
+  private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test) throws Exception {
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchSkipRefs");
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchSkipRefs")).build();
+    Path regionDir = new Path(tableDir, region.getEncodedName());
+    Pair<Path, byte[]> fileWithSplitPoint = writeStoreFileForSplit(new Path(regionDir, "cf"), context);
+    Path storeFile = fileWithSplitPoint.getFirst();
+    HRegionFileSystem regionFS = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
+      new ConstantSizeRegionSplitPolicy());
+    conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    refHsf.initReader();
+    HFile.Reader reader = refHsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      if (block.getBlockType() == BlockType.DATA) {
+        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
+      }
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
   private Path writeStoreFile(String fname) throws IOException {
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     return writeStoreFile(fname, meta);
@@ -248,6 +306,27 @@ public class TestPrefetch {
 
     sfw.close();
     return sfw.getPath();
+  }
+
+  private Pair<Path, byte[]> writeStoreFileForSplit(Path storeDir, HFileContext context) throws IOException {
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
+      .withOutputDir(storeDir).withFileContext(context).build();
+    Random rand = ThreadLocalRandom.current();
+    final int rowLen = 32;
+    byte[] splitPoint = null;
+    for (int i = 0; i < NUM_KV; ++i) {
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
+      byte[] v = RandomKeyValueUtil.randomValue(rand);
+      int cfLen = rand.nextInt(k.length - rowLen + 1);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
+      sfw.append(kv);
+      if (i==NUM_KV/2) {
+        splitPoint = k;
+      }
+    }
+    sfw.close();
+    return new Pair(sfw.getPath(), splitPoint);
   }
 
   public static KeyValue.Type generateKeyType(Random rand) {

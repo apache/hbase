@@ -105,7 +105,7 @@ final class AssignmentManagerUtil {
       for (; i < procs.length; i++) {
         RegionStateNode regionNode = regionNodes.get(i);
         TransitRegionStateProcedure proc =
-          TransitRegionStateProcedure.unassign(env, regionNode.getRegionInfo());
+          TransitRegionStateProcedure.unassignSplitMerge(env, regionNode.getRegionInfo());
         if (regionNode.getProcedure() != null) {
           throw new HBaseIOException(
             "The parent region " + regionNode + " is currently in transition, give up");

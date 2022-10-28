@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -463,11 +464,13 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
   public static class RegionCloseOperation extends RegionOperation {
     private final ServerName destinationServer;
+    private final Optional<Boolean> evictCache;
 
     public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
-      ServerName destinationServer) {
+      ServerName destinationServer, Optional<Boolean> evictCache) {
       super(remoteProcedure, regionInfo, procId);
       this.destinationServer = destinationServer;
+      this.evictCache = evictCache;
     }
 
     public ServerName getDestinationServer() {
@@ -475,8 +478,15 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
-      return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId);
+      if (evictCache.isPresent()) {
+        return ProtobufUtil
+          .buildCloseRegionRequest(serverName, regionInfo.getRegionName(), getDestinationServer(),
+            procId, evictCache.get());
+      } else {
+        return ProtobufUtil
+          .buildCloseRegionRequest(serverName, regionInfo.getRegionName(), getDestinationServer(),
+            procId);
+      }
     }
   }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.handler;
 
+import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.HConstants;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
@@ -277,6 +280,8 @@ public class OpenRegionHandler extends EventHandler {
   /** Returns Instance of HRegion if successful open else null. */
   private HRegion openRegion() {
     HRegion region = null;
+    boolean compactionEnabled = ((HRegionServer)server).getCompactSplitThread().isCompactionsEnabled();
+    this.server.getConfiguration().setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
     try {
       // Instantiate the region. This also periodically tickles OPENING
       // state so master doesn't timeout this region in transition.

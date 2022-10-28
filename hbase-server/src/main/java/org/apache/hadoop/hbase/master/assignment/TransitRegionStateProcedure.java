@@ -21,6 +21,8 @@ import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -120,6 +122,8 @@ public class TransitRegionStateProcedure
 
   private RegionRemoteProcedureBase remoteProc;
 
+  private Optional<Boolean> evictCache;
+
   public TransitRegionStateProcedure() {
   }
 
@@ -145,6 +149,11 @@ public class TransitRegionStateProcedure
 
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
     ServerName assignCandidate, boolean forceNewPlan, TransitionType type) {
+    this(env, hri, assignCandidate, forceNewPlan, type, Optional.empty());
+  }
+
+  protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
+    ServerName assignCandidate, boolean forceNewPlan, TransitionType type, Optional<Boolean> evictCache) {
     super(env, hri);
     this.assignCandidate = assignCandidate;
     this.forceNewPlan = forceNewPlan;
@@ -155,6 +164,8 @@ public class TransitRegionStateProcedure
     if (type == TransitionType.REOPEN) {
       this.assignCandidate = getRegionStateNode(env).getRegionLocation();
     }
+
+    this.evictCache = evictCache;
   }
 
   @Override
@@ -265,7 +276,7 @@ public class TransitRegionStateProcedure
       // this is the normal case
       env.getAssignmentManager().regionClosing(regionNode);
       addChildProcedure(new CloseRegionProcedure(this, getRegion(), regionNode.getRegionLocation(),
-        assignCandidate));
+        assignCandidate, evictCache));
       setNextState(RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_CLOSED);
     } else {
       forceNewPlan = true;
@@ -584,6 +595,11 @@ public class TransitRegionStateProcedure
   public static TransitRegionStateProcedure unassign(MasterProcedureEnv env, RegionInfo region) {
     return setOwner(env,
       new TransitRegionStateProcedure(env, region, null, false, TransitionType.UNASSIGN));
+  }
+
+  public static TransitRegionStateProcedure unassignSplitMerge(MasterProcedureEnv env, RegionInfo region) {
+    return setOwner(env,
+      new TransitRegionStateProcedure(env, region, null, false, TransitionType.UNASSIGN, Optional.of(true)));
   }
 
   public static TransitRegionStateProcedure reopen(MasterProcedureEnv env, RegionInfo region) {
