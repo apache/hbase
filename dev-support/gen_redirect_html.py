@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -20,8 +20,8 @@ import sys
 from string import Template
 
 if len(sys.argv) != 2 :
-  print "usage: %s <redirect url>" % sys.argv[0]
-  exit(1)
+  print("usage: %s <redirect url>" % sys.argv[0])
+  sys.exit(1)
 
 url = sys.argv[1].replace(" ", "%20")
 template = Template("""<html>
@@ -34,4 +34,4 @@ template = Template("""<html>
 </html>""")
 
 output = template.substitute(url = url)
-print output
+print(output)

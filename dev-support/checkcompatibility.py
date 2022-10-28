@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -32,7 +32,7 @@
 #      --annotation org.apache.yetus.audience.InterfaceAudience.LimitedPrivate \
 #      --include-file "hbase-*" \
 #      --known_problems_path ~/known_problems.json \
-#      rel/1.0.0 branch-1.2
+#      rel/1.3.0 branch-1.4
 
 import json
 import logging
@@ -41,7 +41,9 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 from collections import namedtuple
 try:
     import argparse
@@ -55,11 +57,11 @@ REPO_DIR = os.getcwd()
 
 
 def check_output(*popenargs, **kwargs):
-    """ Run command with arguments and return its output as a byte string.
-    Backported from Python 2.7 as it's implemented as pure python on stdlib.
-    >>> check_output(['/usr/bin/python', '--version'])
-    Python 2.6.2 """
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    """ Run command with arguments and return its output as a byte string. """
+    process = subprocess.Popen(stdout=subprocess.PIPE,
+                               universal_newlines=True,
+                               *popenargs,
+                               **kwargs)
     output, _ = process.communicate()
     retcode = process.poll()
     if retcode:
@@ -69,7 +71,7 @@ def check_output(*popenargs, **kwargs):
         error = subprocess.CalledProcessError(retcode, cmd)
         error.output = output
         raise error
-    return output
+    return output.strip()
 
 
 def get_repo_dir():
@@ -161,7 +163,7 @@ def checkout_java_acc(force):
     url = "https://github.com/lvc/japi-compliance-checker/archive/2.4.tar.gz"
     scratch_dir = get_scratch_dir()
     path = os.path.join(scratch_dir, os.path.basename(url))
-    jacc = urllib2.urlopen(url)
+    jacc = urllib.request.urlopen(url)
     with open(path, 'wb') as w:
         w.write(jacc.read())
 
@@ -196,8 +198,8 @@ def ascii_encode_dict(data):
     """ Iterate through a dictionary of data and convert all unicode to ascii.
     This method was taken from
     stackoverflow.com/questions/9590382/forcing-python-json-module-to-work-with-ascii """
-    ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x
-    return dict(map(ascii_encode, pair) for pair in data.items())
+    ascii_encode = lambda x: x.encode('ascii') if isinstance(x, str) else x
+    return dict(list(map(ascii_encode, pair)) for pair in list(data.items()))
 
 
 def process_json(path):
@@ -229,9 +231,9 @@ def compare_results(tool_results, known_issues, compare_warnings):
     unexpected_issues = [unexpected_issue(check=check,  issue_type=issue_type,
                                       known_count=known_count,
                                       observed_count=tool_results[check][issue_type])
-                     for check, known_issue_counts in known_issues.items()
-                        for issue_type, known_count in known_issue_counts.items()
-                            if tool_results[check][issue_type] > known_count]
+                     for check, known_issue_counts in list(known_issues.items())
+                        for issue_type, known_count in list(known_issue_counts.items())
+                           if compare_tool_results_count(tool_results, check, issue_type, known_count)]
 
     if not compare_warnings:
         unexpected_issues = [tup for tup in unexpected_issues
@@ -243,6 +245,14 @@ def compare_results(tool_results, known_issues, compare_warnings):
 
     return bool(unexpected_issues)
 
+def compare_tool_results_count(tool_results, check, issue_type, known_count):
+    """ Check problem counts are no more than the known count.
+    (This function exists just so can add in logging; previous was inlined
+    one-liner but this made it hard debugging)
+    """
+    # logging.info("known_count=%s, check key=%s, tool_results=%s, issue_type=%s",
+    #        str(known_count), str(check), str(tool_results), str(issue_type))
+    return tool_results[check][issue_type] > known_count
 
 def process_java_acc_output(output):
     """ Process the output string to find the problems and warnings in both the
@@ -301,14 +311,14 @@ def run_java_acc(src_name, src_jars, dst_name, dst_jars, annotations, skip_annot
         logging.info("Annotations are: %s", annotations)
         annotations_path = os.path.join(get_scratch_dir(), "annotations.txt")
         logging.info("Annotations path: %s", annotations_path)
-        with file(annotations_path, "w") as f:
+        with open(annotations_path, "w") as f:
             f.write('\n'.join(annotations))
         args.extend(["-annotations-list", annotations_path])
 
     if skip_annotations is not None:
         skip_annotations_path = os.path.join(
             get_scratch_dir(), "skip_annotations.txt")
-        with file(skip_annotations_path, "w") as f:
+        with open(skip_annotations_path, "w") as f:
             f.write('\n'.join(skip_annotations))
         args.extend(["-skip-annotations-list", skip_annotations_path])
 
@@ -327,14 +337,14 @@ def get_known_problems(json_path, src_rev, dst_rev):
     keys in the format source_branch/destination_branch and the values
     dictionaries with binary and source problems and warnings
     Example:
-    {'branch-1.0.0': {
-      'rel/1.0.0': {'binary': {'problems': 123, 'warnings': 16},
+    {'branch-1.3': {
+      'rel/1.3.0': {'binary': {'problems': 123, 'warnings': 16},
                       'source': {'problems': 167, 'warnings': 1}},
-      'branch-1.2.0': {'binary': {'problems': 0, 'warnings': 0},
+      'branch-1.4': {'binary': {'problems': 0, 'warnings': 0},
                       'source': {'problems': 0, 'warnings': 0}}
       },
-    'branch-1.2.0': {
-      'rel/1.2.1': {'binary': {'problems': 13, 'warnings': 1},
+    'branch-1.4': {
+      'rel/1.4.1': {'binary': {'problems': 13, 'warnings': 1},
                       'source': {'problems': 23, 'warnings': 0}}
       }
     } """

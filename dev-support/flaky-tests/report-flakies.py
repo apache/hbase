@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -140,7 +140,7 @@ def expand_multi_config_projects(cli_args):
             raise Exception("Failed to get job information from jenkins for url '" + job_url +
                             "'. Jenkins returned HTTP status " + str(request.status_code))
         response = request.json()
-        if response.has_key("activeConfigurations"):
+        if "activeConfigurations" in response:
             for config in response["activeConfigurations"]:
                 final_expanded_urls.append({'url':config["url"], 'max_builds': max_builds,
                                             'excludes': excluded_builds, 'is_yetus': is_yetus})
@@ -167,7 +167,7 @@ for url_max_build in expanded_urls:
     url = url_max_build["url"]
     excludes = url_max_build["excludes"]
     json_response = requests.get(url + "/api/json?tree=id,builds%5Bnumber,url%5D").json()
-    if json_response.has_key("builds"):
+    if "builds" in json_response:
         builds = json_response["builds"]
         logger.info("Analyzing job: %s", url)
     else:
@@ -238,27 +238,27 @@ for url_max_build in expanded_urls:
 
     # Sort tests in descending order by flakyness.
     sorted_test_to_build_ids = OrderedDict(
-        sorted(test_to_build_ids.iteritems(), key=lambda x: x[1]['flakyness'], reverse=True))
+        sorted(iter(test_to_build_ids.items()), key=lambda x: x[1]['flakyness'], reverse=True))
     url_to_bad_test_results[url] = sorted_test_to_build_ids
 
     if len(sorted_test_to_build_ids) > 0:
-        print "URL: {}".format(url)
-        print "{:>60}  {:10}  {:25}  {}".format(
-            "Test Name", "Total Runs", "Bad Runs(failed/timeout/hanging)", "Flakyness")
+        print("URL: {}".format(url))
+        print("{:>60}  {:10}  {:25}  {}".format(
+            "Test Name", "Total Runs", "Bad Runs(failed/timeout/hanging)", "Flakyness"))
         for bad_test in sorted_test_to_build_ids:
             test_status = sorted_test_to_build_ids[bad_test]
-            print "{:>60}  {:10}  {:7} ( {:4} / {:5} / {:5} )  {:2.0f}%".format(
+            print("{:>60}  {:10}  {:7} ( {:4} / {:5} / {:5} )  {:2.0f}%".format(
                 bad_test, len(test_status['all']), test_status['bad_count'],
                 len(test_status['failed']), len(test_status['timeout']),
-                len(test_status['hanging']), test_status['flakyness'])
+                len(test_status['hanging']), test_status['flakyness']))
     else:
-        print "No flaky tests founds."
+        print("No flaky tests founds.")
         if len(url_to_build_ids[url]) == len(build_ids_without_tests_run):
-            print "None of the analyzed builds have test result."
+            print("None of the analyzed builds have test result.")
 
-    print "Builds analyzed: {}".format(url_to_build_ids[url])
-    print "Builds without any test runs: {}".format(build_ids_without_tests_run)
-    print ""
+    print("Builds analyzed: {}".format(url_to_build_ids[url]))
+    print("Builds without any test runs: {}".format(build_ids_without_tests_run))
+    print("")
 
 
 all_bad_tests = all_hanging_tests.union(all_failed_tests)
