@@ -267,14 +267,14 @@ pipeline {
               if [ -d "${OUTPUT_DIR}/branch-site" ]; then
                 echo "Remove ${OUTPUT_DIR}/branch-site for saving space"
                 rm -rf "${OUTPUT_DIR}/branch-site"
-                python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${OUTPUT_DIR}/branch-site.html"
+                python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${OUTPUT_DIR}/branch-site.html"
               else
                 echo "No branch-site, skipping"
               fi
               if [ -d "${OUTPUT_DIR}/patch-site" ]; then
                 echo "Remove ${OUTPUT_DIR}/patch-site for saving space"
                 rm -rf "${OUTPUT_DIR}/patch-site"
-                python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${OUTPUT_DIR}/patch-site.html"
+                python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${OUTPUT_DIR}/patch-site.html"
               else
                 echo "No patch-site, skipping"
               fi
@@ -384,7 +384,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -493,7 +493,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -604,7 +604,7 @@ pipeline {
                 if [ -f "${OUTPUT_DIR}/test_logs.zip" ]; then
                   echo "Remove ${OUTPUT_DIR}/test_logs.zip for saving space"
                   rm -rf "${OUTPUT_DIR}/test_logs.zip"
-                  python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}" > "${OUTPUT_DIR}/test_logs.html"
                 else
                   echo "No test_logs.zip, skipping"
                 fi
@@ -773,7 +773,7 @@ pipeline {
                 if [ -f "${SRC_TAR}" ]; then
                   echo "Remove ${SRC_TAR} for saving space"
                   rm -rf "${SRC_TAR}"
-                  python2 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/output-srctarball" > "${WORKSPACE}/output-srctarball/hbase-src.html"
+                  python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/output-srctarball" > "${WORKSPACE}/output-srctarball/hbase-src.html"
                 else
                   echo "No hbase-src.tar.gz, skipping"
                 fi

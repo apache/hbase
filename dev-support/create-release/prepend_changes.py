@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -22,7 +22,7 @@ import os
 
 if len(sys.argv) != 3:
   print("usage: %s <NEW_CHANGES.md> <PREV_CHANGES.md>" % sys.argv[0])
-  exit(1)
+  sys.exit(1)
 
 pattern = re.compile(r'^## Release .+ - Unreleased .+$')
 with open(sys.argv[1], 'r', errors = 'ignore') as new_r, open(sys.argv[2], 'r', errors = 'ignore') as prev_r, open(sys.argv[2] + '.tmp', 'w') as w:
