@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 ##
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -45,8 +45,8 @@ def get_bad_tests(console_url):
     """
     response = requests.get(console_url)
     if response.status_code != 200:
-        print "Error getting consoleText. Response = {} {}".format(
-            response.status_code, response.reason)
+        print("Error getting consoleText. Response = {} {}".format(
+            response.status_code, response.reason))
         return
 
     # All tests: All testcases which were run.
@@ -59,13 +59,13 @@ def get_bad_tests(console_url):
     hanging_tests_set = set()
     failed_tests_set = set()
     timeout_tests_set = set()
-    for line in response.content.splitlines():
+    for line in response.content.decode("utf-8").splitlines():
         result1 = re.findall("Running org.apache.hadoop.hbase.(.*)", line)
         if len(result1) == 1:
             test_case = result1[0]
             if test_case in all_tests_set:
-                print ("ERROR! Multiple tests with same name '{}'. Might get wrong results "
-                       "for this test.".format(test_case))
+                print(("ERROR! Multiple tests with same name '{}'. Might get wrong results "
+                       "for this test.".format(test_case)))
             else:
                 hanging_tests_set.add(test_case)
                 all_tests_set.add(test_case)
@@ -75,9 +75,9 @@ def get_bad_tests(console_url):
             if "FAILURE!" in line:
                 failed_tests_set.add(test_case)
             if test_case not in hanging_tests_set:
-                print ("ERROR! No test '{}' found in hanging_tests. Might get wrong results "
+                print(("ERROR! No test '{}' found in hanging_tests. Might get wrong results "
                        "for this test. This may also happen if maven is set to retry failing "
-                       "tests.".format(test_case))
+                       "tests.".format(test_case)))
             else:
                 hanging_tests_set.remove(test_case)
         result3 = re.match("^\\s+(\\w*).*\\sTestTimedOut", line)
@@ -86,30 +86,30 @@ def get_bad_tests(console_url):
             timeout_tests_set.add(test_case)
         for bad_string in BAD_RUN_STRINGS:
             if re.match(".*" + bad_string + ".*", line):
-                print "Bad string found in build:\n > {}".format(line)
-    print "Result > total tests: {:4}   failed : {:4}  timedout : {:4}  hanging : {:4}".format(
-        len(all_tests_set), len(failed_tests_set), len(timeout_tests_set), len(hanging_tests_set))
+                print("Bad string found in build:\n > {}".format(line))
+    print("Result > total tests: {:4}   failed : {:4}  timedout : {:4}  hanging : {:4}".format(
+        len(all_tests_set), len(failed_tests_set), len(timeout_tests_set), len(hanging_tests_set)))
     return [all_tests_set, failed_tests_set, timeout_tests_set, hanging_tests_set]
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "ERROR : Provide the jenkins job console URL as the only argument."
+        print("ERROR : Provide the jenkins job console URL as the only argument.")
         sys.exit(1)
 
-    print "Fetching {}".format(sys.argv[1])
+    print("Fetching {}".format(sys.argv[1]))
     result = get_bad_tests(sys.argv[1])
     if not result:
         sys.exit(1)
     [all_tests, failed_tests, timedout_tests, hanging_tests] = result
 
-    print "Found {} hanging tests:".format(len(hanging_tests))
+    print("Found {} hanging tests:".format(len(hanging_tests)))
     for test in hanging_tests:
-        print test
-    print "\n"
-    print "Found {} failed tests of which {} timed out:".format(
-        len(failed_tests), len(timedout_tests))
+        print(test)
+    print("\n")
+    print("Found {} failed tests of which {} timed out:".format(
+        len(failed_tests), len(timedout_tests)))
     for test in failed_tests:
-        print "{0} {1}".format(test, ("(Timed Out)" if test in timedout_tests else ""))
+        print("{0} {1}".format(test, ("(Timed Out)" if test in timedout_tests else "")))
 
     print ("\nA test may have had 0 or more atomic test failures before it timed out. So a "
            "'Timed Out' test may have other errors too.")
