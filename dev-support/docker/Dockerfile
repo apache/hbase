@@ -73,9 +73,9 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 #
 
 FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
-ENV SPOTBUGS_VERSION '4.7.2'
+ENV SPOTBUGS_VERSION '4.7.3'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA512 '8dd0634c0e5760ade8b2cc3e1d988ed58921dbcbd7568a5a6b4c078d2b2d03c54ebb918329d9832e7e76de23e2e865ff2242cde9ac67d8971f71eea0d43ff0c5'
+ENV SPOTBUGS_SHA512 '09a9fe0e5a6ec8e9d6d116c361b5c34c9d0560c0271241f02fadee911952adfcd69dc184f6de1cc4d4a8fe2c84c162689ea9a691dcae0779935eedf390fcc4ad'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
   echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
