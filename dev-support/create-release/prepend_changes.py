@@ -24,7 +24,7 @@ if len(sys.argv) != 3:
   print("usage: %s <NEW_CHANGES.md> <PREV_CHANGES.md>" % sys.argv[0])
   sys.exit(1)
 
-pattern = re.compile(r'^## Release .+ - Unreleased .+$')
+pattern = re.compile(r'^## Release .+$')
 with open(sys.argv[1], 'r', errors = 'ignore') as new_r, open(sys.argv[2], 'r', errors = 'ignore') as prev_r, open(sys.argv[2] + '.tmp', 'w') as w:
   line = prev_r.readline()
   while line:
