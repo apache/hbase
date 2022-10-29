@@ -877,6 +877,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return get(admin.isReplicationPeerEnabled(peerId));
+  }
+
+  @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
     throws IOException {
     get(admin.decommissionRegionServers(servers, offload));
@@ -1083,10 +1088,5 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
-  }
-
-  @Override
-  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
-    return get(admin.isReplicationPeerEnabled(peerId));
   }
 }

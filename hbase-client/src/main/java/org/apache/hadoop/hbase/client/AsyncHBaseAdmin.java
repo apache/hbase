@@ -482,6 +482,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    return wrap(rawAdmin.isReplicationPeerEnabled(peerId));
+  }
+
+  @Override
   public CompletableFuture<Void> snapshot(SnapshotDescription snapshot) {
     return wrap(rawAdmin.snapshot(snapshot));
   }
@@ -958,10 +963,5 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
-  }
-
-  @Override
-  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
-    return wrap(rawAdmin.isReplicationPeerEnabled(peerId));
   }
 }

@@ -2164,6 +2164,14 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return <code>true</code> if replication peer is enabled
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isReplicationPeerEnabled(String peerId) throws IOException;
+
+  /**
    * Mark region server(s) as decommissioned to prevent additional regions from getting assigned to
    * them. Optionally unload the regions on the servers. If there are multiple servers to be
    * decommissioned, decommissioning them at the same time can prevent wasteful region movements.
@@ -2555,12 +2563,4 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
-
-  /**
-   * Check if a replication peer is enabled.
-   * @param peerId id of replication peer to check
-   * @return <code>true</code> if replication peer is enabled
-   * @throws IOException if a remote or network exception occurs
-   */
-  boolean isReplicationPeerEnabled(String peerId) throws IOException;
 }

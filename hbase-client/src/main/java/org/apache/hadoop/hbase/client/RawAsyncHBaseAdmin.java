@@ -3737,6 +3737,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    GetReplicationPeerStateRequest.Builder request = GetReplicationPeerStateRequest.newBuilder();
+    request.setPeerId(peerId);
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<GetReplicationPeerStateRequest,
+        GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
+          (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
+          resp -> resp.getIsEnabled()))
+      .call();
+  }
+
+  @Override
   public CompletableFuture<CacheEvictionStats> clearBlockCache(TableName tableName) {
     CompletableFuture<CacheEvictionStats> future = new CompletableFuture<>();
     addListener(getTableHRegionLocations(tableName), (locations, err) -> {
@@ -4284,18 +4296,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       .action((controller, stub) -> this.<FlushMasterStoreRequest, FlushMasterStoreResponse,
         Void> call(controller, stub, request.build(),
           (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
-      .call();
-  }
-
-  @Override
-  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
-    GetReplicationPeerStateRequest.Builder request = GetReplicationPeerStateRequest.newBuilder();
-    request.setPeerId(peerId);
-    return this.<Boolean> newMasterCaller()
-      .action((controller, stub) -> this.<GetReplicationPeerStateRequest,
-        GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
-          (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
-          resp -> resp.getIsEnabled()))
       .call();
   }
 }
