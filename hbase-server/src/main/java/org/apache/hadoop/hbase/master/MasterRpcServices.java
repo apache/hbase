@@ -3505,5 +3505,4 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     }
     return FlushMasterStoreResponse.newBuilder().build();
   }
-
 }
