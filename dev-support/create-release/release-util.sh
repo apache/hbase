@@ -361,9 +361,9 @@ function init_locale {
 function init_xmllint {
   if ! [ -x "$(command -v xmllint)"  ]; then
     log "Error: xmllint is not available, we need to use it for parsing pom.xml." >&2
-    log "Ubuntu: apt install libxml2-utils"
-    log "CentOS: yum install xmlstarlet"
-    log "Mac OS: brew install xmlstarlet"
+    log "Ubuntu: apt install libxml2-utils" >&2
+    log "CentOS: yum install xmlstarlet" >&2
+    log "Mac OS: brew install xmlstarlet" >&2
     exit 1
   fi
 }
