@@ -1084,4 +1084,9 @@ class AdminOverAsyncAdmin implements Admin {
   public void flushMasterStore() throws IOException {
     get(admin.flushMasterStore());
   }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return get(admin.isReplicationPeerEnabled(peerId));
+  }
 }

@@ -246,6 +246,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedu
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -3490,5 +3492,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
     return FlushMasterStoreResponse.newBuilder().build();
+  }
+
+  @Override
+  public GetReplicationPeerStateResponse isReplicationPeerEnabled(RpcController controller,
+    GetReplicationPeerStateRequest request) throws ServiceException {
+    boolean isEnabled;
+    try {
+      isEnabled = server.getReplicationPeerManager().getPeerState(request.getPeerId());
+    } catch (ReplicationException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return GetReplicationPeerStateResponse.newBuilder().setIsEnabled(isEnabled).build();
   }
 }

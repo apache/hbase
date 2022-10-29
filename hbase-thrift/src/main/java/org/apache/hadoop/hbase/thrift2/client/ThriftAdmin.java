@@ -1314,4 +1314,9 @@ public class ThriftAdmin implements Admin {
   public void flushMasterStore() throws IOException {
     throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
   }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    throw new NotImplementedException("isReplicationPeerEnabled not supported in ThriftAdmin");
+  }
 }

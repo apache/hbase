@@ -959,4 +959,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<Void> flushMasterStore() {
     return wrap(rawAdmin.flushMasterStore());
   }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    return wrap(rawAdmin.isReplicationPeerEnabled(peerId));
+  }
 }

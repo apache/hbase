@@ -1776,4 +1776,12 @@ public interface AsyncAdmin {
    * Flush master local region
    */
   CompletableFuture<Void> flushMasterStore();
+
+  /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return true if replication peer is enabled. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId);
 }

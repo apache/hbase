@@ -2555,4 +2555,12 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return <code>true</code> if replication peer is enabled
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isReplicationPeerEnabled(String peerId) throws IOException;
 }

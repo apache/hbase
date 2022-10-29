@@ -761,6 +761,13 @@ message ModifyColumnStoreFileTrackerResponse {
 message FlushMasterStoreRequest {}
 message FlushMasterStoreResponse {}
 
+message GetReplicationPeerStateRequest {
+  required string peer_id = 1;
+}
+message GetReplicationPeerStateResponse {
+  required bool is_enabled = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -1203,6 +1210,9 @@ service MasterService {
 
   rpc FlushMasterStore(FlushMasterStoreRequest)
     returns(FlushMasterStoreResponse);
+
+  rpc IsReplicationPeerEnabled(GetReplicationPeerStateRequest)
+    returns(GetReplicationPeerStateResponse);
 }
 
 // HBCK Service definitions.

@@ -939,4 +939,9 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public void flushMasterStore() throws IOException {
     admin.flushMasterStore();
   }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return admin.isReplicationPeerEnabled(peerId);
+  }
 }
