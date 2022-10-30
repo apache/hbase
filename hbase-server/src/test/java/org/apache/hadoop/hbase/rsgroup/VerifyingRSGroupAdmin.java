@@ -676,6 +676,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.transitReplicationPeerSyncReplicationStateAsync(peerId, state);
   }
 
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return admin.isReplicationPeerEnabled(peerId);
+  }
+
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
     throws IOException {
     admin.decommissionRegionServers(servers, offload);

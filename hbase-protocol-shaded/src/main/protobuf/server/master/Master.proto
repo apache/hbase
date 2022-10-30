@@ -1106,6 +1106,9 @@ service MasterService {
   rpc TransitReplicationPeerSyncReplicationState(TransitReplicationPeerSyncReplicationStateRequest)
     returns(TransitReplicationPeerSyncReplicationStateResponse);
 
+  rpc IsReplicationPeerEnabled(GetReplicationPeerStateRequest)
+    returns(GetReplicationPeerStateResponse);
+
   /** Returns a list of ServerNames marked as decommissioned. */
   rpc ListDecommissionedRegionServers(ListDecommissionedRegionServersRequest)
     returns(ListDecommissionedRegionServersResponse);

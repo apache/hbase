@@ -417,6 +417,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
@@ -2103,6 +2105,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(e);
     }
     return response.build();
+  }
+
+  @Override
+  public GetReplicationPeerStateResponse isReplicationPeerEnabled(RpcController controller,
+    GetReplicationPeerStateRequest request) throws ServiceException {
+    boolean isEnabled;
+    try {
+      isEnabled = server.getReplicationPeerManager().getPeerState(request.getPeerId());
+    } catch (ReplicationException ioe) {
+      throw new ServiceException(ioe);
+    }
+    return GetReplicationPeerStateResponse.newBuilder().setIsEnabled(isEnabled).build();
   }
 
   @Override
