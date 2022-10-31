@@ -137,3 +137,11 @@ message ListReplicationPeersRequest {
 message ListReplicationPeersResponse {
   repeated ReplicationPeerDescription peer_desc = 1;
 }
+
+message GetReplicationPeerStateRequest {
+  required string peer_id = 1;
+}
+
+message GetReplicationPeerStateResponse {
+  required bool is_enabled = 1;
+}

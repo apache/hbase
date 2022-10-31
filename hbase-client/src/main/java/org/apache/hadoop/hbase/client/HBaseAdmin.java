@@ -231,6 +231,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
@@ -3975,6 +3977,21 @@ public class HBaseAdmin implements Admin {
         "Table '" + tableName.getNameAsString() + "' does not exists.");
     }
     setTableRep(tableName, false);
+  }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        GetReplicationPeerStateRequest.Builder request =
+          GetReplicationPeerStateRequest.newBuilder();
+        request.setPeerId(peerId);
+        GetReplicationPeerStateResponse response =
+          master.isReplicationPeerEnabled(getRpcController(), request.build());
+        return response.getIsEnabled();
+      }
+    });
   }
 
   /**
