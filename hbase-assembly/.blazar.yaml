@@ -1,8 +1,6 @@
 buildpack:
-  host: git.hubteam.com
-  organization: HubSpotProtected
-  repository: Blazar-Buildpack-Java
-  branch: v2
+  name: Blazar-Buildpack-Java
+
 
 provides:
   - name: hbase-rpm
