@@ -160,6 +160,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
@@ -1849,6 +1851,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       public ListReplicationPeersResponse listReplicationPeers(RpcController controller,
         ListReplicationPeersRequest request) throws ServiceException {
         return stub.listReplicationPeers(controller, request);
+      }
+
+      @Override
+      public GetReplicationPeerStateResponse isReplicationPeerEnabled(RpcController controller,
+        GetReplicationPeerStateRequest request) throws ServiceException {
+        return stub.isReplicationPeerEnabled(controller, request);
       }
 
       @Override

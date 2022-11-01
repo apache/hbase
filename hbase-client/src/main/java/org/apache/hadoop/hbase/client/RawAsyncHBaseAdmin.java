@@ -295,6 +295,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
@@ -3488,6 +3490,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       });
     });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    GetReplicationPeerStateRequest.Builder request = GetReplicationPeerStateRequest.newBuilder();
+    request.setPeerId(peerId);
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<GetReplicationPeerStateRequest,
+        GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
+          (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
+          resp -> resp.getIsEnabled()))
+      .call();
   }
 
   private CompletableFuture<byte[][]> getTableSplits(TableName tableName) {

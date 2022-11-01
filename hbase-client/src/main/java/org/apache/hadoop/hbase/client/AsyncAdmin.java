@@ -774,6 +774,14 @@ public interface AsyncAdmin {
   CompletableFuture<Void> disableTableReplication(TableName tableName);
 
   /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return true if replication peer is enabled. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId);
+
+  /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
    * taken. If the table is disabled, an offline snapshot is taken. Snapshots are considered unique
    * based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even

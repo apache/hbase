@@ -198,6 +198,15 @@ public class ReplicationPeerManager {
     peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, desc.getPeerConfig()));
   }
 
+  public boolean getPeerState(String peerId) throws ReplicationException {
+    ReplicationPeerDescription desc = peers.get(peerId);
+    if (desc != null) {
+      return desc.isEnabled();
+    } else {
+      throw new ReplicationException("Replication Peer of " + peerId + " does not exist.");
+    }
+  }
+
   public void enablePeer(String peerId) throws ReplicationException {
     setPeerState(peerId, true);
   }

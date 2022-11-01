@@ -3010,6 +3010,14 @@ public interface Admin extends Abortable, Closeable {
   void disableTableReplication(TableName tableName) throws IOException;
 
   /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return <code>true</code> if replication peer is enabled
+   * @throws IOException if a remote or network exception occurs
+   */
+  boolean isReplicationPeerEnabled(String peerId) throws IOException;
+
+  /**
    * Clear compacting queues on a regionserver.
    * @param serverName the region server name
    * @param queues     the set of queue name
