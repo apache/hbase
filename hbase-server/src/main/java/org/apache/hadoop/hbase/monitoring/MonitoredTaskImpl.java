@@ -104,7 +104,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String getStatus() {
-    if(status == null){
+    if (status == null) {
       return "No task status available.";
     }
     return status;
