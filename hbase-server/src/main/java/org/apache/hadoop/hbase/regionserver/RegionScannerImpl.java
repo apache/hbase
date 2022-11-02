@@ -130,32 +130,20 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
     this.scannerReadPoints = region.scannerReadPoints;
     this.rsServices = region.getRegionServerServices();
-    if (region.useReadWriteLockForReadPoints) {
-      region.smallestReadPointCalcLock.readLock().lock();
-      try {
-        this.readPt = calculateReadPoint(isolationLevel, mvccReadPoint, nonceGroup, nonce);
-        scannerReadPoints.put(this, this.readPt);
-      } finally {
-        region.smallestReadPointCalcLock.readLock().unlock();
+    region.smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
+    try {
+      if (mvccReadPoint > 0) {
+        this.readPt = mvccReadPoint;
+      } else if (hasNonce(region, nonce)) {
+        this.readPt = rsServices.getNonceManager().getMvccFromOperationContext(nonceGroup, nonce);
+      } else {
+        this.readPt = region.getReadPoint(isolationLevel);
       }
-    } else {
-      synchronized (scannerReadPoints) {
-        this.readPt = calculateReadPoint(isolationLevel, mvccReadPoint, nonceGroup, nonce);
-        scannerReadPoints.put(this, this.readPt);
-      }
+      scannerReadPoints.put(this, this.readPt);
+    } finally {
+      region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
     initializeScanners(scan, additionalScanners);
-  }
-
-  private long calculateReadPoint(IsolationLevel isolationLevel, long mvccReadPoint,
-    long nonceGroup, long nonce) {
-    if (mvccReadPoint > 0) {
-      return mvccReadPoint;
-    }
-    if (hasNonce(region, nonce)) {
-      return rsServices.getNonceManager().getMvccFromOperationContext(nonceGroup, nonce);
-    }
-    return region.getReadPoint(isolationLevel);
   }
 
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
