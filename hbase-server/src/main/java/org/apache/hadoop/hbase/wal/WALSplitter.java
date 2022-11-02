@@ -319,8 +319,7 @@ public class WALSplitter {
       startTS = EnvironmentEdgeManager.currentTime();
       while ((entry = getNextLogLine(walReader, wal, this.skipErrors)) != null) {
         if (WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
-          // This condition is strictly not required since the regionid present in the edit is
-          // invalid, so it will skip processing this edit.
+          // Skip processing the replication marker edits.
           if (LOG.isDebugEnabled()) {
             LOG.debug("Ignoring Replication marker edits.");
           }

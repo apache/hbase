@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
@@ -63,7 +63,6 @@ public class ReplicationMarkerChore extends ScheduledChore {
   private final Configuration conf;
   private final RegionServerServices rsServices;
   private WAL wal;
-  Random random = new Random();
 
   public static final String REPLICATION_MARKER_ENABLED_KEY =
     "hbase.regionserver.replication.marker.enabled";
@@ -84,6 +83,7 @@ public class ReplicationMarkerChore extends ScheduledChore {
   protected void chore() {
     if (wal == null) {
       try {
+        // TODO: We need to add support for multi WAL implementation.
         wal = rsServices.getWAL(null);
       } catch (IOException ioe) {
         LOG.warn("Unable to get WAL ", ioe);
@@ -108,7 +108,7 @@ public class ReplicationMarkerChore extends ScheduledChore {
         + " rows for this regionserver");
       return;
     }
-    HRegion region = regions.get(random.nextInt(regions.size()));
+    HRegion region = regions.get(ThreadLocalRandom.current().nextInt(regions.size()));
     try {
       WALUtil.writeReplicationMarkerAndSync(wal, MVCC, region.getRegionInfo(), rowKey, timeStamp);
     } catch (IOException ioe) {
@@ -120,7 +120,7 @@ public class ReplicationMarkerChore extends ScheduledChore {
   /**
    * Creates a rowkey with region server name and timestamp.
    * @param serverName region server name
-   * @param timestamp  timestamp n
+   * @param timestamp  timestamp
    */
   public static byte[] getRowKey(String serverName, long timestamp) {
     // converting to string since this will help seeing the timestamp in string format using
