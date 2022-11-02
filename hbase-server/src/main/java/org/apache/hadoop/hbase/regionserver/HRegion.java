@@ -400,7 +400,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
   // Lock to manage concurrency between RegionScanner and getSmallestReadPoint
-  final ReentrantReadWriteLock scannerReadPointsLock = new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock smallestReadPointCalcLock = new ReentrantReadWriteLock();
   final boolean useReadWriteLockForReadPoints;
 
   /**
@@ -450,11 +450,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // We need to ensure that while we are calculating the smallestReadPoint
     // no new RegionScanners can grab a readPoint that we are unaware of.
     if (useReadWriteLockForReadPoints) {
-      scannerReadPointsLock.writeLock().lock();
+      smallestReadPointCalcLock.writeLock().lock();
       try {
         minimumReadPoint = calculateSmallestReadPoint();
       } finally {
-        scannerReadPointsLock.writeLock().unlock();
+        smallestReadPointCalcLock.writeLock().unlock();
       }
     } else {
       // We achieve this by synchronizing on the scannerReadPoints object.

@@ -131,12 +131,12 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     this.scannerReadPoints = region.scannerReadPoints;
     this.rsServices = region.getRegionServerServices();
     if (region.useReadWriteLockForReadPoints) {
-      region.scannerReadPointsLock.readLock().lock();
+      region.smallestReadPointCalcLock.readLock().lock();
       try {
         this.readPt = calculateReadPoint(isolationLevel, mvccReadPoint, nonceGroup, nonce);
         scannerReadPoints.put(this, this.readPt);
       } finally {
-        region.scannerReadPointsLock.readLock().unlock();
+        region.smallestReadPointCalcLock.readLock().unlock();
       }
     } else {
       synchronized (scannerReadPoints) {
