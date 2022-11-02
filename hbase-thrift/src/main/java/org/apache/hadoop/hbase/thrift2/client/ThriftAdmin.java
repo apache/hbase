@@ -1032,6 +1032,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    throw new NotImplementedException("isReplicationPeerEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload) {
     throw new NotImplementedException("decommissionRegionServers not supported in ThriftAdmin");
 
