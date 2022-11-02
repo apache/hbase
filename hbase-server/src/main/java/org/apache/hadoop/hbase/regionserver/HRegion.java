@@ -399,6 +399,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final int miniBatchSize;
 
   final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  // Lock to manage concurrency between RegionScanner and getSmallestReadPoint
+  final ReentrantReadWriteLock scannerReadPointsLock = new ReentrantReadWriteLock();
+  final boolean useReadWriteLockForReadPoints;
 
   /**
    * The sequence ID that was enLongAddered when this region was opened.
@@ -446,16 +449,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     long minimumReadPoint;
     // We need to ensure that while we are calculating the smallestReadPoint
     // no new RegionScanners can grab a readPoint that we are unaware of.
-    // We achieve this by synchronizing on the scannerReadPoints object.
-    synchronized (scannerReadPoints) {
-      minimumReadPoint = mvcc.getReadPoint();
-      for (Long readPoint : this.scannerReadPoints.values()) {
-        if (readPoint < minimumReadPoint) {
-          minimumReadPoint = readPoint;
-        }
+    if (useReadWriteLockForReadPoints) {
+      scannerReadPointsLock.writeLock().lock();
+      try {
+        minimumReadPoint = calculateSmallestReadPoint();
+      } finally {
+        scannerReadPointsLock.writeLock().unlock();
+      }
+    } else {
+      // We achieve this by synchronizing on the scannerReadPoints object.
+      synchronized (scannerReadPoints) {
+        minimumReadPoint = calculateSmallestReadPoint();
       }
     }
     return minimumReadPoint;
+  }
+
+  private long calculateSmallestReadPoint() {
+    return scannerReadPoints.values().stream().mapToLong(Long::longValue).min().orElse(0L);
   }
 
   /*
@@ -797,6 +808,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       tmpRowLockDuration = 1;
     }
     this.rowLockWaitDuration = tmpRowLockDuration;
+
+    this.useReadWriteLockForReadPoints =
+      conf.getBoolean("hbase.readpoints.read.write.lock.enable", false);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("region = {}, useReadWriteLockForReadPoints = {}", getRegionInfo(),
+        useReadWriteLockForReadPoints);
+    }
 
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, true);
     this.htableDescriptor = htd;
@@ -8145,7 +8163,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     (3 * ClassSize.CONCURRENT_HASHMAP) + // lockedRows, scannerReadPoints, regionLockHolders
     WriteState.HEAP_SIZE + // writestate
     ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
-    (2 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock
+    (3 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock, scannerReadPointsLock
     MultiVersionConcurrencyControl.FIXED_SIZE // mvcc
     + 2 * ClassSize.TREEMAP // maxSeqIdInStores, replicationScopes
     + 2 * ClassSize.ATOMIC_INTEGER // majorInProgress, minorInProgress
