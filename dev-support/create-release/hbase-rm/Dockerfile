@@ -42,8 +42,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
-  && pip3 install \
-    python-dateutil==2.8.2
+  && pip3 install --no-cache-dir python-dateutil==2.8.2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -72,7 +71,7 @@ ENV YETUS_HOME /opt/yetus
 ARG UID
 ARG RM_USER
 RUN groupadd hbase-rm && \
-    useradd --create-home --shell /bin/bash -p hbase-rm -u $UID $RM_USER && \
+    useradd --create-home -l --shell /bin/bash -p hbase-rm -u $UID $RM_USER && \
     mkdir /home/$RM_USER/.gnupg && \
     chown -R $RM_USER:hbase-rm /home/$RM_USER && \
     chmod -R 700 /home/$RM_USER
