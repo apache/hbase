@@ -25,7 +25,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Lock to manage concurrency between RegionScanner and getSmallestReadPoint.
+ * Lock to manage concurrency between {@link RegionScanner} and
+ * {@link HRegion#getSmallestReadPoint()}. We need to ensure that while we are calculating the
+ * smallest read point, no new scanners can modify the scannerReadPoints Map. We used to achieve
+ * this by synchronizing on the scannerReadPoints object. But this may block the read thread and
+ * reduce the read performance. Since the scannerReadPoints object is a
+ * {@link java.util.concurrent.ConcurrentHashMap}, which is thread-safe, so the
+ * {@link RegionScanner} can record their read points concurrently, what it needs to do is just
+ * acquiring a shared lock. When we calculate the smallest read point, we need to acquire an
+ * exclusive lock. This can improve read performance in most scenarios, only not when we have a lot
+ * of delta operations, like {@link org.apache.hadoop.hbase.client.Append} or
+ * {@link org.apache.hadoop.hbase.client.Increment}. So we introduce a flag to enable/disable this
+ * feature.
  */
 @InterfaceAudience.Private
 public class ReadPointCalculationLock {
@@ -41,7 +52,7 @@ public class ReadPointCalculationLock {
 
   ReadPointCalculationLock(Configuration conf) {
     this.useReadWriteLockForReadPoints =
-      conf.getBoolean("hbase.readpoints.read.write.lock.enable", false);
+      conf.getBoolean("hbase.region.readpoints.read.write.lock.enable", false);
     if (useReadWriteLockForReadPoints) {
       readWriteLock = new ReentrantReadWriteLock();
     } else {
