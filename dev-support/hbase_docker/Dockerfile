@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:18.04 AS BASE_IMAGE
+FROM ubuntu:22.04 AS BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-    ca-certificates=20180409 \
-    curl='7.58.0-*' \
-    git='1:2.17.1-*' \
-    locales='2.27-*' \
+    ca-certificates=20211016 \
+    curl='7.81.0-*' \
+    git='1:2.34.1-*' \
+    locales='2.35-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \
@@ -31,16 +31,16 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
-ENV MAVEN_VERSION='3.6.3'
+ENV MAVEN_VERSION='3.8.6'
 ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-ENV MAVEN_SHA512 'c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0'
+ENV MAVEN_SHA512 'f790857f3b1f90ae8d16281f902c689e4f136ebe584aba45e4b1fa66c80cba826d3e0e52fdd04ed44b4c66f6d3fe3584a057c26dfcac544a60b301e6d0f91c26'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_linux_hotspot_8u345b01.tar.gz'
-ENV OPENJDK8_SHA256 'ed6c9db3719895584fb1fd69fc79c29240977675f26631911c5a1dbce07b7d58'
+ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u352-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u352b08.tar.gz'
+ENV OPENJDK8_SHA256 '1633bd7590cb1cd72f5a1378ae8294451028b274d798e2a4ac672059a2f00fee'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
@@ -74,9 +74,10 @@ ENV PATH "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
 
 # Pull down HBase and build it into /root/hbase-bin.
 WORKDIR /root
-RUN git clone https://gitbox.apache.org/repos/asf/hbase.git -b master \
+ARG BRANCH_OR_TAG=master
+RUN git clone --depth 1 -b ${BRANCH_OR_TAG} https://github.com/apache/hbase.git \
     && \
-    mvn clean install -DskipTests assembly:single -f ./hbase/pom.xml \
+    mvn -T1C clean install -DskipTests assembly:single -f ./hbase/pom.xml \
     && \
     mkdir -p hbase-bin \
     && \
