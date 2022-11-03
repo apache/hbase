@@ -78,8 +78,7 @@ public class TestWALEventTracker {
     // Set the chore for less than a second.
     CONF.setInt(NAMED_QUEUE_CHORE_DURATION_KEY, 900);
     CONF.setLong(WALEventTrackerTableAccessor.SLEEP_INTERVAL_KEY, 100);
-    TEST_UTIL = new HBaseTestingUtility
-      (CONF);
+    TEST_UTIL = new HBaseTestingUtility(CONF);
     TEST_UTIL.startMiniCluster();
   }
 
