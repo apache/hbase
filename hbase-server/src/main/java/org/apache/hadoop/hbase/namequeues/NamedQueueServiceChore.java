@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.namequeues;
 
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,11 +28,16 @@ import org.slf4j.LoggerFactory;
  * Chore to insert multiple accumulated slow/large logs to hbase:slowlog system table
  */
 @InterfaceAudience.Private
-public class SlowLogTableOpsChore extends ScheduledChore {
+public class NamedQueueServiceChore extends ScheduledChore {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SlowLogTableOpsChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(NamedQueueServiceChore.class);
+  public static final String NAMED_QUEUE_CHORE_DURATION_KEY =
+    "hbase.regionserver.named.queue.chore.duration";
+  // 10 mins default.
+  public static final int NAMED_QUEUE_CHORE_DURATION_DEFAULT = 10 * 60 * 1000;
 
   private final NamedQueueRecorder namedQueueRecorder;
+  private final Connection connection;
 
   /**
    * Chore Constructor
@@ -41,21 +47,23 @@ public class SlowLogTableOpsChore extends ScheduledChore {
    *                           scheduled
    * @param namedQueueRecorder {@link NamedQueueRecorder} instance
    */
-  public SlowLogTableOpsChore(final Stoppable stopper, final int period,
-    final NamedQueueRecorder namedQueueRecorder) {
-    super("SlowLogTableOpsChore", stopper, period);
+  public NamedQueueServiceChore(final Stoppable stopper, final int period,
+    final NamedQueueRecorder namedQueueRecorder, Connection connection) {
+    super("NamedQueueServiceChore", stopper, period);
     this.namedQueueRecorder = namedQueueRecorder;
+    this.connection = connection;
   }
 
   @Override
   protected void chore() {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("SlowLog Table Ops Chore is starting up.");
-    }
-    namedQueueRecorder.persistAll(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("SlowLog Table Ops Chore is closing.");
+    for (NamedQueuePayload.NamedQueueEvent event : NamedQueuePayload.NamedQueueEvent.values()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Starting chore for event %s", event.name()));
+      }
+      namedQueueRecorder.persistAll(event, connection);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Stopping chore for event %s", event.name()));
+      }
     }
   }
-
 }

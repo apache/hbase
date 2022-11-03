@@ -827,4 +827,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
   public String logPeerId() {
     return "peerId=" + this.getPeerId() + ",";
   }
+
+  // Visible for testing purpose
+  public long getTotalReplicatedEdits() {
+    return totalReplicatedEdits.get();
+  }
 }
