@@ -1039,7 +1039,7 @@ public class HRegionServer extends Thread
     if (replicationMarkerEnabled) {
       int period = conf.getInt(REPLICATION_MARKER_CHORE_DURATION_KEY,
         REPLICATION_MARKER_CHORE_DURATION_DEFAULT);
-      replicationMarkerChore = new ReplicationMarkerChore(this, this, period, conf);
+      replicationMarkerChore = new ReplicationMarkerChore(this, this, period);
     }
   }
 

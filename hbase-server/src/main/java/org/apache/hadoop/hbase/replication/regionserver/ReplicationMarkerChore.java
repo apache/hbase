@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -60,7 +59,6 @@ public class ReplicationMarkerChore extends ScheduledChore {
   public static final RegionInfo REGION_INFO =
     RegionInfoBuilder.newBuilder(REPLICATION_SINK_TRACKER_TABLE_NAME).build();
   private static final String DELIMITER = "_";
-  private final Configuration conf;
   private final RegionServerServices rsServices;
   private WAL wal;
 
@@ -73,9 +71,8 @@ public class ReplicationMarkerChore extends ScheduledChore {
   public static final int REPLICATION_MARKER_CHORE_DURATION_DEFAULT = 30 * 1000; // 30 seconds
 
   public ReplicationMarkerChore(final Stoppable stopper, final RegionServerServices rsServices,
-    int period, Configuration conf) {
+    int period) {
     super("ReplicationTrackerChore", stopper, period);
-    this.conf = conf;
     this.rsServices = rsServices;
   }
 

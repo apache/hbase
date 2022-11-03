@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public final class WALEventTrackerTableAccessor {
-  private static final Logger LOG = LoggerFactory.getLogger(WALEventTrackerTableAccessor.class);
-
   public static final String RS_COLUMN = "region_server_name";
   public static final String WAL_NAME_COLUMN = "wal_name";
   public static final String TIMESTAMP_COLUMN = "timestamp";
