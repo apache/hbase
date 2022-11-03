@@ -55,17 +55,17 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     shellcheck='0.8.0-*' \
     && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN python3 -mpip install --upgrade pip && \
-  python3 -mpip install pylint==2.15.5
-
-RUN gem install --no-document \
-  rake:13.0.3 \
-  rubocop:1.37.1 \
-  ruby-lint:2.3.1
-
-RUN locale-gen en_US.UTF-8
+    rm -rf /var/lib/apt/lists/* \
+    && \
+    python3 -mpip install --upgrade pip && \
+    python3 -mpip install pylint==2.15.5 \
+    && \
+    gem install --no-document \
+    rake:13.0.3 \
+    rubocop:1.37.1 \
+    ruby-lint:2.3.1 \
+    && \
+    locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 ##
