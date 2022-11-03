@@ -2718,6 +2718,84 @@ clusters communication. This could also happen if replication is manually paused
 (via hbase shell `disable_peer` command, for example), but data keeps getting ingested
 in the source cluster tables.
 
+=== Replication Observability Framework
+The core idea is to create `replication marker rows` periodically and insert them into WAL.
+These marker rows will help track the replication delays/bugs back to the `originating region
+server, WAL and timestamp of occurrence`. This tracker rows' WAL entries are interleaved with
+the regular table WAL entries and have a very high chance of running into the same replication
+delays/bugs that the user tables are seeing. Details as follows:
+
+==== REPLICATION.WALEVENTTRACKER table
+Create  a new table called `REPLICATION.WALEVENTTRACKER` table and persist all the WAL events
+(like `ACTIVE`, `ROLLING`, `ROLLED`) to this table. +
+The properties of this table are: Replication is set to 0, Block Cache is Disabled,
+Max versions is 1, TTL is 1 year.
+
+This table has single ColumnFamily: `info` +
+`info` contains multiple qualifiers:
+
+* `info:region_server_name`
+* `info:wal_name`
+* `info:timestamp`
+* `info:wal_state`
+* `info:wal_length`
+
+Whenever we roll a WAL (`old-wal-name` -> `new-wal-name`), it will create 3 rows in this table. +
+`<region_server_name>, <old-wal-name>, <current timestamp>, <ROLLING>, <length of old-wal-name>` +
+`<region_server_name>, <old-wal-name>, <current timestamp>, <ROLLED>,  <length of old-wal-name>` +
+`<region_server_name>, <new-wal-name>, <current timestamp>, <ACTIVE>,  0` +
+
+.Configuration
+To enable persisting WAL events, there is a configuration property:
+`hbase.regionserver.wal.event.tracker.enabled` (defaults to false)
+
+==== REPLICATION.SINK_TRACKER table
+Create a new table called `REPLICATION.SINK_TRACKER`. +
+The properties of this table are: Replication is set to 0, Block Cache is Disabled,
+Max versions is 1, TTL is 1 year.
+
+This table has single ColumnFamily: `info` +
+`info` contains multiple qualifiers:
+
+* `info:region_server_name`
+* `info:wal_name`
+* `info:timestamp`
+* `info:offset`
+
+.Configuration
+To create the above table, there is a configuration property:
+`hbase.regionserver.replication.sink.tracker.enabled` (defaults to false)
+
+==== ReplicationMarker Chore
+We introduced a new chore called `ReplicationMarkerChore` which will create the marker rows
+periodically into active WAL. The marker rows has the following metadata: `region_server_name,
+wal_name, timestamp and offset within WAL`. These markers are replicated (with special handling)
+and they are persisted into a sink side table `REPLICATION.SINK_TRACKER`.
+
+.Configuration:
+`ReplicationMarkerChore` is enabled with configuration property:
+`hbase.regionserver.replication.marker.enabled` (defaults to false) and the period at which it
+creates marker rows is controlled by `hbase.regionserver.replication.marker.chore.duration`
+(defaults to 30 seconds). Sink cluster can choose to process these marker rows and persist
+to `REPLICATION.SINK_TRACKER` table or it can ignore these rows. This behavior is controlled by
+configuration property `hbase.regionserver.replication.sink.tracker.enabled` (defaults to false).
+If set to false, it will ignore the marker rows.
+
+==== How to enable end-to-end feature ?
+To use this whole feature, we will need to enable the above configuration properties in 2
+phases/releases. +
+In first phase/release, set the following configuration properties to `true`:
+
+* `hbase.regionserver.wal.event.tracker.enabled`: This will just persist all the WAL events to
+REPLICATION.WALEVENTTRACKER table.
+* `hbase.regionserver.replication.sink.tracker.enabled`: This will create REPLICATION.SINK_TRACKER
+table and will process special marker rows coming from source cluster.
+
+In second phase/release, set the following configuration property to `true`:
+
+*  `hbase.regionserver.replication.marker.enabled`: This will create marker rows periodically and
+sink cluster will persist these marker rows in `REPLICATION.SINK_TRACKER` table.
+
 == Running Multiple Workloads On a Single Cluster
 
 HBase provides the following mechanisms for managing the performance of a cluster
