@@ -653,7 +653,7 @@ public class HRegionServer extends Thread
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
 
-      initNamedQueueRecorder(conf);
+      this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
 
@@ -739,26 +739,6 @@ public class HRegionServer extends Thread
       throw t;
     } finally {
       span.end();
-    }
-  }
-
-  private void initNamedQueueRecorder(Configuration conf) {
-    if (!(this instanceof HMaster)) {
-      final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-        HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-      if (isOnlineLogProviderEnabled) {
-        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-      }
-    } else {
-      final boolean isBalancerDecisionRecording =
-        conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
-          BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-      final boolean isBalancerRejectionRecording =
-        conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
-          BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
-      if (isBalancerDecisionRecording || isBalancerRejectionRecording) {
-        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-      }
     }
   }
 
