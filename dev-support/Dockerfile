@@ -29,5 +29,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
       curl='7.81.0-*' \
       python3-pip='22.0.2+dfsg-*' \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN pip3 install -r /hbase/dev-support/python-requirements.txt
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir -r /hbase/dev-support/python-requirements.txt
