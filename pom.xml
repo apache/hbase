@@ -552,7 +552,7 @@
          comes in via hbase-thirdparty hbase-shaded-netty-->
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <audience-annotations.version>0.13.0</audience-annotations.version>
+    <audience-annotations.version>0.5.0</audience-annotations.version>
     <!--
       The version used when generating javadoc, 0.13.0 is the latest version which supports jdk8.
       When building with jdk11, we will use 0.14.1, please see the build-with-jdk11 profile.
@@ -2250,7 +2250,7 @@
             <replaceRegex>
               <name>Remove unhelpful javadoc stubs</name>
               <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
-              <replacement/>
+              <replacement />
             </replaceRegex>
             <!--
               e.g., rewrite
