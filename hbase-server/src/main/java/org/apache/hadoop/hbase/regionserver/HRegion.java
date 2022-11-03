@@ -399,6 +399,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final int miniBatchSize;
 
   final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  final ReadPointCalculationLock smallestReadPointCalcLock;
 
   /**
    * The sequence ID that was enLongAddered when this region was opened.
@@ -443,19 +444,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *         this readPoint, are included in every read operation.
    */
   public long getSmallestReadPoint() {
-    long minimumReadPoint;
     // We need to ensure that while we are calculating the smallestReadPoint
     // no new RegionScanners can grab a readPoint that we are unaware of.
-    // We achieve this by synchronizing on the scannerReadPoints object.
-    synchronized (scannerReadPoints) {
-      minimumReadPoint = mvcc.getReadPoint();
+    smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.CALCULATION_LOCK);
+    try {
+      long minimumReadPoint = mvcc.getReadPoint();
       for (Long readPoint : this.scannerReadPoints.values()) {
-        if (readPoint < minimumReadPoint) {
-          minimumReadPoint = readPoint;
-        }
+        minimumReadPoint = Math.min(minimumReadPoint, readPoint);
       }
+      return minimumReadPoint;
+    } finally {
+      smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.CALCULATION_LOCK);
     }
-    return minimumReadPoint;
   }
 
   /*
@@ -797,6 +797,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       tmpRowLockDuration = 1;
     }
     this.rowLockWaitDuration = tmpRowLockDuration;
+
+    this.smallestReadPointCalcLock = new ReadPointCalculationLock(conf);
 
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, true);
     this.htableDescriptor = htd;
@@ -8140,6 +8142,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // 1 x RegionSplitPolicy - splitPolicy
   // 1 x MetricsRegion - metricsRegion
   // 1 x MetricsRegionWrapperImpl - metricsRegionWrapper
+  // 1 x ReadPointCalculationLock - smallestReadPointCalcLock
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD + ClassSize.OBJECT + // closeLock
     (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
     (3 * ClassSize.ATOMIC_LONG) + // numPutsWithoutWAL, dataInMemoryWithoutWAL,
