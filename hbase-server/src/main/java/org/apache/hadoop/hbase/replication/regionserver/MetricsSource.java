@@ -158,8 +158,12 @@ public class MetricsSource implements BaseSource {
   }
 
   public void decrSizeOfLogQueue() {
-    singleSourceSource.decrSizeOfLogQueue(1);
-    globalSourceSource.decrSizeOfLogQueue(1);
+    decrSizeOfLogQueue(1);
+  }
+
+  public void decrSizeOfLogQueue(int size) {
+    singleSourceSource.decrSizeOfLogQueue(size);
+    globalSourceSource.decrSizeOfLogQueue(size);
   }
 
   /**

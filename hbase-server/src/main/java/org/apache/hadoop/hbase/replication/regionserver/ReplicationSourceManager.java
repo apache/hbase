@@ -467,6 +467,9 @@ public class ReplicationSourceManager {
       ReplicationSourceInterface toRemove = this.sources.put(peerId, src);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
+        // Reset sizeOfLogQueue, log will re enqueue to the created new source.
+        toRemove.getSourceMetrics()
+          .decrSizeOfLogQueue(toRemove.getSourceMetrics().getSizeOfLogQueue());
         // Do not clear metrics
         toRemove.terminate(terminateMessage, null, false);
       }
