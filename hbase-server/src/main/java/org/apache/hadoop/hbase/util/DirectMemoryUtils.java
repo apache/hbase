@@ -79,7 +79,7 @@ public class DirectMemoryUtils {
   /** Returns the direct memory limit of the current progress */
   public static long getDirectMemorySize() {
     try {
-      Field directMemoryLimit = PlatformDependent.class.getDeclaredField("DIRECT_MEMORY_LIMIT");
+      Field directMemoryLimit = PlatformDependent.class.getDeclaredField("MAX_DIRECT_MEMORY");
       directMemoryLimit.setAccessible(true);
       return directMemoryLimit.getLong(PlatformDependent.class);
     } catch (Exception e) {
