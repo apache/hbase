@@ -223,8 +223,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -563,6 +567,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return getTableNames(RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables));
   }
 
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return this.<List<TableName>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableNamesByStateRequest,
+        ListTableNamesByStateResponse, List<TableName>> call(controller, stub,
+          ListTableNamesByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableNamesByState(c, req, done),
+          (resp) -> ProtobufUtil.toTableNameList(resp.getTableNamesList())))
+      .call();
+  }
+
   private CompletableFuture<List<TableName>> getTableNames(GetTableNamesRequest request) {
     return this.<List<TableName>> newMasterCaller()
       .action((controller, stub) -> this.<GetTableNamesRequest, GetTableNamesResponse,
@@ -579,6 +594,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ListTableDescriptorsByNamespaceResponse, List<TableDescriptor>> call(controller, stub,
           ListTableDescriptorsByNamespaceRequest.newBuilder().setNamespaceName(name).build(),
           (s, c, req, done) -> s.listTableDescriptorsByNamespace(c, req, done),
+          (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return this.<List<TableDescriptor>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableDescriptorsByStateRequest,
+        ListTableDescriptorsByStateResponse, List<TableDescriptor>> call(controller, stub,
+          ListTableDescriptorsByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableDescriptorsByState(c, req, done),
           (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
       .call();
   }

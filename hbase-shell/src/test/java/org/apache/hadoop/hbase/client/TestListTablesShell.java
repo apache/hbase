@@ -20,18 +20,27 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ ClientTests.class, LargeTests.class })
-public class TestShell extends AbstractTestShell {
-
+public class TestListTablesShell extends AbstractTestShell {
   @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestShell.class);
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestListTablesShell.class);
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setUpConfig();
+
+    TEST_UTIL.startMiniCluster(3);
+
+    setUpJRubyRuntime();
+  }
 
   @Override
-  protected String getExcludeList() {
-    return "replication_admin_test.rb,rsgroup_shell_test.rb,admin_test.rb,table_test.rb,"
-      + "quotas_test.rb,admin2_test.rb,list_tables_test.rb";
+  protected String getIncludeList() {
+    return "list_tables_test.rb";
   }
 }

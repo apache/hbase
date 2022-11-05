@@ -283,8 +283,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -1173,6 +1177,31 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     }
   }
 
+  @Override
+  public ListTableDescriptorsByStateResponse listTableDescriptorsByState(RpcController controller,
+    ListTableDescriptorsByStateRequest request) throws ServiceException {
+    try {
+      server.checkInitialized();
+      List<TableDescriptor> descriptors = server.listTableDescriptors(null, null, null, false);
+
+      ListTableDescriptorsByStateResponse.Builder builder =
+        ListTableDescriptorsByStateResponse.newBuilder();
+      if (descriptors != null && descriptors.size() > 0) {
+        // Add the table descriptors to the response
+        TableState.State state =
+          request.getIsEnabled() ? TableState.State.ENABLED : TableState.State.DISABLED;
+        for (TableDescriptor htd : descriptors) {
+          if (server.getTableStateManager().isTableState(htd.getTableName(), state)) {
+            builder.addTableSchema(ProtobufUtil.toTableSchema(htd));
+          }
+        }
+      }
+      return builder.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
   /**
    * Get list of userspace table names
    * @param controller Unused (set to null).
@@ -1194,6 +1223,29 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         // Add the table names to the response
         for (TableName table : tableNames) {
           builder.addTableNames(ProtobufUtil.toProtoTableName(table));
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ListTableNamesByStateResponse listTableNamesByState(RpcController controller,
+    ListTableNamesByStateRequest request) throws ServiceException {
+    try {
+      server.checkServiceStarted();
+      List<TableName> tableNames = server.listTableNames(null, null, false);
+      ListTableNamesByStateResponse.Builder builder = ListTableNamesByStateResponse.newBuilder();
+      if (tableNames != null && tableNames.size() > 0) {
+        // Add the disabled table names to the response
+        TableState.State state =
+          request.getIsEnabled() ? TableState.State.ENABLED : TableState.State.DISABLED;
+        for (TableName table : tableNames) {
+          if (server.getTableStateManager().isTableState(table, state)) {
+            builder.addTableNames(ProtobufUtil.toProtoTableName(table));
+          }
         }
       }
       return builder.build();

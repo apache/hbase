@@ -390,6 +390,8 @@ Shell.load_command_group(
     locate_region
     list_regions
     clone_table_schema
+    list_enabled_tables
+    list_disabled_tables
   ],
   aliases: {
     'describe' => ['desc']
