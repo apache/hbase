@@ -722,3 +722,15 @@ enum AssignReplicationQueuesState {
 message AssignReplicationQueuesStateData {
   required ServerName crashed_server = 1;
 }
+
+enum MigrateReplicationQueueFromZkToTableState {
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE = 1;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_PEER = 2;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE = 3;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING = 4;
+  MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_PEER = 5;
+}
+
+message MigrateReplicationQueueFromZkToTableStateData {
+  repeated string disabled_peer_id = 1;
+}
