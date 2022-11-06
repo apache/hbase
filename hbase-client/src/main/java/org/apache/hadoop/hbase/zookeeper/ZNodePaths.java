@@ -220,7 +220,11 @@ public class ZNodePaths {
    * @param suffix ending of znode name
    * @return result of properly joining prefix with suffix
    */
-  public static String joinZNode(String prefix, String suffix) {
-    return prefix + ZNodePaths.ZNODE_PATH_SEPARATOR + suffix;
+  public static String joinZNode(String prefix, String... suffix) {
+    StringBuilder sb = new StringBuilder(prefix);
+    for (String s : suffix) {
+      sb.append(ZNodePaths.ZNODE_PATH_SEPARATOR).append(s);
+    }
+    return sb.toString();
   }
 }
