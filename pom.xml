@@ -1015,12 +1015,17 @@
         <artifactId>hbase-hadoop-compat</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-replication</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-replication</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
