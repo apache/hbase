@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.replication.AssignReplicationQueuesProcedure;
+import org.apache.hadoop.hbase.master.replication.MigrateReplicationQueueFromZkToTableProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -52,6 +53,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ServerCrashState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 /**
  * Handle crashed server. This is a port to ProcedureV2 of what used to be euphemistically called
@@ -266,6 +268,16 @@ public class ServerCrashProcedure extends
           }
           break;
         case SERVER_CRASH_CLAIM_REPLICATION_QUEUES:
+          if (
+            env.getMasterServices().getProcedures().stream()
+              .filter(p -> p instanceof MigrateReplicationQueueFromZkToTableProcedure)
+              .anyMatch(p -> !p.isFinished())
+          ) {
+            LOG.info("There is a pending {}, will retry claim replication queue later",
+              MigrateReplicationQueueFromZkToTableProcedure.class.getSimpleName());
+            suspend(10_000, true);
+            return Flow.NO_MORE_STATE;
+          }
           addChildProcedure(new AssignReplicationQueuesProcedure(serverName));
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
           break;
@@ -429,6 +441,13 @@ public class ServerCrashProcedure extends
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureScheduler().wakeServerExclusiveLock(this, getServerName());
+  }
+
+  @Override
+  protected synchronized boolean setTimeoutFailure(MasterProcedureEnv env) {
+    setState(ProcedureProtos.ProcedureState.RUNNABLE);
+    env.getProcedureScheduler().addFront(this);
+    return false;
   }
 
   @Override
