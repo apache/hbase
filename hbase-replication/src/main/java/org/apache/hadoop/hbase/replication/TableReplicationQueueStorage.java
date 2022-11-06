@@ -21,12 +21,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkLastPushedSeqId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -73,12 +76,6 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
   private final Connection conn;
 
   private final TableName tableName;
-
-  @FunctionalInterface
-  private interface TableCreator {
-
-    void create() throws IOException;
-  }
 
   public TableReplicationQueueStorage(Connection conn, TableName tableName) {
     this.conn = conn;
@@ -539,6 +536,62 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
       return conn.getAdmin().getDescriptor(tableName) != null;
     } catch (IOException e) {
       throw new ReplicationException("failed to get replication queue table", e);
+    }
+  }
+
+  @Override
+  public void batchUpdateQueues(ServerName serverName, List<ReplicationQueueData> datas)
+    throws ReplicationException {
+    List<Put> puts = new ArrayList<>();
+    for (ReplicationQueueData data : datas) {
+      if (data.getOffsets().isEmpty()) {
+        continue;
+      }
+      Put put = new Put(Bytes.toBytes(data.getId().toString()));
+      data.getOffsets().forEach((walGroup, offset) -> {
+        put.addColumn(QUEUE_FAMILY, Bytes.toBytes(walGroup), Bytes.toBytes(offset.toString()));
+      });
+      puts.add(put);
+    }
+    try (Table table = conn.getTable(tableName)) {
+      table.put(puts);
+    } catch (IOException e) {
+      throw new ReplicationException("failed to batch update queues", e);
+    }
+  }
+
+  @Override
+  public void batchUpdateLastSequenceIds(List<ZkLastPushedSeqId> lastPushedSeqIds)
+    throws ReplicationException {
+    Map<String, Put> peerId2Put = new HashMap<>();
+    for (ZkLastPushedSeqId lastPushedSeqId : lastPushedSeqIds) {
+      peerId2Put
+        .computeIfAbsent(lastPushedSeqId.getPeerId(), peerId -> new Put(Bytes.toBytes(peerId)))
+        .addColumn(LAST_SEQUENCE_ID_FAMILY, Bytes.toBytes(lastPushedSeqId.getEncodedRegionName()),
+          Bytes.toBytes(lastPushedSeqId.getLastPushedSeqId()));
+    }
+    try (Table table = conn.getTable(tableName)) {
+      table
+        .put(peerId2Put.values().stream().filter(p -> !p.isEmpty()).collect(Collectors.toList()));
+    } catch (IOException e) {
+      throw new ReplicationException("failed to batch update last pushed sequence ids", e);
+    }
+  }
+
+  @Override
+  public void batchUpdateHFileRefs(String peerId, List<String> hfileRefs)
+    throws ReplicationException {
+    if (hfileRefs.isEmpty()) {
+      return;
+    }
+    Put put = new Put(Bytes.toBytes(peerId));
+    for (String ref : hfileRefs) {
+      put.addColumn(HFILE_REF_FAMILY, Bytes.toBytes(ref), HConstants.EMPTY_BYTE_ARRAY);
+    }
+    try (Table table = conn.getTable(tableName)) {
+      table.put(put);
+    } catch (IOException e) {
+      throw new ReplicationException("failed to batch update hfile references", e);
     }
   }
 }
