@@ -171,6 +171,7 @@ import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
+import org.apache.hadoop.hbase.master.replication.MigrateReplicationQueueFromZkToTableProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
@@ -221,6 +222,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator;
@@ -1050,6 +1052,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.balancer.initialize();
     this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
+    // try migrate replication data
+    ZKReplicationQueueStorageForMigration oldReplicationQueueStorage =
+      new ZKReplicationQueueStorageForMigration(zooKeeper, conf);
+    // check whether there are something to migrate and we haven't scheduled a migration procedure
+    // yet
+    if (
+      oldReplicationQueueStorage.hasData() && procedureExecutor.getProcedures().stream()
+        .allMatch(p -> !(p instanceof MigrateReplicationQueueFromZkToTableProcedure))
+    ) {
+      procedureExecutor.submitProcedure(new MigrateReplicationQueueFromZkToTableProcedure());
+    }
     // start up all service threads.
     startupTaskGroup.addTask("Initializing master service threads");
     startServiceThreads();

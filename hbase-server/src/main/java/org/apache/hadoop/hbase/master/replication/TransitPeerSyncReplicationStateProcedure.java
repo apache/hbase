@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ReopenTableRegionsProcedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.StateMachineProcedure.Flow;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -236,6 +237,19 @@ public class TransitPeerSyncReplicationStateProcedure
     switch (state) {
       case PRE_PEER_SYNC_REPLICATION_STATE_TRANSITION:
         try {
+          if (
+            env.getMasterServices().getProcedures().stream()
+              .filter(p -> p instanceof MigrateReplicationQueueFromZkToTableProcedure)
+              .anyMatch(p -> !p.isFinished())
+          ) {
+            LOG.info("There is a pending {}, give up execution of {}",
+              MigrateReplicationQueueFromZkToTableProcedure.class.getSimpleName(),
+              getClass().getSimpleName());
+            setFailure("master-transit-peer-sync-replication-state",
+              new DoNotRetryIOException("There is a pending "
+                + MigrateReplicationQueueFromZkToTableProcedure.class.getSimpleName()));
+            return Flow.NO_MORE_STATE;
+          }
           preTransit(env);
         } catch (IOException e) {
           LOG.warn("Failed to call pre CP hook or the pre check is failed for peer {} "
