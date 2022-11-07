@@ -68,20 +68,6 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.google.errorprone</groupId>
-          <artifactId>error_prone_core</artifactId>
-          <version>${error-prone.version}</version>
-          <scope>provided</scope>
-          <exclusions>
-            <exclusion>
-              <groupId>com.google.code.findbugs</groupId>
-              <artifactId>jsr305</artifactId>
-            </exclusion>
-          </exclusions>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <!-- Turn on error-prone -->
@@ -94,7 +80,7 @@
               <compilerArgs>
                 <arg>-XDcompilePolicy=simple</arg>
                 <!-- All -Xep need to be on single line see: https://github.com/google/error-prone/pull/1115 -->
-                <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:FallThrough:OFF -Xep:MutablePublicArray:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR -Xep:BanJNDI:WARN</arg>
+                <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -XepExcludedPaths:.*/target/.* -Xep:FallThrough:OFF -Xep:MutablePublicArray:OFF -Xep:ClassNewInstance:ERROR -Xep:MissingDefault:ERROR -Xep:BanJNDI:WARN</arg>
               </compilerArgs>
               <annotationProcessorPaths>
                 <path>
