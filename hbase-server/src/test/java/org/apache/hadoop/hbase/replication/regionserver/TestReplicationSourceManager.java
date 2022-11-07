@@ -381,7 +381,8 @@ public abstract class TestReplicationSourceManager {
       ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration());
     rp1.init();
     NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    w1.start();
+    w1.join();
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
     assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
@@ -402,7 +403,8 @@ public abstract class TestReplicationSourceManager {
     rq.addWAL(server.getServerName(), "2", group + ".log2");
 
     NodeFailoverWorker w1 = manager.new NodeFailoverWorker(server.getServerName());
-    w1.run();
+    w1.start();
+    w1.join();
 
     // The log of the unknown peer should be removed from zk
     for (String peer : manager.getAllQueues()) {
