@@ -78,7 +78,7 @@ pipeline {
                     environment {
                         // customized per parallel stage
                         PLUGINS = "${GENERAL_CHECK_PLUGINS}"
-                        SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+                        SET_JAVA_HOME = "/usr/lib/jvm/java-11"
                         WORKDIR_REL = "${WORKDIR_REL_GENERAL_CHECK}"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"

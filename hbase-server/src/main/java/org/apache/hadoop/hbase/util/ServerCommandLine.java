@@ -36,21 +36,17 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * Base class for command lines that start up various HBase daemons.
  */
 @InterfaceAudience.Private
 public abstract class ServerCommandLine extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(ServerCommandLine.class);
-  @SuppressWarnings("serial")
-  private static final Set<String> DEFAULT_SKIP_WORDS = new HashSet<String>() {
-    {
-      add("secret");
-      add("passwd");
-      add("password");
-      add("credential");
-    }
-  };
+
+  private static final Set<String> DEFAULT_SKIP_WORDS =
+    ImmutableSet.of("secret", "passwd", "password", "credential");
 
   /**
    * Implementing subclasses should return a usage string to print out.
