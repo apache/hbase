@@ -202,7 +202,9 @@ pipeline {
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.SHALLOW_CHECKS}"
-            SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+            SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+            // Activates hadoop 3.0 profile in maven runs.
+            HADOOP_PROFILE = '3.0'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_GENERAL}"
             ASF_NIGHTLIES_GENERAL_CHECK_BASE="${ASF_NIGHTLIES_BASE}/${OUTPUT_DIR_RELATIVE}"
