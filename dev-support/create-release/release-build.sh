@@ -130,11 +130,13 @@ if [[ "$1" == "tag" ]]; then
   # So, here we prepend the project name to the version, but only for the hbase sub-projects.
   jira_fix_version="${RELEASE_VERSION}"
   shopt -s nocasematch
-  if [[ "${PROJECT}" =~ ^hbase- ]]; then
+  if [[ "${PROJECT}" == "hbase-thirdparty" ]]; then
+    jira_fix_version="thirdparty-${RELEASE_VERSION}"
+  elif [[ "${PROJECT}" =~ ^hbase- ]]; then
     jira_fix_version="${PROJECT}-${RELEASE_VERSION}"
   fi
   shopt -u nocasematch
-  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}" "${PREV_VERSION}"
+  update_releasenotes "$(pwd)/${PROJECT}" "${jira_fix_version}"
 
   cd "${PROJECT}"
 
@@ -302,15 +304,31 @@ if [[ "$1" == "publish-release" ]]; then
   mvn_log="${BASE_DIR}/mvn_deploy_release.log"
   log "Staging release in nexus"
   maven_deploy release "$mvn_log"
-  declare staged_repo_id="dryrun-no-repo"
+  declare staged_repo_id
+  declare hadoop3_staged_repo_id
   if ! is_dry_run; then
-    staged_repo_id=$(grep -o "Closing staging repository with ID .*" "$mvn_log" \
+    mapfile -t staged_repo_ids < <(grep -o "Closing staging repository with ID .*" "$mvn_log" \
         | sed -e 's/Closing staging repository with ID "\([^"]*\)"./\1/')
-    log "Release artifacts successfully published to repo ${staged_repo_id}"
+    log "Release artifacts successfully published to repo: " "${staged_repo_ids[@]}"
+    repo_count="${#staged_repo_ids[@]}"
+    if [[ "${repo_count}" == "2" ]]; then
+      staged_repo_id=${staged_repo_ids[0]}
+      hadoop3_staged_repo_id=${staged_repo_ids[1]}
+    elif [[ "${repo_count}" == "1" ]]; then
+      staged_repo_id=${staged_repo_ids[0]}
+      hadoop3_staged_repo_id="not-applicable"
+    else
+      staged_repo_id="not-applicable"
+      hadoop3_staged_repo_id="not-applicable"
+    fi
     rm "$mvn_log"
   else
     log "Dry run: Release artifacts successfully built, but not published due to dry run."
+    staged_repo_id="dryrun-no-repo"
+    hadoop3_staged_repo_id="dryrun-no-repo"
   fi
+  export staged_repo_id
+  export hadoop3_staged_repo_id
   # Dump out email to send. Where we find vote.tmpl depends
   # on where this script is run from
   PROJECT_TEXT="${PROJECT//-/ }" #substitute like 's/-/ /g'
