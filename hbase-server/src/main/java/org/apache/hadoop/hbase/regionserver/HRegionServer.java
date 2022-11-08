@@ -19,8 +19,17 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_KEY;
+import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import io.opentelemetry.api.trace.Span;
@@ -129,12 +138,11 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -156,7 +164,10 @@ import org.apache.hadoop.hbase.regionserver.http.RSDumpServlet;
 import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -457,7 +468,7 @@ public class HRegionServer extends Thread
 
   private final RegionServerAccounting regionServerAccounting;
 
-  private SlowLogTableOpsChore slowLogTableOpsChore = null;
+  private NamedQueueServiceChore namedQueueServiceChore = null;
 
   // Block cache
   private BlockCache blockCache;
@@ -590,6 +601,11 @@ public class HRegionServer extends Thread
   // A timer to shutdown the process if abort takes too long
   private Timer abortMonitor;
 
+  /*
+   * Chore that creates replication marker rows.
+   */
+  private ReplicationMarkerChore replicationMarkerChore;
+
   /**
    * Starts a HRegionServer at the default location.
    * <p/>
@@ -636,7 +652,7 @@ public class HRegionServer extends Thread
       this.abortRequested = new AtomicBoolean(false);
       this.stopped = false;
 
-      initNamedQueueRecorder(conf);
+      this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
       rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
 
@@ -722,26 +738,6 @@ public class HRegionServer extends Thread
       throw t;
     } finally {
       span.end();
-    }
-  }
-
-  private void initNamedQueueRecorder(Configuration conf) {
-    if (!(this instanceof HMaster)) {
-      final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-        HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-      if (isOnlineLogProviderEnabled) {
-        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-      }
-    } else {
-      final boolean isBalancerDecisionRecording =
-        conf.getBoolean(BaseLoadBalancer.BALANCER_DECISION_BUFFER_ENABLED,
-          BaseLoadBalancer.DEFAULT_BALANCER_DECISION_BUFFER_ENABLED);
-      final boolean isBalancerRejectionRecording =
-        conf.getBoolean(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED,
-          BaseLoadBalancer.DEFAULT_BALANCER_REJECTION_BUFFER_ENABLED);
-      if (isBalancerDecisionRecording || isBalancerRejectionRecording) {
-        this.namedQueueRecorder = NamedQueueRecorder.getInstance(this.conf);
-      }
     }
   }
 
@@ -1034,6 +1030,17 @@ public class HRegionServer extends Thread
   public boolean isClusterUp() {
     return this.masterless
       || (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
+  }
+
+  private void initializeReplicationMarkerChore() {
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+    // If replication or replication marker is not enabled then return immediately.
+    if (replicationMarkerEnabled) {
+      int period = conf.getInt(REPLICATION_MARKER_CHORE_DURATION_KEY,
+        REPLICATION_MARKER_CHORE_DURATION_DEFAULT);
+      replicationMarkerChore = new ReplicationMarkerChore(this, this, period);
+    }
   }
 
   /**
@@ -2049,7 +2056,21 @@ public class HRegionServer extends Thread
     }
     // Instantiate replication if replication enabled. Pass it the log directories.
     createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
+
+    WALActionsListener walEventListener = getWALEventTrackerListener(conf);
+    if (walEventListener != null && factory.getWALProvider() != null) {
+      factory.getWALProvider().addWALActionsListener(walEventListener);
+    }
     this.walFactory = factory;
+  }
+
+  private WALActionsListener getWALEventTrackerListener(Configuration conf) {
+    if (conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT)) {
+      WALEventTrackerListener listener =
+        new WALEventTrackerListener(conf, getNamedQueueRecorder(), getServerName());
+      return listener;
+    }
+    return null;
   }
 
   /**
@@ -2205,15 +2226,18 @@ public class HRegionServer extends Thread
     if (this.fsUtilizationChore != null) {
       choreService.scheduleChore(fsUtilizationChore);
     }
-    if (this.slowLogTableOpsChore != null) {
-      choreService.scheduleChore(slowLogTableOpsChore);
+    if (this.namedQueueServiceChore != null) {
+      choreService.scheduleChore(namedQueueServiceChore);
     }
     if (this.brokenStoreFileCleaner != null) {
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
-
     if (this.rsMobFileCleanerChore != null) {
       choreService.scheduleChore(rsMobFileCleanerChore);
+    }
+    if (replicationMarkerChore != null) {
+      LOG.info("Starting replication marker chore");
+      choreService.scheduleChore(replicationMarkerChore);
     }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -2262,10 +2286,22 @@ public class HRegionServer extends Thread
 
     final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
       HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
-    if (isSlowLogTableEnabled) {
+    final boolean walEventTrackerEnabled =
+      conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT);
+
+    if (isSlowLogTableEnabled || walEventTrackerEnabled) {
       // default chore duration: 10 min
-      final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
-      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.namedQueueRecorder);
+      // After <version number>, we will remove hbase.slowlog.systable.chore.duration conf property
+      final int slowLogChoreDuration = conf.getInt(HConstants.SLOW_LOG_SYS_TABLE_CHORE_DURATION_KEY,
+        DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION);
+
+      final int namedQueueChoreDuration =
+        conf.getInt(NAMED_QUEUE_CHORE_DURATION_KEY, NAMED_QUEUE_CHORE_DURATION_DEFAULT);
+      // Considering min of slowLogChoreDuration and namedQueueChoreDuration
+      int choreDuration = Math.min(slowLogChoreDuration, namedQueueChoreDuration);
+
+      namedQueueServiceChore = new NamedQueueServiceChore(this, choreDuration,
+        this.namedQueueRecorder, this.getConnection());
     }
 
     if (this.nonceManager != null) {
@@ -2315,6 +2351,7 @@ public class HRegionServer extends Thread
     this.rsMobFileCleanerChore = new RSMobFileCleanerChore(this);
 
     registerConfigurationObservers();
+    initializeReplicationMarkerChore();
   }
 
   private void registerConfigurationObservers() {
@@ -2795,7 +2832,8 @@ public class HRegionServer extends Thread
       shutdownChore(healthCheckChore);
       shutdownChore(storefileRefresher);
       shutdownChore(fsUtilizationChore);
-      shutdownChore(slowLogTableOpsChore);
+      shutdownChore(namedQueueServiceChore);
+      shutdownChore(replicationMarkerChore);
       shutdownChore(rsMobFileCleanerChore);
       // cancel the remaining scheduled chores (in case we missed out any)
       // TODO: cancel will not cleanup the chores, so we need make sure we do not miss any

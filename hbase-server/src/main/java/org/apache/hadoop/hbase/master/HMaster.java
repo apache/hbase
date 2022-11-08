@@ -172,6 +172,7 @@ import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
 import org.apache.hadoop.hbase.master.zksyncer.MetaLocationSyncer;
 import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
@@ -214,6 +215,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationPeerConfigUpgrader;
+import org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -1242,6 +1244,10 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     final SlowLogMasterService slowLogMasterService = new SlowLogMasterService(conf, this);
     slowLogMasterService.init();
+
+    WALEventTrackerTableCreator.createIfNeededAndNotExists(conf, this);
+    // Create REPLICATION.SINK_TRACKER table if needed.
+    ReplicationSinkTrackerTableCreator.createIfNeededAndNotExists(conf, this);
 
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before

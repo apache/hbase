@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -66,7 +67,7 @@ public class SlowLogPersistentService {
   /**
    * Poll from queueForSysTable and insert 100 records in hbase:slowlog table in single batch
    */
-  public void addAllLogsToSysTable() {
+  public void addAllLogsToSysTable(Connection connection) {
     if (queueForSysTable == null) {
       LOG.trace("hbase.regionserver.slowlog.systable.enabled is turned off. Exiting.");
       return;
@@ -82,13 +83,13 @@ public class SlowLogPersistentService {
         slowLogPayloads.add(queueForSysTable.poll());
         i++;
         if (i == SYSTABLE_PUT_BATCH_SIZE) {
-          SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
+          SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, connection);
           slowLogPayloads.clear();
           i = 0;
         }
       }
       if (slowLogPayloads.size() > 0) {
-        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, this.configuration);
+        SlowLogTableAccessor.addSlowLogRecords(slowLogPayloads, connection);
       }
     } finally {
       LOCK.unlock();
