@@ -304,7 +304,7 @@ pipeline {
             }
           }
           when {
-            branch 'branch-2*'
+            branch 'branch-1*'
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
@@ -412,6 +412,9 @@ pipeline {
             node {
               label 'hbase'
             }
+          }
+          when {
+            branch 'branch-1*'
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
@@ -521,6 +524,9 @@ pipeline {
             node {
               label 'hbase'
             }
+          }
+          when {
+            branch 'branch-1*'
           }
           environment {
             BASEDIR = "${env.WORKSPACE}/component"
@@ -635,6 +641,9 @@ pipeline {
             node {
               label 'hbase-large'
             }
+          }
+          when {
+            branch 'branch-1*'
           }
           tools {
             maven 'maven_latest'
