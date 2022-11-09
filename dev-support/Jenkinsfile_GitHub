@@ -200,6 +200,9 @@ pipeline {
                             label 'hbase'
                         }
                     }
+                    when {
+                        branch 'branch-1*'
+                    }
                     environment {
                         // customized per parallel stage
                         PLUGINS = "${JDK_SPECIFIC_PLUGINS}"
@@ -331,6 +334,9 @@ pipeline {
                         node {
                             label 'hbase'
                         }
+                    }
+                    when {
+                        branch 'branch-1*'
                     }
                     environment {
                         // customized per parallel stage

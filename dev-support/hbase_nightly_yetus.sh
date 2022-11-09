@@ -78,7 +78,7 @@ fi
 if [[ -n "${HADOOP_PROFILE}" ]]; then
   # Master has only Hadoop3 support. We don't need to activate any profile.
   # The Jenkinsfile should not attempt to run any Hadoop2 tests.
-  if [[ "${BRANCH_NAME}" =~ branch-2* ]]; then
+  if [[ "${BRANCH_NAME}" =~ branch-2* ]] || [[ "${BRANCH_NAME}" = "HBASE-27475" ]]; then
     YETUS_ARGS=("--hadoop-profile=${HADOOP_PROFILE}" "${YETUS_ARGS[@]}")
   fi
 fi
