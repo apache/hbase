@@ -30,7 +30,7 @@
 DRY_RUN=${DRY_RUN:-1} #default to dry run
 DEBUG=${DEBUG:-0}
 GPG=${GPG:-gpg}
-GPG_ARGS=(--no-autostart --batch)
+GPG_ARGS=(--no-autostart --batch --pinentry-mode error)
 if [ -n "${GPG_KEY}" ]; then
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 fi
@@ -670,10 +670,16 @@ make_binary_release() {
   # a third to assemble the binary artifact. Trying to do
   # all in the one invocation fails; a problem in our
   # assembly spec to in maven. TODO. Meantime, three invocations.
-  "${MVN[@]}" clean install -DskipTests
-  "${MVN[@]}" site -DskipTests
+  cmd=("${MVN[@]}" clean install -DskipTests)
+  echo "${cmd[*]}"
+  "${cmd[@]}"
+  cmd=("${MVN[@]}" site -DskipTests)
+  echo "${cmd[*]}"
+  "${cmd[@]}"
   kick_gpg_agent
-  "${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}"
+  cmd=("${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}")
+  echo "${cmd[*]}"
+  "${cmd[@]}"
 
   # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
   local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"

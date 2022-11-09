@@ -32,7 +32,7 @@
 #
 # test like:
 #
-# ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-extra-socket)" \
+# ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-socket)" \
 #     -i "${HOME}/.ssh/id_rsa" -N -n localhost
 #
 # launch a docker container to do work that shares the mount for the gpg agent

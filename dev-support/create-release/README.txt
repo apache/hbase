@@ -105,6 +105,9 @@ $ scp ~/gpg.example.apache.pub example.gce.host:
 #   gpg-agent's extra socket (this will restrict what commands the remote node is allowed to have
 #   your agent handle. Note that the gpg guide above can help you set this up in your ssh config
 #   rather than typing it in ssh like this every time.
+# Note that as of maven-gpg-plugin 3.0.1, with gnupg >= 2.1, the plugin uses
+#   `--pinentry-mode error`, which is apparently not supported over the `extra` socket. These
+#   instructions may require tweaking.
 $ ssh -i ~/.ssh/my_id \
     -R "/run/user/1000/gnupg/S.gpg-agent:$(gpgconf --list-dir agent-extra-socket)" \
     -R "/run/user/1000/gnupg/S.gpg-agent.extra:$(gpgconf --list-dir agent-extra-socket)" \
