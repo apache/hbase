@@ -125,7 +125,7 @@ public class UnassignRegionHandler extends EventHandler {
     //there's no point on keep blocks for those region files. As hbase.rs.evictblocksonclose is
     //false by default we don't bother overriding it if evictCache is false.
     if (evictCache) {
-      region.getStores().forEach( s -> s.getCacheConfig().setEvictOnClose(true));
+      region.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(true));
     }
     if (region.close(abort) == null) {
       // XXX: Is this still possible? The old comment says about split, but now split is done at

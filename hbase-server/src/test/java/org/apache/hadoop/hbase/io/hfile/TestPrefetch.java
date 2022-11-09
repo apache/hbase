@@ -52,9 +52,9 @@ import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -253,15 +253,19 @@ public class TestPrefetch {
     });
   }
 
-  private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test) throws Exception {
+  private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test)
+    throws Exception {
     cacheConf = new CacheConfig(conf, blockCache);
     HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchSkipRefs");
-    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchSkipRefs")).build();
+    RegionInfo region =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchSkipRefs")).build();
     Path regionDir = new Path(tableDir, region.getEncodedName());
-    Pair<Path, byte[]> fileWithSplitPoint = writeStoreFileForSplit(new Path(regionDir, "cf"), context);
+    Pair<Path, byte[]> fileWithSplitPoint =
+      writeStoreFileForSplit(new Path(regionDir, "cf"), context);
     Path storeFile = fileWithSplitPoint.getFirst();
-    HRegionFileSystem regionFS = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
       new ConstantSizeRegionSplitPolicy());
@@ -308,7 +312,8 @@ public class TestPrefetch {
     return sfw.getPath();
   }
 
-  private Pair<Path, byte[]> writeStoreFileForSplit(Path storeDir, HFileContext context) throws IOException {
+  private Pair<Path, byte[]> writeStoreFileForSplit(Path storeDir, HFileContext context)
+    throws IOException {
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();

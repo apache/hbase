@@ -3010,7 +3010,8 @@ public final class ProtobufUtil {
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
     ServerName destinationServer, long closeProcId, boolean evictCache) {
-    CloseRegionRequest.Builder builder = getBuilder(server, regionName, destinationServer, closeProcId);
+    CloseRegionRequest.Builder builder =
+      getBuilder(server, regionName, destinationServer, closeProcId);
     builder.setEvictCache(evictCache);
     return builder.build();
   }

@@ -3865,7 +3865,8 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     boolean evictCache = request.getEvictCache();
     if (server.submitRegionProcedure(procId)) {
       server.getExecutorService()
-        .submit(UnassignRegionHandler.create(server, encodedName, procId, false, destination, evictCache));
+        .submit(UnassignRegionHandler.create(server, encodedName, procId, false,
+          destination, evictCache));
     }
   }
 

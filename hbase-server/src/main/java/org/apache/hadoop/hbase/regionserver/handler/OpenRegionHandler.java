@@ -280,8 +280,10 @@ public class OpenRegionHandler extends EventHandler {
   /** Returns Instance of HRegion if successful open else null. */
   private HRegion openRegion() {
     HRegion region = null;
-    boolean compactionEnabled = ((HRegionServer)server).getCompactSplitThread().isCompactionsEnabled();
-    this.server.getConfiguration().setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
+    boolean compactionEnabled =
+      ((HRegionServer)server).getCompactSplitThread().isCompactionsEnabled();
+    this.server.getConfiguration().setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION,
+      compactionEnabled);
     try {
       // Instantiate the region. This also periodically tickles OPENING
       // state so master doesn't timeout this region in transition.

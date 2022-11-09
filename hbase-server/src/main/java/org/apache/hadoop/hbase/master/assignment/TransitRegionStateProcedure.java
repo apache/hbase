@@ -153,7 +153,8 @@ public class TransitRegionStateProcedure
   }
 
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
-    ServerName assignCandidate, boolean forceNewPlan, TransitionType type, Optional<Boolean> evictCache) {
+    ServerName assignCandidate, boolean forceNewPlan, TransitionType type,
+    Optional<Boolean> evictCache) {
     super(env, hri);
     this.assignCandidate = assignCandidate;
     this.forceNewPlan = forceNewPlan;
@@ -597,9 +598,11 @@ public class TransitRegionStateProcedure
       new TransitRegionStateProcedure(env, region, null, false, TransitionType.UNASSIGN));
   }
 
-  public static TransitRegionStateProcedure unassignSplitMerge(MasterProcedureEnv env, RegionInfo region) {
+  public static TransitRegionStateProcedure unassignSplitMerge(MasterProcedureEnv env,
+    RegionInfo region) {
     return setOwner(env,
-      new TransitRegionStateProcedure(env, region, null, false, TransitionType.UNASSIGN, Optional.of(true)));
+      new TransitRegionStateProcedure(env, region, null, false,
+        TransitionType.UNASSIGN, Optional.of(true)));
   }
 
   public static TransitRegionStateProcedure reopen(MasterProcedureEnv env, RegionInfo region) {
