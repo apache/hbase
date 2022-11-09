@@ -257,9 +257,10 @@ public class NettyRpcServer extends RpcServer {
       if (!sslContextForServer.compareAndSet(null, result)) {
         // lost the race, another thread already set the value
         result = sslContextForServer.get();
-      } else if (keyStoreWatcher.get() == null &&
-                 trustStoreWatcher.get() == null &&
-                 conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)) {
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
         X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
           () -> sslContextForServer.set(null));
       }

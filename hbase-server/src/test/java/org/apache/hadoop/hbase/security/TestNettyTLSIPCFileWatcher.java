@@ -17,6 +17,20 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -38,13 +52,9 @@ import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
-import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
-import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.After;
@@ -54,19 +64,16 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.GeneralSecurityException;
-import java.security.Security;
-import java.util.List;
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
+
+@RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
 public class TestNettyTLSIPCFileWatcher {
 
@@ -81,6 +88,23 @@ public class TestNettyTLSIPCFileWatcher {
   private static NettyEventLoopGroupConfig EVENT_LOOP_GROUP_CONFIG;
 
   private X509TestContext x509TestContext;
+
+  @Parameterized.Parameter(0)
+  public X509KeyType keyType;
+
+  @Parameterized.Parameter(1)
+  public KeyStoreFileType storeFileType;
+
+  @Parameterized.Parameters(name = "{index}: keyType={0}, storeFileType={1}")
+  public static List<Object[]> data() {
+    List<Object[]> params = new ArrayList<>();
+    for (X509KeyType caKeyType : X509KeyType.values()) {
+      for (KeyStoreFileType ks : KeyStoreFileType.values()) {
+        params.add(new Object[] { caKeyType, ks });
+      }
+    }
+    return params;
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws IOException {
@@ -106,8 +130,8 @@ public class TestNettyTLSIPCFileWatcher {
 
   @Before
   public void setUp() throws IOException {
-    x509TestContext = PROVIDER.get(X509KeyType.RSA, X509KeyType.RSA, "keyPa$$word".toCharArray());
-    x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+    x509TestContext = PROVIDER.get(keyType, keyType, "keyPa$$word".toCharArray());
+    x509TestContext.setConfigurations(storeFileType, storeFileType);
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, false);
     CONF.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_ENABLED, true);
     CONF.setBoolean(X509Util.TLS_CERT_RELOAD, true);
@@ -142,13 +166,13 @@ public class TestNettyTLSIPCFileWatcher {
         HBaseRpcController pcrc = new HBaseRpcControllerImpl();
         String message = "hello";
         assertEquals(message,
-          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
+          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())
+            .getMessage());
         assertNull(pcrc.cellScanner());
       }
 
       // Replace keystore
-      x509TestContext.regenerateStores(X509KeyType.RSA, X509KeyType.RSA,
-        KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+      x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
 
       try (AbstractRpcClient<?> client = new NettyRpcClient(clientConf)) {
         TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
@@ -156,7 +180,8 @@ public class TestNettyTLSIPCFileWatcher {
         HBaseRpcController pcrc = new HBaseRpcControllerImpl();
         String message = "hello";
         assertEquals(message,
-          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
+          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())
+            .getMessage());
         assertNull(pcrc.cellScanner());
       }
 
@@ -182,17 +207,18 @@ public class TestNettyTLSIPCFileWatcher {
         HBaseRpcController pcrc = new HBaseRpcControllerImpl();
         String message = "hello";
         assertEquals(message,
-          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
+          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())
+            .getMessage());
         assertNull(pcrc.cellScanner());
 
         // Replace keystore and cancel client connections
-        x509TestContext.regenerateStores(X509KeyType.RSA, X509KeyType.RSA,
-          KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+        x509TestContext.regenerateStores(keyType, keyType, storeFileType, storeFileType);
         client.cancelConnections(
           ServerName.valueOf(Address.fromSocketAddress(rpcServer.getListenerAddress()), 0L));
 
         assertEquals(message,
-          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build()).getMessage());
+          stub.echo(pcrc, TestProtos.EchoRequestProto.newBuilder().setMessage(message).build())
+            .getMessage());
         assertNull(pcrc.cellScanner());
       }
     } finally {
@@ -200,10 +226,9 @@ public class TestNettyTLSIPCFileWatcher {
     }
   }
 
-  private RpcServer createRpcServer(String name, List<RpcServer.BlockingServiceAndInterface> services,
-    InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler) throws IOException {
+  private RpcServer createRpcServer(String name,
+    List<RpcServer.BlockingServiceAndInterface> services, InetSocketAddress bindAddress,
+    Configuration conf, RpcScheduler scheduler) throws IOException {
     return new NettyRpcServer(SERVER, name, services, bindAddress, conf, scheduler, true);
   }
-
-
 }

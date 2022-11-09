@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -285,9 +284,9 @@ public final class X509Util {
   }
 
   public static void enableCertFileReloading(Configuration config,
-                                             AtomicReference<FileChangeWatcher> keystoreWatcher,
-                                             AtomicReference<FileChangeWatcher> trustStoreWatcher,
-                                             Runnable resetContext) throws IOException {
+    AtomicReference<FileChangeWatcher> keystoreWatcher,
+    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
+    throws IOException {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
@@ -413,28 +412,25 @@ public final class X509Util {
     }
   }
 
-  private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext) throws IOException {
+  private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
+    throws IOException {
     if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
       return null;
     }
     final Path filePath = Paths.get(fileLocation).toAbsolutePath();
     Path parentPath = filePath.getParent();
     if (parentPath == null) {
-      throw new IOException(
-        "Key/trust store path does not have a parent: " + filePath);
+      throw new IOException("Key/trust store path does not have a parent: " + filePath);
     }
-    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(
-      parentPath,
-      watchEvent -> {
-        handleWatchEvent(filePath, watchEvent, resetContext);
-      });
+    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(parentPath, watchEvent -> {
+      handleWatchEvent(filePath, watchEvent, resetContext);
+    });
     fileChangeWatcher.start();
     return fileChangeWatcher;
   }
 
   /**
    * Handler for watch events that let us know a file we may care about has changed on disk.
-   *
    * @param filePath the path to the file we are watching for changes.
    * @param event    the WatchEvent.
    */
@@ -442,10 +438,13 @@ public final class X509Util {
     boolean shouldResetContext = false;
     Path dirPath = filePath.getParent();
     if (event.kind().equals(StandardWatchEventKinds.OVERFLOW)) {
-      // If we get notified about possibly missed events, reload the key store / trust store just to be sure.
+      // If we get notified about possibly missed events, reload the key store / trust store just to
+      // be sure.
       shouldResetContext = true;
-    } else if (event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) ||
-      event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+    } else if (
+      event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY)
+        || event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)
+    ) {
       Path eventFilePath = dirPath.resolve((Path) event.context());
       if (filePath.equals(eventFilePath)) {
         shouldResetContext = true;
@@ -454,14 +453,14 @@ public final class X509Util {
     // Note: we don't care about delete events
     if (shouldResetContext) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Attempting to reset default SSL context after receiving watch event: " +
-          event.kind() + " with context: " + event.context());
+        LOG.debug("Attempting to reset default SSL context after receiving watch event: "
+          + event.kind() + " with context: " + event.context());
       }
       resetContext.run();
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring watch event and keeping previous default SSL context. Event kind: " +
-          event.kind() + " with context: " + event.context());
+        LOG.debug("Ignoring watch event and keeping previous default SSL context. Event kind: "
+          + event.kind() + " with context: " + event.context());
       }
     }
   }

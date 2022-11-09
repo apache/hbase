@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -199,8 +198,7 @@ public final class X509TestContext {
   }
 
   private void generateTrustStoreJksFile() throws IOException {
-    try (
-      final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStoreJksFile)) {
+    try (final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStoreJksFile)) {
       byte[] bytes =
         X509TestHelpers.certToJavaTrustStoreBytes(trustStoreCertificate, trustStorePassword);
       trustStoreOutputStream.write(bytes);
@@ -237,8 +235,8 @@ public final class X509TestContext {
   }
 
   private void generateTrustStorePkcs12File() throws IOException {
-    try (final FileOutputStream trustStoreOutputStream =
-      new FileOutputStream(trustStorePkcs12File)) {
+    try (
+      final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStorePkcs12File)) {
       byte[] bytes =
         X509TestHelpers.certToPKCS12TrustStoreBytes(trustStoreCertificate, trustStorePassword);
       trustStoreOutputStream.write(bytes);
@@ -347,8 +345,8 @@ public final class X509TestContext {
 
   private void generateKeyStorePemFile() throws IOException, OperatorCreationException {
     FileUtils.writeStringToFile(keyStorePemFile,
-      X509TestHelpers.pemEncodeCertAndPrivateKey(keyStoreCertificate,
-        keyStoreKeyPair.getPrivate(), keyStorePassword),
+      X509TestHelpers.pemEncodeCertAndPrivateKey(keyStoreCertificate, keyStoreKeyPair.getPrivate(),
+        keyStorePassword),
       StandardCharsets.US_ASCII, false);
   }
 
@@ -462,10 +460,8 @@ public final class X509TestContext {
       keyStoreKeyPair, keyStorePassword, cert);
   }
 
-  public void regenerateStores(X509KeyType keyStoreKeyType,
-                               X509KeyType trustStoreKeyType,
-                               KeyStoreFileType keyStoreFileType,
-                               KeyStoreFileType trustStoreFileType)
+  public void regenerateStores(X509KeyType keyStoreKeyType, X509KeyType trustStoreKeyType,
+    KeyStoreFileType keyStoreFileType, KeyStoreFileType trustStoreFileType)
     throws GeneralSecurityException, IOException, OperatorCreationException {
 
     trustStoreKeyPair = X509TestHelpers.generateKeyPair(trustStoreKeyType);

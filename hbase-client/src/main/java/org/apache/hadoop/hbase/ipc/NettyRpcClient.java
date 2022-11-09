@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicReference;
@@ -106,9 +105,10 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
       if (!sslContextForClient.compareAndSet(null, result)) {
         // lost the race, another thread already set the value
         result = sslContextForClient.get();
-      } else if (keyStoreWatcher.get() == null &&
-                 trustStoreWatcher.get() == null &&
-                 conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)) {
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
         X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
           () -> sslContextForClient.set(null));
       }
