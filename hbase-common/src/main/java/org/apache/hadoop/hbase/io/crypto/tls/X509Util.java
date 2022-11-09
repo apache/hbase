@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Security;
@@ -25,6 +30,7 @@ import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -38,6 +44,7 @@ import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
 import org.apache.hadoop.hbase.exceptions.TrustManagerException;
 import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +86,7 @@ public final class X509Util {
     CONFIG_PREFIX + "host-verification.reverse-dns.enabled";
   private static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
   private static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
+  public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
   public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   //
@@ -192,6 +200,11 @@ public final class X509Util {
 
   public static SslContext createSslContextForClient(Configuration config)
     throws X509Exception, IOException {
+    return createSslContextForClient(config, null);
+  }
+
+  public static SslContext createSslContextForClient(Configuration config, Runnable resetContext)
+    throws X509Exception, IOException {
 
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
@@ -204,6 +217,9 @@ public final class X509Util {
     } else {
       sslContextBuilder
         .keyManager(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
+      if (config.getBoolean(TLS_CERT_RELOAD, false)) {
+        newFileChangeWatcher(keyStoreLocation, resetContext);
+      }
     }
 
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
@@ -223,6 +239,9 @@ public final class X509Util {
       sslContextBuilder
         .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
           sslCrlEnabled, sslOcspEnabled, verifyServerHostname, allowReverseDnsLookup));
+      if (config.getBoolean(TLS_CERT_RELOAD, false)) {
+        newFileChangeWatcher(trustStoreLocation, resetContext);
+      }
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
@@ -233,6 +252,11 @@ public final class X509Util {
   }
 
   public static SslContext createSslContextForServer(Configuration config)
+    throws X509Exception, IOException {
+    return createSslContextForServer(config, null);
+  }
+
+  public static SslContext createSslContextForServer(Configuration config, Runnable resetContext)
     throws X509Exception, IOException {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
@@ -247,6 +271,9 @@ public final class X509Util {
 
     sslContextBuilder = SslContextBuilder
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
+    if (config.getBoolean(TLS_CERT_RELOAD, false)) {
+      newFileChangeWatcher(keyStoreLocation, resetContext);
+    }
 
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
@@ -267,6 +294,9 @@ public final class X509Util {
       sslContextBuilder
         .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
           sslCrlEnabled, sslOcspEnabled, verifyClientHostname, allowReverseDnsLookup));
+      if (config.getBoolean(TLS_CERT_RELOAD, false)) {
+        newFileChangeWatcher(trustStoreLocation, resetContext);
+      }
     }
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
@@ -276,6 +306,11 @@ public final class X509Util {
 
     return sslContextBuilder.build();
   }
+
+//  public static void enableCertFileReloading() {
+//    newFileChangeWatcher(keyStoreLocation, resetContext);
+//
+//  }
 
   /**
    * Creates a key manager by loading the key store from the given file of the given type,
@@ -393,6 +428,61 @@ public final class X509Util {
       return getDefaultCipherSuites();
     } else {
       return cipherSuitesInput.split(",");
+    }
+  }
+
+  private static void newFileChangeWatcher(String fileLocation, Runnable resetContext) throws IOException {
+    if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
+      return;
+    }
+    final Path filePath = Paths.get(fileLocation).toAbsolutePath();
+    Path parentPath = filePath.getParent();
+    if (parentPath == null) {
+      throw new IOException(
+        "Key/trust store path does not have a parent: " + filePath);
+    }
+    AtomicReference<FileChangeWatcher> fileWatcher = new AtomicReference<>();
+    fileWatcher.set(new FileChangeWatcher(
+      parentPath,
+      watchEvent -> {
+        handleWatchEvent(filePath, watchEvent, resetContext, fileWatcher);
+      }));
+    fileWatcher.get().start();
+  }
+
+  /**
+   * Handler for watch events that let us know a file we may care about has changed on disk.
+   *
+   * @param filePath the path to the file we are watching for changes.
+   * @param event    the WatchEvent.
+   */
+  private static void handleWatchEvent(Path filePath, WatchEvent<?> event, Runnable resetContext,
+    AtomicReference<FileChangeWatcher> fileWatcher) {
+    boolean shouldResetContext = false;
+    Path dirPath = filePath.getParent();
+    if (event.kind().equals(StandardWatchEventKinds.OVERFLOW)) {
+      // If we get notified about possibly missed events, reload the key store / trust store just to be sure.
+      shouldResetContext = true;
+    } else if (event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) ||
+      event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+      Path eventFilePath = dirPath.resolve((Path) event.context());
+      if (filePath.equals(eventFilePath)) {
+        shouldResetContext = true;
+      }
+    }
+    // Note: we don't care about delete events
+    if (shouldResetContext) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Attempting to reset default SSL context after receiving watch event: " +
+          event.kind() + " with context: " + event.context());
+      }
+      fileWatcher.getAndSet(null).stop();
+      resetContext.run();
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Ignoring watch event and keeping previous default SSL context. Event kind: " +
+          event.kind() + " with context: " + event.context());
+      }
     }
   }
 }

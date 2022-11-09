@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
@@ -85,6 +86,7 @@ public class NettyRpcServer extends RpcServer {
   private final Channel serverChannel;
   final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
   private final ByteBufAllocator channelAllocator;
+  private final AtomicReference<SslContext> sslContextForServer = new AtomicReference<>();
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -226,7 +228,7 @@ public class NettyRpcServer extends RpcServer {
 
   private void initSSL(ChannelPipeline p, boolean supportPlaintext)
     throws X509Exception, IOException {
-    SslContext nettySslContext = X509Util.createSslContextForServer(conf);
+    SslContext nettySslContext = getSslContext();
 
     if (supportPlaintext) {
       p.addLast("ssl", new OptionalSslHandler(nettySslContext));
@@ -235,5 +237,21 @@ public class NettyRpcServer extends RpcServer {
       p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
       LOG.debug("SSL handler added for channel: {}", p.channel());
     }
+  }
+
+  SslContext getSslContext() throws X509Exception, IOException {
+    SslContext result = sslContextForServer.get();
+    if (result == null) {
+      result = X509Util.createSslContextForServer(conf, this::resetContext);
+      if (!sslContextForServer.compareAndSet(null, result)) {
+        // lost the race, another thread already set the value
+        result = sslContextForServer.get();
+      }
+    }
+    return result;
+  }
+
+  private void resetContext() {
+    sslContextForServer.set(null);
   }
 }
