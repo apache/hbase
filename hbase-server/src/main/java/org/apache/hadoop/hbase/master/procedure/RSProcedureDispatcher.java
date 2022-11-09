@@ -479,13 +479,11 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
       if (evictCache.isPresent()) {
-        return ProtobufUtil
-          .buildCloseRegionRequest(serverName, regionInfo.getRegionName(), getDestinationServer(),
-            procId, evictCache.get());
+        return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
+          getDestinationServer(), procId, evictCache.get());
       } else {
-        return ProtobufUtil
-          .buildCloseRegionRequest(serverName, regionInfo.getRegionName(), getDestinationServer(),
-            procId);
+        return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
+          getDestinationServer(), procId);
       }
     }
   }

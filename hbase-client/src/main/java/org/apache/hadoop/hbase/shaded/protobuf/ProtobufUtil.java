@@ -3017,7 +3017,7 @@ public final class ProtobufUtil {
   }
 
   public static CloseRegionRequest.Builder getBuilder(ServerName server, byte[] regionName,
-    ServerName destinationServer, long closeProcId){
+    ServerName destinationServer, long closeProcId) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region =
       RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);

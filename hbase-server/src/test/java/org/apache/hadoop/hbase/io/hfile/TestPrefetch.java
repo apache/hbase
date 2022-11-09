@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -240,7 +239,7 @@ public class TestPrefetch {
   @Test
   public void testPrefetchSkipsRefs() throws Exception {
     testPrefetchWhenRefs(true, c -> {
-      boolean isCached = c!=null;
+      boolean isCached = c != null;
       assertFalse(isCached);
     });
   }
@@ -248,7 +247,7 @@ public class TestPrefetch {
   @Test
   public void testPrefetchDoesntSkipRefs() throws Exception {
     testPrefetchWhenRefs(false, c -> {
-      boolean isCached = c!=null;
+      boolean isCached = c != null;
       assertTrue(isCached);
     });
   }
@@ -314,8 +313,8 @@ public class TestPrefetch {
 
   private Pair<Path, byte[]> writeStoreFileForSplit(Path storeDir, HFileContext context)
     throws IOException {
-    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeDir).withFileContext(context).build();
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(storeDir)
+      .withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     byte[] splitPoint = null;
@@ -326,7 +325,7 @@ public class TestPrefetch {
       KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
         k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
       sfw.append(kv);
-      if (i==NUM_KV/2) {
+      if (i == NUM_KV / 2) {
         splitPoint = k;
       }
     }

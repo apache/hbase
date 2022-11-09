@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Optional;
-
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -600,9 +599,8 @@ public class TransitRegionStateProcedure
 
   public static TransitRegionStateProcedure unassignSplitMerge(MasterProcedureEnv env,
     RegionInfo region) {
-    return setOwner(env,
-      new TransitRegionStateProcedure(env, region, null, false,
-        TransitionType.UNASSIGN, Optional.of(true)));
+    return setOwner(env, new TransitRegionStateProcedure(env, region, null, false,
+      TransitionType.UNASSIGN, Optional.of(true)));
   }
 
   public static TransitRegionStateProcedure reopen(MasterProcedureEnv env, RegionInfo region) {

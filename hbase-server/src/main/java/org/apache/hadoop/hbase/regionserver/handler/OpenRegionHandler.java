@@ -281,7 +281,7 @@ public class OpenRegionHandler extends EventHandler {
   private HRegion openRegion() {
     HRegion region = null;
     boolean compactionEnabled =
-      ((HRegionServer)server).getCompactSplitThread().isCompactionsEnabled();
+      ((HRegionServer) server).getCompactSplitThread().isCompactionsEnabled();
     this.server.getConfiguration().setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION,
       compactionEnabled);
     try {
