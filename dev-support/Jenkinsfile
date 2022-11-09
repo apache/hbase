@@ -39,7 +39,7 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
 
     PROJECT = 'hbase'
-    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
+    PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/HBASE-27475/dev-support/hbase-personality.sh'
     PERSONALITY_FILE = 'tools/personality.sh'
     // This section of the docs tells folks not to use the javadoc tag. older branches have our old version of the check for said tag.
     AUTHOR_IGNORE_LIST = 'src/main/asciidoc/_chapters/developer.adoc,dev-support/test-patch.sh'
@@ -203,6 +203,7 @@ pipeline {
             BASEDIR = "${env.WORKSPACE}/component"
             TESTS = "${env.SHALLOW_CHECKS}"
             SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+            JAVA8_HOME="/usr/lib/jvm/java-8"
             // Activates hadoop 3.0 profile in maven runs.
             HADOOP_PROFILE = '3.0'
             OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_GENERAL}"
