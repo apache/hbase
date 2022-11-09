@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
@@ -87,6 +88,8 @@ public class NettyRpcServer extends RpcServer {
   final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
   private final ByteBufAllocator channelAllocator;
   private final AtomicReference<SslContext> sslContextForServer = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -194,6 +197,14 @@ public class NettyRpcServer extends RpcServer {
       return;
     }
     LOG.info("Stopping server on " + this.serverChannel.localAddress());
+    FileChangeWatcher ks = keyStoreWatcher.getAndSet(null);
+    if (ks != null) {
+      ks.stop();
+    }
+    FileChangeWatcher ts = trustStoreWatcher.getAndSet(null);
+    if (ts != null) {
+      ts.stop();
+    }
     if (authTokenSecretMgr != null) {
       authTokenSecretMgr.stop();
       authTokenSecretMgr = null;
@@ -242,16 +253,17 @@ public class NettyRpcServer extends RpcServer {
   SslContext getSslContext() throws X509Exception, IOException {
     SslContext result = sslContextForServer.get();
     if (result == null) {
-      result = X509Util.createSslContextForServer(conf, this::resetContext);
+      result = X509Util.createSslContextForServer(conf);
       if (!sslContextForServer.compareAndSet(null, result)) {
         // lost the race, another thread already set the value
         result = sslContextForServer.get();
+      } else if (keyStoreWatcher.get() == null &&
+                 trustStoreWatcher.get() == null &&
+                 conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)) {
+        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+          () -> sslContextForServer.set(null));
       }
     }
     return result;
-  }
-
-  private void resetContext() {
-    sslContextForServer.set(null);
   }
 }
