@@ -82,11 +82,16 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
     echo "Using JAVA_HOME from host."
     export PATH="$JAVA_HOME/bin:$PATH"
   elif [ -n "$JDK8" ] ; then
-    # JAVA_HOME for the openjdk8 package.
-    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+    jenv global 1.8
+    # TODO: use jenv export plugin instead?
+    JAVA_HOME=$(jenv javahome)
+    export JAVA_HOME
   else
-    # default to JAVA_HOME for the openjdk11 package.
-    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
+    # default to the openjdk11 package.
+    jenv global 11
+    # TODO: use jenv export plugin instead?
+    JAVA_HOME=$(jenv javahome)
+    export JAVA_HOME
   fi
 else
   # Outside docker, need to ask for information about the release.

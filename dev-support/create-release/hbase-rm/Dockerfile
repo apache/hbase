@@ -16,8 +16,6 @@
 #
 
 # Image for building HBase releases. Based on Ubuntu 22.04.
-#
-# Includes:
 FROM ubuntu:22.04
 
 # Install extra needed repos and refresh.
@@ -33,17 +31,29 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     libxml2-dev='2.9.13+dfsg-*' \
     libxml2-utils='2.9.13+dfsg-*' \
     lsof='4.93.2+dfsg-*' \
-    openjdk-8-jdk-headless='8*' \
+    openjdk-8-jdk='8u*' \
     openjdk-11-jdk-headless='11*' \
     python3-pip='22.0.2+dfsg-*' \
     subversion='1.14.1-*' \
     wget='1.21.2-*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
-  && update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java \
   && pip3 install --no-cache-dir python-dateutil==2.8.2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Install JEnv
+# update{-java}-alternatives is a global decision requiring sudo, but specifying a JDK at runtime
+# requires an update for the local user/shell. Use JEnv for this purpose.
+ENV JENV_PRODUCT_VERSION=0.5.5
+ARG JENV_URL="https://github.com/jenv/jenv/archive/${JENV_PRODUCT_VERSION}.tar.gz"
+ARG JENV_SHA512="2e312cfb4c0b2033fdc0ef4f3babfcdff2f58151247b3524589a70a0df3613d0af6abec1d044628ba321c1c0df5c5ba19d7a7bc93f41adbf4d5c0f29a3dcf9f8"
+RUN mkdir -p /opt/jenv \
+  && curl -fsSL -o /tmp/jenv.tar.gz "${JENV_URL}" \
+  && echo "${JENV_SHA512}  /tmp/jenv.tar.gz" | sha512sum -c - \
+  && tar -zxf /tmp/jenv.tar.gz -C /opt/jenv --strip-components=1 \
+  && rm -f /tmp/jenv.tar.gz \
+  && ln -s /opt/jenv/bin/jenv /usr/bin/jenv
 
 # Install maven
 ENV MAVEN_VERSION=3.8.6
@@ -69,13 +79,18 @@ ENV YETUS_HOME /opt/yetus
 
 ARG UID
 ARG RM_USER
-RUN groupadd hbase-rm && \
-    useradd --create-home -l --shell /bin/bash -p hbase-rm -u $UID $RM_USER && \
-    mkdir /home/$RM_USER/.gnupg && \
-    chown -R $RM_USER:hbase-rm /home/$RM_USER && \
-    chmod -R 700 /home/$RM_USER
+RUN groupadd hbase-rm \
+  && useradd --create-home --no-log-init --shell /bin/bash --password hbase-rm --uid $UID $RM_USER \
+  && mkdir /home/$RM_USER/.gnupg \
+  && chown -R $RM_USER:hbase-rm /home/$RM_USER \
+  && chmod -R 700 /home/$RM_USER
 
 USER $RM_USER:hbase-rm
+RUN mkdir -p "${HOME}/.jenv/versions" \
+  && bash -c 'echo eval "$(jenv init -)" >> ${HOME}/.bashrc' \
+  && { update-java-alternatives --list || true ; } | cut -d/ -f2- | xargs -I{} jenv add /{}
+ENV PATH="/home/${RM_USER}/.jenv/shims:${PATH}"
+
 WORKDIR /home/$RM_USER/hbase-rm/
 
 ENTRYPOINT [ "./do-release.sh" ]

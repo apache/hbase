@@ -105,7 +105,7 @@ EOF
 # the getopt provided out-of-the-box by the linux distro. Use the same base image as is used by
 # hbase-rm/Dockerfile.
 GETOPT_OPTS="$(docker container run \
-  ubuntu:18.04 \
+  ubuntu:22.04 \
   /usr/bin/getopt \
   -o 'd:fhj:p:r:s:t:x' \
   --long 'directory:,force,help,java:,jdk8,jdk11,project:,repo:,step:,tag:,debug' \
