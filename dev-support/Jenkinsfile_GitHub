@@ -79,6 +79,8 @@ pipeline {
                         // customized per parallel stage
                         PLUGINS = "${GENERAL_CHECK_PLUGINS}"
                         SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+                        JAVA8_HOME = "/usr/lib/jvm/java-8"
+                        HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_GENERAL_CHECK}"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
