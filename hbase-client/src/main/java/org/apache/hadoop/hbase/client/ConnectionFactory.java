@@ -216,6 +216,37 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
     final User user) throws IOException {
+    return createConnection(conf, pool, user, null);
+  }
+
+  /**
+   * Create a new Connection instance using the passed <code>conf</code> instance. Connection
+   * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
+   * created from returned connection share zookeeper connection, meta cache, and connections to
+   * region servers and masters. <br>
+   * The caller is responsible for calling {@link Connection#close()} on the returned connection
+   * instance. Typical usage:
+   *
+   * <pre>
+   * Connection connection = ConnectionFactory.createConnection(conf);
+   * Table table = connection.getTable(TableName.valueOf("table1"));
+   * try {
+   *   table.get(...);
+   *   ...
+   * } finally {
+   *   table.close();
+   *   connection.close();
+   * }
+   * </pre>
+   *
+   * @param conf configuration
+   * @param user the user the connection is for
+   * @param pool the thread pool to use for batch operations
+   * @param identity the identity of the metrics for this connection.
+   * @return Connection object for <code>conf</code>
+   */
+  public static Connection createConnection(Configuration conf, ExecutorService pool,
+    final User user, String identity) throws IOException {
     Class<?> clazz = conf.getClass(ConnectionUtils.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionOverAsyncConnection.class, Connection.class);
     if (clazz != ConnectionOverAsyncConnection.class) {
@@ -225,7 +256,7 @@ public class ConnectionFactory {
           clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
         constructor.setAccessible(true);
         return user.runAs((PrivilegedExceptionAction<
-          Connection>) () -> (Connection) constructor.newInstance(conf, pool, user));
+          Connection>) () -> (Connection) constructor.newInstance(conf, pool, user, identity));
       } catch (Exception e) {
         throw new IOException(e);
       }

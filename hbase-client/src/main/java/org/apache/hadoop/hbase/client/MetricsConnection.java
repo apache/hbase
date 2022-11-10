@@ -26,6 +26,8 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.Timer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -54,6 +56,36 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 @InterfaceAudience.Private
 public class MetricsConnection implements StatisticTrackable {
 
+  static final Map<String, MetricsConnection> METRICS_INSTANCES =
+    new HashMap<String, MetricsConnection>();
+
+  static MetricsConnection getMetricsConnection(final AsyncConnection conn, Supplier<ThreadPoolExecutor> batchPool,
+    Supplier<ThreadPoolExecutor> metaPool) {
+    String scope = getScope(conn);
+    MetricsConnection metrics;
+    synchronized(METRICS_INSTANCES) {
+      metrics = METRICS_INSTANCES.get(scope);
+      if (metrics == null) {
+        metrics = new MetricsConnection(scope, batchPool, metaPool);
+        metrics.incrConnectionCount();
+        METRICS_INSTANCES.put(scope, metrics);
+      }
+    }
+    return metrics;
+  }
+
+  static void deleteMetricsConnection(final AsyncConnection conn) {
+    String scope = getScope(conn);
+    synchronized(METRICS_INSTANCES) {
+      MetricsConnection metrics = METRICS_INSTANCES.get(scope);
+      metrics.decrConnectionCount();
+      if (metrics.getConnectionCount() == 0) {
+        METRICS_INSTANCES.remove(scope);
+        metrics.shutdown();
+      }
+    }
+  }
+
   /** Set this key to {@code true} to enable metrics collection of client requests. */
   public static final String CLIENT_SIDE_METRICS_ENABLED_KEY = "hbase.client.metrics.enable";
 
@@ -78,9 +110,15 @@ public class MetricsConnection implements StatisticTrackable {
    * @param connectionObj either a Connection or AsyncConnectionImpl, the instance creating this
    *                      MetricsConnection.
    */
-  static String getScope(Configuration conf, String clusterId, Object connectionObj) {
-    return conf.get(METRICS_SCOPE_KEY,
-      clusterId + "@" + Integer.toHexString(connectionObj.hashCode()));
+  private static String getScope(final AsyncConnection conn) {
+    String identity = conn.getIdentity(); 
+    if (identity != null) {
+      return identity;
+    }
+    Configuration conf = conn.getConfiguration();
+    String clusterId = conn.getClusterId2();
+    int connHashCode = conn.hashCode();
+    return conf.get(METRICS_SCOPE_KEY, clusterId + "@" + Integer.toHexString(connHashCode));
   }
 
   private static final String CNT_BASE = "rpcCount_";
@@ -297,6 +335,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   // static metrics
 
+  protected final Counter connectionCount;
   protected final Counter metaCacheHits;
   protected final Counter metaCacheMisses;
   protected final CallTracker getTracker;
@@ -355,6 +394,7 @@ public class MetricsConnection implements StatisticTrackable {
         return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
       }
     });
+    this.connectionCount = registry.counter(name(this.getClass(), "connectionCount", scope));
     this.metaCacheHits = registry.counter(name(this.getClass(), "metaCacheHits", scope));
     this.metaCacheMisses = registry.counter(name(this.getClass(), "metaCacheMisses", scope));
     this.metaCacheNumClearServer =
@@ -404,6 +444,21 @@ public class MetricsConnection implements StatisticTrackable {
   public static CallStats newCallStats() {
     // TODO: instance pool to reduce GC?
     return new CallStats();
+  }
+
+  /** Return the connection count of the metrics within a scope */
+  public long getConnectionCount() {
+    return connectionCount.getCount();
+  }
+
+  /** Increment the connection count of the metrics within a scope */
+  public void incrConnectionCount() {
+    connectionCount.inc();
+  }
+
+  /** Decrement the connection count of the metrics within a scope */
+  public void decrConnectionCount() {
+    connectionCount.dec();
   }
 
   /** Increment the number of meta cache hits. */

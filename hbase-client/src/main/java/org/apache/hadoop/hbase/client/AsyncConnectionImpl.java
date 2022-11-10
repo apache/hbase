@@ -118,6 +118,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
+  private final String clusterId;
+  private final String identity;
   private final Optional<MetricsConnection> metrics;
 
   private final ClusterStatusListener clusterStatusListener;
@@ -126,6 +128,13 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
     SocketAddress localAddress, User user) {
+    this(conf, registry, clusterId, localAddress, user, null);
+  }
+
+  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
+    SocketAddress localAddress, User user, String identity) {
+    this.clusterId = clusterId;
+    this.identity = identity;
     this.conf = conf;
     this.user = user;
 
@@ -135,8 +144,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      String scope = MetricsConnection.getScope(conf, clusterId, this);
-      this.metrics = Optional.of(new MetricsConnection(scope, () -> null, () -> null));
+      this.metrics = Optional.of(MetricsConnection.getMetricsConnection(this, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }
@@ -206,6 +214,16 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
+  public String getClusterId2() {
+    return clusterId;
+  }
+
+  @Override
+  public String getIdentity() {
+    return identity;
+  }
+
+  @Override
   public Configuration getConfiguration() {
     return conf;
   }
@@ -235,7 +253,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
           choreService = null;
         }
       }
-      metrics.ifPresent(MetricsConnection::shutdown);
+      if (metrics.isPresent()) {
+        MetricsConnection.deleteMetricsConnection(this);
+      }
       ConnectionOverAsyncConnection c = this.conn;
       if (c != null) {
         c.closePool();

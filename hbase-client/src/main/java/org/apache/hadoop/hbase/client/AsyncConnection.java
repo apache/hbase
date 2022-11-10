@@ -35,6 +35,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface AsyncConnection extends Closeable {
 
   /**
+   * Returns the clusterId of this connection.
+   */
+  String getClusterId2();
+
+  /**
+   * Returns this connection identity.
+   */
+  String getIdentity();
+
+  /**
    * Returns the {@link org.apache.hadoop.conf.Configuration} object used by this instance.
    * <p>
    * The reference returned is not a copy, so any change made to it will affect this instance.
