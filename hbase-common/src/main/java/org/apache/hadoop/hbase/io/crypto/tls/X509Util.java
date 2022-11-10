@@ -283,16 +283,6 @@ public final class X509Util {
     return sslContextBuilder.build();
   }
 
-  public static void enableCertFileReloading(Configuration config,
-    AtomicReference<FileChangeWatcher> keystoreWatcher,
-    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
-    throws IOException {
-    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
-    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
-  }
-
   /**
    * Creates a key manager by loading the key store from the given file of the given type,
    * optionally decrypting it using the given password.
@@ -412,6 +402,24 @@ public final class X509Util {
     }
   }
 
+  /**
+   * Enable certificate file reloading by creating FileWatchers for keystore and truststore.
+   * AtomicReferences will be set with the new instances. resetContext - if not null - will be
+   * called when the file has been modified.
+   * @param keystoreWatcher   Reference to keystoreFileWatcher.
+   * @param trustStoreWatcher Reference to truststoreFileWatcher.
+   * @param resetContext      Callback for file changes.
+   */
+  public static void enableCertFileReloading(Configuration config,
+    AtomicReference<FileChangeWatcher> keystoreWatcher,
+    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
+    throws IOException {
+    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
+    keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
+    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+  }
+
   private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
     throws IOException {
     if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
@@ -452,15 +460,15 @@ public final class X509Util {
     }
     // Note: we don't care about delete events
     if (shouldResetContext) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Attempting to reset default SSL context after receiving watch event: "
-          + event.kind() + " with context: " + event.context());
-      }
+      LOG.info(
+        "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
+        event.kind(), event.context());
       resetContext.run();
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring watch event and keeping previous default SSL context. Event kind: "
-          + event.kind() + " with context: " + event.context());
+        LOG.debug(
+          "Ignoring watch event and keeping previous default SSL context. Event kind: {} with context: {}",
+          event.kind(), event.context());
       }
     }
   }
