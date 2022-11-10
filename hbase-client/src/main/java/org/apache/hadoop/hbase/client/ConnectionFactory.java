@@ -239,9 +239,9 @@ public class ConnectionFactory {
    * }
    * </pre>
    *
-   * @param conf configuration
-   * @param user the user the connection is for
-   * @param pool the thread pool to use for batch operations
+   * @param conf     configuration
+   * @param user     the user the connection is for
+   * @param pool     the thread pool to use for batch operations
    * @param identity the identity of the metrics for this connection.
    * @return Connection object for <code>conf</code>
    */

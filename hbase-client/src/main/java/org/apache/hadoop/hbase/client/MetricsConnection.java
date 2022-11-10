@@ -59,11 +59,11 @@ public class MetricsConnection implements StatisticTrackable {
   static final Map<String, MetricsConnection> METRICS_INSTANCES =
     new HashMap<String, MetricsConnection>();
 
-  static MetricsConnection getMetricsConnection(final AsyncConnection conn, Supplier<ThreadPoolExecutor> batchPool,
-    Supplier<ThreadPoolExecutor> metaPool) {
+  static MetricsConnection getMetricsConnection(final AsyncConnection conn,
+    Supplier<ThreadPoolExecutor> batchPool, Supplier<ThreadPoolExecutor> metaPool) {
     String scope = getScope(conn);
     MetricsConnection metrics;
-    synchronized(METRICS_INSTANCES) {
+    synchronized (METRICS_INSTANCES) {
       metrics = METRICS_INSTANCES.get(scope);
       if (metrics == null) {
         metrics = new MetricsConnection(scope, batchPool, metaPool);
@@ -76,7 +76,7 @@ public class MetricsConnection implements StatisticTrackable {
 
   static void deleteMetricsConnection(final AsyncConnection conn) {
     String scope = getScope(conn);
-    synchronized(METRICS_INSTANCES) {
+    synchronized (METRICS_INSTANCES) {
       MetricsConnection metrics = METRICS_INSTANCES.get(scope);
       metrics.decrConnectionCount();
       if (metrics.getConnectionCount() == 0) {
@@ -111,7 +111,7 @@ public class MetricsConnection implements StatisticTrackable {
    *                      MetricsConnection.
    */
   private static String getScope(final AsyncConnection conn) {
-    String identity = conn.getIdentity(); 
+    String identity = conn.getIdentity();
     if (identity != null) {
       return identity;
     }
