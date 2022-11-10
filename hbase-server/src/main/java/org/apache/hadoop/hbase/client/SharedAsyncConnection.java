@@ -53,6 +53,16 @@ public class SharedAsyncConnection implements AsyncConnection {
   }
 
   @Override
+  public String getClusterId2() {
+    return conn.getClusterId2();
+  }
+
+  @Override
+  public String getIdentity() {
+    return conn.getIdentity();
+  }
+
+  @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
     return conn.getRegionLocator(tableName);
   }

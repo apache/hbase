@@ -45,6 +45,16 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
+  public String getClusterId2() {
+    return null;
+  }
+
+  @Override
+  public String getIdentity() {
+    return null;
+  }
+
+  @Override
   public AsyncTableRegionLocator getRegionLocator(TableName tableName) {
     return null;
   }
