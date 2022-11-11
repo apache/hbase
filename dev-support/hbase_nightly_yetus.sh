@@ -83,7 +83,7 @@ if [[ -n "${HADOOP_PROFILE}" ]]; then
   fi
 fi
 
-if [[ -n "${SKIP_ERROR_PRONE}" ]]; then
+if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   YETUS_ARGS=("--skip-errorprone" "${YETUS_ARGS[@]}")
 fi
 
