@@ -26,7 +26,9 @@ import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.Timer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -67,9 +69,11 @@ public class MetricsConnection implements StatisticTrackable {
       metrics = METRICS_INSTANCES.get(scope);
       if (metrics == null) {
         metrics = new MetricsConnection(scope, batchPool, metaPool);
-        metrics.incrConnectionCount();
         METRICS_INSTANCES.put(scope, metrics);
+      } else {
+        metrics.addThreadPools(batchPool, metaPool);
       }
+      metrics.incrConnectionCount();
     }
     return metrics;
   }
@@ -333,6 +337,10 @@ public class MetricsConnection implements StatisticTrackable {
     }
   };
 
+  // List of thread pool per connection of the metrics.
+  private List batchPools = new ArrayList<Supplier>();
+  private List metaPools = new ArrayList<Supplier>();
+
   // static metrics
 
   protected final Counter connectionCount;
@@ -373,25 +381,47 @@ public class MetricsConnection implements StatisticTrackable {
   MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
     Supplier<ThreadPoolExecutor> metaPool) {
     this.scope = scope;
+    this.batchPools.add(batchPool);
+    this.metaPools.add(metaPool);
     this.registry = new MetricRegistry();
     this.registry.register(getExecutorPoolName(), new RatioGauge() {
       @Override
       protected Ratio getRatio() {
-        ThreadPoolExecutor pool = batchPool.get();
-        if (pool == null) {
-          return Ratio.of(0, 0);
+        int numerator = 0;
+        int denominator = 0;
+        for (int i = 0; i < batchPools.size(); i++) {
+          ThreadPoolExecutor pool = (ThreadPoolExecutor)((Supplier)batchPools.get(i)).get();
+          if (pool != null) {
+            int activeCount = pool.getActiveCount();
+            int maxPoolSize = pool.getMaximumPoolSize();
+            if (numerator == 0 ||
+              (numerator * maxPoolSize) < (activeCount * denominator)) {
+              numerator = activeCount;
+              denominator = maxPoolSize;
+            }
+          }
         }
-        return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
+        return Ratio.of(numerator, denominator);
       }
     });
     this.registry.register(getMetaPoolName(), new RatioGauge() {
       @Override
       protected Ratio getRatio() {
-        ThreadPoolExecutor pool = metaPool.get();
-        if (pool == null) {
-          return Ratio.of(0, 0);
+        int numerator = 0;
+        int denominator = 0;
+        for (int i = 0; i < metaPools.size(); i++) {
+          ThreadPoolExecutor pool = (ThreadPoolExecutor)((Supplier)metaPools.get(i)).get();
+          if (pool != null) {
+            int activeCount = pool.getActiveCount();
+            int maxPoolSize = pool.getMaximumPoolSize();
+            if (numerator == 0 ||
+              (numerator * maxPoolSize) < (activeCount * denominator)) {
+              numerator = activeCount;
+              denominator = maxPoolSize;
+            }
+          }
         }
-        return Ratio.of(pool.getActiveCount(), pool.getMaximumPoolSize());
+        return Ratio.of(numerator, denominator);
       }
     });
     this.connectionCount = registry.counter(name(this.getClass(), "connectionCount", scope));
@@ -446,21 +476,6 @@ public class MetricsConnection implements StatisticTrackable {
     return new CallStats();
   }
 
-  /** Return the connection count of the metrics within a scope */
-  public long getConnectionCount() {
-    return connectionCount.getCount();
-  }
-
-  /** Increment the connection count of the metrics within a scope */
-  public void incrConnectionCount() {
-    connectionCount.inc();
-  }
-
-  /** Decrement the connection count of the metrics within a scope */
-  public void decrConnectionCount() {
-    connectionCount.dec();
-  }
-
   /** Increment the number of meta cache hits. */
   public void incrMetaCacheHit() {
     metaCacheHits.inc();
@@ -510,6 +525,27 @@ public class MetricsConnection implements StatisticTrackable {
   /** Update the overloaded backoff time **/
   public void incrementServerOverloadedBackoffTime(long time, TimeUnit timeUnit) {
     overloadedBackoffTimer.update(time, timeUnit);
+  }
+
+  /** Return the connection count of the metrics within a scope */
+  private long getConnectionCount() {
+    return connectionCount.getCount();
+  }
+
+  /** Increment the connection count of the metrics within a scope */
+  private void incrConnectionCount() {
+    connectionCount.inc();
+  }
+
+  /** Decrement the connection count of the metrics within a scope */
+  private void decrConnectionCount() {
+    connectionCount.dec();
+  }
+
+  /** Add thread pools of additional connections to the metrics */
+  private void addThreadPools(Supplier batchPool, Supplier metaPool) {
+    batchPools.add(batchPool);
+    metaPools.add(metaPool);
   }
 
   /**
