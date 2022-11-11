@@ -390,12 +390,11 @@ public class MetricsConnection implements StatisticTrackable {
         int numerator = 0;
         int denominator = 0;
         for (int i = 0; i < batchPools.size(); i++) {
-          ThreadPoolExecutor pool = (ThreadPoolExecutor)((Supplier)batchPools.get(i)).get();
+          ThreadPoolExecutor pool = (ThreadPoolExecutor) ((Supplier) batchPools.get(i)).get();
           if (pool != null) {
             int activeCount = pool.getActiveCount();
             int maxPoolSize = pool.getMaximumPoolSize();
-            if (numerator == 0 ||
-              (numerator * maxPoolSize) < (activeCount * denominator)) {
+            if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
               numerator = activeCount;
               denominator = maxPoolSize;
             }
@@ -410,12 +409,11 @@ public class MetricsConnection implements StatisticTrackable {
         int numerator = 0;
         int denominator = 0;
         for (int i = 0; i < metaPools.size(); i++) {
-          ThreadPoolExecutor pool = (ThreadPoolExecutor)((Supplier)metaPools.get(i)).get();
+          ThreadPoolExecutor pool = (ThreadPoolExecutor) ((Supplier) metaPools.get(i)).get();
           if (pool != null) {
             int activeCount = pool.getActiveCount();
             int maxPoolSize = pool.getMaximumPoolSize();
-            if (numerator == 0 ||
-              (numerator * maxPoolSize) < (activeCount * denominator)) {
+            if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
               numerator = activeCount;
               denominator = maxPoolSize;
             }
