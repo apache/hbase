@@ -33,7 +33,7 @@ For example:
 
     hbase> revoke 'bobsmith'
     hbase> revoke '@admins'
-    hbase> revoke 'bobsmith', '@ns1'
+    hbase> revoke 'bobsmith', '@ns1', 'RWXCA'
     hbase> revoke 'bobsmith', 't1', 'f1', 'col1'
     hbase> revoke 'bobsmith', 'ns1:t1', 'f1', 'col1'
 EOF
