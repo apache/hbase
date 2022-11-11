@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -50,6 +51,8 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
 
   private final boolean shutdownGroupWhenClose;
   private final AtomicReference<SslContext> sslContextForClient = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
     MetricsConnection metrics) {
@@ -86,6 +89,14 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
     if (shutdownGroupWhenClose) {
       NettyFutureUtils.consume(group.shutdownGracefully());
     }
+    FileChangeWatcher ks = keyStoreWatcher.getAndSet(null);
+    if (ks != null) {
+      ks.stop();
+    }
+    FileChangeWatcher ts = trustStoreWatcher.getAndSet(null);
+    if (ts != null) {
+      ts.stop();
+    }
   }
 
   SslContext getSslContext() throws X509Exception, IOException {
@@ -95,6 +106,12 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
       if (!sslContextForClient.compareAndSet(null, result)) {
         // lost the race, another thread already set the value
         result = sslContextForClient.get();
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
+        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+          () -> sslContextForClient.set(null));
       }
     }
     return result;

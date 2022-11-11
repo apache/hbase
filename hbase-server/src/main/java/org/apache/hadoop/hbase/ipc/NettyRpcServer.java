@@ -25,11 +25,13 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -92,6 +94,9 @@ public class NettyRpcServer extends RpcServer {
   private final Channel serverChannel;
   final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
   private final ByteBufAllocator channelAllocator;
+  private final AtomicReference<SslContext> sslContextForServer = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -199,6 +204,14 @@ public class NettyRpcServer extends RpcServer {
       return;
     }
     LOG.info("Stopping server on " + this.serverChannel.localAddress());
+    FileChangeWatcher ks = keyStoreWatcher.getAndSet(null);
+    if (ks != null) {
+      ks.stop();
+    }
+    FileChangeWatcher ts = trustStoreWatcher.getAndSet(null);
+    if (ts != null) {
+      ts.stop();
+    }
     if (authTokenSecretMgr != null) {
       authTokenSecretMgr.stop();
       authTokenSecretMgr = null;
@@ -248,7 +261,7 @@ public class NettyRpcServer extends RpcServer {
 
   private void initSSL(ChannelPipeline p, boolean supportPlaintext)
     throws X509Exception, IOException {
-    SslContext nettySslContext = X509Util.createSslContextForServer(conf);
+    SslContext nettySslContext = getSslContext();
 
     if (supportPlaintext) {
       p.addLast("ssl", new OptionalSslHandler(nettySslContext));
@@ -257,5 +270,23 @@ public class NettyRpcServer extends RpcServer {
       p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
       LOG.debug("SSL handler added for channel: {}", p.channel());
     }
+  }
+
+  SslContext getSslContext() throws X509Exception, IOException {
+    SslContext result = sslContextForServer.get();
+    if (result == null) {
+      result = X509Util.createSslContextForServer(conf);
+      if (!sslContextForServer.compareAndSet(null, result)) {
+        // lost the race, another thread already set the value
+        result = sslContextForServer.get();
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
+        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+          () -> sslContextForServer.set(null));
+      }
+    }
+    return result;
   }
 }
