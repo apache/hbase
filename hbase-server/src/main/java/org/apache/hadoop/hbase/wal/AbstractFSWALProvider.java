@@ -35,9 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -386,21 +384,19 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   /**
    * List all the wal files for a logPrefix.
    */
-  public static List<Path> getWALFiles(Configuration c, String logPrefix) throws IOException {
+  public static List<Path> getWALFiles(Configuration c, ServerName serverName) throws IOException {
     Path walRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
     FileSystem fs = walRoot.getFileSystem(c);
     List<Path> walFiles = new ArrayList<>();
+    Path walDir = new Path(walRoot, serverName.toString());
     try {
-      RemoteIterator<LocatedFileStatus> it = fs.listFiles(walRoot, true);
-      while (it.hasNext()) {
-        LocatedFileStatus lfs = it.next();
-        if (lfs.isFile() && lfs.getPath().getName().startsWith(logPrefix)) {
-          walFiles.add(lfs.getPath());
+      for (FileStatus status : fs.listStatus(walDir)) {
+        if (status.isFile()) {
+          walFiles.add(status.getPath());
         }
       }
     } catch (FileNotFoundException e) {
-      LOG.info("WAL dir {} not exists", walRoot);
-      return Collections.emptyList();
+      LOG.info("WAL dir {} not exists", walDir);
     }
     return walFiles;
   }

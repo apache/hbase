@@ -370,18 +370,15 @@ public class DumpReplicationQueues extends Configured implements Tool {
       for (ReplicationQueueId queueId : queueIds) {
         List<String> tmpWals = new ArrayList<>();
         // wals
-        tmpWals.addAll(AbstractFSWALProvider
-          .getWALFiles(connection.getConfiguration(),
-            URLEncoder.encode(queueId.getServerWALsBelongTo().toString(),
-              StandardCharsets.UTF_8.name()))
-          .stream().map(Path::toString).collect(Collectors.toList()));
+        AbstractFSWALProvider
+          .getWALFiles(connection.getConfiguration(), queueId.getServerWALsBelongTo()).stream()
+          .map(Path::toString).forEach(tmpWals::add);
 
         // old wals
-        tmpWals.addAll(AbstractFSWALProvider
-          .getArchivedWALFiles(connection.getConfiguration(), queueId.getServerWALsBelongTo(),
-            URLEncoder.encode(queueId.getServerWALsBelongTo().toString(),
-              StandardCharsets.UTF_8.name()))
-          .stream().map(Path::toString).collect(Collectors.toList()));
+        AbstractFSWALProvider.getArchivedWALFiles(connection.getConfiguration(),
+          queueId.getServerWALsBelongTo(), URLEncoder
+            .encode(queueId.getServerWALsBelongTo().toString(), StandardCharsets.UTF_8.name()))
+          .stream().map(Path::toString).forEach(tmpWals::add);
 
         Map<String, ReplicationGroupOffset> offsets = queueStorage.getOffsets(queueId);
         // filter out the wal files that should replicate
