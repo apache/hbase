@@ -36,9 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class PrometheusHadoopServlet extends HttpServlet {
   private static boolean descriptionEnabled;
-  private static boolean queryEnabled;
   private static String queryParam;
-
 
   private static final Pattern SPLIT_PATTERN =
     Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=([A-Z][a-z]))|\\W|(_)+");
@@ -47,7 +45,6 @@ public class PrometheusHadoopServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
     descriptionEnabled = "true".equals(req.getParameter("description"));
     queryParam = req.getParameter("qry");
-    queryEnabled = queryParam != null;
 
     writeMetrics(resp.getWriter());
   }
@@ -73,14 +70,15 @@ public class PrometheusHadoopServlet extends HttpServlet {
 
           String key = toPrometheusName(metricsRecord.name(), metrics.name());
 
-          if (!queryEnabled || (queryEnabled && key.contains(queryParam))) {
+          if (queryParam == null || key.contains(queryParam)) {
 
             if (descriptionEnabled) {
               String description = metrics.description();
               if (!description.isEmpty()) writer.append("# HELP ").append(description).append('\n');
             }
 
-            writer.append("# TYPE ").append(key).append(" ").append(metrics.type().toString().toLowerCase()).append('\n').append(key).append("{");
+            writer.append("# TYPE ").append(key).append(" ")
+              .append(metrics.type().toString().toLowerCase()).append('\n').append(key).append("{");
 
             /* add tags */
             String sep = "";
