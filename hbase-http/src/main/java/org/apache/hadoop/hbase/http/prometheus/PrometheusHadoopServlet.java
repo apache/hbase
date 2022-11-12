@@ -35,8 +35,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class PrometheusHadoopServlet extends HttpServlet {
-  private static boolean descriptionEnabled;
-  private static String queryParam;
+  private boolean descriptionEnabled;
+  private String queryParam;
 
   private static final Pattern SPLIT_PATTERN =
     Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=([A-Z][a-z]))|\\W|(_)+");
