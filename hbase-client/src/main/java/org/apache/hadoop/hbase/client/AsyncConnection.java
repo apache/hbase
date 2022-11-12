@@ -37,12 +37,12 @@ public interface AsyncConnection extends Closeable {
   /**
    * Returns the clusterId of this connection.
    */
-  String getClusterId2();
+  String getClusterIdentity();
 
   /**
    * Returns this connection identity.
    */
-  String getIdentity();
+  String getConnectionScope();
 
   /**
    * Returns the {@link org.apache.hadoop.conf.Configuration} object used by this instance.

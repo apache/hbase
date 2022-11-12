@@ -45,12 +45,12 @@ public class DummyAsyncClusterConnection implements AsyncClusterConnection {
   }
 
   @Override
-  public String getClusterId2() {
+  public String getClusterIdentity() {
     return null;
   }
 
   @Override
-  public String getIdentity() {
+  public String getConnectionScope() {
     return null;
   }
 

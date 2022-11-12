@@ -82,6 +82,7 @@ public class MetricsConnection implements StatisticTrackable {
     String scope = getScope(conn);
     synchronized (METRICS_INSTANCES) {
       MetricsConnection metrics = METRICS_INSTANCES.get(scope);
+      if (metrics == null) return;
       metrics.decrConnectionCount();
       if (metrics.getConnectionCount() == 0) {
         METRICS_INSTANCES.remove(scope);
@@ -115,12 +116,12 @@ public class MetricsConnection implements StatisticTrackable {
    *                      MetricsConnection.
    */
   private static String getScope(final AsyncConnection conn) {
-    String identity = conn.getIdentity();
-    if (identity != null) {
-      return identity;
+    String scope = conn.getConnectionScope();
+    if (scope != null) {
+      return scope;
     }
     Configuration conf = conn.getConfiguration();
-    String clusterId = conn.getClusterId2();
+    String clusterId = conn.getClusterIdentity();
     int connHashCode = conn.hashCode();
     return conf.get(METRICS_SCOPE_KEY, clusterId + "@" + Integer.toHexString(connHashCode));
   }
@@ -338,8 +339,8 @@ public class MetricsConnection implements StatisticTrackable {
   };
 
   // List of thread pool per connection of the metrics.
-  private List batchPools = new ArrayList<Supplier>();
-  private List metaPools = new ArrayList<Supplier>();
+  private List<Supplier<ThreadPoolExecutor>> batchPools = new ArrayList<>();
+  private List<Supplier<ThreadPoolExecutor>> metaPools = new ArrayList<>();
 
   // static metrics
 
@@ -389,11 +390,12 @@ public class MetricsConnection implements StatisticTrackable {
       protected Ratio getRatio() {
         int numerator = 0;
         int denominator = 0;
-        for (int i = 0; i < batchPools.size(); i++) {
-          ThreadPoolExecutor pool = (ThreadPoolExecutor) ((Supplier) batchPools.get(i)).get();
+        for (Supplier<ThreadPoolExecutor> poolSupplier : batchPools) {
+          ThreadPoolExecutor pool = poolSupplier.get();
           if (pool != null) {
             int activeCount = pool.getActiveCount();
             int maxPoolSize = pool.getMaximumPoolSize();
+            /* The max thread usage ratio among batch pools of all connections */
             if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
               numerator = activeCount;
               denominator = maxPoolSize;
@@ -408,11 +410,12 @@ public class MetricsConnection implements StatisticTrackable {
       protected Ratio getRatio() {
         int numerator = 0;
         int denominator = 0;
-        for (int i = 0; i < metaPools.size(); i++) {
-          ThreadPoolExecutor pool = (ThreadPoolExecutor) ((Supplier) metaPools.get(i)).get();
+        for (Supplier<ThreadPoolExecutor> poolSupplier : metaPools) {
+          ThreadPoolExecutor pool = poolSupplier.get();
           if (pool != null) {
             int activeCount = pool.getActiveCount();
             int maxPoolSize = pool.getMaximumPoolSize();
+            /* The max thread usage ratio among meta lookup pools of all connections */
             if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
               numerator = activeCount;
               denominator = maxPoolSize;

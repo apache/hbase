@@ -119,7 +119,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final String clusterId;
-  private final String identity;
+  private final String connScope;
   private final Optional<MetricsConnection> metrics;
 
   private final ClusterStatusListener clusterStatusListener;
@@ -132,9 +132,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-    SocketAddress localAddress, User user, String identity) {
+    SocketAddress localAddress, User user, String connScope) {
     this.clusterId = clusterId;
-    this.identity = identity;
+    this.connScope = connScope;
     this.conf = conf;
     this.user = user;
 
@@ -215,13 +215,13 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public String getClusterId2() {
+  public String getClusterIdentity() {
     return clusterId;
   }
 
   @Override
-  public String getIdentity() {
-    return identity;
+  public String getConnectionScope() {
+    return connScope;
   }
 
   @Override

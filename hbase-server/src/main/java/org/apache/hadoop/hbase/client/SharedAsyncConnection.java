@@ -53,13 +53,13 @@ public class SharedAsyncConnection implements AsyncConnection {
   }
 
   @Override
-  public String getClusterId2() {
-    return conn.getClusterId2();
+  public String getClusterIdentity() {
+    return conn.getClusterIdentity();
   }
 
   @Override
-  public String getIdentity() {
-    return conn.getIdentity();
+  public String getConnectionScope() {
+    return conn.getConnectionScope();
   }
 
   @Override
