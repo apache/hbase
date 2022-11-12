@@ -190,7 +190,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListDecomm
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTableRegionsRequest;
@@ -341,6 +345,20 @@ public class HBaseAdmin implements Admin {
   @Override
   public List<TableDescriptor> listTableDescriptors() throws IOException {
     return listTableDescriptors((Pattern) null, false);
+  }
+
+  @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    return executeCallable(
+      new MasterCallable<List<TableDescriptor>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected List<TableDescriptor> rpcCall() throws Exception {
+          ListTableDescriptorsByStateResponse response =
+            master.listTableDescriptorsByState(getRpcController(),
+              ListTableDescriptorsByStateRequest.newBuilder().setIsEnabled(isEnabled).build());
+          return ProtobufUtil.toTableDescriptorList(response);
+        }
+      });
   }
 
   @Override
@@ -564,6 +582,19 @@ public class HBaseAdmin implements Admin {
   public TableName[] listTableNames(final String regex, final boolean includeSysTables)
     throws IOException {
     return listTableNames(Pattern.compile(regex), includeSysTables);
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    return executeCallable(
+      new MasterCallable<List<TableName>>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected List<TableName> rpcCall() throws Exception {
+          ListTableNamesByStateResponse response = master.listTableNamesByState(getRpcController(),
+            ListTableNamesByStateRequest.newBuilder().setIsEnabled(isEnabled).build());
+          return ProtobufUtil.toTableNameList(response.getTableNamesList());
+        }
+      });
   }
 
   @Override

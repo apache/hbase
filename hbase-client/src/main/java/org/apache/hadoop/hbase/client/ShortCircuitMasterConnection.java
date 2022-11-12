@@ -117,8 +117,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -444,9 +448,21 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   }
 
   @Override
+  public ListTableNamesByStateResponse listTableNamesByState(RpcController controller,
+    ListTableNamesByStateRequest request) throws ServiceException {
+    return stub.listTableNamesByState(controller, request);
+  }
+
+  @Override
   public GetTableDescriptorsResponse getTableDescriptors(RpcController controller,
     GetTableDescriptorsRequest request) throws ServiceException {
     return stub.getTableDescriptors(controller, request);
+  }
+
+  @Override
+  public ListTableDescriptorsByStateResponse listTableDescriptorsByState(RpcController controller,
+    ListTableDescriptorsByStateRequest request) throws ServiceException {
+    return stub.listTableDescriptorsByState(controller, request);
   }
 
   @Override

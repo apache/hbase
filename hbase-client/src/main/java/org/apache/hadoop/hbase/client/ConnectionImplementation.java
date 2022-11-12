@@ -1728,9 +1728,23 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.ListTableDescriptorsByStateResponse listTableDescriptorsByState(
+        RpcController controller, MasterProtos.ListTableDescriptorsByStateRequest request)
+        throws ServiceException {
+        return stub.listTableDescriptorsByState(controller, request);
+      }
+
+      @Override
       public MasterProtos.GetTableNamesResponse getTableNames(RpcController controller,
         MasterProtos.GetTableNamesRequest request) throws ServiceException {
         return stub.getTableNames(controller, request);
+      }
+
+      @Override
+      public MasterProtos.ListTableNamesByStateResponse listTableNamesByState(
+        RpcController controller, MasterProtos.ListTableNamesByStateRequest request)
+        throws ServiceException {
+        return stub.listTableNamesByState(controller, request);
       }
 
       @Override

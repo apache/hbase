@@ -195,6 +195,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetComplet
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -453,6 +454,20 @@ public final class ProtobufUtil {
   public static List<TableDescriptor>
     toTableDescriptorList(ListTableDescriptorsByNamespaceResponse proto) {
     if (proto == null) return new ArrayList<>();
+    return proto.getTableSchemaList().stream().map(ProtobufUtil::toTableDescriptor)
+      .collect(Collectors.toList());
+  }
+
+  /**
+   * Get a list of TableDescriptor from ListTableDescriptorsByNamespaceResponse protobuf
+   * @param proto the ListTableDescriptorsByNamespaceResponse
+   * @return a list of TableDescriptor
+   */
+  public static List<TableDescriptor>
+    toTableDescriptorList(ListTableDescriptorsByStateResponse proto) {
+    if (proto == null) {
+      return new ArrayList<>();
+    }
     return proto.getTableSchemaList().stream().map(ProtobufUtil::toTableDescriptor)
       .collect(Collectors.toList());
   }

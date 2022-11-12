@@ -142,6 +142,13 @@ public interface Admin extends Abortable, Closeable {
   List<TableDescriptor> listTableDescriptors() throws IOException;
 
   /**
+   * List all enabled or disabled tables
+   * @param isEnabled is true means return enabled tables, false means return disabled tables
+   * @return a list of enabled or disabled tables
+   */
+  List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException;
+
+  /**
    * List all the userspace tables that match the given pattern.
    * @param pattern The compiled regular expression to match against
    * @return an array of read-only HTableDescriptors
@@ -263,6 +270,14 @@ public interface Admin extends Abortable, Closeable {
    */
   @Deprecated
   TableName[] listTableNames(String regex, boolean includeSysTables) throws IOException;
+
+  /**
+   * List all enabled or disabled table names
+   * @param isEnabled is true means return enabled table names, false means return disabled table
+   *                  names
+   * @return a list of enabled or disabled table names
+   */
+  List<TableName> listTableNamesByState(boolean isEnabled) throws IOException;
 
   /**
    * Get a table descriptor.
