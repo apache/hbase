@@ -382,6 +382,26 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   }
 
   /**
+   * List all the wal files for a logPrefix.
+   */
+  public static List<Path> getWALFiles(Configuration c, ServerName serverName) throws IOException {
+    Path walRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
+    FileSystem fs = walRoot.getFileSystem(c);
+    List<Path> walFiles = new ArrayList<>();
+    Path walDir = new Path(walRoot, serverName.toString());
+    try {
+      for (FileStatus status : fs.listStatus(walDir)) {
+        if (status.isFile()) {
+          walFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("WAL dir {} not exists", walDir);
+    }
+    return walFiles;
+  }
+
+  /**
    * Pulls a ServerName out of a Path generated according to our layout rules. In the below layouts,
    * this method ignores the format of the logfile component. Current format: [base directory for
    * hbase]/hbase/.logs/ServerName/logfile or [base directory for
