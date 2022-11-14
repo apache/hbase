@@ -1894,9 +1894,8 @@ public class TestHStore {
   public void testForceCloneOfBigCellForCellChunkImmutableSegment() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int maxAllocByteSize = conf.getInt(MemStoreLAB.MAX_ALLOC_KEY, MemStoreLAB.MAX_ALLOC_DEFAULT);
-    /**
-     * Construct big cell,which is large than {@link MemStoreLABImpl#maxAlloc}.
-     */
+
+    // Construct big cell,which is large than {@link MemStoreLABImpl#maxAlloc}.
     byte[] cellValue = new byte[maxAllocByteSize + 1];
     final long timestamp = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
@@ -1910,17 +1909,13 @@ public class TestHStore {
     int cellByteSize = MutableSegment.getCellLength(originalCell1);
     int inMemoryFlushByteSize = cellByteSize - 1;
 
-    /**
-     * set CompactingMemStore.inmemoryFlushSize to flushByteSize.
-     */
+    // set CompactingMemStore.inmemoryFlushSize to flushByteSize.
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore6.class.getName());
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(inMemoryFlushByteSize * 200));
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
-    /**
-     * Use {@link MemoryCompactionPolicy#EAGER} for always compacting.
-     */
+    // Use {@link MemoryCompactionPolicy#EAGER} for always compacting.
     init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.EAGER).build());
 
@@ -1932,13 +1927,9 @@ public class TestHStore {
 
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
 
-    /**
-     * First compact
-     */
+    // First compact
     store.add(originalCell1, memStoreSizing);
-    /**
-     * Waiting for the first in-memory compaction finished
-     */
+    // Waiting for the first in-memory compaction finished
     myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
 
     StoreScanner storeScanner =
@@ -1958,19 +1949,18 @@ public class TestHStore {
     assertTrue(!memStoreLAB1.chunks.isEmpty());
     assertTrue(!memStoreLAB1.isReclaimed());
 
-    /**
-     * Second compact
-     */
+    // Second compact
     store.add(originalCell2, memStoreSizing);
-    /**
-     * Waiting for the second in-memory compaction finished
-     */
+    // Waiting for the second in-memory compaction finished
     myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
 
-    /**
-     * Before HBASE-27464, here may throw java.lang.IllegalArgumentException: In CellChunkMap, cell
-     * must be associated with chunk.. We were looking for a cell at index 0
-     */
+    // Before HBASE-27464, here may throw java.lang.IllegalArgumentException: In CellChunkMap, cell
+    // must be associated with chunk.. We were looking for a cell at index 0. The cause for this
+    // exception is because the data chunk Pool is disabled,when the data chunks are recycled after
+    // the second in-memory compaction finished,the {@link ChunkCreator.putbackChunks} method does
+    // not put the chunks back to the data chunk pool,it just removes them from
+    // {@link ChunkCreator#chunkIdMap},so in {@link CellChunkMap#getCell} we could not get the data
+    // chunk by chunkId.
     storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
     Cell newResultCell1 = segmentScanner.next();
