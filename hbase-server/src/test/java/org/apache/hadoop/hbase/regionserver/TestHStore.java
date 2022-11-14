@@ -1955,12 +1955,12 @@ public class TestHStore {
     myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
 
     // Before HBASE-27464, here may throw java.lang.IllegalArgumentException: In CellChunkMap, cell
-    // must be associated with chunk.. We were looking for a cell at index 0. The cause for this
-    // exception is because the data chunk Pool is disabled,when the data chunks are recycled after
-    // the second in-memory compaction finished,the {@link ChunkCreator.putbackChunks} method does
-    // not put the chunks back to the data chunk pool,it just removes them from
-    // {@link ChunkCreator#chunkIdMap},so in {@link CellChunkMap#getCell} we could not get the data
-    // chunk by chunkId.
+    // must be associated with chunk.. We were looking for a cell at index 0.
+    // The cause for this exception is because the data chunk Pool is disabled,when the data chunks
+    // are recycled after the second in-memory compaction finished,the
+    // {@link ChunkCreator.putbackChunks} method does not put the chunks back to the data chunk
+    // pool,it just removes them from {@link ChunkCreator#chunkIdMap},so in
+    // {@link CellChunkMap#getCell} we could not get the data chunk by chunkId.
     storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
     segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
     Cell newResultCell1 = segmentScanner.next();
