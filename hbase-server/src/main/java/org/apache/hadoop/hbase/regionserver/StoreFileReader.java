@@ -157,6 +157,10 @@ public class StoreFileReader {
     refCount.incrementAndGet();
   }
 
+  void decrementRefCount() {
+    refCount.decrementAndGet();
+  }
+
   /**
    * Indicate that the scanner has finished reading with this reader. We need to decrement the ref
    * count, and also, if this is not the common pread reader, we should close it.

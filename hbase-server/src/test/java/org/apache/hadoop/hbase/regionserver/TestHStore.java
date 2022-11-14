@@ -47,6 +47,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1030,6 +1031,56 @@ public class TestHStore {
     // ensure that replaceStoreFiles is not called, i.e, the times does not change, if files are not
     // refreshed,
     verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
+  }
+
+
+  @Test
+  public void testRefreshScanAfterFlushDuringCompaction() throws Exception {
+    init(name.getMethodName());
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    KeyValue kv = new KeyValue(row, family, qf1, 1, (byte[]) null);
+    // add some data, flush
+    this.store.add(kv, null);
+    flush(1);
+
+    ExecutorService service =  Executors.newFixedThreadPool(2);
+
+    Scan scan = new Scan(new Get(row));
+    Future<KeyValueScanner> scanFuture = service.submit( () -> {
+      try {
+        LOG.info(">>>> creating scanner");
+        return this.store.createScanner(scan, new ScanInfo(HBaseConfiguration.create(),
+          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build(), Long.MAX_VALUE,
+          0, CellComparator.getInstance()), scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
+      } catch (IOException e) {
+        e.printStackTrace();
+        return null;
+      }
+    });
+    Future compactFuture = service.submit(() -> {
+      try {
+        LOG.info(">>>>>> starting compaction");
+        this.store.compactRecentForTestingAssumingDefaultPolicy(1);
+        LOG.info(">>>>>> Compaction is finished");
+        this.store.closeAndArchiveCompactedFiles();
+         LOG.info(">>>>>> Compacted files deleted");
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    });
+
+    KeyValueScanner kvs = scanFuture.get();
+    ((StoreScanner)kvs).currentScanners.forEach(s -> {
+      if(s instanceof StoreFileScanner) {
+        assertEquals(1, ((StoreFileScanner)s).getReader().getRefCount());
+      }
+    });
+
+    compactFuture.get();
+    kvs.seek(kv);
+    service.shutdownNow();
   }
 
   private long countMemStoreScanner(StoreScanner scanner) {
