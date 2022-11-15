@@ -962,7 +962,7 @@ public class HStore
         includeStartRow, stopRow, includeStopRow);
       memStoreScanners = this.memstore.getScanners(readPt);
       storeFilesToScan.stream().forEach(f -> {
-        if(f.getReader()!=null) {
+        if (f.getReader() != null) {
           f.getReader().incrementRefCount();
         }
       });
@@ -987,7 +987,7 @@ public class HStore
       throw t instanceof IOException ? (IOException) t : new IOException(t);
     } finally {
       storeFilesToScan.stream().forEach(f -> {
-        if(f.getReader()!=null) {
+        if (f.getReader() != null) {
           f.getReader().decrementRefCount();
         }
       });
