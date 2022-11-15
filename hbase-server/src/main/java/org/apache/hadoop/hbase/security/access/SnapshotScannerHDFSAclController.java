@@ -556,7 +556,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       if (aclTableInitialized) {
         return true;
       } else {
-        LOG.warn("Skip set HDFS acls because acl table is not initialized when " + operation);
+        LOG.warn("Skip set HDFS acls because acl table is not initialized when {}", operation);
       }
     }
     return false;
@@ -611,7 +611,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
           PermissionStorage.isGlobalEntry(entry)
             || (PermissionStorage.isNamespaceEntry(entry)
               && Bytes.equals(PermissionStorage.fromNamespaceEntry(entry), namespace))
-            || (!Bytes.equals(tableName.getName(), entry)
+            || (PermissionStorage.isTableEntry(entry) && !Bytes.equals(tableName.getName(), entry)
               && Bytes.equals(TableName.valueOf(entry).getNamespace(), namespace))
         ) {
           remove = false;
