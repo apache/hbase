@@ -478,7 +478,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       LOG.info("unexpected exception: ", e);
       deleted = false;
     }
-    LOG.trace("Finish deleting {} under {}, deleted=", type, dir, deleted);
+    LOG.trace("Finish deleting {} under {}, deleted = {}", type, dir, deleted);
     return deleted;
   }
 }
