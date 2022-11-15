@@ -654,7 +654,7 @@ public class TestSnapshotScannerHDFSAclController {
     // delete table
     admin.disableTable(table);
     admin.deleteTable(table);
-    // grantUser2 and grantUser3 should have data/ns acl
+    // grantUser2 should have data/ns acl
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser1, snapshot1, -1);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser2, snapshot1, 6);
     assertTrue(hasUserNamespaceHdfsAcl(aclTable, grantUserName2, namespace));
@@ -671,6 +671,26 @@ public class TestSnapshotScannerHDFSAclController {
     Path tmpTableDir = helper.getPathHelper().getTmpTableDir(table);
     assertFalse(FS.exists(tmpTableDir));
     deleteTable(table);
+  }
+
+  @Test
+  public void testDeleteTable2() throws Exception {
+    String namespace1 = name.getMethodName() + "1";
+    String namespace2 = name.getMethodName() + "2";
+    String grantUser = name.getMethodName();
+    TableName table = TableName.valueOf(namespace1, name.getMethodName());
+
+    TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
+    // grant user table permission
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, grantUser, table, READ);
+    // grant user other namespace permission
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, grantUser, namespace2, READ);
+    // delete table
+    admin.disableTable(table);
+    admin.deleteTable(table);
+    // grantUser should have namespace2's acl
+    assertFalse(hasUserTableHdfsAcl(aclTable, grantUser, table));
+    assertTrue(hasUserNamespaceHdfsAcl(aclTable, grantUser, namespace2));
   }
 
   @Test
