@@ -113,6 +113,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final Runnable completeWhenNoMoreResultsInRegion;
 
+  protected final AsyncConnectionImpl conn;
+
   private final CompletableFuture<Boolean> future;
 
   private final HBaseRpcController controller;
@@ -318,6 +320,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     long pauseNsForServerOverloaded, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
     int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
+    this.conn = conn;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
     this.scannerId = scannerId;
@@ -441,6 +444,10 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     tries++;
+    if (HBaseServerException.isServerOverloaded(error)) {
+      Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
+      metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
+    }
     retryTimer.newTimeout(t -> call(), delayNs, TimeUnit.NANOSECONDS);
   }
 

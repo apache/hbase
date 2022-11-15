@@ -246,7 +246,8 @@ public class TestAsyncProcess {
           }
         });
 
-      return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10, 9) {
+      return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10,
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null) {
         @Override
         public AbstractResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
           int callTimeout) throws IOException, RuntimeException {
@@ -307,7 +308,7 @@ public class TestAsyncProcess {
     private final IOException e;
 
     public CallerWithFailure(IOException e) {
-      super(100, 500, 100, 9);
+      super(100, 500, 100, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null);
       this.e = e;
     }
 
@@ -412,7 +413,8 @@ public class TestAsyncProcess {
         replicaCalls.incrementAndGet();
       }
 
-      return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10, 9) {
+      return new RpcRetryingCallerImpl<AbstractResponse>(100, 500, 10,
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 9, 0, null) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<AbstractResponse> callable,
           int callTimeout) throws IOException, RuntimeException {

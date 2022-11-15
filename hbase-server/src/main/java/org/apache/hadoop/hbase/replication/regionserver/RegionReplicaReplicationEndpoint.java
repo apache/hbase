@@ -390,8 +390,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       this.sink = sink;
       this.connection = connection;
       this.operationTimeout = operationTimeout;
-      this.rpcRetryingCallerFactory =
-        RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
+      this.rpcRetryingCallerFactory = RpcRetryingCallerFactory
+        .instantiate(connection.getConfiguration(), connection.getConnectionMetrics());
       this.rpcControllerFactory = RpcControllerFactory.instantiate(connection.getConfiguration());
       this.pool = pool;
       this.tableDescriptors = tableDescriptors;
