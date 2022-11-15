@@ -209,8 +209,8 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
         locations.getRegionLocation(1), locations.getRegionLocation(1).getRegionInfo(), row,
         Lists.newArrayList(entry), new AtomicLong());
 
-      RpcRetryingCallerFactory factory =
-        RpcRetryingCallerFactory.instantiate(connection.getConfiguration());
+      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory
+        .instantiate(connection.getConfiguration(), connection.getConnectionMetrics());
       factory.<ReplicateWALEntryResponse> newCaller().callWithRetries(callable, 10000);
     }
   }

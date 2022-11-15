@@ -58,8 +58,8 @@ public class TestRpcRetryingCallerImpl {
     long pauseMillis = 1;
     long specialPauseMillis = 2;
 
-    RpcRetryingCallerImpl<Void> caller =
-      new RpcRetryingCallerImpl<>(pauseMillis, specialPauseMillis, 2, 0);
+    RpcRetryingCallerImpl<Void> caller = new RpcRetryingCallerImpl<>(pauseMillis,
+      specialPauseMillis, 2, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, 0, 0, null);
 
     RetryingCallable<Void> callable =
       new ThrowingCallable(CallQueueTooBigException.class, specialPauseMillis);

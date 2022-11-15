@@ -301,10 +301,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
     this.stats = ServerStatisticTracker.create(conf);
     this.interceptor = new RetryingCallerInterceptorFactory(conf).build();
-    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
+
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
-    this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
 
     boolean shouldListen =
       conf.getBoolean(HConstants.STATUS_PUBLISHED, HConstants.STATUS_PUBLISHED_DEFAULT);
@@ -332,6 +330,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       this.metaCache = new MetaCache(this.metrics);
 
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
+      this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+      this.rpcCallerFactory =
+        RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats, this.metrics);
+      this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
 
       // Do we publish the status?
       if (shouldListen) {
@@ -1058,6 +1060,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         // Only relocate the parent region if necessary
         relocateMeta =
           !(e instanceof RegionOfflineException || e instanceof NoServerForRegionException);
+
+        if (metrics != null && HBaseServerException.isServerOverloaded(e)) {
+          metrics.incrementServerOverloadedBackoffTime(
+            ConnectionUtils.getPauseTime(pauseBase, tries), TimeUnit.MILLISECONDS);
+        }
       } finally {
         userRegionLock.unlock();
       }
@@ -2191,8 +2198,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
-    return RpcRetryingCallerFactory.instantiate(conf, this.interceptor,
-      this.getStatisticsTracker());
+    return RpcRetryingCallerFactory.instantiate(conf, this.interceptor, this.getStatisticsTracker(),
+      metrics);
   }
 
   @Override
