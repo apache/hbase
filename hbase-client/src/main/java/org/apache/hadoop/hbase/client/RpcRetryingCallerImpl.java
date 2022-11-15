@@ -26,6 +26,7 @@ import java.net.SocketTimeoutException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
@@ -63,15 +64,11 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
   private final RetryingTimeTracker tracker;
+  private final MetricsConnection metrics;
 
   public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
-    int startLogErrorsCnt) {
-    this(pause, pauseForServerOverloaded, retries,
-      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt, 0);
-  }
-
-  public RpcRetryingCallerImpl(long pause, long pauseForServerOverloaded, int retries,
-    RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout) {
+    RetryingCallerInterceptor interceptor, int startLogErrorsCnt, int rpcTimeout,
+    MetricsConnection metricsConnection) {
     this.pause = pause;
     this.pauseForServerOverloaded = pauseForServerOverloaded;
     this.maxAttempts = retries2Attempts(retries);
@@ -80,6 +77,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.tracker = new RetryingTimeTracker();
     this.rpcTimeout = rpcTimeout;
+    this.metrics = metricsConnection;
   }
 
   @Override
@@ -157,6 +155,9 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
           String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration + ": "
             + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException) new SocketTimeoutException(msg).initCause(t);
+        }
+        if (metrics != null && HBaseServerException.isServerOverloaded(t)) {
+          metrics.incrementServerOverloadedBackoffTime(expectedSleep, TimeUnit.MILLISECONDS);
         }
       } finally {
         interceptor.updateFailureInfo(context);

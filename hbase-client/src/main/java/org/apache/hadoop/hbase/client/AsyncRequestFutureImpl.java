@@ -747,6 +747,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       backOffTime = errorsByServer.calculateBackoffTime(oldServer,
         asyncProcess.connectionConfiguration.getPauseMillis());
     }
+
+    MetricsConnection metrics = asyncProcess.connection.getConnectionMetrics();
+    if (metrics != null && HBaseServerException.isServerOverloaded(throwable)) {
+      metrics.incrementServerOverloadedBackoffTime(backOffTime, TimeUnit.MILLISECONDS);
+    }
+
     if (numAttempt > asyncProcess.startLogErrorsCnt) {
       // We use this value to have some logs when we have multiple failures, but not too many
       // logs, as errors are to be expected when a region moves, splits and so on
