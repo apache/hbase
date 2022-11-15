@@ -1116,7 +1116,6 @@ public class TestHStore {
     verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
   }
 
-
   @Test
   public void testScanWithCompactionAfterFlush() throws Exception {
     TEST_UTIL.getConfiguration().set(DEFAULT_COMPACTION_POLICY_CLASS_KEY,
@@ -1138,16 +1137,17 @@ public class TestHStore {
     this.store.add(kv, null);
     flush(3);
 
-    ExecutorService service =  Executors.newFixedThreadPool(2);
+    ExecutorService service = Executors.newFixedThreadPool(2);
 
     Scan scan = new Scan(new Get(row));
-    Future<KeyValueScanner> scanFuture = service.submit( () -> {
+    Future<KeyValueScanner> scanFuture = service.submit(() -> {
       try {
         LOG.info(">>>> creating scanner");
-        return this.store.createScanner(scan, new ScanInfo(HBaseConfiguration.create(),
-          ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build(),
+        return this.store.createScanner(scan,
+          new ScanInfo(HBaseConfiguration.create(),
+            ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build(),
             Long.MAX_VALUE, 0, CellComparator.getInstance()),
-            scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
+          scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
       } catch (IOException e) {
         e.printStackTrace();
         return null;
@@ -1156,24 +1156,24 @@ public class TestHStore {
     Future compactFuture = service.submit(() -> {
       try {
         LOG.info(">>>>>> starting compaction");
-        Optional<CompactionContext> opCompaction =  this.store.requestCompaction();
+        Optional<CompactionContext> opCompaction = this.store.requestCompaction();
         assertTrue(opCompaction.isPresent());
         store.compact(opCompaction.get(), new NoLimitThroughputController(), User.getCurrent());
         LOG.info(">>>>>> Compaction is finished");
         this.store.closeAndArchiveCompactedFiles();
-         LOG.info(">>>>>> Compacted files deleted");
+        LOG.info(">>>>>> Compacted files deleted");
       } catch (IOException e) {
         e.printStackTrace();
       }
     });
 
     KeyValueScanner kvs = scanFuture.get();
-    ((StoreScanner)kvs).currentScanners.forEach(s -> {
-      if(s instanceof StoreFileScanner) {
-        assertEquals(1, ((StoreFileScanner)s).getReader().getRefCount());
+    compactFuture.get();
+    ((StoreScanner) kvs).currentScanners.forEach(s -> {
+      if (s instanceof StoreFileScanner) {
+        assertEquals(1, ((StoreFileScanner) s).getReader().getRefCount());
       }
     });
-    compactFuture.get();
     kvs.seek(kv);
     service.shutdownNow();
   }
