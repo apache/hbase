@@ -239,8 +239,8 @@ public class TestTaskMonitor {
     assertEquals(clone.getStatus(), monitor.getStatus());
     assertEquals(clone.toString(), monitor.toString());
     assertEquals(clone.toMap(), monitor.toMap());
-    JSONAssert.assertEquals(clone.toJSON(), monitor.toJSON(),true);
-    
+    JSONAssert.assertEquals(clone.toJSON(), monitor.toJSON(), true);
+
     // mark complete and make param dirty
     monitor.markComplete("complete RPC");
     testParam.setParam("dirtyParam");
