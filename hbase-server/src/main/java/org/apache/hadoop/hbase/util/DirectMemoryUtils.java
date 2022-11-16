@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -48,6 +47,7 @@ public class DirectMemoryUtils {
   private static final MBeanServer BEAN_SERVER;
   private static final ObjectName NIO_DIRECT_POOL;
   private static final boolean HAS_MEMORY_USED_ATTRIBUTE;
+  private static long maxDirectMemory = -1L;
 
   static {
     // initialize singletons. Only maintain a reference to the MBeanServer if
@@ -78,14 +78,11 @@ public class DirectMemoryUtils {
 
   /** Returns the direct memory limit of the current progress */
   public static long getDirectMemorySize() {
-    try {
-      Field directMemoryLimit = PlatformDependent.class.getDeclaredField("MAX_DIRECT_MEMORY");
-      directMemoryLimit.setAccessible(true);
-      return directMemoryLimit.getLong(PlatformDependent.class);
-    } catch (Exception e) {
-      LOG.warn("Failed get direct memory size", e);
-      return 0L;
+    if (maxDirectMemory >= 0L) {
+      return maxDirectMemory;
     }
+    maxDirectMemory = PlatformDependent.estimateMaxDirectMemory();
+    return maxDirectMemory;
   }
 
   /** Returns the current amount of direct memory used. */
