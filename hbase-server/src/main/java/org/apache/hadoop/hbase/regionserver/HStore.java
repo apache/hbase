@@ -961,11 +961,7 @@ public class HStore
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
         includeStartRow, stopRow, includeStopRow);
       memStoreScanners = this.memstore.getScanners(readPt);
-      storeFilesToScan.stream().forEach(f -> {
-        if (f.getReader() != null) {
-          f.getReader().incrementRefCount();
-        }
-      });
+      storeFilesToScan.stream().forEach(f -> f.getFileInfo().refCount.incrementAndGet());
     } finally {
       this.storeEngine.readUnlock();
     }
@@ -986,11 +982,7 @@ public class HStore
       clearAndClose(memStoreScanners);
       throw t instanceof IOException ? (IOException) t : new IOException(t);
     } finally {
-      storeFilesToScan.stream().forEach(f -> {
-        if (f.getReader() != null) {
-          f.getReader().decrementRefCount();
-        }
-      });
+      storeFilesToScan.stream().forEach(f -> f.getFileInfo().refCount.decrementAndGet());
     }
   }
 
