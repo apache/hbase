@@ -1018,6 +1018,11 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <version>1.5.1</version>
+        <scope>test</scope>
+      <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-replication</artifactId>
         <version>${project.version}</version>

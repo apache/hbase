@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.skyscreamer.jsonassert.JSONAssert;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestTaskMonitor {
