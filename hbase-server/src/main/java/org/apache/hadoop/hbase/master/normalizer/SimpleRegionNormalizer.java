@@ -22,6 +22,7 @@ import static org.apache.hbase.thirdparty.org.apache.commons.collections4.Collec
 import java.time.Instant;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -79,6 +80,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
+  static final String CUMULATIVE_MERGE_SIZE_LIMIT_MB_KEY = "hbase.normalizer.merge.plans_size_limit.mb";
+  static final long DEFAULT_CUMULATIVE_MERGE_SIZE_LIMIT_MB = Long.MAX_VALUE;
+  static final String CUMULATIVE_SPLIT_SIZE_LIMIT_MB_KEY = "hbase.normalizer.split.plans_size_limit.mb";
+  static final long DEFAULT_CUMULATIVE_SPLIT_SIZE_LIMIT_MB = Long.MAX_VALUE;
 
   private MasterServices masterServices;
   private NormalizerConfiguration normalizerConfiguration;
@@ -234,6 +239,14 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return plans;
   }
 
+  private long getTotalRegionSizeMB(Collection<NormalizationTarget> targets) {
+    long total = 0;
+    for (NormalizationTarget target : targets) {
+      total += target.getRegionSizeMb();
+    }
+    return total;
+  }
+
   /** Returns size of region in MB and if region is not found than -1 */
   private long getRegionSizeMB(RegionInfo hri) {
     ServerName sn =
@@ -357,6 +370,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     final List<NormalizationPlan> plans = new LinkedList<>();
     final List<NormalizationTarget> rangeMembers = new LinkedList<>();
     long sumRangeMembersSizeMb;
+    long cumulativePlansSizeMb = 0;
     int current = 0;
     for (int rangeStart = 0; rangeStart < ctx.getTableRegions().size() - 1
       && current < ctx.getTableRegions().size();) {
@@ -394,7 +408,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         break;
       }
       if (rangeMembers.size() > 1) {
-        plans.add(new MergeNormalizationPlan.Builder().setTargets(rangeMembers).build());
+        cumulativePlansSizeMb += getTotalRegionSizeMB(rangeMembers);
+        if (cumulativePlansSizeMb > normalizerConfiguration.getCumulativeMergePlansSizeLimitMb()) {
+          return plans;
+        } else {
+          plans.add(new MergeNormalizationPlan.Builder().setTargets(rangeMembers).build());
+        }
       }
     }
     return plans;
@@ -422,6 +441,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     LOG.debug("Table {}, average region size: {} MB", ctx.getTableName(),
       String.format("%.3f", avgRegionSize));
 
+    long cumulativePlansSizeMb = 0;
     final List<NormalizationPlan> plans = new ArrayList<>();
     for (final RegionInfo hri : ctx.getTableRegions()) {
       if (skipForSplit(ctx.getRegionStates().getRegionState(hri), hri)) {
@@ -434,7 +454,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
             + "splitting",
           ctx.getTableName(), hri.getRegionNameAsString(), regionSizeMb,
           String.format("%.3f", avgRegionSize));
-        plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
+        cumulativePlansSizeMb += getRegionSizeMB(hri);
+        if (cumulativePlansSizeMb > normalizerConfiguration.getCumulativeSplitPlansSizeLimitMb()) {
+          return plans;
+        } else {
+          plans.add(new SplitNormalizationPlan(hri, regionSizeMb));
+        }
       }
     }
     return plans;
@@ -484,6 +509,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final int mergeMinRegionCount;
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
+    private final long cumulativeMergePlansSizeLimitMb;
+    private final long cumulativeSplitPlansSizeLimitMb;
 
     private NormalizerConfiguration() {
       conf = null;
@@ -492,6 +519,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = DEFAULT_MERGE_MIN_REGION_COUNT;
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
+      cumulativeMergePlansSizeLimitMb = DEFAULT_CUMULATIVE_MERGE_SIZE_LIMIT_MB;
+      cumulativeSplitPlansSizeLimitMb = DEFAULT_CUMULATIVE_SPLIT_SIZE_LIMIT_MB;
     }
 
     private NormalizerConfiguration(final Configuration conf,
@@ -502,6 +531,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = parseMergeMinRegionCount(conf);
       mergeMinRegionAge = parseMergeMinRegionAge(conf);
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
+      cumulativeSplitPlansSizeLimitMb = conf.getLong(CUMULATIVE_SPLIT_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_MERGE_SIZE_LIMIT_MB);
+      cumulativeMergePlansSizeLimitMb = conf.getLong(CUMULATIVE_MERGE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_MERGE_SIZE_LIMIT_MB);
       logConfigurationUpdated(SPLIT_ENABLED_KEY, currentConfiguration.isSplitEnabled(),
         splitEnabled);
       logConfigurationUpdated(MERGE_ENABLED_KEY, currentConfiguration.isMergeEnabled(),
@@ -512,6 +543,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         currentConfiguration.getMergeMinRegionAge(), mergeMinRegionAge);
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
         currentConfiguration.getMergeMinRegionSizeMb(), mergeMinRegionSizeMb);
+      logConfigurationUpdated(CUMULATIVE_SPLIT_SIZE_LIMIT_MB_KEY, currentConfiguration.getCumulativeSplitPlansSizeLimitMb(), cumulativeSplitPlansSizeLimitMb);
+      logConfigurationUpdated(CUMULATIVE_MERGE_SIZE_LIMIT_MB_KEY, currentConfiguration.getCumulativeMergePlansSizeLimitMb(), cumulativeMergePlansSizeLimitMb);
     }
 
     public Configuration getConf() {
@@ -573,6 +606,14 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         return getMergeMinRegionSizeMb();
       }
       return mergeMinRegionSizeMb;
+    }
+
+    public long getCumulativeSplitPlansSizeLimitMb() {
+      return cumulativeSplitPlansSizeLimitMb;
+    }
+
+    public long getCumulativeMergePlansSizeLimitMb() {
+      return cumulativeMergePlansSizeLimitMb;
     }
   }
 

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static java.lang.String.format;
+import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.CUMULATIVE_MERGE_SIZE_LIMIT_MB_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.CUMULATIVE_SPLIT_SIZE_LIMIT_MB_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.DEFAULT_MERGE_MIN_REGION_AGE_DAYS;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_ENABLED_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_AGE_DAYS_KEY;
@@ -30,6 +32,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
@@ -605,6 +608,40 @@ public class TestSimpleRegionNormalizer {
     // Compute the plan, no merge plan returned as they are not adjacent.
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
+  }
+
+  @Test
+  public void testMergeSizeLimit() {
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    conf.setLong(CUMULATIVE_MERGE_SIZE_LIMIT_MB_KEY, 5);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 6);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos,1, 1, 1, 1, 1, 1);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(2L);
+
+    assertTrue(normalizer.isMergeEnabled());
+    assertFalse(normalizer.isSplitEnabled());
+    assertThat(normalizer.computePlansForTable(tableDescriptor),
+      hasSize(2)); // creates 2 merge plans, even though there are 3 otherwise eligible pairs of regions
+  }
+
+  @Test
+  public void testSplitSizeLimit() {
+    conf.setBoolean(MERGE_ENABLED_KEY, false);
+    conf.setLong(CUMULATIVE_SPLIT_SIZE_LIMIT_MB_KEY, 10);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
+    final Map<byte[], Integer> regionSizes =
+      createRegionSizesMap(regionInfos, 3, 3, 3, 3);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(1L);
+
+    assertTrue(normalizer.isSplitEnabled());
+    assertFalse(normalizer.isMergeEnabled());
+    assertThat(normalizer.computePlansForTable(tableDescriptor),
+      hasSize(3));  // the plan includes only 3 regions, even though the table has 4 otherwise split-eligible regions
   }
 
   @SuppressWarnings("MockitoCast")
