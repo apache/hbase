@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -238,7 +239,7 @@ public class TestTaskMonitor {
     assertEquals(clone.getStatus(), monitor.getStatus());
     assertEquals(clone.toString(), monitor.toString());
     assertEquals(clone.toMap(), monitor.toMap());
-    assertEquals(clone.toJSON(), monitor.toJSON());
+    JSONAssert.assertEquals(clone.toJSON(), monitor.toJSON(), true);
 
     // mark complete and make param dirty
     monitor.markComplete("complete RPC");

@@ -603,6 +603,7 @@
     <jcodings.version>1.0.55</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.70</bouncycastle.version>
+    <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.1.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.3.0.7.2.17.0-SNAPSHOT</curator.version>
@@ -1296,6 +1297,12 @@
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <version>${skyscreamer.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
