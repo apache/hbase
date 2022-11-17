@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -61,14 +63,16 @@ public class TestMetricsConnection {
   private static final ThreadPoolExecutor BATCH_POOL =
     (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
 
+  private static final String MOCK_CONN_STR = "mocked-connection";
+
   @BeforeClass
   public static void beforeClass() {
-    METRICS = new MetricsConnection("mocked-connection", () -> BATCH_POOL, () -> null);
+    METRICS = MetricsConnection.getMetricsConnection(MOCK_CONN_STR, () -> BATCH_POOL, () -> null);
   }
 
   @AfterClass
   public static void afterClass() {
-    METRICS.shutdown();
+    MetricsConnection.deleteMetricsConnection(MOCK_CONN_STR);
   }
 
   @Test
@@ -88,6 +92,50 @@ public class TestMetricsConnection {
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
     assertEquals(scope, metrics.get().scope);
+  }
+
+  @Test
+  public void testMetricsWithMutiConnections() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+    conf.set(MetricsConnection.METRICS_SCOPE_KEY, "unit-test");
+
+    User user = User.getCurrent();
+
+    /* create multiple connections */
+    final int num = 3;
+    AsyncConnectionImpl impl;
+    List<AsyncConnectionImpl> connList = new ArrayList<AsyncConnectionImpl>();
+    for (int i = 0; i < num; i++) {
+      impl = new AsyncConnectionImpl(conf, null, null, null, user);
+      connList.add(impl);
+    }
+
+    /* verify metrics presence */
+    impl = connList.get(0);
+    Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present", metrics.isPresent());
+
+    /* verify connection count in a shared metrics */
+    long count = metrics.get().getConnectionCount();
+    assertEquals("Failed to verify connection count." + count, count, num);
+
+    /* close some connections */
+    for (int i = 0; i < num - 1; i++) {
+      connList.get(i).close();
+    }
+
+    /* verify metrics presence again */
+    impl = connList.get(num - 1);
+    metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present after some of connections are closed.", metrics.isPresent());
+
+    /* verify count of remaining connections */
+    count = metrics.get().getConnectionCount();
+    assertEquals("Connection count suppose to be 1 but got: " + count, count, 1);
+
+    /* shutdown */
+    impl.close();
   }
 
   @Test

@@ -371,7 +371,7 @@ public class MetricsConnection implements StatisticTrackable {
   protected final ConcurrentMap<String, Counter> rpcCounters =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
-  MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
+  private MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
     Supplier<ThreadPoolExecutor> metaPool) {
     this.scope = scope;
     this.batchPools.add(batchPool);
@@ -459,10 +459,6 @@ public class MetricsConnection implements StatisticTrackable {
     return registry;
   }
 
-  public void shutdown() {
-    this.reporter.stop();
-  }
-
   /** Produce an instance of {@link CallStats} for clients to attach to RPCs. */
   public static CallStats newCallStats() {
     // TODO: instance pool to reduce GC?
@@ -521,7 +517,7 @@ public class MetricsConnection implements StatisticTrackable {
   }
 
   /** Return the connection count of the metrics within a scope */
-  private long getConnectionCount() {
+  public long getConnectionCount() {
     return connectionCount.getCount();
   }
 
@@ -556,6 +552,10 @@ public class MetricsConnection implements StatisticTrackable {
       .update(stats.getRequestSizeBytes());
     getMetric(RESP_BASE + methodName, rpcHistograms, histogramFactory)
       .update(stats.getResponseSizeBytes());
+  }
+
+  private void shutdown() {
+    this.reporter.stop();
   }
 
   /** Report RPC context to metrics system. */
