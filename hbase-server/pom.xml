@@ -346,6 +346,11 @@
       <artifactId>log4j-1.2-api</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.skyscreamer</groupId>
+      <artifactId>jsonassert</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <!-- Make sure resources get added before they are processed by placing this first
