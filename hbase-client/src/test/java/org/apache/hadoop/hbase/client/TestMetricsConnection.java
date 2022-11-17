@@ -128,7 +128,8 @@ public class TestMetricsConnection {
     /* verify metrics presence again */
     impl = connList.get(num - 1);
     metrics = impl.getConnectionMetrics();
-    assertTrue("Metrics should be present after some of connections are closed.", metrics.isPresent());
+    assertTrue("Metrics should be present after some of connections are closed.",
+      metrics.isPresent());
 
     /* verify count of remaining connections */
     count = metrics.get().getConnectionCount();
