@@ -159,8 +159,11 @@ public class CellChunkImmutableSegment extends ImmutableSegment {
         offsetInCurentChunk = ChunkCreator.SIZEOF_CHUNK_HEADER;
       }
       if (action == MemStoreCompactionStrategy.Action.COMPACT && !alreadyCopied) {
-        // for compaction copy cell to the new segment (MSLAB copy)
-        c = maybeCloneWithAllocator(c, false);
+
+        // For compaction copy cell to the new segment (MSLAB copy),here we set forceCloneOfBigCell
+        // to true, because the chunk which the cell is allocated may be freed after the compaction
+        // is completed, see HBASE-27464.
+        c = maybeCloneWithAllocator(c, true);
       }
       offsetInCurentChunk = // add the Cell reference to the index chunk
         createCellReference((ByteBufferKeyValue) c, chunks[currentChunkIdx].getData(),
