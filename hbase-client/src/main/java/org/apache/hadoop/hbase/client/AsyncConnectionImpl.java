@@ -119,7 +119,6 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final String clusterId;
-  private final String connScope;
   private final Optional<MetricsConnection> metrics;
 
   private final ClusterStatusListener clusterStatusListener;
@@ -128,13 +127,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
     SocketAddress localAddress, User user) {
-    this(conf, registry, clusterId, localAddress, user, null);
-  }
-
-  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
-    SocketAddress localAddress, User user, String connScope) {
     this.clusterId = clusterId;
-    this.connScope = connScope;
     this.conf = conf;
     this.user = user;
 
@@ -144,8 +137,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+      String scope = MetricsConnection.getScope(conf, clusterId, this);
       this.metrics =
-        Optional.of(MetricsConnection.getMetricsConnection(this, () -> null, () -> null));
+        Optional.of(MetricsConnection.getMetricsConnection(scope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }
@@ -215,16 +209,6 @@ public class AsyncConnectionImpl implements AsyncConnection {
   }
 
   @Override
-  public String getClusterIdentity() {
-    return clusterId;
-  }
-
-  @Override
-  public String getConnectionScope() {
-    return connScope;
-  }
-
-  @Override
   public Configuration getConfiguration() {
     return conf;
   }
@@ -255,7 +239,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
         }
       }
       if (metrics.isPresent()) {
-        MetricsConnection.deleteMetricsConnection(this);
+        String scope = MetricsConnection.getScope(conf, clusterId, this);
+        MetricsConnection.deleteMetricsConnection(scope);
       }
       ConnectionOverAsyncConnection c = this.conn;
       if (c != null) {

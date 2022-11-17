@@ -61,9 +61,8 @@ public class MetricsConnection implements StatisticTrackable {
   static final Map<String, MetricsConnection> METRICS_INSTANCES =
     new HashMap<String, MetricsConnection>();
 
-  static MetricsConnection getMetricsConnection(final AsyncConnection conn,
+  static MetricsConnection getMetricsConnection(final String scope,
     Supplier<ThreadPoolExecutor> batchPool, Supplier<ThreadPoolExecutor> metaPool) {
-    String scope = getScope(conn);
     MetricsConnection metrics;
     synchronized (METRICS_INSTANCES) {
       metrics = METRICS_INSTANCES.get(scope);
@@ -78,8 +77,7 @@ public class MetricsConnection implements StatisticTrackable {
     return metrics;
   }
 
-  static void deleteMetricsConnection(final AsyncConnection conn) {
-    String scope = getScope(conn);
+  static void deleteMetricsConnection(final String scope) {
     synchronized (METRICS_INSTANCES) {
       MetricsConnection metrics = METRICS_INSTANCES.get(scope);
       if (metrics == null) return;
@@ -115,15 +113,9 @@ public class MetricsConnection implements StatisticTrackable {
    * @param connectionObj either a Connection or AsyncConnectionImpl, the instance creating this
    *                      MetricsConnection.
    */
-  private static String getScope(final AsyncConnection conn) {
-    String scope = conn.getConnectionScope();
-    if (scope != null) {
-      return scope;
-    }
-    Configuration conf = conn.getConfiguration();
-    String clusterId = conn.getClusterIdentity();
-    int connHashCode = conn.hashCode();
-    return conf.get(METRICS_SCOPE_KEY, clusterId + "@" + Integer.toHexString(connHashCode));
+  static String getScope(Configuration conf, String clusterId, Object connectionObj) {
+    return conf.get(METRICS_SCOPE_KEY,
+      clusterId + "@" + Integer.toHexString(connectionObj.hashCode()));
   }
 
   private static final String CNT_BASE = "rpcCount_";
