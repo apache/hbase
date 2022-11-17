@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.rest.client;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,6 +63,9 @@ import org.apache.http.util.EntityUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * A wrapper around HttpClient which provides some useful function and semantics for interacting
@@ -492,28 +494,29 @@ public class Client {
    * @return The response body, null if body is empty
    * @throws IOException If an I/O (transport) problem occurs while obtaining the response body.
    */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_LOAD_OF_KNOWN_NULL_VALUE",
-      justification = "null is possible return value")
   public static byte[] getResponseBody(HttpResponse resp) throws IOException {
-    if (resp.getEntity() == null) return null;
-    try (InputStream instream = resp.getEntity().getContent()) {
-      if (instream != null) {
-        long contentLength = resp.getEntity().getContentLength();
-        if (contentLength > Integer.MAX_VALUE) {
-          // guard integer cast from overflow
-          throw new IOException("Content too large to be buffered: " + contentLength + " bytes");
-        }
-        ByteArrayOutputStream outstream =
-          new ByteArrayOutputStream(contentLength > 0 ? (int) contentLength : 4 * 1024);
-        byte[] buffer = new byte[4096];
-        int len;
-        while ((len = instream.read(buffer)) > 0) {
-          outstream.write(buffer, 0, len);
-        }
-        outstream.close();
-        return outstream.toByteArray();
-      }
+    if (resp.getEntity() == null) {
       return null;
+    }
+    InputStream instream = resp.getEntity().getContent();
+    if (instream == null) {
+      return null;
+    }
+    try {
+      long contentLength = resp.getEntity().getContentLength();
+      if (contentLength > Integer.MAX_VALUE) {
+        // guard integer cast from overflow
+        throw new IOException("Content too large to be buffered: " + contentLength + " bytes");
+      }
+      if (contentLength > 0) {
+        byte[] content = new byte[(int) contentLength];
+        ByteStreams.readFully(instream, content);
+        return content;
+      } else {
+        return ByteStreams.toByteArray(instream);
+      }
+    } finally {
+      Closeables.closeQuietly(instream);
     }
   }
 
