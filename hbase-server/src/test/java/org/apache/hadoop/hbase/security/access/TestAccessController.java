@@ -2074,16 +2074,16 @@ public class TestAccessController extends SecureTestUtil {
       USER_GROUP_WRITE, USER_GROUP_CREATE);
 
     verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(deleteAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
-      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
 
     verifyAllowed(restoreAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
     verifyDenied(restoreAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
       USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
     verifyAllowed(deleteAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
-    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(deleteAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -2126,18 +2126,66 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(restoreAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
     verifyDenied(restoreAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE, USER_GROUP_CREATE);
+  }
 
-    AccessTestAction cloneAction = new AccessTestAction() {
+  @Test
+  public void testCloneSnapshotWithOwner() throws Exception {
+    Admin admin = TEST_UTIL.getAdmin();
+    final TableDescriptor originalTd = admin.getDescriptor(TEST_TABLE);
+    final SnapshotDescription snapshot =
+      new SnapshotDescription(TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null,
+        USER_OWNER.getName());
+    String namespace = "testCloneSnapshot";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
+    createNamespace(TEST_UTIL, desc);
+
+    String differentTableString = "testtable2";
+    TableName differentTable = TableName.valueOf(namespace, differentTableString);
+    TableDescriptor diffrentTd = TableDescriptorBuilder.newBuilder(differentTable)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
+
+    //recreating the original table
+    AccessTestAction cloneOriginalAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV), snapshot,
-          htd);
+          originalTd);
         return null;
       }
     };
-    verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER);
-    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+    verifyAllowed(cloneOriginalAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER);
+    verifyDenied(cloneOriginalAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    //cloning to a different table
+    AccessTestAction cloneDifferentAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV), snapshot,
+          diffrentTd);
+        return null;
+      }
+    };
+    verifyAllowed(cloneDifferentAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(cloneDifferentAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE, USER_OWNER);
+
+    //cloning to a different table where user is namespace admin
+    grantOnNamespace(TEST_UTIL, USER_OWNER.getShortName(), namespace, Action.ADMIN);
+
+    AccessTestAction cloneNamespaceAdminAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContextImpl.createAndPrepare(CP_ENV), snapshot,
+          diffrentTd);
+        return null;
+      }
+    };
+    verifyAllowed(cloneNamespaceAdminAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER);
+    verifyDenied(cloneNamespaceAdminAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
+
+    deleteNamespace(TEST_UTIL, namespace);
   }
 
   @Test
