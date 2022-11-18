@@ -192,7 +192,7 @@ public class TestMultiVersions {
    * Port of old TestScanMultipleVersions test here so can better utilize the spun up cluster
    * running more than just a single test. Keep old tests crazyness.
    * <p>
-   * Tests five cases of scans and timestamps. n
+   * Tests five cases of scans and timestamps.
    */
   @Test
   public void testScanMultipleVersions() throws Exception {

@@ -890,7 +890,7 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * n * ByteBuffer to hash n * offset to start from n * length to hash
+   * ByteBuffer to hash offset to start from length to hash
    */
   public static int hashCode(ByteBuffer buf, int offset, int length) {
     int hash = 1;
@@ -1005,7 +1005,7 @@ public final class ByteBufferUtils {
    * @param buf    The ByteBuffer
    * @param offset Offset to int value
    * @param length Number of bytes used to store the int value.
-   * @return the int value n * if there's not enough bytes left in the buffer after the given offset
+   * @return the int value if there's not enough bytes left in the buffer after the given offset
    */
   public static int readAsInt(ByteBuffer buf, int offset, final int length) {
     if (offset + length > buf.limit()) {

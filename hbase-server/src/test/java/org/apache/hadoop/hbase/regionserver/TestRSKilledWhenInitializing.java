@@ -81,7 +81,7 @@ public class TestRSKilledWhenInitializing {
 
   /**
    * Test verifies whether a region server is removed from online servers list in master if it went
-   * down after registering with master. Test will TIMEOUT if an error!!!! n
+   * down after registering with master. Test will TIMEOUT if an error!!!!
    */
   @Test
   public void testRSTerminationAfterRegisteringToMasterBeforeCreatingEphemeralNode()

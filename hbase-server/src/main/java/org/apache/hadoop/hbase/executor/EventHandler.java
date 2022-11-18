@@ -106,7 +106,7 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
   }
 
   /**
-   * This method is the main processing loop to be implemented by the various subclasses. n
+   * This method is the main processing loop to be implemented by the various subclasses.
    */
   public abstract void process() throws IOException;
 

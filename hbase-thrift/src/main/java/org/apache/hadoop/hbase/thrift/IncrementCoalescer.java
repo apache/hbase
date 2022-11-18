@@ -262,7 +262,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   /**
    * This method samples the incoming requests and, if selected, will check if the corePoolSize
-   * should be changed. n
+   * should be changed.
    */
   private void dynamicallySetCoreSize(int countersMapSize) {
     // Here we are using countersMapSize as a random number, meaning this

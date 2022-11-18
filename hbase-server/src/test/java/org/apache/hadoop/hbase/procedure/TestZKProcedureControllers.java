@@ -318,8 +318,8 @@ public class TestZKProcedureControllers {
   }
 
   /**
-   * n * @return a mock {@link ProcedureCoordinator} that just counts down the prepared and
-   * committed latch for called to the respective method
+   * @return a mock {@link ProcedureCoordinator} that just counts down the prepared and committed
+   *         latch for called to the respective method
    */
   private ProcedureCoordinator setupMockCoordinator(String operationName,
     final CountDownLatch prepared, final CountDownLatch committed,

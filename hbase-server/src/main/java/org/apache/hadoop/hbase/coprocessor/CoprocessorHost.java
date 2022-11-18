@@ -655,7 +655,7 @@ public abstract class CoprocessorHost<C extends Coprocessor, E extends Coprocess
    * may remain shutdown if any exception occurs during next coprocessor execution which prevent
    * master/regionserver stop or cluster shutdown. (Refer:
    * <a href="https://issues.apache.org/jira/browse/HBASE-16663">HBASE-16663</a>
-   * @return true if bypaas coprocessor execution, false if not. n
+   * @return true if bypaas coprocessor execution, false if not.
    */
   protected <O> boolean execShutdown(final ObserverOperation<O> observerOperation)
     throws IOException {

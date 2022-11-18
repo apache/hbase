@@ -148,7 +148,7 @@ public class ZNodePaths {
 
   /**
    * Parses the meta replicaId from the passed path.
-   * @param path the name of the full path which includes baseZNode. n
+   * @param path the name of the full path which includes baseZNode.
    */
   public int getMetaReplicaIdFromPath(String path) {
     // Extract the znode from path. The prefix is of the following format.
@@ -159,7 +159,7 @@ public class ZNodePaths {
 
   /**
    * Parse the meta replicaId from the passed znode
-   * @param znode the name of the znode, does not include baseZNode n
+   * @param znode the name of the znode, does not include baseZNode
    */
   public int getMetaReplicaIdFromZNode(String znode) {
     return znode.equals(metaZNodePrefix)

@@ -240,10 +240,10 @@ public class HttpServer implements FilterContainer {
     private int port = -1;
 
     /**
-     * Add an endpoint that the HTTP server should listen to. n * the endpoint of that the HTTP
-     * server should listen to. The scheme specifies the protocol (i.e. HTTP / HTTPS), the host
-     * specifies the binding address, and the port specifies the listening port. Unspecified or zero
-     * port means that the server can listen to any port.
+     * Add an endpoint that the HTTP server should listen to. the endpoint of that the HTTP server
+     * should listen to. The scheme specifies the protocol (i.e. HTTP / HTTPS), the host specifies
+     * the binding address, and the port specifies the listening port. Unspecified or zero port
+     * means that the server can listen to any port.
      */
     public Builder addEndpoint(URI endpoint) {
       endpoints.add(endpoint);

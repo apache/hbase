@@ -201,7 +201,7 @@ public interface Store {
   /**
    * Checks the underlying store files, and opens the files that have not been opened, and removes
    * the store file readers for store files no longer available. Mainly used by secondary region
-   * replicas to keep up to date with the primary region files. n
+   * replicas to keep up to date with the primary region files.
    */
   void refreshStoreFiles() throws IOException;
 

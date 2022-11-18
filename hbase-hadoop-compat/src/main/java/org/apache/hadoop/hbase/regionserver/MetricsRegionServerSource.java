@@ -54,7 +54,7 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updatePut(long t);
 
   /**
-   * Update the PutBatch time histogram if a batch contains a Put op n
+   * Update the PutBatch time histogram if a batch contains a Put op
    */
   void updatePutBatch(long t);
 
@@ -329,12 +329,18 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_HIT_COUNT_DESC = "Count of the hit on the block cache.";
   String BLOCK_CACHE_PRIMARY_HIT_COUNT = "blockCacheHitCountPrimary";
   String BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC = "Count of hit on primary replica in the block cache.";
+  String BLOCK_CACHE_HIT_CACHING_COUNT = "blockCacheHitCachingCount";
+  String BLOCK_CACHE_HIT_CACHING_COUNT_DESC =
+    "Count of the hit on the block cache, for cacheable requests.";
   String BLOCK_CACHE_MISS_COUNT = "blockCacheMissCount";
   String BLOCK_COUNT_MISS_COUNT_DESC =
     "Number of requests for a block that missed the block cache.";
   String BLOCK_CACHE_PRIMARY_MISS_COUNT = "blockCacheMissCountPrimary";
   String BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC =
     "Number of requests for a block of primary replica that missed the block cache.";
+  String BLOCK_CACHE_MISS_CACHING_COUNT = "blockCacheMissCachingCount";
+  String BLOCK_COUNT_MISS_CACHING_COUNT_DESC =
+    "Number of requests for a block that missed the block cache, for cacheable requests.";
   String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
   String BLOCK_CACHE_EVICTION_COUNT_DESC =
     "Count of the number of blocks evicted from the block cache."

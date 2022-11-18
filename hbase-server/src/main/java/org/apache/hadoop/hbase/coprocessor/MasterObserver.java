@@ -547,8 +547,8 @@ public interface MasterObserver {
 
   /**
    * Called prior to unassigning a given region.
-   * @param ctx the environment to interact with the framework and master n * @param force whether
-   *            to force unassignment or not
+   * @param ctx   the environment to interact with the framework and master
+   * @param force whether to force unassignment or not
    * @deprecated in 2.4.0. replaced by preUnassign(ctx, regionInfo). removed in hbase 3. until then
    *             safe to either leave implementation here or move it to the new method. default impl
    *             of that method calls this one.
@@ -559,7 +559,7 @@ public interface MasterObserver {
 
   /**
    * Called prior to unassigning a given region.
-   * @param ctx the environment to interact with the framework and master n
+   * @param ctx the environment to interact with the framework and master
    */
   default void preUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     final RegionInfo regionInfo) throws IOException {
@@ -568,8 +568,8 @@ public interface MasterObserver {
 
   /**
    * Called after the region unassignment has been requested.
-   * @param ctx the environment to interact with the framework and master n * @param force whether
-   *            to force unassignment or not
+   * @param ctx   the environment to interact with the framework and master
+   * @param force whether to force unassignment or not
    * @deprecated in 2.4.0. replaced by postUnassign(ctx, regionInfo). removed in hbase 3. until then
    *             safe to either leave implementation here or move it to the new method. default impl
    *             of that method calls this one.
@@ -580,7 +580,7 @@ public interface MasterObserver {
 
   /**
    * Called after the region unassignment has been requested.
-   * @param ctx the environment to interact with the framework and master n
+   * @param ctx the environment to interact with the framework and master
    */
   default void postUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     final RegionInfo regionInfo) throws IOException {
@@ -589,7 +589,7 @@ public interface MasterObserver {
 
   /**
    * Called prior to marking a given region as offline.
-   * @param ctx the environment to interact with the framework and master n
+   * @param ctx the environment to interact with the framework and master
    */
   default void preRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     final RegionInfo regionInfo) throws IOException {
@@ -597,7 +597,7 @@ public interface MasterObserver {
 
   /**
    * Called after the region has been marked offline.
-   * @param ctx the environment to interact with the framework and master n
+   * @param ctx the environment to interact with the framework and master
    */
   default void postRegionOffline(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     final RegionInfo regionInfo) throws IOException {
@@ -677,7 +677,7 @@ public interface MasterObserver {
 
   /**
    * This will be called before update META step as part of split transaction.
-   * @param ctx the environment to interact with the framework and master nn
+   * @param ctx the environment to interact with the framework and master
    */
   default void preSplitRegionBeforeMETAAction(
     final ObserverContext<MasterCoprocessorEnvironment> ctx, final byte[] splitKey,
@@ -1421,67 +1421,72 @@ public interface MasterObserver {
   }
 
   /**
-   * Called before remove a replication peer n * @param peerId a short name that identifies the peer
+   * Called before remove a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void preRemoveReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called after remove a replication peer n * @param peerId a short name that identifies the peer
+   * Called after remove a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void postRemoveReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called before enable a replication peer n * @param peerId a short name that identifies the peer
+   * Called before enable a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void preEnableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called after enable a replication peer n * @param peerId a short name that identifies the peer
+   * Called after enable a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void postEnableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called before disable a replication peer n * @param peerId a short name that identifies the
-   * peer
+   * Called before disable a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void preDisableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called after disable a replication peer n * @param peerId a short name that identifies the peer
+   * Called after disable a replication peer
+   * @param peerId a short name that identifies the peer
    */
   default void postDisableReplicationPeer(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called before get the configured ReplicationPeerConfig for the specified peer n * @param peerId
-   * a short name that identifies the peer
+   * Called before get the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
    */
   default void preGetReplicationPeerConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called after get the configured ReplicationPeerConfig for the specified peer n * @param peerId
-   * a short name that identifies the peer
+   * Called after get the configured ReplicationPeerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
    */
   default void postGetReplicationPeerConfig(final ObserverContext<MasterCoprocessorEnvironment> ctx,
     String peerId) throws IOException {
   }
 
   /**
-   * Called before update peerConfig for the specified peer n * @param peerId a short name that
-   * identifies the peer
+   * Called before update peerConfig for the specified peer
+   * @param peerId a short name that identifies the peer
    */
   default void preUpdateReplicationPeerConfig(
     final ObserverContext<MasterCoprocessorEnvironment> ctx, String peerId,

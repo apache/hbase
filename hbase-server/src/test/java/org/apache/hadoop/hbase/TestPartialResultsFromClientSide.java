@@ -138,7 +138,7 @@ public class TestPartialResultsFromClientSide {
 
   /**
    * Ensure that the expected key values appear in a result returned from a scanner that is
-   * combining partial results into complete results n
+   * combining partial results into complete results
    */
   @Test
   public void testExpectedValuesOfPartialResults() throws Exception {
@@ -172,7 +172,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Ensure that we only see Results marked as partial when the allowPartial flag is set n
+   * Ensure that we only see Results marked as partial when the allowPartial flag is set
    */
   @Test
   public void testAllowPartialResults() throws Exception {
@@ -204,7 +204,7 @@ public class TestPartialResultsFromClientSide {
   /**
    * Ensure that the results returned from a scanner that retrieves all results in a single RPC call
    * matches the results that are returned from a scanner that must incrementally combine partial
-   * results into complete results. A variety of scan configurations can be tested n
+   * results into complete results. A variety of scan configurations can be tested
    */
   @Test
   public void testEquivalenceOfScanResults() throws Exception {
@@ -241,7 +241,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Order of cells in partial results matches the ordering of cells from complete results n
+   * Order of cells in partial results matches the ordering of cells from complete results
    */
   @Test
   public void testOrderingOfCellsInPartialResults() throws Exception {
@@ -313,7 +313,7 @@ public class TestPartialResultsFromClientSide {
 
   /**
    * Setting the max result size allows us to control how many cells we expect to see on each call
-   * to next on the scanner. Test a variety of different sizes for correctness n
+   * to next on the scanner. Test a variety of different sizes for correctness
    */
   @Test
   public void testExpectedNumberOfCellsPerPartialResult() throws Exception {
@@ -365,7 +365,7 @@ public class TestPartialResultsFromClientSide {
   /**
    * @return The approximate heap size of a cell in the test table. All cells should have
    *         approximately the same heap size, so the value is cached to avoid repeating the
-   *         calculation n
+   *         calculation
    */
   private long getCellHeapSize() throws Exception {
     if (CELL_HEAP_SIZE == -1) {
@@ -393,8 +393,8 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * n * @return the result size that should be used in {@link Scan#setMaxResultSize(long)} if you
-   * want the server to return exactly numberOfCells cells n
+   * @return the result size that should be used in {@link Scan#setMaxResultSize(long)} if you want
+   *         the server to return exactly numberOfCells cells
    */
   private long getResultSizeForNumberOfCells(int numberOfCells) throws Exception {
     return getCellHeapSize() * numberOfCells;
@@ -442,7 +442,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Test the method {@link Result#createCompleteResult(Iterable)} n
+   * Test the method {@link Result#createCompleteResult(Iterable)}
    */
   @Test
   public void testPartialResultsReassembly() throws Exception {
@@ -543,7 +543,7 @@ public class TestPartialResultsFromClientSide {
    * Examine the interaction between the maxResultSize and caching. If the caching limit is reached
    * before the maxResultSize limit, we should not see partial results. On the other hand, if the
    * maxResultSize limit is reached before the caching limit, it is likely that partial results will
-   * be seen. n
+   * be seen.
    */
   @Test
   public void testPartialResultsAndCaching() throws Exception {
@@ -556,7 +556,7 @@ public class TestPartialResultsFromClientSide {
 
   /**
    * @param resultSizeRowLimit The row limit that will be enforced through maxResultSize
-   * @param cachingRowLimit    The row limit that will be enforced through caching n
+   * @param cachingRowLimit    The row limit that will be enforced through caching
    */
   public void testPartialResultsAndCaching(int resultSizeRowLimit, int cachingRowLimit)
     throws Exception {
@@ -636,7 +636,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Verifies that result contains all the key values within expKvList. Fails the test otherwise nnn
+   * Verifies that result contains all the key values within expKvList. Fails the test otherwise
    */
   static void verifyResult(Result result, List<Cell> expKvList, String msg) {
     if (LOG.isInfoEnabled()) {
@@ -662,7 +662,7 @@ public class TestPartialResultsFromClientSide {
   }
 
   /**
-   * Compares two results and fails the test if the results are different nnn
+   * Compares two results and fails the test if the results are different
    */
   static void compareResults(Result r1, Result r2, final String message) {
     if (LOG.isInfoEnabled()) {
@@ -771,7 +771,7 @@ public class TestPartialResultsFromClientSide {
    * Test partial Result re-assembly in the presence of different filters. The Results from the
    * partial scanner should match the Results returned from a scanner that receives all of the
    * results in one RPC to the server. The partial scanner is tested with a variety of different
-   * result sizes (all of which are less than the size necessary to fetch an entire row) n
+   * result sizes (all of which are less than the size necessary to fetch an entire row)
    */
   @Test
   public void testPartialResultsWithColumnFilter() throws Exception {

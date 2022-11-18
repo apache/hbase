@@ -1442,7 +1442,7 @@ public class HFileBlock implements Cacheable {
       boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
       if (!pread) {
         // Seek + read. Better for scanning.
-        HFileUtil.seekOnMultipleSources(istream, fileOffset);
+        istream.seek(fileOffset);
         long realOffset = istream.getPos();
         if (realOffset != fileOffset) {
           throw new IOException("Tried to seek to " + fileOffset + " to read " + size

@@ -39,7 +39,6 @@ public interface ReplicationSinkService extends ReplicationService {
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
    *                                   directory required for replicating hfiles
    * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
-   *                                   n
    */
   void replicateLogEntries(List<WALEntry> entries, CellScanner cells, String replicationClusterId,
     String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath) throws IOException;

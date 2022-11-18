@@ -76,7 +76,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
   static class ProcessContentsMapper extends TableMapper<ImmutableBytesWritable, Put> {
 
     /**
-     * Pass the key, and reversed value to reduce nnnn
+     * Pass the key, and reversed value to reduce
      */
     @Override
     public void map(ImmutableBytesWritable key, Result value, Context context)
@@ -136,7 +136,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
   }
 
   /**
-   * Verify scan counters are emitted from the job nn
+   * Verify scan counters are emitted from the job
    */
   private void verifyJobCountersAreEmitted(Job job) throws IOException {
     Counters counters = job.getCounters();

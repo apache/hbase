@@ -195,7 +195,7 @@ public class TestOpenTableInCoprocessor {
   /**
    * Count the number of keyvalue in the table. Scans all possible versions
    * @param table table to scan
-   * @return number of keyvalues over all rows in the table n
+   * @return number of keyvalues over all rows in the table
    */
   private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();

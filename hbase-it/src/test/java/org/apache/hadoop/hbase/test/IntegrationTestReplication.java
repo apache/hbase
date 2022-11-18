@@ -185,7 +185,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     /**
      * This tears down any tables that existed from before and rebuilds the tables and schemas on
      * the source cluster. It then sets up replication from the source to the sink cluster by using
-     * the {@link org.apache.hadoop.hbase.client.replication.ReplicationAdmin} connection. n
+     * the {@link org.apache.hadoop.hbase.client.replication.ReplicationAdmin} connection.
      */
     protected void setupTablesAndReplication() throws Exception {
       TableName tableName = getTableName(source.getConfiguration());
@@ -261,7 +261,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
     /**
      * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Generator} in the
-     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication. n
+     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication.
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
@@ -282,7 +282,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Verify} in the sink
      * cluster. If replication is working properly the data written at the source cluster should be
      * available in the sink cluster after a reasonable gap
-     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster n
+     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);

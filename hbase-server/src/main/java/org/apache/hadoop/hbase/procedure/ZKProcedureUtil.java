@@ -218,7 +218,7 @@ public abstract class ZKProcedureUtil extends ZKListener implements Closeable {
   // --------------------------------------------------------------------------
   /**
    * Recursively print the current state of ZK (non-transactional)
-   * @param root name of the root directory in zk to print n
+   * @param root name of the root directory in zk to print
    */
   void logZKTree(String root) {
     if (!LOG.isDebugEnabled()) return;

@@ -87,7 +87,7 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
   void updateClusterMetrics(ClusterMetrics metrics);
 
   /**
-   * Set the master service. n
+   * Set the master service.
    */
   void setMasterServices(MasterServices masterServices);
 
@@ -101,14 +101,16 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
     throws IOException;
 
   /**
-   * Perform a Round Robin assignment of regions. nn * @return Map of servername to regioninfos
+   * Perform a Round Robin assignment of regions.
+   * @return Map of servername to regioninfos
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
     List<ServerName> servers) throws HBaseIOException;
 
   /**
-   * Assign regions to the previously hosting region server nn * @return List of plans
+   * Assign regions to the previously hosting region server
+   * @return List of plans
    */
   @NonNull
   Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
@@ -116,28 +118,28 @@ public interface LoadBalancer extends Stoppable, ConfigurationObserver {
 
   /**
    * Get a random region server from the list
-   * @param regionInfo Region for which this selection is being done. nn
+   * @param regionInfo Region for which this selection is being done.
    */
   ServerName randomAssignment(RegionInfo regionInfo, List<ServerName> servers)
     throws HBaseIOException;
 
   /**
-   * Initialize the load balancer. Must be called after setters. n
+   * Initialize the load balancer. Must be called after setters.
    */
   void initialize() throws HBaseIOException;
 
   /**
-   * Marks the region as online at balancer. nn
+   * Marks the region as online at balancer.
    */
   void regionOnline(RegionInfo regionInfo, ServerName sn);
 
   /**
-   * Marks the region as offline at balancer. n
+   * Marks the region as offline at balancer.
    */
   void regionOffline(RegionInfo regionInfo);
 
   /*
-   * Notification that config has changed n
+   * Notification that config has changed
    */
   @Override
   void onConfigurationChange(Configuration conf);

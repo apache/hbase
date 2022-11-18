@@ -45,7 +45,7 @@ public class AccessControlClient {
   /**
    * Return true if authorization is supported and enabled
    * @param connection The connection to use
-   * @return true if authorization is supported and enabled, false otherwise n
+   * @return true if authorization is supported and enabled, false otherwise
    */
   public static boolean isAuthorizationEnabled(Connection connection) throws IOException {
     return connection.getAdmin().getSecurityCapabilities()
@@ -55,7 +55,7 @@ public class AccessControlClient {
   /**
    * Return true if cell authorization is supported and enabled
    * @param connection The connection to use
-   * @return true if cell authorization is supported and enabled, false otherwise n
+   * @return true if cell authorization is supported and enabled, false otherwise
    */
   public static boolean isCellAuthorizationEnabled(Connection connection) throws IOException {
     return connection.getAdmin().getSecurityCapabilities()
@@ -146,7 +146,7 @@ public class AccessControlClient {
 
   /**
    * Grant global permissions for the specified user. If permissions for the specified user exists,
-   * later granted permissions will override previous granted permissions. nnnn
+   * later granted permissions will override previous granted permissions.
    */
   public static void grant(Connection connection, final String userName,
     final Permission.Action... actions) throws Throwable {
@@ -162,7 +162,7 @@ public class AccessControlClient {
 
   /**
    * Revokes the permission on the table
-   * @param connection The Connection instance to use nnnnnn
+   * @param connection The Connection instance to use
    */
   public static void revoke(Connection connection, final TableName tableName, final String username,
     final byte[] family, final byte[] qualifier, final Permission.Action... actions)
@@ -173,7 +173,7 @@ public class AccessControlClient {
 
   /**
    * Revokes the permission on the namespace for the specified user.
-   * @param connection The Connection instance to use nnnn
+   * @param connection The Connection instance to use
    */
   public static void revoke(Connection connection, final String namespace, final String userName,
     final Permission.Action... actions) throws Throwable {
@@ -197,7 +197,7 @@ public class AccessControlClient {
    * along with the list of superusers would be returned. Else, no rows get returned.
    * @param connection The Connection instance to use
    * @param tableRegex The regular expression string to match against
-   * @return List of UserPermissions n
+   * @return List of UserPermissions
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
     throws Throwable {

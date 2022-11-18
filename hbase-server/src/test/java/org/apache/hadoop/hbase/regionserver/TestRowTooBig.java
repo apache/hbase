@@ -70,7 +70,7 @@ public class TestRowTooBig {
    * Usecase: - create a row with 5 large cells (5 Mb each) - flush memstore but don't compact
    * storefiles. - try to Get whole row. OOME happened before we actually get to reading results,
    * but during seeking, as each StoreFile gets it's own scanner, and each scanner seeks after the
-   * first KV. n
+   * first KV.
    */
   @Test(expected = RowTooBigException.class)
   public void testScannersSeekOnFewLargeCells() throws IOException {
@@ -109,7 +109,7 @@ public class TestRowTooBig {
 
   /**
    * Usecase: - create a row with 1M cells, 10 bytes in each - flush & run major compaction - try to
-   * Get whole row. OOME happened in StoreScanner.next(..). n
+   * Get whole row. OOME happened in StoreScanner.next(..).
    */
   @Test(expected = RowTooBigException.class)
   public void testScanAcrossManySmallColumns() throws IOException {

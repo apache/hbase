@@ -39,20 +39,20 @@ public interface HFileDataBlockEncoder {
   /**
    * Starts encoding for a block of KeyValues. Call
    * {@link #endBlockEncoding(HFileBlockEncodingContext, DataOutputStream, byte[], BlockType)} to
-   * finish encoding of a block. nnn
+   * finish encoding of a block.
    */
   void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException;
 
   /**
-   * Encodes a KeyValue. nnnn
+   * Encodes a KeyValue.
    */
   void encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
     throws IOException;
 
   /**
    * Ends encoding for a block of KeyValues. Gives a chance for the encoder to do the finishing
-   * stuff for the encoded block. It must be called at the end of block encoding. nnnnn
+   * stuff for the encoded block. It must be called at the end of block encoding.
    */
   void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
     byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException;

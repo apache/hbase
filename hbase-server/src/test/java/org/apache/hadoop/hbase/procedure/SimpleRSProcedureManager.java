@@ -140,7 +140,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
 
     /**
      * Wait for all of the currently outstanding tasks submitted via {@link #submitTask(Callable)}
-     * @return <tt>true</tt> on success, <tt>false</tt> otherwise n
+     * @return <tt>true</tt> on success, <tt>false</tt> otherwise
      */
     public boolean waitForOutstandingTasks() throws ForeignException {
       LOG.debug("Waiting for procedure to finish.");

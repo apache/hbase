@@ -51,8 +51,11 @@ public final class MobFileName {
   public static final String REGION_SEP = "_";
 
   /**
-   * n * The start key. n * The string of the latest timestamp of cells in this file, the format is
-   * yyyymmdd. n * The uuid
+   * Creates an instance of MobFileName
+   * @param startKey   The start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
+   * @param uuid       The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(byte[] startKey, String date, String uuid, String regionName) {
@@ -64,8 +67,11 @@ public final class MobFileName {
   }
 
   /**
-   * n * The md5 hex string of the start key. n * The string of the latest timestamp of cells in
-   * this file, the format is yyyymmdd. n * The uuid
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
+   * @param uuid       The uuid
    * @param regionName name of a region, where this file was created during flush or compaction.
    */
   private MobFileName(String startKey, String date, String uuid, String regionName) {
@@ -77,8 +83,10 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
-   * the latest timestamp of cells in this file, the format is yyyymmdd.
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
    * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
@@ -88,8 +96,10 @@ public final class MobFileName {
   }
 
   /**
-   * Creates an instance of MobFileName n * The md5 hex string of the start key. n * The string of
-   * the latest timestamp of cells in this file, the format is yyyymmdd.
+   * Creates an instance of MobFileName
+   * @param startKey   The md5 hex string of the start key.
+   * @param date       The string of the latest timestamp of cells in this file, the format is
+   *                   yyyymmdd.
    * @param uuid       The uuid.
    * @param regionName name of a region, where this file was created during flush or compaction.
    * @return An instance of a MobFileName.
@@ -120,7 +130,7 @@ public final class MobFileName {
 
   /**
    * get startKey from MobFileName.
-   * @param fileName file name. n
+   * @param fileName file name.
    */
   public static String getStartKeyFromName(final String fileName) {
     return fileName.substring(0, STARTKEY_END_INDEX);
@@ -128,7 +138,7 @@ public final class MobFileName {
 
   /**
    * get date from MobFileName.
-   * @param fileName file name. n
+   * @param fileName file name.
    */
   public static String getDateFromName(final String fileName) {
     return fileName.substring(STARTKEY_END_INDEX, DATE_END_INDEX);

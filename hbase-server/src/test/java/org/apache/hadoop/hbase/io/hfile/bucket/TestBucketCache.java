@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -120,7 +121,6 @@ public class TestBucketCache {
       int writerThreads, int writerQLen, String persistencePath) throws IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreads, writerQLen,
         persistencePath);
-      super.wait_when_cache = true;
     }
 
     @Override
@@ -242,8 +242,8 @@ public class TestBucketCache {
   // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
   // threads will flush it to the bucket and put reference entry in backingMap.
   private void cacheAndWaitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey,
-    Cacheable block) throws InterruptedException {
-    cache.cacheBlock(cacheKey, block);
+    Cacheable block, boolean waitWhenCache) throws InterruptedException {
+    cache.cacheBlock(cacheKey, block, false, waitWhenCache);
     waitUntilFlushedToBucket(cache, cacheKey);
   }
 
@@ -251,7 +251,7 @@ public class TestBucketCache {
   public void testMemoryLeak() throws Exception {
     final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
-      new CacheTestUtils.ByteArrayCacheable(new byte[10]));
+      new CacheTestUtils.ByteArrayCacheable(new byte[10]), true);
     long lockId = cache.backingMap.get(cacheKey).offset();
     ReentrantReadWriteLock lock = cache.offsetLock.getLock(lockId);
     lock.writeLock().lock();
@@ -266,7 +266,7 @@ public class TestBucketCache {
     cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true, true);
     assertEquals(0, cache.getBlockCount());
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
-      new CacheTestUtils.ByteArrayCacheable(new byte[10]));
+      new CacheTestUtils.ByteArrayCacheable(new byte[10]), true);
     assertEquals(1, cache.getBlockCount());
     lock.writeLock().unlock();
     evictThread.join();
@@ -312,7 +312,7 @@ public class TestBucketCache {
       bucketCache.cacheBlock(block.getBlockName(), block.getBlock());
     }
     for (HFileBlockPair block : blocks) {
-      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
+      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock(), false);
     }
     usedSize = bucketCache.getAllocator().getUsedSize();
     assertNotEquals(0, usedSize);
@@ -691,7 +691,7 @@ public class TestBucketCache {
 
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
         cacheAndWaitUntilFlushedToBucket(bucketCache, hfileBlockPair.getBlockName(),
-          hfileBlockPair.getBlock());
+          hfileBlockPair.getBlock(), false);
       }
       usedByteSize = bucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedByteSize);
@@ -716,4 +716,58 @@ public class TestBucketCache {
     }
   }
 
+  @Test
+  public void testBlockAdditionWaitWhenCache() throws Exception {
+    try {
+      final Path dataTestDir = createAndGetTestDir();
+
+      String ioEngineName = "file:" + dataTestDir + "/bucketNoRecycler.cache";
+      String persistencePath = dataTestDir + "/bucketNoRecycler.persistence";
+
+      BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, 1, 1, persistencePath);
+      long usedByteSize = bucketCache.getAllocator().getUsedSize();
+      assertEquals(0, usedByteSize);
+
+      HFileBlockPair[] hfileBlockPairs =
+        CacheTestUtils.generateHFileBlocks(constructedBlockSize, 10);
+      // Add blocks
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        bucketCache.cacheBlock(hfileBlockPair.getBlockName(), hfileBlockPair.getBlock(), false,
+          true);
+      }
+
+      // Max wait for 10 seconds.
+      long timeout = 10000;
+      // Wait for blocks size to match the number of blocks.
+      while (bucketCache.backingMap.size() != 10) {
+        if (timeout <= 0) break;
+        Threads.sleep(100);
+        timeout -= 100;
+      }
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        assertTrue(bucketCache.backingMap.containsKey(hfileBlockPair.getBlockName()));
+      }
+      usedByteSize = bucketCache.getAllocator().getUsedSize();
+      assertNotEquals(0, usedByteSize);
+      // persist cache to file
+      bucketCache.shutdown();
+      assertTrue(new File(persistencePath).exists());
+
+      // restore cache from file
+      bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
+        constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+      assertFalse(new File(persistencePath).exists());
+      assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
+
+      for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
+        BlockCacheKey blockCacheKey = hfileBlockPair.getBlockName();
+        bucketCache.evictBlock(blockCacheKey);
+      }
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+      assertEquals(0, bucketCache.backingMap.size());
+    } finally {
+      HBASE_TESTING_UTILITY.cleanupTestDir();
+    }
+  }
 }

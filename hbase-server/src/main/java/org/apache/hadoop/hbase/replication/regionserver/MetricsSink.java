@@ -62,7 +62,7 @@ public class MetricsSink {
   }
 
   /**
-   * Convience method to change metrics when a batch of operations are applied. n
+   * Convience method to change metrics when a batch of operations are applied.
    */
   public void applyBatch(long batchSize) {
     mss.incrAppliedBatches(1);
@@ -87,14 +87,14 @@ public class MetricsSink {
   }
 
   /**
-   * Get the count of the failed bathes n
+   * Get the count of the failed bathes
    */
   protected long getFailedBatches() {
     return mss.getFailedBatches();
   }
 
   /**
-   * Get the Age of Last Applied Op n
+   * Get the Age of Last Applied Op
    */
   public long getAgeOfLastAppliedOp() {
     return mss.getLastAppliedOpAge();
@@ -122,14 +122,14 @@ public class MetricsSink {
   }
 
   /**
-   * Gets the time stamp from when the Sink was initialized. n
+   * Gets the time stamp from when the Sink was initialized.
    */
   public long getStartTimestamp() {
     return this.startTimestamp;
   }
 
   /**
-   * Gets the total number of OPs delivered to this sink. n
+   * Gets the total number of OPs delivered to this sink.
    */
   public long getAppliedOps() {
     return this.mss.getSinkAppliedOps();

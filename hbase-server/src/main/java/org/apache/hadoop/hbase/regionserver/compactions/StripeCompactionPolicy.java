@@ -421,6 +421,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     return totalSize;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "FL_FLOATS_AS_LOOP_COUNTERS",
+      justification = "valid usage")
   private Pair<Long, Integer> estimateTargetKvs(Collection<HStoreFile> files, double splitCount) {
     // If the size is larger than what we target, we don't want to split into proportionally
     // larger parts and then have to split again very soon. So, we will increase the multiplier
@@ -433,7 +435,10 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     while (ratio > 1.0) {
       // Ratio of real to desired size if we increase the multiplier.
       double newRatio = totalSize / ((splitCount + 1.0) * targetPartSize);
-      if ((1.0 / newRatio) >= ratio) break; // New ratio is < 1.0, but further than the last one.
+      if ((1.0 / newRatio) >= ratio) {
+        // New ratio is < 1.0, but further than the last one.
+        break;
+      }
       ratio = newRatio;
       splitCount += 1.0;
     }

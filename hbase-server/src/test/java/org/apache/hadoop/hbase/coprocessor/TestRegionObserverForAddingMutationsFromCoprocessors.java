@@ -104,7 +104,7 @@ public class TestRegionObserverForAddingMutationsFromCoprocessors {
   }
 
   /**
-   * Test various multiput operations. n
+   * Test various multiput operations.
    */
   @Test
   public void testMulti() throws Exception {

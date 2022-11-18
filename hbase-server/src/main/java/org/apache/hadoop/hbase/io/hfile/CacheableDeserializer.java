@@ -31,7 +31,7 @@ public interface CacheableDeserializer<T extends Cacheable> {
   /**
    * @param b         ByteBuff to deserialize the Cacheable.
    * @param allocator to manage NIO ByteBuffers for future allocation or de-allocation.
-   * @return T the deserialized object. n
+   * @return T the deserialized object.
    */
   T deserialize(ByteBuff b, ByteBuffAllocator allocator) throws IOException;
 

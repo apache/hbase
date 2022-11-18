@@ -169,8 +169,9 @@ public class ImmutableBytesWritable implements WritableComparable<ImmutableBytes
   }
 
   /**
-   * Compares the bytes in this object to the specified byte array n * @return Positive if left is
-   * bigger than right, 0 if they are equal, and negative if left is smaller than right.
+   * Compares the bytes in this object to the specified byte array
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
    */
   public int compareTo(final byte[] that) {
     return WritableComparator.compareBytes(this.bytes, this.offset, this.length, that, 0,

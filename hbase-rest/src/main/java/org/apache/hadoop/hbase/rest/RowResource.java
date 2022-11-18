@@ -69,7 +69,7 @@ public class RowResource extends ResourceBase {
   private boolean returnResult = false;
 
   /**
-   * Constructor nnnnnn
+   * Constructor
    */
   public RowResource(TableResource tableResource, String rowspec, String versions, String check,
     String returnResult) throws IOException {

@@ -120,7 +120,7 @@ public class TestFilterList {
   }
 
   /**
-   * Test "must pass one" n
+   * Test "must pass one"
    */
   @Test
   public void testMPONE() throws Exception {
@@ -177,7 +177,7 @@ public class TestFilterList {
   }
 
   /**
-   * Test "must pass all" n
+   * Test "must pass all"
    */
   @Test
   public void testMPALL() throws Exception {
@@ -218,7 +218,7 @@ public class TestFilterList {
   }
 
   /**
-   * Test list ordering n
+   * Test list ordering
    */
   @Test
   public void testOrdering() throws Exception {
@@ -275,7 +275,7 @@ public class TestFilterList {
 
   /**
    * When we do a "MUST_PASS_ONE" (a logical 'OR') of the above two filters we expect to get the
-   * same result as the 'prefix' only result. n
+   * same result as the 'prefix' only result.
    */
   @Test
   public void testFilterListTwoFiltersMustPassOne() throws Exception {
@@ -307,7 +307,7 @@ public class TestFilterList {
 
   /**
    * When we do a "MUST_PASS_ONE" (a logical 'OR') of the two filters we expect to get the same
-   * result as the inclusive stop result. n
+   * result as the inclusive stop result.
    */
   @Test
   public void testFilterListWithInclusiveStopFilterMustPassOne() throws Exception {
@@ -344,7 +344,7 @@ public class TestFilterList {
   }
 
   /**
-   * Test serialization n
+   * Test serialization
    */
   @Test
   public void testSerialization() throws Exception {
@@ -366,7 +366,7 @@ public class TestFilterList {
   }
 
   /**
-   * Test filterCell logic. n
+   * Test filterCell logic.
    */
   @Test
   public void testFilterCell() throws Exception {

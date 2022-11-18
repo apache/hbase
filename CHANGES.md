@@ -20,6 +20,86 @@
 # Be careful doing manual edits in this file. Do not change format
 # of release header or remove the below marker. This file is generated.
 # DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.5.1 - 2022-10-21
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27314](https://issues.apache.org/jira/browse/HBASE-27314) | Make index block be customized and configured |  Major | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27159](https://issues.apache.org/jira/browse/HBASE-27159) | Emit source metrics for BlockCacheExpressHitPercent |  Minor | BlockCache, metrics |
+| [HBASE-27339](https://issues.apache.org/jira/browse/HBASE-27339) | Improve sasl connection failure log message to include server |  Minor | Client |
+| [HBASE-27365](https://issues.apache.org/jira/browse/HBASE-27365) | Minimise block addition failures due to no space in bucket cache writers queue by introducing wait time |  Major | BucketCache |
+| [HBASE-27391](https://issues.apache.org/jira/browse/HBASE-27391) | Downgrade ERROR log to DEBUG in ConnectionUtils.updateStats |  Major | . |
+| [HBASE-27370](https://issues.apache.org/jira/browse/HBASE-27370) | Avoid decompressing blocks when reading from bucket cache prefetch threads |  Major | . |
+| [HBASE-27361](https://issues.apache.org/jira/browse/HBASE-27361) | Add .flattened-pom.xml to .gitignore |  Major | build |
+| [HBASE-27224](https://issues.apache.org/jira/browse/HBASE-27224) | HFile tool statistic sampling produces misleading results |  Major | . |
+| [HBASE-27340](https://issues.apache.org/jira/browse/HBASE-27340) | Artifacts with resolved profiles |  Minor | build, pom |
+| [HBASE-27332](https://issues.apache.org/jira/browse/HBASE-27332) | Remove RejectedExecutionHandler for long/short compaction thread pools |  Minor | Compaction |
+| [HBASE-27338](https://issues.apache.org/jira/browse/HBASE-27338) | brotli compression lib tests fail on arm64 |  Minor | . |
+| [HBASE-27320](https://issues.apache.org/jira/browse/HBASE-27320) | hide some sensitive configuration information in the UI |  Minor | security, UI |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27426](https://issues.apache.org/jira/browse/HBASE-27426) | Region server abort with failing to list region servers. |  Major | Zookeeper |
+| [HBASE-27432](https://issues.apache.org/jira/browse/HBASE-27432) | TestUsersOperationsWithSecureHadoop fails affter HBASE-27411 |  Major | . |
+| [HBASE-27420](https://issues.apache.org/jira/browse/HBASE-27420) | Failure while connecting to zk if HBase is running in standalone mode in a container |  Minor | Zookeeper |
+| [HBASE-27424](https://issues.apache.org/jira/browse/HBASE-27424) | Upgrade Jettison for CVE-2022-40149/40150 |  Major | . |
+| [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
+| [HBASE-27407](https://issues.apache.org/jira/browse/HBASE-27407) | Fixing check for "description" request param in JMXJsonServlet.java |  Minor | metrics |
+| [HBASE-27409](https://issues.apache.org/jira/browse/HBASE-27409) | Fix the javadoc for WARCRecord |  Major | documentation |
+| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | . |
+| [HBASE-27368](https://issues.apache.org/jira/browse/HBASE-27368) | Do not need to throw IllegalStateException when peer is not active in ReplicationSource.initialize |  Major | regionserver, Replication |
+| [HBASE-27352](https://issues.apache.org/jira/browse/HBASE-27352) | Quoted string argument with spaces passed from command line are propagated wrongly to the underlying java class |  Minor | shell |
+| [HBASE-27362](https://issues.apache.org/jira/browse/HBASE-27362) | Fix some tests hung by CompactSplit.requestCompactionInternal ignoring compactionsEnabled check |  Major | Compaction |
+| [HBASE-27353](https://issues.apache.org/jira/browse/HBASE-27353) | opentelemetry-context jar missing at runtime causes MR jobs to fail |  Minor | . |
+| [HBASE-22939](https://issues.apache.org/jira/browse/HBASE-22939) | SpaceQuotas- Bulkload from different hdfs failed when space quotas are turned on. |  Major | . |
+| [HBASE-27336](https://issues.apache.org/jira/browse/HBASE-27336) | The region visualizer shows 'undefined' region server |  Major | master, UI |
+| [HBASE-27335](https://issues.apache.org/jira/browse/HBASE-27335) | HBase shell hang for a minute when quiting |  Major | shell |
+| [HBASE-27152](https://issues.apache.org/jira/browse/HBASE-27152) | Under compaction mark may leak |  Major | Compaction |
+| [HBASE-25922](https://issues.apache.org/jira/browse/HBASE-25922) | Disabled sanity checks ignored on snapshot restore |  Minor | conf, snapshots |
+| [HBASE-27246](https://issues.apache.org/jira/browse/HBASE-27246) | RSGroupMappingScript#getRSGroup has thread safety problem |  Major | rsgroup |
+| [HBASE-25166](https://issues.apache.org/jira/browse/HBASE-25166) | MobFileCompactionChore is closing the master's shared cluster connection |  Major | master |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27360](https://issues.apache.org/jira/browse/HBASE-27360) | The trace related assertions are flaky for async client tests |  Major | test, tracing |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27421](https://issues.apache.org/jira/browse/HBASE-27421) | Bump spotless plugin to 2.27.2 and reimplement the 'Remove unhelpful javadoc stubs' rule |  Major | documentation, pom |
+| [HBASE-27401](https://issues.apache.org/jira/browse/HBASE-27401) | Clean up current broken 'n's in our javadoc |  Major | documentation |
+| [HBASE-27403](https://issues.apache.org/jira/browse/HBASE-27403) | Remove 'Remove unhelpful javadoc stubs' spotless rule for now |  Major | documentation, pom |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27431](https://issues.apache.org/jira/browse/HBASE-27431) | Remove TestRemoteTable.testLimitedScan |  Trivial | REST, test |
+| [HBASE-27411](https://issues.apache.org/jira/browse/HBASE-27411) |  Update and clean up bcprov-jdk15on dependency |  Minor | build |
+| [HBASE-27372](https://issues.apache.org/jira/browse/HBASE-27372) | Update java versions in our Dockerfiles |  Major | build, scripts |
+| [HBASE-27373](https://issues.apache.org/jira/browse/HBASE-27373) | Fix new spotbugs warnings after upgrading spotbugs to 4.7.2 |  Major | . |
+| [HBASE-27371](https://issues.apache.org/jira/browse/HBASE-27371) | Bump spotbugs version |  Major | build, pom |
+
+
 ## Release 2.5.0 - Unreleased (as of 2022-08-23)
 
 

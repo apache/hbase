@@ -161,7 +161,8 @@ class SequenceIdAccounting {
   /**
    * We've been passed a new sequenceid for the region. Set it as highest seen for this region and
    * if we are to record oldest, or lowest sequenceids, save it as oldest seen if nothing currently
-   * older. nnn * @param lowest Whether to keep running account of oldest sequence id.
+   * older.
+   * @param lowest Whether to keep running account of oldest sequence id.
    */
   void update(byte[] encodedRegionName, Set<byte[]> families, long sequenceid,
     final boolean lowest) {
@@ -259,8 +260,8 @@ class SequenceIdAccounting {
   }
 
   /**
-   * n * @return New Map that has same keys as <code>src</code> but instead of a Map for a value, it
-   * instead has found the smallest sequence id and it returns that as the value instead.
+   * @return New Map that has same keys as <code>src</code> but instead of a Map for a value, it
+   *         instead has found the smallest sequence id and it returns that as the value instead.
    */
   private <T extends Map<?, Long>> Map<byte[], Long> flattenToLowestSequenceId(Map<byte[], T> src) {
     if (src == null || src.isEmpty()) {

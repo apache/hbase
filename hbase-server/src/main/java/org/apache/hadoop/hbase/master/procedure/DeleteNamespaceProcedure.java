@@ -189,7 +189,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * Action before any real action of deleting namespace.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private boolean prepareDelete(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(namespaceName) == false) {
@@ -224,7 +224,7 @@ public class DeleteNamespaceProcedure
   /**
    * delete the row from namespace table
    * @param env           MasterProcedureEnv
-   * @param namespaceName name of the namespace in string format n
+   * @param namespaceName name of the namespace in string format
    */
   protected static void deleteFromNSTable(final MasterProcedureEnv env, final String namespaceName)
     throws IOException {
@@ -233,7 +233,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * undo the delete
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void undoDeleteFromNSTable(final MasterProcedureEnv env) {
     try {
@@ -249,7 +249,7 @@ public class DeleteNamespaceProcedure
   /**
    * remove from ZooKeeper.
    * @param env           MasterProcedureEnv
-   * @param namespaceName name of the namespace in string format n
+   * @param namespaceName name of the namespace in string format
    */
   protected static void removeFromZKNamespaceManager(final MasterProcedureEnv env,
     final String namespaceName) throws IOException {
@@ -258,7 +258,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * undo the remove from ZooKeeper
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void undoRemoveFromZKNamespaceManager(final MasterProcedureEnv env) {
     try {
@@ -274,7 +274,7 @@ public class DeleteNamespaceProcedure
   /**
    * Delete the namespace directories from the file system
    * @param env           MasterProcedureEnv
-   * @param namespaceName name of the namespace in string format n
+   * @param namespaceName name of the namespace in string format
    */
   protected static void deleteDirectory(final MasterProcedureEnv env, final String namespaceName)
     throws IOException {
@@ -299,7 +299,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * undo delete directory
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void rollbackDeleteDirectory(final MasterProcedureEnv env) throws IOException {
     try {
@@ -313,7 +313,7 @@ public class DeleteNamespaceProcedure
   /**
    * remove quota for the namespace
    * @param env           MasterProcedureEnv
-   * @param namespaceName name of the namespace in string format n
+   * @param namespaceName name of the namespace in string format
    **/
   protected static void removeNamespaceQuota(final MasterProcedureEnv env,
     final String namespaceName) throws IOException {
@@ -322,7 +322,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * undo remove quota for the namespace
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void rollbacRemoveNamespaceQuota(final MasterProcedureEnv env) throws IOException {
     try {
@@ -339,7 +339,7 @@ public class DeleteNamespaceProcedure
 
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it. n
+   * retrieve it.
    */
   private Boolean isTraceEnabled() {
     if (traceEnabled == null) {

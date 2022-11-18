@@ -220,7 +220,7 @@ class SimpleRpcServerResponder extends Thread {
   /**
    * Process the response for this call. You need to have the lock on
    * {@link org.apache.hadoop.hbase.ipc.SimpleServerRpcConnection#responseWriteLock}
-   * @return true if we proceed the call fully, false otherwise. n
+   * @return true if we proceed the call fully, false otherwise.
    */
   private boolean processResponse(SimpleServerRpcConnection conn, RpcResponse resp)
     throws IOException {
@@ -255,8 +255,8 @@ class SimpleRpcServerResponder extends Thread {
 
   /**
    * Process all the responses for this connection
-   * @return true if all the calls were processed or that someone else is doing it. false if there *
-   *         is still some work to do. In this case, we expect the caller to delay us. n
+   * @return true if all the calls were processed or that someone else is doing it. false if there
+   *         is still some work to do. In this case, we expect the caller to delay us.
    */
   private boolean processAllResponses(final SimpleServerRpcConnection connection)
     throws IOException {

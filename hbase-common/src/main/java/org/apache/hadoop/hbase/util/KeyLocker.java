@@ -58,7 +58,7 @@ public class KeyLocker<K> {
     }, NB_CONCURRENT_LOCKS);
 
   /**
-   * Return a lock for the given key. The lock is already locked. n
+   * Return a lock for the given key. The lock is already locked.
    */
   public ReentrantLock acquireLock(K key) {
     if (key == null) throw new IllegalArgumentException("key must not be null");

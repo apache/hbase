@@ -174,7 +174,7 @@ public class TestFromClientSideScanExcpetion {
   /**
    * Tests the case where a Scan can throw an IOException in the middle of the seek / reseek leaving
    * the server side RegionScanner to be in dirty state. The client has to ensure that the
-   * ClientScanner does not get an exception and also sees all the data. nn
+   * ClientScanner does not get an exception and also sees all the data.
    */
   @Test
   public void testClientScannerIsResetWhenScanThrowsIOException()

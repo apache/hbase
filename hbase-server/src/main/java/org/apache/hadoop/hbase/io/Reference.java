@@ -67,23 +67,19 @@ public class Reference {
     bottom
   }
 
-  /**
-   * n * @return A {@link Reference} that points at top half of a an hfile
-   */
+  /** Returns A {@link Reference} that points at top half of a an hfile */
   public static Reference createTopReference(final byte[] splitRow) {
     return new Reference(splitRow, Range.top);
   }
 
-  /**
-   * n * @return A {@link Reference} that points at the bottom half of a an hfile
-   */
+  /** Returns A {@link Reference} that points at the bottom half of a an hfile */
   public static Reference createBottomReference(final byte[] splitRow) {
     return new Reference(splitRow, Range.bottom);
   }
 
   /**
    * Constructor
-   * @param splitRow This is row we are splitting around. n
+   * @param splitRow This is row we are splitting around.
    */
   Reference(final byte[] splitRow, final Range fr) {
     this.splitkey = splitRow == null ? null : KeyValueUtil.createFirstOnRow(splitRow).getKey();
@@ -102,15 +98,13 @@ public class Reference {
   }
 
   /**
-   * n
-   */
+   *   */
   public Range getFileRegion() {
     return this.region;
   }
 
   /**
-   * n
-   */
+   *   */
   public byte[] getSplitKey() {
     return splitkey;
   }
@@ -151,7 +145,8 @@ public class Reference {
   }
 
   /**
-   * Read a Reference from FileSystem. nn * @return New Reference made from passed <code>p</code> n
+   * Read a Reference from FileSystem.
+   * @return New Reference made from passed <code>p</code>
    */
   public static Reference read(final FileSystem fs, final Path p) throws IOException {
     InputStream in = fs.open(p);
@@ -198,7 +193,7 @@ public class Reference {
   /**
    * Use this when writing to a stream and you want to use the pb mergeDelimitedFrom (w/o the
    * delimiter, pb reads to EOF which may not be what you want).
-   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix. n
+   * @return This instance serialized as a delimited protobuf w/ a magic pb prefix.
    */
   byte[] toByteArray() throws IOException {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());

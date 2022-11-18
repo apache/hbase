@@ -101,8 +101,7 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   /**
-   * n * @deprecated since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()}
-   * instead.
+   * @deprecated since 2.0.0. Will be removed in 3.0.0. Use {@link #getCompareOperator()} instead.
    */
   @Deprecated
   public CompareOp getOperator() {

@@ -38,17 +38,17 @@ abstract class RetryingCallerInterceptorContext {
 
   /**
    * This prepares the context object by populating it with information specific to the
-   * implementation of the {@link RetryingCallerInterceptor} along with which this will be used. n *
-   * : The {@link RetryingCallable} that contains the information about the call that is being made.
+   * implementation of the {@link RetryingCallerInterceptor} along with which this will be used. :
+   * The {@link RetryingCallable} that contains the information about the call that is being made.
    * @return A new {@link RetryingCallerInterceptorContext} object that can be used for use in the
    *         current retrying call
    */
   public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable);
 
   /**
-   * Telescopic extension that takes which of the many retries we are currently in. n * : The
-   * {@link RetryingCallable} that contains the information about the call that is being made. n * :
-   * The retry number that we are currently in.
+   * Telescopic extension that takes which of the many retries we are currently in. : The
+   * {@link RetryingCallable} that contains the information about the call that is being made. : The
+   * retry number that we are currently in.
    * @return A new context object that can be used for use in the current retrying call
    */
   public abstract RetryingCallerInterceptorContext prepare(RetryingCallable<?> callable, int tries);

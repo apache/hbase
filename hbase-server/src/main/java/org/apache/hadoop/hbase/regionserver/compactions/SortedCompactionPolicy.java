@@ -118,9 +118,7 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
   public abstract boolean shouldPerformMajorCompaction(Collection<HStoreFile> filesToCompact)
     throws IOException;
 
-  /**
-   * n * @return When to run next major compaction
-   */
+  /** Returns When to run next major compaction */
   public long getNextMajorCompactTime(Collection<HStoreFile> filesToCompact) {
     /** Default to {@link org.apache.hadoop.hbase.HConstants#DEFAULT_MAJOR_COMPACTION_PERIOD}. */
     long period = comConf.getMajorCompactionPeriod();

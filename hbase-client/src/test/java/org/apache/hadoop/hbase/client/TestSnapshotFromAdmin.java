@@ -62,7 +62,7 @@ public class TestSnapshotFromAdmin {
 
   /**
    * Test that the logic for doing 'correct' back-off based on exponential increase and the max-time
-   * passed from the server ensures the correct overall waiting for the snapshot to finish. n
+   * passed from the server ensures the correct overall waiting for the snapshot to finish.
    */
   @Test
   public void testBackoffLogic() throws Exception {

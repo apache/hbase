@@ -235,7 +235,7 @@ public class HBaseConfiguration extends Configuration {
    * @param conf    configuration instance for accessing the passwords
    * @param alias   the name of the password element
    * @param defPass the default password
-   * @return String password or default password n
+   * @return String password or default password
    */
   public static String getPassword(Configuration conf, String alias, String defPass)
     throws IOException {

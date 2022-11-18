@@ -259,7 +259,7 @@ public final class ProtobufUtil {
    * Like {@link #getRemoteException(ServiceException)} but more generic, able to handle more than
    * just {@link ServiceException}. Prefer this method to
    * {@link #getRemoteException(ServiceException)} because trying to contain direct protobuf
-   * references. n
+   * references.
    */
   public static IOException handleRemoteException(Exception e) {
     return makeIOExceptionOfException(e);
@@ -363,7 +363,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Get to a client Get
    * @param proto the protocol buffer Get to convert
-   * @return the converted client Get n
+   * @return the converted client Get
    */
   public static Get toGet(final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
@@ -448,7 +448,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Mutate to a Put.
    * @param proto The protocol buffer MutationProto to convert
-   * @return A client Put. n
+   * @return A client Put.
    */
   public static Put toPut(final MutationProto proto) throws IOException {
     return toPut(proto, null);
@@ -458,7 +458,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Mutate to a Put.
    * @param proto       The protocol buffer MutationProto to convert
    * @param cellScanner If non-null, the Cell data that goes with this proto.
-   * @return A client Put. n
+   * @return A client Put.
    */
   public static Put toPut(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -542,7 +542,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Mutate to a Delete
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Delete n
+   * @return the converted client Delete
    */
   public static Delete toDelete(final MutationProto proto) throws IOException {
     return toDelete(proto, null);
@@ -552,7 +552,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Mutate to a Delete
    * @param proto       the protocol buffer Mutate to convert
    * @param cellScanner if non-null, the data that goes with this delete.
-   * @return the converted client Delete n
+   * @return the converted client Delete
    */
   public static Delete toDelete(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -716,7 +716,7 @@ public final class ProtobufUtil {
   /**
    * Convert a MutateRequest to Mutation
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted Mutation n
+   * @return the converted Mutation
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
@@ -737,7 +737,8 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protocol buffer Mutate to a Get.
-   * @param proto the protocol buffer Mutate to convert. n * @return the converted client get. n
+   * @param proto the protocol buffer Mutate to convert.
+   * @return the converted client get.
    */
   public static Get toGet(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -817,7 +818,7 @@ public final class ProtobufUtil {
   /**
    * Convert a client Scan to a protocol buffer Scan
    * @param scan the client Scan to convert
-   * @return the converted protocol buffer Scan n
+   * @return the converted protocol buffer Scan
    */
   public static ClientProtos.Scan toScan(final Scan scan) throws IOException {
     ClientProtos.Scan.Builder scanBuilder = ClientProtos.Scan.newBuilder();
@@ -910,7 +911,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Scan to a client Scan
    * @param proto the protocol buffer Scan to convert
-   * @return the converted client Scan n
+   * @return the converted client Scan
    */
   public static Scan toScan(final ClientProtos.Scan proto) throws IOException {
     byte[] startRow = HConstants.EMPTY_START_ROW;
@@ -1011,7 +1012,7 @@ public final class ProtobufUtil {
   /**
    * Create a protocol buffer Get based on a client Get.
    * @param get the client Get
-   * @return a protocol buffer Get n
+   * @return a protocol buffer Get
    */
   public static ClientProtos.Get toGet(final Get get) throws IOException {
     ClientProtos.Get.Builder builder = ClientProtos.Get.newBuilder();
@@ -1076,7 +1077,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer Mutate based on a client Mutation nn * @return a protobuf'd Mutation n
+   * Create a protocol buffer Mutate based on a client Mutation
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
     final long nonce) throws IOException {
@@ -1125,8 +1127,8 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf. nnn * @return a
-   * protobuf'd Mutation n
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
     final MutationProto.Builder builder) throws IOException {
@@ -1135,8 +1137,8 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf. nn * @return a
-   * protobuf'd Mutation n
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation)
     throws IOException {
@@ -1162,8 +1164,8 @@ public final class ProtobufUtil {
 
   /**
    * Code shared by {@link #toMutation(MutationType, Mutation)} and
-   * {@link #toMutationNoData(MutationType, Mutation)} nn * @return A partly-filled out protobuf'd
-   * Mutation.
+   * {@link #toMutationNoData(MutationType, Mutation)}
+   * @return A partly-filled out protobuf'd Mutation.
    */
   private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
     final Mutation mutation, MutationProto.Builder builder) {
@@ -1268,7 +1270,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Result to a client Result
    * @param proto   the protocol buffer Result to convert
    * @param scanner Optional cell scanner.
-   * @return the converted client Result n
+   * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
     throws IOException {
@@ -1382,8 +1384,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a delete KeyValue type to protocol buffer DeleteType. n * @return protocol buffer
-   * DeleteType n
+   * Convert a delete KeyValue type to protocol buffer DeleteType.
+   * @return protocol buffer DeleteType
    */
   public static DeleteType toDeleteType(KeyValue.Type type) throws IOException {
     switch (type) {
@@ -1403,7 +1405,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer DeleteType to delete KeyValue type.
    * @param type The DeleteType
-   * @return The type. n
+   * @return The type.
    */
   public static KeyValue.Type fromDeleteType(DeleteType type) throws IOException {
     switch (type) {
@@ -1476,17 +1478,11 @@ public final class ProtobufUtil {
   }
 
   /**
-   * @see #buildGetServerInfoRequest()
-   */
-  private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
-    GetServerInfoRequest.newBuilder().build();
-
-  /**
    * Create a new GetServerInfoRequest
    * @return a GetServerInfoRequest
    */
   public static GetServerInfoRequest buildGetServerInfoRequest() {
-    return GET_SERVER_INFO_REQUEST;
+    return GetServerInfoRequest.getDefaultInstance();
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
@@ -1573,7 +1569,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
    * working with byte arrays
    * @param builder current message builder
-   * @param b       byte array n
+   * @param b       byte array
    */
   public static void mergeFrom(Message.Builder builder, byte[] b) throws IOException {
     final CodedInputStream codedInput = CodedInputStream.newInstance(b);
@@ -1586,7 +1582,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
    * working with byte arrays
    * @param builder current message builder
-   * @param b       byte array nnn
+   * @param b       byte array
    */
   public static void mergeFrom(Message.Builder builder, byte[] b, int offset, int length)
     throws IOException {
@@ -1640,7 +1636,7 @@ public final class ProtobufUtil {
    *             magic and that is then followed by a protobuf that has a serialized
    *             {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
-   *         instance. n
+   *         instance.
    */
   public static ServerName toServerName(final byte[] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;

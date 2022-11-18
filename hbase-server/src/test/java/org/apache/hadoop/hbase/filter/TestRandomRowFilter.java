@@ -44,7 +44,7 @@ public class TestRandomRowFilter {
   }
 
   /**
-   * Tests basics n
+   * Tests basics
    */
   @Test
   public void testBasics() throws Exception {
@@ -63,7 +63,7 @@ public class TestRandomRowFilter {
   }
 
   /**
-   * Tests serialization n
+   * Tests serialization
    */
   @Test
   public void testSerialization() throws Exception {

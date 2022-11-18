@@ -323,7 +323,7 @@ public class TestStoreScanner {
   }
 
   /*
-   * Test utility for building a NavigableSet for scanners. nn
+   * Test utility for building a NavigableSet for scanners.
    */
   NavigableSet<byte[]> getCols(String... strCols) {
     NavigableSet<byte[]> cols = new TreeSet<>(Bytes.BYTES_COMPARATOR);
@@ -550,7 +550,7 @@ public class TestStoreScanner {
   /*
    * Test test shows exactly how the matcher's return codes confuses the StoreScanner and prevent it
    * from doing the right thing. Seeking once, then nexting twice should return R1, then R2, but in
-   * this case it doesnt. TODO this comment makes no sense above. Appears to do the right thing. n
+   * this case it doesnt. TODO this comment makes no sense above. Appears to do the right thing.
    */
   @Test
   public void testWontNextToNext() throws IOException {

@@ -348,7 +348,7 @@ public final class BucketAllocator {
    * @param availableSpace capacity of cache
    * @param map            A map stores the block key and BucketEntry(block's meta data like offset,
    *                       length)
-   * @param realCacheSize  cached data size statistics for bucket cache n
+   * @param realCacheSize  cached data size statistics for bucket cache
    */
   BucketAllocator(long availableSpace, int[] bucketSizes, Map<BlockCacheKey, BucketEntry> map,
     LongAdder realCacheSize) throws BucketAllocatorException {
@@ -444,7 +444,8 @@ public final class BucketAllocator {
 
   /**
    * Allocate a block with specified size. Return the offset
-   * @param blockSize size of block nn * @return the offset in the IOEngine
+   * @param blockSize size of block
+   * @return the offset in the IOEngine
    */
   public synchronized long allocateBlock(int blockSize)
     throws CacheFullException, BucketAllocatorException {

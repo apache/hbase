@@ -44,7 +44,7 @@ public class TestMasterFailoverBalancerPersistence {
 
   /**
    * Test that if the master fails, the load balancer maintains its state (running or not) when the
-   * next master takes over n
+   * next master takes over
    */
   @Test
   public void testMasterFailoverBalancerPersistence() throws Exception {
@@ -82,8 +82,8 @@ public class TestMasterFailoverBalancerPersistence {
   }
 
   /**
-   * Kill the master and wait for a new active master to show up n * @return the new active master n
-   * * @throws java.io.IOException
+   * Kill the master and wait for a new active master to show up
+   * @return the new active master
    */
   private HMaster killActiveAndWaitForNewActive(MiniHBaseCluster cluster)
     throws InterruptedException, IOException {

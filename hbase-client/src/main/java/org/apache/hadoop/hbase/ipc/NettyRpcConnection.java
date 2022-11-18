@@ -296,7 +296,10 @@ class NettyRpcConnection extends RpcConnection {
         public void operationComplete(ChannelFuture future) throws Exception {
           Channel ch = future.channel();
           if (!future.isSuccess()) {
-            failInit(ch, toIOE(future.cause()));
+            IOException ex = toIOE(future.cause());
+            LOG.warn(
+              "Exception encountered while connecting to the server " + remoteId.getAddress(), ex);
+            failInit(ch, ex);
             rpcClient.failedServers.addToFailedServers(remoteId.getAddress(), future.cause());
             return;
           }

@@ -132,7 +132,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * configured to make this rpc call, use getRpcController(). We are trying to contain
    * rpcController references so we don't pollute codebase with protobuf references; keep the
    * protobuf references contained and only present in a few classes rather than all about the code
-   * base. n
+   * base.
    */
   protected abstract T rpcCall() throws Exception;
 

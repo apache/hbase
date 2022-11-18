@@ -44,7 +44,7 @@ public class NamespacesResource extends ResourceBase {
   private static final Logger LOG = LoggerFactory.getLogger(NamespacesResource.class);
 
   /**
-   * Constructor n
+   * Constructor
    */
   public NamespacesResource() throws IOException {
     super();

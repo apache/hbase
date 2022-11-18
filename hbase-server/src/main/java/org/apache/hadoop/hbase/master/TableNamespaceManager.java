@@ -226,7 +226,7 @@ public class TableNamespaceManager implements Stoppable {
   }
 
   /**
-   * An ugly utility to be removed when refactor TableNamespaceManager. n
+   * An ugly utility to be removed when refactor TableNamespaceManager.
    */
   private static void block(final MasterServices services, final long procId)
     throws TimeoutIOException {

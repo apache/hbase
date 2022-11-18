@@ -107,7 +107,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   }
 
   /**
-   * Reads the WAL with and without WALTrailer. n
+   * Reads the WAL with and without WALTrailer.
    */
   @Test
   public void testWALTrailer() throws IOException {
@@ -123,7 +123,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
    *                    so that a trailer is appended to the WAL. Otherwise, it starts reading after
    *                    the sync call. This means that reader is not aware of the trailer. In this
    *                    scenario, if the reader tries to read the trailer in its next() call, it
-   *                    returns false from ProtoBufLogReader. n
+   *                    returns false from ProtoBufLogReader.
    */
   private void doRead(boolean withTrailer) throws IOException {
     final int columnCount = 5;

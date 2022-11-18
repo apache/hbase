@@ -45,7 +45,7 @@ public class ReplicationLoad {
 
   /**
    * buildReplicationLoad
-   * @param sources List of ReplicationSource instances for which metrics should be reported n
+   * @param sources List of ReplicationSource instances for which metrics should be reported
    */
 
   public void buildReplicationLoad(final List<ReplicationSourceInterface> sources,

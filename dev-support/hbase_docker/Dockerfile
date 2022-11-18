@@ -39,8 +39,8 @@ RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${M
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u232-b09/OpenJDK8U-jdk_x64_linux_hotspot_8u232b09.tar.gz'
-ENV OPENJDK8_SHA256 '7b7884f2eb2ba2d47f4c0bf3bb1a2a95b73a3a7734bd47ebf9798483a7bcc423'
+ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_linux_hotspot_8u345b01.tar.gz'
+ENV OPENJDK8_SHA256 'ed6c9db3719895584fb1fd69fc79c29240977675f26631911c5a1dbce07b7d58'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -

@@ -180,7 +180,7 @@ public class IOTestProvider implements WALProvider {
      * @param prefix          should always be hostname and port in distributed env and it will be
      *                        URL encoded before being used. If prefix is null, "wal" will be used
      * @param suffix          will be url encoded. null is treated as empty. non-empty must start
-     *                        with {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER} n
+     *                        with {@link AbstractFSWALProvider#WAL_FILE_NAME_DELIMITER}
      */
     public IOTestWAL(final FileSystem fs, final Path rootDir, final String logDir,
       final String archiveDir, final Configuration conf, final List<WALActionsListener> listeners,

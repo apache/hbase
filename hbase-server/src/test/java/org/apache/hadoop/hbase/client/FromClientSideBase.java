@@ -210,14 +210,14 @@ class FromClientSideBase {
   }
 
   /*
-   * n * @return Scan with RowFilter that does LESS than passed key.
+   * @return Scan with RowFilter that does LESS than passed key.
    */
   protected Scan createScanWithRowFilter(final byte[] key) {
     return createScanWithRowFilter(key, null, CompareOperator.LESS);
   }
 
   /*
-   * nnn * @return Scan with RowFilter that does CompareOp op on passed key.
+   * @return Scan with RowFilter that does CompareOp op on passed key.
    */
   protected Scan createScanWithRowFilter(final byte[] key, final byte[] startRow,
     CompareOperator op) {
@@ -250,8 +250,8 @@ class FromClientSideBase {
 
   /*
    * Wait on table split. May return because we waited long enough on the split and it didn't
-   * happen. Caller should check. n * @return Map of table regions; caller needs to check table
-   * actually split.
+   * happen. Caller should check.
+   * @return Map of table regions; caller needs to check table actually split.
    */
   private List<HRegionLocation> waitOnSplit(final Table t) throws IOException {
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {

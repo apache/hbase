@@ -105,7 +105,6 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat
    * restoreDir. Sets:
    * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#RESTORE_DIRS_KEY},
    * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#SNAPSHOT_TO_SCANS_KEY}
-   * nnnn
    */
   public static void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans,
     Path restoreDir) throws IOException {

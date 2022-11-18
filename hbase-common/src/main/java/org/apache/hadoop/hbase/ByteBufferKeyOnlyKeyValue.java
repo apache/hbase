@@ -54,7 +54,7 @@ public class ByteBufferKeyOnlyKeyValue extends ByteBufferExtendedCell {
 
   /**
    * A setter that helps to avoid object creation every time and whenever there is a need to create
-   * new OffheapKeyOnlyKeyValue. nnn
+   * new OffheapKeyOnlyKeyValue.
    */
   public void setKey(ByteBuffer key, int offset, int length) {
     setKey(key, offset, length, ByteBufferUtils.toShort(key, offset));

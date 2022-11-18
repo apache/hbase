@@ -46,7 +46,7 @@ public class InternalScan extends Scan {
   }
 
   /**
-   * @param scan - original scan object n
+   * @param scan - original scan object
    */
   public InternalScan(Scan scan) throws IOException {
     super(scan);

@@ -95,7 +95,7 @@ public class RestoreSnapshotProcedure
    * Constructor
    * @param env             MasterProcedureEnv
    * @param tableDescriptor the table to operate on
-   * @param snapshot        snapshot to restore from n
+   * @param snapshot        snapshot to restore from
    */
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
@@ -319,7 +319,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Action before any real action of restoring from snapshot.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void prepareRestore(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
@@ -356,7 +356,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Update descriptor
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
@@ -364,7 +364,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Execute the on-disk Restore
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void restoreSnapshot(final MasterProcedureEnv env) throws IOException {
     MasterFileSystem fileSystemManager = env.getMasterServices().getMasterFileSystem();
@@ -397,7 +397,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Apply changes to hbase:meta
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void updateMETA(final MasterProcedureEnv env) throws IOException {
     try {

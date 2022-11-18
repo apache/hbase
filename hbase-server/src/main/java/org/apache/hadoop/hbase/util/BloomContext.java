@@ -42,7 +42,7 @@ public abstract class BloomContext {
   }
 
   /**
-   * Bloom information from the cell is retrieved nn
+   * Bloom information from the cell is retrieved
    */
   public void writeBloom(Cell cell) throws IOException {
     // only add to the bloom filter on a new, unique key
@@ -62,7 +62,7 @@ public abstract class BloomContext {
   }
 
   /**
-   * Adds the last bloom key to the HFile Writer as part of StorefileWriter close. nn
+   * Adds the last bloom key to the HFile Writer as part of StorefileWriter close.
    */
   public abstract void addLastBloomKey(HFile.Writer writer) throws IOException;
 

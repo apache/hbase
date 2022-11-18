@@ -456,7 +456,6 @@ public class TestResult {
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
-   * n
    */
   public void doReadBenchmark() throws Exception {
 
@@ -518,7 +517,7 @@ public class TestResult {
   }
 
   /**
-   * Calls non-functional test methods. n
+   * Calls non-functional test methods.
    */
   public static void main(String[] args) {
     TestResult testResult = new TestResult();

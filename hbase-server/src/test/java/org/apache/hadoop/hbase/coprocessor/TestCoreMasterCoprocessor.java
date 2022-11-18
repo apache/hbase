@@ -87,7 +87,7 @@ public class TestCoreMasterCoprocessor {
 
   /**
    * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to access
-   * a MasterServices instance. Assert the opposite too. Do it to MasterCoprocessors. n
+   * a MasterServices instance. Assert the opposite too. Do it to MasterCoprocessors.
    */
   @Test
   public void testCoreRegionCoprocessor() throws IOException {

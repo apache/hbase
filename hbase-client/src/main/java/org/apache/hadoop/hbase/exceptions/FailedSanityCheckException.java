@@ -35,15 +35,13 @@ public class FailedSanityCheckException extends org.apache.hadoop.hbase.DoNotRet
   }
 
   /**
-   * n
-   */
+   *   */
   public FailedSanityCheckException(String message) {
     super(message);
   }
 
   /**
-   * nn
-   */
+   *   */
   public FailedSanityCheckException(String message, Throwable cause) {
     super(message, cause);
   }
