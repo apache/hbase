@@ -89,13 +89,13 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
-import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
@@ -172,8 +172,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
 public class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
 
-  public static final String
-    MASTER_STATE_CACHE_TIMEOUT_SEC = "hbase.client.master.state.cache.timeout.sec";
+  public static final String MASTER_STATE_CACHE_TIMEOUT_SEC =
+    "hbase.client.master.state.cache.timeout.sec";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
   // The mode tells if HedgedRead, LoadBalance mode is supported.
@@ -253,7 +253,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   /** lock guards against multiple threads trying to query the meta region at the same time */
   private final ReentrantLock userRegionLock = new ReentrantLock();
-
 
   /** A Guava based TTL Cache to cache state of the master i.e. master is running or not */
   final Supplier<Boolean> cachedMasterStateSupplier;
@@ -1392,7 +1391,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private MasterKeepAliveConnection getKeepAliveMasterService() throws IOException {
-    if(!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)){
+    if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
       synchronized (masterLock) {
         if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
           MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
