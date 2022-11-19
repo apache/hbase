@@ -89,6 +89,8 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
+import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
@@ -169,6 +171,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Updat
 @InterfaceAudience.Private
 public class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
+
+  public static final String
+    MASTER_STATE_CACHE_TIMEOUT_SEC = "hbase.client.master.state.cache.timeout.sec";
   private static final Logger LOG = LoggerFactory.getLogger(ConnectionImplementation.class);
 
   // The mode tells if HedgedRead, LoadBalance mode is supported.
@@ -248,6 +253,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   /** lock guards against multiple threads trying to query the meta region at the same time */
   private final ReentrantLock userRegionLock = new ReentrantLock();
+
+
+  /** A Guava based TTL Cache to cache state of the master i.e. master is running or not */
+  final Supplier<Boolean> cachedMasterStateSupplier;
 
   private ChoreService choreService;
 
@@ -382,6 +391,24 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       default:
         // Doing nothing
     }
+
+    this.cachedMasterStateSupplier = Suppliers.memoizeWithExpiration(() -> {
+      if (this.masterServiceState.getStub() == null) {
+        return false;
+      }
+      try {
+        LOG.info("Getting master state using rpc call");
+        return this.masterServiceState.isMasterRunning();
+      } catch (UndeclaredThrowableException e) {
+        // It's somehow messy, but we can receive exceptions such as
+        // java.net.ConnectException but they're not declared. So we catch it...
+        LOG.info("Master connection is not running anymore", e.getUndeclaredThrowable());
+        return false;
+      } catch (IOException se) {
+        LOG.warn("Checking master connection", se);
+        return false;
+      }
+    }, conf.getLong(MASTER_STATE_CACHE_TIMEOUT_SEC, 30), TimeUnit.SECONDS);
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -1365,12 +1392,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private MasterKeepAliveConnection getKeepAliveMasterService() throws IOException {
-    synchronized (masterLock) {
-      if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
-        MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
-        this.masterServiceState.stub = stubMaker.makeStub();
+    if(!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)){
+      synchronized (masterLock) {
+        if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
+          MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
+          this.masterServiceState.stub = stubMaker.makeStub();
+        }
+        resetMasterServiceState(this.masterServiceState);
       }
-      resetMasterServiceState(this.masterServiceState);
     }
     // Ugly delegation just so we can add in a Close method.
     final MasterProtos.MasterService.BlockingInterface stub = this.masterServiceState.stub;
@@ -1945,20 +1974,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private boolean isKeepAliveMasterConnectedAndRunning(MasterServiceState mss) {
-    if (mss.getStub() == null) {
-      return false;
-    }
-    try {
-      return mss.isMasterRunning();
-    } catch (UndeclaredThrowableException e) {
-      // It's somehow messy, but we can receive exceptions such as
-      // java.net.ConnectException but they're not declared. So we catch it...
-      LOG.info("Master connection is not running anymore", e.getUndeclaredThrowable());
-      return false;
-    } catch (IOException se) {
-      LOG.warn("Checking master connection", se);
-      return false;
-    }
+    LOG.info("Getting master connection state from TTL Cache");
+    return cachedMasterStateSupplier.get();
   }
 
   void releaseMaster(MasterServiceState mss) {
