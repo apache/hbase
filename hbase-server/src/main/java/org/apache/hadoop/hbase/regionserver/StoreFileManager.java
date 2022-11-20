@@ -52,8 +52,8 @@ public interface StoreFileManager {
    * @param sfs New store files.
    */
   @RestrictedApi(explanation = "Should only be called in StoreEngine", link = "",
-      allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
-  void insertNewFiles(Collection<HStoreFile> sfs) throws IOException;
+    allowedOnPath = ".*(/org/apache/hadoop/hbase/regionserver/StoreEngine.java|/src/test/.*)")
+  Collection<HStoreFile> insertNewFiles(Collection<HStoreFile> sfs) throws IOException;
 
   /**
    * Adds only the new compaction results into the structure.

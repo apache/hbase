@@ -20,10 +20,13 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -971,8 +974,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Eagerly creating scanners so that we have the ref counting ticking on the newly created
       // store files. In case of stream scanners this eager creation does not induce performance
       // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
-      List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
+      List<KeyValueScanner> scanners =
+        store.getScanners(sfs, cacheBlocks,
+          get, usePread, isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt,
+          false);
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);

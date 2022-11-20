@@ -459,11 +459,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     void run() throws IOException;
   }
 
-  public void addStoreFiles(Collection<HStoreFile> storeFiles) throws IOException {
+  public Collection<HStoreFile> addStoreFiles(Collection<HStoreFile> storeFiles) throws IOException {
     storeFileTracker.add(StoreUtils.toStoreFileInfo(storeFiles));
     writeLock();
     try {
-      storeFileManager.insertNewFiles(storeFiles);
+      storeFiles = storeFileManager.insertNewFiles(storeFiles);
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -472,6 +472,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       // the lock.
       writeUnlock();
     }
+    return storeFiles;
   }
 
   public void replaceStoreFiles(Collection<HStoreFile> compactedFiles,

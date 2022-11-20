@@ -150,11 +150,12 @@ public class StripeStoreFileManager
   }
 
   @Override
-  public void insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
+  public Collection<HStoreFile> insertNewFiles(Collection<HStoreFile> sfs) throws IOException {
     CompactionOrFlushMergeCopy cmc = new CompactionOrFlushMergeCopy(true);
     // Passing null does not cause NPE??
     cmc.mergeResults(null, sfs);
     debugDumpState("Added new files");
+    return sfs;
   }
 
   @Override

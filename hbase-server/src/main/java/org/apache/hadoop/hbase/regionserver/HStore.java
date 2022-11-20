@@ -901,7 +901,7 @@ public class HStore
   private boolean completeFlush(List<HStoreFile> sfs, long snapshotId) throws IOException {
     storeEngine.writeLock();
     try {
-      storeEngine.addStoreFiles(sfs);
+      sfs = storeEngine.addStoreFiles(sfs).stream().collect(Collectors.toList());
       // We do not need to call clearSnapshot method inside the write lock.
       // The clearSnapshot itself is thread safe, which can be called at the same time with other
       // memstore operations expect snapshot and clearSnapshot. And for these two methods, in
