@@ -240,16 +240,20 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private List<NormalizationPlan> truncateForSize(List<NormalizationPlan> plans) {
     if (cumulativePlansSizeLimitMb.get() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB) {
       List<NormalizationPlan> maybeTruncatedPlans = new ArrayList<>(plans.size());
-      long cumulativeSizeMb = 0;
+      long totalCumulativeSizeMb = 0;
+      long truncatedCumulativeSizeMb = 0;
       for (NormalizationPlan plan : plans) {
-        cumulativeSizeMb += plan.getPlanSizeMb();
-        if (cumulativeSizeMb > cumulativePlansSizeLimitMb.get()) {
-          LOG.debug(
-            "Truncating list of normalization plans that RegionNormalizerWorker will process because of {}. Original list had size {}, new list has size {}.",
-            CUMULATIVE_SIZE_LIMIT_MB_KEY, plans.size(), maybeTruncatedPlans.size());
-          break;
+        totalCumulativeSizeMb += plan.getPlanSizeMb();
+        if (totalCumulativeSizeMb <= cumulativePlansSizeLimitMb.get()) {
+          truncatedCumulativeSizeMb += plan.getPlanSizeMb();
+          maybeTruncatedPlans.add(plan);
         }
-        maybeTruncatedPlans.add(plan);
+      }
+      if (maybeTruncatedPlans.size() != plans.size()) {
+        LOG.debug(
+          "Truncating list of normalization plans that RegionNormalizerWorker will process because of {}. Original list had {} plan(s), new list has {} plan(s). Original list covered regions with cumulative size {} mb, new list covers regions with cumulative size {} mb.",
+          CUMULATIVE_SIZE_LIMIT_MB_KEY, plans.size(), maybeTruncatedPlans.size(),
+          totalCumulativeSizeMb, truncatedCumulativeSizeMb);
       }
       return maybeTruncatedPlans;
     } else {
