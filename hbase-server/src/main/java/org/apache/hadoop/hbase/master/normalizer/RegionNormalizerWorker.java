@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -66,7 +67,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private final boolean defaultNormalizerTableLevel;
   private long splitPlanCount;
   private long mergePlanCount;
-  private long cumulativePlansSizeLimitMb;
+  private final AtomicLong cumulativePlansSizeLimitMb;
 
   RegionNormalizerWorker(final Configuration configuration, final MasterServices masterServices,
     final RegionNormalizer regionNormalizer, final RegionNormalizerWorkQueue<TableName> workQueue) {
@@ -78,8 +79,8 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     this.mergePlanCount = 0;
     this.rateLimiter = loadRateLimiter(configuration);
     this.defaultNormalizerTableLevel = extractDefaultNormalizerValue(configuration);
-    this.cumulativePlansSizeLimitMb =
-      configuration.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB);
+    this.cumulativePlansSizeLimitMb = new AtomicLong(
+      configuration.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB));
   }
 
   private boolean extractDefaultNormalizerValue(final Configuration configuration) {
@@ -103,9 +104,20 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     }
   }
 
+  private static long logLongConfigurationUpdated(final String key, final long oldValue,
+    final long newValue) {
+    if (oldValue != newValue) {
+      LOG.info("Updated configuration for key '{}' from {} to {}", key, oldValue, newValue);
+    }
+    return newValue;
+  }
+
   @Override
   public void onConfigurationChange(Configuration conf) {
     rateLimiter.setRate(loadRateLimit(conf));
+    cumulativePlansSizeLimitMb.set(
+      logLongConfigurationUpdated(CUMULATIVE_SIZE_LIMIT_MB_KEY, cumulativePlansSizeLimitMb.get(),
+        conf.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB)));
   }
 
   private static RateLimiter loadRateLimiter(final Configuration configuration) {
@@ -226,12 +238,15 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   }
 
   private List<NormalizationPlan> truncateForSize(List<NormalizationPlan> plans) {
-    if (cumulativePlansSizeLimitMb != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB) {
+    if (cumulativePlansSizeLimitMb.get() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB) {
       List<NormalizationPlan> maybeTruncatedPlans = new ArrayList<>(plans.size());
       long cumulativeSizeMb = 0;
       for (NormalizationPlan plan : plans) {
         cumulativeSizeMb += plan.getPlanSizeMb();
-        if (cumulativeSizeMb > cumulativePlansSizeLimitMb) {
+        if (cumulativeSizeMb > cumulativePlansSizeLimitMb.get()) {
+          LOG.debug(
+            "Truncating list of normalization plans that RegionNormalizerWorker will process because of {}. Original list had size {}, new list has size {}.",
+            CUMULATIVE_SIZE_LIMIT_MB_KEY, plans.size(), maybeTruncatedPlans.size());
           break;
         }
         maybeTruncatedPlans.add(plan);

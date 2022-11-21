@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.CUMULATIVE_SIZE_LIMIT_MB_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.DEFAULT_CUMULATIVE_SIZE_LIMIT_MB;
 import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 import java.time.Instant;
@@ -79,8 +81,6 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
-  static final String CUMULATIVE_SIZE_LIMIT_MB_KEY = "hbase.normalizer.plans_size_limit.mb";
-  static final long DEFAULT_CUMULATIVE_SIZE_LIMIT_MB = Long.MAX_VALUE;
 
   private MasterServices masterServices;
   private NormalizerConfiguration normalizerConfiguration;
@@ -534,8 +534,6 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         currentConfiguration.getMergeMinRegionAge(), mergeMinRegionAge);
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
         currentConfiguration.getMergeMinRegionSizeMb(), mergeMinRegionSizeMb);
-      logConfigurationUpdated(CUMULATIVE_SIZE_LIMIT_MB_KEY,
-        currentConfiguration.getCumulativePlansSizeLimitMb(), cumulativePlansSizeLimitMb);
     }
 
     public Configuration getConf() {
@@ -599,7 +597,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       return mergeMinRegionSizeMb;
     }
 
-    public long getCumulativePlansSizeLimitMb() {
+    private long getCumulativePlansSizeLimitMb() {
       return cumulativePlansSizeLimitMb;
     }
   }

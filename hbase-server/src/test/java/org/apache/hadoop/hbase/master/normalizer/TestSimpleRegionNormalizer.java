@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static java.lang.String.format;
-import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.CUMULATIVE_SIZE_LIMIT_MB_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.CUMULATIVE_SIZE_LIMIT_MB_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.DEFAULT_MERGE_MIN_REGION_AGE_DAYS;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_ENABLED_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_AGE_DAYS_KEY;
