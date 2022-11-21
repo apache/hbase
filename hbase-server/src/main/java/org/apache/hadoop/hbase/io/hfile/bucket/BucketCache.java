@@ -1034,13 +1034,19 @@ public class BucketCache implements BlockCache, HeapSize {
         final HFileContext fileContext = ((HFileBlock) re.getData()).getHFileContext();
         final String columnFamily = Bytes.toString(fileContext.getColumnFamily());
         final String tableName = Bytes.toString(fileContext.getTableName());
-        if (tableName != null && columnFamily != null) {
+        if (tableName != null) {
           sb.append(" Table: ");
           sb.append(tableName);
+        }
+        if (columnFamily != null) {
           sb.append(" CF: ");
           sb.append(columnFamily);
-          sb.append(" HFile: ");
+        }
+        sb.append(" HFile: ");
+        if (fileContext.getHFileName() != null) {
           sb.append(fileContext.getHFileName());
+        } else {
+          sb.append(re.getKey());
         }
       } else {
         sb.append(" HFile: ");
