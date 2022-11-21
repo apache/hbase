@@ -38,7 +38,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -610,36 +614,20 @@ public class TestSimpleRegionNormalizer {
   }
 
   @Test
-  public void testMergeSizeLimit() {
-    conf.setBoolean(SPLIT_ENABLED_KEY, false);
-    conf.setLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, 5);
-    final TableName tableName = name.getTableName();
-    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 6);
-    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 1, 1, 1, 1);
-    setupMocksForNormalizer(regionSizes, regionInfos);
-    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(2L);
-
-    assertTrue(normalizer.isMergeEnabled());
-    assertFalse(normalizer.isSplitEnabled());
-    // creates 2 merge plans, even though there are 3 otherwise eligible pairs of regions
-    assertThat(normalizer.computePlansForTable(tableDescriptor), hasSize(2));
-  }
-
-  @Test
-  public void testSplitSizeLimit() {
-    conf.setBoolean(MERGE_ENABLED_KEY, false);
+  public void testSizeLimitShufflesPlans() {
     conf.setLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, 10);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 3, 3, 3, 3);
     setupMocksForNormalizer(regionSizes, regionInfos);
     when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(1L);
+    normalizer = spy(normalizer);
 
     assertTrue(normalizer.isSplitEnabled());
-    assertFalse(normalizer.isMergeEnabled());
-    // the plan includes only 3 regions, even though the table has 4 otherwise split-eligible
-    // regions
-    assertThat(normalizer.computePlansForTable(tableDescriptor), hasSize(3));
+    assertTrue(normalizer.isMergeEnabled());
+    List<NormalizationPlan> computedPlans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(computedPlans, hasSize(4));
+    verify(normalizer, times(1)).shuffleNormalizationPlans(anyList());
   }
 
   @SuppressWarnings("MockitoCast")

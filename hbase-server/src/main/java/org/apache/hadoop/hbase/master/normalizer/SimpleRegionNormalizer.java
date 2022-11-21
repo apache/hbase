@@ -217,7 +217,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     LOG.debug("Computing normalization plan for table:  {}, number of regions: {}", table,
       ctx.getTableRegions().size());
 
-    List<NormalizationPlan> plans = new ArrayList<>();
+    final List<NormalizationPlan> plans = new ArrayList<>();
     int splitPlansCount = 0;
     if (proceedWithSplitPlanning) {
       List<NormalizationPlan> splitPlans = computeSplitNormalizationPlans(ctx);
@@ -231,7 +231,13 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       plans.addAll(mergePlans);
     }
 
-    plans = truncateForSize(plans);
+    if (
+      normalizerConfiguration.getCumulativePlansSizeLimitMb() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB
+    ) {
+      // If we are going to truncate our list of plans, shuffle the split and merge plans together
+      // so that the merge plans, which are listed last, are not starved out.
+      shuffleNormalizationPlans(plans);
+    }
 
     LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, "
       + "merge plans: {}", table, plans.size(), splitPlansCount, mergePlansCount);
@@ -468,25 +474,12 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
   }
 
-  private List<NormalizationPlan> truncateForSize(List<NormalizationPlan> plans) {
-    if (
-      normalizerConfiguration.getCumulativePlansSizeLimitMb() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB
-    ) {
-      // If we are going to truncate our list of plans, shuffle the split and merge plans together
-      // so that the merge plans, which are listed last, are not starved out.
-      List<NormalizationPlan> maybeTruncatedPlans = new ArrayList<>();
-      Collections.shuffle(plans);
-      long cumulativeSizeMb = 0;
-      for (NormalizationPlan plan : plans) {
-        cumulativeSizeMb += plan.getPlanSizeMb();
-        if (cumulativeSizeMb < normalizerConfiguration.getCumulativePlansSizeLimitMb()) {
-          maybeTruncatedPlans.add(plan);
-        }
-      }
-      return maybeTruncatedPlans;
-    } else {
-      return plans;
-    }
+  /**
+   * This very simple method exists so we can verify it was called in a unit test. Visible for
+   * testing.
+   */
+  void shuffleNormalizationPlans(List<NormalizationPlan> plans) {
+    Collections.shuffle(plans);
   }
 
   private static boolean logTraceReason(final BooleanSupplier predicate, final String fmtWhenTrue,
