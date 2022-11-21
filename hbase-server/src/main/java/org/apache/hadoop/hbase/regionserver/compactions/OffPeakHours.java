@@ -46,7 +46,7 @@ public abstract class OffPeakHours {
 
   /**
    * @param startHour inclusive
-   * @param endHour   exclusive
+   * @param endHour   inclusive
    */
   public static OffPeakHours getInstance(int startHour, int endHour) {
     if (startHour == -1 && endHour == -1) {
@@ -84,7 +84,7 @@ public abstract class OffPeakHours {
 
     /**
      * @param startHour inclusive
-     * @param endHour   exclusive
+     * @param endHour   inclusive
      */
     OffPeakHoursImpl(int startHour, int endHour) {
       this.startHour = startHour;
@@ -99,7 +99,7 @@ public abstract class OffPeakHours {
     @Override
     public boolean isOffPeakHour(int targetHour) {
       if (startHour <= endHour) {
-        return startHour <= targetHour && targetHour < endHour;
+        return startHour <= targetHour && targetHour <= endHour;
       }
       return targetHour < endHour || startHour <= targetHour;
     }

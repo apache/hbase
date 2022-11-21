@@ -49,6 +49,8 @@ public class TestOffPeakHours {
   private int hourPlusOne;
   private int hourMinusOne;
   private int hourMinusTwo;
+  private int hourAllDayStart;
+  private int hourAllDayEnd;
   private Configuration conf;
 
   @Before
@@ -57,6 +59,8 @@ public class TestOffPeakHours {
     hourPlusOne = ((hourOfDay + 1) % 24);
     hourMinusOne = ((hourOfDay - 1 + 24) % 24);
     hourMinusTwo = ((hourOfDay - 2 + 24) % 24);
+    hourAllDayStart = 0;
+    hourAllDayEnd = 23;
     conf = testUtil.getConfiguration();
   }
 
@@ -81,5 +85,15 @@ public class TestOffPeakHours {
     conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_END_HOUR, hourMinusOne);
     OffPeakHours target = OffPeakHours.getInstance(conf);
     assertFalse(target.isOffPeakHour(hourOfDay));
+  }
+
+  @Test
+  public void testSetPeakHourAllDay() {
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_START_HOUR, hourAllDayStart);
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_END_HOUR, hourAllDayEnd);
+    OffPeakHours target = OffPeakHours.getInstance(conf);
+    assertTrue(target.isOffPeakHour(hourAllDayStart));
+    assertTrue(target.isOffPeakHour(hourOfDay));
+    assertTrue(target.isOffPeakHour(hourAllDayEnd));
   }
 }
