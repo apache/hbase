@@ -1896,8 +1896,12 @@
         <configuration>
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
         </configuration>
+        <!--
+          Don't enable flattening for hubspot right now because
+          it messes with hadoop2 deps in our bundles.
+          This is a bit of a hack, but should be resolved once we finally
+          finish hadoop3 client upgrade
         <executions>
-          <!-- enable flattening -->
           <execution>
             <id>flatten</id>
             <goals>
@@ -1905,7 +1909,6 @@
             </goals>
             <phase>process-resources</phase>
           </execution>
-          <!-- ensure proper cleanup -->
           <execution>
             <id>flatten.clean</id>
             <goals>
@@ -1914,6 +1917,7 @@
             <phase>clean</phase>
           </execution>
         </executions>
+        -->
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
