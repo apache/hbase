@@ -47,7 +47,7 @@ public class DirectMemoryUtils {
   private static final MBeanServer BEAN_SERVER;
   private static final ObjectName NIO_DIRECT_POOL;
   private static final boolean HAS_MEMORY_USED_ATTRIBUTE;
-  private static long maxDirectMemory = -1L;
+  private static final long MAX_DIRECT_MEMORY = PlatformDependent.estimateMaxDirectMemory();
 
   static {
     // initialize singletons. Only maintain a reference to the MBeanServer if
@@ -78,11 +78,7 @@ public class DirectMemoryUtils {
 
   /** Returns the direct memory limit of the current progress */
   public static long getDirectMemorySize() {
-    if (maxDirectMemory >= 0L) {
-      return maxDirectMemory;
-    }
-    maxDirectMemory = PlatformDependent.estimateMaxDirectMemory();
-    return maxDirectMemory;
+    return MAX_DIRECT_MEMORY;
   }
 
   /** Returns the current amount of direct memory used. */
