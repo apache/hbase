@@ -251,7 +251,10 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       }
       if (maybeTruncatedPlans.size() != plans.size()) {
         LOG.debug(
-          "Truncating list of normalization plans that RegionNormalizerWorker will process because of {}. Original list had {} plan(s), new list has {} plan(s). Original list covered regions with cumulative size {} mb, new list covers regions with cumulative size {} mb.",
+          "Truncating list of normalization plans that RegionNormalizerWorker will process "
+            + "because of {}. Original list had {} plan(s), new list has {} plan(s). "
+            + "Original list covered regions with cumulative size {} mb, "
+            + "new list covers regions with cumulative size {} mb.",
           CUMULATIVE_SIZE_LIMIT_MB_KEY, plans.size(), maybeTruncatedPlans.size(),
           totalCumulativeSizeMb, truncatedCumulativeSizeMb);
       }
