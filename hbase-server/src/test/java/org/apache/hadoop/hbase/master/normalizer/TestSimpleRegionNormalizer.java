@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.normalizer;
 
 import static java.lang.String.format;
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.CUMULATIVE_SIZE_LIMIT_MB_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.DEFAULT_MERGE_MIN_REGION_AGE_DAYS;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_ENABLED_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_AGE_DAYS_KEY;
@@ -30,13 +31,18 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -605,6 +611,23 @@ public class TestSimpleRegionNormalizer {
     // Compute the plan, no merge plan returned as they are not adjacent.
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans, empty());
+  }
+
+  @Test
+  public void testSizeLimitShufflesPlans() {
+    conf.setLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, 10);
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 4);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 3, 3, 3, 3);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+    when(tableDescriptor.getNormalizerTargetRegionSize()).thenReturn(1L);
+    normalizer = spy(normalizer);
+
+    assertTrue(normalizer.isSplitEnabled());
+    assertTrue(normalizer.isMergeEnabled());
+    List<NormalizationPlan> computedPlans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(computedPlans, hasSize(4));
+    verify(normalizer, times(1)).shuffleNormalizationPlans(anyList());
   }
 
   @SuppressWarnings("MockitoCast")
