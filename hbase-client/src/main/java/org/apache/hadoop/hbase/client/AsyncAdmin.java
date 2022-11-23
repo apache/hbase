@@ -107,6 +107,14 @@ public interface AsyncAdmin {
   CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name);
 
   /**
+   * List all enabled or disabled table descriptors
+   * @param isEnabled is true means return enabled table descriptors, false means return disabled
+   *                  table descriptors
+   * @return a list of table names wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled);
+
+  /**
    * List all of the names of userspace tables.
    * @return a list of table names wrapped by a {@link CompletableFuture}.
    * @see #listTableNames(Pattern, boolean)
@@ -136,6 +144,14 @@ public interface AsyncAdmin {
    * @return The list of table names in the namespace wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableName>> listTableNamesByNamespace(String name);
+
+  /**
+   * List all enabled or disabled table names
+   * @param isEnabled is true means return enabled table names, false means return disabled table
+   *                  names
+   * @return a list of table names wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled);
 
   /**
    * Method for getting the tableDescriptor

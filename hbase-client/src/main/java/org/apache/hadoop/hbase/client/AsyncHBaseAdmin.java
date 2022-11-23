@@ -100,6 +100,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableDescriptorsByState(isEnabled));
+  }
+
+  @Override
   public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(includeSysTables));
   }
@@ -113,6 +118,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<TableName>> listTableNamesByNamespace(String name) {
     return wrap(rawAdmin.listTableNamesByNamespace(name));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableNamesByState(isEnabled));
   }
 
   @Override
