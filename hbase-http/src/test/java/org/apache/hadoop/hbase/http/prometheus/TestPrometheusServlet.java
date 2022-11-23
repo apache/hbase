@@ -61,7 +61,7 @@ public class TestPrometheusServlet {
     // WHEN
     PrometheusHadoopServlet prom2Servlet = new PrometheusHadoopServlet();
     // Test with no description
-    prom2Servlet.writeMetrics(writer,false,null);
+    prom2Servlet.writeMetrics(writer, false, null);
 
     // THEN
     String writtenMetrics = stream.toString(UTF_8.name());
