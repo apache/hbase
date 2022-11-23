@@ -2117,6 +2117,7 @@
         <version>1.3.0</version>
         <configuration>
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+          <updatePomFile>true</updatePomFile>
         </configuration>
         <executions>
           <!-- enable flattening -->
