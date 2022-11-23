@@ -70,6 +70,13 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
    */
   public static final String LOG_CLEANER_CHORE_SIZE = "hbase.log.cleaner.scan.dir.concurrent.size";
   static final String DEFAULT_LOG_CLEANER_CHORE_POOL_SIZE = "1";
+  /**
+   * Enable the CleanerChore to sort the subdirectories by consumed space and start the cleaning
+   * with the largest subdirectory. Enabled by default.
+   */
+  public static final String LOG_CLEANER_CHORE_DIRECTORY_SORTING =
+    "hbase.cleaner.directory.sorting";
+  static final boolean DEFAULT_LOG_CLEANER_CHORE_DIRECTORY_SORTING = true;
 
   private final DirScanPool pool;
 
@@ -82,6 +89,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   protected List<String> excludeDirs;
   private CompletableFuture<Boolean> future;
   private boolean forceRun;
+  private boolean sortDirectories;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
     FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
@@ -123,6 +131,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     if (excludeDirs != null) {
       LOG.info("Cleaner {} excludes sub dirs: {}", name, excludeDirs);
     }
+    sortDirectories = conf.getBoolean(LOG_CLEANER_CHORE_DIRECTORY_SORTING,
+      DEFAULT_LOG_CLEANER_CHORE_DIRECTORY_SORTING);
     initCleanerChain(confKey);
   }
 
@@ -475,7 +485,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
       // Step.3: Start to traverse and delete the sub-directories.
       List<CompletableFuture<Boolean>> futures = new ArrayList<>();
       if (!subDirs.isEmpty()) {
-        sortByConsumedSpace(subDirs);
+        if (sortDirectories) {
+          sortByConsumedSpace(subDirs);
+        }
         // Submit the request of sub-directory deletion.
         subDirs.forEach(subDir -> {
           if (!shouldExclude(subDir)) {
