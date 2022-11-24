@@ -466,9 +466,8 @@ public final class X509Util {
       resetContext.run();
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-          "Ignoring watch event and keeping previous default SSL context. Event kind: {} with context: {}",
-          event.kind(), event.context());
+        LOG.debug("Ignoring watch event and keeping previous default SSL context. "
+          + "Event kind: {} with context: {}", event.kind(), event.context());
       }
     }
   }
