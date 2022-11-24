@@ -32,7 +32,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * The thread pool used for scan directories
  */
 @InterfaceAudience.Private
-public class DirScanPool implements ConfigurationObserver {
+public final class DirScanPool implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(DirScanPool.class);
   private volatile int size;
   private final ThreadPoolExecutor pool;
