@@ -1,5 +1,4 @@
 # RELEASENOTES
-
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,10 +15,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+-->
+# HBASE  2.5.2 Release Notes
 
-# Be careful doing manual edits in this file. Do not change format
-# of release header or remove the below marker. This file is generated.
-# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27434](https://issues.apache.org/jira/browse/HBASE-27434) | *Major* | **Use $revision as placeholder for maven version to make it easier to control the version from command line**
+
+Use ${revision} as placeholder for maven version in pom, so later you can use 'mvn install -Drevision=xxx' to specify the version at build time.
+After this change, you can not use mvn versions:set to bump the version, instead. you should just modify the parent pom to change the value of the 'revision' property in the properties section.
+
+
+---
+
+* [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | *Major* | **The personality script set wrong hadoop2 check version for branch-2**
+
+This only affects branch-2 but for aliging the personality scripts across all active branches, we apply it to all active branches.
+
+
+---
+
+* [HBASE-27443](https://issues.apache.org/jira/browse/HBASE-27443) | *Major* | **Use java11 in the general check of our jenkins job**
+
+Change to use java 11 in nightly and pre commit jobs.
+
+Bump error prone to 2.16 and force using jdk11 when error prone is enabled.
+
+
+
 # HBASE  2.5.1 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
