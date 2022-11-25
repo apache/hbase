@@ -254,8 +254,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   /** lock guards against multiple threads trying to query the meta region at the same time */
   private final ReentrantLock userRegionLock = new ReentrantLock();
 
-  /** A Guava based TTL Cache to cache state of the master i.e. master is running or not */
-  final Supplier<Boolean> cachedMasterStateSupplier;
+  /**
+   * Supplier to get masterState
+   * - By default uses simple supplier without TTL cache
+   * - Use TTL Cache when hbase.client.master.state.cache.timeout.sec > 0
+   */
+  private final Supplier<Boolean> masterStateSupplier;
 
   private ChoreService choreService;
 
@@ -391,7 +395,22 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         // Doing nothing
     }
 
-    this.cachedMasterStateSupplier = Suppliers.memoizeWithExpiration(() -> {
+    long masterStateCacheTimeout = conf.getLong(MASTER_STATE_CACHE_TIMEOUT_SEC, 0);
+
+    Supplier<Boolean> masterConnSupplier = masterConnectionStateSupplier();
+    if (masterStateCacheTimeout <= 0L) {
+      this.masterStateSupplier = masterConnSupplier;
+    } else {
+      this.masterStateSupplier = Suppliers.memoizeWithExpiration(masterConnSupplier,
+        masterStateCacheTimeout, TimeUnit.SECONDS);
+    }
+  }
+
+  /**
+   * Visible for tests
+   */
+  Supplier<Boolean> masterConnectionStateSupplier() {
+    return () -> {
       if (this.masterServiceState.getStub() == null) {
         return false;
       }
@@ -407,7 +426,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         LOG.warn("Checking master connection", se);
         return false;
       }
-    }, conf.getLong(MASTER_STATE_CACHE_TIMEOUT_SEC, 30), TimeUnit.SECONDS);
+    };
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -1281,7 +1300,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    * Class to make a MasterServiceStubMaker stub.
    */
   private final class MasterServiceStubMaker {
-
     private void isMasterRunning(MasterProtos.MasterService.BlockingInterface stub)
       throws IOException {
       try {
@@ -1400,6 +1418,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         resetMasterServiceState(this.masterServiceState);
       }
     }
+
     // Ugly delegation just so we can add in a Close method.
     final MasterProtos.MasterService.BlockingInterface stub = this.masterServiceState.stub;
     return new MasterKeepAliveConnection() {
@@ -1974,7 +1993,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private boolean isKeepAliveMasterConnectedAndRunning(MasterServiceState mss) {
     LOG.info("Getting master connection state from TTL Cache");
-    return cachedMasterStateSupplier.get();
+    return masterStateSupplier.get();
   }
 
   void releaseMaster(MasterServiceState mss) {
