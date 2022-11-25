@@ -255,9 +255,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   private final ReentrantLock userRegionLock = new ReentrantLock();
 
   /**
-   * Supplier to get masterState
-   * - By default uses simple supplier without TTL cache
-   * - Use TTL Cache when hbase.client.master.state.cache.timeout.sec > 0
+   * Supplier to get masterState.By default uses simple supplier without TTL cache. When
+   * hbase.client.master.state.cache.timeout.sec > 0 it uses TTL Cache.
    */
   private final Supplier<Boolean> masterStateSupplier;
 
