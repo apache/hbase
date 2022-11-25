@@ -67,7 +67,6 @@ public class TestConnectionImplementation {
 
     LOG.info("TotalMillisWithoutCache:{} ms", totalMillisWithoutCache);
 
-
     // Test with hbase.client.master.state.cache.timeout.sec = 15 Sec
     conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 15L);
     conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
