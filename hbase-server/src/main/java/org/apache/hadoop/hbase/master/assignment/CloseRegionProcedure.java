@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import java.io.IOException;
-import java.util.Optional;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.UnexpectedStateException;
@@ -46,14 +45,14 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   // wrong(but do not make it wrong intentionally). The client can handle this error.
   private ServerName assignCandidate;
 
-  private Optional<Boolean> evictCache;
+  private boolean evictCache;
 
   public CloseRegionProcedure() {
     super();
   }
 
   public CloseRegionProcedure(TransitRegionStateProcedure parent, RegionInfo region,
-    ServerName targetServer, ServerName assignCandidate, Optional<Boolean> evictCache) {
+    ServerName targetServer, ServerName assignCandidate, boolean evictCache) {
     super(parent, region, targetServer);
     this.assignCandidate = assignCandidate;
     this.evictCache = evictCache;
@@ -66,7 +65,8 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   public RemoteOperation newRemoteOperation() {
-    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, evictCache);
+    return new RegionCloseOperation(this, region, getProcId(),
+      assignCandidate, evictCache);
   }
 
   @Override
@@ -76,6 +76,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     if (assignCandidate != null) {
       builder.setAssignCandidate(ProtobufUtil.toServerName(assignCandidate));
     }
+    builder.setEvictCache(evictCache);
     serializer.serialize(builder.build());
   }
 
@@ -87,6 +88,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
     if (data.hasAssignCandidate()) {
       assignCandidate = ProtobufUtil.toServerName(data.getAssignCandidate());
     }
+    evictCache = data.getEvictCache();
   }
 
   @Override
