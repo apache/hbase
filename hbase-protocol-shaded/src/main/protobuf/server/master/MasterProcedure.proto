@@ -604,6 +604,8 @@ message RegionStateTransitionStateData {
   required RegionTransitionType type = 1;
   optional ServerName assign_candidate = 2;
   required bool force_new_plan = 3;
+  optional bool is_split = 4 [default = false];
+  optional bool evict_cache = 5 [default = false];
 }
 
 enum RegionRemoteProcedureBaseState {
@@ -628,6 +630,7 @@ message OpenRegionProcedureStateData {
 
 message CloseRegionProcedureStateData {
   optional ServerName assign_candidate = 1;
+  optional bool evict_cache = 2 [default = false];
 }
 
 enum SwitchRpcThrottleState {
