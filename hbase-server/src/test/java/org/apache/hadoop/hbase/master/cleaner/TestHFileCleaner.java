@@ -75,7 +75,7 @@ public class TestHFileCleaner {
   public static void setupCluster() throws Exception {
     // have to use a minidfs cluster because the localfs doesn't modify file times correctly
     UTIL.startMiniDFSCluster(1);
-    POOL = new DirScanPool(UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
   }
 
   @AfterClass
