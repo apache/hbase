@@ -91,7 +91,7 @@ public class TestHFileLinkCleaner {
 
   @BeforeClass
   public static void setUp() {
-    POOL = new DirScanPool(TEST_UTIL.getConfiguration());
+    POOL = DirScanPool.getHFileCleanerScanPool(TEST_UTIL.getConfiguration());
   }
 
   @AfterClass
