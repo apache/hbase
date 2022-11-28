@@ -171,10 +171,10 @@ export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 export HBASE_AUTOSTART_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autostart
 
 if [ -n "$SERVER_GC_OPTS" ]; then
-  export SERVER_GC_OPTS=${SERVER_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${HBASE_LOGGC}"}
+  export SERVER_GC_OPTS=${SERVER_GC_OPTS/"<FILE-PATH>"/"${HBASE_LOGGC}"}
 fi
 if [ -n "$CLIENT_GC_OPTS" ]; then
-  export CLIENT_GC_OPTS=${CLIENT_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${HBASE_LOGGC}"}
+  export CLIENT_GC_OPTS=${CLIENT_GC_OPTS/"<FILE-PATH>"/"${HBASE_LOGGC}"}
 fi
 
 # Set default scheduling priority
