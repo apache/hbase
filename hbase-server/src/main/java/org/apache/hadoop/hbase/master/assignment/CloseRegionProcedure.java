@@ -65,8 +65,7 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   public RemoteOperation newRemoteOperation() {
-    return new RegionCloseOperation(this, region, getProcId(),
-      assignCandidate, evictCache);
+    return new RegionCloseOperation(this, region, getProcId(), assignCandidate, evictCache);
   }
 
   @Override
