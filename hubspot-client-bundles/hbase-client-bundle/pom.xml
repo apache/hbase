@@ -81,11 +81,19 @@
                   <include>org.apache.hbase:hbase-logging</include>
                   <include>org.apache.hbase:hbase-protocol</include>
                   <include>org.apache.hbase:hbase-protocol-shaded</include>
+                  <!--
+                  need to include a bunch of thirdparty deps, otherwise we'd need
+                  to manage those versions in parent-pom
+                  -->
+                  <include>org.apache.hbase.thirdparty:*</include>
                   <!-- for AggregationClient. we filter to just client classes below -->
                   <include>org.apache.hbase:hbase-endpoint</include>
 
-                  <include>com.google.protobuf:protobuf-java</include>
+                  <!--
+                  following deps shaded in hubspot-client-bundles pom
+                  -->
 
+                  <include>com.google.protobuf:protobuf-java</include>
                   <!--  For client metrics we need to include so the metrics package can be shaded to prevent issues with our parent pom -->
                   <include>io.dropwizard.metrics:metrics-core</include>
                 </includes>
