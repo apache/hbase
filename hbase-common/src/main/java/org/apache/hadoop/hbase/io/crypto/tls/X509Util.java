@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.Security;
@@ -25,6 +29,7 @@ import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -38,6 +43,7 @@ import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
 import org.apache.hadoop.hbase.exceptions.TrustManagerException;
 import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +85,7 @@ public final class X509Util {
     CONFIG_PREFIX + "host-verification.reverse-dns.enabled";
   private static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
   private static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
+  public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
   public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   //
@@ -244,7 +251,6 @@ public final class X509Util {
     }
 
     SslContextBuilder sslContextBuilder;
-
     sslContextBuilder = SslContextBuilder
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
@@ -393,6 +399,76 @@ public final class X509Util {
       return getDefaultCipherSuites();
     } else {
       return cipherSuitesInput.split(",");
+    }
+  }
+
+  /**
+   * Enable certificate file reloading by creating FileWatchers for keystore and truststore.
+   * AtomicReferences will be set with the new instances. resetContext - if not null - will be
+   * called when the file has been modified.
+   * @param keystoreWatcher   Reference to keystoreFileWatcher.
+   * @param trustStoreWatcher Reference to truststoreFileWatcher.
+   * @param resetContext      Callback for file changes.
+   */
+  public static void enableCertFileReloading(Configuration config,
+    AtomicReference<FileChangeWatcher> keystoreWatcher,
+    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
+    throws IOException {
+    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
+    keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
+    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+  }
+
+  private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
+    throws IOException {
+    if (fileLocation == null || fileLocation.isEmpty() || resetContext == null) {
+      return null;
+    }
+    final Path filePath = Paths.get(fileLocation).toAbsolutePath();
+    Path parentPath = filePath.getParent();
+    if (parentPath == null) {
+      throw new IOException("Key/trust store path does not have a parent: " + filePath);
+    }
+    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(parentPath, watchEvent -> {
+      handleWatchEvent(filePath, watchEvent, resetContext);
+    });
+    fileChangeWatcher.start();
+    return fileChangeWatcher;
+  }
+
+  /**
+   * Handler for watch events that let us know a file we may care about has changed on disk.
+   * @param filePath the path to the file we are watching for changes.
+   * @param event    the WatchEvent.
+   */
+  private static void handleWatchEvent(Path filePath, WatchEvent<?> event, Runnable resetContext) {
+    boolean shouldResetContext = false;
+    Path dirPath = filePath.getParent();
+    if (event.kind().equals(StandardWatchEventKinds.OVERFLOW)) {
+      // If we get notified about possibly missed events, reload the key store / trust store just to
+      // be sure.
+      shouldResetContext = true;
+    } else if (
+      event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY)
+        || event.kind().equals(StandardWatchEventKinds.ENTRY_CREATE)
+    ) {
+      Path eventFilePath = dirPath.resolve((Path) event.context());
+      if (filePath.equals(eventFilePath)) {
+        shouldResetContext = true;
+      }
+    }
+    // Note: we don't care about delete events
+    if (shouldResetContext) {
+      LOG.info(
+        "Attempting to reset default SSL context after receiving watch event: {} with context: {}",
+        event.kind(), event.context());
+      resetContext.run();
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Ignoring watch event and keeping previous default SSL context. "
+          + "Event kind: {} with context: {}", event.kind(), event.context());
+      }
     }
   }
 }
