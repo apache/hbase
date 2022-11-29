@@ -2866,7 +2866,7 @@
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
-        <argLine>-Dio.netty.tryReflectionSetAccessible=true
+        <argLine>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
