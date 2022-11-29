@@ -77,6 +77,11 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   public static final String LOG_CLEANER_CHORE_DIRECTORY_SORTING =
     "hbase.cleaner.directory.sorting";
   static final boolean DEFAULT_LOG_CLEANER_CHORE_DIRECTORY_SORTING = true;
+  /**
+   * Enable the CleanerChore.
+   */
+  public static final String CLEANER_CHORE_ENABLED = "hbase.cleaner.chore.enabled";
+  static final boolean DEFAULT_CLEANER_CHORE_ENABLED = true;
 
   private final DirScanPool pool;
 
@@ -84,12 +89,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
   private final Path oldFileDir;
   private final Configuration conf;
   protected final Map<String, Object> params;
-  private final AtomicBoolean enabled = new AtomicBoolean(true);
+  private final AtomicBoolean enabled;
   protected List<T> cleanersChain;
   protected List<String> excludeDirs;
   private CompletableFuture<Boolean> future;
   private boolean forceRun;
-  private boolean sortDirectories;
+  private final boolean sortDirectories;
 
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
     FileSystem fs, Path oldFileDir, String confKey, DirScanPool pool) {
@@ -118,6 +123,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     this.oldFileDir = oldFileDir;
     this.conf = conf;
     this.params = params;
+    this.enabled =
+      new AtomicBoolean(conf.getBoolean(CLEANER_CHORE_ENABLED, DEFAULT_CLEANER_CHORE_ENABLED));
     if (excludePaths != null && !excludePaths.isEmpty()) {
       excludeDirs = new ArrayList<>(excludePaths.size());
       for (Path path : excludePaths) {
@@ -131,7 +138,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Schedu
     if (excludeDirs != null) {
       LOG.info("Cleaner {} excludes sub dirs: {}", name, excludeDirs);
     }
-    sortDirectories = conf.getBoolean(LOG_CLEANER_CHORE_DIRECTORY_SORTING,
+    this.sortDirectories = conf.getBoolean(LOG_CLEANER_CHORE_DIRECTORY_SORTING,
       DEFAULT_LOG_CLEANER_CHORE_DIRECTORY_SORTING);
     initCleanerChain(confKey);
   }
