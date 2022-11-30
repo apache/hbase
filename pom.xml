@@ -645,6 +645,12 @@
       <email>bbeaudreault@apache.org</email>
       <timezone>-5</timezone>
     </developer>
+    <developer>
+      <id>heliangjun</id>
+      <name>Liangjun He</name>
+      <email>heliangjun@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
