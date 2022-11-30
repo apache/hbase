@@ -186,6 +186,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
@@ -1383,9 +1384,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
             LOG.error(msg);
             throw new IOException(msg);
           }
+          // if Master use-ip is enabled, RegionServer use-ip will be enabled by default even if it
+          // is set to disable. so we will use the ip of the RegionServer to compare with the
+          // hostname passed by the Master, see HBASE-27304 for details.
+          InetSocketAddress isa = rpcServices.getSocketAddress();
+          // here getActiveMaster() is definitely not null.
+          String isaHostName = InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
+            ? isa.getAddress().getHostAddress()
+            : isa.getHostName();
           if (
             StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(rpcServices.getSocketAddress().getHostName())
+              && !hostnameFromMasterPOV.equals(isaHostName)
           ) {
             String msg = "Master passed us a different hostname to use; was="
               + rpcServices.getSocketAddress().getHostName() + ", but now=" + hostnameFromMasterPOV;
