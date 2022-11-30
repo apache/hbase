@@ -27,9 +27,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.Timer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -60,35 +58,33 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
 @InterfaceAudience.Private
 public class MetricsConnection implements StatisticTrackable {
 
-  static final Map<String, MetricsConnection> METRICS_INSTANCES =
-    new HashMap<String, MetricsConnection>();
+  private static final ConcurrentMap<String, MetricsConnection> METRICS_INSTANCES =
+    new ConcurrentHashMap<>();
 
   static MetricsConnection getMetricsConnection(final String scope,
     Supplier<ThreadPoolExecutor> batchPool, Supplier<ThreadPoolExecutor> metaPool) {
-    MetricsConnection metrics;
-    synchronized (METRICS_INSTANCES) {
-      metrics = METRICS_INSTANCES.get(scope);
-      if (metrics == null) {
-        metrics = new MetricsConnection(scope, batchPool, metaPool);
-        METRICS_INSTANCES.put(scope, metrics);
+    return METRICS_INSTANCES.compute(scope, (s, metricsConnection) -> {
+      if (metricsConnection == null) {
+        MetricsConnection newMetricsConn = new MetricsConnection(scope, batchPool, metaPool);
+        newMetricsConn.incrConnectionCount();
+        return newMetricsConn;
       } else {
-        metrics.addThreadPools(batchPool, metaPool);
+        metricsConnection.addThreadPools(batchPool, metaPool);
+        metricsConnection.incrConnectionCount();
+        return metricsConnection;
       }
-      metrics.incrConnectionCount();
-    }
-    return metrics;
+    });
   }
 
   static void deleteMetricsConnection(final String scope) {
-    synchronized (METRICS_INSTANCES) {
-      MetricsConnection metrics = METRICS_INSTANCES.get(scope);
-      if (metrics == null) return;
-      metrics.decrConnectionCount();
-      if (metrics.getConnectionCount() == 0) {
-        METRICS_INSTANCES.remove(scope);
-        metrics.shutdown();
+    METRICS_INSTANCES.computeIfPresent(scope, (s, metricsConnection) -> {
+      metricsConnection.decrConnectionCount();
+      if (metricsConnection.getConnectionCount() == 0) {
+        metricsConnection.shutdown();
+        return null;
       }
-    }
+      return metricsConnection;
+    });
   }
 
   /** Set this key to {@code true} to enable metrics collection of client requests. */
