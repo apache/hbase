@@ -209,11 +209,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
           }
         } catch (OperationTimeoutExceededException e) {
           // The operation has timed out before executing the actual callable. This may be due to
-          // slow/hotspotted
-          // meta or the operation timeout set too low for the number of requests. Circumventing the
-          // usual failure flow
-          // ensure the meta cache is not cleared and will not result in a doomed feedback loop in
-          // which the meta continues to be hotspotted
+          // slow/hotspotted meta or the operation timeout set too low for the number of requests.
+          // Circumventing the usual failure flow ensure the meta cache is not cleared and will not
+          // result in a doomed feedback loop in which the meta continues to be hotspotted.
+          // See HBASE-27487
           failAll(multiAction, server, numAttempt, e);
           return;
         } catch (IOException e) {
