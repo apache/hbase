@@ -50,10 +50,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
  * This class is for maintaining the various connection statistics and publishing them through the
  * metrics interfaces. This class manages its own {@link MetricRegistry} and {@link JmxReporter} so
  * as to not conflict with other uses of Yammer Metrics within the client application. Calling
- * {@link #getMetricsConnection} implicitly creates and "starts" instances of these classes; be
- * sure to call {@link #deleteMetricsConnection} to terminate the thread pools they allocate. The
- * metrics reporter will be shutdown {@link #shutdown()} when all connections within this metrics
- * instances are closed.
+ * {@link #getMetricsConnection} implicitly creates and "starts" instances of these classes; be sure
+ * to call {@link #deleteMetricsConnection} to terminate the thread pools they allocate. The metrics
+ * reporter will be shutdown {@link #shutdown()} when all connections within this metrics instances
+ * are closed.
  */
 @InterfaceAudience.Private
 public class MetricsConnection implements StatisticTrackable {
@@ -329,8 +329,8 @@ public class MetricsConnection implements StatisticTrackable {
   };
 
   // List of thread pool per connection of the metrics.
-  private List<Supplier<ThreadPoolExecutor>> batchPools = new ArrayList<>();
-  private List<Supplier<ThreadPoolExecutor>> metaPools = new ArrayList<>();
+  private final List<Supplier<ThreadPoolExecutor>> batchPools = new ArrayList<>();
+  private final List<Supplier<ThreadPoolExecutor>> metaPools = new ArrayList<>();
 
   // static metrics
 
@@ -529,7 +529,8 @@ public class MetricsConnection implements StatisticTrackable {
   }
 
   /** Add thread pools of additional connections to the metrics */
-  private void addThreadPools(Supplier batchPool, Supplier metaPool) {
+  private void addThreadPools(Supplier<ThreadPoolExecutor> batchPool,
+    Supplier<ThreadPoolExecutor> metaPool) {
     batchPools.add(batchPool);
     metaPools.add(metaPool);
   }
