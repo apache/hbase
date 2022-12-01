@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MutationPr
  * This class is for maintaining the various connection statistics and publishing them through the
  * metrics interfaces. This class manages its own {@link MetricRegistry} and {@link JmxReporter} so
  * as to not conflict with other uses of Yammer Metrics within the client application. Calling
- * {@link #getMetricsConnection()} implicitly creates and "starts" instances of these classes; be
- * sure to call {@link #deleteMetricsConnection()} to terminate the thread pools they allocate. The
+ * {@link #getMetricsConnection} implicitly creates and "starts" instances of these classes; be
+ * sure to call {@link #deleteMetricsConnection} to terminate the thread pools they allocate. The
  * metrics reporter will be shutdown {@link #shutdown()} when all connections within this metrics
  * instances are closed.
  */
