@@ -206,6 +206,14 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
             // Cancelled
             return;
           }
+        } catch (OperationTimeoutExceededException e) {
+          // The operation has timed out before executing the actual callable. This may be due to
+          // slow/hotspotted meta or the operation timeout set too low for the number of requests.
+          // Circumventing the usual failure flow ensure the meta cache is not cleared and will not
+          // result in a doomed feedback loop in which the meta continues to be hotspotted.
+          // See HBASE-27487
+          failAll(multiAction, server, numAttempt, e);
+          return;
         } catch (IOException e) {
           // The service itself failed . It may be an error coming from the communication
           // layer, but, as well, a functional error raised by the server.
@@ -672,6 +680,25 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       canRetry = Retry.NO_OTHER_SUCCEEDED;
     }
     return canRetry;
+  }
+
+  /**
+   * Fail all the actions from this multiaction after an OperationTimeoutExceededException
+   * @param actions    the actions still to do from the initial list
+   * @param server     the destination
+   * @param numAttempt the number of attempts so far
+   * @param throwable  the throwable that caused the failure
+   */
+  private void failAll(MultiAction actions, ServerName server, int numAttempt,
+    Throwable throwable) {
+    int failed = 0;
+    for (Map.Entry<byte[], List<Action>> e : actions.actions.entrySet()) {
+      for (Action action : e.getValue()) {
+        setError(action.getOriginalIndex(), action.getAction(), throwable, server);
+        ++failed;
+      }
+    }
+    logNoResubmit(server, numAttempt, actions.size(), throwable, failed, 0);
   }
 
   /**
