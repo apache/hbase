@@ -264,7 +264,7 @@ public final class MetricsConnection implements StatisticTrackable {
     }
   }
 
-  protected ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats =
+  private ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats =
     new ConcurrentHashMap<>();
 
   public void updateServerStats(ServerName serverName, byte[] regionName, Object r) {
@@ -305,7 +305,7 @@ public final class MetricsConnection implements StatisticTrackable {
 
   private final MetricRegistry registry;
   private final JmxReporter reporter;
-  protected final String scope;
+  private final String scope;
 
   private final NewMetric<Timer> timerFactory = new NewMetric<Timer>() {
     @Override
@@ -334,39 +334,39 @@ public final class MetricsConnection implements StatisticTrackable {
 
   // static metrics
 
-  protected final Counter connectionCount;
-  protected final Counter metaCacheHits;
-  protected final Counter metaCacheMisses;
-  protected final CallTracker getTracker;
-  protected final CallTracker scanTracker;
-  protected final CallTracker appendTracker;
-  protected final CallTracker deleteTracker;
-  protected final CallTracker incrementTracker;
-  protected final CallTracker putTracker;
-  protected final CallTracker multiTracker;
-  protected final RunnerStats runnerStats;
-  protected final Counter metaCacheNumClearServer;
-  protected final Counter metaCacheNumClearRegion;
-  protected final Counter hedgedReadOps;
-  protected final Counter hedgedReadWin;
-  protected final Histogram concurrentCallsPerServerHist;
-  protected final Histogram numActionsPerServerHist;
-  protected final Counter nsLookups;
-  protected final Counter nsLookupsFailed;
-  protected final Timer overloadedBackoffTimer;
+  private final Counter connectionCount;
+  private final Counter metaCacheHits;
+  private final Counter metaCacheMisses;
+  private final CallTracker getTracker;
+  private final CallTracker scanTracker;
+  private final CallTracker appendTracker;
+  private final CallTracker deleteTracker;
+  private final CallTracker incrementTracker;
+  private final CallTracker putTracker;
+  private final CallTracker multiTracker;
+  private final RunnerStats runnerStats;
+  private final Counter metaCacheNumClearServer;
+  private final Counter metaCacheNumClearRegion;
+  private final Counter hedgedReadOps;
+  private final Counter hedgedReadWin;
+  private final Histogram concurrentCallsPerServerHist;
+  private final Histogram numActionsPerServerHist;
+  private final Counter nsLookups;
+  private final Counter nsLookupsFailed;
+  private final Timer overloadedBackoffTimer;
 
   // dynamic metrics
 
   // These maps are used to cache references to the metric instances that are managed by the
   // registry. I don't think their use perfectly removes redundant allocations, but it's
   // a big improvement over calling registry.newMetric each time.
-  protected final ConcurrentMap<String, Timer> rpcTimers =
+  private final ConcurrentMap<String, Timer> rpcTimers =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  protected final ConcurrentMap<String, Histogram> rpcHistograms = new ConcurrentHashMap<>(
+  private final ConcurrentMap<String, Histogram> rpcHistograms = new ConcurrentHashMap<>(
     CAPACITY * 2 /* tracking both request and response sizes */, LOAD_FACTOR, CONCURRENCY_LEVEL);
   private final ConcurrentMap<String, Counter> cacheDroppingExceptions =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
-  protected final ConcurrentMap<String, Counter> rpcCounters =
+  private final ConcurrentMap<String, Counter> rpcCounters =
     new ConcurrentHashMap<>(CAPACITY, LOAD_FACTOR, CONCURRENCY_LEVEL);
 
   private MetricsConnection(String scope, Supplier<ThreadPoolExecutor> batchPool,
@@ -454,6 +454,86 @@ public final class MetricsConnection implements StatisticTrackable {
 
   MetricRegistry getMetricRegistry() {
     return registry;
+  }
+
+  /** scope of the metrics object */
+  public String getMetricScope() {
+    return scope;
+  }
+
+  /** serverStats metric */
+  public ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> getServerStats() {
+    return serverStats;
+  }
+
+  /** runnerStats metric */
+  public RunnerStats getRunnerStats() {
+    return runnerStats;
+  }
+
+  /** metaCacheNumClearServer metric */
+  public Counter getMetaCacheNumClearServer() {
+    return metaCacheNumClearServer;
+  }
+
+  /** metaCacheNumClearRegion metric */
+  public Counter getMetaCacheNumClearRegion() {
+    return metaCacheNumClearRegion;
+  }
+
+  /** hedgedReadOps metric */
+  public Counter getHedgedReadOps() {
+    return hedgedReadOps;
+  }
+
+  /** hedgedReadWin metric */
+  public Counter getHedgedReadWin() {
+    return hedgedReadWin;
+  }
+
+  /** numActionsPerServerHist metric */
+  public Histogram getNumActionsPerServerHist() {
+    return numActionsPerServerHist;
+  }
+
+  /** rpcCounters metric */
+  public ConcurrentMap<String, Counter> getRpcCounters() {
+    return rpcCounters;
+  }
+
+  /** getTracker metric */
+  public CallTracker getGetTracker() {
+    return getTracker;
+  }
+
+  /** scanTracker metric */
+  public CallTracker getScanTracker() {
+    return scanTracker;
+  }
+
+  /** multiTracker metric */
+  public CallTracker getMultiTracker() {
+    return multiTracker;
+  }
+
+  /** appendTracker metric */
+  public CallTracker getAppendTracker() {
+    return appendTracker;
+  }
+
+  /** deleteTracker metric */
+  public CallTracker getDeleteTracker() {
+    return deleteTracker;
+  }
+
+  /** incrementTracker metric */
+  public CallTracker getIncrementTracker() {
+    return incrementTracker;
+  }
+
+  /** putTracker metric */
+  public CallTracker getPutTracker() {
+    return putTracker;
   }
 
   /** Produce an instance of {@link CallStats} for clients to attach to RPCs. */

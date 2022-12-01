@@ -85,13 +85,14 @@ public class TestMetricsConnection {
     AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
-    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.get().scope);
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
+      metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
-    assertEquals(scope, metrics.get().scope);
+    assertEquals(scope, metrics.get().getMetricScope());
   }
 
   @Test
@@ -176,12 +177,13 @@ public class TestMetricsConnection {
     }
     for (String method : new String[] { "Get", "Scan", "Mutate" }) {
       final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
-      final long metricVal = METRICS.rpcCounters.get(metricKey).getCount();
+      final long metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
     }
-    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] { METRICS.getTracker,
-      METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker, METRICS.deleteTracker,
-      METRICS.incrementTracker, METRICS.putTracker }) {
+    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
+      METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
+      METRICS.getAppendTracker(), METRICS.getDeleteTracker(), METRICS.getIncrementTracker(),
+      METRICS.getPutTracker() }) {
       assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
       assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
       assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());
