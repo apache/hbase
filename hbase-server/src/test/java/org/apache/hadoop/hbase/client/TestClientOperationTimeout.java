@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
@@ -79,6 +80,8 @@ public class TestClientOperationTimeout {
   private static int DELAY_BATCH;
   private static int DELAY_META_SCAN;
 
+  private static boolean FAIL_BATCH = false;
+
   private static final TableName TABLE_NAME = TableName.valueOf("Timeout");
   private static final byte[] FAMILY = Bytes.toBytes("family");
   private static final byte[] ROW = Bytes.toBytes("row");
@@ -113,6 +116,7 @@ public class TestClientOperationTimeout {
     DELAY_MUTATE = 0;
     DELAY_BATCH = 0;
     DELAY_META_SCAN = 0;
+    FAIL_BATCH = false;
   }
 
   @AfterClass
@@ -196,17 +200,16 @@ public class TestClientOperationTimeout {
   /**
    * Tests that a batch get on a table throws
    * {@link org.apache.hadoop.hbase.client.OperationTimeoutExceededException} when the region lookup
-   * takes longer than the 'hbase.client.operation.timeout'
+   * takes longer than the 'hbase.client.operation.timeout'. This specifically tests that when meta
+   * is slow, the fetching of region locations for a batch is not allowed to itself exceed the
+   * operation timeout. In a batch size of 100, it's possible to need to make 100 meta calls in
+   * sequence. If meta is slow, we should abort the request once the operation timeout is exceeded,
+   * even if we haven't finished locating all regions. See HBASE-27490
    */
   @Test
   public void testMultiGetMetaTimeout() throws IOException {
-
     Configuration conf = new Configuration(UTIL.getConfiguration());
 
-    // the operation timeout must be lower than the delay from a meta scan to etch region locations
-    // of the get requests. Simply increasing the meta scan timeout to greater than the
-    // HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD will result in SocketTimeoutException on the scans thus
-    // avoiding the simulation of load on meta. See: HBASE-27487
     conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 400);
     conf.setBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     try (Connection specialConnection = ConnectionFactory.createConnection(conf);
@@ -216,7 +219,9 @@ public class TestClientOperationTimeout {
         ((ConnectionImplementation) specialConnection).getConnectionMetrics();
       long metaCacheNumClearServerPreFailure = metrics.getMetaCacheNumClearServer().getCount();
 
+      // delay and timeout are the same, so we should see a timeout after the first region lookup
       DELAY_META_SCAN = 400;
+
       List<Get> gets = new ArrayList<>();
       // we need to ensure the region look-ups eat up more time than the operation timeout without
       // exceeding the scan timeout.
@@ -237,11 +242,70 @@ public class TestClientOperationTimeout {
 
         for (Throwable cause : expected.getCauses()) {
           Assert.assertTrue(cause instanceof OperationTimeoutExceededException);
+          // Check that this is the timeout thrown by AsyncRequestFutureImpl during region lookup
+          Assert.assertTrue(cause.getMessage().contains("Operation timeout exceeded during"));
         }
-
       }
     }
+  }
 
+  /**
+   * Tests that a batch get on a table throws
+   * {@link org.apache.hadoop.hbase.client.OperationTimeoutExceededException} when retries are tuned
+   * too high to be able to be processed within the operation timeout. In this case, the final
+   * OperationTimeoutExceededException should not trigger a cache clear (but the individual failures
+   * may, if appropriate). This test skirts around the timeout checks during meta lookups from
+   * HBASE-27490, because we want to test for the case where meta lookups were able to succeed in
+   * time but did not leave enough time for the actual calls to occur. See HBASE-27487
+   */
+  @Test
+  public void testMultiGetRetryTimeout() {
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+
+    // allow 1 retry, and 0 backoff
+    conf.setLong(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 500);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setLong(HConstants.HBASE_CLIENT_PAUSE, 0);
+    conf.setBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+
+    try (Connection specialConnection = ConnectionFactory.createConnection(conf);
+      Table specialTable = specialConnection.getTable(TABLE_NAME)) {
+
+      MetricsConnection metrics =
+        ((ConnectionImplementation) specialConnection).getConnectionMetrics();
+      long metaCacheNumClearServerPreFailure = metrics.getMetaCacheNumClearServer().getCount();
+
+      // meta scan should take up most of the timeout but not all
+      DELAY_META_SCAN = 300;
+      // fail the batch call, causing a retry
+      FAIL_BATCH = true;
+
+      // Use a batch size of 1 so that we only make 1 meta call per attempt
+      List<Get> gets = new ArrayList<>();
+      gets.add(new Get(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER));
+
+      try {
+        specialTable.batch(gets, new Object[1]);
+        Assert.fail("should not reach here");
+      } catch (Exception e) {
+        RetriesExhaustedWithDetailsException expected = (RetriesExhaustedWithDetailsException) e;
+        Assert.assertEquals(1, expected.getNumExceptions());
+
+        // We expect that the error caused by FAIL_BATCH would clear the meta cache but
+        // the OperationTimeoutExceededException should not. So only allow new cache clear here
+        long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearServer().getCount();
+        Assert.assertEquals(metaCacheNumClearServerPreFailure + 1,
+          metaCacheNumClearServerPostFailure);
+
+        for (Throwable cause : expected.getCauses()) {
+          Assert.assertTrue(cause instanceof OperationTimeoutExceededException);
+          // Check that this is the timeout thrown by CancellableRegionServerCallable
+          Assert.assertTrue(cause.getMessage().contains("Timeout exceeded before call began"));
+        }
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -322,6 +386,9 @@ public class TestClientOperationTimeout {
     public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
       throws ServiceException {
       try {
+        if (FAIL_BATCH) {
+          throw new ServiceException(new NotServingRegionException("simulated failure"));
+        }
         Thread.sleep(DELAY_BATCH);
       } catch (InterruptedException e) {
         LOG.error("Sleep interrupted during multi operation", e);
