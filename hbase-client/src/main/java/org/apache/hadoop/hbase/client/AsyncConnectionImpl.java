@@ -118,6 +118,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
+  private final String metricsScope;
   private final Optional<MetricsConnection> metrics;
 
   private final ClusterStatusListener clusterStatusListener;
@@ -128,6 +129,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
     SocketAddress localAddress, User user) {
     this.conf = conf;
     this.user = user;
+    this.metricsScope = MetricsConnection.getScope(conf, clusterId, this);
 
     if (user.isLoginFromKeytab()) {
       spawnRenewalChore(user.getUGI());
@@ -135,8 +137,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      String scope = MetricsConnection.getScope(conf, clusterId, this);
-      this.metrics = Optional.of(new MetricsConnection(scope, () -> null, () -> null));
+      this.metrics =
+        Optional.of(MetricsConnection.getMetricsConnection(metricsScope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }
@@ -235,7 +237,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
           choreService = null;
         }
       }
-      metrics.ifPresent(MetricsConnection::shutdown);
+      if (metrics.isPresent()) {
+        MetricsConnection.deleteMetricsConnection(metricsScope);
+      }
       ConnectionOverAsyncConnection c = this.conn;
       if (c != null) {
         c.closePool();

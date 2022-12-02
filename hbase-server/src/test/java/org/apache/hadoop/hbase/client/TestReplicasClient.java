@@ -569,8 +569,8 @@ public class TestReplicasClient {
 
       // reset
       AsyncConnectionImpl conn = (AsyncConnectionImpl) HTU.getConnection().toAsyncConnection();
-      Counter hedgedReadOps = conn.getConnectionMetrics().get().hedgedReadOps;
-      Counter hedgedReadWin = conn.getConnectionMetrics().get().hedgedReadWin;
+      Counter hedgedReadOps = conn.getConnectionMetrics().get().getHedgedReadOps();
+      Counter hedgedReadWin = conn.getConnectionMetrics().get().getHedgedReadWin();
       hedgedReadOps.dec(hedgedReadOps.getCount());
       hedgedReadWin.dec(hedgedReadWin.getCount());
 

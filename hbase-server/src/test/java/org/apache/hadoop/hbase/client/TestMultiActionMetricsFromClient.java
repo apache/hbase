@@ -75,9 +75,9 @@ public class TestMultiActionMetricsFromClient {
 
       MetricsConnection metrics =
         ((AsyncConnectionImpl) conn.toAsyncConnection()).getConnectionMetrics().get();
-      assertEquals(1, metrics.multiTracker.reqHist.getCount());
-      assertEquals(3, metrics.numActionsPerServerHist.getSnapshot().getMean(), 1e-15);
-      assertEquals(1, metrics.numActionsPerServerHist.getCount());
+      assertEquals(1, metrics.getMultiTracker().reqHist.getCount());
+      assertEquals(3, metrics.getNumActionsPerServerHist().getSnapshot().getMean(), 1e-15);
+      assertEquals(1, metrics.getNumActionsPerServerHist().getCount());
     }
   }
 }
