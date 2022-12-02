@@ -315,7 +315,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
       if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
         this.metricsScope = MetricsConnection.getScope(conf, clusterId, this);
-        this.metrics = MetricsConnection.getMetricsConnection(this.metricsScope, this::getBatchPool, this::getMetaLookupPool);
+        this.metrics = MetricsConnection.getMetricsConnection(this.metricsScope, this::getBatchPool,
+          this::getMetaLookupPool);
       } else {
         this.metrics = null;
       }
