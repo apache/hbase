@@ -542,8 +542,8 @@ public class TestReplicasClient {
 
     // reset
     ClusterConnection connection = (ClusterConnection) HTU.getConnection();
-    Counter hedgedReadOps = connection.getConnectionMetrics().hedgedReadOps;
-    Counter hedgedReadWin = connection.getConnectionMetrics().hedgedReadWin;
+    Counter hedgedReadOps = connection.getConnectionMetrics().getHedgedReadOps();
+    Counter hedgedReadWin = connection.getConnectionMetrics().getHedgedReadWin();
     hedgedReadOps.dec(hedgedReadOps.getCount());
     hedgedReadWin.dec(hedgedReadWin.getCount());
 
