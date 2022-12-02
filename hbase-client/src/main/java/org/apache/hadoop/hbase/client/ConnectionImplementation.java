@@ -1398,6 +1398,13 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   final MasterServiceState masterServiceState = new MasterServiceState(this);
 
+  /**
+   * Visible for tests
+   */
+  MasterServiceState getMasterServiceState() {
+    return this.masterServiceState;
+  }
+
   @Override
   public MasterKeepAliveConnection getMaster() throws IOException {
     return getKeepAliveMasterService();
@@ -1408,9 +1415,9 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private MasterKeepAliveConnection getKeepAliveMasterService() throws IOException {
-    if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
+    if (!isKeepAliveMasterConnectedAndRunning()) {
       synchronized (masterLock) {
-        if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
+        if (!isKeepAliveMasterConnectedAndRunning()) {
           MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
           this.masterServiceState.stub = stubMaker.makeStub();
         }
@@ -1990,7 +1997,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  private boolean isKeepAliveMasterConnectedAndRunning(MasterServiceState mss) {
+  private boolean isKeepAliveMasterConnectedAndRunning() {
     LOG.info("Getting master connection state from TTL Cache");
     return masterStateSupplier.get();
   }
