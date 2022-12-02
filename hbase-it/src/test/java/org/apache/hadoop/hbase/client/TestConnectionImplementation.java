@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -25,21 +29,21 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 
 @Category({ ClientTests.class, MediumTests.class })
+@RunWith(MockitoJUnitRunner.class)
 public class TestConnectionImplementation {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestConnectionImplementation.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestConnectionImplementation.class);
-
   private static final IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
 
   @BeforeClass
@@ -53,43 +57,104 @@ public class TestConnectionImplementation {
   }
 
   @Test
-  public void testGetMasterTTLCache() throws IOException, InterruptedException {
+  public void testGetMaster_noCachedMasterState() throws IOException, IllegalAccessException {
     Configuration conf = TEST_UTIL.getConfiguration();
-
-    // Test with hbase.client.master.state.cache.timeout.sec = 0 sec
     conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 0L);
     ConnectionImplementation conn =
       new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
-    long startTime = System.currentTimeMillis();
-    conn.getMaster();
-    long endTime = System.currentTimeMillis();
-    long totalMillisWithoutCache = endTime - startTime;
+    ConnectionImplementation.MasterServiceState masterServiceState = spyMasterServiceState(conn);
+    conn.getMaster(); // This initializes the stubs but don't call isMasterRunning
+    conn.getMaster(); // Calls isMasterRunning since stubs are initialized. Invocation 1
+    conn.getMaster(); // Calls isMasterRunning since stubs are initialized. Invocation 2
+    Mockito.verify(masterServiceState, Mockito.times(2)).isMasterRunning();
+    conn.close();
+  }
 
-    LOG.info("TotalMillisWithoutCache:{} ms", totalMillisWithoutCache);
-
-    // Test with hbase.client.master.state.cache.timeout.sec = 15 Sec
+  @Test
+  public void testGetMaster_masterStateCacheHit() throws IOException, IllegalAccessException {
+    Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 15L);
-    conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    ConnectionImplementation conn =
+      new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    ConnectionImplementation.MasterServiceState masterServiceState = spyMasterServiceState(conn);
+    conn.getMaster(); // This initializes the stubs but don't call isMasterRunning
+    conn.getMaster(); // Uses cached value, don't call isMasterRunning
+    conn.getMaster(); // Uses cached value, don't call isMasterRunning
+    Mockito.verify(masterServiceState, Mockito.times(0)).isMasterRunning();
+    conn.close();
+  }
+
+  @Test
+  public void testGetMaster_masterStateCacheMiss()
+    throws IOException, InterruptedException, IllegalAccessException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 5L);
+    ConnectionImplementation conn =
+      new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    ConnectionImplementation.MasterServiceState masterServiceState = spyMasterServiceState(conn);
+    conn.getMaster(); // This initializes the stubs but don't call isMasterRunning
+    conn.getMaster(); // Uses cached value, don't call isMasterRunning
+    conn.getMaster(); // Uses cached value, don't call isMasterRunning
+    Thread.sleep(10000);
+    conn.getMaster(); // Calls isMasterRunning after cache expiry
+    Mockito.verify(masterServiceState, Mockito.times(1)).isMasterRunning();
+    conn.close();
+  }
+
+  @Test
+  public void testIsKeepAliveMasterConnectedAndRunning_UndeclaredThrowableException()
+    throws IOException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 0);
+    ConnectionImplementation conn =
+      new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    conn.getMaster(); // Initializes stubs
+
+    ConnectionImplementation.MasterServiceState masterServiceState = spyMasterServiceState(conn);
+    Mockito.doThrow(new UndeclaredThrowableException(new Exception("DUMMY EXCEPTION")))
+      .when(masterServiceState).isMasterRunning();
+
+    // Verify that masterState is "false" because of to injected exception
+    boolean isKeepAliveMasterRunning =
+      (boolean) getIsKeepAliveMasterConnectedAndRunningMethod().invoke(conn);
+    Assert.assertFalse(isKeepAliveMasterRunning);
+    conn.close();
+  }
+
+  @Test
+  public void testIsKeepAliveMasterConnectedAndRunning_IOException()
+    throws IOException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(ConnectionImplementation.MASTER_STATE_CACHE_TIMEOUT_SEC, 0);
+    ConnectionImplementation conn =
+      new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
     conn.getMaster();
 
-    startTime = System.currentTimeMillis();
-    conn.getMaster();
-    endTime = System.currentTimeMillis();
-    long totalMillisWithCache = endTime - startTime;
+    ConnectionImplementation.MasterServiceState masterServiceState = spyMasterServiceState(conn);
+    Mockito.doThrow(new IOException("DUMMY EXCEPTION")).when(masterServiceState).isMasterRunning();
 
-    LOG.info("totalMillisWithCache:{} ms", totalMillisWithCache);
+    boolean isKeepAliveMasterRunning =
+      (boolean) getIsKeepAliveMasterConnectedAndRunningMethod().invoke(conn);
 
-    Thread.sleep(20000);
-    startTime = System.currentTimeMillis();
-    conn.getMaster();
-    endTime = System.currentTimeMillis();
-    long totalMillisAfterCacheExpiry = endTime - startTime;
-    LOG.info("totalMillisAfterCacheExpiry:{} ms", totalMillisAfterCacheExpiry);
+    // Verify that masterState is "false" because of to injected exception
+    Assert.assertFalse(isKeepAliveMasterRunning);
+    conn.close();
+  }
 
-    // Verify that retrieval from cache is faster than retrieval without cache.
-    assert totalMillisWithCache < totalMillisWithoutCache;
+  // Spy the masterServiceState object using reflection
+  private ConnectionImplementation.MasterServiceState
+    spyMasterServiceState(ConnectionImplementation conn) throws IllegalAccessException {
+    ConnectionImplementation.MasterServiceState spiedMasterServiceState =
+      Mockito.spy(conn.getMasterServiceState());
+    FieldUtils.writeDeclaredField(conn, "masterServiceState", spiedMasterServiceState, true);
+    return spiedMasterServiceState;
+  }
 
-    // Verify that retrieval from cache is faster than retrieval after expiry.
-    assert totalMillisWithCache < totalMillisAfterCacheExpiry;
+  // Get isKeepAliveMasterConnectedAndRunning using reflection
+  private Method getIsKeepAliveMasterConnectedAndRunningMethod() throws NoSuchMethodException {
+    Method method =
+      ConnectionImplementation.class.getDeclaredMethod("isKeepAliveMasterConnectedAndRunning");
+    method.setAccessible(true);
+    return method;
   }
 }
