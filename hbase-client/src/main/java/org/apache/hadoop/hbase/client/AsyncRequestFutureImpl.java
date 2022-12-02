@@ -410,6 +410,28 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   /**
+   * Some checked calls send a callable with their own tracker. This method checks the operation
+   * timeout against the appropriate tracker, or returns false if no tracker.
+   */
+  private boolean isOperationTimeoutExceeded() {
+    RetryingTimeTracker currentTracker;
+    if (tracker != null) {
+      currentTracker = tracker;
+    } else if (currentCallable != null && currentCallable.getTracker() != null) {
+      currentTracker = currentCallable.getTracker();
+    } else {
+      return false;
+    }
+
+    // no-op if already started, this is just to ensure it was initialized (usually true)
+    currentTracker.start();
+
+    // return value of 1 is special to mean exceeded, to differentiate from 0
+    // which is no timeout. see implementation of getRemainingTime
+    return currentTracker.getRemainingTime(operationTimeout) == 1;
+  }
+
+  /**
    * Group a list of actions per region servers, and send them.
    * @param currentActions - the list of row to submit
    * @param numAttempt     - the current numAttempt (first attempt is 1)
@@ -420,9 +442,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     boolean isReplica = false;
     List<Action> unknownReplicaActions = null;
     for (Action action : currentActions) {
-      if (tracker.getRemainingTime(operationTimeout) == 1) {
-        // return value of 1 is special to mean exceeded, to differentiate from 0
-        // which is no timeout. see implementation of getRemainingTime
+      if (isOperationTimeoutExceeded()) {
         String message = numAttempt == 1
           ? "Operation timeout exceeded during resolution of region locations, "
             + "prior to executing any actions."

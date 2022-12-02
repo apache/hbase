@@ -122,4 +122,8 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
       throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException {
     return getStub().cleanupBulkLoad(getRpcController(), request);
   }
+
+  RetryingTimeTracker getTracker() {
+    return tracker;
+  }
 }
