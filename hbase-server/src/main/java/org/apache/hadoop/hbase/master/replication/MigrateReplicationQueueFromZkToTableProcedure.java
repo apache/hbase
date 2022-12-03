@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_PEER;
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_PEER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_MIGRATE;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE;
@@ -111,6 +113,26 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     }
   }
 
+  private void disableReplicationLogCleaner(MasterProcedureEnv env)
+    throws ProcedureSuspendedException {
+    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+      // it is not likely that we can reach here as we will schedule this procedure immediately
+      // after master restarting, where ReplicationLogCleaner should have not started its first run
+      // yet. But anyway, let's make the code more robust. And it is safe to wait a bit here since
+      // there will be no data in the new replication queue storage before we execute this procedure
+      // so ReplicationLogCleaner will quit immediately without doing anything.
+      throw suspend(env.getMasterConfiguration(),
+        backoff -> LOG.info(
+          "Can not disable replication log cleaner, sleep {} secs and retry later",
+          backoff / 1000));
+    }
+    resetRetry();
+  }
+
+  private void enableReplicationLogCleaner(MasterProcedureEnv env) {
+    env.getReplicationPeerManager().getReplicationLogCleanerBarrier().enable();
+  }
+
   private void waitUntilNoPeerProcedure(MasterProcedureEnv env) throws ProcedureSuspendedException {
     long peerProcCount;
     try {
@@ -136,6 +158,10 @@ public class MigrateReplicationQueueFromZkToTableProcedure
     MigrateReplicationQueueFromZkToTableState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     switch (state) {
+      case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER:
+        disableReplicationLogCleaner(env);
+        setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE);
+        return Flow.HAS_MORE_STATE;
       case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE:
         waitUntilNoPeerProcedure(env);
         List<ReplicationPeerDescription> peers = env.getReplicationPeerManager().listPeers(null);
@@ -152,7 +178,8 @@ public class MigrateReplicationQueueFromZkToTableProcedure
                 "failed to delete old replication queue data, sleep {} secs and retry later",
                 backoff / 1000, e));
           }
-          return Flow.NO_MORE_STATE;
+          setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER);
+          return Flow.HAS_MORE_STATE;
         }
         // here we do not care the peers which have already been disabled, as later we do not need
         // to enable them
@@ -232,6 +259,10 @@ public class MigrateReplicationQueueFromZkToTableProcedure
         for (String peerId : disabledPeerIds) {
           addChildProcedure(new EnablePeerProcedure(peerId));
         }
+        setNextState(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER);
+        return Flow.HAS_MORE_STATE;
+      case MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_ENABLE_CLEANER:
+        enableReplicationLogCleaner(env);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
@@ -263,7 +294,19 @@ public class MigrateReplicationQueueFromZkToTableProcedure
 
   @Override
   protected MigrateReplicationQueueFromZkToTableState getInitialState() {
-    return MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_PREPARE;
+    return MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER;
+  }
+
+  @Override
+  protected void afterReplay(MasterProcedureEnv env) {
+    if (getCurrentState() == getInitialState()) {
+      // do not need to disable log cleaner or acquire lock if we are in the initial state, later
+      // when executing the procedure we will try to disable and acquire.
+      return;
+    }
+    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+      throw new IllegalStateException("can not disable log cleaner, this should not happen");
+    }
   }
 
   @Override
