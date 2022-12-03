@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER;
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MigrateReplicationQueueFromZkToTableState.MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_WAIT_UPGRADING;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -48,6 +51,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -102,6 +106,8 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
 
   @BeforeClass
   public static void setupCluster() throws Exception {
+    // one hour, to make sure it will not run during the test
+    UTIL.getConfiguration().setInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL, 60 * 60 * 1000);
     UTIL.startMiniCluster(
       StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
   }
@@ -193,8 +199,10 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
     UTIL.waitFor(30000, () -> proc.isSuccess());
   }
 
+  // make sure we will disable replication peers while migrating
+  // and also tests disable/enable replication log cleaner and wait for region server upgrading
   @Test
-  public void testDisablePeerAndWaitUpgrading() throws Exception {
+  public void testDisablePeerAndWaitStates() throws Exception {
     String peerId = "2";
     ReplicationPeerConfig rpc = ReplicationPeerConfig.newBuilder()
       .setClusterKey(UTIL.getZkCluster().getAddress().toString() + ":/testhbase")
@@ -206,11 +214,22 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
     EXTRA_REGION_SERVERS
       .put(ServerName.valueOf("localhost", 54321, EnvironmentEdgeManager.currentTime()), metrics);
 
+    ReplicationLogCleanerBarrier barrier = UTIL.getHBaseCluster().getMaster()
+      .getReplicationPeerManager().getReplicationLogCleanerBarrier();
+    assertTrue(barrier.start());
+
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MigrateReplicationQueueFromZkToTableProcedure proc =
       new MigrateReplicationQueueFromZkToTableProcedure();
     procExec.submitProcedure(proc);
+
+    Thread.sleep(5000);
+    // make sure we are still waiting for replication log cleaner quit
+    assertEquals(MIGRATE_REPLICATION_QUEUE_FROM_ZK_TO_TABLE_DISABLE_CLEANER.getNumber(),
+      proc.getCurrentStateId());
+    barrier.stop();
+
     // wait until we reach the wait upgrading state
     UTIL.waitFor(30000,
       () -> proc.getCurrentStateId()
@@ -218,9 +237,17 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
         && proc.getState() == ProcedureState.WAITING_TIMEOUT);
     // make sure the peer is disabled for migrating
     assertFalse(UTIL.getAdmin().isReplicationPeerEnabled(peerId));
+    // make sure the replication log cleaner is disabled
+    assertFalse(barrier.start());
 
     // the procedure should finish successfully
     EXTRA_REGION_SERVERS.clear();
     UTIL.waitFor(30000, () -> proc.isSuccess());
+
+    // make sure the peer is enabled again
+    assertTrue(UTIL.getAdmin().isReplicationPeerEnabled(peerId));
+    // make sure the replication log cleaner is enabled again
+    assertTrue(barrier.start());
+    barrier.stop();
   }
 }
