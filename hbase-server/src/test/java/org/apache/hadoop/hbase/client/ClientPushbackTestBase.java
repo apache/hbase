@@ -142,14 +142,14 @@ public abstract class ClientPushbackTestBase {
     // time reported by above debug logging has significantly deviated.
     MetricsConnection metrics = getConnectionMetrics();
     String name = server.getServerName() + "," + Bytes.toStringBinary(regionName);
-    MetricsConnection.RegionStats rsStats = metrics.serverStats.get(server).get(regionName);
+    MetricsConnection.RegionStats rsStats = metrics.getServerStats().get(server).get(regionName);
     assertEquals(name, rsStats.name);
     assertEquals(rsStats.heapOccupancyHist.getSnapshot().getMean(),
       (double) regionStats.getHeapOccupancyPercent(), 0.1);
     assertEquals(rsStats.memstoreLoadHist.getSnapshot().getMean(),
       (double) regionStats.getMemStoreLoadPercent(), 0.1);
 
-    MetricsConnection.RunnerStats runnerStats = metrics.runnerStats;
+    MetricsConnection.RunnerStats runnerStats = metrics.getRunnerStats();
 
     assertEquals(1, runnerStats.delayRunners.getCount());
     assertEquals(1, runnerStats.normalRunners.getCount());

@@ -214,7 +214,7 @@ public class TestClientOperationTimeout {
 
       MetricsConnection metrics =
         ((ConnectionImplementation) specialConnection).getConnectionMetrics();
-      long metaCacheNumClearServerPreFailure = metrics.metaCacheNumClearServer.getCount();
+      long metaCacheNumClearServerPreFailure = metrics.getMetaCacheNumClearServer().getCount();
 
       DELAY_META_SCAN = 400;
       List<Get> gets = new ArrayList<>();
@@ -232,7 +232,7 @@ public class TestClientOperationTimeout {
 
         // verify we do not clear the cache in this situation otherwise we will create pathological
         // feedback loop with multigets See: HBASE-27487
-        long metaCacheNumClearServerPostFailure = metrics.metaCacheNumClearServer.getCount();
+        long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearServer().getCount();
         Assert.assertEquals(metaCacheNumClearServerPreFailure, metaCacheNumClearServerPostFailure);
 
         for (Throwable cause : expected.getCauses()) {

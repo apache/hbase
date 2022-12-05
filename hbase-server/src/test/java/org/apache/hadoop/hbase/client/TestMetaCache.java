@@ -243,8 +243,8 @@ public class TestMetaCache {
 
       // obtain the client metrics
       MetricsConnection metrics = conn.getConnectionMetrics();
-      long preGetRegionClears = metrics.metaCacheNumClearRegion.getCount();
-      long preGetServerClears = metrics.metaCacheNumClearServer.getCount();
+      long preGetRegionClears = metrics.getMetaCacheNumClearRegion().getCount();
+      long preGetServerClears = metrics.getMetaCacheNumClearServer().getCount();
 
       // attempt a get on the test table
       Get get = new Get(row);
@@ -256,8 +256,8 @@ public class TestMetaCache {
       }
 
       // verify that no cache clearing took place
-      long postGetRegionClears = metrics.metaCacheNumClearRegion.getCount();
-      long postGetServerClears = metrics.metaCacheNumClearServer.getCount();
+      long postGetRegionClears = metrics.getMetaCacheNumClearRegion().getCount();
+      long postGetServerClears = metrics.getMetaCacheNumClearServer().getCount();
       assertEquals(preGetRegionClears, postGetRegionClears);
       assertEquals(preGetServerClears, postGetServerClears);
     } finally {
