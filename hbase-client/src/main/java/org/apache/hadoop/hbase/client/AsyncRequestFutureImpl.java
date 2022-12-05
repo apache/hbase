@@ -715,7 +715,11 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     errorsByServer.reportServerError(server);
     Retry canRetry = errorsByServer.canTryMore(numAttempt) ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED;
 
-    cleanServerCache(server, t);
+    // Do not update cache if exception is from failing to submit action to thread pool
+    if (!(t instanceof RejectedExecutionException)) {
+      cleanServerCache(server, t);
+    }
+
     int failed = 0;
     int stopped = 0;
     List<Action> toReplay = new ArrayList<>();
@@ -723,9 +727,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       byte[] regionName = e.getKey();
       byte[] row = e.getValue().get(0).getAction().getRow();
       // Do not use the exception for updating cache because it might be coming from
-      // any of the regions in the MultiAction.
-      updateCachedLocations(server, regionName, row,
-        ClientExceptionsUtil.isMetaClearingException(t) ? null : t);
+      // any of the regions in the MultiAction and do not update cache if exception is
+      // from failing to submit action to thread pool
+      if (!(t instanceof RejectedExecutionException)) {
+        updateCachedLocations(server, regionName, row,
+          ClientExceptionsUtil.isMetaClearingException(t) ? null : t);
+      }
       for (Action action : e.getValue()) {
         Retry retry =
           manageError(action.getOriginalIndex(), action.getAction(), canRetry, t, server);
