@@ -83,7 +83,7 @@ public abstract class TestTableMapReduceBase {
   }
 
   /**
-   * Test a map/reduce against a multi-region table n
+   * Test a map/reduce against a multi-region table
    */
   @Test
   public void testMultiRegionTable() throws IOException {
@@ -152,7 +152,8 @@ public abstract class TestTableMapReduceBase {
   /**
    * Looks at every value of the mapreduce output and verifies that indeed the values have been
    * reversed.
-   * @param table Table to scan. n * @throws NullPointerException if we failed to find a cell value
+   * @param table Table to scan.
+   * @throws NullPointerException if we failed to find a cell value
    */
   private void verifyAttempt(final Table table) throws IOException, NullPointerException {
     Scan scan = new Scan();

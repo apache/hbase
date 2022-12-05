@@ -35,6 +35,19 @@ public interface BlockCache extends Iterable<CachedBlock> {
   void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
+   * Add block to cache.
+   * @param cacheKey      The block's cache key.
+   * @param buf           The block contents wrapped in a ByteBuffer.
+   * @param inMemory      Whether block should be treated as in-memory
+   * @param waitWhenCache Whether to wait for the cache to be flushed mainly when BucketCache is
+   *                      configured.
+   */
+  default void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlock(cacheKey, buf, inMemory);
+  }
+
+  /**
    * Add block to cache (defaults to not in-memory).
    * @param cacheKey The block's cache key.
    * @param buf      The object to cache.
@@ -67,7 +80,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
   int evictBlocksByHfileName(String hfileName);
 
   /**
-   * Get the statistics for this block cache. n
+   * Get the statistics for this block cache.
    */
   CacheStats getStats();
 

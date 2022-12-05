@@ -776,7 +776,7 @@ public class TestCellBasedHFileOutputFormat2 {
   /**
    * Test for {@link HFileOutputFormat2#configureCompression(Configuration, HTableDescriptor)} and
    * {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}. Tests that the
-   * compression map is correctly serialized into and deserialized from configuration n
+   * compression map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -839,7 +839,7 @@ public class TestCellBasedHFileOutputFormat2 {
   /**
    * Test for {@link HFileOutputFormat2#configureBloomType(HTableDescriptor, Configuration)} and
    * {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}. Tests that the compression
-   * map is correctly serialized into and deserialized from configuration n
+   * map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -899,7 +899,7 @@ public class TestCellBasedHFileOutputFormat2 {
   /**
    * Test for {@link HFileOutputFormat2#configureBlockSize(HTableDescriptor, Configuration)} and
    * {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}. Tests that the compression
-   * map is correctly serialized into and deserialized from configuration n
+   * map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -962,7 +962,7 @@ public class TestCellBasedHFileOutputFormat2 {
   /**
    * Test for {@link HFileOutputFormat2#configureDataBlockEncoding(HTableDescriptor, Configuration)}
    * and {@link HFileOutputFormat2#createFamilyDataBlockEncodingMap(Configuration)}. Tests that the
-   * compression map is correctly serialized into and deserialized from configuration n
+   * compression map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test

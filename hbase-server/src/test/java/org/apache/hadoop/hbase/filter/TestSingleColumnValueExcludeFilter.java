@@ -55,7 +55,7 @@ public class TestSingleColumnValueExcludeFilter {
   private static final byte[] VAL_2 = Bytes.toBytes("ab");
 
   /**
-   * Test the overridden functionality of filterCell(Cell) n
+   * Test the overridden functionality of filterCell(Cell)
    */
   @Test
   public void testFilterCell() throws Exception {

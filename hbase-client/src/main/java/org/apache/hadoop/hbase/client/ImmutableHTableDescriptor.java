@@ -41,7 +41,7 @@ public class ImmutableHTableDescriptor extends HTableDescriptor {
   }
 
   /*
-   * Create an unmodifyable copy of an HTableDescriptor n
+   * Create an unmodifyable copy of an HTableDescriptor
    */
   public ImmutableHTableDescriptor(final HTableDescriptor desc) {
     super(desc, false);

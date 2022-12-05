@@ -154,9 +154,9 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   /**
    * Run an ImportTsv job and perform basic validation on the results. Returns the ImportTsv
    * <code>Tool</code> instance so that other tests can inspect it for further validation as
-   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. n *
-   * Any arguments to pass BEFORE inputFile path is appended. n * @return The Tool instance used to
-   * run the test.
+   * necessary. This method is static to insure non-reliance on instance's util/conf facilities. Any
+   * arguments to pass BEFORE inputFile path is appended.
+   * @return The Tool instance used to run the test.
    */
   private Tool doMROnTableTest(HBaseTestingUtility util, String family, String data, String[] args,
     int valueMultiplier, boolean dataAvailable) throws Exception {
@@ -193,7 +193,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   /**
-   * Confirm ImportTsv via data in online table. n
+   * Confirm ImportTsv via data in online table.
    */
   private static void validateTable(Configuration conf, TableName tableName, String family,
     int valueMultiplier, boolean dataAvailable) throws IOException {

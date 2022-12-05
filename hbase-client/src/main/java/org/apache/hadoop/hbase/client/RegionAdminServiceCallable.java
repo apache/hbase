@@ -184,7 +184,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
    * Run RPC call.
    * @param rpcController PayloadCarryingRpcController is a mouthful but it at a minimum is a facade
    *                      on protobuf so we don't have to put protobuf everywhere; we can keep it
-   *                      behind this class. n
+   *                      behind this class.
    */
   protected abstract T call(HBaseRpcController rpcController) throws Exception;
 }

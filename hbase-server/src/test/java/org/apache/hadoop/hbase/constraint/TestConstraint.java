@@ -67,7 +67,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that we run a passing constraint n
+   * Test that we run a passing constraint
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -97,7 +97,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that constraints will fail properly n
+   * Test that constraints will fail properly
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -131,7 +131,7 @@ public class TestConstraint {
   }
 
   /**
-   * Check that if we just disable one constraint, then n
+   * Check that if we just disable one constraint, then
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -166,7 +166,7 @@ public class TestConstraint {
   }
 
   /**
-   * Test that if we disable all constraints, then nothing gets run n
+   * Test that if we disable all constraints, then nothing gets run
    */
   @SuppressWarnings("unchecked")
   @Test
@@ -199,7 +199,7 @@ public class TestConstraint {
   }
 
   /**
-   * Check to make sure a constraint is unloaded when it fails n
+   * Check to make sure a constraint is unloaded when it fails
    */
   @Test
   public void testIsUnloaded() throws Exception {

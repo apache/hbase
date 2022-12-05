@@ -107,7 +107,7 @@ public class TestCellBasedWALPlayer2 {
   }
 
   /**
-   * Simple end-to-end test n
+   * Simple end-to-end test
    */
   @Test
   public void testWALPlayer() throws Exception {

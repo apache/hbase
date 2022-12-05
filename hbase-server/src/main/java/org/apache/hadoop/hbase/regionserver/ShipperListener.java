@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ShipperListener {
 
   /**
-   * The action that needs to be performed before {@link Shipper#shipped()} is performed n
+   * The action that needs to be performed before {@link Shipper#shipped()} is performed
    */
   void beforeShipped() throws IOException;
 }

@@ -40,7 +40,7 @@ public interface ForeignExceptionSnare {
 
   /**
    * Rethrow an exception currently held by the {@link ForeignExceptionSnare}. If there is no
-   * exception this is a no-op n * all exceptions from remote sources are procedure exceptions
+   * exception this is a no-op all exceptions from remote sources are procedure exceptions
    */
   void rethrowException() throws ForeignException;
 

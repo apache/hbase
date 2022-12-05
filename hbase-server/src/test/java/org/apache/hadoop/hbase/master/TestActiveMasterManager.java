@@ -122,7 +122,7 @@ public class TestActiveMasterManager {
 
   /**
    * Unit tests that uses ZooKeeper but does not use the master-side methods but rather acts
-   * directly on ZK. n
+   * directly on ZK.
    */
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {

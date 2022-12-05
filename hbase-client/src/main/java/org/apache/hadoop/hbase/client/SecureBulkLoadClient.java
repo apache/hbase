@@ -69,7 +69,7 @@ public class SecureBulkLoadClient {
             return response.getBulkToken();
           }
         };
-      return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
+      return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null, null)
         .<String> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
@@ -91,7 +91,7 @@ public class SecureBulkLoadClient {
           return null;
         }
       };
-      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null).<Void> newCaller()
+      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null, null).<Void> newCaller()
         .callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
@@ -99,8 +99,8 @@ public class SecureBulkLoadClient {
   }
 
   /**
-   * Securely bulk load a list of HFiles using client protocol. nnnnnn * @return true if all are
-   * loaded n
+   * Securely bulk load a list of HFiles using client protocol.
+   * @return true if all are loaded
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
@@ -110,8 +110,8 @@ public class SecureBulkLoadClient {
   }
 
   /**
-   * Securely bulk load a list of HFiles using client protocol. nnnnnnn * @return true if all are
-   * loaded n
+   * Securely bulk load a list of HFiles using client protocol.
+   * @return true if all are loaded
    */
   public boolean secureBulkLoadHFiles(final ClientService.BlockingInterface client,
     final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,

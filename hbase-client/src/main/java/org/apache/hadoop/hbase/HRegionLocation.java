@@ -82,7 +82,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   * @return Immutable HRegionInfo
+   * Returns immutable HRegionInfo
    * @deprecated Since 2.0.0. Will remove in 3.0.0. Use {@link #getRegion()}} instead.
    */
   @Deprecated
@@ -90,9 +90,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     return regionInfo == null ? null : new ImmutableHRegionInfo(regionInfo);
   }
 
-  /**
-   * n
-   */
+  /** Returns regionInfo */
   public RegionInfo getRegion() {
     return regionInfo;
   }

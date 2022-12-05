@@ -74,9 +74,11 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * Creates the singleton instance, if not yet present, and returns the same. nn * @return
-   * Singleton instance of VisibilityLabelsCache n
+   * Creates the singleton instance, if not yet present, and returns the same.
+   * @return Singleton instance of VisibilityLabelsCache
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public synchronized static VisibilityLabelsCache createAndGet(ZKWatcher watcher,
     Configuration conf) throws IOException {
     // VisibilityLabelService#init() for different regions (in same RS) passes same instance of
@@ -92,9 +94,11 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * @return Singleton instance of VisibilityLabelsCache n * when this is called before calling
+   * @return Singleton instance of VisibilityLabelsCache when this is called before calling
    *         {@link #createAndGet(ZKWatcher, Configuration)}
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static VisibilityLabelsCache get() {
     // By the time this method is called, the singleton instance of VisibilityLabelsCache should
     // have been created.
@@ -245,8 +249,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   /**
-   * Returns the list of ordinals of labels associated with the groups n * @return the list of
-   * ordinals
+   * Returns the list of ordinals of labels associated with the groups
+   * @return the list of ordinals
    */
   public Set<Integer> getGroupAuthsAsOrdinals(String[] groups) {
     this.lock.readLock().lock();

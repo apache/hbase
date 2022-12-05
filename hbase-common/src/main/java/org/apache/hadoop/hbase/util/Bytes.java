@@ -267,8 +267,9 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Compares the bytes in this object to the specified byte array n * @return Positive if left is
-   * bigger than right, 0 if they are equal, and negative if left is smaller than right.
+   * Compares the bytes in this object to the specified byte array
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
    */
   public int compareTo(final byte[] that) {
     return BYTES_RAWCOMPARATOR.compare(this.bytes, this.offset, this.length, that, 0, that.length);
@@ -570,7 +571,8 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Write a printable representation of a byte array.
-   * @param b byte array n * @see #toStringBinary(byte[], int, int)
+   * @param b byte array
+   * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte[] b) {
     if (b == null) return "null";
@@ -2244,7 +2246,7 @@ public class Bytes implements Comparable<Bytes> {
    * Copy the byte array given in parameter and return an instance of a new byte array with the same
    * length and the same content.
    * @param bytes the byte array to copy from
-   * @return a copy of the given designated byte array nn
+   * @return a copy of the given designated byte array
    */
   public static byte[] copy(byte[] bytes, final int offset, final int length) {
     if (bytes == null) return null;
@@ -2425,7 +2427,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Fill given array with zeros at the specified position. nnn
+   * Fill given array with zeros at the specified position.
    */
   public static void zero(byte[] b, int offset, int length) {
     checkPositionIndex(offset, b.length, "offset");
@@ -2508,7 +2510,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Create a byte array which is multiple given bytes nn * @return byte array
+   * Create a byte array which is multiple given bytes
+   * @return byte array
    */
   public static byte[] multiple(byte[] srcBytes, int multiNum) {
     if (multiNum <= 0) {
@@ -2563,7 +2566,7 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Create a byte array from a string of hash digits. The length of the string must be a multiple
-   * of 2 n
+   * of 2
    */
   public static byte[] fromHex(String hex) {
     checkArgument(hex.length() % 2 == 0, "length must be a multiple of 2");

@@ -63,14 +63,13 @@ public interface ByteRange extends Comparable<ByteRange> {
 
   /**
    * Nullifies this ByteRange. That is, it becomes a husk, being a range over no byte[] whatsoever.
-   * n
    */
   public ByteRange unset();
 
   /**
    * Reuse this {@code ByteRange} over a new byte[]. {@code offset} is set to 0 and {@code length}
    * is set to {@code capacity}.
-   * @param capacity the size of a new byte[]. n
+   * @param capacity the size of a new byte[].
    */
   public ByteRange set(int capacity);
 
@@ -78,7 +77,7 @@ public interface ByteRange extends Comparable<ByteRange> {
    * Reuse this {@code ByteRange} over a new byte[]. {@code offset} is set to 0 and {@code length}
    * is set to {@code bytes.length}. A null {@code bytes} IS supported, in which case this method
    * will behave equivalently to {@link #unset()}.
-   * @param bytes the array to wrap. n
+   * @param bytes the array to wrap.
    */
   public ByteRange set(byte[] bytes);
 
@@ -188,21 +187,21 @@ public interface ByteRange extends Comparable<ByteRange> {
   /**
    * Store the short value at {@code index}
    * @param index the index in the range where {@code val} is stored
-   * @param val   the value to store n
+   * @param val   the value to store
    */
   public ByteRange putShort(int index, short val);
 
   /**
    * Store the int value at {@code index}
    * @param index the index in the range where {@code val} is stored
-   * @param val   the value to store n
+   * @param val   the value to store
    */
   public ByteRange putInt(int index, int val);
 
   /**
    * Store the long value at {@code index}
    * @param index the index in the range where {@code val} is stored
-   * @param val   the value to store n
+   * @param val   the value to store
    */
   public ByteRange putLong(int index, long val);
 

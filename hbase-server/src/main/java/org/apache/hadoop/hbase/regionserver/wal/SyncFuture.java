@@ -93,7 +93,7 @@ class SyncFuture {
 
   /**
    * Call this method to clear old usage and get it ready for new deploy.
-   * @param txid the new transaction id n
+   * @param txid the new transaction id
    */
   SyncFuture reset(long txid, boolean forceSync) {
     if (t != null && t != Thread.currentThread()) {

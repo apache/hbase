@@ -58,7 +58,7 @@ public class HConnectionTestingUtility {
    * around; this is probably not what you want. >>>>>>> fabf2b8282... HBASE-22572 Javadoc
    * Warnings: @link reference not found (#306)
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code> n
+   * @return ClusterConnection object for <code>conf</code>
    */
   public static ClusterConnection getMockedConnection(final Configuration conf)
     throws ZooKeeperConnectionException {
@@ -92,7 +92,7 @@ public class HConnectionTestingUtility {
    *         {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
    *         {@link ClientProtos.ClientService.BlockingInterface} instance when
    *         {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
-   *         {@link Connection#close()} when done with this mocked Connection. n
+   *         {@link Connection#close()} when done with this mocked Connection.
    */
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
     final AdminProtos.AdminService.BlockingInterface admin,
@@ -123,10 +123,11 @@ public class HConnectionTestingUtility {
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     AsyncProcess asyncProcess = new AsyncProcess(c, conf,
-      RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
+      RpcRetryingCallerFactory.instantiate(conf, c.getConnectionMetrics()),
+      RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(RpcRetryingCallerFactory
-      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));
+      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, null));
     Mockito.when(c.getRpcControllerFactory()).thenReturn(Mockito.mock(RpcControllerFactory.class));
     Table t = Mockito.mock(Table.class);
     Mockito.when(c.getTable((TableName) Mockito.any())).thenReturn(t);
@@ -140,7 +141,7 @@ public class HConnectionTestingUtility {
    * configuration instance. Be sure to shutdown the connection when done by calling
    * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
-   * @return ClusterConnection object for <code>conf</code> n * [Dead link]: See also
+   * @return ClusterConnection object for <code>conf</code> [Dead link]: See also
    *         {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
   public static ClusterConnection getSpiedConnection(final Configuration conf) throws IOException {

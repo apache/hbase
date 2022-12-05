@@ -440,7 +440,7 @@ public class TestPerColumnFamilyFlush {
   /**
    * When a log roll is about to happen, we do a flush of the regions who will be affected by the
    * log roll. These flushes cannot be a selective flushes, otherwise we cannot roll the logs. This
-   * test ensures that we do a full-flush in that scenario. n
+   * test ensures that we do a full-flush in that scenario.
    */
   @Test
   public void testFlushingWhenLogRolling() throws Exception {

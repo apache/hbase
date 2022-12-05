@@ -147,7 +147,8 @@ public interface Table extends Closeable {
    * @param results Empty Object[], same size as actions. Provides access to partial results, in
    *                case an exception is thrown. A null in the result array means that the call for
    *                that action failed, even after retries. The order of the objects in the results
-   *                array corresponds to the order of actions in the request list. n * @since 0.90.0
+   *                array corresponds to the order of actions in the request list.
+   * @since 0.90.0
    */
   default void batch(final List<? extends Row> actions, final Object[] results)
     throws IOException, InterruptedException {
@@ -358,8 +359,8 @@ public interface Table extends Closeable {
    * @apiNote In 3.0.0 version, the input list {@code deletes} will no longer be modified. Also,
    *          {@link #put(List)} runs pre-flight validations on the input list on client. Currently
    *          {@link #delete(List)} doesn't run validations on the client, there is no need
-   *          currently, but this may change in the future. An * {@link IllegalArgumentException}
-   *          will be thrown in this case.
+   *          currently, but this may change in the future. An {@link IllegalArgumentException} will
+   *          be thrown in this case.
    */
   default void delete(List<Delete> deletes) throws IOException {
     throw new NotImplementedException("Add an implementation!");
@@ -780,12 +781,12 @@ public interface Table extends Closeable {
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
    * region spanning the range from the {@code startKey} row to {@code endKey} row (inclusive), all
    * the invocations to the same region server will be batched into one call. The coprocessor
-   * service is invoked according to the service instance, method name and parameters. n * the
-   * descriptor for the protobuf service method to call. n * the method call parameters n * start
-   * region selection with region containing this row. If {@code null}, the selection will start
-   * with the first table region. n * select regions up to and including the region containing this
-   * row. If {@code null}, selection will continue through the last table region. n * the proto type
-   * of the response of the method in Service.
+   * service is invoked according to the service instance, method name and parameters. the
+   * descriptor for the protobuf service method to call. the method call parameters start region
+   * selection with region containing this row. If {@code null}, the selection will start with the
+   * first table region. select regions up to and including the region containing this row. If
+   * {@code null}, selection will continue through the last table region. the proto type of the
+   * response of the method in Service.
    * @param <R> the response type for the coprocessor Service method
    * @return a map of result values keyed by region name
    */

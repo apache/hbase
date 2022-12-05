@@ -299,9 +299,7 @@ public class StoreFileScanner implements KeyValueScanner {
     closed = true;
   }
 
-  /**
-   * nn * @return false if not found or if k is after the end. n
-   */
+  /** Returns false if not found or if k is after the end. */
   public static boolean seekAtOrAfter(HFileScanner s, Cell k) throws IOException {
     int result = s.seekTo(k);
     if (result < 0) {

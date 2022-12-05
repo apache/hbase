@@ -234,7 +234,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
 
   /**
    * Sends a message to Members to create a new {@link Subprocedure} for this Procedure and execute
-   * the {@link Subprocedure#acquireBarrier} step. n
+   * the {@link Subprocedure#acquireBarrier} step.
    */
   public void sendGlobalBarrierStart() throws ForeignException {
     // start the procedure
@@ -255,7 +255,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    * Sends a message to all members that the global barrier condition has been satisfied. This
    * should only be executed after all members have completed its
    * {@link Subprocedure#acquireBarrier()} call successfully. This triggers the member
-   * {@link Subprocedure#insideBarrier} method. n
+   * {@link Subprocedure#insideBarrier} method.
    */
   public void sendGlobalBarrierReached() throws ForeignException {
     try {
@@ -285,7 +285,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   //
 
   /**
-   * Call back triggered by an individual member upon successful local barrier acquisition n
+   * Call back triggered by an individual member upon successful local barrier acquisition
    */
   public void barrierAcquiredByMember(String member) {
     LOG.debug("member: '" + member + "' joining acquired barrier for procedure '" + procName
@@ -307,7 +307,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
 
   /**
    * Call back triggered by a individual member upon successful local in-barrier execution and
-   * release nn
+   * release
    */
   public void barrierReleasedByMember(String member, byte[] dataFromMember) {
     boolean removed = false;
@@ -329,7 +329,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
 
   /**
    * Waits until the entire procedure has globally completed, or has been aborted. If an exception
-   * is thrown the procedure may or not have run cleanup to trigger the completion latch yet. nn
+   * is thrown the procedure may or not have run cleanup to trigger the completion latch yet.
    */
   public void waitForCompleted() throws ForeignException, InterruptedException {
     waitForLatch(completedLatch, monitor, wakeFrequency, procName + " completed");
@@ -338,7 +338,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   /**
    * Waits until the entire procedure has globally completed, or has been aborted. If an exception
    * is thrown the procedure may or not have run cleanup to trigger the completion latch yet.
-   * @return data returned from procedure members upon successfully completing subprocedure. nn
+   * @return data returned from procedure members upon successfully completing subprocedure.
    */
   public HashMap<String, byte[]> waitForCompletedWithRet()
     throws ForeignException, InterruptedException {
@@ -347,7 +347,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Check if the entire procedure has globally completed, or has been aborted. n
+   * Check if the entire procedure has globally completed, or has been aborted.
    */
   public boolean isCompleted() throws ForeignException {
     // Rethrow exception if any

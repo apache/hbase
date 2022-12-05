@@ -196,8 +196,8 @@ public class StoreFileReader {
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
    *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
    *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts. n * should we cache the blocks? n * use pread (for concurrent small
-   *             readers) n * is scanner being used for compaction?
+   *             concepts. should we cache the blocks? use pread (for concurrent small readers) is
+   *             scanner being used for compaction?
    * @return the underlying HFileScanner
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
    */
@@ -320,7 +320,7 @@ public class StoreFileReader {
 
   /**
    * A method for checking Bloom filters. Called directly from StoreFileScanner in case of a
-   * multi-column query. n * the cell to check if present in BloomFilter
+   * multi-column query. the cell to check if present in BloomFilter
    * @return True if passes
    */
   public boolean passesGeneralRowColBloomFilter(Cell cell) {

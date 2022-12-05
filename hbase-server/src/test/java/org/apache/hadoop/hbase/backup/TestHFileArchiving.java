@@ -347,7 +347,7 @@ public class TestHFileArchiving {
 
   /**
    * Test that the region directory is removed when we archive a region without store files, but
-   * still has hidden files. n
+   * still has hidden files.
    */
   @Test
   public void testDeleteRegionWithNoStoreFiles() throws Exception {
@@ -566,7 +566,7 @@ public class TestHFileArchiving {
   }
 
   /**
-   * Test that the store files are archived when a column family is removed. n
+   * Test that the store files are archived when a column family is removed.
    */
   @Test
   public void testArchiveOnTableFamilyDelete() throws Exception {
@@ -732,7 +732,7 @@ public class TestHFileArchiving {
    * Get the names of all the files below the given directory
    * @param fs         the file system to inspect
    * @param archiveDir the directory in which to look
-   * @return a list of all files in the directory and sub-directories n
+   * @return a list of all files in the directory and sub-directories
    */
   private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException {
     FileStatus[] files = CommonFSUtils.listStatus(fs, archiveDir, new PathFilter() {

@@ -540,7 +540,7 @@ public class TestImportTsv implements Configurable {
    * Method returns the total KVs in given hfile
    * @param fs File System
    * @param p  HFile path
-   * @return KV count in the given hfile n
+   * @return KV count in the given hfile
    */
   private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
     Configuration conf = util.getConfiguration();

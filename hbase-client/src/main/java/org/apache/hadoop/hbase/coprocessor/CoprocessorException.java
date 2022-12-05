@@ -33,7 +33,7 @@ public class CoprocessorException extends DoNotRetryIOException {
   }
 
   /**
-   * Constructor with a Class object and exception message. nn
+   * Constructor with a Class object and exception message.
    */
   public CoprocessorException(Class<?> clazz, String s) {
     super("Coprocessor [" + clazz.getName() + "]: " + s);

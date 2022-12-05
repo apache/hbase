@@ -318,7 +318,7 @@ public final class Encryption {
    * <p>
    * The encryptor's state will be finalized. It should be reinitialized or returned to the pool.
    * @param out ciphertext
-   * @param src plaintext nnnn
+   * @param src plaintext
    */
   public static void encrypt(OutputStream out, byte[] src, int offset, int length, Encryptor e)
     throws IOException {
@@ -333,7 +333,7 @@ public final class Encryption {
   /**
    * Encrypt a block of plaintext
    * @param out ciphertext
-   * @param src plaintext nnnnn
+   * @param src plaintext
    */
   public static void encrypt(OutputStream out, byte[] src, int offset, int length, Context context,
     byte[] iv) throws IOException {
@@ -349,7 +349,7 @@ public final class Encryption {
    * <p>
    * The encryptor's state will be finalized. It should be reinitialized or returned to the pool.
    * @param out ciphertext
-   * @param in  plaintext nn
+   * @param in  plaintext
    */
   public static void encrypt(OutputStream out, InputStream in, Encryptor e) throws IOException {
     OutputStream cout = e.createEncryptionStream(out);
@@ -363,7 +363,7 @@ public final class Encryption {
   /**
    * Encrypt a stream of plaintext given a context and IV
    * @param out ciphertext
-   * @param in  plaintet nnn
+   * @param in  plaintet
    */
   public static void encrypt(OutputStream out, InputStream in, Context context, byte[] iv)
     throws IOException {
@@ -378,7 +378,6 @@ public final class Encryption {
    * Decrypt a block of ciphertext read in from a stream with the given cipher and context
    * <p>
    * The decryptor's state will be finalized. It should be reinitialized or returned to the pool.
-   * nnnnnn
    */
   public static void decrypt(byte[] dest, int destOffset, InputStream in, int destSize, Decryptor d)
     throws IOException {
@@ -391,7 +390,7 @@ public final class Encryption {
   }
 
   /**
-   * Decrypt a block of ciphertext from a stream given a context and IV nnnnnnn
+   * Decrypt a block of ciphertext from a stream given a context and IV
    */
   public static void decrypt(byte[] dest, int destOffset, InputStream in, int destSize,
     Context context, byte[] iv) throws IOException {
@@ -402,7 +401,7 @@ public final class Encryption {
   }
 
   /**
-   * Decrypt a stream of ciphertext given a decryptor nnnnn
+   * Decrypt a stream of ciphertext given a decryptor
    */
   public static void decrypt(OutputStream out, InputStream in, int outLen, Decryptor d)
     throws IOException {
@@ -425,7 +424,7 @@ public final class Encryption {
   }
 
   /**
-   * Decrypt a stream of ciphertext given a context and IV nnnnnn
+   * Decrypt a stream of ciphertext given a context and IV
    */
   public static void decrypt(OutputStream out, InputStream in, int outLen, Context context,
     byte[] iv) throws IOException {
@@ -436,7 +435,8 @@ public final class Encryption {
   }
 
   /**
-   * Resolves a key for the given subject nn * @return a key for the given subject
+   * Resolves a key for the given subject
+   * @return a key for the given subject
    * @throws IOException if the key is not found
    */
   public static Key getSecretKeyForSubject(String subject, Configuration conf) throws IOException {
@@ -460,7 +460,7 @@ public final class Encryption {
    * @param in     plaintext
    * @param conf   configuration
    * @param cipher the encryption algorithm
-   * @param iv     the initialization vector, can be null n
+   * @param iv     the initialization vector, can be null
    */
   public static void encryptWithSubjectKey(OutputStream out, InputStream in, String subject,
     Configuration conf, Cipher cipher, byte[] iv) throws IOException {
@@ -482,7 +482,7 @@ public final class Encryption {
    * @param subject the subject's key alias
    * @param conf    configuration
    * @param cipher  the encryption algorithm
-   * @param iv      the initialization vector, can be null n
+   * @param iv      the initialization vector, can be null
    */
   public static void decryptWithSubjectKey(OutputStream out, InputStream in, int outLen,
     String subject, Configuration conf, Cipher cipher, byte[] iv) throws IOException {

@@ -122,7 +122,7 @@ public class ReplicationSinkManager {
   /**
    * Report a {@code SinkPeer} as being bad (i.e. an attempt to replicate to it failed). If a single
    * SinkPeer is reported as bad more than replication.bad.sink.threshold times, it will be removed
-   * from the pool of potential replication targets. n * The SinkPeer that had a failed replication
+   * from the pool of potential replication targets. The SinkPeer that had a failed replication
    * attempt on it
    */
   public synchronized void reportBadSink(SinkPeer sinkPeer) {
@@ -139,8 +139,8 @@ public class ReplicationSinkManager {
   }
 
   /**
-   * Report that a {@code SinkPeer} successfully replicated a chunk of data. n * The SinkPeer that
-   * had a failed replication attempt on it
+   * Report that a {@code SinkPeer} successfully replicated a chunk of data. The SinkPeer that had a
+   * failed replication attempt on it
    */
   public synchronized void reportSinkSuccess(SinkPeer sinkPeer) {
     badReportCounts.remove(sinkPeer.getServerName());

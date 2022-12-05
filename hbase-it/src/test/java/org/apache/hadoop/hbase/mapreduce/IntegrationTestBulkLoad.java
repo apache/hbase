@@ -669,7 +669,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   /**
-   * After adding data to the table start a mr job to nnn
+   * After adding data to the table start a mr job to
    */
   private void runCheck() throws IOException, ClassNotFoundException, InterruptedException {
     LOG.info("Running check");

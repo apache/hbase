@@ -1,5 +1,4 @@
 # RELEASENOTES
-
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,10 +15,86 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+-->
+# HBASE  2.5.2 Release Notes
 
-# Be careful doing manual edits in this file. Do not change format
-# of release header or remove the below marker. This file is generated.
-# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27434](https://issues.apache.org/jira/browse/HBASE-27434) | *Major* | **Use $revision as placeholder for maven version to make it easier to control the version from command line**
+
+Use ${revision} as placeholder for maven version in pom, so later you can use 'mvn install -Drevision=xxx' to specify the version at build time.
+After this change, you can not use mvn versions:set to bump the version, instead. you should just modify the parent pom to change the value of the 'revision' property in the properties section.
+
+
+---
+
+* [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | *Major* | **The personality script set wrong hadoop2 check version for branch-2**
+
+This only affects branch-2 but for aliging the personality scripts across all active branches, we apply it to all active branches.
+
+
+---
+
+* [HBASE-27443](https://issues.apache.org/jira/browse/HBASE-27443) | *Major* | **Use java11 in the general check of our jenkins job**
+
+Change to use java 11 in nightly and pre commit jobs.
+
+Bump error prone to 2.16 and force using jdk11 when error prone is enabled.
+
+
+
+# HBASE  2.5.1 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | *Major* | **Still seeing 'Stuck' in static initialization creating RegionInfo instance**
+
+Static constant UNDEFINED has been removed from public interface RegionInfo. This is a breaking change, but resolves a critical deadlock bug. This constant was never meant to be exposed and has been deprecated since version 2.3.2 with no replacement.
+
+
+---
+
+* [HBASE-27372](https://issues.apache.org/jira/browse/HBASE-27372) | *Major* | **Update java versions in our Dockerfiles**
+
+Upgrade java version to 11.0.16.1 and 8u345b01 in the docker files which are used in our pre commit and nightly jobs.
+Remove JDK7 in these docker files as we do not support JDK7 any more.
+
+
+---
+
+* [HBASE-27371](https://issues.apache.org/jira/browse/HBASE-27371) | *Major* | **Bump spotbugs version**
+
+Bump spotbugs version from 4.2.2 to 4.7.2. Also bump maven spotbugs plugin version from 4.2.0 to 4.7.2.0.
+
+
+---
+
+* [HBASE-27224](https://issues.apache.org/jira/browse/HBASE-27224) | *Major* | **HFile tool statistic sampling produces misleading results**
+
+Fixes HFilePrettyPrinter's calculation of min and max size for an HFile so that it will truly be the min and max for the whole file. Previously was based on just a sampling, as with the histograms. Additionally adds a new argument to the tool '-d' which prints detailed range counts for each summary. The range counts give you the exact count of rows/cells that fall within the pre-defined ranges, useful for giving more detailed insight into outliers.
+
+
+---
+
+* [HBASE-27340](https://issues.apache.org/jira/browse/HBASE-27340) | *Minor* | **Artifacts with resolved profiles**
+
+Published poms now contain runtime dependencies only; build and test time dependencies are stripped. Profiles are also now resolved and in-lined at publish time. This removes the need/ability of downstreamers shaping hbase dependencies via enable/disable of hbase profile settings (Implication is that now the hbase project publishes artifacts for hadoop2 and for hadoop3, and so on).
+
+
+---
+
+* [HBASE-27320](https://issues.apache.org/jira/browse/HBASE-27320) | *Minor* | **hide some sensitive configuration information in the UI**
+
+hide superuser and password related settings in the configuration UI
+
+
+
 # HBASE  2.5.0 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

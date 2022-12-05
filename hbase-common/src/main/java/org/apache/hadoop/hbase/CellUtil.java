@@ -584,9 +584,7 @@ public final class CellUtil {
     return PrivateCellUtil.createCell(cell, value, tags);
   }
 
-  /**
-   * Return CellScanner interface over <code>cellIterables</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterables</code> */
   public static CellScanner
     createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
@@ -612,16 +610,14 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * Return CellScanner interface over <code>cellIterable</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterable</code> */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
     if (cellIterable == null) return null;
     return createCellScanner(cellIterable.iterator());
   }
 
   /**
-   * Return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   * Returns CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
    * null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
@@ -644,9 +640,7 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * Return CellScanner interface over <code>cellArray</code>
-   */
+  /** Returns CellScanner interface over <code>cellArray</code> */
   public static CellScanner createCellScanner(final Cell[] cellArray) {
     return new CellScanner() {
       private final Cell[] cells = cellArray;

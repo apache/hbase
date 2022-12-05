@@ -63,7 +63,7 @@ public class TestMasterTransitions {
     new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
 
   /**
-   * Start up a mini cluster and put a small table of many empty regions into it. n
+   * Start up a mini cluster and put a small table of many empty regions into it.
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -124,7 +124,7 @@ public class TestMasterTransitions {
    * RegionServerOperation op) { if (isWantedCloseOperation(op) != null) return; this.done = true; }
    */
   /*
-   * n * @return Null if not the wanted ProcessRegionClose, else <code>op</code> cast as a
+   * @return Null if not the wanted ProcessRegionClose, else <code>op</code> cast as a
    * ProcessRegionClose.
    */
   /*
@@ -285,7 +285,7 @@ public class TestMasterTransitions {
    * entry in its startkey because of addRowToEachRegion. byte [] row = getStartKey(hri); HTable t =
    * new HTable(TEST_UTIL.getConfiguration(), TABLENAME); Get g = new Get(row);
    * assertTrue((t.get(g)).size() > 0); } /*
-   * @return Count of regions in meta table. n
+   * @return Count of regions in meta table.
    */
   /*
    * private static int countOfMetaRegions() throws IOException { HTable meta = new
@@ -297,7 +297,7 @@ public class TestMasterTransitions {
    */
   /*
    * Add to each of the regions in hbase:meta a value. Key is the startrow of the region (except its
-   * 'aaa' for first region). Actual value is the row name. nnn
+   * 'aaa' for first region). Actual value is the row name.
    */
   private static int addToEachStartKey(final int expected) throws IOException {
     Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
@@ -332,7 +332,7 @@ public class TestMasterTransitions {
   }
 
   /*
-   * n * @return Start key for hri (If start key is '', then return 'aaa'.
+   * @return Start key for hri (If start key is '', then return 'aaa'.
    */
   private static byte[] getStartKey(final RegionInfo hri) {
     return Bytes.equals(HConstants.EMPTY_START_ROW, hri.getStartKey())

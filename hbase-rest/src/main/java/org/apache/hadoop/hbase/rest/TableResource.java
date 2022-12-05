@@ -46,7 +46,7 @@ public class TableResource extends ResourceBase {
   private static final Logger LOG = LoggerFactory.getLogger(TableResource.class);
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public TableResource(String table) throws IOException {
     super();

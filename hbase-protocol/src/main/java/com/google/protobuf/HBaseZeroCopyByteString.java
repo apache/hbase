@@ -65,6 +65,8 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
    *            of a {@code LiteralByteString}.
    * @return byte[] representation
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "by design")
   public static byte[] zeroCopyGetBytes(final ByteString buf) {
     if (buf instanceof LiteralByteString) {
       return ((LiteralByteString) buf).bytes;

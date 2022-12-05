@@ -41,7 +41,7 @@ public class RollingStatCalculator {
   private long[] dataValues;
 
   /**
-   * Creates a RollingStatCalculator with given number of rolling periods. n
+   * Creates a RollingStatCalculator with given number of rolling periods.
    */
   public RollingStatCalculator(int rollingPeriod) {
     this.rollingPeriod = rollingPeriod;
@@ -53,7 +53,7 @@ public class RollingStatCalculator {
   }
 
   /**
-   * Inserts given data value to array of data values to be considered for statistics calculation n
+   * Inserts given data value to array of data values to be considered for statistics calculation
    */
   public void insertDataValue(long data) {
     // if current number of data points already equals rolling period and rolling period is
@@ -71,7 +71,7 @@ public class RollingStatCalculator {
   }
 
   /**
-   * Update the statistics after removing the given data value n
+   * Update the statistics after removing the given data value
    */
   private void removeData(long data) {
     currentSum = currentSum - (double) data;
@@ -91,9 +91,7 @@ public class RollingStatCalculator {
     return Math.sqrt(variance);
   }
 
-  /**
-   * n * @return an array of given size initialized with zeros
-   */
+  /** Returns an array of given size initialized with zeros */
   private long[] fillWithZeros(int size) {
     long[] zeros = new long[size];
     for (int i = 0; i < size; i++) {

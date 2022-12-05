@@ -152,7 +152,7 @@ public interface KeyValueScanner extends Shipper, Closeable {
 
   /**
    * Seek the scanner at the first KeyValue of last row
-   * @return true if scanner has values left, false if the underlying data is empty n
+   * @return true if scanner has values left, false if the underlying data is empty
    */
   public boolean seekToLastRow() throws IOException;
 

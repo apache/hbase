@@ -66,22 +66,19 @@ public class OperationStatus {
   }
 
   /**
-   * n
-   */
+   *   */
   public OperationStatusCode getOperationStatusCode() {
     return code;
   }
 
   /**
-   * n
-   */
+   *   */
   public Result getResult() {
     return result;
   }
 
   /**
-   * n
-   */
+   *   */
   public String getExceptionMsg() {
     return exceptionMsg;
   }

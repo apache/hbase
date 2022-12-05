@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
@@ -84,6 +85,10 @@ public class ColumnFamilyDescriptorBuilder {
   public static final String DATA_BLOCK_ENCODING = "DATA_BLOCK_ENCODING";
   private static final Bytes DATA_BLOCK_ENCODING_BYTES =
     new Bytes(Bytes.toBytes(DATA_BLOCK_ENCODING));
+  @InterfaceAudience.Private
+  public static final String INDEX_BLOCK_ENCODING = "INDEX_BLOCK_ENCODING";
+  private static final Bytes INDEX_BLOCK_ENCODING_BYTES =
+    new Bytes(Bytes.toBytes(INDEX_BLOCK_ENCODING));
   /**
    * Key for the BLOCKCACHE attribute. A more exact name would be CACHE_DATA_ON_READ because this
    * flag sets whether or not we cache DATA blocks. We always cache INDEX and BLOOM blocks; caching
@@ -200,6 +205,11 @@ public class ColumnFamilyDescriptorBuilder {
   public static final DataBlockEncoding DEFAULT_DATA_BLOCK_ENCODING = DataBlockEncoding.NONE;
 
   /**
+   * Default index block encoding algorithm.
+   */
+  public static final IndexBlockEncoding DEFAULT_INDEX_BLOCK_ENCODING = IndexBlockEncoding.NONE;
+
+  /**
    * Default number of versions of a record to keep.
    */
   public static final int DEFAULT_MAX_VERSIONS = 1;
@@ -301,6 +311,7 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.put(BLOCKCACHE, String.valueOf(DEFAULT_BLOCKCACHE));
     DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
     DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
+    DEFAULT_VALUES.put(INDEX_BLOCK_ENCODING, String.valueOf(DEFAULT_INDEX_BLOCK_ENCODING));
     // Do NOT add this key/value by default. NEW_VERSION_BEHAVIOR is NOT defined in hbase1 so
     // it is not possible to make an hbase1 HCD the same as an hbase2 HCD and so the replication
     // compare of schemas will fail. It is OK not adding the below to the initial map because of
@@ -498,6 +509,11 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setDataBlockEncoding(DataBlockEncoding value) {
     desc.setDataBlockEncoding(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setIndexBlockEncoding(IndexBlockEncoding value) {
+    desc.setIndexBlockEncoding(value);
     return this;
   }
 
@@ -832,10 +848,26 @@ public class ColumnFamilyDescriptorBuilder {
         type == null ? DataBlockEncoding.NONE.name() : type.name());
     }
 
+    @Override
+    public IndexBlockEncoding getIndexBlockEncoding() {
+      return getStringOrDefault(INDEX_BLOCK_ENCODING_BYTES,
+        n -> IndexBlockEncoding.valueOf(n.toUpperCase()), IndexBlockEncoding.NONE);
+    }
+
+    /**
+     * Set index block encoding algorithm used in block cache.
+     * @param type What kind of index block encoding will be used.
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setIndexBlockEncoding(IndexBlockEncoding type) {
+      return setValue(INDEX_BLOCK_ENCODING_BYTES,
+        type == null ? IndexBlockEncoding.NONE.name() : type.name());
+    }
+
     /**
      * Set whether the tags should be compressed along with DataBlockEncoding. When no
-     * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
-     * invocation)
+     * DataBlockEncoding is been used, this is having no effect.
+     * @return this (for chained invocation)
      */
     public ModifyableColumnFamilyDescriptor setCompressTags(boolean compressTags) {
       return setValue(COMPRESS_TAGS_BYTES, String.valueOf(compressTags));

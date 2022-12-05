@@ -329,6 +329,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getBlockCacheHitCachingCount() {
+    return this.cacheStats != null ? this.cacheStats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     return this.cacheStats != null ? this.cacheStats.getMissCount() : 0L;
   }
@@ -336,6 +341,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getBlockCachePrimaryMissCount() {
     return this.cacheStats != null ? this.cacheStats.getPrimaryMissCount() : 0L;
+  }
+
+  @Override
+  public long getBlockCacheMissCachingCount() {
+    return this.cacheStats != null ? this.cacheStats.getMissCachingCount() : 0L;
   }
 
   @Override

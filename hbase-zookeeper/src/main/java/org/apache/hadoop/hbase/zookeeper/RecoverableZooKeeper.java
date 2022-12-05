@@ -401,7 +401,7 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * getData is an idempotent operation. Retry before throwing exception n
+   * getData is an idempotent operation. Retry before throwing exception
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
     throws KeeperException, InterruptedException {
@@ -436,7 +436,7 @@ public class RecoverableZooKeeper {
   }
 
   /**
-   * getData is an idempotent operation. Retry before throwing exception n
+   * getData is an idempotent operation. Retry before throwing exception
    */
   public byte[] getData(String path, boolean watch, Stat stat)
     throws KeeperException, InterruptedException {
@@ -610,7 +610,6 @@ public class RecoverableZooKeeper {
    * But SEQUENTIAL is NOT idempotent operation. It is necessary to add identifier to the path to
    * verify, whether the previous one is successful or not.
    * </p>
-   * n
    */
   public String create(String path, byte[] data, List<ACL> acl, CreateMode createMode)
     throws KeeperException, InterruptedException {

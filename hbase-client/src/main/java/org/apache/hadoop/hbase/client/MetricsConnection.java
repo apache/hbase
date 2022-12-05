@@ -315,6 +315,7 @@ public class MetricsConnection implements StatisticTrackable {
   protected final Histogram numActionsPerServerHist;
   protected final Counter nsLookups;
   protected final Counter nsLookupsFailed;
+  protected final Timer overloadedBackoffTimer;
 
   // dynamic metrics
 
@@ -376,6 +377,9 @@ public class MetricsConnection implements StatisticTrackable {
       registry.histogram(name(MetricsConnection.class, "numActionsPerServer", scope));
     this.nsLookups = registry.counter(name(this.getClass(), NS_LOOKUPS, scope));
     this.nsLookupsFailed = registry.counter(name(this.getClass(), NS_LOOKUPS_FAILED, scope));
+
+    this.overloadedBackoffTimer =
+      registry.timer(name(this.getClass(), "overloadedBackoffDurationMs", scope));
 
     this.reporter = JmxReporter.forRegistry(this.registry).build();
     this.reporter.start();
@@ -447,6 +451,10 @@ public class MetricsConnection implements StatisticTrackable {
   public void incrDelayRunnersAndUpdateDelayInterval(long interval) {
     this.runnerStats.incrDelayRunners();
     this.runnerStats.updateDelayInterval(interval);
+  }
+
+  public void incrementServerOverloadedBackoffTime(long time, TimeUnit timeUnit) {
+    overloadedBackoffTimer.update(time, timeUnit);
   }
 
   /**

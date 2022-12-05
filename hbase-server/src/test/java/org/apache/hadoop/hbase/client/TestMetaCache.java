@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
@@ -266,16 +266,10 @@ public class TestMetaCache {
   }
 
   public static List<Throwable> metaCachePreservingExceptions() {
-    return new ArrayList<Throwable>() {
-      {
-        add(new RegionOpeningException(" "));
-        add(new RegionTooBusyException("Some old message"));
-        add(new RpcThrottlingException(" "));
-        add(new MultiActionResultTooLarge(" "));
-        add(new RetryImmediatelyException(" "));
-        add(new CallQueueTooBigException());
-      }
-    };
+    return Arrays.asList(new RegionOpeningException(" "),
+      new RegionTooBusyException("Some old message"), new RpcThrottlingException(" "),
+      new MultiActionResultTooLarge(" "), new RetryImmediatelyException(" "),
+      new CallQueueTooBigException());
   }
 
   public static class RegionServerWithFakeRpcServices extends HRegionServer {
@@ -384,7 +378,7 @@ public class TestMetaCache {
 
     /**
      * Throw some exceptions. Mostly throw exceptions which do not clear meta cache. Periodically
-     * throw NotSevingRegionException which clears the meta cache. n
+     * throw NotSevingRegionException which clears the meta cache.
      */
     private void throwSomeExceptions(FakeRSRpcServices rpcServices,
       HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {

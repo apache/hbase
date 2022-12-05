@@ -308,7 +308,7 @@ public class TestHFile {
   }
 
   /**
-   * Test empty HFile. Test all features work reasonably when hfile is empty of entries. n
+   * Test empty HFile. Test all features work reasonably when hfile is empty of entries.
    */
   @Test
   public void testEmptyHFile() throws IOException {
@@ -489,7 +489,7 @@ public class TestHFile {
   }
 
   /**
-   * test none codecs n
+   * test none codecs
    */
   void basicWithSomeCodec(String codec, boolean useTags) throws IOException {
     if (useTags) {

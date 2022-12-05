@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
@@ -338,6 +339,11 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
     return delegatee.getDataBlockEncoding();
   }
 
+  @Override
+  public IndexBlockEncoding getIndexBlockEncoding() {
+    return delegatee.getIndexBlockEncoding();
+  }
+
   /**
    * Set data block encoding algorithm used in block cache.
    * @param value What kind of data block encoding will be used.
@@ -350,8 +356,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
 
   /**
    * Set whether the tags should be compressed along with DataBlockEncoding. When no
-   * DataBlockEncoding is been used, this is having no effect. n * @return this (for chained
-   * invocation)
+   * DataBlockEncoding is been used, this is having no effect.
+   * @return this (for chained invocation)
    */
   public HColumnDescriptor setCompressTags(boolean value) {
     getDelegateeForModification().setCompressTags(value);
@@ -681,8 +687,8 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   /**
    * Parse a serialized representation of a {@link HColumnDescriptor}
    * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
-   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code> n * @see
-   *         #toByteArray()
+   * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code>
+   * @see #toByteArray()
    */
   public static HColumnDescriptor parseFrom(final byte[] bytes) throws DeserializationException {
     ColumnFamilyDescriptor desc = ColumnFamilyDescriptorBuilder.parseFrom(bytes);
@@ -726,7 +732,7 @@ public class HColumnDescriptor implements ColumnFamilyDescriptor, Comparable<HCo
   }
 
   /**
-   * Set the encryption algorithm for use with this family n
+   * Set the encryption algorithm for use with this family
    */
   public HColumnDescriptor setEncryptionType(String value) {
     getDelegateeForModification().setEncryptionType(value);

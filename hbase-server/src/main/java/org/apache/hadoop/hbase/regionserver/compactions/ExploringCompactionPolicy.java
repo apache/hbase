@@ -165,8 +165,12 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   }
 
   /**
-   * Check that all files satisfy the constraint FileSize(i) <= ( Sum(0,N,FileSize(_)) - FileSize(i)
-   * ) * Ratio.
+   * Check that all files satisfy the constraint
+   *
+   * <pre>
+   * FileSize(i) <= ( Sum(0,N,FileSize(_)) - FileSize(i)) * Ratio.
+   * </pre>
+   *
    * @param files        List of store files to consider as a compaction candidate.
    * @param currentRatio The ratio to use.
    * @return a boolean if these files satisfy the ratio constraints.

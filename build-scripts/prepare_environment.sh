@@ -56,7 +56,7 @@ fi
 
 # the pom.xml has an invalid xml namespace, so just remove that so xmllint can parse it.
 cat $WORKSPACE/pom.xml | sed '2 s/xmlns=".*"//g' > pom.xml.tmp
-HBASE_VERSION=$(echo "cat /project/version/text()" | xmllint --nocdata --shell pom.xml.tmp | sed '1d;$d')
+HBASE_VERSION=$(echo "cat /project/properties/revision/text()" | xmllint --nocdata --shell pom.xml.tmp | sed '1d;$d')
 rm pom.xml.tmp
 
 # sanity check that we've got some that looks right. it wouldn't be the end of the world if we got it wrong, but

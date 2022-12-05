@@ -62,7 +62,7 @@ public final class EncryptionUtil {
    * @param conf      configuration
    * @param key       the raw key bytes
    * @param algorithm the algorithm to use with this key material
-   * @return the encrypted key bytes n
+   * @return the encrypted key bytes
    */
   public static byte[] wrapKey(Configuration conf, byte[] key, String algorithm)
     throws IOException {
@@ -115,7 +115,7 @@ public final class EncryptionUtil {
    * @param conf    configuration
    * @param subject subject key alias
    * @param value   the encrypted key bytes
-   * @return the raw key bytes nn
+   * @return the raw key bytes
    */
   public static Key unwrapKey(Configuration conf, String subject, byte[] value)
     throws IOException, KeyException {

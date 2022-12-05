@@ -33,8 +33,7 @@ public class FailedLogCloseException extends IOException {
   }
 
   /**
-   * n
-   */
+   *   */
   public FailedLogCloseException(String msg) {
     super(msg);
   }

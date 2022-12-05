@@ -61,8 +61,8 @@ public class ByteBufferWriterOutputStream extends OutputStream implements ByteBu
    * position of the ByteBuffer.
    * @param b   the ByteBuffer
    * @param off the start offset in the data
-   * @param len the number of bytes to write n * if an I/O error occurs. In particular, an
-   *            IOException is thrown if the output stream is closed.
+   * @param len the number of bytes to write if an I/O error occurs. In particular, an IOException
+   *            is thrown if the output stream is closed.
    */
   @Override
   public void write(ByteBuffer b, int off, int len) throws IOException {

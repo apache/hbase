@@ -25,9 +25,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     locales='2.27-*' \
     && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN locale-gen en_US.UTF-8
+    rm -rf /var/lib/apt/lists/* \
+    && \
+    locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
@@ -39,8 +39,8 @@ RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${M
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u232-b09/OpenJDK8U-jdk_x64_linux_hotspot_8u232b09.tar.gz'
-ENV OPENJDK8_SHA256 '7b7884f2eb2ba2d47f4c0bf3bb1a2a95b73a3a7734bd47ebf9798483a7bcc423'
+ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_linux_hotspot_8u345b01.tar.gz'
+ENV OPENJDK8_SHA256 'ed6c9db3719895584fb1fd69fc79c29240977675f26631911c5a1dbce07b7d58'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
@@ -74,12 +74,15 @@ ENV PATH "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
 
 # Pull down HBase and build it into /root/hbase-bin.
 WORKDIR /root
-RUN git clone https://gitbox.apache.org/repos/asf/hbase.git -b master
-RUN mvn clean install -DskipTests assembly:single -f ./hbase/pom.xml
-RUN mkdir -p hbase-bin
-RUN find /root/hbase/hbase-assembly/target -iname '*.tar.gz' -not -iname '*client*' \
-  | head -n 1 \
-  | xargs -I{} tar xzf {} --strip-components 1 -C /root/hbase-bin
+RUN git clone https://gitbox.apache.org/repos/asf/hbase.git -b master \
+    && \
+    mvn clean install -DskipTests assembly:single -f ./hbase/pom.xml \
+    && \
+    mkdir -p hbase-bin \
+    && \
+    find /root/hbase/hbase-assembly/target -iname '*.tar.gz' -not -iname '*client*' \
+    | head -n 1 \
+    | xargs -I{} tar xzf {} --strip-components 1 -C /root/hbase-bin
 
 # Set HBASE_HOME, add it to the path, and start HBase.
 ENV HBASE_HOME /root/hbase-bin

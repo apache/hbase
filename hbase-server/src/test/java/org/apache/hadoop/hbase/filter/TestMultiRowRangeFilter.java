@@ -67,16 +67,14 @@ public class TestMultiRowRangeFilter {
   public TestName name = new TestName();
 
   /**
-   * n
-   */
+   *   */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
   /**
-   * n
-   */
+   *   */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();

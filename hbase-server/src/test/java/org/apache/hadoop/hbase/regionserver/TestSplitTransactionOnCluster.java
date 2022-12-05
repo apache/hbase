@@ -1002,8 +1002,7 @@ public class TestSplitTransactionOnCluster {
 
   /**
    * Ensure single table region is not on same server as the single hbase:meta table region.
-   * @return Index of the server hosting the single table region nn * @throws
-   *         org.apache.hadoop.hbase.ZooKeeperConnectionException n
+   * @return Index of the server hosting the single table region
    */
   private int ensureTableRegionNotOnSameServerAsMeta(final Admin admin, final RegionInfo hri)
     throws IOException, MasterNotRunningException, ZooKeeperConnectionException,
@@ -1052,8 +1051,8 @@ public class TestSplitTransactionOnCluster {
 
   /**
    * Find regionserver other than the one passed. Can't rely on indexes into list of regionservers
-   * since crashed servers occupy an index. nn * @return A regionserver that is not
-   * <code>notThisOne</code> or null if none found
+   * since crashed servers occupy an index.
+   * @return A regionserver that is not <code>notThisOne</code> or null if none found
    */
   private HRegionServer getOtherRegionServer(final MiniHBaseCluster cluster,
     final HRegionServer notThisOne) {

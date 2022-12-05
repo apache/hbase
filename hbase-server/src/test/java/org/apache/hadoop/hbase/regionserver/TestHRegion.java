@@ -275,7 +275,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test that I can use the max flushed sequence id after the close. n
+   * Test that I can use the max flushed sequence id after the close.
    */
   @Test
   public void testSequenceId() throws IOException {
@@ -309,7 +309,7 @@ public class TestHRegion {
    * starts a flush is ongoing, the first flush is skipped and only the second flush takes place.
    * However, two flushes are required in case previous flush fails and leaves some data in
    * snapshot. The bug could cause loss of data in current memstore. The fix is removing all
-   * conditions except abort check so we ensure 2 flushes for region close." n
+   * conditions except abort check so we ensure 2 flushes for region close."
    */
   @Test
   public void testCloseCarryingSnapshot() throws IOException {
@@ -482,7 +482,7 @@ public class TestHRegion {
    * proceed for a couple cycles, the size in current memstore could be much larger than the
    * snapshot. It's likely to drift memstoreSize much smaller than expected. In extreme case, if the
    * error accumulates to even bigger than HRegion's memstore size limit, any further flush is
-   * skipped because flush does not do anything if memstoreSize is not larger than 0." n
+   * skipped because flush does not do anything if memstoreSize is not larger than 0."
    */
   @Test
   public void testFlushSizeAccounting() throws Exception {
@@ -3727,7 +3727,7 @@ public class TestHRegion {
   }
 
   /**
-   * This method tests https://issues.apache.org/jira/browse/HBASE-2516. n
+   * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
    */
   @Test
   public void testGetScanner_WithRegionClosed() throws IOException {
@@ -4402,7 +4402,7 @@ public class TestHRegion {
 
   /**
    * Write an HFile block full with Cells whose qualifier that are identical between 0 and
-   * Short.MAX_VALUE. See HBASE-13329. n
+   * Short.MAX_VALUE. See HBASE-13329.
    */
   @Test
   public void testLongQualifier() throws Exception {
@@ -4422,8 +4422,8 @@ public class TestHRegion {
 
   /**
    * Flushes the cache in a thread while scanning. The tests verify that the scan is coherent - e.g.
-   * the returned results are always of the same or later update as the previous results. n * scan /
-   * compact n * thread join
+   * the returned results are always of the same or later update as the previous results. scan /
+   * compact thread join
    */
   @Test
   public void testFlushCacheWhileScanning() throws IOException, InterruptedException {
@@ -4564,8 +4564,7 @@ public class TestHRegion {
 
   /**
    * Writes very wide records and scans for the latest every time.. Flushes and compacts the region
-   * every now and then to keep things realistic. n * by flush / scan / compaction n * when joining
-   * threads
+   * every now and then to keep things realistic. by flush / scan / compaction when joining threads
    */
   @Test
   public void testWritesWhileScanning() throws IOException, InterruptedException {
@@ -4734,7 +4733,7 @@ public class TestHRegion {
 
   /**
    * Writes very wide records and gets the latest row every time.. Flushes and compacts the region
-   * aggressivly to catch issues. n * by flush / scan / compaction n * when joining threads
+   * aggressivly to catch issues. by flush / scan / compaction when joining threads
    */
   @Test
   public void testWritesWhileGetting() throws Exception {
@@ -5102,7 +5101,7 @@ public class TestHRegion {
 
   /**
    * Testcase to check state of region initialization task set to ABORTED or not if any exceptions
-   * during initialization n
+   * during initialization
    */
   @Test
   public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
@@ -5219,7 +5218,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check increment function with memstore flushing n
+   * Test case to check increment function with memstore flushing
    */
   @Test
   public void testParallelIncrementWithMemStoreFlush() throws Exception {
@@ -5304,7 +5303,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check append function with memstore flushing n
+   * Test case to check append function with memstore flushing
    */
   @Test
   public void testParallelAppendWithMemStoreFlush() throws Exception {
@@ -5362,7 +5361,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check put function with memstore flushing for same row, same ts n
+   * Test case to check put function with memstore flushing for same row, same ts
    */
   @Test
   public void testPutWithMemStoreFlush() throws Exception {
@@ -5732,7 +5731,7 @@ public class TestHRegion {
   }
 
   /*
-   * Assert first value in the passed region is <code>firstValue</code>. n * n * n * n
+   * Assert first value in the passed region is <code>firstValue</code>.
    */
   protected void assertScan(final HRegion r, final byte[] fs, final byte[] firstValue)
     throws IOException {

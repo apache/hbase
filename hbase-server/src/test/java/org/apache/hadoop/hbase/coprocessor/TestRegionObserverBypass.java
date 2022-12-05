@@ -98,7 +98,7 @@ public class TestRegionObserverBypass {
   }
 
   /**
-   * do a single put that is bypassed by a RegionObserver n
+   * do a single put that is bypassed by a RegionObserver
    */
   @Test
   public void testSimple() throws Exception {
@@ -112,7 +112,7 @@ public class TestRegionObserverBypass {
   }
 
   /**
-   * Test various multiput operations. If the column family is 'test', then bypass is invoked. n
+   * Test various multiput operations. If the column family is 'test', then bypass is invoked.
    */
   @Test
   public void testMulti() throws Exception {

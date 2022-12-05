@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.replication.regionserver.TestSourceFSConfigurationProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -64,6 +65,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
   protected void customizeClusterConf(Configuration conf) {
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     conf.set(HConstants.REPLICATION_CLUSTER_ID, "12345");
+    conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     String classes = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
@@ -82,10 +84,10 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     setupReplication();
 
     /**
-     * Prepare 16 random hfile ranges required for creating hfiles
+     * Prepare 24 random hfile ranges required for creating hfiles
      */
-    Set<String> randomHFileRanges = new HashSet<>(16);
-    for (int i = 0; i < 16; i++) {
+    Set<String> randomHFileRanges = new HashSet<>(24);
+    for (int i = 0; i < 24; i++) {
       randomHFileRanges.add(HBaseTestingUtility.getRandomUUID().toString());
     }
     List<String> randomHFileRangeList = new ArrayList<>(randomHFileRanges);
@@ -93,8 +95,9 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     Iterator<String> randomHFileRangeListIterator = randomHFileRangeList.iterator();
 
     /**
-     * at Master: t1_syncup: Load 100 rows into cf1, and 3 rows into norep t2_syncup: Load 200 rows
-     * into cf1, and 3 rows into norep verify correctly replicated to slave
+     * at Master: t1_syncup: Load 50 rows into cf1, and 50 rows from other hdfs into cf1, and 3 rows
+     * into norep t2_syncup: Load 100 rows into cf1, and 100 rows from other hdfs into cf1, and 3
+     * rows into norep verify correctly replicated to slave
      */
     loadAndReplicateHFiles(true, randomHFileRangeListIterator);
 
@@ -175,11 +178,17 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     Iterator<String> randomHFileRangeListIterator) throws Exception {
     LOG.debug("loadAndReplicateHFiles");
 
-    // Load 100 + 3 hfiles to t1_syncup.
+    // Load 50 + 50 + 3 hfiles to t1_syncup.
     byte[][][] hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
         Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source, hfileRanges, 100);
+    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source, hfileRanges, 50);
+
+    hfileRanges =
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadFromOtherHDFSAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht1Source,
+      hfileRanges, 50);
 
     hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
@@ -187,11 +196,17 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     loadAndValidateHFileReplication("HFileReplication_1", row, NO_REP_FAMILY, ht1Source,
       hfileRanges, 3);
 
-    // Load 200 + 3 hfiles to t2_syncup.
+    // Load 100 + 100 + 3 hfiles to t2_syncup.
     hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
         Bytes.toBytes(randomHFileRangeListIterator.next()) } };
-    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source, hfileRanges, 200);
+    loadAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source, hfileRanges, 100);
+
+    hfileRanges =
+      new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
+        Bytes.toBytes(randomHFileRangeListIterator.next()) } };
+    loadFromOtherHDFSAndValidateHFileReplication("HFileReplication_1", row, FAMILY, ht2Source,
+      hfileRanges, 100);
 
     hfileRanges =
       new byte[][][] { new byte[][] { Bytes.toBytes(randomHFileRangeListIterator.next()),
@@ -221,6 +236,26 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
       byte[] from = range[0];
       byte[] to = range[1];
       HFileTestUtil.createHFile(UTIL1.getConfiguration(), fs,
+        new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
+    }
+
+    final TableName tableName = source.getName();
+    BulkLoadHFiles loader = BulkLoadHFiles.create(UTIL1.getConfiguration());
+    loader.bulkLoad(tableName, dir);
+  }
+
+  private void loadFromOtherHDFSAndValidateHFileReplication(String testName, byte[] row, byte[] fam,
+    Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
+    Path dir = UTIL2.getDataTestDirOnTestFS(testName);
+    FileSystem fs = UTIL2.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+    Path familyDir = new Path(dir, Bytes.toString(fam));
+
+    int hfileIdx = 0;
+    for (byte[][] range : hfileRanges) {
+      byte[] from = range[0];
+      byte[] to = range[1];
+      HFileTestUtil.createHFile(UTIL2.getConfiguration(), fs,
         new Path(familyDir, "hfile_" + hfileIdx++), fam, row, from, to, numOfRows);
     }
 

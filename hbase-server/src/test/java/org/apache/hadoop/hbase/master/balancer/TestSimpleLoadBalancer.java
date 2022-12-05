@@ -150,7 +150,7 @@ public class TestSimpleLoadBalancer extends BalancerTestBase {
    * Test the load balancing algorithm. Invariant is that all servers should be hosting either
    * floor(average) or ceiling(average) at both table level and cluster level Deliberately generate
    * a special case to show the overall strategy can achieve cluster level balance while the bytable
-   * strategy cannot n
+   * strategy cannot
    */
   @Test
   public void testImpactOfBalanceClusterOverall() throws Exception {

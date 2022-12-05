@@ -92,7 +92,7 @@ public class BloomFilterChunk implements BloomFilterBase {
    * @param hashType   Type of hash function to use
    * @param foldFactor When finished adding entries, you may be able to 'fold' this bloom to save
    *                   space. Tradeoff potentially excess bytes in bloom for ability to fold if
-   *                   keyCount is exponentially greater than maxKeys. n
+   *                   keyCount is exponentially greater than maxKeys.
    */
   // Used only in testcases
   public BloomFilterChunk(int maxKeys, double errorRate, int hashType, int foldFactor)

@@ -92,7 +92,7 @@ public class TextSortReducer
    * Handles initializing this class with objects specific to it (i.e., the parser). Common
    * initialization that might be leveraged by a subsclass is done in <code>doSetup</code>. Hence a
    * subclass may choose to override this method and call <code>doSetup</code> as well before
-   * handling it's own custom params. n
+   * handling it's own custom params.
    */
   @Override
   protected void setup(Context context) {
@@ -107,7 +107,7 @@ public class TextSortReducer
   }
 
   /**
-   * Handles common parameter initialization that a subclass might want to leverage. nn
+   * Handles common parameter initialization that a subclass might want to leverage.
    */
   protected void doSetup(Context context, Configuration conf) {
     // If a custom separator has been used,

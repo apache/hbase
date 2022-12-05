@@ -169,7 +169,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {

@@ -49,7 +49,7 @@ public class TestIntraRowPagination {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**
-   * Test from client side for scan with maxResultPerCF set n
+   * Test from client side for scan with maxResultPerCF set
    */
   @Test
   public void testScanLimitAndOffset() throws Exception {

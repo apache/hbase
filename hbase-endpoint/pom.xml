@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-build-configuration</artifactId>
-    <version>2.5.0</version>
+    <version>${revision}</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-endpoint</artifactId>
@@ -152,11 +152,6 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-mapreduce</artifactId>
       <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minikdc</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- General dependencies -->
@@ -349,6 +344,11 @@
           <version>${netty.hadoop.version}</version>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
     </profile>
     <!--
@@ -391,6 +391,11 @@
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
           <version>3.6.2.Final</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
           <scope>test</scope>
         </dependency>
       </dependencies>

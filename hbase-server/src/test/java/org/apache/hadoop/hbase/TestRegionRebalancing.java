@@ -101,7 +101,7 @@ public class TestRegionRebalancing {
 
   /**
    * For HBASE-71. Try a few different configurations of starting and stopping region servers to see
-   * if the assignment or regions is pretty balanced. nn
+   * if the assignment or regions is pretty balanced.
    */
   @Test
   public void testRebalanceOnRegionServerNumberChange() throws IOException, InterruptedException {

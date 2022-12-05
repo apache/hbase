@@ -148,7 +148,7 @@ public class ImportTsv extends Configured implements Tool {
 
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated. The row key
-     *                             should be the special token TsvParser.ROWKEY_COLUMN_SPEC n
+     *                             should be the special token TsvParser.ROWKEY_COLUMN_SPEC
      */
     public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
@@ -416,8 +416,8 @@ public class ImportTsv extends Configured implements Tool {
     }
 
     /**
-     * Return starting position and length of row key from the specified line bytes. nn * @return
-     * Pair of row key offset and length. n
+     * Return starting position and length of row key from the specified line bytes.
+     * @return Pair of row key offset and length.
      */
     public Pair<Integer, Integer> parseRowKey(byte[] lineBytes, int length)
       throws BadTsvLineException {

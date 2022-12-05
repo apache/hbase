@@ -33,17 +33,20 @@ public class RpcRetryingCallerFactory {
   private final ConnectionConfiguration connectionConf;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
+  private final MetricsConnection metrics;
 
   public RpcRetryingCallerFactory(Configuration conf) {
-    this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
+    this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null);
   }
 
-  public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
+  public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor,
+    MetricsConnection metrics) {
     this.conf = conf;
     this.connectionConf = new ConnectionConfiguration(conf);
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
       AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
+    this.metrics = metrics;
   }
 
   /**
@@ -54,7 +57,7 @@ public class RpcRetryingCallerFactory {
     // is cheap as it does not require parsing a complex structure.
     return new RpcRetryingCallerImpl<>(connectionConf.getPauseMillis(),
       connectionConf.getPauseMillisForServerOverloaded(), connectionConf.getRetriesNumber(),
-      interceptor, startLogErrorsCnt, rpcTimeout);
+      interceptor, startLogErrorsCnt, rpcTimeout, metrics);
   }
 
   /**
@@ -65,26 +68,30 @@ public class RpcRetryingCallerFactory {
     // is cheap as it does not require parsing a complex structure.
     return new RpcRetryingCallerImpl<>(connectionConf.getPauseMillis(),
       connectionConf.getPauseMillisForServerOverloaded(), connectionConf.getRetriesNumber(),
-      interceptor, startLogErrorsCnt, connectionConf.getRpcTimeout());
-  }
-
-  public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
-    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null);
+      interceptor, startLogErrorsCnt, connectionConf.getRpcTimeout(), metrics);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-    ServerStatisticTracker stats) {
-    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats);
+    MetricsConnection metrics) {
+    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null,
+      metrics);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-    RetryingCallerInterceptor interceptor, ServerStatisticTracker stats) {
+    ServerStatisticTracker stats, MetricsConnection metrics) {
+    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats,
+      metrics);
+  }
+
+  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+    RetryingCallerInterceptor interceptor, ServerStatisticTracker stats,
+    MetricsConnection metrics) {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
       configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
     RpcRetryingCallerFactory factory;
     if (rpcCallerFactoryClazz.equals(clazzName)) {
-      factory = new RpcRetryingCallerFactory(configuration, interceptor);
+      factory = new RpcRetryingCallerFactory(configuration, interceptor, metrics);
     } else {
       factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
         new Class[] { Configuration.class }, new Object[] { configuration });

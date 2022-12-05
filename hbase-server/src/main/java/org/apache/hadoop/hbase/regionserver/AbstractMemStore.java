@@ -281,7 +281,7 @@ public abstract class AbstractMemStore implements MemStore {
   }
 
   /*
-   * nn * @return Return lowest of a or b or null if both a and b are null
+   * @return Return lowest of a or b or null if both a and b are null
    */
   protected Cell getLowest(final Cell a, final Cell b) {
     if (a == null) {

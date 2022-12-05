@@ -241,9 +241,9 @@ public class WALKeyImpl implements WALKey {
    *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tablename         the tablename
    * @param now               Time at which this edit was written.
-   * @param clusterIds        the clusters that have consumed the change(used in Replication) nn
-   *                          * @param mvcc mvcc control used to generate sequence numbers and
-   *                          control read/write points
+   * @param clusterIds        the clusters that have consumed the change(used in Replication)
+   * @param mvcc              mvcc control used to generate sequence numbers and control read/write
+   *                          points
    */
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, final long now,
     List<UUID> clusterIds, long nonceGroup, final long nonce,
@@ -256,8 +256,8 @@ public class WALKeyImpl implements WALKey {
    * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
    * purposes. A regionName is always a sub-table object.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>. n * @param now Time
-   *                          at which this edit was written.
+   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param now               Time at which this edit was written.
    * @param clusterIds        the clusters that have consumed the change(used in Replication)
    * @param nonceGroup        the nonceGroup
    * @param nonce             the nonce
@@ -276,7 +276,7 @@ public class WALKeyImpl implements WALKey {
    * Create the log key for writing to somewhere. We maintain the tablename mainly for debugging
    * purposes. A regionName is always a sub-table object.
    * @param encodedRegionName Encoded name of the region as returned by
-   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>. nnnn
+   *                          <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    */
   // TODO: Fix being able to pass in sequenceid.
   public WALKeyImpl(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,

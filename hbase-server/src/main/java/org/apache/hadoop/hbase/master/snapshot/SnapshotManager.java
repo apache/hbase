@@ -305,9 +305,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Delete the specified snapshot n * @throws SnapshotDoesNotExistException If the specified
-   * snapshot does not exist.
-   * @throws IOException For filesystem IOExceptions
+   * Delete the specified snapshot
+   * @throws SnapshotDoesNotExistException If the specified snapshot does not exist.
+   * @throws IOException                   For filesystem IOExceptions
    */
   public void deleteSnapshot(SnapshotDescription snapshot) throws IOException {
     // check to see if it is completed
@@ -345,8 +345,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Check if the specified snapshot is done n * @return true if snapshot is ready to be restored,
-   * false if it is still being taken.
+   * Check if the specified snapshot is done
+   * @return true if snapshot is ready to be restored, false if it is still being taken.
    * @throws IOException              IOException if error from HDFS or RPC
    * @throws UnknownSnapshotException if snapshot is invalid or does not exist.
    */
@@ -578,9 +578,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Take a snapshot based on the enabled/disabled state of the table. n * @throws
-   * HBaseSnapshotException when a snapshot specific exception occurs.
-   * @throws IOException when some sort of generic IO exception occurs.
+   * Take a snapshot based on the enabled/disabled state of the table.
+   * @throws HBaseSnapshotException when a snapshot specific exception occurs.
+   * @throws IOException            when some sort of generic IO exception occurs.
    */
   public void takeSnapshot(SnapshotDescription snapshot) throws IOException {
     this.takingSnapshotLock.readLock().lock();
@@ -682,8 +682,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   /**
    * Set the handler for the current snapshot
    * <p>
-   * Exposed for TESTING n * @param handler handler the master should use TODO get rid of this if
-   * possible, repackaging, modify tests.
+   * Exposed for TESTING
+   * @param handler handler the master should use TODO get rid of this if possible, repackaging,
+   *                modify tests.
    */
   public synchronized void setSnapshotHandlerForTesting(final TableName tableName,
     final SnapshotSentinel handler) {
@@ -727,7 +728,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param snapshot          Snapshot Descriptor
    * @param snapshotTableDesc Table Descriptor
    * @param nonceKey          unique identifier to prevent duplicated RPC
-   * @return procId the ID of the clone snapshot procedure n
+   * @return procId the ID of the clone snapshot procedure
    */
   private long cloneSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
     final SnapshotDescription snapshot, final TableDescriptor snapshotTableDesc,
@@ -794,8 +795,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   }
 
   /**
-   * Restore or Clone the specified snapshot n * @param nonceKey unique identifier to prevent
-   * duplicated RPC n
+   * Restore or Clone the specified snapshot
+   * @param nonceKey unique identifier to prevent duplicated RPC
    */
   public long restoreOrCloneSnapshot(final SnapshotDescription reqSnapshot, final NonceKey nonceKey,
     final boolean restoreAcl, String customSFT) throws IOException {
@@ -847,7 +848,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param snapshotTableDesc Table Descriptor
    * @param nonceKey          unique identifier to prevent duplicated RPC
    * @param restoreAcl        true to restore acl of snapshot
-   * @return procId the ID of the restore snapshot procedure n
+   * @return procId the ID of the restore snapshot procedure
    */
   private long restoreSnapshot(final SnapshotDescription reqSnapshot, final TableName tableName,
     final SnapshotDescription snapshot, final TableDescriptor snapshotTableDesc,

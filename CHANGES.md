@@ -1,4 +1,3 @@
-# HBASE Changelog
 
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -16,10 +15,157 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+-->
+# HBASE Changelog
 
-# Be careful doing manual edits in this file. Do not change format
-# of release header or remove the below marker. This file is generated.
-# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.5.2 - Unreleased (as of 2022-11-24)
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-26809](https://issues.apache.org/jira/browse/HBASE-26809) | Report client backoff time for server overloaded in ConnectionMetrics |  Major | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27434](https://issues.apache.org/jira/browse/HBASE-27434) | Use $revision as placeholder for maven version to make it easier to control the version from command line |  Major | build, pom |
+| [HBASE-27167](https://issues.apache.org/jira/browse/HBASE-27167) | s390x: Skip tests on unsupported compression libs |  Major | build, pom |
+| [HBASE-27450](https://issues.apache.org/jira/browse/HBASE-27450) | Update all our python scripts to use python3 |  Major | scripts |
+| [HBASE-27414](https://issues.apache.org/jira/browse/HBASE-27414) | Search order for locations in  HFileLink |  Minor | Performance |
+| [HBASE-27495](https://issues.apache.org/jira/browse/HBASE-27495) | Improve HFileLinkCleaner to validate back reference links ahead the next traverse |  Major | master |
+| [HBASE-27408](https://issues.apache.org/jira/browse/HBASE-27408) | Improve BucketAllocatorException log to always include HFile name |  Major | . |
+| [HBASE-27496](https://issues.apache.org/jira/browse/HBASE-27496) | Optionally limit the amount of plans executed in the Normalizer |  Minor | Normalizer |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27433](https://issues.apache.org/jira/browse/HBASE-27433) | DefaultMobStoreCompactor should delete MobStoreFile cleanly when compaction is failed |  Major | mob |
+| [HBASE-27440](https://issues.apache.org/jira/browse/HBASE-27440) | metrics method removeHistogramMetrics trigger serious memory leak |  Major | metrics, regionserver |
+| [HBASE-25983](https://issues.apache.org/jira/browse/HBASE-25983) | javadoc generation fails on openjdk-11.0.11+9 |  Major | documentation, pom |
+| [HBASE-27446](https://issues.apache.org/jira/browse/HBASE-27446) | Spotbugs 4.7.2 report a lot of logging errors when generating report |  Major | build, jenkins, scripts |
+| [HBASE-27437](https://issues.apache.org/jira/browse/HBASE-27437) | TestHeapSize is flaky |  Major | test |
+| [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | The personality script set wrong hadoop2 check version for branch-2 |  Major | jenkins, scripts |
+| [HBASE-27473](https://issues.apache.org/jira/browse/HBASE-27473) | Fix spotbugs warnings in hbase-rest Client.getResponseBody |  Major | REST |
+| [HBASE-27480](https://issues.apache.org/jira/browse/HBASE-27480) | Skip error prone for hadoop2/3 checkes in our nightly jobs |  Major | jenkins, scripts |
+| [HBASE-27469](https://issues.apache.org/jira/browse/HBASE-27469) | IllegalArgumentException is thrown by SnapshotScannerHDFSAclController when dropping a table |  Major | snapshots |
+| [HBASE-27379](https://issues.apache.org/jira/browse/HBASE-27379) | numOpenConnections metric is one less than the actual |  Minor | metrics |
+| [HBASE-27423](https://issues.apache.org/jira/browse/HBASE-27423) | Upgrade hbase-thirdparty to 4.1.3 and upgrade Jackson for CVE-2022-42003/42004 |  Major | security |
+| [HBASE-27464](https://issues.apache.org/jira/browse/HBASE-27464) | In memory compaction 'COMPACT' may cause data corruption when adding cells large than maxAlloc(default 256k) size |  Critical | in-memory-compaction |
+| [HBASE-27501](https://issues.apache.org/jira/browse/HBASE-27501) | The .flattened-pom.xml for some modules are not installed |  Blocker | build, pom |
+| [HBASE-27445](https://issues.apache.org/jira/browse/HBASE-27445) | result of DirectMemoryUtils#getDirectMemorySize may be wrong |  Minor | UI |
+| [HBASE-27504](https://issues.apache.org/jira/browse/HBASE-27504) | Remove duplicated config 'hbase.normalizer.merge.min\_region\_age.days' in hbase-default.xml |  Minor | conf |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27479](https://issues.apache.org/jira/browse/HBASE-27479) | Flaky Test testClone in TestTaskMonitor |  Trivial | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27475](https://issues.apache.org/jira/browse/HBASE-27475) | Use different jdks when running hadoopcheck in personality scripts |  Critical | jenkins, scripts |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27425](https://issues.apache.org/jira/browse/HBASE-27425) | Run flaky test job more often |  Minor | test |
+| [HBASE-27460](https://issues.apache.org/jira/browse/HBASE-27460) | Fix the hadolint errors after HBASE-27456 |  Major | scripts |
+| [HBASE-27443](https://issues.apache.org/jira/browse/HBASE-27443) | Use java11 in the general check of our jenkins job |  Major | build, jenkins |
+
+
+## Release 2.5.1 - 2022-10-21
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27314](https://issues.apache.org/jira/browse/HBASE-27314) | Make index block be customized and configured |  Major | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27159](https://issues.apache.org/jira/browse/HBASE-27159) | Emit source metrics for BlockCacheExpressHitPercent |  Minor | BlockCache, metrics |
+| [HBASE-27339](https://issues.apache.org/jira/browse/HBASE-27339) | Improve sasl connection failure log message to include server |  Minor | Client |
+| [HBASE-27365](https://issues.apache.org/jira/browse/HBASE-27365) | Minimise block addition failures due to no space in bucket cache writers queue by introducing wait time |  Major | BucketCache |
+| [HBASE-27391](https://issues.apache.org/jira/browse/HBASE-27391) | Downgrade ERROR log to DEBUG in ConnectionUtils.updateStats |  Major | . |
+| [HBASE-27370](https://issues.apache.org/jira/browse/HBASE-27370) | Avoid decompressing blocks when reading from bucket cache prefetch threads |  Major | . |
+| [HBASE-27361](https://issues.apache.org/jira/browse/HBASE-27361) | Add .flattened-pom.xml to .gitignore |  Major | build |
+| [HBASE-27224](https://issues.apache.org/jira/browse/HBASE-27224) | HFile tool statistic sampling produces misleading results |  Major | . |
+| [HBASE-27340](https://issues.apache.org/jira/browse/HBASE-27340) | Artifacts with resolved profiles |  Minor | build, pom |
+| [HBASE-27332](https://issues.apache.org/jira/browse/HBASE-27332) | Remove RejectedExecutionHandler for long/short compaction thread pools |  Minor | Compaction |
+| [HBASE-27338](https://issues.apache.org/jira/browse/HBASE-27338) | brotli compression lib tests fail on arm64 |  Minor | . |
+| [HBASE-27320](https://issues.apache.org/jira/browse/HBASE-27320) | hide some sensitive configuration information in the UI |  Minor | security, UI |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27426](https://issues.apache.org/jira/browse/HBASE-27426) | Region server abort with failing to list region servers. |  Major | Zookeeper |
+| [HBASE-27432](https://issues.apache.org/jira/browse/HBASE-27432) | TestUsersOperationsWithSecureHadoop fails affter HBASE-27411 |  Major | . |
+| [HBASE-27420](https://issues.apache.org/jira/browse/HBASE-27420) | Failure while connecting to zk if HBase is running in standalone mode in a container |  Minor | Zookeeper |
+| [HBASE-27424](https://issues.apache.org/jira/browse/HBASE-27424) | Upgrade Jettison for CVE-2022-40149/40150 |  Major | . |
+| [HBASE-27419](https://issues.apache.org/jira/browse/HBASE-27419) | Update to hbase-thirdparty 4.1.2 |  Major | dependencies |
+| [HBASE-27407](https://issues.apache.org/jira/browse/HBASE-27407) | Fixing check for "description" request param in JMXJsonServlet.java |  Minor | metrics |
+| [HBASE-27409](https://issues.apache.org/jira/browse/HBASE-27409) | Fix the javadoc for WARCRecord |  Major | documentation |
+| [HBASE-27381](https://issues.apache.org/jira/browse/HBASE-27381) | Still seeing 'Stuck' in static initialization creating RegionInfo instance |  Major | . |
+| [HBASE-27368](https://issues.apache.org/jira/browse/HBASE-27368) | Do not need to throw IllegalStateException when peer is not active in ReplicationSource.initialize |  Major | regionserver, Replication |
+| [HBASE-27352](https://issues.apache.org/jira/browse/HBASE-27352) | Quoted string argument with spaces passed from command line are propagated wrongly to the underlying java class |  Minor | shell |
+| [HBASE-27362](https://issues.apache.org/jira/browse/HBASE-27362) | Fix some tests hung by CompactSplit.requestCompactionInternal ignoring compactionsEnabled check |  Major | Compaction |
+| [HBASE-27353](https://issues.apache.org/jira/browse/HBASE-27353) | opentelemetry-context jar missing at runtime causes MR jobs to fail |  Minor | . |
+| [HBASE-22939](https://issues.apache.org/jira/browse/HBASE-22939) | SpaceQuotas- Bulkload from different hdfs failed when space quotas are turned on. |  Major | . |
+| [HBASE-27336](https://issues.apache.org/jira/browse/HBASE-27336) | The region visualizer shows 'undefined' region server |  Major | master, UI |
+| [HBASE-27335](https://issues.apache.org/jira/browse/HBASE-27335) | HBase shell hang for a minute when quiting |  Major | shell |
+| [HBASE-27152](https://issues.apache.org/jira/browse/HBASE-27152) | Under compaction mark may leak |  Major | Compaction |
+| [HBASE-25922](https://issues.apache.org/jira/browse/HBASE-25922) | Disabled sanity checks ignored on snapshot restore |  Minor | conf, snapshots |
+| [HBASE-27246](https://issues.apache.org/jira/browse/HBASE-27246) | RSGroupMappingScript#getRSGroup has thread safety problem |  Major | rsgroup |
+| [HBASE-25166](https://issues.apache.org/jira/browse/HBASE-25166) | MobFileCompactionChore is closing the master's shared cluster connection |  Major | master |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27360](https://issues.apache.org/jira/browse/HBASE-27360) | The trace related assertions are flaky for async client tests |  Major | test, tracing |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27421](https://issues.apache.org/jira/browse/HBASE-27421) | Bump spotless plugin to 2.27.2 and reimplement the 'Remove unhelpful javadoc stubs' rule |  Major | documentation, pom |
+| [HBASE-27401](https://issues.apache.org/jira/browse/HBASE-27401) | Clean up current broken 'n's in our javadoc |  Major | documentation |
+| [HBASE-27403](https://issues.apache.org/jira/browse/HBASE-27403) | Remove 'Remove unhelpful javadoc stubs' spotless rule for now |  Major | documentation, pom |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27431](https://issues.apache.org/jira/browse/HBASE-27431) | Remove TestRemoteTable.testLimitedScan |  Trivial | REST, test |
+| [HBASE-27411](https://issues.apache.org/jira/browse/HBASE-27411) |  Update and clean up bcprov-jdk15on dependency |  Minor | build |
+| [HBASE-27372](https://issues.apache.org/jira/browse/HBASE-27372) | Update java versions in our Dockerfiles |  Major | build, scripts |
+| [HBASE-27373](https://issues.apache.org/jira/browse/HBASE-27373) | Fix new spotbugs warnings after upgrading spotbugs to 4.7.2 |  Major | . |
+| [HBASE-27371](https://issues.apache.org/jira/browse/HBASE-27371) | Bump spotbugs version |  Major | build, pom |
+
+
 ## Release 2.5.0 - Unreleased (as of 2022-08-23)
 
 

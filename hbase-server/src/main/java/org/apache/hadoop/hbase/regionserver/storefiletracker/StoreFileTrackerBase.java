@@ -103,7 +103,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
       .withDataBlockEncoding(family.getDataBlockEncoding()).withEncryptionContext(encryptionContext)
       .withCreateTime(EnvironmentEdgeManager.currentTime()).withColumnFamily(family.getName())
-      .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator()).build();
+      .withTableName(ctx.getTableName().getName()).withCellComparator(ctx.getComparator())
+      .withIndexBlockEncoding(family.getIndexBlockEncoding()).build();
     return hFileContext;
   }
 

@@ -32,6 +32,8 @@ public final class NoOpRegionSizeStore implements RegionSizeStore {
   private NoOpRegionSizeStore() {
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static NoOpRegionSizeStore getInstance() {
     return INSTANCE;
   }

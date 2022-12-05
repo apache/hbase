@@ -135,7 +135,7 @@ public class TestMasterNoCluster {
   }
 
   /**
-   * Test starting master then stopping it before its fully up. nnn
+   * Test starting master then stopping it before its fully up.
    */
   @Test
   public void testStopDuringStart() throws IOException, KeeperException, InterruptedException {
@@ -147,8 +147,8 @@ public class TestMasterNoCluster {
   }
 
   /**
-   * Test master failover. Start up three fake regionservers and a master. nnn * @throws
-   * org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
+   * Test master failover. Start up three fake regionservers and a master.
+   * @throws org.apache.hbase.thirdparty.com.google.protobuf.ServiceException
    */
   @Ignore
   @Test // Disabled since HBASE-18511. Reenable when master can carry regions.

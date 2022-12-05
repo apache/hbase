@@ -31,13 +31,13 @@ public interface KeyProvider {
   public static final String PASSWORDFILE = "passwordfile";
 
   /**
-   * Initialize the key provider n
+   * Initialize the key provider
    */
   public void init(String params);
 
   /**
-   * Retrieve the key for a given key aliase n * @return the keys corresponding to the supplied
-   * alias, or null if a key is not found
+   * Retrieve the key for a given key aliase
+   * @return the keys corresponding to the supplied alias, or null if a key is not found
    */
   public Key getKey(String alias);
 

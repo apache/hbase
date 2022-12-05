@@ -198,7 +198,7 @@ public class CreateNamespaceProcedure
 
   /**
    * Action before any real action of creating namespace.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {
     if (getTableNamespaceManager(env).doesNamespaceExist(nsDescriptor.getName())) {
@@ -213,7 +213,7 @@ public class CreateNamespaceProcedure
   /**
    * Create the namespace directory
    * @param env          MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor n
+   * @param nsDescriptor NamespaceDescriptor
    */
   protected static void createDirectory(final MasterProcedureEnv env,
     final NamespaceDescriptor nsDescriptor) throws IOException {
@@ -225,7 +225,7 @@ public class CreateNamespaceProcedure
   /**
    * Insert the row into ns table
    * @param env          MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor n
+   * @param nsDescriptor NamespaceDescriptor
    */
   protected static void insertIntoNSTable(final MasterProcedureEnv env,
     final NamespaceDescriptor nsDescriptor) throws IOException {
@@ -235,7 +235,7 @@ public class CreateNamespaceProcedure
   /**
    * Update ZooKeeper.
    * @param env          MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor n
+   * @param nsDescriptor NamespaceDescriptor
    */
   protected static void updateZKNamespaceManager(final MasterProcedureEnv env,
     final NamespaceDescriptor nsDescriptor) throws IOException {
@@ -245,7 +245,7 @@ public class CreateNamespaceProcedure
   /**
    * Set quota for the namespace
    * @param env          MasterProcedureEnv
-   * @param nsDescriptor NamespaceDescriptor n
+   * @param nsDescriptor NamespaceDescriptor
    **/
   protected static void setNamespaceQuota(final MasterProcedureEnv env,
     final NamespaceDescriptor nsDescriptor) throws IOException {
@@ -260,7 +260,7 @@ public class CreateNamespaceProcedure
 
   /**
    * The procedure could be restarted from a different machine. If the variable is null, we need to
-   * retrieve it. n
+   * retrieve it.
    */
   private Boolean isTraceEnabled() {
     if (traceEnabled == null) {

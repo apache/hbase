@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
@@ -176,6 +175,14 @@ public class TestHFileBlockIndex {
     public HFileBlock readBlock(long offset, long onDiskSize, boolean cacheBlock, boolean pread,
       boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
       DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+      return readBlock(offset, onDiskSize, cacheBlock, pread, isCompaction, updateCacheMetrics,
+        expectedBlockType, expectedDataBlockEncoding, false);
+    }
+
+    @Override
+    public HFileBlock readBlock(long offset, long onDiskSize, boolean cacheBlock, boolean pread,
+      boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
+      DataBlockEncoding expectedDataBlockEncoding, boolean cacheOnly) throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize && pread == prevPread) {
         hitCount += 1;
         return prevBlock;
@@ -254,7 +261,8 @@ public class TestHFileBlockIndex {
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(TEST_UTIL.getConfiguration(), null, meta);
     FSDataOutputStream outputStream = fs.create(path);
-    HFileBlockIndex.BlockIndexWriter biw = new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
+    HFileBlockIndex.BlockIndexWriter biw =
+      new HFileBlockIndex.BlockIndexWriter(hbw, null, null, null);
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
       hbw.startWriting(BlockType.DATA).write(Bytes.toBytes(String.valueOf(RNG.nextInt(1000))));
       long blockOffset = outputStream.getPos();
@@ -432,7 +440,8 @@ public class TestHFileBlockIndex {
 
   @Test
   public void testBlockIndexChunk() throws IOException {
-    BlockIndexChunk c = new BlockIndexChunk();
+    BlockIndexChunk c = new HFileBlockIndex.BlockIndexChunkImpl();
+    HFileIndexBlockEncoder indexBlockEncoder = NoOpIndexBlockEncoder.INSTANCE;
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     int N = 1000;
     int[] numSubEntriesAt = new int[N];
@@ -440,12 +449,12 @@ public class TestHFileBlockIndex {
     for (int i = 0; i < N; ++i) {
       baos.reset();
       DataOutputStream dos = new DataOutputStream(baos);
-      c.writeNonRoot(dos);
+      indexBlockEncoder.encode(c, false, dos);
       assertEquals(c.getNonRootSize(), dos.size());
 
       baos.reset();
       dos = new DataOutputStream(baos);
-      c.writeRoot(dos);
+      indexBlockEncoder.encode(c, true, dos);
       assertEquals(c.getRootSize(), dos.size());
 
       byte[] k = RandomKeyValueUtil.randomOrderedKey(RNG, i);
@@ -486,7 +495,7 @@ public class TestHFileBlockIndex {
   }
 
   /**
-   * to check if looks good when midKey on a leaf index block boundary n
+   * to check if looks good when midKey on a leaf index block boundary
    */
   @Test
   public void testMidKeyOnLeafIndexBlockBoundary() throws IOException {
@@ -543,7 +552,6 @@ public class TestHFileBlockIndex {
   /**
    * Testing block index through the HFile writer/reader APIs. Allows to test setting index block
    * size through configuration, intermediate-level index blocks, and caching index blocks on write.
-   * n
    */
   @Test
   public void testHFileWriterAndReader() throws IOException {

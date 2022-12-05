@@ -92,7 +92,8 @@ public class ZKDataMigrator {
    * @param tableName table we're checking
    * @return Null or
    *         {@link org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State}
-   *         found in znode. n * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
+   *         found in znode.
+   * @deprecated Since 2.0.0. To be removed in hbase-3.0.0.
    */
   @Deprecated
   private static ZooKeeperProtos.DeprecatedTableState.State getTableState(final ZKWatcher zkw,

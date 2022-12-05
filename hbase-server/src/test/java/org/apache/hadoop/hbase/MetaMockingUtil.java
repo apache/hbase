@@ -34,7 +34,7 @@ public class MetaMockingUtil {
    * Returns a Result object constructed from the given region information simulating a catalog
    * table result.
    * @param region the HRegionInfo object or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table. n
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    */
   public static Result getMetaTableRowResult(final HRegionInfo region) throws IOException {
     return getMetaTableRowResult(region, null, null, null);
@@ -45,7 +45,7 @@ public class MetaMockingUtil {
    * table result.
    * @param region the HRegionInfo object or null
    * @param sn     to use making startcode and server hostname:port in meta or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table. n
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    */
   public static Result getMetaTableRowResult(final HRegionInfo region, final ServerName sn)
     throws IOException {
@@ -59,7 +59,7 @@ public class MetaMockingUtil {
    * @param sn     to use making startcode and server hostname:port in meta or null
    * @param splita daughter region or null
    * @param splitb daughter region or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table. n
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    */
   public static Result getMetaTableRowResult(RegionInfo region, final ServerName sn,
     RegionInfo splita, RegionInfo splitb) throws IOException {

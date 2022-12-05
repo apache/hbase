@@ -233,14 +233,14 @@ public class StoreFileInfo implements Configurable {
   }
 
   /**
-   * Size of the Hfile n
+   * Size of the Hfile
    */
   public long getSize() {
     return size;
   }
 
   /**
-   * Sets the region coprocessor env. n
+   * Sets the region coprocessor env.
    */
   public void setRegionCoprocessorHost(RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;

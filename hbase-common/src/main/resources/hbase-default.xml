@@ -662,11 +662,6 @@ possible configurations would overwhelm and obscure the important.
     <description>The minimum age for a region to be considered for a merge, in days.</description>
   </property>
   <property>
-    <name>hbase.normalizer.merge.min_region_age.days</name>
-    <value>3</value>
-    <description>The minimum age for a region to be considered for a merge, in days.</description>
-  </property>
-  <property>
     <name>hbase.normalizer.merge.min_region_size.mb</name>
     <value>1</value>
     <description>The minimum size for a region to be considered for a merge, in whole

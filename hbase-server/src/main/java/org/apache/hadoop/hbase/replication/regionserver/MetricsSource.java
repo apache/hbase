@@ -127,7 +127,7 @@ public class MetricsSource implements BaseSource {
 
   /**
    * get age of last shipped op of given wal group. If the walGroup is null, return 0
-   * @param walGroup which group we are getting n
+   * @param walGroup which group we are getting
    */
   public long getAgeOfLastShippedOp(String walGroup) {
     return this.ageOfLastShippedOp.get(walGroup) == null ? 0 : ageOfLastShippedOp.get(walGroup);
@@ -283,22 +283,22 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get AgeOfLastShippedOp n
+   * Get AgeOfLastShippedOp
    */
   public Long getAgeOfLastShippedOp() {
     return singleSourceSource.getLastShippedAge();
   }
 
   /**
-   * Get the sizeOfLogQueue n
+   * Get the sizeOfLogQueue
    */
   public int getSizeOfLogQueue() {
     return singleSourceSource.getSizeOfLogQueue();
   }
 
   /**
-   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one n
-   * * @deprecated Since 2.0.0. Removed in 3.0.0.
+   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
+   * @deprecated Since 2.0.0. Removed in 3.0.0.
    * @see #getTimestampOfLastShippedOp()
    */
   @Deprecated
@@ -307,14 +307,14 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get the value of uncleanlyClosedWAL counter n
+   * Get the value of uncleanlyClosedWAL counter
    */
   public long getUncleanlyClosedWALs() {
     return singleSourceSource.getUncleanlyClosedWALs();
   }
 
   /**
-   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one n
+   * Get the timestampsOfLastShippedOp, if there are multiple groups, return the latest one
    */
   public long getTimestampOfLastShippedOp() {
     long lastTimestamp = 0L;
@@ -361,7 +361,7 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Get the slave peer ID n
+   * Get the slave peer ID
    */
   public String getPeerID() {
     return id;
@@ -507,7 +507,7 @@ public class MetricsSource implements BaseSource {
   }
 
   /**
-   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication. n
+   * Returns the amount of memory in bytes used in this RegionServer by edits pending replication.
    */
   public long getWALReaderEditsBufferUsage() {
     return globalSourceSource.getWALReaderEditsBufferBytes();

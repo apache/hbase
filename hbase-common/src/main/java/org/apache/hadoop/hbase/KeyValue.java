@@ -1840,8 +1840,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
      * Compare columnFamily, qualifier, timestamp, and key type (everything except the row). This
      * method is used both in the normal comparator and the "same-prefix" comparator. Note that we
      * are assuming that row portions of both KVs have already been parsed and found identical, and
-     * we don't validate that assumption here. n * the length of the common prefix of the two
-     * key-values being compared, including row length and row
+     * we don't validate that assumption here. the length of the common prefix of the two key-values
+     * being compared, including row length and row
      */
     private int compareWithoutRow(int commonPrefix, byte[] left, int loffset, int llength,
       byte[] right, int roffset, int rlength, short rowlength) {

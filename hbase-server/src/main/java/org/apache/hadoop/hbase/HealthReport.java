@@ -34,7 +34,7 @@ class HealthReport {
   }
 
   /**
-   * Gets the status of the region server. n
+   * Gets the status of the region server.
    */
   HealthCheckerExitStatus getStatus() {
     return status;
@@ -46,7 +46,7 @@ class HealthReport {
   }
 
   /**
-   * Gets the health report of the region server. n
+   * Gets the health report of the region server.
    */
   String getHealthReport() {
     return healthReport;

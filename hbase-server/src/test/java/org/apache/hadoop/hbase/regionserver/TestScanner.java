@@ -539,14 +539,15 @@ public class TestScanner {
     }
   }
 
-  /*
-   * @param hri Region
+  /**
+   * Count table.
+   * @param hri        Region
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
-   * @return Count of rows found. n
+   * @return Count of rows found.
    */
   private int count(final Table countTable, final int flushIndex, boolean concurrent)
-    throws IOException {
+    throws Exception {
     LOG.info("Taking out counting scan");
     Scan scan = new Scan();
     for (byte[] qualifier : EXPLICIT_COLS) {
@@ -574,10 +575,10 @@ public class TestScanner {
             }
           }
         };
-        if (concurrent) {
-          t.start(); // concurrently flush.
-        } else {
-          t.run(); // sync flush
+        t.start();
+        if (!concurrent) {
+          // sync flush
+          t.join();
         }
         LOG.info("Continuing on after kicking off background flush");
         justFlushed = true;

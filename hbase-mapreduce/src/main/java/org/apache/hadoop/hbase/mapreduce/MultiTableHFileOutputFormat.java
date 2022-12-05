@@ -72,7 +72,7 @@ public class MultiTableHFileOutputFormat extends HFileOutputFormat2 {
    * function will configure the requisite number of reducers to write HFiles for multple tables
    * simultaneously
    * @param job                   See {@link org.apache.hadoop.mapreduce.Job}
-   * @param multiTableDescriptors Table descriptor and region locator pairs n
+   * @param multiTableDescriptors Table descriptor and region locator pairs
    */
   public static void configureIncrementalLoad(Job job, List<TableInfo> multiTableDescriptors)
     throws IOException {

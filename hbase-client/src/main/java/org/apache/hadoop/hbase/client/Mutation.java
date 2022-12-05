@@ -201,7 +201,7 @@ public abstract class Mutation extends OperationWithAttributes
    * Compile the details beyond the scope of getFingerprint (row, columns, timestamps, etc.) into a
    * Map along with the fingerprinted information. Useful for debugging, logging, and administration
    * tools.
-   * @param maxCols a limit on the number of columns output prior to truncation n
+   * @param maxCols a limit on the number of columns output prior to truncation
    */
   @Override
   public Map<String, Object> toMap(int maxCols) {
@@ -264,7 +264,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Set the durability for this mutation n
+   * Set the durability for this mutation
    */
   public Mutation setDurability(Durability d) {
     this.durability = d;
@@ -277,7 +277,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Method for retrieving the put's familyMap n
+   * Method for retrieving the put's familyMap
    */
   public NavigableMap<byte[], List<Cell>> getFamilyCellMap() {
     return this.familyMap;
@@ -305,7 +305,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Method for retrieving the delete's row n
+   * Method for retrieving the delete's row
    */
   @Override
   public byte[] getRow() {
@@ -323,8 +323,9 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Method for retrieving the timestamp n * @deprecated As of release 2.0.0, this will be removed
-   * in HBase 3.0.0. Use {@link #getTimestamp()} instead
+   * Method for retrieving the timestamp
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0. Use
+   *             {@link #getTimestamp()} instead
    */
   @Deprecated
   public long getTimeStamp() {
@@ -332,7 +333,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Method for retrieving the timestamp. n
+   * Method for retrieving the timestamp.
    */
   public long getTimestamp() {
     return this.ts;
@@ -368,7 +369,7 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Sets the visibility expression associated with cells in this Mutation. n
+   * Sets the visibility expression associated with cells in this Mutation.
    */
   public Mutation setCellVisibility(CellVisibility expression) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY,
@@ -384,8 +385,8 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Create a protocol buffer CellVisibility based on a client CellVisibility. n * @return a
-   * protocol buffer CellVisibility
+   * Create a protocol buffer CellVisibility based on a client CellVisibility.
+   * @return a protocol buffer CellVisibility
    */
   static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
     ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
@@ -394,8 +395,8 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Convert a protocol buffer CellVisibility to a client CellVisibility n * @return the converted
-   * client CellVisibility
+   * Convert a protocol buffer CellVisibility to a client CellVisibility
+   * @return the converted client CellVisibility
    */
   private static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
     if (proto == null) return null;
@@ -403,8 +404,8 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility n * @return the
-   * converted client CellVisibility n
+   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
+   * @return the converted client CellVisibility
    */
   private static CellVisibility toCellVisibility(byte[] protoBytes)
     throws DeserializationException {
@@ -511,7 +512,7 @@ public abstract class Mutation extends OperationWithAttributes
 
   /**
    * Set the TTL desired for the result of the mutation, in milliseconds.
-   * @param ttl the TTL desired for the result of the mutation, in milliseconds n
+   * @param ttl the TTL desired for the result of the mutation, in milliseconds
    */
   public Mutation setTTL(long ttl) {
     setAttribute(OP_ATTRIBUTE_TTL, Bytes.toBytes(ttl));
@@ -688,8 +689,9 @@ public abstract class Mutation extends OperationWithAttributes
   }
 
   /**
-   * @param row Row to check nn * @throws IllegalArgumentException Thrown if <code>row</code> is
-   *            empty or null or &gt; {@link HConstants#MAX_ROW_LENGTH}
+   * @param row Row to check
+   * @throws IllegalArgumentException Thrown if <code>row</code> is empty or null or &gt;
+   *                                  {@link HConstants#MAX_ROW_LENGTH}
    * @return <code>row</code>
    */
   static byte[] checkRow(final byte[] row, final int offset, final int length) {

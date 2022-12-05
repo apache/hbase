@@ -48,7 +48,7 @@ public class RootResource extends ResourceBase {
   }
 
   /**
-   * Constructor n
+   * Constructor
    */
   public RootResource() throws IOException {
     super();

@@ -21,14 +21,14 @@
 # tweaking unrelated aspects of the image.
 
 # start with a minimal image into which we can download remote tarballs
-FROM ubuntu:18.04 AS BASE_IMAGE
+FROM ubuntu:22.04 AS BASE_IMAGE
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
-    ca-certificates=20180409 \
-    curl='7.58.0-*' \
-    locales='2.27-*' \
+    ca-certificates=20211016 \
+    curl='7.81.0-*' \
+    locales='2.35-*' \
 ##
 # install dependencies from system packages.
 # be careful not to install any system packages (i.e., findbugs) that will
@@ -36,36 +36,36 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
 #
 # bring the base image into conformance with the expectations imposed by
 # Yetus and our personality file of what a build environment looks like.
-    bash='4.4.18-*' \
-    build-essential=12.4ubuntu1 \
-    diffutils='1:3.6-*' \
-    git='1:2.17.1-*' \
-    rsync='3.1.2-*' \
-    tar='1.29b-*' \
-    wget='1.19.4-*' \
+    bash='5.1-*' \
+    build-essential=12.9ubuntu3 \
+    diffutils='1:3.8-*' \
+    git='1:2.34.1-*' \
+    rsync='3.2.3-*' \
+    tar='1.34+dfsg-*' \
+    wget='1.21.2-*' \
 # install the dependencies required in order to enable the sundry precommit
 # checks/features provided by Yetus plugins.
-    bats='0.4.0-*' \
-    libperl-critic-perl='1.130-*' \
-    python3='3.6.7-*' \
-    python3-pip='9.0.1-*' \
-    python3-setuptools='39.0.1-*' \
-    ruby=1:2.5.1 \
-    ruby-dev=1:2.5.1 \
-    shellcheck='0.4.6-*' \
+    bats='1.2.1-*' \
+    libperl-critic-perl='1.140-*' \
+    python3='3.10.6-*' \
+    python3-pip='22.0.2+dfsg-*' \
+    python3-setuptools='59.6.0-*' \
+    ruby=1:3.0* \
+    ruby-dev=1:3.0* \
+    shellcheck='0.8.0-*' \
     && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN python3 -mpip install --upgrade pip && \
-  python3 -mpip install pylint==2.4.4
-
-RUN gem install --no-document \
-  rake:13.0.1 \
-  rubocop:0.80.0 \
-  ruby-lint:2.3.1
-
-RUN locale-gen en_US.UTF-8
+    rm -rf /var/lib/apt/lists/* \
+    && \
+    python3 -mpip install --upgrade pip && \
+    python3 -mpip install pylint==2.15.5 \
+    && \
+    gem install --no-document \
+    rake:13.0.3 \
+    rubocop:1.37.1 \
+    ruby-lint:2.3.1 \
+    && \
+    locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 ##
@@ -73,46 +73,39 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 #
 
 FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
-ENV SPOTBUGS_VERSION '4.2.2'
+ENV SPOTBUGS_VERSION '4.7.3'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
-ENV SPOTBUGS_SHA256 '4967c72396e34b86b9458d0c34c5ed185770a009d357df8e63951ee2844f769f'
+ENV SPOTBUGS_SHA512 '09a9fe0e5a6ec8e9d6d116c361b5c34c9d0560c0271241f02fadee911952adfcd69dc184f6de1cc4d4a8fe2c84c162689ea9a691dcae0779935eedf390fcc4ad'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
-  echo "${SPOTBUGS_SHA256} */tmp/spotbugs.tgz" | sha256sum -c -
+  echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
 
 FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
-ENV HADOLINT_VERSION '1.17.5'
+ENV HADOLINT_VERSION '2.10.0'
 ENV HADOLINT_URL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
-ENV HADOLINT_SHA256 '20dd38bc0602040f19268adc14c3d1aae11af27b463af43f3122076baf827a35'
+ENV HADOLINT_SHA512 '4816c95243bedf15476d2225f487fc17465495fb2031e1a4797d82a26db83a1edb63e4fed084b80cef17d5eb67eb45508caadaf7cd0252fb061187113991a338'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/hadolint "${HADOLINT_URL}" && \
-  echo "${HADOLINT_SHA256} */tmp/hadolint" | sha256sum -c -
+  echo "${HADOLINT_SHA512} */tmp/hadolint" | sha512sum -c -
 
 FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
-ENV MAVEN_VERSION='3.6.3'
+ENV MAVEN_VERSION='3.8.6'
 ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
-ENV MAVEN_SHA512 'c35a1803a6e70a126e80b2b3ae33eed961f83ed74d18fcd16909b2d44d7dada3203f1ffe726c17ef8dcca2dcaa9fca676987befeadc9b9f759967a8cb77181c0'
+ENV MAVEN_SHA512 'f790857f3b1f90ae8d16281f902c689e4f136ebe584aba45e4b1fa66c80cba826d3e0e52fdd04ed44b4c66f6d3fe3584a057c26dfcac544a60b301e6d0f91c26'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
-FROM BASE_IMAGE AS OPENJDK7_DOWNLOAD_IMAGE
-ENV OPENJDK7_URL 'https://cdn.azul.com/zulu/bin/zulu7.36.0.5-ca-jdk7.0.252-linux_x64.tar.gz'
-ENV OPENJDK7_SHA256 'e0f34c242e6d456dac3e2c8a9eaeacfa8ea75c4dfc3e8818190bf0326e839d82'
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl --location --fail --silent --show-error --output /tmp/zuluopenjdk7.tar.gz "${OPENJDK7_URL}" && \
-  echo "${OPENJDK7_SHA256} */tmp/zuluopenjdk7.tar.gz" | sha256sum -c -
-
 FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
-ENV OPENJDK8_URL 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u282b08.tar.gz'
-ENV OPENJDK8_SHA256 'e6e6e0356649b9696fa5082cfcb0663d4bef159fc22d406e3a012e71fce83a5c'
+ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u352-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u352b08.tar.gz'
+ENV OPENJDK8_SHA256 '1633bd7590cb1cd72f5a1378ae8294451028b274d798e2a4ac672059a2f00fee'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
 FROM BASE_IMAGE AS OPENJDK11_DOWNLOAD_IMAGE
-ENV OPENJDK11_URL 'https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.10%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.10_9.tar.gz'
-ENV OPENJDK11_SHA256 'ae78aa45f84642545c01e8ef786dfd700d2226f8b12881c844d6a1f71789cb99'
+ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz'
+ENV OPENJDK11_SHA256 'b8d46ed08ef4859476fe6421a7690d899ed83dce63f13fd894f994043177ef3c'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.tar.gz "${OPENJDK11_URL}" && \
   echo "${OPENJDK11_SHA256} */tmp/adoptopenjdk11.tar.gz" | sha256sum -c -
@@ -148,14 +141,6 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
 # when updating java or maven versions here, consider also updating
 # `dev-support/hbase_docker/Dockerfile` as well.
 #
-
-# hadolint ignore=DL3010
-COPY --from=OPENJDK7_DOWNLOAD_IMAGE /tmp/zuluopenjdk7.tar.gz /tmp/zuluopenjdk7.tar.gz
-RUN mkdir -p /usr/lib/jvm && \
-  tar xzf /tmp/zuluopenjdk7.tar.gz -C /usr/lib/jvm && \
-  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/zuluopenjdk7.tar.gz | head -n1)")" /usr/lib/jvm/java-7-zuluopenjdk && \
-  ln -s /usr/lib/jvm/java-7-zuluopenjdk /usr/lib/jvm/java-7 && \
-  rm /tmp/zuluopenjdk7.tar.gz
 
 # hadolint ignore=DL3010
 COPY --from=OPENJDK8_DOWNLOAD_IMAGE /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz

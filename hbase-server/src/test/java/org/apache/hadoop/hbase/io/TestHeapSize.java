@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -25,13 +27,16 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,7 +74,6 @@ import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -290,7 +294,7 @@ public class TestHeapSize {
 
   /**
    * Testing the classes that implements HeapSize and are a part of 0.20. Some are not tested here
-   * for example BlockIndex which is tested in TestHFile since it is a non public class n
+   * for example BlockIndex which is tested in TestHFile since it is a non public class
    */
   @Test
   public void testSizes() throws IOException {
@@ -602,18 +606,30 @@ public class TestHeapSize {
     }
   }
 
-  @Test
-  public void testAutoCalcFixedOverHead() {
-    Class[] classList = new Class[] { HFileContext.class, HRegion.class, BlockCacheKey.class,
-      HFileBlock.class, HStore.class, LruBlockCache.class, StoreContext.class };
-    for (Class cl : classList) {
-      // do estimate in advance to ensure class is loaded
-      ClassSize.estimateBase(cl, false);
-
-      long startTime = EnvironmentEdgeManager.currentTime();
-      ClassSize.estimateBase(cl, false);
-      long endTime = EnvironmentEdgeManager.currentTime();
-      assertTrue(endTime - startTime < 5);
+  private long calcFixedOverhead(List<Class<?>> classList) {
+    long overhead = 0;
+    for (Class<?> clazz : classList) {
+      overhead += ClassSize.estimateBase(clazz, false);
     }
+    return overhead;
+  }
+
+  @Test
+  public void testAutoCalcFixedOverhead() throws InterruptedException {
+    List<Class<?>> classList = Arrays.asList(HFileContext.class, HRegion.class, BlockCacheKey.class,
+      HFileBlock.class, HStore.class, LruBlockCache.class, StoreContext.class);
+    for (int i = 0; i < 10; i++) {
+      // warm up
+      calcFixedOverhead(classList);
+    }
+    long startNs = System.nanoTime();
+    long overhead = 0;
+    for (int i = 0; i < 100; i++) {
+      overhead += calcFixedOverhead(classList);
+    }
+    long costNs = System.nanoTime() - startNs;
+    LOG.info("overhead = {}, cost {} ns", overhead, costNs);
+    // the single computation cost should be less than 5ms
+    assertThat(costNs, lessThan(TimeUnit.MILLISECONDS.toNanos(5) * classList.size() * 100));
   }
 }

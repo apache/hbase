@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-compression</artifactId>
-    <version>2.5.0</version>
+    <version>${revision}</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-compression-brotli</artifactId>
@@ -162,6 +162,18 @@
           <artifactId>javax.annotation-api</artifactId>
         </dependency>
       </dependencies>
+    </profile>
+    <profile>
+      <!-- Brotli4j does not yet support s390x -->
+      <id>s390x-brotli-skip-tests</id>
+      <activation>
+        <os>
+          <arch>s390x</arch>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
     </profile>
   </profiles>
 </project>

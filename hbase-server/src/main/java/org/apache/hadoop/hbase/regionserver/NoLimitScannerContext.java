@@ -45,9 +45,11 @@ public class NoLimitScannerContext extends ScannerContext {
   private static final ScannerContext NO_LIMIT = new NoLimitScannerContext();
 
   /**
-   * @return The static, immutable instance of {@link NoLimitScannerContext} to be used whenever
-   *         limits should not be enforced
+   * Returns the static, immutable instance of {@link NoLimitScannerContext} to be used whenever
+   * limits should not be enforced
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public static final ScannerContext getInstance() {
     return NO_LIMIT;
   }

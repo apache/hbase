@@ -38,7 +38,7 @@ public class RandomRowFilter extends FilterBase {
   protected boolean filterOutRow;
 
   /**
-   * Create a new filter with a specified chance for a row to be included. n
+   * Create a new filter with a specified chance for a row to be included.
    */
   public RandomRowFilter(float chance) {
     this.chance = chance;
@@ -50,7 +50,7 @@ public class RandomRowFilter extends FilterBase {
   }
 
   /**
-   * Set the chance that a row is included. n
+   * Set the chance that a row is included.
    */
   public void setChance(float chance) {
     this.chance = chance;

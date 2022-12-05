@@ -107,7 +107,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   /**
    * Returns a list of all the column families for a given Table.
-   * @param table table n
+   * @param table table
    */
   byte[][] getAllColumns(Table table) throws IOException {
     HColumnDescriptor[] cds = table.getTableDescriptor().getColumnFamilies();

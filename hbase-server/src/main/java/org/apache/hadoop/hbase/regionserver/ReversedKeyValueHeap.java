@@ -36,8 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class ReversedKeyValueHeap extends KeyValueHeap {
 
   /**
-   * nnn
-   */
+   *   */
   public ReversedKeyValueHeap(List<? extends KeyValueScanner> scanners, CellComparator comparator)
     throws IOException {
     super(scanners, new ReversedKVScannerComparator(comparator));
@@ -150,7 +149,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
   private static class ReversedKVScannerComparator extends KVScannerComparator {
 
     /**
-     * Constructor n
+     * Constructor
      */
     public ReversedKVScannerComparator(CellComparator kvComparator) {
       super(kvComparator);
@@ -166,7 +165,8 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
     }
 
     /**
-     * Compares rows of two KeyValue nn * @return less than 0 if left is smaller, 0 if equal etc..
+     * Compares rows of two KeyValue
+     * @return less than 0 if left is smaller, 0 if equal etc..
      */
     public int compareRows(Cell left, Cell right) {
       return super.kvComparator.compareRows(left, right);

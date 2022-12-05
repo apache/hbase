@@ -108,7 +108,7 @@ public class TestWALEntrySinkFilter {
    * Test filter. Filter will filter out any write time that is <= 5 (BOUNDARY). We count how many
    * items we filter out and we count how many cells make it through for distribution way down below
    * in the Table#batch implementation. Puts in place a custom DevNullConnection so we can insert
-   * our counting Table. n
+   * our counting Table.
    */
   @Test
   public void testWALEntryFilter() throws IOException {

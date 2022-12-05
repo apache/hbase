@@ -74,7 +74,7 @@ public class HBaseFsckRepair {
   /**
    * Fix unassigned by creating/transition the unassigned ZK node for this region to OFFLINE state
    * with a special flag to tell the master that this is a forced operation by HBCK. This assumes
-   * that info is in META. nnnn
+   * that info is in META.
    */
   public static void fixUnassigned(Admin admin, RegionInfo region)
     throws IOException, KeeperException, InterruptedException {

@@ -242,7 +242,7 @@ public class TestSingleColumnValueFilter {
   }
 
   /**
-   * Tests identification of the stop row n
+   * Tests identification of the stop row
    */
   @Test
   public void testStop() throws Exception {
@@ -254,7 +254,7 @@ public class TestSingleColumnValueFilter {
   }
 
   /**
-   * Tests serialization n
+   * Tests serialization
    */
   @Test
   public void testSerialization() throws Exception {

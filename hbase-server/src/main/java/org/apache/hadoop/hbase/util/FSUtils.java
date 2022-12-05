@@ -132,8 +132,8 @@ public final class FSUtils {
    * Compare path component of the Path URI; e.g. if hdfs://a/b/c and /a/b/c, it will compare the
    * '/a/b/c' part. If you passed in 'hdfs://a/b/c and b/c, it would return true. Does not consider
    * schema; i.e. if schemas different but path or subpath matches, the two will equate.
-   * @param pathToSearch Path we will be trying to match. n * @return True if <code>pathTail</code>
-   *                     is tail on the path of <code>pathToSearch</code>
+   * @param pathToSearch Path we will be trying to match.
+   * @return True if <code>pathTail</code> is tail on the path of <code>pathToSearch</code>
    */
   public static boolean isMatchingTail(final Path pathToSearch, final Path pathTail) {
     Path tailPath = pathTail;
@@ -165,7 +165,7 @@ public final class FSUtils {
 
   /**
    * Delete the region directory if exists.
-   * @return True if deleted the region directory. n
+   * @return True if deleted the region directory.
    */
   public static boolean deleteRegionDir(final Configuration conf, final RegionInfo hri)
     throws IOException {
@@ -253,14 +253,14 @@ public final class FSUtils {
   /**
    * Inquire the Active NameNode's safe mode status.
    * @param dfs A DistributedFileSystem object representing the underlying HDFS.
-   * @return whether we're in safe mode n
+   * @return whether we're in safe mode
    */
   private static boolean isInSafeMode(DistributedFileSystem dfs) throws IOException {
     return dfs.setSafeMode(SAFEMODE_GET, true);
   }
 
   /**
-   * Check whether dfs is in safemode. nn
+   * Check whether dfs is in safemode.
    */
   public static void checkDfsSafeMode(final Configuration conf) throws IOException {
     boolean isInSafeMode = false;
@@ -566,8 +566,7 @@ public final class FSUtils {
   }
 
   /**
-   * nn
-   */
+   *   */
   private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
     final ClusterId cid) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
@@ -913,8 +912,8 @@ public final class FSUtils {
   }
 
   /**
-   * nn * @return All the table directories under <code>rootdir</code>. Ignore non table hbase
-   * folders such as .logs, .oldlogs, .corrupt folders. n
+   * @return All the table directories under <code>rootdir</code>. Ignore non table hbase folders
+   *         such as .logs, .oldlogs, .corrupt folders.
    */
   public static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
     throws IOException {
@@ -960,7 +959,7 @@ public final class FSUtils {
    * .tableinfo
    * @param fs       A file system for the Path
    * @param tableDir Path to a specific table directory &lt;hbase.rootdir&gt;/&lt;tabledir&gt;
-   * @return List of paths to valid region directories in table dir. n
+   * @return List of paths to valid region directories in table dir.
    */
   public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir)
     throws IOException {
@@ -1025,7 +1024,7 @@ public final class FSUtils {
    * Given a particular region dir, return all the familydirs inside it
    * @param fs        A file system for the Path
    * @param regionDir Path to a specific region directory
-   * @return List of paths to valid family directories in region dir. n
+   * @return List of paths to valid family directories in region dir.
    */
   public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir)
     throws IOException {
@@ -1173,7 +1172,7 @@ public final class FSUtils {
    * @param hbaseRootDir The root directory to scan.
    * @param tableName    name of the table to scan.
    * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails. n
+   * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
     final FileSystem fs, final Path hbaseRootDir, TableName tableName)
@@ -1429,7 +1428,7 @@ public final class FSUtils {
    * @param progressReporter Instance or null; gets called every time we move to new region of
    *                         family dir and for each store file.
    * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails. n
+   * @throws IOException When scanning the directory fails.
    */
   public static Map<String, Path> getTableStoreFilePathMap(final FileSystem fs,
     final Path hbaseRootDir, PathFilter sfFilter, ExecutorService executor,
@@ -1515,10 +1514,10 @@ public final class FSUtils {
   /**
    * This function is to scan the root path of the file system to get the degree of locality for
    * each region on each of the servers having at least one block of that region. This is used by
-   * the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer} n * the configuration
-   * to use
-   * @return the mapping from region encoded name to a map of server names to locality fraction n *
-   *         in case of file system errors or interrupts
+   * the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer} the configuration to
+   * use
+   * @return the mapping from region encoded name to a map of server names to locality fraction in
+   *         case of file system errors or interrupts
    */
   public static Map<String, Map<String, Float>>
     getRegionDegreeLocalityMappingFromFS(final Configuration conf) throws IOException {
@@ -1529,11 +1528,10 @@ public final class FSUtils {
 
   /**
    * This function is to scan the root path of the file system to get the degree of locality for
-   * each region on each of the servers having at least one block of that region. n * the
-   * configuration to use n * the table you wish to scan locality for n * the thread pool size to
-   * use
-   * @return the mapping from region encoded name to a map of server names to locality fraction n *
-   *         in case of file system errors or interrupts
+   * each region on each of the servers having at least one block of that region. the configuration
+   * to use the table you wish to scan locality for the thread pool size to use
+   * @return the mapping from region encoded name to a map of server names to locality fraction in
+   *         case of file system errors or interrupts
    */
   public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
     final Configuration conf, final String desiredTable, int threadPoolSize) throws IOException {
@@ -1546,9 +1544,9 @@ public final class FSUtils {
    * This function is to scan the root path of the file system to get either the mapping between the
    * region name and its best locality region server or the degree of locality of each region on
    * each of the servers having at least one block of that region. The output map parameters are
-   * both optional. n * the configuration to use n * the table you wish to scan locality for n * the
-   * thread pool size to use n * the map into which to put the locality degree mapping or null, must
-   * be a thread-safe implementation n * in case of file system errors or interrupts
+   * both optional. the configuration to use the table you wish to scan locality for the thread pool
+   * size to use the map into which to put the locality degree mapping or null, must be a
+   * thread-safe implementation in case of file system errors or interrupts
    */
   private static void getRegionLocalityMappingFromFS(final Configuration conf,
     final String desiredTable, int threadPoolSize,
@@ -1648,7 +1646,7 @@ public final class FSUtils {
 
   /**
    * Do our short circuit read setup. Checks buffer size to use and whether to do checksumming in
-   * hbase or hdfs. n
+   * hbase or hdfs.
    */
   public static void setupShortCircuitRead(final Configuration conf) {
     // Check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
@@ -1668,7 +1666,7 @@ public final class FSUtils {
   }
 
   /**
-   * Check if short circuit read buffer size is set and if not, set it to hbase value. n
+   * Check if short circuit read buffer size is set and if not, set it to hbase value.
    */
   public static void checkShortCircuitReadBufferSize(final Configuration conf) {
     final int defaultSize = HConstants.DEFAULT_BLOCKSIZE * 2;
@@ -1684,8 +1682,7 @@ public final class FSUtils {
   }
 
   /**
-   * n * @return The DFSClient DFSHedgedReadMetrics instance or null if can't be found or not on
-   * hdfs. n
+   * Returns The DFSClient DFSHedgedReadMetrics instance or null if can't be found or not on hdfs.
    */
   public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
     throws IOException {
