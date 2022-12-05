@@ -228,7 +228,7 @@ public class TestTaskMonitor {
 
   @Test
   public void testClone() throws Exception {
-    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl();
+    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl("test");
     monitor.abort("abort RPC");
     TestParam testParam = new TestParam("param1");
     monitor.setRPC("method1", new Object[] { testParam }, 0);

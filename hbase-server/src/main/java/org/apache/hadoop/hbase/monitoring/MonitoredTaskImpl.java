@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
+import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,11 +47,13 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   private static final Gson GSON = GsonUtil.createGson().create();
 
-  public MonitoredTaskImpl(boolean enableJournal) {
+  public MonitoredTaskImpl(boolean enableJournal, String description) {
     startTime = EnvironmentEdgeManager.currentTime();
     statusTime = startTime;
     stateTime = startTime;
     warnTime = startTime;
+    this.description = description;
+    this.status = "status unset";
     if (enableJournal) {
       journal = new ConcurrentLinkedQueue<>();
     } else {
@@ -104,9 +107,6 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String getStatus() {
-    if (status == null) {
-      return "No task status available.";
-    }
     return status;
   }
 
@@ -164,6 +164,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public void setStatus(String status) {
+    Preconditions.checkNotNull(status, "Status is null");
     this.status = status;
     statusTime = EnvironmentEdgeManager.currentTime();
     if (journal != null) {
@@ -178,6 +179,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public void setDescription(String description) {
+    Preconditions.checkNotNull(description, "Description is null");
     this.description = description;
   }
 
