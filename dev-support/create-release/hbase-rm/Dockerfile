@@ -21,7 +21,6 @@
 # * Java 8
 FROM ubuntu:22.04
 
-
 # Install extra needed repos and refresh.
 #
 # This is all in a single "RUN" command so that if anything changes, "apt update" is run to fetch
@@ -39,6 +38,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     python3-pip='22.0.2+dfsg-*' \
     subversion='1.14.1-*' \
     wget='1.21.2-*' \
+    patch='2.7.6-*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \

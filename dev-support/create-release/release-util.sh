@@ -75,7 +75,7 @@ function banner {
 }
 
 function log {
-  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") ${1}"
+  echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") $*"
 }
 
 # current number of seconds since epoch
@@ -298,12 +298,11 @@ EOF
   fi
   GPG_ARGS=("${GPG_ARGS[@]}" --local-user "${GPG_KEY}")
 
-  if ! is_dry_run; then
-    if [ -z "$ASF_PASSWORD" ]; then
-      stty -echo && printf "ASF_PASSWORD: " && read -r ASF_PASSWORD && printf '\n' && stty echo
-    fi
-  else
-    ASF_PASSWORD="***INVALID***"
+  # The nexus staging plugin needs the password to contact to remote server even if
+  # skipRemoteStaging is set to true, not sure why so here we need the password even
+  # if this is a dry run
+  if [ -z "$ASF_PASSWORD" ]; then
+    stty -echo && printf "ASF_PASSWORD: " && read -r ASF_PASSWORD && printf '\n' && stty echo
   fi
 
   export ASF_PASSWORD
@@ -561,7 +560,6 @@ function get_jira_name {
 function update_releasenotes {
   local project_dir="$1"
   local jira_fix_version="$2"
-  local previous_jira_fix_version="$3"
   local jira_project
   local timing_token
   timing_token="$(start_step)"
@@ -583,7 +581,7 @@ function update_releasenotes {
         "${project_dir}/CHANGES.md" || true
   else
     # should be hbase 3.x, will copy CHANGES.md from archive.a.o/dist
-    curl --location --fail --silent --show-error --output ${project_dir}/CHANGES.md "https://archive.apache.org/dist/hbase/${previous_jira_fix_version}/CHANGES.md"
+    curl --location --fail --silent --show-error --output ${project_dir}/CHANGES.md "https://archive.apache.org/dist/hbase/${PREV_VERSION}/CHANGES.md"
   fi
   if [ -f "${project_dir}/RELEASENOTES.md" ]; then
     sed -i -e \
@@ -591,7 +589,7 @@ function update_releasenotes {
         "${project_dir}/RELEASENOTES.md" || true
   else
     # should be hbase 3.x, will copy CHANGES.md from archive.a.o/dist
-    curl --location --fail --silent --show-error --output ${project_dir}/RELEASENOTES.md "https://archive.apache.org/dist/hbase/${previous_jira_fix_version}/RELEASENOTES.md"
+    curl --location --fail --silent --show-error --output ${project_dir}/RELEASENOTES.md "https://archive.apache.org/dist/hbase/${PREV_VERSION}/RELEASENOTES.md"
   fi
 
   # Yetus will not generate CHANGES if no JIRAs fixed against the release version
@@ -645,6 +643,48 @@ make_src_release() {
   stop_step "${timing_token}"
 }
 
+build_release_binary() {
+  local project="${1}"
+  local version="${2}"
+  local base_name="${project}-${version}"
+  local extra_flags=()
+  if [[ "${version}" = *-hadoop3 ]] || [[ "${version}" = *-hadoop3-SNAPSHOT ]]; then
+    extra_flags=("-Drevision=${version}" "-Dhadoop.profile=3.0")
+  fi
+
+  cd "$project" || exit
+  git clean -d -f -x
+  # Three invocations of maven. This seems to work. One to
+  # populate the repo, another to build the site, and then
+  # a third to assemble the binary artifact. Trying to do
+  # all in the one invocation fails; a problem in our
+  # assembly spec to in maven. TODO. Meantime, three invocations.
+  cmd=("${MVN[@]}" "${extra_flags[@]}" clean install -DskipTests)
+  echo "${cmd[*]}"
+  "${cmd[@]}"
+  cmd=("${MVN[@]}" "${extra_flags[@]}" site -DskipTests)
+  echo "${cmd[*]}"
+  "${cmd[@]}"
+  kick_gpg_agent
+  cmd=("${MVN[@]}" "${extra_flags[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}")
+  echo "${cmd[*]}"
+  "${cmd[@]}"
+
+  # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
+  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
+  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
+    cp "${f_bin_prefix}"*-bin.tar.gz ..
+    cd .. || exit
+    for i in "${base_name}"*-bin.tar.gz; do
+      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
+      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
+    done
+  else
+    cd .. || exit
+    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+  fi
+}
+
 # Make binary release.
 # Takes as arguments first the project name -- e.g. hbase or hbase-operator-tools
 # -- and then the version string. Expects to find checkout adjacent to this script
@@ -662,37 +702,10 @@ make_binary_release() {
   local timing_token
   timing_token="$(start_step)"
   rm -rf "${base_name}"-bin*
-  cd "$project" || exit
 
-  git clean -d -f -x
-  # Three invocations of maven. This seems to work. One to
-  # populate the repo, another to build the site, and then
-  # a third to assemble the binary artifact. Trying to do
-  # all in the one invocation fails; a problem in our
-  # assembly spec to in maven. TODO. Meantime, three invocations.
-  cmd=("${MVN[@]}" clean install -DskipTests)
-  echo "${cmd[*]}"
-  "${cmd[@]}"
-  cmd=("${MVN[@]}" site -DskipTests)
-  echo "${cmd[*]}"
-  "${cmd[@]}"
-  kick_gpg_agent
-  cmd=("${MVN[@]}" install assembly:single -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}")
-  echo "${cmd[*]}"
-  "${cmd[@]}"
-
-  # Check there is a bin gz output. The build may not produce one: e.g. hbase-thirdparty.
-  local f_bin_prefix="./${PROJECT}-assembly/target/${base_name}"
-  if ls "${f_bin_prefix}"*-bin.tar.gz &>/dev/null; then
-    cp "${f_bin_prefix}"*-bin.tar.gz ..
-    cd .. || exit
-    for i in "${base_name}"*-bin.tar.gz; do
-      "${GPG}" "${GPG_ARGS[@]}" --armour --output "${i}.asc" --detach-sig "${i}"
-      "${GPG}" "${GPG_ARGS[@]}" --print-md SHA512 "${i}" > "${i}.sha512"
-    done
-  else
-    cd .. || exit
-    log "No ${f_bin_prefix}*-bin.tar.gz product; expected?"
+  build_release_binary "${project}" "${version}"
+  if should_build_with_hadoop3 "$project/pom.xml"; then
+    build_release_binary "${project}" "$(get_hadoop3_version "${version}")"
   fi
 
   stop_step "${timing_token}"
@@ -746,6 +759,7 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   # Invoke with cwd=$PROJECT
   local deploy_type="$1"
   local mvn_log_file="$2" #secondary log file used later to extract staged_repo_id
+  local staging_dir
   if [[ "$deploy_type" != "snapshot" && "$deploy_type" != "release" ]]; then
     error "unrecognized deploy type, must be 'snapshot'|'release'"
   fi
@@ -759,6 +773,8 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   elif [[ "$deploy_type" == "release" ]] && [[ "$RELEASE_VERSION" =~ SNAPSHOT ]]; then
     error "Non-snapshot release version must not include the word 'SNAPSHOT'; you gave version '$RELEASE_VERSION'"
   fi
+  # Just output to parent directory, the staging directory has a staging prefix already
+  staging_dir="$(dirname "$(pwd)")/local-staged"
   # Publish ${PROJECT} to Maven repo
   # shellcheck disable=SC2154
   log "Publishing ${PROJECT} checkout at '$GIT_REF' ($git_hash)"
@@ -767,19 +783,43 @@ function maven_deploy { #inputs: <snapshot|release> <log_file_path>
   maven_set_version "$RELEASE_VERSION"
   # Prepare for signing
   kick_gpg_agent
-  declare -a mvn_goals=(clean)
-  if ! is_dry_run; then
-    mvn_goals=("${mvn_goals[@]}" deploy)
+  declare -a mvn_extra_flags=()
+  if is_dry_run; then
+    # In dry run mode, skip deploying to remote repo
+    mvn_extra_flags=("${mvn_extra_flags[@]}" -DskipRemoteStaging)
   fi
-  log "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" "${mvn_goals[@]}"
+  log "${MVN[@]}" clean deploy -DskipTests -Dcheckstyle.skip=true \
+    -DaltStagingDirectory="${staging_dir}" "${PUBLISH_PROFILES[@]}" "${mvn_extra_flags[@]}"
   log "Logging to ${mvn_log_file}.  This will take a while..."
   rm -f "$mvn_log_file"
   # The tortuous redirect in the next command allows mvn's stdout and stderr to go to mvn_log_file,
   # while also sending stderr back to the caller.
   # shellcheck disable=SC2094
-  if ! "${MVN[@]}" -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
-      "${mvn_goals[@]}" 1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
+  if ! "${MVN[@]}" clean deploy -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
+      -DaltStagingDirectory="${staging_dir}" "${PUBLISH_PROFILES[@]}" "${mvn_extra_flags[@]}" \
+      1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
     error "Deploy build failed, for details see log at '$mvn_log_file'."
+  fi
+  local hadoop3_version
+  if should_build_with_hadoop3 pom.xml; then
+    hadoop3_version="$(get_hadoop3_version "${RELEASE_VERSION}")"
+    hadoop3_staging_dir="${staging_dir}-hadoop3"
+    log "Deploying artifacts for hadoop3..."
+    log "${MVN[@]}" clean deploy -DskipTests -Dcheckstyle.skip=true \
+      -Drevision="${hadoop3_version}" -Dhadoop.profile=3.0 \
+      -DaltStagingDirectory="${hadoop3_staging_dir}" "${PUBLISH_PROFILES[@]}" "${mvn_extra_flags[@]}"
+    {
+      echo "========================================================================"
+      echo "Deploy build for hadoop3"
+      echo "========================================================================"
+    } >> "$mvn_log_file"
+    # shellcheck disable=SC2094
+    if ! "${MVN[@]}" clean deploy -DskipTests -Dcheckstyle.skip=true "${PUBLISH_PROFILES[@]}" \
+        -Drevision="${hadoop3_version}" -Dhadoop.profile=3.0 \
+        -DaltStagingDirectory="${hadoop3_staging_dir}" "${PUBLISH_PROFILES[@]}" "${mvn_extra_flags[@]}" \
+        1>> "$mvn_log_file" 2> >( tee -a "$mvn_log_file" >&2 ); then
+      error "Deploy build failed, for details see log at '$mvn_log_file'."
+    fi
   fi
   log "BUILD SUCCESS."
   stop_step "${timing_token}"
@@ -797,4 +837,37 @@ function is_tracked() {
   local file=$1
   git ls-files --error-unmatch "$file" &>/dev/null
   return $?
+}
+
+# When we have all the below conditions matched, we will build hadoop3 binaries
+# 1. Use $revision place holder as version in pom
+# 2. Has a hadoop-2.0 profile
+# 3. Has a hadoop-3.0 profile
+function should_build_with_hadoop3() {
+  local pom="$1"
+  maven_version="$(parse_version < "${pom}")"
+  # We do not want to expand ${revision} here, see https://maven.apache.org/maven-ci-friendly.html
+  # If we use ${revision} as placeholder, the way to bump maven version will be different
+  # shellcheck disable=SC2016
+  if [[ "${maven_version}" != '${revision}' ]]; then
+    return 1
+  fi
+  if ! xmllint --xpath "//*[local-name()='project']/*[local-name()='profiles']/*[local-name()='profile']/*[local-name()='id']/text()" "${pom}" \
+    | grep -q ^hadoop-2.0$; then
+    return 1
+  fi
+  if ! xmllint --xpath "//*[local-name()='project']/*[local-name()='profiles']/*[local-name()='profile']/*[local-name()='id']/text()" "${pom}" \
+    | grep -q ^hadoop-3.0$; then
+    return 1
+  fi
+  return 0
+}
+
+function get_hadoop3_version() {
+  local version="$1"
+  if [[ "${version}" =~ -SNAPSHOT$ ]]; then
+    echo "${version/-SNAPSHOT/-hadoop3-SNAPSHOT}"
+  else
+    echo "${version}-hadoop3"
+  fi
 }

@@ -31,6 +31,7 @@ with open(sys.argv[1], 'r', errors = 'ignore') as new_r, open(sys.argv[2], 'r', 
     if pattern.match(line):
       break
     line = prev_r.readline()
+  w.writelines('# RELEASENOTES')
   for newline in new_r:
     w.writelines(newline)
   while line:
