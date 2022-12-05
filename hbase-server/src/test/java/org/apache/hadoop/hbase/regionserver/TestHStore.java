@@ -1809,7 +1809,6 @@ public class TestHStore {
     public long getSmallestReadPoint() {
       return hook.getSmallestReadPoint(this);
     }
-
   }
 
   private abstract static class MyStoreHook {
