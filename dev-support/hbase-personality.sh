@@ -131,6 +131,10 @@ function personality_parse_args
         delete_parameter "${i}"
         SUREFIRE_SECOND_PART_FORK_COUNT=${i#*=}
       ;;
+      --java8-home=*)
+        delete_parameter "${i}"
+        JAVA8_HOME=${i#*=}
+      ;;
     esac
   done
 }
@@ -560,6 +564,7 @@ function hadoopcheck_rebuild
   local result=0
   local hbase_hadoop2_versions
   local hbase_hadoop3_versions
+  local savejavahome=${JAVA_HOME}
 
   if [[ "${repostatus}" = branch ]]; then
     return 0
@@ -582,7 +587,7 @@ function hadoopcheck_rebuild
     else
       hbase_hadoop2_versions="2.10.0 2.10.1 2.10.2"
     fi
-  elif [[ "${PATCH_BRANCH}" = branch-2.* ]]; then
+  elif [[ "${PATCH_BRANCH}" = branch-2* ]]; then
     yetus_info "Setting Hadoop 2 versions to test based on branch-2.5+ rules."
     hbase_hadoop2_versions="2.10.2"
   else
@@ -609,12 +614,18 @@ function hadoopcheck_rebuild
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for hadoopver in ${hbase_hadoop2_versions}; do
     logfile="${PATCH_DIR}/patch-javac-${hadoopver}.txt"
+    # alawys use java8 to build with hadoop 2.x
+    if [[ -n "${JAVA8_HOME}" ]]; then
+      yetus_info "Switching to java 8 for building against hadoop 2.x"
+      export JAVA_HOME=${JAVA8_HOME}
+    fi
     # disabled because "maven_executor" needs to return both command and args
     # shellcheck disable=2046
     echo_and_redirect "${logfile}" \
       $(maven_executor) clean install \
         -DskipTests -DHBasePatchProcess \
         -Dhadoop-two.version="${hadoopver}"
+    export JAVA_HOME=${savejavahome}
     count=$(${GREP} -c '\[ERROR\]' "${logfile}")
     if [[ ${count} -gt 0 ]]; then
       add_vote_table -1 hadoopcheck "${BUILDMODEMSG} causes ${count} errors with Hadoop v${hadoopver}."

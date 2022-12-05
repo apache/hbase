@@ -366,13 +366,12 @@ public class TestFavoredNodeAssignmentHelper {
     regionMap.put(regionsOnRack1, 1);
     regionMap.put(regionsOnRack2, 2);
     regionMap.put(regionsOnRack3, 3);
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3), rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3),
-      rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
-    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3), rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
+    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3), rackMap.get(firstRackSize), regionMap.get(regionsOnRack1));
+    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3), rackMap.get(secondRackSize), regionMap.get(regionsOnRack2));
+    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+      regionsOnRack2, regionsOnRack3), rackMap.get(thirdRackSize), regionMap.get(regionsOnRack3));
   }
 
   private String printProportions(int firstRackSize, int secondRackSize, int thirdRackSize,

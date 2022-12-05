@@ -46,6 +46,11 @@ final class SplitNormalizationPlan implements NormalizationPlan {
   }
 
   @Override
+  public long getPlanSizeMb() {
+    return splitTarget.getRegionSizeMb();
+  }
+
+  @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
       .append("splitTarget", splitTarget).toString();

@@ -34,4 +34,6 @@ public interface NormalizationPlan {
 
   /** Returns the type of this plan */
   PlanType getType();
+
+  long getPlanSizeMb();
 }

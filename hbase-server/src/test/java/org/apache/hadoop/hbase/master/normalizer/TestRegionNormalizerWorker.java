@@ -204,6 +204,36 @@ public class TestRegionNormalizerWorker {
       Duration.ofNanos(endTime - startTime), greaterThanOrEqualTo(Duration.ofSeconds(5)));
   }
 
+  @Test
+  public void testPlansSizeLimit() throws Exception {
+    final TableName tn = tableName.getTableName();
+    final TableDescriptor tnDescriptor =
+      TableDescriptorBuilder.newBuilder(tn).setNormalizationEnabled(true).build();
+    final RegionInfo splitRegionInfo = RegionInfoBuilder.newBuilder(tn).build();
+    final RegionInfo mergeRegionInfo1 = RegionInfoBuilder.newBuilder(tn).build();
+    final RegionInfo mergeRegionInfo2 = RegionInfoBuilder.newBuilder(tn).build();
+    when(masterServices.getTableDescriptors().get(tn)).thenReturn(tnDescriptor);
+    when(masterServices.splitRegion(any(), any(), anyLong(), anyLong())).thenReturn(1L);
+    when(masterServices.mergeRegions(any(), anyBoolean(), anyLong(), anyLong())).thenReturn(1L);
+    when(regionNormalizer.computePlansForTable(tnDescriptor)).thenReturn(Arrays.asList(
+      new SplitNormalizationPlan(splitRegionInfo, 2), new MergeNormalizationPlan.Builder()
+        .addTarget(mergeRegionInfo1, 1).addTarget(mergeRegionInfo2, 2).build(),
+      new SplitNormalizationPlan(splitRegionInfo, 1)));
+
+    final Configuration conf = testingUtility.getConfiguration();
+    conf.setLong(RegionNormalizerWorker.CUMULATIVE_SIZE_LIMIT_MB_KEY, 5);
+
+    final RegionNormalizerWorker worker = new RegionNormalizerWorker(
+      testingUtility.getConfiguration(), masterServices, regionNormalizer, queue);
+    workerPool.submit(worker);
+    queue.put(tn);
+
+    assertThatEventually("worker should process first split plan, but not second",
+      worker::getSplitPlanCount, comparesEqualTo(1L));
+    assertThatEventually("worker should process merge plan", worker::getMergePlanCount,
+      comparesEqualTo(1L));
+  }
+
   /**
    * Repeatedly evaluates {@code matcher} against the result of calling {@code actualSupplier} until
    * the matcher succeeds or the timeout period of 30 seconds is exhausted.

@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -53,6 +55,9 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     "hbase.normalizer.throughput.max_bytes_per_sec";
   private static final long RATE_UNLIMITED_BYTES = 1_000_000_000_000L; // 1TB/sec
 
+  static final String CUMULATIVE_SIZE_LIMIT_MB_KEY = "hbase.normalizer.plans_size_limit.mb";
+  static final long DEFAULT_CUMULATIVE_SIZE_LIMIT_MB = Long.MAX_VALUE;
+
   private final MasterServices masterServices;
   private final RegionNormalizer regionNormalizer;
   private final RegionNormalizerWorkQueue<TableName> workQueue;
@@ -62,6 +67,7 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
   private final boolean defaultNormalizerTableLevel;
   private long splitPlanCount;
   private long mergePlanCount;
+  private final AtomicLong cumulativePlansSizeLimitMb;
 
   RegionNormalizerWorker(final Configuration configuration, final MasterServices masterServices,
     final RegionNormalizer regionNormalizer, final RegionNormalizerWorkQueue<TableName> workQueue) {
@@ -73,6 +79,8 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     this.mergePlanCount = 0;
     this.rateLimiter = loadRateLimiter(configuration);
     this.defaultNormalizerTableLevel = extractDefaultNormalizerValue(configuration);
+    this.cumulativePlansSizeLimitMb = new AtomicLong(
+      configuration.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB));
   }
 
   private boolean extractDefaultNormalizerValue(final Configuration configuration) {
@@ -96,9 +104,20 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
     }
   }
 
+  private static long logLongConfigurationUpdated(final String key, final long oldValue,
+    final long newValue) {
+    if (oldValue != newValue) {
+      LOG.info("Updated configuration for key '{}' from {} to {}", key, oldValue, newValue);
+    }
+    return newValue;
+  }
+
   @Override
   public void onConfigurationChange(Configuration conf) {
     rateLimiter.setRate(loadRateLimit(conf));
+    cumulativePlansSizeLimitMb.set(
+      logLongConfigurationUpdated(CUMULATIVE_SIZE_LIMIT_MB_KEY, cumulativePlansSizeLimitMb.get(),
+        conf.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB)));
   }
 
   private static RateLimiter loadRateLimiter(final Configuration configuration) {
@@ -207,12 +226,42 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
       return Collections.emptyList();
     }
 
-    final List<NormalizationPlan> plans = regionNormalizer.computePlansForTable(tblDesc);
+    List<NormalizationPlan> plans = regionNormalizer.computePlansForTable(tblDesc);
+
+    plans = truncateForSize(plans);
+
     if (CollectionUtils.isEmpty(plans)) {
       LOG.debug("No normalization required for table {}.", tableName);
       return Collections.emptyList();
     }
     return plans;
+  }
+
+  private List<NormalizationPlan> truncateForSize(List<NormalizationPlan> plans) {
+    if (cumulativePlansSizeLimitMb.get() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB) {
+      List<NormalizationPlan> maybeTruncatedPlans = new ArrayList<>(plans.size());
+      long totalCumulativeSizeMb = 0;
+      long truncatedCumulativeSizeMb = 0;
+      for (NormalizationPlan plan : plans) {
+        totalCumulativeSizeMb += plan.getPlanSizeMb();
+        if (totalCumulativeSizeMb <= cumulativePlansSizeLimitMb.get()) {
+          truncatedCumulativeSizeMb += plan.getPlanSizeMb();
+          maybeTruncatedPlans.add(plan);
+        }
+      }
+      if (maybeTruncatedPlans.size() != plans.size()) {
+        LOG.debug(
+          "Truncating list of normalization plans that RegionNormalizerWorker will process "
+            + "because of {}. Original list had {} plan(s), new list has {} plan(s). "
+            + "Original list covered regions with cumulative size {} mb, "
+            + "new list covers regions with cumulative size {} mb.",
+          CUMULATIVE_SIZE_LIMIT_MB_KEY, plans.size(), maybeTruncatedPlans.size(),
+          totalCumulativeSizeMb, truncatedCumulativeSizeMb);
+      }
+      return maybeTruncatedPlans;
+    } else {
+      return plans;
+    }
   }
 
   private void submitPlans(final List<NormalizationPlan> plans) {
