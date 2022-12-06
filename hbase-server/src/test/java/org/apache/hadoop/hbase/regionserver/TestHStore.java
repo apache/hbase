@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -41,12 +42,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -70,6 +73,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -99,9 +103,12 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.quotas.RegionSizeStoreImpl;
+import org.apache.hadoop.hbase.regionserver.ChunkCreator.ChunkType;
 import org.apache.hadoop.hbase.regionserver.MemStoreCompactionStrategy.Action;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.EverythingPolicy;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
@@ -1111,6 +1118,68 @@ public class TestHStore {
     verify(spiedStoreEngine, times(1)).replaceStoreFiles(any(), any(), any(), any());
   }
 
+  @Test
+  public void testScanWithCompactionAfterFlush() throws Exception {
+    TEST_UTIL.getConfiguration().set(DEFAULT_COMPACTION_POLICY_CLASS_KEY,
+      EverythingPolicy.class.getName());
+    init(name.getMethodName());
+
+    assertEquals(0, this.store.getStorefilesCount());
+
+    KeyValue kv = new KeyValue(row, family, qf1, 1, (byte[]) null);
+    // add some data, flush
+    this.store.add(kv, null);
+    flush(1);
+    kv = new KeyValue(row, family, qf2, 1, (byte[]) null);
+    // add some data, flush
+    this.store.add(kv, null);
+    flush(2);
+    kv = new KeyValue(row, family, qf3, 1, (byte[]) null);
+    // add some data, flush
+    this.store.add(kv, null);
+    flush(3);
+
+    ExecutorService service = Executors.newFixedThreadPool(2);
+
+    Scan scan = new Scan(new Get(row));
+    Future<KeyValueScanner> scanFuture = service.submit(() -> {
+      try {
+        LOG.info(">>>> creating scanner");
+        return this.store.createScanner(scan,
+          new ScanInfo(HBaseConfiguration.create(),
+            ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build(),
+            Long.MAX_VALUE, 0, CellComparator.getInstance()),
+          scan.getFamilyMap().get(store.getColumnFamilyDescriptor().getName()), 0);
+      } catch (IOException e) {
+        e.printStackTrace();
+        return null;
+      }
+    });
+    Future compactFuture = service.submit(() -> {
+      try {
+        LOG.info(">>>>>> starting compaction");
+        Optional<CompactionContext> opCompaction = this.store.requestCompaction();
+        assertTrue(opCompaction.isPresent());
+        store.compact(opCompaction.get(), new NoLimitThroughputController(), User.getCurrent());
+        LOG.info(">>>>>> Compaction is finished");
+        this.store.closeAndArchiveCompactedFiles();
+        LOG.info(">>>>>> Compacted files deleted");
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    });
+
+    KeyValueScanner kvs = scanFuture.get();
+    compactFuture.get();
+    ((StoreScanner) kvs).currentScanners.forEach(s -> {
+      if (s instanceof StoreFileScanner) {
+        assertEquals(1, ((StoreFileScanner) s).getReader().getRefCount());
+      }
+    });
+    kvs.seek(kv);
+    service.shutdownNow();
+  }
+
   private long countMemStoreScanner(StoreScanner scanner) {
     if (scanner.currentScanners == null) {
       return 0;
@@ -1880,6 +1949,106 @@ public class TestHStore {
     assertTrue(memStoreSizing.getDataSize() == cellByteSize);
     // Waiting the in memory compaction completed, see HBASE-26438
     myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
+  }
+
+  /**
+   * This test is for HBASE-27464, before this JIRA,when init {@link CellChunkImmutableSegment} for
+   * 'COMPACT' action, we not force copy to current MSLab. When cell size bigger than
+   * {@link MemStoreLABImpl#maxAlloc}, cell will stay in previous chunk which will recycle after
+   * segment replace, and we may read wrong data when these chunk reused by others.
+   */
+  @Test
+  public void testForceCloneOfBigCellForCellChunkImmutableSegment() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    int maxAllocByteSize = conf.getInt(MemStoreLAB.MAX_ALLOC_KEY, MemStoreLAB.MAX_ALLOC_DEFAULT);
+
+    // Construct big cell,which is large than {@link MemStoreLABImpl#maxAlloc}.
+    byte[] cellValue = new byte[maxAllocByteSize + 1];
+    final long timestamp = EnvironmentEdgeManager.currentTime();
+    final long seqId = 100;
+    final byte[] rowKey1 = Bytes.toBytes("rowKey1");
+    final Cell originalCell1 = createCell(rowKey1, qf1, timestamp, seqId, cellValue);
+    final byte[] rowKey2 = Bytes.toBytes("rowKey2");
+    final Cell originalCell2 = createCell(rowKey2, qf1, timestamp, seqId, cellValue);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+
+    int cellByteSize = MutableSegment.getCellLength(originalCell1);
+    int inMemoryFlushByteSize = cellByteSize - 1;
+
+    // set CompactingMemStore.inmemoryFlushSize to flushByteSize.
+    conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore6.class.getName());
+    conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(inMemoryFlushByteSize * 200));
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+
+    // Use {@link MemoryCompactionPolicy#EAGER} for always compacting.
+    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setInMemoryCompaction(MemoryCompactionPolicy.EAGER).build());
+
+    MyCompactingMemStore6 myCompactingMemStore = ((MyCompactingMemStore6) store.memstore);
+    assertTrue((int) (myCompactingMemStore.getInmemoryFlushSize()) == inMemoryFlushByteSize);
+
+    // Data chunk Pool is disabled.
+    assertTrue(ChunkCreator.getInstance().getMaxCount(ChunkType.DATA_CHUNK) == 0);
+
+    MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
+
+    // First compact
+    store.add(originalCell1, memStoreSizing);
+    // Waiting for the first in-memory compaction finished
+    myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
+
+    StoreScanner storeScanner =
+      (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
+    SegmentScanner segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
+    Cell resultCell1 = segmentScanner.next();
+    assertTrue(CellUtil.equals(resultCell1, originalCell1));
+    int cell1ChunkId = ((ExtendedCell) resultCell1).getChunkId();
+    assertTrue(cell1ChunkId != ExtendedCell.CELL_NOT_BASED_ON_CHUNK);
+    assertNull(segmentScanner.next());
+    segmentScanner.close();
+    storeScanner.close();
+    Segment segment = segmentScanner.segment;
+    assertTrue(segment instanceof CellChunkImmutableSegment);
+    MemStoreLABImpl memStoreLAB1 = (MemStoreLABImpl) (segmentScanner.segment.getMemStoreLAB());
+    assertTrue(!memStoreLAB1.isClosed());
+    assertTrue(!memStoreLAB1.chunks.isEmpty());
+    assertTrue(!memStoreLAB1.isReclaimed());
+
+    // Second compact
+    store.add(originalCell2, memStoreSizing);
+    // Waiting for the second in-memory compaction finished
+    myCompactingMemStore.inMemoryCompactionEndCyclicBarrier.await();
+
+    // Before HBASE-27464, here may throw java.lang.IllegalArgumentException: In CellChunkMap, cell
+    // must be associated with chunk.. We were looking for a cell at index 0.
+    // The cause for this exception is because the data chunk Pool is disabled,when the data chunks
+    // are recycled after the second in-memory compaction finished,the
+    // {@link ChunkCreator.putbackChunks} method does not put the chunks back to the data chunk
+    // pool,it just removes them from {@link ChunkCreator#chunkIdMap},so in
+    // {@link CellChunkMap#getCell} we could not get the data chunk by chunkId.
+    storeScanner = (StoreScanner) store.getScanner(new Scan(new Get(rowKey1)), quals, seqId + 1);
+    segmentScanner = getTypeKeyValueScanner(storeScanner, SegmentScanner.class);
+    Cell newResultCell1 = segmentScanner.next();
+    assertTrue(newResultCell1 != resultCell1);
+    assertTrue(CellUtil.equals(newResultCell1, originalCell1));
+
+    Cell resultCell2 = segmentScanner.next();
+    assertTrue(CellUtil.equals(resultCell2, originalCell2));
+    assertNull(segmentScanner.next());
+    segmentScanner.close();
+    storeScanner.close();
+
+    segment = segmentScanner.segment;
+    assertTrue(segment instanceof CellChunkImmutableSegment);
+    MemStoreLABImpl memStoreLAB2 = (MemStoreLABImpl) (segmentScanner.segment.getMemStoreLAB());
+    assertTrue(!memStoreLAB2.isClosed());
+    assertTrue(!memStoreLAB2.chunks.isEmpty());
+    assertTrue(!memStoreLAB2.isReclaimed());
+    assertTrue(memStoreLAB1.isClosed());
+    assertTrue(memStoreLAB1.chunks.isEmpty());
+    assertTrue(memStoreLAB1.isReclaimed());
   }
 
   // This test is for HBASE-26210 also, test write large cell and small cell concurrently when
