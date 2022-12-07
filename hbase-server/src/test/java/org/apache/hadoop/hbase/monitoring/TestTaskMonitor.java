@@ -54,6 +54,8 @@ public class TestTaskMonitor {
     TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
 
+
+
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
     MonitoredTask taskFromTm = tm.getTasks().get(0);
@@ -62,6 +64,8 @@ public class TestTaskMonitor {
     assertEquals(task.getDescription(), taskFromTm.getDescription());
     assertEquals(-1, taskFromTm.getCompletionTimestamp());
     assertEquals(MonitoredTask.State.RUNNING, taskFromTm.getState());
+    assertEquals(task.getStatus(), taskFromTm.getStatus());
+    assertEquals("status unset", taskFromTm.getStatus());
 
     // Mark it as finished
     task.markComplete("Finished!");
