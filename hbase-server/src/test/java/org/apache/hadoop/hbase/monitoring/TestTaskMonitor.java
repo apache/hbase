@@ -54,8 +54,6 @@ public class TestTaskMonitor {
     TaskMonitor tm = new TaskMonitor(new Configuration());
     assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
 
-
-
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
     MonitoredTask taskFromTm = tm.getTasks().get(0);
