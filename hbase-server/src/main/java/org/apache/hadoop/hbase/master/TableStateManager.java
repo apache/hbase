@@ -55,8 +55,7 @@ public class TableStateManager {
   private final ConcurrentMap<TableName, TableState.State> tableName2State =
     new ConcurrentHashMap<>();
 
-  private final ConcurrentMap<TableName, Integer> creating =
-    new ConcurrentHashMap<>();
+  private final ConcurrentMap<TableName, Integer> creating = new ConcurrentHashMap<>();
 
   TableStateManager(MasterServices master) {
     this.master = master;
@@ -116,16 +115,14 @@ public class TableStateManager {
   /**
    * Set a table as being created.
    * @param tableName name of table being created
-   * @return void
    */
   public void updateCreating(TableName tableName) {
-    creating.put(tableName,1);
+    creating.put(tableName, 1);
   }
 
   /**
    * Notify that a table is created.
    * @param tableName name of table created
-   * @return void
    */
   public void finishCreating(TableName tableName) {
     creating.remove(tableName);

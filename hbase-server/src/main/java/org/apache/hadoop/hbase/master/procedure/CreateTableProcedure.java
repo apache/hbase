@@ -105,7 +105,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
           setNextState(CreateTableState.CREATE_TABLE_ASSIGN_REGIONS);
           break;
         case CREATE_TABLE_ASSIGN_REGIONS:
-          env.getMasterServices().getTableStateManager().updateCreating(getTableName()); 
+          env.getMasterServices().getTableStateManager().updateCreating(getTableName());
           setEnablingState(env, getTableName());
           addChildProcedure(
             env.getAssignmentManager().createRoundRobinAssignProcedures(newRegions));
