@@ -67,14 +67,6 @@ mkdir -p "${PATCHDIR}"
 mkdir "${PATCHDIR}/machine"
 "${SOURCEDIR}/dev-support/gather_machine_environment.sh" "${PATCHDIR}/machine"
 
-# If CHANGE_URL is set (e.g., Github Branch Source plugin), process it.
-# Otherwise exit, because we don't want HBase to do a
-# full build.  We wouldn't normally do this check for smaller
-# projects. :)
-if [[ -z "${CHANGE_URL}" ]]; then
-  echo "Full build skipped" > "${PATCHDIR}/report.html"
-  exit 0
-fi
 # enable debug output for yetus
 if [[ "true" = "${DEBUG}" ]]; then
   YETUS_ARGS+=("--debug")
