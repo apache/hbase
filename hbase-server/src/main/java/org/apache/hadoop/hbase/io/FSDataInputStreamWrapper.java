@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.io;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -244,14 +246,30 @@ public class FSDataInputStreamWrapper implements Closeable {
        */
       HdfsDataInputStream hdfsDataInputStream = (HdfsDataInputStream) stream;
       synchronized (readStatistics) {
-        readStatistics.totalBytesRead +=
-          hdfsDataInputStream.getReadStatistics().getTotalBytesRead();
-        readStatistics.totalLocalBytesRead +=
-          hdfsDataInputStream.getReadStatistics().getTotalLocalBytesRead();
-        readStatistics.totalShortCircuitBytesRead +=
-          hdfsDataInputStream.getReadStatistics().getTotalShortCircuitBytesRead();
-        readStatistics.totalZeroCopyBytesRead +=
-          hdfsDataInputStream.getReadStatistics().getTotalZeroCopyBytesRead();
+        try {
+          Method getReadStatisticsMethod =
+            hdfsDataInputStream.getClass().getMethod("getReadStatistics");
+          Object getReadStatisticsObj = getReadStatisticsMethod.invoke(hdfsDataInputStream);
+          Method getTotalBytesReadMethod =
+            getReadStatisticsObj.getClass().getMethod("getTotalBytesRead");
+          Method getTotalLocalBytesReadMethod =
+            getReadStatisticsObj.getClass().getMethod("getTotalLocalBytesRead");
+          Method getTotalShortCircuitBytesReadMethod =
+            getReadStatisticsObj.getClass().getMethod("getTotalShortCircuitBytesRead");
+          Method getTotalZeroCopyBytesReadMethod =
+            getReadStatisticsObj.getClass().getMethod("getTotalZeroCopyBytesRead");
+
+          readStatistics.totalBytesRead +=
+            (long) getTotalBytesReadMethod.invoke(getReadStatisticsObj);
+          readStatistics.totalLocalBytesRead +=
+            (long) getTotalLocalBytesReadMethod.invoke(getReadStatisticsObj);
+          readStatistics.totalShortCircuitBytesRead +=
+            (long) getTotalShortCircuitBytesReadMethod.invoke(getReadStatisticsObj);
+          readStatistics.totalZeroCopyBytesRead +=
+            (long) getTotalZeroCopyBytesReadMethod.invoke(getReadStatisticsObj);
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
   }
