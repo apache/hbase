@@ -218,13 +218,13 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         } catch (IOException e) {
           // The service itself failed . It may be an error coming from the communication
           // layer, but, as well, a functional error raised by the server.
-          receiveGlobalFailure(multiAction, server, numAttempt, e);
+          receiveGlobalFailure(multiAction, server, numAttempt, e, true);
           return;
         } catch (Throwable t) {
           // This should not happen. Let's log & retry anyway.
           LOG.error("id=" + asyncProcess.id + ", caught throwable. Unexpected."
             + " Retrying. Server=" + server + ", tableName=" + tableName, t);
-          receiveGlobalFailure(multiAction, server, numAttempt, t);
+          receiveGlobalFailure(multiAction, server, numAttempt, t, true);
           return;
         }
         if (res.type() == AbstractResponse.ResponseType.MULTI) {
@@ -563,6 +563,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    */
   void sendMultiAction(Map<ServerName, MultiAction> actionsByServer, int numAttempt,
     List<Action> actionsForReplicaThread, boolean reuseThread) {
+    boolean clearServerCache = true;
     // Run the last item on the same thread if we are already on a send thread.
     // We hope most of the time it will be the only item, so we can cut down on threads.
     int actionsRemaining = actionsByServer.size();
@@ -597,6 +598,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
               // let's secure this a little.
               LOG.warn("id=" + asyncProcess.id + ", task rejected by pool. Unexpected." + " Server="
                 + server.getServerName(), t);
+              // Do not update cache if exception is from failing to submit action to thread pool
+              clearServerCache = false;
             } else {
               // see #HBASE-14359 for more details
               LOG.warn("Caught unexpected exception/error: ", t);
@@ -604,7 +607,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
             asyncProcess.decTaskCounters(multiAction.getRegions(), server);
             // We're likely to fail again, but this will increment the attempt counter,
             // so it will finish.
-            receiveGlobalFailure(multiAction, server, numAttempt, t);
+            receiveGlobalFailure(multiAction, server, numAttempt, t, clearServerCache);
           }
         }
       }
@@ -754,11 +757,15 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * @param t          the throwable (if any) that caused the resubmit
    */
   private void receiveGlobalFailure(MultiAction rsActions, ServerName server, int numAttempt,
-    Throwable t) {
+    Throwable t, boolean clearServerCache) {
     errorsByServer.reportServerError(server);
     Retry canRetry = errorsByServer.canTryMore(numAttempt) ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED;
 
-    cleanServerCache(server, t);
+    // Do not update cache if exception is from failing to submit action to thread pool
+    if (clearServerCache) {
+      cleanServerCache(server, t);
+    }
+
     int failed = 0;
     int stopped = 0;
     List<Action> toReplay = new ArrayList<>();
@@ -766,9 +773,12 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       byte[] regionName = e.getKey();
       byte[] row = e.getValue().get(0).getAction().getRow();
       // Do not use the exception for updating cache because it might be coming from
-      // any of the regions in the MultiAction.
-      updateCachedLocations(server, regionName, row,
-        ClientExceptionsUtil.isMetaClearingException(t) ? null : t);
+      // any of the regions in the MultiAction and do not update cache if exception is
+      // from failing to submit action to thread pool
+      if (clearServerCache) {
+        updateCachedLocations(server, regionName, row,
+          ClientExceptionsUtil.isMetaClearingException(t) ? null : t);
+      }
       for (Action action : e.getValue()) {
         Retry retry =
           manageError(action.getOriginalIndex(), action.getAction(), canRetry, t, server);
