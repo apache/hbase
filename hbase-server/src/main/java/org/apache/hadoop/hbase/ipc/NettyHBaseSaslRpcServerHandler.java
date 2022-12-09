@@ -73,29 +73,34 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
 
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-    LOG.debug("Read input token of size={} for processing by saslServer.evaluateResponse()",
-      msg.readableBytes());
-    HBaseSaslRpcServer saslServer = conn.getOrCreateSaslServer();
-    byte[] saslToken = new byte[msg.readableBytes()];
-    msg.readBytes(saslToken, 0, saslToken.length);
-    byte[] replyToken = saslServer.evaluateResponse(saslToken);
-    if (replyToken != null) {
-      LOG.debug("Will send token of size {} from saslServer.", replyToken.length);
-      doResponse(ctx, SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
-    }
-    if (saslServer.isComplete()) {
-      conn.finishSaslNegotiation();
-      String qop = saslServer.getNegotiatedQop();
-      boolean useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-      ChannelPipeline p = ctx.pipeline();
-      if (useWrap) {
-        p.addBefore(DECODER_NAME, null, new SaslWrapHandler(saslServer::wrap)).addLast(
-          new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
-          new SaslUnwrapHandler(saslServer::unwrap));
+    try {
+      LOG.debug("Read input token of size={} for processing by saslServer.evaluateResponse()",
+        msg.readableBytes());
+      HBaseSaslRpcServer saslServer = conn.getOrCreateSaslServer();
+      byte[] saslToken = new byte[msg.readableBytes()];
+      msg.readBytes(saslToken, 0, saslToken.length);
+      byte[] replyToken = saslServer.evaluateResponse(saslToken);
+      if (replyToken != null) {
+        LOG.debug("Will send token of size {} from saslServer.", replyToken.length);
+        doResponse(ctx, SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
       }
-      conn.setupHandler();
-      p.remove(this);
-      p.remove(DECODER_NAME);
+      if (saslServer.isComplete()) {
+        conn.finishSaslNegotiation();
+        String qop = saslServer.getNegotiatedQop();
+        boolean useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+        ChannelPipeline p = ctx.pipeline();
+        if (useWrap) {
+          p.addBefore(DECODER_NAME, null, new SaslWrapHandler(saslServer::wrap)).addLast(
+            new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4),
+            new SaslUnwrapHandler(saslServer::unwrap));
+        }
+        conn.setupHandler();
+        p.remove(this);
+        p.remove(DECODER_NAME);
+      }
+    } catch (Exception e) {
+      exceptionCaught(ctx, e);
+      throw e;
     }
   }
 
