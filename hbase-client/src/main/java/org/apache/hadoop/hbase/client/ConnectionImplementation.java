@@ -96,7 +96,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Supplier;
 import org.apache.hbase.thirdparty.com.google.common.base.Suppliers;
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -413,7 +412,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     if (masterStateCacheTimeout <= 0L) {
       this.masterStateSupplier = masterConnSupplier;
     } else {
-      this.masterStateSupplier = Suppliers.memoizeWithExpiration(masterConnSupplier,
+      this.masterStateSupplier = Suppliers.memoizeWithExpiration(masterConnSupplier::get,
         masterStateCacheTimeout, TimeUnit.SECONDS);
     }
   }
