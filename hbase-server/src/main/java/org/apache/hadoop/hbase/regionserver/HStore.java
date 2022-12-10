@@ -893,7 +893,7 @@ public class HStore
       // NOTE: here we must increase the refCount for storeFiles because we would open the
       // storeFiles and get the StoreFileScanners for them in HStore.notifyChangedReadersObservers.
       // If we don't increase the refCount here, HStore.closeAndArchiveCompactedFiles called by
-      // CompactedHFilesDischarger may delete the storeFiles after a concurrent compaction.Because
+      // CompactedHFilesDischarger may archive the storeFiles after a concurrent compaction.Because
       // HStore.requestCompaction is under storeEngine lock, so here we increase the refCount under
       // storeEngine lock. see HBASE-27519 for more details.
       snapshotId > 0 ? () -> {
@@ -977,7 +977,7 @@ public class HStore
       memStoreScanners = this.memstore.getScanners(readPt);
       // NOTE: here we must increase the refCount for storeFiles because we would open the
       // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,
-      // HStore.closeAndArchiveCompactedFiles called by CompactedHFilesDischarger may delete the
+      // HStore.closeAndArchiveCompactedFiles called by CompactedHFilesDischarger may archive the
       // storeFiles after a concurrent compaction.Because HStore.requestCompaction is under
       // storeEngine lock, so here we increase the refCount under storeEngine lock. see HBASE-27484
       // for more details.
