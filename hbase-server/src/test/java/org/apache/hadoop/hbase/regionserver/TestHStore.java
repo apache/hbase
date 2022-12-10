@@ -31,6 +31,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.security.PrivilegedExceptionAction;
@@ -44,6 +45,7 @@ import java.util.ListIterator;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.TreeSet;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -1441,6 +1443,106 @@ public class TestHStore {
         assertTrue("expected:" + Bytes.toStringBinary(currentValue) + ", actual:"
           + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, currentValue));
       }
+    }
+  }
+
+  /**
+   * This test is for HBASE-27519, when the {@link StoreScanner} is scanning,the Flush and the
+   * Compaction execute concurrently and theCcompaction compact and archive the flushed
+   * {@link HStoreFile} which is used by {@link StoreScanner#updateReaders}.Before
+   * HBASE-27519,{@link StoreScanner.updateReaders} would throw {@link FileNotFoundException}.
+   */
+  @Test
+  public void testStoreScannerUpdateReadersWhenFlushAndCompactConcurrently() throws IOException {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(WALFactory.WAL_ENABLED, false);
+    conf.set(DEFAULT_COMPACTION_POLICY_CLASS_KEY, EverythingPolicy.class.getName());
+    byte[] r0 = Bytes.toBytes("row0");
+    byte[] r1 = Bytes.toBytes("row1");
+    final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
+    final AtomicBoolean shouldWaitRef = new AtomicBoolean(false);
+    // Initialize region
+    final MyStore myStore = initMyStore(name.getMethodName(), conf, new MyStoreHook() {
+      @Override
+      public void getScanners(MyStore store) throws IOException {
+        try {
+          // Here this method is called by StoreScanner.updateReaders which is invoked by the
+          // following TestHStore.flushStore
+          if (shouldWaitRef.get()) {
+            // wait the following compaction Task start
+            cyclicBarrier.await();
+            // wait the following HStore.closeAndArchiveCompactedFiles end.
+            cyclicBarrier.await();
+          }
+        } catch (BrokenBarrierException | InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+
+    final AtomicReference<Throwable> compactionExceptionRef = new AtomicReference<Throwable>(null);
+    Runnable compactionTask = () -> {
+      try {
+        // Only when the StoreScanner.updateReaders invoked by TestHStore.flushStore prepares for
+        // entering the MyStore.getScanners, compactionTask could start.
+        cyclicBarrier.await();
+        region.compactStore(family, new NoLimitThroughputController());
+        myStore.closeAndArchiveCompactedFiles();
+        // Notify StoreScanner.updateReaders could enter MyStore.getScanners.
+        cyclicBarrier.await();
+      } catch (Throwable e) {
+        compactionExceptionRef.set(e);
+      }
+    };
+
+    long ts = EnvironmentEdgeManager.currentTime();
+    long seqId = 100;
+    byte[] value = Bytes.toBytes("value");
+    // older data whihc shouldn't be "seen" by client
+    myStore.add(createCell(r0, qf1, ts, seqId, value), null);
+    flushStore(myStore, id++);
+    myStore.add(createCell(r0, qf2, ts, seqId, value), null);
+    flushStore(myStore, id++);
+    myStore.add(createCell(r0, qf3, ts, seqId, value), null);
+    TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    quals.add(qf1);
+    quals.add(qf2);
+    quals.add(qf3);
+
+    myStore.add(createCell(r1, qf1, ts, seqId, value), null);
+    myStore.add(createCell(r1, qf2, ts, seqId, value), null);
+    myStore.add(createCell(r1, qf3, ts, seqId, value), null);
+
+    Thread.currentThread()
+      .setName("testStoreScannerUpdateReadersWhenFlushAndCompactConcurrently thread");
+    Scan scan = new Scan();
+    scan.withStartRow(r0, true);
+    try (InternalScanner scanner = (InternalScanner) myStore.getScanner(scan, quals, seqId)) {
+      List<Cell> results = new MyList<>(size -> {
+        switch (size) {
+          case 1:
+            shouldWaitRef.set(true);
+            Thread thread = new Thread(compactionTask);
+            thread.setName("MyCompacting Thread.");
+            thread.start();
+            try {
+              flushStore(myStore, id++);
+              thread.join();
+            } catch (IOException | InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+            shouldWaitRef.set(false);
+            break;
+          default:
+            break;
+        }
+      });
+      // Before HBASE-27519, here would throw java.io.FileNotFoundException because the storeFile
+      // which used by StoreScanner.updateReaders is deleted by compactionTask.
+      scanner.next(results);
+      // The results is r0 row cells.
+      assertEquals(3, results.size());
+      assertTrue(compactionExceptionRef.get() == null);
     }
   }
 

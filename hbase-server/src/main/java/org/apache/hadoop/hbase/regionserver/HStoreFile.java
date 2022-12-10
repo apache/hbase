@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -45,6 +46,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -608,5 +611,27 @@ public class HStoreFile implements StoreFile {
 
   Set<String> getCompactedStoreFiles() {
     return Collections.unmodifiableSet(this.compactedStoreFiles);
+  }
+
+  long increaseRefCount() {
+    return this.fileInfo.refCount.incrementAndGet();
+  }
+
+  long decreaseRefCount() {
+    return this.fileInfo.refCount.decrementAndGet();
+  }
+
+  static void increaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::increaseRefCount);
+  }
+
+  static void decreaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::decreaseRefCount);
   }
 }
