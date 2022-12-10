@@ -885,15 +885,29 @@ public class HStore
     return sfs.stream().mapToLong(sf -> sf.getReader().length()).sum();
   }
 
-  private boolean completeFlush(List<HStoreFile> sfs, long snapshotId) throws IOException {
+  private boolean completeFlush(final List<HStoreFile> sfs, long snapshotId) throws IOException {
     // NOTE:we should keep clearSnapshot method inside the write lock because clearSnapshot may
     // close {@link DefaultMemStore#snapshot}, which may be used by
     // {@link DefaultMemStore#getScanners}.
     storeEngine.addStoreFiles(sfs,
-      snapshotId > 0 ? () -> this.memstore.clearSnapshot(snapshotId) : () -> {
+      // NOTE: here we must increase the refCount for storeFiles because we would open the
+      // storeFiles and get the StoreFileScanners for them in HStore.notifyChangedReadersObservers.
+      // If we don't increase the refCount here, HStore.closeAndArchiveCompactedFiles called by
+      // CompactedHFilesDischarger may archive the storeFiles after a concurrent compaction.Because
+      // HStore.requestCompaction is under storeEngine lock, so here we increase the refCount under
+      // storeEngine lock. see HBASE-27519 for more details.
+      snapshotId > 0 ? () -> {
+        this.memstore.clearSnapshot(snapshotId);
+        HStoreFile.increaseStoreFilesRefeCount(sfs);
+      } : () -> {
+        HStoreFile.increaseStoreFilesRefeCount(sfs);
       });
     // notify to be called here - only in case of flushes
-    notifyChangedReadersObservers(sfs);
+    try {
+      notifyChangedReadersObservers(sfs);
+    } finally {
+      HStoreFile.decreaseStoreFilesRefeCount(sfs);
+    }
     if (LOG.isTraceEnabled()) {
       long totalSize = getTotalSize(sfs);
       String traceMessage = "FLUSH time,count,size,store size,store files ["
@@ -961,7 +975,13 @@ public class HStore
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
         includeStartRow, stopRow, includeStopRow);
       memStoreScanners = this.memstore.getScanners(readPt);
-      storeFilesToScan.stream().forEach(f -> f.getFileInfo().refCount.incrementAndGet());
+      // NOTE: here we must increase the refCount for storeFiles because we would open the
+      // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,
+      // HStore.closeAndArchiveCompactedFiles called by CompactedHFilesDischarger may archive the
+      // storeFiles after a concurrent compaction.Because HStore.requestCompaction is under
+      // storeEngine lock, so here we increase the refCount under storeEngine lock. see HBASE-27484
+      // for more details.
+      HStoreFile.increaseStoreFilesRefeCount(storeFilesToScan);
     } finally {
       this.storeEngine.readUnlock();
     }
@@ -982,7 +1002,7 @@ public class HStore
       clearAndClose(memStoreScanners);
       throw t instanceof IOException ? (IOException) t : new IOException(t);
     } finally {
-      storeFilesToScan.stream().forEach(f -> f.getFileInfo().refCount.decrementAndGet());
+      HStoreFile.decreaseStoreFilesRefeCount(storeFilesToScan);
     }
   }
 
