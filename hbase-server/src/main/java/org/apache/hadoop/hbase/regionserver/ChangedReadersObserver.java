@@ -31,7 +31,13 @@ public interface ChangedReadersObserver {
   long getReadPoint();
 
   /**
-   * Notify observers.
+   * Notify observers. <br/>
+   * NOTE:Before we invoke this method,{@link HStoreFile#increaseRefCount} is invoked for every
+   * {@link HStoreFile} in 'sfs' input parameter to prevent {@link HStoreFile} is archived after a
+   * concurrent compaction, and after this method is invoked,{@link HStoreFile#decreaseRefCount} is
+   * invoked.So if you open the {@link StoreFileReader} or {@link StoreFileScanner} asynchronously
+   * in this method,you may need to invoke {@link HStoreFile#increaseRefCount} or
+   * {@link HStoreFile#decreaseRefCount} by yourself to prevent the {@link HStoreFile}s be archived.
    * @param sfs              The new files
    * @param memStoreScanners scanner of current memstore
    * @throws IOException e
