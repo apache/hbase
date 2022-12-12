@@ -96,7 +96,7 @@ public class TestConnectionImplementation {
     conn.getMaster(); // Uses cached value, don't call isMasterRunning
     conn.getMaster(); // Uses cached value, don't call isMasterRunning
     Thread.sleep(10000);
-    conn.getMaster(); // Calls isMasterRunning after cache expiry
+    conn.getMaster(); // Calls isMasterRunning after cache expiry. Invocation 1
     Mockito.verify(masterServiceState, Mockito.times(1)).isMasterRunning();
     conn.close();
   }
