@@ -35,13 +35,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class PrometheusHadoopServlet extends HttpServlet {
-
   private static final Pattern SPLIT_PATTERN =
     Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=([A-Z][a-z]))|\\W|(_)+");
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-    writeMetrics(resp.getWriter(), "true".equals(req.getParameter("description")));
+    writeMetrics(resp.getWriter(), "true".equals(req.getParameter("description")),
+      req.getParameter("qry"));
   }
 
   static String toPrometheusName(String metricRecordName, String metricName) {
@@ -57,7 +57,8 @@ public class PrometheusHadoopServlet extends HttpServlet {
    */
   @RestrictedApi(explanation = "Should only be called in tests or self", link = "",
       allowedOnPath = ".*/src/test/.*|.*/PrometheusHadoopServlet\\.java")
-  void writeMetrics(Writer writer, boolean desc) throws IOException {
+  void writeMetrics(Writer writer, boolean descriptionEnabled, String queryParam)
+    throws IOException {
     Collection<MetricsRecord> metricRecords = MetricsExportHelper.export();
     for (MetricsRecord metricsRecord : metricRecords) {
       for (AbstractMetric metrics : metricsRecord.metrics()) {
@@ -65,23 +66,26 @@ public class PrometheusHadoopServlet extends HttpServlet {
 
           String key = toPrometheusName(metricsRecord.name(), metrics.name());
 
-          if (desc) {
-            String description = metrics.description();
-            if (!description.isEmpty()) writer.append("# HELP ").append(description).append('\n');
-          }
+          if (queryParam == null || key.contains(queryParam)) {
 
-          writer.append("# TYPE ").append(key).append(" ")
-            .append(metrics.type().toString().toLowerCase()).append('\n').append(key).append("{");
+            if (descriptionEnabled) {
+              String description = metrics.description();
+              if (!description.isEmpty()) writer.append("# HELP ").append(description).append('\n');
+            }
 
-          /* add tags */
-          String sep = "";
-          for (MetricsTag tag : metricsRecord.tags()) {
-            String tagName = tag.name().toLowerCase();
-            writer.append(sep).append(tagName).append("=\"").append(tag.value()).append("\"");
-            sep = ",";
+            writer.append("# TYPE ").append(key).append(" ")
+              .append(metrics.type().toString().toLowerCase()).append('\n').append(key).append("{");
+
+            /* add tags */
+            String sep = "";
+            for (MetricsTag tag : metricsRecord.tags()) {
+              String tagName = tag.name().toLowerCase();
+              writer.append(sep).append(tagName).append("=\"").append(tag.value()).append("\"");
+              sep = ",";
+            }
+            writer.append("} ");
+            writer.append(metrics.value().toString()).append('\n');
           }
-          writer.append("} ");
-          writer.append(metrics.value().toString()).append('\n');
         }
       }
     }
