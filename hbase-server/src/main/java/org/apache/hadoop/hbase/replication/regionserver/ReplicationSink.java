@@ -219,6 +219,7 @@ public class ReplicationSink {
         Cell previousCell = null;
         Mutation mutation = null;
         int count = entry.getAssociatedCellCount();
+        List<WALProtos.Attribute> attributeList = entry.getKey().getExtendedAttributesList();
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
           if (!cells.advance()) {
@@ -265,6 +266,11 @@ public class ReplicationSink {
               mutation.setClusterIds(clusterIds);
               mutation.setAttribute(ReplicationUtils.REPLICATION_ATTR_NAME,
                 HConstants.EMPTY_BYTE_ARRAY);
+              if (attributeList != null) {
+                for (WALProtos.Attribute attribute : attributeList) {
+                  mutation.setAttribute(attribute.getKey(), attribute.getValue().toByteArray());
+                }
+              }
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
