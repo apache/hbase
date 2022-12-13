@@ -84,7 +84,7 @@ import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
  * An asynchronous HDFS output stream implementation which fans out data to datanode and only
  * supports writing file with only one block.
  * <p>
- * Use the createOutput method in {@link FanOutOneBlockAsyncDFSOutputHelper} to create. The mainly
+ * Use the createOutput method in {@link FanOutOneBlockAsyncDFSOutputHelper} to create. The main
  * usage of this class is implementing WAL, so we only expose a little HDFS configurations in the
  * method. And we place it here under io package because we want to make it independent of WAL
  * implementation thus easier to move it to HDFS project finally.
@@ -104,8 +104,8 @@ import org.apache.hbase.thirdparty.io.netty.handler.timeout.IdleStateHandler;
 @InterfaceAudience.Private
 public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
 
-  // The MAX_PACKET_SIZE is 16MB but it include the header size and checksum size. So here we set a
-  // smaller limit for data size.
+  // The MAX_PACKET_SIZE is 16MB, but it includes the header size and checksum size. So here we set
+  // a smaller limit for data size.
   private static final int MAX_DATA_LEN = 12 * 1024 * 1024;
 
   private final Configuration conf;
@@ -173,7 +173,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
   private long nextPacketOffsetInBlock = 0L;
 
   // the length of the trailing partial chunk, this is because the packet start offset must be
-  // aligned with the length of checksum chunk so we need to resend the same data.
+  // aligned with the length of checksum chunk, so we need to resend the same data.
   private int trailingPartialChunkLength = 0;
 
   private long nextPacketSeqno = 0L;
@@ -437,7 +437,7 @@ public class FanOutOneBlockAsyncDFSOutput implements AsyncFSOutput {
       checksumBuf.release();
       headerBuf.release();
 
-      // This method takes ownership of the dataBuf so we need release it before returning.
+      // This method takes ownership of the dataBuf, so we need release it before returning.
       dataBuf.release();
       return;
     }
