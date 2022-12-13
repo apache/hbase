@@ -92,7 +92,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   private static final String MULTI_SERVICE_CALLS = "multi.service_calls";
 
   private final boolean authorize;
-  private final boolean isOnlineLogProviderEnabled;
+  private volatile boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -196,8 +196,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected final int maxRequestSize;
-  protected final int warnResponseTime;
-  protected final int warnResponseSize;
+  protected volatile int warnResponseTime;
+  protected volatile int warnResponseSize;
 
   protected final int minClientRequestTimeout;
 
@@ -275,8 +275,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     this.maxQueueSizeInBytes =
       this.conf.getLong("hbase.ipc.server.max.callqueue.size", DEFAULT_MAX_CALLQUEUE_SIZE);
 
-    this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
-    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
+    this.warnResponseTime = getWarnResponseTime(conf);
+    this.warnResponseSize = getWarnResponseSize(conf);
     this.minClientRequestTimeout =
       conf.getInt(MIN_CLIENT_REQUEST_TIMEOUT, DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT);
     this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
@@ -297,8 +297,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       saslProps = Collections.emptyMap();
     }
 
-    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+    this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
   }
 
@@ -311,6 +310,35 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     if (authorize) {
       refreshAuthManager(newConf, new HBasePolicyProvider());
     }
+    refreshSlowLogConfiguration(newConf);
+  }
+
+  private void refreshSlowLogConfiguration(Configuration newConf) {
+    boolean newIsOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(newConf);
+    if (isOnlineLogProviderEnabled != newIsOnlineLogProviderEnabled) {
+      isOnlineLogProviderEnabled = newIsOnlineLogProviderEnabled;
+    }
+    int newWarnResponseTime = getWarnResponseTime(newConf);
+    if (warnResponseTime != newWarnResponseTime) {
+      warnResponseTime = newWarnResponseTime;
+    }
+    int newWarnResponseSize = getWarnResponseSize(newConf);
+    if (warnResponseSize != newWarnResponseSize) {
+      warnResponseSize = newWarnResponseSize;
+    }
+  }
+
+  private static boolean getIsOnlineLogProviderEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+  }
+
+  private static int getWarnResponseTime(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
+  }
+
+  private static int getWarnResponseSize(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
