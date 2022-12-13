@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -125,6 +126,7 @@ public class TestReplicationWithWALExtendedAttributes {
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
       TestCoprocessorForWALAnnotationAtSink.class.getName());
+    conf2.setBoolean(ReplicationSink.HBASE_REPLICATION_SINK_ATTRIBUTES_WAL_TO_MUTATIONS, true);
 
     utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);

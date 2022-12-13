@@ -108,6 +108,14 @@ public class ReplicationSink {
   private WALEntrySinkFilter walEntrySinkFilter;
 
   /**
+   * If enabled at sink cluster site config, extended WAL attributes would be attached as Mutation
+   * attributes. This is useful for source cluster coproc to provide coproc specific metadata as WAL
+   * annotations and have them attached back to Mutations generated from WAL entries at sink side.
+   */
+  public static final String HBASE_REPLICATION_SINK_ATTRIBUTES_WAL_TO_MUTATIONS =
+    "hbase.replication.sink.attributes.wal.to.mutations";
+
+  /**
    * Row size threshold for multi requests above which a warning is logged
    */
   private final int rowSizeWarnThreshold;
@@ -266,10 +274,8 @@ public class ReplicationSink {
               mutation.setClusterIds(clusterIds);
               mutation.setAttribute(ReplicationUtils.REPLICATION_ATTR_NAME,
                 HConstants.EMPTY_BYTE_ARRAY);
-              if (attributeList != null) {
-                for (WALProtos.Attribute attribute : attributeList) {
-                  mutation.setAttribute(attribute.getKey(), attribute.getValue().toByteArray());
-                }
+              if (this.conf.getBoolean(HBASE_REPLICATION_SINK_ATTRIBUTES_WAL_TO_MUTATIONS, false)) {
+                attachWALExtendedAttributesToMutation(mutation, attributeList);
               }
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
@@ -318,6 +324,15 @@ public class ReplicationSink {
       LOG.error("Unable to accept edit because:", ex);
       this.metrics.incrementFailedBatches();
       throw ex;
+    }
+  }
+
+  private static void attachWALExtendedAttributesToMutation(Mutation mutation,
+    List<WALProtos.Attribute> attributeList) {
+    if (attributeList != null) {
+      for (WALProtos.Attribute attribute : attributeList) {
+        mutation.setAttribute(attribute.getKey(), attribute.getValue().toByteArray());
+      }
     }
   }
 
