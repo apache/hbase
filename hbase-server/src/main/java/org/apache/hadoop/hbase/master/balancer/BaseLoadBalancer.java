@@ -56,7 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * The base class for load balancers. It provides the the functions used to by
+ * The base class for load balancers. It provides the functions used to by
  * {@link org.apache.hadoop.hbase.master.assignment.AssignmentManager} to assign regions in the edge
  * cases. It doesn't provide an implementation of the actual balancing algorithm.
  */
@@ -456,7 +456,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return assignments;
     }
 
-    // Group all of the old assignments by their hostname.
+    // Group all the old assignments by their hostname.
     // We can't group directly by ServerName since the servers all have
     // new start-codes.
 
@@ -642,7 +642,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Round robin a list of regions to a list of servers
+   * Round-robin a list of regions to a list of servers
    */
   private void roundRobinAssignment(BalancerClusterState cluster, List<RegionInfo> regions,
     List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignments) {
