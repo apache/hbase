@@ -461,6 +461,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>shahrs87</id>
+      <name>Rushabh Shah</name>
+      <email>shahrs87@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>sakthi</id>
       <name>Sakthi Vel</name>
       <email>sakthi@apache.org</email>
