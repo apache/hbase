@@ -989,7 +989,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   private void cleanServerCache(ServerName server, Throwable regionException) {
-    if (ClientExceptionsUtil.isMetaClearingException(regionException)) {
+    if (tableName == null && ClientExceptionsUtil.isMetaClearingException(regionException)) {
       // We want to make sure to clear the cache in case there were location-related exceptions.
       // We don't to clear the cache for every possible exception that comes through, however.
       MetricsConnection metrics = asyncProcess.connection.getConnectionMetrics();
