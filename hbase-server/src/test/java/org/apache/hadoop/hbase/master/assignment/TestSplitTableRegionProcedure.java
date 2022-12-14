@@ -62,6 +62,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -177,7 +178,7 @@ public class TestSplitTableRegionProcedure {
     }
   }
 
-  @Test
+  @Ignore
   public void testRollbackForSplitTableRegionWithReplica() throws Exception {
     final TableName tableName = TableName.valueOf(name.getMethodName());
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
