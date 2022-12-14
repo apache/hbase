@@ -234,7 +234,8 @@ public class CatalogJanitor extends ScheduledChore {
   protected CatalogJanitorReport scanForReport() throws IOException {
     ReportMakingVisitor visitor = new ReportMakingVisitor(this.services);
     // Null tablename means scan all of meta.
-    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null);
+    MetaTableAccessor.scanMetaForTableRegions(this.services.getConnection(), visitor, null,
+      HConstants.SYSTEMTABLE_QOS);
     return visitor.getReport();
   }
 
@@ -491,7 +492,8 @@ public class CatalogJanitor extends ScheduledChore {
           r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
         t.put(p);
       }
-      MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null);
+      MetaTableAccessor.scanMetaForTableRegions(connection, visitor, null,
+        HConstants.SYSTEMTABLE_QOS);
       CatalogJanitorReport report = visitor.getReport();
       LOG.info(report != null ? report.toString() : "empty");
     }
