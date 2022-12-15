@@ -63,6 +63,8 @@ public class TestTaskMonitor {
     assertEquals(task.getDescription(), taskFromTm.getDescription());
     assertEquals(-1, taskFromTm.getCompletionTimestamp());
     assertEquals(MonitoredTask.State.RUNNING, taskFromTm.getState());
+    assertEquals(task.getStatus(), taskFromTm.getStatus());
+    assertEquals("status unset", taskFromTm.getStatus());
 
     // Mark it as finished
     task.markComplete("Finished!");
@@ -229,7 +231,7 @@ public class TestTaskMonitor {
 
   @Test
   public void testClone() throws Exception {
-    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl();
+    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl("test");
     monitor.abort("abort RPC");
     TestParam testParam = new TestParam("param1");
     monitor.setRPC("method1", new Object[] { testParam }, 0);

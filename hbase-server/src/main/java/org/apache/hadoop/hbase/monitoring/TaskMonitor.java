@@ -94,8 +94,7 @@ public class TaskMonitor {
 
   public synchronized MonitoredTask createStatus(String description, boolean ignore,
     boolean enableJournal) {
-    MonitoredTask stat = new MonitoredTaskImpl(enableJournal);
-    stat.setDescription(description);
+    MonitoredTask stat = new MonitoredTaskImpl(enableJournal, description);
     MonitoredTask proxy = (MonitoredTask) Proxy.newProxyInstance(stat.getClass().getClassLoader(),
       new Class<?>[] { MonitoredTask.class }, new PassthroughInvocationHandler<>(stat));
     TaskAndWeakRefPair pair = new TaskAndWeakRefPair(stat, proxy);
@@ -109,8 +108,7 @@ public class TaskMonitor {
   }
 
   public synchronized MonitoredRPCHandler createRPCStatus(String description) {
-    MonitoredRPCHandler stat = new MonitoredRPCHandlerImpl();
-    stat.setDescription(description);
+    MonitoredRPCHandler stat = new MonitoredRPCHandlerImpl(description);
     MonitoredRPCHandler proxy =
       (MonitoredRPCHandler) Proxy.newProxyInstance(stat.getClass().getClassLoader(),
         new Class<?>[] { MonitoredRPCHandler.class }, new PassthroughInvocationHandler<>(stat));
