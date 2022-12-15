@@ -906,6 +906,20 @@ restart fashion.
 WARNING: Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able to communicate
 with other clusters which have TLS enabled. For example, this would impact inter-cluster replication.
 
+=== Enable automatic certificate reloading
+
+Certificates usually expire after some time to improve security. In this case we need to replace them by modifying
+Keystore / Truststore files and HBase processes have to be restarted. In order to avoid that you can enable automatic
+file change detection and certificate reloading with the following option. Default: false.
+
+[source,xml]
+----
+<property>
+  <name>hbase.rpc.tls.certReload</name>
+  <value>true</value>
+</property>
+----
+
 === Additional configuration
 
 ==== Enabled protocols
