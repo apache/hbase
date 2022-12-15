@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
@@ -46,11 +47,13 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   private static final Gson GSON = GsonUtil.createGson().create();
 
-  public MonitoredTaskImpl(boolean enableJournal) {
+  public MonitoredTaskImpl(boolean enableJournal, String description) {
     startTime = EnvironmentEdgeManager.currentTime();
     statusTime = startTime;
     stateTime = startTime;
     warnTime = startTime;
+    this.description = description;
+    this.status = "status unset";
     if (enableJournal) {
       journal = new ConcurrentLinkedQueue<>();
     } else {
@@ -161,6 +164,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public void setStatus(String status) {
+    Preconditions.checkNotNull(status, "Status is null");
     this.status = status;
     statusTime = EnvironmentEdgeManager.currentTime();
     if (journal != null) {
@@ -175,6 +179,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public void setDescription(String description) {
+    Preconditions.checkNotNull(description, "Description is null");
     this.description = description;
   }
 

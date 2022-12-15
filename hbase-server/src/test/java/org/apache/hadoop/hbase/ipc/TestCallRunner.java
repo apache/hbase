@@ -81,7 +81,7 @@ public class TestCallRunner {
 
     TraceUtil.trace(() -> {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
-      cr.setStatus(new MonitoredRPCHandlerImpl());
+      cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.run();
     }, testName.getMethodName());
 
@@ -101,7 +101,7 @@ public class TestCallRunner {
 
     TraceUtil.trace(() -> {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
-      cr.setStatus(new MonitoredRPCHandlerImpl());
+      cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.run();
     }, testName.getMethodName());
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
@@ -116,7 +116,7 @@ public class TestCallRunner {
 
     TraceUtil.trace(() -> {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
-      cr.setStatus(new MonitoredRPCHandlerImpl());
+      cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.drop();
     }, testName.getMethodName());
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
@@ -142,7 +142,7 @@ public class TestCallRunner {
 
     TraceUtil.trace(() -> {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
-      cr.setStatus(new MonitoredRPCHandlerImpl());
+      cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.drop();
     }, testName.getMethodName());
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
