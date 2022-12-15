@@ -113,7 +113,7 @@ public class TestFifoRpcScheduler {
 
     for (int i = totalCallMethods; i > 0; i--) {
       CallRunner task = createMockTask();
-      task.setStatus(new MonitoredRPCHandlerImpl());
+      task.setStatus(new MonitoredRPCHandlerImpl("test"));
 
       if (!scheduler.dispatch(task)) {
         unableToDispatch++;

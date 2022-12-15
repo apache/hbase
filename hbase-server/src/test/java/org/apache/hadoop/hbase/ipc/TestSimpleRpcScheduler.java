@@ -109,7 +109,7 @@ public class TestSimpleRpcScheduler {
     scheduler.init(CONTEXT);
     scheduler.start();
     CallRunner task = createMockTask();
-    task.setStatus(new MonitoredRPCHandlerImpl());
+    task.setStatus(new MonitoredRPCHandlerImpl("test"));
     scheduler.dispatch(task);
     verify(task, timeout(10000)).run();
     scheduler.stop();
@@ -164,7 +164,7 @@ public class TestSimpleRpcScheduler {
     int totalCallMethods = 10;
     for (int i = totalCallMethods; i > 0; i--) {
       CallRunner task = createMockTask();
-      task.setStatus(new MonitoredRPCHandlerImpl());
+      task.setStatus(new MonitoredRPCHandlerImpl("test"));
       scheduler.dispatch(task);
     }
 
@@ -205,7 +205,7 @@ public class TestSimpleRpcScheduler {
       }
     };
     for (CallRunner task : tasks) {
-      task.setStatus(new MonitoredRPCHandlerImpl());
+      task.setStatus(new MonitoredRPCHandlerImpl("test"));
       doAnswer(answerToRun).when(task).run();
     }
 
@@ -513,7 +513,7 @@ public class TestSimpleRpcScheduler {
 
   private void doAnswerTaskExecution(final CallRunner callTask, final ArrayList<Integer> results,
     final int value, final int sleepInterval) {
-    callTask.setStatus(new MonitoredRPCHandlerImpl());
+    callTask.setStatus(new MonitoredRPCHandlerImpl("test"));
     doAnswer(new Answer<Object>() {
       @Override
       public Object answer(InvocationOnMock invocation) {
