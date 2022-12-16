@@ -3862,9 +3862,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       ? ProtobufUtil.toServerName(request.getDestinationServer())
       : null;
     long procId = request.getCloseProcId();
+    boolean evictCache = request.getEvictCache();
     if (server.submitRegionProcedure(procId)) {
-      server.getExecutorService()
-        .submit(UnassignRegionHandler.create(server, encodedName, procId, false, destination));
+      server.getExecutorService().submit(
+        UnassignRegionHandler.create(server, encodedName, procId, false, destination, evictCache));
     }
   }
 
