@@ -472,11 +472,13 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
   public static class RegionCloseOperation extends RegionOperation {
     private final ServerName destinationServer;
+    private boolean evictCache;
 
     public RegionCloseOperation(RemoteProcedure remoteProcedure, RegionInfo regionInfo, long procId,
-      ServerName destinationServer) {
+      ServerName destinationServer, boolean evictCache) {
       super(remoteProcedure, regionInfo, procId);
       this.destinationServer = destinationServer;
+      this.evictCache = evictCache;
     }
 
     public ServerName getDestinationServer() {
@@ -485,7 +487,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     public CloseRegionRequest buildCloseRegionRequest(final ServerName serverName) {
       return ProtobufUtil.buildCloseRegionRequest(serverName, regionInfo.getRegionName(),
-        getDestinationServer(), procId);
+        getDestinationServer(), procId, evictCache);
+
     }
   }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import java.io.DataInput;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -45,6 +48,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -1262,6 +1266,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     BlockCacheKey cacheKey =
       new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
 
+    boolean cacheable = cacheBlock && cacheIfCompactionsOff();
+
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     Span span = TraceUtil.getGlobalTracer().spanBuilder("HFileReaderImpl.readBlock").startSpan();
@@ -1303,7 +1309,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             return cachedBlock;
           }
 
-          if (!useLock && cacheBlock && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
+          if (!useLock && cacheable && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
             // check cache again with lock
             useLock = true;
             continue;
@@ -1322,10 +1328,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
-          LOG.debug("Skipping decompression of block in prefetch");
+          LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
           // Cache the block if necessary
           cacheConf.getBlockCache().ifPresent(cache -> {
-            if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+            if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
               cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(), cacheOnly);
             }
           });
@@ -1338,7 +1344,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
-          if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
+          if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
             // Using the wait on cache during compaction and prefetching.
             cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
               cacheConf.isInMemory(), cacheOnly);
@@ -1662,5 +1668,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void unbufferStream() {
     fsBlockReader.unbufferStream();
+  }
+
+  protected boolean cacheIfCompactionsOff() {
+    return (!StoreFileInfo.isReference(name) && !HFileLink.isHFileLink(name))
+      || !conf.getBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, true);
   }
 }

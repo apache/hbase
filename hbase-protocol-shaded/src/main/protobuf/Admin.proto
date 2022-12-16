@@ -122,6 +122,7 @@ message CloseRegionRequest {
   // the intended server for this RPC.
   optional uint64 serverStartCode = 5;
   optional int64 close_proc_id = 6 [default = -1];
+  optional bool evict_cache = 7 [default = false];
 }
 
 message CloseRegionResponse {

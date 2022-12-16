@@ -798,7 +798,7 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
 
   public void setCompactionsEnabled(boolean compactionsEnabled) {
     this.compactionsEnabled = compactionsEnabled;
-    this.conf.set(HBASE_REGION_SERVER_ENABLE_COMPACTION, String.valueOf(compactionsEnabled));
+    this.conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionsEnabled);
   }
 
   /** Returns the longCompactions thread pool executor */

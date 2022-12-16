@@ -3267,6 +3267,9 @@ public class HRegionServer extends Thread
    * <p>
    * If a close was in progress, this new request will be ignored, and an exception thrown.
    * </p>
+   * <p>
+   * Provides additional flag to indicate if this region blocks should be evicted from the cache.
+   * </p>
    * @param encodedName Region to close
    * @param abort       True if we are aborting
    * @param destination Where the Region is being moved too... maybe null if unknown.
