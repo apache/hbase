@@ -62,14 +62,22 @@ public class UnassignRegionHandler extends EventHandler {
 
   private final RetryCounter retryCounter;
 
+  private boolean evictCache;
+
   public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
     boolean abort, @Nullable ServerName destination, EventType eventType) {
+    this(server, encodedName, closeProcId, abort, destination, eventType, false);
+  }
+
+  public UnassignRegionHandler(HRegionServer server, String encodedName, long closeProcId,
+    boolean abort, @Nullable ServerName destination, EventType eventType, boolean evictCache) {
     super(server, eventType);
     this.encodedName = encodedName;
     this.closeProcId = closeProcId;
     this.abort = abort;
     this.destination = destination;
     this.retryCounter = HandlerUtil.getRetryCounter();
+    this.evictCache = evictCache;
   }
 
   private HRegionServer getServer() {
@@ -115,6 +123,12 @@ public class UnassignRegionHandler extends EventHandler {
       // abort the RS...
       region.getCoprocessorHost().preClose(abort);
     }
+    // This should be true only in the case of splits/merges closing the parent regions, as
+    // there's no point on keep blocks for those region files. As hbase.rs.evictblocksonclose is
+    // false by default we don't bother overriding it if evictCache is false.
+    if (evictCache) {
+      region.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(true));
+    }
     if (region.close(abort) == null) {
       // XXX: Is this still possible? The old comment says about split, but now split is done at
       // master side, so...
@@ -157,7 +171,7 @@ public class UnassignRegionHandler extends EventHandler {
   }
 
   public static UnassignRegionHandler create(HRegionServer server, String encodedName,
-    long closeProcId, boolean abort, @Nullable ServerName destination) {
+    long closeProcId, boolean abort, @Nullable ServerName destination, boolean evictCache) {
     // Just try our best to determine whether it is for closing meta. It is not the end of the world
     // if we put the handler into a wrong executor.
     Region region = server.getRegion(encodedName);
@@ -165,6 +179,6 @@ public class UnassignRegionHandler extends EventHandler {
       ? EventType.M_RS_CLOSE_META
       : EventType.M_RS_CLOSE_REGION;
     return new UnassignRegionHandler(server, encodedName, closeProcId, abort, destination,
-      eventType);
+      eventType, evictCache);
   }
 }

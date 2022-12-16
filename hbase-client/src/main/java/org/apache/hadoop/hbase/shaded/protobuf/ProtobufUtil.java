@@ -2964,6 +2964,19 @@ public final class ProtobufUtil {
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
     ServerName destinationServer, long closeProcId) {
+    return ProtobufUtil.getBuilder(server, regionName, destinationServer, closeProcId).build();
+  }
+
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
+    ServerName destinationServer, long closeProcId, boolean evictCache) {
+    CloseRegionRequest.Builder builder =
+      getBuilder(server, regionName, destinationServer, closeProcId);
+    builder.setEvictCache(evictCache);
+    return builder.build();
+  }
+
+  public static CloseRegionRequest.Builder getBuilder(ServerName server, byte[] regionName,
+    ServerName destinationServer, long closeProcId) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region =
       RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
@@ -2975,7 +2988,7 @@ public final class ProtobufUtil {
       builder.setServerStartCode(server.getStartcode());
     }
     builder.setCloseProcId(closeProcId);
-    return builder.build();
+    return builder;
   }
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,

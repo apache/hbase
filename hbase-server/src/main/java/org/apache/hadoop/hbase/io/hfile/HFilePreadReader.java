@@ -35,7 +35,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen()) {
+    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -97,7 +97,7 @@ public class HFilePreadReader extends HFileReaderImpl {
       if (evictOnClose) {
         int numEvicted = cache.evictBlocksByHfileName(name);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("On close, file=" + name + " evicted=" + numEvicted + " block(s)");
+          LOG.trace("On close, file= {} evicted= {} block(s)", name, numEvicted);
         }
       }
     });
