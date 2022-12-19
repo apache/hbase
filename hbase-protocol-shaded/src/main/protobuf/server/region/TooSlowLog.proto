@@ -27,6 +27,8 @@ option java_outer_classname = "TooSlowLog";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "client/Client.proto";
+
 message SlowLogPayload {
   required int64 start_time = 1;
   required int32 processing_time = 2;
@@ -43,6 +45,10 @@ message SlowLogPayload {
   optional int32 multi_mutations = 13 [default = 0];
   optional int32 multi_service_calls = 14 [default = 0];
   required Type type = 15;
+  optional Scan scan = 16;
+  optional MultiRequest multi = 17;
+  optional Get get = 18;
+  optional MutationProto mutate = 19;
 
   // SLOW_LOG is RPC call slow in nature whereas LARGE_LOG is RPC call quite large.
   // Majority of times, slow logs are also large logs and hence, ALL is combination of

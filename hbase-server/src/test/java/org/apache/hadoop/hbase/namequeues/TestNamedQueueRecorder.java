@@ -99,7 +99,7 @@ public class TestNamedQueueRecorder {
   }
 
   @Test
-  public void testOnlieSlowLogConsumption() throws Exception {
+  public void testOnlineSlowLogConsumption() throws Exception {
 
     Configuration conf = applySlowLogRecorderConf(8);
     Constructor<NamedQueueRecorder> constructor =
@@ -275,6 +275,118 @@ public class TestNamedQueueRecorder {
 
     // confirm ringbuffer is empty
     Assert.assertEquals(slowLogPayloads.size(), 0);
+  }
+
+  @Test
+  public void testOnlineSlowLogOperationMessagePayloadDefaultDisabled() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.unset(HConstants.SLOW_LOG_OPERATION_MESSAGE_PAYLOAD_ENABLED);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1");
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent()) {
+        Message message = getMessage(slowLogPayload.get());
+        return message == null;
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogOperationMessagePayloadExplicitlyDisabled() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.setBoolean(HConstants.SLOW_LOG_OPERATION_MESSAGE_PAYLOAD_ENABLED, false);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1");
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent()) {
+        Message message = getMessage(slowLogPayload.get());
+        return message == null;
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogOperationMessagePayloadEnabled() throws Exception {
+    i = 0; // set this so that the RpcCall and expected Message are deterministic
+    Configuration conf = applySlowLogRecorderConf(1);
+    conf.setBoolean(HConstants.SLOW_LOG_OPERATION_MESSAGE_PAYLOAD_ENABLED, true);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+    Message expectedMessage =
+      ClientProtos.MutationProto.newBuilder().setRow(ByteString.copyFromUtf8("row123")).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1");
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.map(TestNamedQueueRecorder::hasMessage).orElse(false)) {
+        Message message = getMessage(slowLogPayload.get());
+        return message.equals(expectedMessage);
+      }
+      return false;
+    }));
+  }
+
+  private static boolean hasMessage(SlowLogPayload slowLogPayload) {
+    int trueCount = 0;
+    if (slowLogPayload.hasScan()) {
+      trueCount++;
+    }
+    if (slowLogPayload.hasMulti()) {
+      trueCount++;
+    }
+    if (slowLogPayload.hasGet()) {
+      trueCount++;
+    }
+    if (slowLogPayload.hasMutate()) {
+      trueCount++;
+    }
+    Assert.assertTrue(trueCount <= 1);
+    return trueCount > 0;
+  }
+
+  private static Message getMessage(SlowLogPayload slowLogPayload) {
+    if (slowLogPayload.hasScan()) {
+      return slowLogPayload.getScan();
+    }
+    if (slowLogPayload.hasMulti()) {
+      return slowLogPayload.getMulti();
+    }
+    if (slowLogPayload.hasGet()) {
+      return slowLogPayload.getGet();
+    }
+    if (slowLogPayload.hasMutate()) {
+      return slowLogPayload.getMutate();
+    }
+    return null;
   }
 
   @Test
