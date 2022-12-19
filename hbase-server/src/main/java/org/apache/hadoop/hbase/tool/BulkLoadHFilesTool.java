@@ -753,10 +753,11 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     StoreFileWriter halfWriter = null;
     try {
       ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
-      HFileInfo hfile = new HFileInfo(context, conf);
-      halfReader =
-        new HalfStoreFileReader(context, hfile, cacheConf, reference, new AtomicInteger(0), conf);
-      hfile.initMetaAndIndex(halfReader.getHFileReader());
+      StoreFileInfo storeFileInfo =
+        new StoreFileInfo(conf, fs, fs.getFileStatus(inFile), reference);
+      storeFileInfo.initHFileInfo(context);
+      halfReader = (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
