@@ -637,7 +637,7 @@ public final class MetricsConnection implements StatisticTrackable {
   }
 
   /** Report RPC context to metrics system. */
-  public void updateRpc(MethodDescriptor method, Message param, CallStats stats) {
+  public void updateRpc(MethodDescriptor method, Message param, CallStats stats, boolean failed) {
     int callsPerServer = stats.getConcurrentCallsPerServer();
     if (callsPerServer > 0) {
       concurrentCallsPerServerHist.update(callsPerServer);
@@ -645,6 +645,9 @@ public final class MetricsConnection implements StatisticTrackable {
     // Update the counter that tracks RPCs by type.
     final String methodName = method.getService().getName() + "_" + method.getName();
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
+    if (failed) {
+      getMetric(CNT_BASE + methodName + "_Failure", rpcCounters, counterFactory).inc();
+    }
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
     if (method.getService() == ClientService.getDescriptor()) {
