@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -79,6 +80,40 @@ public class TestHFileReaderImpl {
     writer.close();
     fout.close();
     return ncTFile;
+  }
+
+  /**
+   * Test that we only count block size once per block while scanning
+   */
+  @Test
+  public void testGetCurrentBlockSizeOnce() throws IOException {
+    Path p = makeNewFile();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    HFile.Reader reader = HFile.createReader(fs, p, CacheConfig.DISABLED, true, conf);
+
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, false)) {
+      scanner.seekTo();
+
+      assertTrue("expected non-zero block size on first request",
+        scanner.getCurrentBlockSizeOnce() > 0);
+      assertEquals("expected zero block size on second request", 0,
+        scanner.getCurrentBlockSizeOnce());
+
+      int blocks = 0;
+      while (scanner.next()) {
+        int blockSize = scanner.getCurrentBlockSizeOnce();
+        if (blockSize > 0) {
+          blocks++;
+          // there's only 2 cells in the second block
+          assertTrue("expected remaining block to be less than block size",
+            blockSize < toKV("a").getLength() * 3);
+        }
+      }
+
+      assertEquals("expected only one remaining block but got " + blocks, 1, blocks);
+    }
   }
 
   @Test

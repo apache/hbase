@@ -64,6 +64,12 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
+  public int getCurrentBlockSizeOnce() {
+    // No block size by default.
+    return 0;
+  }
+
+  @Override
   public Path getFilePath() {
     // Not a file by default.
     return null;

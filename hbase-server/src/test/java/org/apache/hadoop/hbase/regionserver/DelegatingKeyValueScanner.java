@@ -113,4 +113,9 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   public Cell getNextIndexedKey() {
     return delegate.getNextIndexedKey();
   }
+
+  @Override
+  public int getCurrentBlockSizeOnce() {
+    return delegate.getCurrentBlockSizeOnce();
+  }
 }

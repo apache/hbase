@@ -336,6 +336,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
     // unreferenced block please.
     protected HFileBlock curBlock;
+    // Whether we returned a result for curBlock's size in getCurrentBlockSizeOnce().
+    // gets reset whenever curBlock is changed.
+    private boolean providedCurrentBlockSize = false;
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
@@ -355,6 +358,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         prevBlocks.add(this.curBlock);
       }
       this.curBlock = block;
+      this.providedCurrentBlockSize = false;
     }
 
     void reset() {
@@ -413,6 +417,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         reader.unbufferStream();
       }
       this.returnBlocks(true);
+    }
+
+    @Override
+    public int getCurrentBlockSizeOnce() {
+      if (providedCurrentBlockSize || curBlock == null) {
+        return 0;
+      }
+      providedCurrentBlockSize = true;
+      return curBlock.getUncompressedSizeWithoutHeader();
     }
 
     // Returns the #bytes in HFile for the current cell. Used to skip these many bytes in current

@@ -105,6 +105,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   @Override
+  public int getCurrentBlockSizeOnce() {
+    return this.current.getCurrentBlockSizeOnce();
+  }
+
+  @Override
   public Cell next() throws IOException {
     if (this.current == null) {
       return null;

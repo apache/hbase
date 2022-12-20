@@ -277,6 +277,11 @@ public class HalfStoreFileReader extends StoreFileReader {
       public void shipped() throws IOException {
         this.delegate.shipped();
       }
+
+      @Override
+      public int getCurrentBlockSizeOnce() {
+        return this.delegate.getCurrentBlockSizeOnce();
+      }
     };
   }
 

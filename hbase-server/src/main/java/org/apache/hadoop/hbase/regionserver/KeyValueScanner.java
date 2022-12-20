@@ -126,6 +126,12 @@ public interface KeyValueScanner extends Shipper, Closeable {
   boolean isFileScanner();
 
   /**
+   * Returns the block size in bytes for the current block. Will only return a value once per block,
+   * otherwise 0. Used for calculating block IO in ScannerContext.
+   */
+  int getCurrentBlockSizeOnce();
+
+  /**
    * @return the file path if this is a file scanner, otherwise null.
    * @see #isFileScanner()
    */

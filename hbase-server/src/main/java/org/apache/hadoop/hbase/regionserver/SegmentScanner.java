@@ -287,6 +287,11 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   @Override
+  public int getCurrentBlockSizeOnce() {
+    return 0;
+  }
+
+  @Override
   public Path getFilePath() {
     return null;
   }
