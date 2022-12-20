@@ -24,8 +24,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -45,7 +51,7 @@ public class TestBackupUtils {
   protected static Configuration conf = TEST_UTIL.getConfiguration();
 
   @Test
-  public void TestGetBulkOutputDir() {
+  public void testGetBulkOutputDir() {
     // Create a user who is not the current user
     String fooUserName = "foo1234";
     String fooGroupName = "group1";
@@ -77,5 +83,25 @@ public class TestBackupUtils {
     });
     // Make sure the directory is in foo1234's home directory
     Assert.assertTrue(bulkOutputDir.toString().startsWith(fooHomeDirectory.toString()));
+  }
+
+  @Test
+  public void testFilesystemWalHostNameParsing() throws IOException {
+    String host = "localhost";
+    int port = 60030;
+    ServerName serverName = ServerName.valueOf(host, port, 1234);
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+
+    Path testWalPath = new Path(oldLogDir,
+      serverName.toString() + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
+    Path testMasterWalPath =
+      new Path(oldLogDir, testWalPath.getName() + MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
+
+    String parsedHost = BackupUtils.parseHostFromOldLog(testMasterWalPath);
+    Assert.assertNull(parsedHost);
+
+    parsedHost = BackupUtils.parseHostFromOldLog(testWalPath);
+    Assert.assertEquals(parsedHost, host + Addressing.HOSTNAME_PORT_SEPARATOR + port);
   }
 }
