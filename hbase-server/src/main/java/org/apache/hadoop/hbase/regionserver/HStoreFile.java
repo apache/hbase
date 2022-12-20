@@ -646,17 +646,25 @@ public class HStoreFile implements StoreFile {
     return Collections.unmodifiableSet(this.compactedStoreFiles);
   }
 
+  long increaseRefCount() {
+    return this.fileInfo.increaseRefCount();
+  }
+
+  long decreaseRefCount() {
+    return this.fileInfo.decreaseRefCount();
+  }
+
   static void increaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
     if (CollectionUtils.isEmpty(storeFiles)) {
       return;
     }
-    storeFiles.forEach(storeFile -> storeFile.fileInfo.increaseRefCount());
+    storeFiles.forEach(HStoreFile::increaseRefCount);
   }
 
   static void decreaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
     if (CollectionUtils.isEmpty(storeFiles)) {
       return;
     }
-    storeFiles.forEach(storeFile -> storeFile.fileInfo.decreaseRefCount());
+    storeFiles.forEach(HStoreFile::decreaseRefCount);
   }
 }
