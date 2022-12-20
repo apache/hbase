@@ -176,7 +176,10 @@ public class TestMetricsConnection {
           .build(),
         MetricsConnection.newCallStats(), false);
     }
-    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcCountPrefix =
+      "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcFailureCountPrefix =
+      "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
     String metricKey;
     long metricVal;
     Counter counter;
@@ -184,12 +187,12 @@ public class TestMetricsConnection {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
-      metricKey += "_Failure";
+      metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
     }
-    metricKey = rpcCountPrefix + "Multi" + "_Failure";
+    metricKey = rpcFailureCountPrefix + "Multi";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);

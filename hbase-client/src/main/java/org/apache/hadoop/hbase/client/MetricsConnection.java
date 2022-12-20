@@ -117,6 +117,7 @@ public final class MetricsConnection implements StatisticTrackable {
   }
 
   private static final String CNT_BASE = "rpcCount_";
+  private static final String FAILURE_CNT_BASE = "rpcFailureCount_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
@@ -646,7 +647,7 @@ public final class MetricsConnection implements StatisticTrackable {
     final String methodName = method.getService().getName() + "_" + method.getName();
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     if (failed) {
-      getMetric(CNT_BASE + methodName + "_Failure", rpcCounters, counterFactory).inc();
+      getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     }
     // this implementation is tied directly to protobuf implementation details. would be better
     // if we could dispatch based on something static, ie, request Message type.
