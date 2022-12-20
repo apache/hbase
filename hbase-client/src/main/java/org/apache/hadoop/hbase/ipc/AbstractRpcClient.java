@@ -380,8 +380,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       metrics.updateRpc(call.md, call.param, call.callStats, failed);
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("CallId: {}, call: {}, startTime: {}ms, callTime: {}ms, status: {}",
-        call.id, call.md.getName(), call.getStartTime(), call.callStats.getCallTimeMs(),
+      LOG.trace("CallId: {}, call: {}, startTime: {}ms, callTime: {}ms, status: {}", call.id,
+        call.md.getName(), call.getStartTime(), call.callStats.getCallTimeMs(),
         failed ? "failed" : "successful");
     }
     if (failed) {

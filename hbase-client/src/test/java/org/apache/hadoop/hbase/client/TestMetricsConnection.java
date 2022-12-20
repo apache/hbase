@@ -176,8 +176,7 @@ public class TestMetricsConnection {
           .build(),
         MetricsConnection.newCallStats(), false);
     }
-    final String rpcCountPrefix =
-      "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
     final String rpcFailureCountPrefix =
       "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
     String metricKey;
