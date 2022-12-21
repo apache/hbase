@@ -259,6 +259,151 @@ public class TestHFile {
     alloc.clean();
   }
 
+  /**
+   * Tests that we properly allocate from the off-heap or on-heap when LRUCache is configured. In
+   * this case, the determining factor is whether we end up caching the block or not. So the below
+   * test cases try different permutations of enabling/disabling via CacheConfig and via user
+   * request (cacheblocks), along with different expected block types.
+   */
+  @Test
+  public void testReaderBlockAllocationWithLRUCache() throws IOException {
+    // false because caching is fully enabled
+    testReaderBlockAllocationWithLRUCache(true, true, null, false);
+    // false because we only look at cache config when expectedBlockType is non-null
+    testReaderBlockAllocationWithLRUCache(false, true, null, false);
+    // false because cacheBlock is true and even with cache config is disabled, we still cache
+    // important blocks like indexes
+    testReaderBlockAllocationWithLRUCache(false, true, BlockType.INTERMEDIATE_INDEX, false);
+    // true because since it's a DATA block, we honor the cache config
+    testReaderBlockAllocationWithLRUCache(false, true, BlockType.DATA, true);
+    // true for the following 2 because cacheBlock takes precedence over cache config
+    testReaderBlockAllocationWithLRUCache(true, false, null, true);
+    testReaderBlockAllocationWithLRUCache(true, false, BlockType.INTERMEDIATE_INDEX, false);
+    // false for the following 3 because both cache config and cacheBlock are false.
+    // per above, INDEX would supersede cache config, but not cacheBlock
+    testReaderBlockAllocationWithLRUCache(false, false, null, true);
+    testReaderBlockAllocationWithLRUCache(false, false, BlockType.INTERMEDIATE_INDEX, true);
+    testReaderBlockAllocationWithLRUCache(false, false, BlockType.DATA, true);
+  }
+
+  private void testReaderBlockAllocationWithLRUCache(boolean cacheConfigCacheBlockOnRead,
+    boolean cacheBlock, BlockType blockType, boolean expectSharedMem) throws IOException {
+    int bufCount = 1024, blockSize = 64 * 1024;
+    ByteBuffAllocator alloc = initAllocator(true, blockSize, bufCount, 0);
+    fillByteBuffAllocator(alloc, bufCount);
+    Path storeFilePath = writeStoreFile();
+    Configuration myConf = new Configuration(conf);
+
+    myConf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, cacheConfigCacheBlockOnRead);
+    // Open the file reader with LRUBlockCache
+    BlockCache lru = new LruBlockCache(1024 * 1024 * 32, blockSize, true, myConf);
+    CacheConfig cacheConfig = new CacheConfig(myConf, null, lru, alloc);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, myConf);
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      long read = readAtOffsetWithAllocationAsserts(alloc, reader, offset, cacheBlock, blockType,
+        expectSharedMem);
+      if (read < 0) {
+        break;
+      }
+
+      offset += read;
+    }
+
+    reader.close();
+    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    alloc.clean();
+    lru.shutdown();
+  }
+
+  /**
+   * Tests that we properly allocate from the off-heap or on-heap when CombinedCache is configured.
+   * In this case, we should always use off-heap unless the block is an INDEX (which always goes to
+   * L1 cache which is on-heap)
+   */
+  @Test
+  public void testReaderBlockAllocationWithCombinedCache() throws IOException {
+    // true because caching is fully enabled and block type null
+    testReaderBlockAllocationWithCombinedCache(true, true, null, true);
+    // false because caching is fully enabled, index block type always goes to on-heap L1
+    testReaderBlockAllocationWithCombinedCache(true, true, BlockType.INTERMEDIATE_INDEX, false);
+    // true because cacheBlocks takes precedence over cache config which block type is null
+    testReaderBlockAllocationWithCombinedCache(false, true, null, true);
+    // false because caching is enabled and block type is index, which always goes to L1
+    testReaderBlockAllocationWithCombinedCache(false, true, BlockType.INTERMEDIATE_INDEX, false);
+    // true because since it's a DATA block, we honor the cache config
+    testReaderBlockAllocationWithCombinedCache(false, true, BlockType.DATA, true);
+    // true for the following 2 because cacheBlock takes precedence over cache config
+    // with caching disabled, we always go to off-heap
+    testReaderBlockAllocationWithCombinedCache(true, false, null, true);
+    testReaderBlockAllocationWithCombinedCache(true, false, BlockType.INTERMEDIATE_INDEX, false);
+    // true for the following 3, because with caching disabled we always go to off-heap
+    testReaderBlockAllocationWithCombinedCache(false, false, null, true);
+    testReaderBlockAllocationWithCombinedCache(false, false, BlockType.INTERMEDIATE_INDEX, true);
+    testReaderBlockAllocationWithCombinedCache(false, false, BlockType.DATA, true);
+  }
+
+  private void testReaderBlockAllocationWithCombinedCache(boolean cacheConfigCacheBlockOnRead,
+    boolean cacheBlock, BlockType blockType, boolean expectSharedMem) throws IOException {
+    int bufCount = 1024, blockSize = 64 * 1024;
+    ByteBuffAllocator alloc = initAllocator(true, blockSize, bufCount, 0);
+    fillByteBuffAllocator(alloc, bufCount);
+    Path storeFilePath = writeStoreFile();
+    // Open the file reader with CombinedBlockCache
+    BlockCache combined = initCombinedBlockCache("LRU");
+    Configuration myConf = new Configuration(conf);
+
+    myConf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, cacheConfigCacheBlockOnRead);
+    myConf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
+
+    CacheConfig cacheConfig = new CacheConfig(myConf, null, combined, alloc);
+    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, myConf);
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      long read = readAtOffsetWithAllocationAsserts(alloc, reader, offset, cacheBlock, blockType,
+        expectSharedMem);
+      if (read < 0) {
+        break;
+      }
+
+      offset += read;
+    }
+
+    reader.close();
+    combined.shutdown();
+    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    alloc.clean();
+  }
+
+  private long readAtOffsetWithAllocationAsserts(ByteBuffAllocator alloc, HFile.Reader reader,
+    long offset, boolean cacheBlock, BlockType blockType, boolean expectSharedMem)
+    throws IOException {
+    HFileBlock block;
+    try {
+      block = reader.readBlock(offset, -1, cacheBlock, true, false, true, blockType, null);
+    } catch (IOException e) {
+      if (e.getMessage().contains("Expected block type")) {
+        return -1;
+      }
+      throw e;
+    }
+
+    Assert.assertEquals(expectSharedMem, block.isSharedMem());
+
+    if (expectSharedMem) {
+      Assert.assertTrue(alloc.getFreeBufferCount() < alloc.getTotalBufferCount());
+    } else {
+      // Should never allocate off-heap block from allocator because ensure that it's LRU.
+      Assert.assertEquals(alloc.getTotalBufferCount(), alloc.getFreeBufferCount());
+    }
+
+    try {
+      return block.getOnDiskSizeWithHeader();
+    } finally {
+      block.release(); // return back the ByteBuffer back to allocator.
+    }
+  }
+
   private void readStoreFile(Path storeFilePath, Configuration conf, ByteBuffAllocator alloc)
     throws Exception {
     // Open the file reader with block cache disabled.
