@@ -3906,8 +3906,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
     long procId = request.getCloseProcId();
     boolean evictCache = request.getEvictCache();
     if (regionServer.submitRegionProcedure(procId)) {
-      regionServer.getExecutorService().submit(
-        UnassignRegionHandler.create(regionServer, encodedName, procId, false, destination, evictCache));
+      regionServer.getExecutorService().submit(UnassignRegionHandler.create(regionServer,
+        encodedName, procId, false, destination, evictCache));
     }
   }
 
