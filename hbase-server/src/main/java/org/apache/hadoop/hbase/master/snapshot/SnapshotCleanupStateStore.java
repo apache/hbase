@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotCleanupProtos;
 
 /**
- * Store the snapshot cleanup eanbled state.
+ * Store the snapshot cleanup enabled state.
  */
 @InterfaceAudience.Private
 public class SnapshotCleanupStateStore extends BooleanStateStore {
@@ -50,6 +50,7 @@ public class SnapshotCleanupStateStore extends BooleanStateStore {
     return ProtobufUtil.prependPBMagic(builder.build().toByteArray());
   }
 
+  @Override
   protected boolean parseFrom(byte[] pbBytes) throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(pbBytes);
     SnapshotCleanupProtos.SnapshotCleanupState.Builder builder =

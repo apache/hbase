@@ -27,6 +27,8 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Store a boolean state.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "UG_SYNC_SET_UNSYNC_GET",
+    justification = "the flag is volatile")
 @InterfaceAudience.Private
 public abstract class BooleanStateStore extends MasterStateStore {
 
