@@ -336,25 +336,6 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Clean up directories with prefix "_distcp_logs-", which are generated when DistCp copying
-   * hlogs.
-   * @throws IOException exception
-   */
-  protected void cleanupDistCpLog(BackupInfo backupInfo, Configuration conf) throws IOException {
-    Path rootPath = new Path(backupInfo.getHLogTargetDir()).getParent();
-    FileStatus[] files = CommonFSUtils.listStatus(fs, rootPath);
-    if (files == null) {
-      return;
-    }
-    for (FileStatus file : files) {
-      if (file.getPath().getName().startsWith("_distcp_logs")) {
-        LOG.debug("Delete log files of DistCp: " + file.getPath().getName());
-        CommonFSUtils.delete(fs, file.getPath(), true);
-      }
-    }
-  }
-
-  /**
    * Complete the overall backup.
    * @param backupInfo backup info
    * @throws IOException exception
@@ -381,11 +362,10 @@ public abstract class TableBackupClient {
     // - delete HBase snapshot
     // - clean up directories with prefix "exportSnapshot-", which are generated when exporting
     // snapshots
+    // incremental backups use distcp, which handles cleaning up its own directories
     if (type == BackupType.FULL) {
       deleteSnapshots(conn, backupInfo, conf);
       cleanupExportSnapshotLog(conf);
-    } else if (type == BackupType.INCREMENTAL) {
-      cleanupDistCpLog(backupInfo, conf);
     }
     BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
