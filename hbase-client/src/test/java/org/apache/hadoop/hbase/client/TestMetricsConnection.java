@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
@@ -149,37 +150,51 @@ public class TestMetricsConnection {
 
     for (int i = 0; i < loop; i++) {
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Get"),
-        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Scan"),
-        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Multi"),
-        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats(), true);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.APPEND, new Append(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.DELETE, new Delete(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
           .build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
     }
+    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcFailureCountPrefix =
+      "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
+    String metricKey;
+    long metricVal;
+    Counter counter;
     for (String method : new String[] { "Get", "Scan", "Mutate" }) {
-      final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
-      final long metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
+      metricKey = rpcCountPrefix + method;
+      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+      metricKey = rpcFailureCountPrefix + method;
+      counter = METRICS.getRpcCounters().get(metricKey);
+      metricVal = (counter != null) ? counter.getCount() : 0;
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
     }
+    metricKey = rpcFailureCountPrefix + "Multi";
+    counter = METRICS.getRpcCounters().get(metricKey);
+    metricVal = (counter != null) ? counter.getCount() : 0;
+    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
       METRICS.getAppendTracker(), METRICS.getDeleteTracker(), METRICS.getIncrementTracker(),
