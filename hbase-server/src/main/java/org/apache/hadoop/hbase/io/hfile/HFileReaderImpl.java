@@ -1215,21 +1215,34 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
-   * If expected block is data block, we'll allocate the ByteBuff of block from
-   * {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} and it's usually an off-heap one,
-   * otherwise it will allocate from heap.
+   * Whether we use heap or not depends on our intent to cache the block. We want to avoid
+   * allocating to off-heap if we intend to cache into the on-heap L1 cache. Otherwise, it's more
+   * efficient to allocate to off-heap since we can control GC ourselves for those. So our decision
+   * here breaks down as follows: <br>
+   * If block cache is disabled, don't use heap. If we're not using the CombinedBlockCache, use heap
+   * unless caching is disabled for the request. Otherwise, only use heap if caching is enabled and
+   * the expected block type is not DATA (which goes to off-heap L2 in combined cache).
    * @see org.apache.hadoop.hbase.io.hfile.HFileBlock.FSReader#readBlockData(long, long, boolean,
    *      boolean, boolean)
    */
-  private boolean shouldUseHeap(BlockType expectedBlockType) {
+  private boolean shouldUseHeap(BlockType expectedBlockType, boolean cacheBlock) {
     if (!cacheConf.getBlockCache().isPresent()) {
       return false;
-    } else if (!cacheConf.isCombinedBlockCache()) {
-      // Block to cache in LruBlockCache must be an heap one. So just allocate block memory from
-      // heap for saving an extra off-heap to heap copying.
-      return true;
     }
-    return expectedBlockType != null && !expectedBlockType.isData();
+
+    // we only cache a block if cacheBlock is true and caching-on-read is enabled in CacheConfig
+    // we can really only check for that if have an expectedBlockType
+    if (expectedBlockType != null) {
+      cacheBlock &= cacheConf.shouldCacheBlockOnRead(expectedBlockType.getCategory());
+    }
+
+    if (!cacheConf.isCombinedBlockCache()) {
+      // Block to cache in LruBlockCache must be an heap one, if caching enabled. So just allocate
+      // block memory from heap for saving an extra off-heap to heap copying in that case.
+      return cacheBlock;
+    }
+
+    return cacheBlock && expectedBlockType != null && !expectedBlockType.isData();
   }
 
   @Override
@@ -1316,8 +1329,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         span.addEvent("block cache miss", attributes);
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
-          !isCompaction, shouldUseHeap(expectedBlockType));
-        validateBlockType(hfileBlock, expectedBlockType);
+          !isCompaction, shouldUseHeap(expectedBlockType, cacheBlock));
+        try {
+          validateBlockType(hfileBlock, expectedBlockType);
+        } catch (IOException e) {
+          hfileBlock.release();
+          throw e;
+        }
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
         final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
         final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
