@@ -72,9 +72,9 @@
  * The Region Normalizer subsystem is composed of a handful of related classes:
  * <ul>
  *   <li>
- *     The {@link org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker} provides a system by
- *     which the Normalizer can be disabled at runtime. It currently does this by managing a znode,
- *     but this is an implementation detail.
+ *     The {@link org.apache.hadoop.hbase.master.normalizer.RegionNormalizerStateStore} provides a
+ *     system by which the Normalizer can be disabled at runtime. It currently does this by
+ *     storing the state in master local region, but this is an implementation detail.
  *   </li>
  *   <li>
  *     The {@link org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorkQueue} is a

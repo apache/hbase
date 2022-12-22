@@ -121,7 +121,6 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -539,22 +538,18 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
    * @return old balancer switch
    */
   boolean switchBalancer(final boolean b, BalanceSwitchMode mode) throws IOException {
-    boolean oldValue = server.loadBalancerTracker.isBalancerOn();
+    boolean oldValue = server.loadBalancerStateStore.get();
     boolean newValue = b;
     try {
       if (server.cpHost != null) {
         server.cpHost.preBalanceSwitch(newValue);
       }
-      try {
-        if (mode == BalanceSwitchMode.SYNC) {
-          synchronized (server.getLoadBalancer()) {
-            server.loadBalancerTracker.setBalancerOn(newValue);
-          }
-        } else {
-          server.loadBalancerTracker.setBalancerOn(newValue);
+      if (mode == BalanceSwitchMode.SYNC) {
+        synchronized (server.getLoadBalancer()) {
+          server.loadBalancerStateStore.set(newValue);
         }
-      } catch (KeeperException ke) {
-        throw new IOException(ke);
+      } else {
+        server.loadBalancerStateStore.set(newValue);
       }
       LOG.info(server.getClientIdAuditPrefix() + " set balanceSwitch=" + newValue);
       if (server.cpHost != null) {
@@ -1648,8 +1643,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     IsSnapshotCleanupEnabledRequest request) throws ServiceException {
     try {
       server.checkInitialized();
-      final boolean isSnapshotCleanupEnabled =
-        server.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+      final boolean isSnapshotCleanupEnabled = server.snapshotCleanupStateStore.get();
       return IsSnapshotCleanupEnabledResponse.newBuilder().setEnabled(isSnapshotCleanupEnabled)
         .build();
     } catch (IOException e) {
@@ -1665,8 +1659,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
    * @return previous snapshot auto-cleanup mode
    */
   private synchronized boolean switchSnapshotCleanup(final boolean enabledNewVal,
-    final boolean synchronous) {
-    final boolean oldValue = server.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+    final boolean synchronous) throws IOException {
+    final boolean oldValue = server.snapshotCleanupStateStore.get();
     server.switchSnapshotCleanup(enabledNewVal, synchronous);
     LOG.info("{} Successfully set snapshot cleanup to {}", server.getClientIdAuditPrefix(),
       enabledNewVal);
@@ -1901,12 +1895,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         if (server.cpHost != null) {
           server.cpHost.preSetSplitOrMergeEnabled(newValue, switchType);
         }
-        server.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
+        server.getSplitOrMergeStateStore().setSplitOrMergeEnabled(newValue, switchType);
         if (server.cpHost != null) {
           server.cpHost.postSetSplitOrMergeEnabled(newValue, switchType);
         }
       }
-    } catch (IOException | KeeperException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
     return response.build();
@@ -1956,7 +1950,11 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     // only one process with the authority to modify the value.
     final boolean prevValue = server.getRegionNormalizerManager().isNormalizerOn();
     final boolean newValue = request.getOn();
-    server.getRegionNormalizerManager().setNormalizerOn(newValue);
+    try {
+      server.getRegionNormalizerManager().setNormalizerOn(newValue);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     LOG.info("{} set normalizerSwitch={}", server.getClientIdAuditPrefix(), newValue);
     return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
   }
