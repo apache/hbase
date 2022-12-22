@@ -143,12 +143,6 @@ public final class MasterRegion {
     flusherAndCompactor.onUpdate();
   }
 
-  /**
-   * The design for master region is to only load all the data to memory at once when starting, so
-   * typically you should not use the get method to get a single row of data at runtime.
-   */
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   public Result get(Get get) throws IOException {
     return region.get(get);
   }

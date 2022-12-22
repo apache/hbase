@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
@@ -128,6 +129,7 @@ import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
+import org.apache.hadoop.hbase.master.balancer.LoadBalancerStateStore;
 import org.apache.hadoop.hbase.master.balancer.MaintenanceLoadBalancer;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -144,6 +146,7 @@ import org.apache.hadoop.hbase.master.locking.LockManager;
 import org.apache.hadoop.hbase.master.migrate.RollingUpgradeChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerManager;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerStateStore;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
@@ -171,6 +174,7 @@ import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotCleanupStateStore;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator;
 import org.apache.hadoop.hbase.master.zksyncer.MasterAddressSyncer;
@@ -236,11 +240,8 @@ import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
-import org.apache.hadoop.hbase.zookeeper.SnapshotCleanupTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -294,17 +295,17 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Draining region server tracker
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
-  LoadBalancerTracker loadBalancerTracker;
+  LoadBalancerStateStore loadBalancerStateStore;
   // Tracker for meta location, if any client ZK quorum specified
   private MetaLocationSyncer metaLocationSyncer;
   // Tracker for active master location, if any client ZK quorum specified
   @InterfaceAudience.Private
   MasterAddressSyncer masterAddressSyncer;
   // Tracker for auto snapshot cleanup state
-  SnapshotCleanupTracker snapshotCleanupTracker;
+  SnapshotCleanupStateStore snapshotCleanupStateStore;
 
   // Tracker for split and merge state
-  private SplitOrMergeTracker splitOrMergeTracker;
+  private SplitOrMergeStateStore splitOrMergeStateStore;
 
   private ClusterSchemaService clusterSchemaService;
 
@@ -743,31 +744,28 @@ public class HMaster extends HRegionServer implements MasterServices {
    * should have already been initialized along with {@link ServerManager}.
    */
   private void initializeZKBasedSystemTrackers()
-    throws IOException, KeeperException, ReplicationException {
+    throws IOException, KeeperException, ReplicationException, DeserializationException {
     if (maintenanceMode) {
       // in maintenance mode, always use MaintenanceLoadBalancer.
       conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MaintenanceLoadBalancer.class,
         LoadBalancer.class);
     }
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
-    this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
-    this.loadBalancerTracker.start();
+    this.loadBalancerStateStore = new LoadBalancerStateStore(masterRegion, zooKeeper);
 
     this.regionNormalizerManager =
-      RegionNormalizerFactory.createNormalizerManager(conf, zooKeeper, this);
+      RegionNormalizerFactory.createNormalizerManager(conf, masterRegion, zooKeeper, this);
     this.configurationManager.registerObserver(regionNormalizerManager);
     this.regionNormalizerManager.start();
 
-    this.splitOrMergeTracker = new SplitOrMergeTracker(zooKeeper, conf, this);
-    this.splitOrMergeTracker.start();
+    this.splitOrMergeStateStore = new SplitOrMergeStateStore(masterRegion, zooKeeper, conf);
 
     this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
 
-    this.snapshotCleanupTracker = new SnapshotCleanupTracker(zooKeeper, this);
-    this.snapshotCleanupTracker.start();
+    this.snapshotCleanupStateStore = new SnapshotCleanupStateStore(masterRegion, zooKeeper);
 
     String clientQuorumServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     boolean clientZkObserverMode = conf.getBoolean(HConstants.CLIENT_ZOOKEEPER_OBSERVER_MODE,
@@ -889,8 +887,8 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Notice that now we will not schedule a special procedure to make meta online(unless the first
    * time where meta has not been created yet), we will rely on SCP to bring meta online.
    */
-  private void finishActiveMasterInitialization(MonitoredTask status)
-    throws IOException, InterruptedException, KeeperException, ReplicationException {
+  private void finishActiveMasterInitialization(MonitoredTask status) throws IOException,
+    InterruptedException, KeeperException, ReplicationException, DeserializationException {
     /*
      * We are active master now... go initialize components we need to run.
      */
@@ -1630,7 +1628,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       new ReplicationBarrierCleaner(conf, this, getConnection(), replicationPeerManager);
     getChoreService().scheduleChore(replicationBarrierCleaner);
 
-    final boolean isSnapshotChoreEnabled = this.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+    final boolean isSnapshotChoreEnabled = this.snapshotCleanupStateStore.get();
     this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
     if (isSnapshotChoreEnabled) {
       getChoreService().scheduleChore(this.snapshotCleanerChore);
@@ -1752,7 +1750,7 @@ public class HMaster extends HRegionServer implements MasterServices {
    * Turn on/off Snapshot Cleanup Chore
    * @param on indicates whether Snapshot Cleanup Chore is to be run
    */
-  void switchSnapshotCleanup(final boolean on, final boolean synchronous) {
+  void switchSnapshotCleanup(final boolean on, final boolean synchronous) throws IOException {
     if (synchronous) {
       synchronized (this.snapshotCleanerChore) {
         switchSnapshotCleanup(on);
@@ -1762,16 +1760,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
   }
 
-  private void switchSnapshotCleanup(final boolean on) {
-    try {
-      snapshotCleanupTracker.setSnapshotCleanupEnabled(on);
-      if (on) {
-        getChoreService().scheduleChore(this.snapshotCleanerChore);
-      } else {
-        this.snapshotCleanerChore.cancel();
-      }
-    } catch (KeeperException e) {
-      LOG.error("Error updating snapshot cleanup mode to {}", on, e);
+  private void switchSnapshotCleanup(final boolean on) throws IOException {
+    snapshotCleanupStateStore.set(on);
+    if (on) {
+      getChoreService().scheduleChore(this.snapshotCleanerChore);
+    } else {
+      this.snapshotCleanerChore.cancel();
     }
   }
 
@@ -1947,9 +1941,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     BalanceResponse.Builder responseBuilder = BalanceResponse.newBuilder();
 
-    if (
-      loadBalancerTracker == null || !(loadBalancerTracker.isBalancerOn() || request.isDryRun())
-    ) {
+    if (loadBalancerStateStore == null || !(loadBalancerStateStore.get() || request.isDryRun())) {
       return responseBuilder.build();
     }
 
@@ -2875,8 +2867,8 @@ public class HMaster extends HRegionServer implements MasterServices {
           break;
         }
         case BALANCER_ON: {
-          if (loadBalancerTracker != null) {
-            builder.setBalancerOn(loadBalancerTracker.isBalancerOn());
+          if (loadBalancerStateStore != null) {
+            builder.setBalancerOn(loadBalancerStateStore.get());
           }
           break;
         }
@@ -3727,17 +3719,16 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized, false
-   * is returned.
+   * Queries the state of the {@link LoadBalancerStateStore}. If the balancer is not initialized,
+   * false is returned.
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   public boolean isBalancerOn() {
-    return !isInMaintenanceMode() && loadBalancerTracker != null
-      && loadBalancerTracker.isBalancerOn();
+    return !isInMaintenanceMode() && loadBalancerStateStore != null && loadBalancerStateStore.get();
   }
 
   /**
-   * Queries the state of the {@link RegionNormalizerTracker}. If it's not initialized, false is
+   * Queries the state of the {@link RegionNormalizerStateStore}. If it's not initialized, false is
    * returned.
    */
   public boolean isNormalizerOn() {
@@ -3745,15 +3736,15 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   /**
-   * Queries the state of the {@link SplitOrMergeTracker}. If it is not initialized, false is
+   * Queries the state of the {@link SplitOrMergeStateStore}. If it is not initialized, false is
    * returned. If switchType is illegal, false will return.
    * @param switchType see {@link org.apache.hadoop.hbase.client.MasterSwitchType}
    * @return The state of the switch
    */
   @Override
   public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
-    return !isInMaintenanceMode() && splitOrMergeTracker != null
-      && splitOrMergeTracker.isSplitOrMergeEnabled(switchType);
+    return !isInMaintenanceMode() && splitOrMergeStateStore != null
+      && splitOrMergeStateStore.isSplitOrMergeEnabled(switchType);
   }
 
   /**
@@ -3765,8 +3756,8 @@ public class HMaster extends HRegionServer implements MasterServices {
       LoadBalancerFactory.getDefaultLoadBalancerClass().getName());
   }
 
-  public SplitOrMergeTracker getSplitOrMergeTracker() {
-    return splitOrMergeTracker;
+  public SplitOrMergeStateStore getSplitOrMergeStateStore() {
+    return splitOrMergeStateStore;
   }
 
   @Override

@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Factory to create instance of {@link RegionNormalizer} as configured.
@@ -35,12 +38,14 @@ public final class RegionNormalizerFactory {
   private RegionNormalizerFactory() {
   }
 
+  // TODO: consolidate this down to MasterServices
   public static RegionNormalizerManager createNormalizerManager(final Configuration conf,
-    final ZKWatcher zkWatcher, final HMaster master // TODO: consolidate this down to MasterServices
-  ) {
+    final MasterRegion masterRegion, final ZKWatcher zkWatcher, final HMaster master)
+    throws DeserializationException, IOException, KeeperException {
     final RegionNormalizer regionNormalizer = getRegionNormalizer(conf);
     regionNormalizer.setMasterServices(master);
-    final RegionNormalizerTracker tracker = new RegionNormalizerTracker(zkWatcher, master);
+    final RegionNormalizerStateStore stateStore =
+      new RegionNormalizerStateStore(masterRegion, zkWatcher);
     final RegionNormalizerChore chore =
       master.isInMaintenanceMode() ? null : new RegionNormalizerChore(master);
     final RegionNormalizerWorkQueue<TableName> workQueue =
@@ -48,7 +53,7 @@ public final class RegionNormalizerFactory {
     final RegionNormalizerWorker worker = master.isInMaintenanceMode()
       ? null
       : new RegionNormalizerWorker(conf, master, regionNormalizer, workQueue);
-    return new RegionNormalizerManager(tracker, chore, workQueue, worker);
+    return new RegionNormalizerManager(stateStore, chore, workQueue, worker);
   }
 
   /**

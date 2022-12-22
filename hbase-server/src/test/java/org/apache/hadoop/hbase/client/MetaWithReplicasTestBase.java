@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -33,7 +31,6 @@ import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
-import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.junit.AfterClass;
 import org.junit.Rule;
 import org.slf4j.Logger;
@@ -98,21 +95,7 @@ public class MetaWithReplicasTestBase {
         destinationServerName);
     }
     // Disable the balancer
-    LoadBalancerTracker l =
-      new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(), new Abortable() {
-        AtomicBoolean aborted = new AtomicBoolean(false);
-
-        @Override
-        public boolean isAborted() {
-          return aborted.get();
-        }
-
-        @Override
-        public void abort(String why, Throwable e) {
-          aborted.set(true);
-        }
-      });
-    l.setBalancerOn(false);
+    TEST_UTIL.getAdmin().balancerSwitch(false, true);
     LOG.debug("All meta replicas assigned");
   }
 

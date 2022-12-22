@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -60,7 +59,7 @@ public class TestRegionNormalizerManagerConfigurationObserver {
   @Mock
   private MasterServices masterServices;
   @Mock
-  private RegionNormalizerTracker tracker;
+  private RegionNormalizerStateStore stateStore;
   @Mock
   private RegionNormalizerChore chore;
   @Mock
@@ -75,7 +74,7 @@ public class TestRegionNormalizerManagerConfigurationObserver {
     normalizer = new SimpleRegionNormalizer();
     worker = new RegionNormalizerWorker(conf, masterServices, normalizer, queue);
     final RegionNormalizerManager normalizerManager =
-      new RegionNormalizerManager(tracker, chore, queue, worker);
+      new RegionNormalizerManager(stateStore, chore, queue, worker);
     configurationManager = new ConfigurationManager();
     configurationManager.registerObserver(normalizerManager);
   }

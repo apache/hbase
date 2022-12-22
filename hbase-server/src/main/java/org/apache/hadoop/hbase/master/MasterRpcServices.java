@@ -127,7 +127,6 @@ import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -478,22 +477,18 @@ public class MasterRpcServices extends RSRpcServices
    * @return old balancer switch
    */
   boolean switchBalancer(final boolean b, BalanceSwitchMode mode) throws IOException {
-    boolean oldValue = master.loadBalancerTracker.isBalancerOn();
+    boolean oldValue = master.loadBalancerStateStore.get();
     boolean newValue = b;
     try {
       if (master.cpHost != null) {
         master.cpHost.preBalanceSwitch(newValue);
       }
-      try {
-        if (mode == BalanceSwitchMode.SYNC) {
-          synchronized (master.getLoadBalancer()) {
-            master.loadBalancerTracker.setBalancerOn(newValue);
-          }
-        } else {
-          master.loadBalancerTracker.setBalancerOn(newValue);
+      if (mode == BalanceSwitchMode.SYNC) {
+        synchronized (master.getLoadBalancer()) {
+          master.loadBalancerStateStore.set(newValue);
         }
-      } catch (KeeperException ke) {
-        throw new IOException(ke);
+      } else {
+        master.loadBalancerStateStore.set(newValue);
       }
       LOG.info(master.getClientIdAuditPrefix() + " set balanceSwitch=" + newValue);
       if (master.cpHost != null) {
@@ -1588,8 +1583,7 @@ public class MasterRpcServices extends RSRpcServices
     IsSnapshotCleanupEnabledRequest request) throws ServiceException {
     try {
       master.checkInitialized();
-      final boolean isSnapshotCleanupEnabled =
-        master.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+      final boolean isSnapshotCleanupEnabled = master.snapshotCleanupStateStore.get();
       return IsSnapshotCleanupEnabledResponse.newBuilder().setEnabled(isSnapshotCleanupEnabled)
         .build();
     } catch (IOException e) {
@@ -1605,8 +1599,8 @@ public class MasterRpcServices extends RSRpcServices
    * @return previous snapshot auto-cleanup mode
    */
   private synchronized boolean switchSnapshotCleanup(final boolean enabledNewVal,
-    final boolean synchronous) {
-    final boolean oldValue = master.snapshotCleanupTracker.isSnapshotCleanupEnabled();
+    final boolean synchronous) throws IOException {
+    final boolean oldValue = master.snapshotCleanupStateStore.get();
     master.switchSnapshotCleanup(enabledNewVal, synchronous);
     LOG.info("{} Successfully set snapshot cleanup to {}", master.getClientIdAuditPrefix(),
       enabledNewVal);
@@ -1923,12 +1917,12 @@ public class MasterRpcServices extends RSRpcServices
         if (master.cpHost != null) {
           master.cpHost.preSetSplitOrMergeEnabled(newValue, switchType);
         }
-        master.getSplitOrMergeTracker().setSplitOrMergeEnabled(newValue, switchType);
+        master.getSplitOrMergeStateStore().setSplitOrMergeEnabled(newValue, switchType);
         if (master.cpHost != null) {
           master.cpHost.postSetSplitOrMergeEnabled(newValue, switchType);
         }
       }
-    } catch (IOException | KeeperException e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
     return response.build();
@@ -1978,7 +1972,11 @@ public class MasterRpcServices extends RSRpcServices
     // only one process with the authority to modify the value.
     final boolean prevValue = master.getRegionNormalizerManager().isNormalizerOn();
     final boolean newValue = request.getOn();
-    master.getRegionNormalizerManager().setNormalizerOn(newValue);
+    try {
+      master.getRegionNormalizerManager().setNormalizerOn(newValue);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     LOG.info("{} set normalizerSwitch={}", master.getClientIdAuditPrefix(), newValue);
     return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
   }
