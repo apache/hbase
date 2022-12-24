@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -76,7 +75,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.PreviousBlockCompressionRatePredicator;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
@@ -119,7 +117,7 @@ public class TestHStoreFile {
   private static final Logger LOG = LoggerFactory.getLogger(TestHStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-  private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
+  private static Path ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile");
   private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
@@ -594,10 +592,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -642,7 +640,10 @@ public class TestHStoreFile {
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
@@ -658,7 +659,10 @@ public class TestHStoreFile {
     float err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
@@ -677,10 +681,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -716,7 +720,11 @@ public class TestHStoreFile {
   @Test
   public void testReseek() throws Exception {
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
+
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs).withFilePath(f)
@@ -726,10 +734,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
 
     // Now do reseek with empty KV to position to the beginning of the file
 
@@ -760,9 +768,13 @@ public class TestHStoreFile {
     // 2nd for loop for every column (2*colCount)
     float[] expErr = { 2 * rowCount * colCount * err, 2 * rowCount * 2 * colCount * err };
 
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
     for (int x : new int[] { 0, 1 }) {
       // write the file
-      Path f = new Path(ROOT_DIR, name.getMethodName() + x);
+      Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
+
       HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
         .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
       // Make a store file and write data to it.
@@ -786,10 +798,10 @@ public class TestHStoreFile {
       ReaderContext context =
         new ReaderContextBuilder().withFilePath(f).withFileSize(fs.getFileStatus(f).getLen())
           .withFileSystem(fs).withInputStreamWrapper(new FSDataInputStreamWrapper(fs, f)).build();
-      HFileInfo fileInfo = new HFileInfo(context, conf);
-      StoreFileReader reader =
-        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-      fileInfo.initMetaAndIndex(reader.getHFileReader());
+      StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+      storeFileInfo.initHFileInfo(context);
+      StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
