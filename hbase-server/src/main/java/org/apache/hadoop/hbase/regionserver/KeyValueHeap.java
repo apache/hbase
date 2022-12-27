@@ -420,4 +420,24 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       }
     }
   }
+
+  @Override
+  public void checkpoint(State state) {
+    if (current != null) {
+      current.checkpoint(state);
+    }
+    if (this.heap != null) {
+      for (KeyValueScanner scanner : this.heap) {
+        scanner.checkpoint(state);
+      }
+    }
+    // Also checkpoint any scanners for delayed close. These would be exhausted scanners,
+    // which may contain blocks that were totally filtered during a request. If so, the checkpoint
+    // will release them.
+    if (scannersForDelayedClose != null) {
+      for (KeyValueScanner scanner : scannersForDelayedClose) {
+        scanner.checkpoint(state);
+      }
+    }
+  }
 }

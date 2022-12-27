@@ -558,4 +558,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public void shipped() throws IOException {
     this.hfs.shipped();
   }
+
+  @Override
+  public void checkpoint(State state) {
+    this.hfs.checkpoint(state);
+  }
 }

@@ -23,7 +23,11 @@ import org.apache.yetus.audience.InterfaceAudience;
 /**
  * This interface denotes a scanner as one which can ship cells. Scan operation do many RPC requests
  * to server and fetch N rows/RPC. These are then shipped to client. At the end of every such batch
- * {@link #shipped()} will get called.
+ * {@link #shipped()} will get called. <br>
+ * Scans of large numbers of fully filtered blocks (due to Filter, or sparse columns, etc) can cause
+ * excess memory to be held while waiting for {@link #shipped()} to be called. Therefore, there's a
+ * checkpoint mechanism via {@link #checkpoint(State)}. These enable fully filtered blocks to be
+ * eagerly released, since they are not referenced by cells being returned to clients.
  */
 @InterfaceAudience.Private
 public interface Shipper {
@@ -33,4 +37,19 @@ public interface Shipper {
    * can be done here.
    */
   void shipped() throws IOException;
+
+  enum State {
+    START,
+    FILTERED
+  }
+
+  /**
+   * Called during processing of a batch of scanned rows, before returning to the client. Allows
+   * releasing of blocks which have been totally skipped in the result set due to filters. <br>
+   * Should be called with {@link State#START} at the beginning of a request for a row. This will
+   * set state necessary to handle {@link State#FILTERED}. Calling with {@link State#FILTERED} will
+   * release any blocks which have been fully processed since the last call to
+   * {@link #checkpoint(State)}. Calling again with {@link State#START} will reset the pointers.
+   */
+  void checkpoint(State state);
 }

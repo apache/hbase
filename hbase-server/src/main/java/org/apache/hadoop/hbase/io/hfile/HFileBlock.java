@@ -2070,7 +2070,8 @@ public class HFileBlock implements Cacheable {
     return createBuilder(blk, newBuf).build();
   }
 
-  static HFileBlock deepCloneOnHeap(HFileBlock blk) {
+  // Publicly visible for access in tests
+  public static HFileBlock deepCloneOnHeap(HFileBlock blk) {
     ByteBuff deepCloned = ByteBuff.wrap(ByteBuffer.wrap(blk.buf.toBytes(0, blk.buf.limit())));
     return createBuilder(blk, deepCloned).build();
   }

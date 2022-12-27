@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +32,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,10 +65,9 @@ public class TestHFileReaderImpl {
     return Bytes.toString(c.getRowArray(), c.getRowOffset(), c.getRowLength());
   }
 
-  Path makeNewFile() throws IOException {
+  Path makeNewFile(int blocksize) throws IOException {
     Path ncTFile = new Path(TEST_UTIL.getDataTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
-    int blocksize = toKV("a").getLength() * 3;
     HFileContext context =
       new HFileContextBuilder().withBlockSize(blocksize).withIncludesTags(true).build();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -82,8 +87,86 @@ public class TestHFileReaderImpl {
   }
 
   @Test
+  public void testCheckpoint() throws IOException {
+    // use very small blocksize to force every cell to be a different block. this gives us
+    // more room to work below in testing checkpointing between blocks.
+    Path p = makeNewFile(1);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY, 0);
+
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, allocator);
+    HFile.Reader reader = HFile.createReader(fs, p, cacheConfig, true, conf);
+
+    HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true);
+
+    // we do an initial checkpoint. but we'll override it below, which is to prove that
+    // checkpoints can supersede each other (by updating index). if that didn't work, we'd see
+    // the first prevBlock entry get released early which would fail the assertions below.
+    scanner.checkpoint(Shipper.State.START);
+
+    scanner.seekTo();
+
+    boolean started = false;
+    boolean finished = false;
+
+    // our goal is to prove that we can clear out a slice of prevBlocks
+    // skip the first prevBlock entry by calling checkpoint START at that point
+    // once we get another prevBlocks entry we finish up with FILTERED
+    while (scanner.next()) {
+      if (scanner.prevBlocks.size() > 0) {
+        if (started) {
+          finished = true;
+          scanner.checkpoint(Shipper.State.FILTERED);
+          break;
+        } else {
+          started = true;
+          scanner.checkpoint(Shipper.State.START);
+        }
+      }
+    }
+
+    assertTrue(started);
+    assertTrue(finished);
+    assertNotEquals(0, allocator.getUsedBufferCount());
+
+    // checkpointing doesn't clear out prevBlocks, just releases and sets them all to null
+    // make sure there are still entries
+    assertNotEquals(0, scanner.prevBlocks.size());
+
+    // we expect to find 1 block at the head of the list which is non-null. this is the one we
+    // skipped above. after that any others should be null
+    boolean foundNonNull = false;
+    for (HFileBlock block : scanner.prevBlocks) {
+      if (!foundNonNull) {
+        assertNotNull(block);
+        foundNonNull = true;
+      } else {
+        assertNull(block);
+      }
+    }
+
+    // we loaded at least 3 blocks -- 1 was skipped (still in prevBlocks) and 1 is held in curBlock.
+    // so skip two buffers in our check here
+    assertEquals(allocator.getUsedBufferCount() - 2, allocator.getFreeBufferCount());
+
+    scanner.shipped();
+
+    // shipped cleans up prevBlocks and releases anything left over
+    assertTrue(scanner.prevBlocks.isEmpty());
+    // now just curBlock holds a buffer
+    assertEquals(allocator.getUsedBufferCount() - 1, allocator.getFreeBufferCount());
+
+    // close and validate that all buffers are returned
+    scanner.close();
+    assertEquals(allocator.getUsedBufferCount(), allocator.getFreeBufferCount());
+  }
+
+  @Test
   public void testSeekBefore() throws Exception {
-    Path p = makeNewFile();
+    Path p = makeNewFile(toKV("a").getLength() * 3);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
     int[] bucketSizes = { 512, 2048, 4096, 64 * 1024, 128 * 1024 };

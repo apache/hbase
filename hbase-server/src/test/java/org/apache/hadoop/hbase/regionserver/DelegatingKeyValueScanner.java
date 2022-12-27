@@ -35,6 +35,11 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
+  public void checkpoint(State state) {
+    delegate.checkpoint(state);
+  }
+
+  @Override
   public Cell peek() {
     return delegate.peek();
   }

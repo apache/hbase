@@ -309,6 +309,11 @@ public class SegmentScanner implements KeyValueScanner {
     // do nothing
   }
 
+  @Override
+  public void checkpoint(State state) {
+    // do nothing
+  }
+
   // debug method
   @Override
   public String toString() {

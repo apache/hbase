@@ -336,7 +336,13 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
     // unreferenced block please.
     protected HFileBlock curBlock;
-    // Previous blocks that were used in the course of the read
+
+    // Updated to the current prevBlocks size when checkpoint is called. Used to eagerly release
+    // any blocks accumulated in the fetching of a row, if that row is thrown away due to filterRow.
+    private int lastCheckpointIndex = -1;
+
+    // Previous blocks that were used in the course of the read, to be released at close,
+    // checkpoint, or shipped
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
     public HFileScannerImpl(final HFile.Reader reader, final boolean cacheBlocks,
@@ -366,8 +372,15 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     private void returnBlocks(boolean returnAll) {
-      this.prevBlocks.forEach(HFileBlock::release);
+      this.prevBlocks.forEach((block) -> {
+        if (block != null) {
+          block.release();
+        }
+      });
       this.prevBlocks.clear();
+      if (lastCheckpointIndex > 0) {
+        this.lastCheckpointIndex = 0;
+      }
       if (returnAll && this.curBlock != null) {
         this.curBlock.release();
         this.curBlock = null;
@@ -1046,6 +1059,23 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     public void shipped() throws IOException {
       this.returnBlocks(false);
+    }
+
+    /**
+     * Sets the last checkpoint index to the current prevBlocks size. If called with State.FILTERED,
+     * releases and nulls out any prevBlocks entries which were added since the last checkpoint.
+     * Nulls out instead of removing to avoid unnecessary resizing of the list.
+     */
+    @Override
+    public void checkpoint(State state) {
+      if (state == State.FILTERED) {
+        assert lastCheckpointIndex >= 0;
+        for (int i = lastCheckpointIndex; i < prevBlocks.size(); i++) {
+          prevBlocks.get(i).release();
+          prevBlocks.set(i, null);
+        }
+      }
+      lastCheckpointIndex = prevBlocks.size();
     }
   }
 

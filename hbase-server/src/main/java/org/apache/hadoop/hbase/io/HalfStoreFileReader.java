@@ -277,6 +277,12 @@ public class HalfStoreFileReader extends StoreFileReader {
       public void shipped() throws IOException {
         this.delegate.shipped();
       }
+
+      @Override
+      public void checkpoint(State state) {
+        this.delegate.checkpoint(state);
+      }
+
     };
   }
 

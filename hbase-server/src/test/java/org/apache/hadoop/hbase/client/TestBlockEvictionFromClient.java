@@ -20,11 +20,16 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,11 +51,18 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -91,6 +105,7 @@ public class TestBlockEvictionFromClient {
   private static byte[] ROW2 = Bytes.toBytes("testRow2");
   private static byte[] ROW3 = Bytes.toBytes("testRow3");
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
+  private static byte[] FAMILY2 = Bytes.toBytes("testFamily1");
   private static byte[][] FAMILIES_1 = new byte[1][0];
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
@@ -179,7 +194,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testBlockEvictionWithParallelScans() throws Exception {
+  public void testBlockEvictionWithParallelScans() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -215,7 +230,7 @@ public class TestBlockEvictionFromClient {
       Thread.sleep(100);
       checkForBlockEviction(cache, false, false);
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // CustomInnerRegionObserver.sleepTime.set(0);
       Iterator<CachedBlock> iterator = cache.iterator();
@@ -265,7 +280,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testParallelGetsAndScans() throws IOException, InterruptedException {
+  public void testParallelGetsAndScans() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(2);
@@ -300,7 +315,7 @@ public class TestBlockEvictionFromClient {
       CustomInnerRegionObserver.waitForGets.set(false);
       checkForBlockEviction(cache, false, false);
       for (GetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
@@ -308,7 +323,7 @@ public class TestBlockEvictionFromClient {
       checkForBlockEviction(cache, true, false);
       getLatch.countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       System.out.println("Scans should have returned the bloks");
       // Check with either true or false
@@ -323,7 +338,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testGetWithCellsInDifferentFiles() throws IOException, InterruptedException {
+  public void testGetWithCellsInDifferentFiles() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -366,7 +381,7 @@ public class TestBlockEvictionFromClient {
       Thread.sleep(200);
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
@@ -383,8 +398,7 @@ public class TestBlockEvictionFromClient {
 
   @Test
   // TODO : check how block index works here
-  public void testGetsWithMultiColumnsAndExplicitTracker()
-    throws IOException, InterruptedException {
+  public void testGetsWithMultiColumnsAndExplicitTracker() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -428,34 +442,11 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       GetThread[] getThreads = initiateGet(table, true, false);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      boolean usedBlocksFound = false;
-      int refCount = 0;
-      int noOfBlocksWithRef = 0;
-      while (iterator.hasNext()) {
-        CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
-        if (refCount != 0) {
-          // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
-          assertEquals(NO_OF_THREADS, refCount);
-          usedBlocksFound = true;
-          noOfBlocksWithRef++;
-        }
-      }
-      assertTrue(usedBlocksFound);
-      // the number of blocks referred
+      int noOfBlocksWithRef = countReferences(cache);
       assertEquals(10, noOfBlocksWithRef);
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
@@ -471,7 +462,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testGetWithMultipleColumnFamilies() throws IOException, InterruptedException {
+  public void testGetWithMultipleColumnFamilies() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -522,34 +513,12 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       GetThread[] getThreads = initiateGet(table, true, true);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      boolean usedBlocksFound = false;
-      int refCount = 0;
-      int noOfBlocksWithRef = 0;
-      while (iterator.hasNext()) {
-        CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
-        if (refCount != 0) {
-          // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
-          assertEquals(NO_OF_THREADS, refCount);
-          usedBlocksFound = true;
-          noOfBlocksWithRef++;
-        }
-      }
-      assertTrue(usedBlocksFound);
+      int noOfBlocksWithRef = countReferences(cache);
       // the number of blocks referred
       assertEquals(3, noOfBlocksWithRef);
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
@@ -629,7 +598,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testMultiGets() throws IOException, InterruptedException {
+  public void testMultiGets() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(2);
@@ -670,29 +639,13 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       MultiGetThread[] getThreads = initiateMultiGet(table);
       Thread.sleep(200);
-      int refCount;
       Iterator<CachedBlock> iterator = cache.iterator();
-      boolean foundNonZeroBlock = false;
-      while (iterator.hasNext()) {
-        CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
-        if (refCount != 0) {
-          assertEquals(NO_OF_THREADS, refCount);
-          foundNonZeroBlock = true;
-        }
-      }
-      assertTrue("Should have found nonzero ref count block", foundNonZeroBlock);
+      int noOfBlocksWithRef = countReferences(cache);
+      assertTrue("Should have found nonzero ref count block", noOfBlocksWithRef > 0);
       CustomInnerRegionObserver.getCdl().get().countDown();
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (MultiGetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
@@ -708,7 +661,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testScanWithMultipleColumnFamilies() throws IOException, InterruptedException {
+  public void testScanWithMultipleColumnFamilies() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -757,34 +710,12 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       ScanThread[] scanThreads = initiateScan(table, true);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      boolean usedBlocksFound = false;
-      int refCount = 0;
-      int noOfBlocksWithRef = 0;
-      while (iterator.hasNext()) {
-        CachedBlock next = iterator.next();
-        BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
-        if (refCount != 0) {
-          // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
-          assertEquals(NO_OF_THREADS, refCount);
-          usedBlocksFound = true;
-          noOfBlocksWithRef++;
-        }
-      }
-      assertTrue(usedBlocksFound);
+      int noOfBlocksWithRef = countReferences(cache);
       // the number of blocks referred
       assertEquals(12, noOfBlocksWithRef);
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // giving some time for the block to be decremented
       checkForBlockEviction(cache, true, false);
@@ -793,6 +724,329 @@ public class TestBlockEvictionFromClient {
         table.close();
       }
     }
+  }
+
+  /**
+   * This test is a baseline for the below filtered tests. It proves that a full unfiltered scan
+   * should retain 12 blocks based on the test data in {@link #setupStreamScanTest()}. Prior to
+   * HBASE-27227, a filtered scan would retain the same number of blocks. The further tests below
+   * show that with HBASE-27227 the filtered scans retain far fewer blocks. <br>
+   * We use a stream scan to avoid switching to stream mid-request. This throws off the counting due
+   * to how the test coordinates with a countdown latch. <br>
+   * In addition to verifying the actual data returned by every scan,
+   * {@link #countReferences(BlockCache)} also corrupts the byte buffs allocated to any blocks we
+   * eagerly release due to checkpointing. This validates that our checkpointing does not release
+   * any blocks that are necessary to serve the scan request. If we did, it'd blow up the test
+   * trying to create a cell block response from corrupted cells.
+   */
+  @Test
+  public void testStreamScan() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // setupStreamScanTest writes 12 cells, each large enough to consume an entire block.
+      // A "full table scan" will retain all 12 blocks.
+      assertNoBlocksWithRef(testCase.table, testCase.baseScan, testCase.cache, 12,
+        new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        new ExpectedResult(ROW, FAMILY, QUALIFIER2, data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier1"), data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier2"), data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier3"), data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier4"), data2),
+        new ExpectedResult(ROW1, FAMILY2, Bytes.toBytes("testQualifier1"), data2),
+        new ExpectedResult(ROW1, FAMILY2, Bytes.toBytes("testQualifier2"), data2),
+        new ExpectedResult(ROW1, FAMILY2, Bytes.toBytes("testQualifier3"), data2),
+        new ExpectedResult(ROW1, FAMILY2, Bytes.toBytes("testQualifier4"), data2),
+        new ExpectedResult(ROW3, FAMILY, QUALIFIER, data),
+        new ExpectedResult(ROW3, FAMILY2, QUALIFIER2, data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithOneColumn() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // we expect 3 because 2 rows contain FAMILY/QUALIFIER:
+      // - ROW contains FAMILY/QUALIFIER (1 block) and FAMILY/QUALIFIER2. Even though we don't
+      // return QUALIFIER2, we seek to it due to INCLUDE_AND_SEEK_NEXT_ROW so it gets loaded into
+      // HFileReaderImpl's curBlock, which we don't ever release.
+      // - ROW3 contains FAMILY/QUALIFIER, so an additional block.
+      assertNoBlocksWithRef(testCase.table, testCase.baseScan.addColumn(FAMILY, QUALIFIER),
+        testCase.cache, 3, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        new ExpectedResult(ROW3, FAMILY, QUALIFIER, data));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithOneColumnQualifierFilter() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // This is the same as testStreamScanWithOneColumn but using a filter instead. Same reasoning
+      // as that test.
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan
+          .setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIER))),
+        testCase.cache, 3, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        new ExpectedResult(ROW3, FAMILY, QUALIFIER, data));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithLargeRow() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // We expect 8 blocks. This test illustrates one remaining way filtered blocks can be
+      // unnecessarily retained. testQualifier1 really only accounts for 2 of ROW1's 8 blocks, but
+      // we must retain all of them because we currently enforce checkpointing at the row/store
+      // boundary. Since anything is returned for the row/store, we retain all of the blocks.
+      byte[] qualifier = Bytes.toBytes("testQualifier1");
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan
+          .setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(qualifier))),
+        testCase.cache, 8, new ExpectedResult(ROW1, FAMILY, qualifier, data2),
+        new ExpectedResult(ROW1, FAMILY2, qualifier, data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithRowFilter() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // we expect 2 because the "ROW" row has 2 cell and all cells are 1 block
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan
+          .setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW))),
+        testCase.cache, 2, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        new ExpectedResult(ROW, FAMILY, QUALIFIER2, data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithSingleColumnValueExcludeFilter() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // We expect 5 blocks. Initially, all 7 storefiles are opened. But FAMILY is essential due to
+      // setFilterIfMissing, so only storefiles within that family are iterated unless a match is
+      // found. 4 Storefiles are for FAMILY, the remaining 3 are family2. So the remaining 3 will
+      // retain just the initially opened block -- this counts for 3 of the 5.
+      // Multiple rows match FAMILY, two rows match FAMILY/QUALIFIER, but only one row also matches
+      // the value. That row has 2 blocks, one for each cell. That's the remaining 2.
+      // SingleColumnValueExcludeFilter does not return the matched column, so we're only returning
+      // 1 of those cells (thus 1 of those blocks) but we can't release the other one since
+      // checkpointing based on filterRow happens at the row level and the row itself is returned.
+      SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, new BinaryComparator(data2));
+      filter.setFilterIfMissing(true);
+      assertNoBlocksWithRef(testCase.table, testCase.baseScan.setFilter(filter), testCase.cache, 5,
+        new ExpectedResult(ROW, FAMILY, QUALIFIER2, data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithSingleColumnValueExcludeFilterJoinedHeap() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // We expect 6 blocks. This test is set up almost identical to above
+      // testStreamScanWithSingleColumnValueExcludeFilter, but behaves very differently. In the
+      // above, the filter matches on a row which only contains cells in FAMILY. So joinedHeap
+      // requestSeek ends up being a no-op. That test only touches storefiles containing FAMILY, and
+      // ends up with 2 blocks left over from those along with the 3 initial blocks from opening the
+      // FAMILY2 storefiles.
+      // In this test, the filter matches ROW3, which only has 1 cell in FAMILY but also contains
+      // cells in FAMILY2. So we see the affect of the joinedHeap here. We scan past ROW and ROW1,
+      // releasing all of those blocks. We end up retaining 1 block for the 1 cell in ROW3 FAMILY,
+      // then accumulate 4 blocks seeking in the relevant FAMILY1 storefiles: for each
+      // storefile, the initially opened block is retained in prevBlocks and then a new one is
+      // loaded. This retention is exaggerated in our test here since each cell is its own block.
+      // The retained blocks from joinedHeap along with the 2 cells for ROW3 give us our 6.
+      SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, new BinaryComparator(data));
+      filter.setFilterIfMissing(true);
+      assertNoBlocksWithRef(testCase.table, testCase.baseScan.setFilter(filter), testCase.cache, 6,
+        new ExpectedResult(ROW3, FAMILY2, QUALIFIER2, data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithSingleColumnValueExcludeFilterJoinedHeapColumnExcluded()
+    throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // We expect 0 blocks. Another permutation of joined heap tests, this one uses a filter list
+      // to cause the joined heap to return nothing. ROW3 is matched by
+      // SingleColumnValueExcludeFilter. That filter excludes the matched column, and causes joined
+      // heap to be checked. The joined heap returns nothing, because FAMILY2 only contains
+      // QUALIFIER2 while we want QUALIFIER. The final result is an empty list, so we can release
+      // all blocks accumulated.
+      SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER,
+        CompareOperator.EQUAL, new BinaryComparator(data));
+      filter.setFilterIfMissing(true);
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan.setFilter(new FilterList(filter,
+          new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIER)))),
+        testCase.cache, 0);
+    }
+  }
+
+  private static final class TestCase implements AutoCloseable {
+    private final Table table;
+    private final BlockCache cache;
+    private final Scan baseScan;
+
+    private TestCase(Table table, BlockCache cache, Scan baseScan) {
+      this.table = table;
+      this.cache = cache;
+      this.baseScan = baseScan;
+    }
+
+    @Override
+    public void close() throws Exception {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+
+  private TestCase setupStreamScanTest() throws IOException, InterruptedException {
+    latch = new CountDownLatch(1);
+    final TableName tableName = TableName.valueOf(name.getMethodName());
+    byte[][] fams = new byte[][] { FAMILY, FAMILY2 };
+    Table table =
+      TEST_UTIL.createTable(tableName, fams, 1, 1024, CustomInnerRegionObserver.class.getName());
+    // get the block cache and region
+    RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
+    String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
+    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
+    BlockCache cache = setCacheProperties(region);
+
+    // this writes below all create 12 cells total, with each cell being an entire block.
+    // so 12 blocks total as well.
+    Put put = new Put(ROW);
+    put.addColumn(FAMILY, QUALIFIER, data2);
+    put.addColumn(FAMILY, QUALIFIER2, data2);
+    table.put(put);
+    region.flush(true);
+    put = new Put(ROW3);
+    put.addColumn(FAMILY, QUALIFIER, data);
+    put.addColumn(FAMILY2, QUALIFIER2, data2);
+    table.put(put);
+    region.flush(true);
+    // below creates 8 of the 12 cells
+    for (int i = 1; i < 5; i++) {
+      byte[] qualifier = Bytes.toBytes("testQualifier" + i);
+      put = new Put(ROW1);
+      put.addColumn(FAMILY, qualifier, data2);
+      put.addColumn(FAMILY2, qualifier, data2);
+      table.put(put);
+      if (i % 2 == 0) {
+        region.flush(true);
+      }
+    }
+    region.flush(true);
+    // flush the data
+    System.out.println("Flushing cache");
+    return new TestCase(table, cache, new Scan().setReadType(Scan.ReadType.STREAM));
+  }
+
+  private void assertNoBlocksWithRef(Table table, Scan scan, BlockCache cache, int expectedBlocks,
+    ExpectedResult... expectedResults) throws Throwable {
+    ScanThread[] scanThreads = initiateScan(table, scan, expectedResults);
+    Thread.sleep(500);
+
+    int noOfBlocksWithRef = countReferences(cache);
+    // the number of blocks referred
+    assertEquals(expectedBlocks, noOfBlocksWithRef);
+    CustomInnerRegionObserver.getCdl().get().countDown();
+    for (ScanThread thread : scanThreads) {
+      thread.joinAndRethrow();
+    }
+    // giving some time for the block to be decremented
+    checkForBlockEviction(cache, true, false);
+  }
+
+  private static final class ExpectedResult {
+    private final byte[] row;
+    private final byte[] family;
+    private final byte[] qualifier;
+    private final byte[] value;
+
+    private ExpectedResult(byte[] row, byte[] family, byte[] qualifier, byte[] value) {
+      this.row = row;
+      this.family = family;
+      this.qualifier = qualifier;
+      this.value = value;
+    }
+
+    public void assertEquals(Cell cell, int index) {
+      assertTrue(getAssertMessage(index, "row", row, cell), CellUtil.matchingRows(cell, row));
+      assertTrue(getAssertMessage(index, "family", family, cell),
+        CellUtil.matchingFamily(cell, family));
+      assertTrue(getAssertMessage(index, "qualifier", qualifier, cell),
+        CellUtil.matchingQualifier(cell, qualifier));
+      assertTrue(getAssertMessage(index, "value", value, cell),
+        CellUtil.matchingValue(cell, value));
+    }
+
+    private String getAssertMessage(int index, String component, byte[] value, Cell cell) {
+      return "Expected cell " + (index + 1) + " to have " + component + " "
+        + Bytes.toStringBinary(value) + ": " + CellUtil.toString(cell, true);
+    }
+  }
+
+  /**
+   * Counts how many blocks still have references, expecting each of those blocks to have 1
+   * reference per NO_OF_THREADS. <br>
+   * Additionally, manipulates the bucket cache to "corrupt" any cells still referencing blocks that
+   * should not have any references. It does this by evicting those blocks and re-caching them in a
+   * different order. This causes the content of the buffers backing those cells to be the wrong
+   * size/position/data. As a result, if any cells do still reference blocks that they shouldn't,
+   * the requests will fail loudly at the RPC serialization step, failing the tests.
+   */
+  private int countReferences(BlockCache cache) {
+    BucketCache bucketCache;
+    if (cache instanceof CombinedBlockCache) {
+      bucketCache = (BucketCache) ((CombinedBlockCache) cache).getSecondLevelCache();
+    } else if (cache instanceof BucketCache) {
+      bucketCache = (BucketCache) cache;
+    } else {
+      throw new RuntimeException("Expected bucket cache but got " + cache);
+    }
+
+    Iterator<CachedBlock> iterator = bucketCache.iterator();
+    int refCount;
+    int noOfBlocksWithRef = 0;
+
+    Map<BlockCacheKey, Cacheable> unreferencedBlocks = new HashMap<>();
+    List<BlockCacheKey> cacheKeys = new ArrayList<>();
+
+    while (iterator.hasNext()) {
+      CachedBlock next = iterator.next();
+      BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
+      refCount = bucketCache.getRpcRefCount(cacheKey);
+
+      if (refCount != 0) {
+        // Blocks will be with count 3
+        System.out.println("The refCount is " + refCount);
+        assertEquals(NO_OF_THREADS, refCount);
+        noOfBlocksWithRef++;
+      } else if (cacheKey.getBlockType().isData()) {
+        System.out.println("Corrupting block " + cacheKey);
+        HFileBlock block = (HFileBlock) bucketCache.getBlock(cacheKey, false, false, false);
+
+        // Clone to heap, then release and evict the block. This will cause the bucket cache
+        // to reclaim memory that is currently referenced by these blocks.
+        HFileBlock clonedBlock = HFileBlock.deepCloneOnHeap(block);
+        block.release();
+        bucketCache.evictBlock(cacheKey);
+
+        cacheKeys.add(cacheKey);
+        unreferencedBlocks.put(cacheKey, clonedBlock);
+      }
+    }
+
+    // Write the blocks back to the bucket cache in a random order so they end up
+    // in the wrong offsets. This causes the ByteBufferExtendedCell in our results to be
+    // referencing the wrong spots if we erroneously released blocks that matter for the scanner
+    Collections.shuffle(cacheKeys);
+
+    for (BlockCacheKey cacheKey : cacheKeys) {
+      bucketCache.cacheBlock(cacheKey, unreferencedBlocks.get(cacheKey));
+    }
+
+    System.out.println("Done corrupting blocks");
+
+    return noOfBlocksWithRef;
   }
 
   private BlockCache setCacheProperties(HRegion region) {
@@ -810,8 +1064,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testParallelGetsAndScanWithWrappedRegionScanner()
-    throws IOException, InterruptedException {
+  public void testParallelGetsAndScanWithWrappedRegionScanner() throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(2);
@@ -854,11 +1107,11 @@ public class TestBlockEvictionFromClient {
       // countdown the latch
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       getLatch.countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
     } finally {
       if (table != null) {
@@ -868,17 +1121,17 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testScanWithCompaction() throws IOException, InterruptedException {
+  public void testScanWithCompaction() throws Throwable {
     testScanWithCompactionInternals(name.getMethodName(), false);
   }
 
   @Test
-  public void testReverseScanWithCompaction() throws IOException, InterruptedException {
+  public void testReverseScanWithCompaction() throws Throwable {
     testScanWithCompactionInternals(name.getMethodName(), true);
   }
 
   private void testScanWithCompactionInternals(String tableNameStr, boolean reversed)
-    throws IOException, InterruptedException {
+    throws Throwable {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
@@ -974,7 +1227,7 @@ public class TestBlockEvictionFromClient {
       compactionLatch.countDown();
       latch.countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // by this time all blocks should have been evicted
       iterator = cache.iterator();
@@ -993,8 +1246,7 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
-  public void testBlockEvictionAfterHBASE13082WithCompactionAndFlush()
-    throws IOException, InterruptedException {
+  public void testBlockEvictionAfterHBASE13082WithCompactionAndFlush() throws Throwable {
     // do flush and scan in parallel
     Table table = null;
     try {
@@ -1100,7 +1352,7 @@ public class TestBlockEvictionFromClient {
       compactionLatch.countDown();
       latch.countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        thread.joinAndRethrow();
       }
       // by this time all blocks should have been evicted
       iterator = cache.iterator();
@@ -1179,7 +1431,13 @@ public class TestBlockEvictionFromClient {
       // countdown the latch
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (ScanThread thread : scanThreads) {
-        thread.join();
+        // expect it to fail
+        try {
+          thread.joinAndRethrow();
+          fail("Expected failure");
+        } catch (Throwable t) {
+          assertTrue(t instanceof UncheckedIOException);
+        }
       }
       iterator = cache.iterator();
       usedBlocksFound = false;
@@ -1241,16 +1499,24 @@ public class TestBlockEvictionFromClient {
     table.put(put);
   }
 
-  private ScanThread[] initiateScan(Table table, boolean reverse)
-    throws IOException, InterruptedException {
+  private ScanThread[] initiateScan(Table table, Scan scan, ExpectedResult... expectedResults) {
     ScanThread[] scanThreads = new ScanThread[NO_OF_THREADS];
     for (int i = 0; i < NO_OF_THREADS; i++) {
-      scanThreads[i] = new ScanThread(table, reverse);
+      scanThreads[i] = new ScanThread(table, scan, expectedResults);
     }
     for (ScanThread thread : scanThreads) {
       thread.start();
     }
     return scanThreads;
+  }
+
+  private ScanThread[] initiateScan(Table table, boolean reverse)
+    throws IOException, InterruptedException {
+    Scan scan = new Scan();
+    if (reverse) {
+      scan.setReversed(true);
+    }
+    return initiateScan(table, scan);
   }
 
   private GetThread[] initiateGet(Table table, boolean tracker, boolean multipleCFs)
@@ -1341,6 +1607,7 @@ public class TestBlockEvictionFromClient {
   private static class MultiGetThread extends Thread {
     private final Table table;
     private final List<Get> gets = new ArrayList<>();
+    private volatile Throwable throwable = null;
 
     public MultiGetThread(Table table) {
       this.table = table;
@@ -1355,7 +1622,20 @@ public class TestBlockEvictionFromClient {
         Result[] r = table.get(gets);
         assertTrue(Bytes.equals(r[0].getRow(), ROW));
         assertTrue(Bytes.equals(r[1].getRow(), ROW1));
-      } catch (IOException e) {
+      } catch (Throwable t) {
+        throwable = t;
+      }
+    }
+
+    /**
+     * Joins the thread and re-throws any throwable that was thrown by the runnable method. The
+     * thread runnable itself has assertions in it. Without this rethrow, if those other assertions
+     * failed we would never actually know because they don't bubble up to the main thread.
+     */
+    public void joinAndRethrow() throws Throwable {
+      join();
+      if (throwable != null) {
+        throw throwable;
       }
     }
   }
@@ -1364,6 +1644,8 @@ public class TestBlockEvictionFromClient {
     private final Table table;
     private final boolean tracker;
     private final boolean multipleCFs;
+
+    private volatile Throwable throwable = null;
 
     public GetThread(Table table, boolean tracker, boolean multipleCFs) {
       this.table = table;
@@ -1375,8 +1657,20 @@ public class TestBlockEvictionFromClient {
     public void run() {
       try {
         initiateGet(table);
-      } catch (IOException e) {
-        // do nothing
+      } catch (Throwable t) {
+        throwable = t;
+      }
+    }
+
+    /**
+     * Joins the thread and re-throws any throwable that was thrown by the runnable method. The
+     * thread runnable itself has assertions in it. Without this rethrow, if those other assertions
+     * failed we would never actually know because they don't bubble up to the main thread.
+     */
+    public void joinAndRethrow() throws Throwable {
+      join();
+      if (throwable != null) {
+        throw throwable;
       }
     }
 
@@ -1426,35 +1720,66 @@ public class TestBlockEvictionFromClient {
 
   private static class ScanThread extends Thread {
     private final Table table;
-    private final boolean reverse;
+    private final Scan scan;
+    private final ExpectedResult[] expectedResults;
 
-    public ScanThread(Table table, boolean reverse) {
+    private volatile Throwable throwable = null;
+
+    public ScanThread(Table table, Scan scan, ExpectedResult... expectedResults) {
       this.table = table;
-      this.reverse = reverse;
+      this.scan = scan;
+      this.expectedResults = expectedResults;
     }
 
     @Override
     public void run() {
       try {
         initiateScan(table);
-      } catch (IOException e) {
-        // do nothing
+      } catch (Throwable t) {
+        throwable = t;
+      }
+    }
+
+    /**
+     * Joins the thread and re-throws any throwable that was thrown by the runnable method. The
+     * thread runnable itself has assertions in it. Without this rethrow, if those other assertions
+     * failed we would never actually know because they don't bubble up to the main thread.
+     */
+    public void joinAndRethrow() throws Throwable {
+      join();
+      if (throwable != null) {
+        throw throwable;
       }
     }
 
     private void initiateScan(Table table) throws IOException {
-      Scan scan = new Scan();
-      if (reverse) {
-        scan.setReversed(true);
-      }
       CustomInnerRegionObserver.getCdl().set(latch);
       ResultScanner resScanner = table.getScanner(scan);
-      int i = (reverse ? ROWS.length - 1 : 0);
+      if (expectedResults != null && expectedResults.length > 0) {
+        assertExpectedRows(resScanner);
+      } else {
+        assertRowsMatch(resScanner);
+      }
+    }
+
+    private void assertExpectedRows(ResultScanner scanner) {
+      int i = 0;
+      for (Result result : scanner) {
+        for (Cell cell : result.listCells()) {
+          expectedResults[i].assertEquals(cell, i++);
+        }
+      }
+      // verify we covered the full expected results
+      assertEquals(i, expectedResults.length);
+    }
+
+    private void assertRowsMatch(ResultScanner scanner) {
+      int i = (scan.isReversed() ? ROWS.length - 1 : 0);
       boolean resultFound = false;
-      for (Result result : resScanner) {
+      for (Result result : scanner) {
         resultFound = true;
-        System.out.println(result);
-        if (!reverse) {
+        System.out.println("result: " + result);
+        if (!scan.isReversed()) {
           assertTrue(Bytes.equals(result.getRow(), ROWS[i]));
           i++;
         } else {
@@ -1462,7 +1787,7 @@ public class TestBlockEvictionFromClient {
           i--;
         }
       }
-      assertTrue(resultFound);
+      assertEquals(!scan.hasFilter(), resultFound);
     }
   }
 

@@ -78,4 +78,9 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   public void shipped() throws IOException {
     // do nothing
   }
+
+  @Override
+  public void checkpoint(State state) {
+    // do nothing
+  }
 }

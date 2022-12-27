@@ -426,6 +426,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // Used to check time limit
     LimitScope limitScope = LimitScope.BETWEEN_CELLS;
 
+    checkpoint(State.START);
+
     // The loop here is used only when at some point during the next we determine
     // that due to effects of filters or otherwise, we have an empty row in the result.
     // Then we loop and try again. Otherwise, we must get out on the first iteration via return,
@@ -501,6 +503,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
           results.clear();
+          checkpoint(State.FILTERED);
 
           // Read nothing as the rowkey was filtered, but still need to check time limit
           if (scannerContext.checkTimeLimit(limitScope)) {
@@ -553,6 +556,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         if (isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE || filterRow()) {
           incrementCountOfRowsFilteredMetric(scannerContext);
           results.clear();
+          checkpoint(State.FILTERED);
           boolean moreRows = nextRow(scannerContext, current);
           if (!moreRows) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -602,6 +606,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // Double check to prevent empty rows from appearing in result. It could be
       // the case when SingleColumnValueExcludeFilter is used.
       if (results.isEmpty()) {
+        checkpoint(State.FILTERED);
         incrementCountOfRowsFilteredMetric(scannerContext);
         boolean moreRows = nextRow(scannerContext, current);
         if (!moreRows) {
@@ -780,6 +785,16 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
     if (joinedHeap != null) {
       joinedHeap.shipped();
+    }
+  }
+
+  @Override
+  public void checkpoint(State state) {
+    if (storeHeap != null) {
+      storeHeap.checkpoint(state);
+    }
+    if (joinedHeap != null) {
+      joinedHeap.checkpoint(state);
     }
   }
 
