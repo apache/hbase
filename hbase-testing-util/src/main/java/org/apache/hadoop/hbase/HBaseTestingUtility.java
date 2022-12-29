@@ -616,11 +616,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirsAndSetProperties();
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
-    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
-      "ERROR");
-
     this.dfsCluster =
       new MiniDFSCluster(0, this.conf, servers, true, true, true, null, racks, hosts, null);
     this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
@@ -642,10 +637,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public MiniDFSCluster startMiniDFSClusterForTestWAL(int namenodePort) throws IOException {
     createDirsAndSetProperties();
-    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
-      "ERROR");
     dfsCluster =
       new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
     this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
@@ -1117,9 +1108,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     if (conf.getInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, -1) == -1) {
       conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, option.getNumRegionServers());
     }
-
-    // Avoid log flooded with chore execution time, see HBASE-24646 for more details.
-    Log4jUtils.setLogLevel(org.apache.hadoop.hbase.ScheduledChore.class.getName(), "INFO");
 
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
