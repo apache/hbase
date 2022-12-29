@@ -1279,4 +1279,31 @@ public class TestHStoreFile {
     assertEquals(expectedBlockCount, blockCount);
   }
 
+  @Test
+  public void testInitReaderForWarmup() throws Exception {
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testInitReaderForWarmup")).build();
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+      new Path(testDir, hri.getTable().getNameAsString()), hri);
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    writeStoreFile(writer);
+    Path hsfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
+    writer.close();
+
+    HStoreFile file = Mockito.spy(new HStoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true));
+
+    // after warmup the file reader should be closed and null to avoid file descriptor leakage
+    file.initReader(true);
+    assertNull(file.getReader());
+    Mockito.verify(file, Mockito.times(1)).closeStoreFile(Mockito.anyBoolean());
+
+    // not for warmup
+    file.initReader();
+    assertNotNull(file.getReader());
+    Mockito.verify(file, Mockito.times(1)).closeStoreFile(Mockito.anyBoolean());
+  }
 }

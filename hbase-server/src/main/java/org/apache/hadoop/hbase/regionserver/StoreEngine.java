@@ -219,10 +219,14 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   }
 
   public HStoreFile createStoreFileAndReader(StoreFileInfo info) throws IOException {
+    return createStoreFileAndReader(info, false);
+  }
+
+  public HStoreFile createStoreFileAndReader(StoreFileInfo info, boolean warmup) throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
       ctx.getCacheConf(), bloomFilterMetrics);
-    storeFile.initReader();
+    storeFile.initReader(warmup);
     return storeFile;
   }
 
@@ -263,7 +267,7 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
       // our store's CompoundConfiguration here.
       storeFileInfo.setConf(conf);
       // open each store file in parallel
-      completionService.submit(() -> createStoreFileAndReader(storeFileInfo));
+      completionService.submit(() -> createStoreFileAndReader(storeFileInfo, warmup));
       totalValidStoreFile++;
     }
 

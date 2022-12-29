@@ -378,6 +378,10 @@ public class HStoreFile implements StoreFile {
    * @see #closeStoreFile(boolean)
    */
   private void open() throws IOException {
+    open(false);
+  }
+
+  private void open(boolean warmup) throws IOException {
     fileInfo.initHDFSBlocksDistribution();
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
     ReaderContext context = fileInfo.createReaderContext(false, readahead, ReaderType.PREAD);
@@ -499,17 +503,25 @@ public class HStoreFile implements StoreFile {
     firstKey = initialReader.getFirstKey();
     lastKey = initialReader.getLastKey();
     comparator = initialReader.getComparator();
+
+    if (warmup) {
+      closeStoreFile(cacheConf == null || cacheConf.shouldEvictOnClose());
+    }
   }
 
   /**
    * Initialize the reader used for pread.
    */
   public void initReader() throws IOException {
+    initReader(false);
+  }
+
+  public void initReader(boolean warmup) throws IOException {
     if (initialReader == null) {
       synchronized (this) {
         if (initialReader == null) {
           try {
-            open();
+            open(warmup);
           } catch (Exception e) {
             try {
               boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
