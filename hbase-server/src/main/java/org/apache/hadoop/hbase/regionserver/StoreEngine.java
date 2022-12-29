@@ -222,7 +222,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     return createStoreFileAndReader(info, false);
   }
 
-  public HStoreFile createStoreFileAndReader(StoreFileInfo info, boolean warmup) throws IOException {
+  public HStoreFile createStoreFileAndReader(StoreFileInfo info, boolean warmup)
+    throws IOException {
     info.setRegionCoprocessorHost(coprocessorHost);
     HStoreFile storeFile = new HStoreFile(info, ctx.getFamily().getBloomFilterType(),
       ctx.getCacheConf(), bloomFilterMetrics);

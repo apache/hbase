@@ -1294,7 +1294,8 @@ public class TestHStoreFile {
     Path hsfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
     writer.close();
 
-    HStoreFile file = Mockito.spy(new HStoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true));
+    HStoreFile file =
+      Mockito.spy(new HStoreFile(this.fs, hsfPath, conf, cacheConf, BloomType.NONE, true));
 
     // after warmup the file reader should be closed and null to avoid file descriptor leakage
     file.initReader(true);

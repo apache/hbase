@@ -377,10 +377,6 @@ public class HStoreFile implements StoreFile {
    * Opens reader on this store file. Called by Constructor.
    * @see #closeStoreFile(boolean)
    */
-  private void open() throws IOException {
-    open(false);
-  }
-
   private void open(boolean warmup) throws IOException {
     fileInfo.initHDFSBlocksDistribution();
     long readahead = fileInfo.isNoReadahead() ? 0L : -1L;
