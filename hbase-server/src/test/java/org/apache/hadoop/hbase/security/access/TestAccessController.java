@@ -2132,9 +2132,8 @@ public class TestAccessController extends SecureTestUtil {
   public void testCloneSnapshotWithOwner() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     final TableDescriptor originalTd = admin.getDescriptor(TEST_TABLE);
-    final SnapshotDescription snapshot =
-      new SnapshotDescription(TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null,
-        USER_OWNER.getName());
+    final SnapshotDescription snapshot = new SnapshotDescription(
+      TEST_TABLE.getNameAsString() + "-snapshot", TEST_TABLE, null, USER_OWNER.getName());
     String namespace = "testCloneSnapshot";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     createNamespace(TEST_UTIL, desc);
@@ -2144,7 +2143,7 @@ public class TestAccessController extends SecureTestUtil {
     TableDescriptor diffrentTd = TableDescriptorBuilder.newBuilder(differentTable)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
 
-    //recreating the original table
+    // recreating the original table
     AccessTestAction cloneOriginalAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -2157,7 +2156,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(cloneOriginalAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE, USER_GROUP_CREATE);
 
-    //cloning to a different table
+    // cloning to a different table
     AccessTestAction cloneDifferentAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -2170,7 +2169,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(cloneDifferentAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
       USER_GROUP_WRITE, USER_GROUP_CREATE, USER_OWNER);
 
-    //cloning to a different table where user is namespace admin
+    // cloning to a different table where user is namespace admin
     grantOnNamespace(TEST_UTIL, USER_OWNER.getShortName(), namespace, Action.ADMIN);
 
     AccessTestAction cloneNamespaceAdminAction = new AccessTestAction() {
@@ -2182,8 +2181,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
     verifyAllowed(cloneNamespaceAdminAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN, USER_OWNER);
-    verifyDenied(cloneNamespaceAdminAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(cloneNamespaceAdminAction, USER_CREATE, USER_RW, USER_RO, USER_NONE,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
     deleteNamespace(TEST_UTIL, namespace);
   }
