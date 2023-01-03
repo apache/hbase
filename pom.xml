@@ -1018,11 +1018,6 @@
         <version>${jettison.version}</version>
       </dependency>
       <dependency>
-        <groupId>ch.qos.reload4j</groupId>
-        <artifactId>reload4j</artifactId>
-        <version>${reload4j.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j-reload4j.version}</version>
@@ -1031,12 +1026,6 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-reload4j</artifactId>
         <version>${slf4j-reload4j.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>ch.qos.reload4j</groupId>
-            <artifactId>reload4j</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
@@ -1047,6 +1036,11 @@
         <groupId>org.slf4j</groupId>
         <artifactId>jul-to-slf4j</artifactId>
         <version>${slf4j-reload4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.reload4j</groupId>
+        <artifactId>reload4j</artifactId>
+        <version>${reload4j.version}</version>
       </dependency>
       <!-- Avro dependencies we mostly get transitively, manual version coallescing -->
       <dependency>
