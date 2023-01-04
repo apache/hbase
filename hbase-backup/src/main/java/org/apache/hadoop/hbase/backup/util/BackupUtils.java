@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -359,6 +360,10 @@ public final class BackupUtils {
    * @return host name
    */
   public static String parseHostFromOldLog(Path p) {
+    // Skip master wals
+    if (p.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)) {
+      return null;
+    }
     try {
       String n = p.getName();
       int idx = n.lastIndexOf(LOGNAME_SEPARATOR);
