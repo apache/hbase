@@ -19,9 +19,12 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -136,5 +139,19 @@ public interface RegionServerObserver {
    */
   default void postExecuteProcedures(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
     throws IOException {
+  }
+
+  /**
+   * This will be called before replication sink mutations are executed on the sink table as part of
+   * batch call.
+   * @param ctx      the environment to interact with the framework and region server.
+   * @param walEntry wal entry from which mutation is formed.
+   * @param mutation mutation to be applied at sink cluster.
+   * @throws IOException if something goes wrong.
+   */
+  default void preReplicationSinkBatchMutate(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, AdminProtos.WALEntry walEntry,
+    Mutation mutation) throws IOException {
+
   }
 }

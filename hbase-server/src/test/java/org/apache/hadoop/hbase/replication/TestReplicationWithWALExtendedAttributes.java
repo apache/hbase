@@ -22,6 +22,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -46,8 +47,10 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,6 +66,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestReplicationWithWALExtendedAttributes {
@@ -126,7 +132,8 @@ public class TestReplicationWithWALExtendedAttributes {
     conf2.setStrings(HConstants.REPLICATION_CODEC_CONF_KEY, KeyValueCodecWithTags.class.getName());
     conf2.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
       TestCoprocessorForWALAnnotationAtSink.class.getName());
-    conf2.setBoolean(ReplicationSink.HBASE_REPLICATION_SINK_ATTRIBUTES_WAL_TO_MUTATIONS, true);
+    conf2.setStrings(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      TestReplicationSinkRegionServerEndpoint.class.getName());
 
     utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
@@ -257,4 +264,32 @@ public class TestReplicationWithWALExtendedAttributes {
       throw new IOException("Failed to retrieve WAL annotations..");
     }
   }
+
+  public static final class TestReplicationSinkRegionServerEndpoint
+    implements RegionServerCoprocessor, RegionServerObserver {
+
+    @Override
+    public Optional<RegionServerObserver> getRegionServerObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public void preReplicationSinkBatchMutate(
+      ObserverContext<RegionServerCoprocessorEnvironment> ctx, AdminProtos.WALEntry walEntry,
+      Mutation mutation) throws IOException {
+      RegionServerObserver.super.preReplicationSinkBatchMutate(ctx, walEntry, mutation);
+      List<WALProtos.Attribute> attributeList = walEntry.getKey().getExtendedAttributesList();
+      attachWALExtendedAttributesToMutation(mutation, attributeList);
+    }
+
+    private void attachWALExtendedAttributesToMutation(Mutation mutation,
+      List<WALProtos.Attribute> attributeList) {
+      if (attributeList != null) {
+        for (WALProtos.Attribute attribute : attributeList) {
+          mutation.setAttribute(attribute.getKey(), attribute.getValue().toByteArray());
+        }
+      }
+    }
+  }
+
 }

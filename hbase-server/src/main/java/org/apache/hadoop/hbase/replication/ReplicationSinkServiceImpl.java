@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -57,8 +59,12 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, CellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath) throws IOException {
+    RegionServerCoprocessorHost rsServerHost = null;
+    if (server instanceof HRegionServer) {
+      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
+    }
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
+      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, rsServerHost);
   }
 
   @Override

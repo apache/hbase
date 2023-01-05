@@ -159,7 +159,7 @@ public class TestWALEntrySinkFilter {
       }
     };
     // Call our sink.
-    sink.replicateEntries(entries, cellScanner, null, null, null);
+    sink.replicateEntries(entries, cellScanner, null, null, null, null);
     // Check what made it through and what was filtered.
     assertTrue(FILTERED.get() > 0);
     assertTrue(UNFILTERED.get() > 0);
