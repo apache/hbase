@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -107,6 +108,20 @@ public class TransitRegionStateProcedure
 
   private static final Logger LOG = LoggerFactory.getLogger(TransitRegionStateProcedure.class);
 
+  public static final String FORCE_REGION_RETAINMENT = "hbase.master.scp.retain.assignment.force";
+
+  public static final boolean DEFAULT_FORCE_REGION_RETAINMENT = false;
+
+  public static final String FORCE_REGION_RETAINMENT_WAIT =
+    "hbase.master.scp.retain.assignment.force.wait";
+
+  public static final long DEFAULT_FORCE_REGION_RETAINMENT_WAIT = 500;
+
+  public static final String FORCE_REGION_RETAINMENT_RETRIES =
+    "hbase.master.scp.retain.assignment.force.retries";
+
+  public static final long DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
+
   private TransitionType type;
 
   private RegionStateTransitionState initialState;
@@ -125,6 +140,14 @@ public class TransitRegionStateProcedure
   private boolean evictCache;
 
   private boolean isSplit;
+
+  private boolean forceRegionRetainment;
+
+  private ServerManager serverManager;
+
+  private long forceRegionRetainmentWait;
+
+  private long forceRegionRetainmentRetries;
 
   public TransitRegionStateProcedure() {
   }
@@ -163,6 +186,17 @@ public class TransitRegionStateProcedure
     }
     evictCache =
       env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+
+    forceRegionRetainment = env.getMasterConfiguration().getBoolean(FORCE_REGION_RETAINMENT,
+      DEFAULT_FORCE_REGION_RETAINMENT);
+
+    forceRegionRetainmentWait = env.getMasterConfiguration().getLong(FORCE_REGION_RETAINMENT_WAIT,
+      DEFAULT_FORCE_REGION_RETAINMENT_WAIT);
+
+    forceRegionRetainmentRetries = env.getMasterConfiguration()
+      .getLong(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
+
+    serverManager = env.getMasterServices().getServerManager();
   }
 
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
@@ -188,6 +222,25 @@ public class TransitRegionStateProcedure
     return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, getRegion());
   }
 
+  private void checkAndWaitForOriginalServer(ServerName lastHost)
+    throws ProcedureSuspendedException {
+    boolean isOnline = serverManager.findServerWithSameHostnamePortWithLock(lastHost) != null;
+    long retries = 0;
+    while (!isOnline && retries < forceRegionRetainmentRetries) {
+      try {
+        Thread.sleep(forceRegionRetainmentWait);
+      } catch (InterruptedException e) {
+        throw new ProcedureSuspendedException();
+      }
+      retries++;
+      isOnline = serverManager.findServerWithSameHostnamePortWithLock(lastHost) != null;
+    }
+    LOG.info(
+      "{} is true. We waited {} ms for host {} to come back online. "
+        + "Did host come back online? {}",
+      FORCE_REGION_RETAINMENT, (retries * forceRegionRetainmentRetries), lastHost, isOnline);
+  }
+
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)
     throws ProcedureSuspendedException {
     boolean retain = false;
@@ -200,8 +253,14 @@ public class TransitRegionStateProcedure
         regionNode.setRegionLocation(assignCandidate);
       } else if (regionNode.getLastHost() != null) {
         retain = true;
-        LOG.info("Setting lastHost as the region location {}", regionNode.getLastHost());
+        LOG.info("Setting lastHost {} as the location for region {}", regionNode.getLastHost(),
+          regionNode.getRegionInfo().getEncodedName());
         regionNode.setRegionLocation(regionNode.getLastHost());
+      }
+      if (regionNode.getRegionLocation() != null && forceRegionRetainment) {
+        LOG.warn("{} is set to true. This may delay regions re-assignment "
+          + "upon RegionServers crashes or restarts.", FORCE_REGION_RETAINMENT);
+        checkAndWaitForOriginalServer(regionNode.getRegionLocation());
       }
     }
     LOG.info("Starting {}; {}; forceNewPlan={}, retain={}", this, regionNode.toShortString(),
