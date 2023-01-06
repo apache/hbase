@@ -40,6 +40,7 @@
 Name: hbase
 Version: %{hbase_version}
 Release: %{release}
+BuildArch: noarch
 Summary: HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. 
 URL: http://hbase.apache.org/
 Group: Systems/Daemons
