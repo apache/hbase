@@ -18,10 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,10 +33,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -69,29 +66,19 @@ public class ReplicationSyncUp extends Configured implements Tool {
     System.exit(ret);
   }
 
-  private Set<ServerName> getLiveRegionServers(ZKWatcher zkw) throws KeeperException {
-    List<String> rsZNodes = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
-    return rsZNodes == null
-      ? Collections.emptySet()
-      : rsZNodes.stream().map(ServerName::parseServerName).collect(Collectors.toSet());
-  }
-
   // When using this tool, usually the source cluster is unhealthy, so we should try to claim the
   // replication queues for the dead region servers first and then replicate the data out.
-  private void claimReplicationQueues(ZKWatcher zkw, ReplicationSourceManager mgr)
+  private void claimReplicationQueues(ReplicationSourceManager mgr)
     throws ReplicationException, KeeperException {
     // TODO: reimplement this tool
-    // List<ServerName> replicators = mgr.getQueueStorage().getListOfReplicators();
-    // Set<ServerName> liveRegionServers = getLiveRegionServers(zkw);
-    // for (ServerName sn : replicators) {
-    // if (!liveRegionServers.contains(sn)) {
-    // List<String> replicationQueues = mgr.getQueueStorage().getAllQueues(sn);
-    // System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
-    // for (String queue : replicationQueues) {
-    // mgr.claimQueue(sn, queue);
-    // }
-    // }
-    // }
+    List<ServerName> replicators = mgr.getQueueStorage().listAllReplicators();
+    for (ServerName sn : replicators) {
+      List<ReplicationQueueId> replicationQueues = mgr.getQueueStorage().listAllQueueIds(sn);
+      System.out.println(sn + " is dead, claim its replication queues: " + replicationQueues);
+      for (ReplicationQueueId queueId : replicationQueues) {
+        mgr.claimQueue(queueId);
+      }
+    }
   }
 
   @Override
@@ -123,7 +110,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
           null, false));
       ReplicationSourceManager manager = replication.getReplicationManager();
       manager.init();
-      claimReplicationQueues(zkw, manager);
+      claimReplicationQueues(manager);
       while (manager.activeFailoverTaskCount() > 0) {
         Thread.sleep(SLEEP_TIME);
       }
