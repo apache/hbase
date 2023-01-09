@@ -112,9 +112,12 @@ public class TransitRegionStateProcedure
 
   public static final boolean DEFAULT_FORCE_REGION_RETAINMENT = false;
 
+  /** The wait time in millis before checking again if the region's previous RS is back online*/
   public static final String FORCE_REGION_RETAINMENT_WAIT =
     "hbase.master.scp.retain.assignment.force.wait";
 
+  /** The number of times to check if the region's previous RS is back online, before giving up
+   * and proceeding with assignment on a new RS*/
   public static final long DEFAULT_FORCE_REGION_RETAINMENT_WAIT = 500;
 
   public static final String FORCE_REGION_RETAINMENT_RETRIES =
