@@ -563,4 +563,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public void checkpoint(State state) {
     this.hfs.checkpoint(state);
   }
+
+  @Override
+  public void retainBlock() {
+    this.hfs.retainBlock();
+  }
 }

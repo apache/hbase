@@ -52,4 +52,12 @@ public interface Shipper {
    * {@link #checkpoint(State)}. Calling again with {@link State#START} will reset the pointers.
    */
   void checkpoint(State state);
+
+  /**
+   * Used by upstream callers to notify the shipper that the current block should be retained for
+   * shipping when {@link #shipped()} or {@link #checkpoint(State)} are called. Otherwise, the block
+   * will be released immediately once it's no longer needed. Only has an effect after
+   * {@link #checkpoint(State)} has been called at least once.
+   */
+  void retainBlock();
 }

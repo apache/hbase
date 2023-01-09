@@ -83,4 +83,9 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   public void checkpoint(State state) {
     // do nothing
   }
+
+  @Override
+  public void retainBlock() {
+    // do nothing
+  }
 }

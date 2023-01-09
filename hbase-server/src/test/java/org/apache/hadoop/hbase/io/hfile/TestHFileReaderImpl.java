@@ -87,6 +87,66 @@ public class TestHFileReaderImpl {
   }
 
   @Test
+  public void testRetainBlock() throws IOException {
+    // use very small blocksize to force every cell to be a different block. this gives us
+    // more room to work below in testing checkpointing between blocks.
+    Path p = makeNewFile(1);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setInt(ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY, 0);
+
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, null, allocator);
+    HFile.Reader reader = HFile.createReader(fs, p, cacheConfig, true, conf);
+
+    int blocksRetained;
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      scanner.seekTo();
+
+      // no checkpoint occurred, so we should retain all of these blocks despite
+      // not calling retainBlock
+      while (scanner.next()) {
+        // pass
+      }
+
+      blocksRetained = scanner.prevBlocks.size();
+      assertTrue(blocksRetained > 0);
+    }
+
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      scanner.seekTo();
+
+      // we call checkpoint on this scanner, so none of the below blocks should be retained since
+      // we never call retainBlock
+      scanner.checkpoint(Shipper.State.START);
+
+      while (scanner.next()) {
+        // pass
+      }
+
+      assertEquals(0, scanner.prevBlocks.size());
+    }
+
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      scanner.seekTo();
+
+      // we call checkpoint and retainBlock, so we expect to retain all the blocks.
+      scanner.checkpoint(Shipper.State.START);
+      scanner.retainBlock();
+
+      while (scanner.next()) {
+        scanner.retainBlock();
+      }
+
+      // expect the same number of blocks as the first time with no checkpoint
+      assertEquals(blocksRetained, scanner.prevBlocks.size());
+    }
+  }
+
+  @Test
   public void testCheckpoint() throws IOException {
     // use very small blocksize to force every cell to be a different block. this gives us
     // more room to work below in testing checkpointing between blocks.
@@ -116,6 +176,7 @@ public class TestHFileReaderImpl {
     // skip the first prevBlock entry by calling checkpoint START at that point
     // once we get another prevBlocks entry we finish up with FILTERED
     while (scanner.next()) {
+      scanner.retainBlock();
       if (scanner.prevBlocks.size() > 0) {
         if (started) {
           finished = true;

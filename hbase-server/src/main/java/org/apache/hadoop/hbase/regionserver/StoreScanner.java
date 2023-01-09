@@ -661,6 +661,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             // also update metric accordingly
             if (this.countPerRow > storeOffset) {
               outResult.add(cell);
+              // call retainBlock since we are including this cell in the result
+              // we only want to retain blocks that are backing cells that we include.
+              // if the cell is filtered upstream, it will be released by checkpoint.
+              this.heap.retainBlock();
 
               // Update local tracking information
               count++;

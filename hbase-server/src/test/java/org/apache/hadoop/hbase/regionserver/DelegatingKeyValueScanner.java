@@ -40,6 +40,11 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
+  public void retainBlock() {
+    delegate.retainBlock();
+  }
+
+  @Override
   public Cell peek() {
     return delegate.peek();
   }

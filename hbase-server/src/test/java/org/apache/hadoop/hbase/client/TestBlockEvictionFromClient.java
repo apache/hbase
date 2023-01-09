@@ -443,7 +443,9 @@ public class TestBlockEvictionFromClient {
       GetThread[] getThreads = initiateGet(table, true, false);
       Thread.sleep(200);
       int noOfBlocksWithRef = countReferences(cache);
-      assertEquals(10, noOfBlocksWithRef);
+      // 3 blocks for the 3 returned cells, plus 1 extra because we don't fully exhaust one of the
+      // storefiles so one remains in curBlock after we SEEK_NEXT_ROW
+      assertEquals(4, noOfBlocksWithRef);
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (GetThread thread : getThreads) {
         thread.joinAndRethrow();
@@ -763,14 +765,14 @@ public class TestBlockEvictionFromClient {
   @Test
   public void testStreamScanWithOneColumn() throws Throwable {
     try (TestCase testCase = setupStreamScanTest()) {
-      // we expect 3 because 2 rows contain FAMILY/QUALIFIER:
-      // - ROW contains FAMILY/QUALIFIER (1 block) and FAMILY/QUALIFIER2. Even though we don't
-      // return QUALIFIER2, we seek to it due to INCLUDE_AND_SEEK_NEXT_ROW so it gets loaded into
-      // HFileReaderImpl's curBlock, which we don't ever release.
-      // - ROW3 contains FAMILY/QUALIFIER, so an additional block.
-      assertNoBlocksWithRef(testCase.table, testCase.baseScan.addColumn(FAMILY, QUALIFIER),
-        testCase.cache, 3, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
-        new ExpectedResult(ROW3, FAMILY, QUALIFIER, data));
+      // We expect 2 blocks. Everything is filtered out at the StoreScanner layer, so we can
+      // just not retain the blocks for excluded cells right away.
+      byte[] qualifier = Bytes.toBytes("testQualifier1");
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan
+          .setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(qualifier))),
+        testCase.cache, 2, new ExpectedResult(ROW1, FAMILY, qualifier, data2),
+        new ExpectedResult(ROW1, FAMILY2, qualifier, data2));
     }
   }
 
@@ -782,24 +784,8 @@ public class TestBlockEvictionFromClient {
       assertNoBlocksWithRef(testCase.table,
         testCase.baseScan
           .setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(QUALIFIER))),
-        testCase.cache, 3, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        testCase.cache, 2, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
         new ExpectedResult(ROW3, FAMILY, QUALIFIER, data));
-    }
-  }
-
-  @Test
-  public void testStreamScanWithLargeRow() throws Throwable {
-    try (TestCase testCase = setupStreamScanTest()) {
-      // We expect 8 blocks. This test illustrates one remaining way filtered blocks can be
-      // unnecessarily retained. testQualifier1 really only accounts for 2 of ROW1's 8 blocks, but
-      // we must retain all of them because we currently enforce checkpointing at the row/store
-      // boundary. Since anything is returned for the row/store, we retain all of the blocks.
-      byte[] qualifier = Bytes.toBytes("testQualifier1");
-      assertNoBlocksWithRef(testCase.table,
-        testCase.baseScan
-          .setFilter(new QualifierFilter(CompareOperator.EQUAL, new BinaryComparator(qualifier))),
-        testCase.cache, 8, new ExpectedResult(ROW1, FAMILY, qualifier, data2),
-        new ExpectedResult(ROW1, FAMILY2, qualifier, data2));
     }
   }
 
@@ -820,8 +806,9 @@ public class TestBlockEvictionFromClient {
     try (TestCase testCase = setupStreamScanTest()) {
       // We expect 5 blocks. Initially, all 7 storefiles are opened. But FAMILY is essential due to
       // setFilterIfMissing, so only storefiles within that family are iterated unless a match is
-      // found. 4 Storefiles are for FAMILY, the remaining 3 are family2. So the remaining 3 will
-      // retain just the initially opened block -- this counts for 3 of the 5.
+      // found. 4 Storefiles are for FAMILY, the remaining 3 are FAMILY2. The row we match on (ROW)
+      // doesn't have any cells in FAMILY2, so we don't end up iterating those storefiles. So the
+      // initial blocks remain open and untouched -- this counts for 3 of the 5.
       // Multiple rows match FAMILY, two rows match FAMILY/QUALIFIER, but only one row also matches
       // the value. That row has 2 blocks, one for each cell. That's the remaining 2.
       // SingleColumnValueExcludeFilter does not return the matched column, so we're only returning
@@ -838,23 +825,16 @@ public class TestBlockEvictionFromClient {
   @Test
   public void testStreamScanWithSingleColumnValueExcludeFilterJoinedHeap() throws Throwable {
     try (TestCase testCase = setupStreamScanTest()) {
-      // We expect 6 blocks. This test is set up almost identical to above
-      // testStreamScanWithSingleColumnValueExcludeFilter, but behaves very differently. In the
-      // above, the filter matches on a row which only contains cells in FAMILY. So joinedHeap
-      // requestSeek ends up being a no-op. That test only touches storefiles containing FAMILY, and
-      // ends up with 2 blocks left over from those along with the 3 initial blocks from opening the
-      // FAMILY2 storefiles.
-      // In this test, the filter matches ROW3, which only has 1 cell in FAMILY but also contains
-      // cells in FAMILY2. So we see the affect of the joinedHeap here. We scan past ROW and ROW1,
-      // releasing all of those blocks. We end up retaining 1 block for the 1 cell in ROW3 FAMILY,
-      // then accumulate 4 blocks seeking in the relevant FAMILY1 storefiles: for each
-      // storefile, the initially opened block is retained in prevBlocks and then a new one is
-      // loaded. This retention is exaggerated in our test here since each cell is its own block.
-      // The retained blocks from joinedHeap along with the 2 cells for ROW3 give us our 6.
+      // We expect 2 blocks. Unlike the last test, this one actually iterates the joined heap. So
+      // we end up exhausting more of the storefiles and being able to relase more blocks. We end up
+      // retaining 1 block for the match on the SingleColumnValueExcludeFilter, then 1 block from
+      // the joined heap on that same row (ROW3). We can eagerly release all of the other blocks. We
+      // only return 1 cell, but still retain 2 blocks checkpointing happens at the row boundary.
+      // Since at least 1 cell is returned for the row, we keep both blocks.
       SingleColumnValueExcludeFilter filter = new SingleColumnValueExcludeFilter(FAMILY, QUALIFIER,
         CompareOperator.EQUAL, new BinaryComparator(data));
       filter.setFilterIfMissing(true);
-      assertNoBlocksWithRef(testCase.table, testCase.baseScan.setFilter(filter), testCase.cache, 6,
+      assertNoBlocksWithRef(testCase.table, testCase.baseScan.setFilter(filter), testCase.cache, 2,
         new ExpectedResult(ROW3, FAMILY2, QUALIFIER2, data2));
     }
   }

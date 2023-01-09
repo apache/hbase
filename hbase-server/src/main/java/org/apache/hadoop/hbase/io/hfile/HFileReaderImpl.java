@@ -341,6 +341,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // any blocks accumulated in the fetching of a row, if that row is thrown away due to filterRow.
     private int lastCheckpointIndex = -1;
 
+    // Updated by retainBlock, when a cell is included from the current block. Is reset whenever
+    // curBlock gets updated. Only honored when lastCheckpointIndex >= 0, meaning a checkpoint
+    // has occurred.
+    private boolean shouldRetainBlock = false;
+
     // Previous blocks that were used in the course of the read, to be released at close,
     // checkpoint, or shipped
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
@@ -357,18 +362,31 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       if (block != null && curBlock != null && block.getOffset() == curBlock.getOffset()) {
         return;
       }
-      if (this.curBlock != null && this.curBlock.isSharedMem()) {
-        prevBlocks.add(this.curBlock);
-      }
+      handlePrevBlock();
       this.curBlock = block;
     }
 
     void reset() {
+      handlePrevBlock();
+      this.curBlock = null;
+    }
+
+    /**
+     * Add curBlock to prevBlocks or release it immediately, depending on whether a checkpoint has
+     * occurred and we've been instructed to retain the block. If no checkpoint has occurred, we use
+     * original logic to always add to prevBlocks. If checkpoint occurred, release the block unless
+     * {@link #retainBlock()} has been called.
+     */
+    private void handlePrevBlock() {
       // We don't have to keep ref to heap block
       if (this.curBlock != null && this.curBlock.isSharedMem()) {
-        this.prevBlocks.add(this.curBlock);
+        if (shouldRetainBlock || lastCheckpointIndex < 0) {
+          prevBlocks.add(this.curBlock);
+        } else {
+          this.curBlock.release();
+        }
       }
-      this.curBlock = null;
+      shouldRetainBlock = false;
     }
 
     private void returnBlocks(boolean returnAll) {
@@ -1076,6 +1094,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
       }
       lastCheckpointIndex = prevBlocks.size();
+    }
+
+    @Override
+    public void retainBlock() {
+      shouldRetainBlock = true;
     }
   }
 

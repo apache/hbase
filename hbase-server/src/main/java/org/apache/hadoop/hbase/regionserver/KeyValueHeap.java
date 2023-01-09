@@ -440,4 +440,12 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       }
     }
   }
+
+  @Override
+  public void retainBlock() {
+    if (current != null) {
+      current.retainBlock();
+    }
+
+  }
 }

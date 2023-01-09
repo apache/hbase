@@ -799,6 +799,11 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   }
 
   @Override
+  public void retainBlock() {
+    // do nothing. this is really only called in StoreScanner
+  }
+
+  @Override
   public void run() throws IOException {
     // This is the RPC callback method executed. We do the close in of the scanner in this
     // callback

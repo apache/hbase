@@ -314,6 +314,11 @@ public class SegmentScanner implements KeyValueScanner {
     // do nothing
   }
 
+  @Override
+  public void retainBlock() {
+    // do nothing
+  }
+
   // debug method
   @Override
   public String toString() {

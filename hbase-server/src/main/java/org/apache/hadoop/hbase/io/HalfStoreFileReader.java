@@ -283,6 +283,10 @@ public class HalfStoreFileReader extends StoreFileReader {
         this.delegate.checkpoint(state);
       }
 
+      @Override
+      public void retainBlock() {
+        this.delegate.retainBlock();
+      }
     };
   }
 
