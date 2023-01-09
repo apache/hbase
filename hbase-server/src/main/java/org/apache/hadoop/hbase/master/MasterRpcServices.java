@@ -2809,13 +2809,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
             mergeExistingPermissions);
         }
         server.cpHost.postGrant(perm, mergeExistingPermissions);
-        User caller = RpcServer.getRequestUser().orElse(null);
-        if (AUDITLOG.isTraceEnabled()) {
-          // audit log should store permission changes in addition to auth results
-          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
-          AUDITLOG.trace("User {} (remote address: {}) granted permission {}", caller,
-            remoteAddress, perm);
-        }
         return GrantResponse.getDefaultInstance();
       } else {
         throw new DoNotRetryIOException(
@@ -2839,13 +2832,6 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           PermissionStorage.removeUserPermission(server.getConfiguration(), userPermission, table);
         }
         server.cpHost.postRevoke(userPermission);
-        User caller = RpcServer.getRequestUser().orElse(null);
-        if (AUDITLOG.isTraceEnabled()) {
-          // audit log should record all permission changes
-          String remoteAddress = RpcServer.getRemoteAddress().map(InetAddress::toString).orElse("");
-          AUDITLOG.trace("User {} (remote address: {}) revoked permission {}", caller,
-            remoteAddress, userPermission);
-        }
         return RevokeResponse.getDefaultInstance();
       } else {
         throw new DoNotRetryIOException(
