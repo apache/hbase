@@ -341,7 +341,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // any blocks accumulated in the fetching of a row, if that row is thrown away due to filterRow.
     private int lastCheckpointIndex = -1;
 
-    // Updated by retainBlock, when a cell is included from the current block. Is reset whenever
+    // Updated by retainBlock(), when a cell is included from the current block. Is reset whenever
     // curBlock gets updated. Only honored when lastCheckpointIndex >= 0, meaning a checkpoint
     // has occurred.
     private boolean shouldRetainBlock = false;
@@ -1096,6 +1096,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       lastCheckpointIndex = prevBlocks.size();
     }
 
+    /**
+     * Sets state so that when curBlock is finished, it gets added onto prevBlocks. Otherwise, we
+     * eagerly release the block when checkpointing is enabled.
+     */
     @Override
     public void retainBlock() {
       shouldRetainBlock = true;

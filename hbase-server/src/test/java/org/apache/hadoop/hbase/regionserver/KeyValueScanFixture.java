@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
@@ -30,14 +31,35 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
  * file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
+  private final AtomicInteger retainBlockCount;
+
   public KeyValueScanFixture(CellComparator comparator, Cell... cells) {
+    this(comparator, null, cells);
+  }
+
+  public KeyValueScanFixture(CellComparator comparator, AtomicInteger retainBlockCount,
+    Cell... cells) {
     super(comparator, cells);
+    this.retainBlockCount = retainBlockCount;
+  }
+
+  @Override
+  public void retainBlock() {
+    if (retainBlockCount != null) {
+      retainBlockCount.incrementAndGet();
+    }
+    super.retainBlock();
   }
 
   public static List<KeyValueScanner> scanFixture(KeyValue[]... kvArrays) {
+    return scanFixture(null, kvArrays);
+  }
+
+  public static List<KeyValueScanner> scanFixture(AtomicInteger retainBlockCount,
+    KeyValue[]... kvArrays) {
     ArrayList<KeyValueScanner> scanners = new ArrayList<>();
     for (KeyValue[] kvs : kvArrays) {
-      scanners.add(new KeyValueScanFixture(CellComparator.getInstance(), kvs));
+      scanners.add(new KeyValueScanFixture(CellComparator.getInstance(), retainBlockCount, kvs));
     }
     return scanners;
   }

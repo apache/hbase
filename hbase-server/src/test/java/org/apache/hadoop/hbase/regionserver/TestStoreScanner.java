@@ -1094,6 +1094,36 @@ public class TestStoreScanner {
     }
   }
 
+  /**
+   * Test that we call heap.retainBlock() when adding a cell to the return list
+   */
+  @Test
+  public void testRetainBlock() throws IOException {
+    AtomicInteger retainBlockCount = new AtomicInteger();
+    List<KeyValueScanner> scanners = scanFixture(retainBlockCount, kvs);
+    try (StoreScanner scan = new StoreScanner(new Scan(), scanInfo, getCols("a", "d"), scanners)) {
+      List<Cell> results = new ArrayList<>();
+      assertEquals(true, scan.next(results));
+      assertEquals(2, results.size());
+      assertEquals(2, retainBlockCount.getAndSet(0));
+      assertEquals(kvs[0], results.get(0));
+      assertEquals(kvs[3], results.get(1));
+      results.clear();
+
+      assertEquals(true, scan.next(results));
+      assertEquals(1, results.size());
+      assertEquals(1, retainBlockCount.get());
+      assertEquals(kvs[kvs.length - 1], results.get(0));
+
+      results.clear();
+      assertEquals(false, scan.next(results));
+    }
+  }
+
+  /**
+   * test that we call checkpoint on new scanners after flush, iff the StoreScanner itself has been
+   * checkpointed
+   */
   @Test
   public void testCheckpointNewScannersAfterFlush() throws IOException {
     List<KeyValueScanner> scanners = scanFixture(kvs);
@@ -1138,6 +1168,10 @@ public class TestStoreScanner {
     assertEquals(otherScanners.size(), checkpointed.get());
   }
 
+  /**
+   * test that we call checkpoint on new scanners after switching to stream read, iff the
+   * StoreScanner itself has been checkpointed
+   */
   @Test
   public void testCheckpointAfterSwitchToStreamRead() throws IOException {
     Configuration confForStream = new Configuration(CONF);

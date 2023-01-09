@@ -144,6 +144,12 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
     initializeScanners(scan, additionalScanners);
+
+    // set initial checkpoint, which enables eager releasing in all StoreScanners. StoreScanner
+    // calls retainBlock() if a cell is included, and HFileReaderImpl releases exhausted blocks
+    // if retainBlock() was never called. Additionally below we will do more checkpointing if
+    // filters are included on the scan.
+    checkpoint(State.START);
   }
 
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)
@@ -426,7 +432,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // Used to check time limit
     LimitScope limitScope = LimitScope.BETWEEN_CELLS;
 
-    checkpoint(State.START);
+    // reset checkpoint at start of each row, this way if row is filtered we only release blocks
+    // exhausted since this row began.
+    checkpointIfFiltering(State.START);
 
     // The loop here is used only when at some point during the next we determine
     // that due to effects of filters or otherwise, we have an empty row in the result.
@@ -503,7 +511,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
           results.clear();
-          checkpoint(State.FILTERED);
+          checkpointIfFiltering(State.FILTERED);
 
           // Read nothing as the rowkey was filtered, but still need to check time limit
           if (scannerContext.checkTimeLimit(limitScope)) {
@@ -556,7 +564,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         if (isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE || filterRow()) {
           incrementCountOfRowsFilteredMetric(scannerContext);
           results.clear();
-          checkpoint(State.FILTERED);
+          checkpointIfFiltering(State.FILTERED);
           boolean moreRows = nextRow(scannerContext, current);
           if (!moreRows) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -606,7 +614,7 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       // Double check to prevent empty rows from appearing in result. It could be
       // the case when SingleColumnValueExcludeFilter is used.
       if (results.isEmpty()) {
-        checkpoint(State.FILTERED);
+        checkpointIfFiltering(State.FILTERED);
         incrementCountOfRowsFilteredMetric(scannerContext);
         boolean moreRows = nextRow(scannerContext, current);
         if (!moreRows) {
@@ -786,6 +794,17 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     if (joinedHeap != null) {
       joinedHeap.shipped();
     }
+  }
+
+  /**
+   * Calls checkpoint with the given state, but only if this scanner has filters. It's unnecessary
+   * to do checkpointing at this level if there are no filters.
+   */
+  private void checkpointIfFiltering(State state) {
+    if (filter == null) {
+      return;
+    }
+    checkpoint(state);
   }
 
   @Override
