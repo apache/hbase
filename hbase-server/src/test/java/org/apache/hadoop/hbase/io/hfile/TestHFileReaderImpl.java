@@ -86,6 +86,7 @@ public class TestHFileReaderImpl {
     return ncTFile;
   }
 
+  @SuppressWarnings("checkstyle:EmptyBlock")
   @Test
   public void testRetainBlock() throws IOException {
     // use very small blocksize to force every cell to be a different block. this gives us

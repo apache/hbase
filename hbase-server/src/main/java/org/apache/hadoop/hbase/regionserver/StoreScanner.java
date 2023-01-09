@@ -799,11 +799,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (count > 0 && matcher.isUserScan()) {
         // if true increment memstore metrics, if not the mixed one
         updateMetricsStore(onlyFromMemstore);
-      } else if (count == 0 && checkpointed) {
-        // If we returned nothing, it means the row has been filtered for this store. If we've
-        // previously checkpointed, we can call checkpoint again here to release any blocks we may
-        // have scanned in reaching this point.
-        checkpoint(State.FILTERED);
       }
     }
   }
