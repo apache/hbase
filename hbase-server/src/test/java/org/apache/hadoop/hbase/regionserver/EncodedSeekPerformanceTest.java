@@ -62,7 +62,7 @@ public class EncodedSeekPerformanceTest {
       cacheConf, BloomType.NONE, true);
     storeFile.initReader();
     StoreFileReader reader = storeFile.getReader();
-    StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false, false);
     Cell current;
 
     scanner.seek(KeyValue.LOWESTKEY);
@@ -93,7 +93,7 @@ public class EncodedSeekPerformanceTest {
     long totalSize = 0;
 
     StoreFileReader reader = storeFile.getReader();
-    StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false, 0, 0, false, false);
 
     long startReadingTime = System.nanoTime();
     Cell current;

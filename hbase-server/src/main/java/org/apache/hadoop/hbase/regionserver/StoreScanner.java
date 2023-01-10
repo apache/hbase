@@ -159,12 +159,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long readPt;
   private boolean topChanged = false;
 
-  // when creating new scanners, i.e. in flush or switching to stream read, we want
-  // to checkpoint the new scanners iff we've received a checkpoint call ourselves.
-  // this keeps the new scanners in sync with the old in terms of enabling eager release
-  // of unneeded blocks.
-  private boolean checkpointed = false;
-
   /** An internal constructor. */
   private StoreScanner(HStore store, Scan scan, ScanInfo scanInfo, int numColumns, long readPt,
     boolean cacheBlocks, ScanType scanType) {
@@ -250,14 +244,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Pass columns to try to filter out unnecessary StoreFiles.
       scanners = selectScannersFrom(store,
         store.getScanners(cacheBlocks, scanUsePread, false, matcher, scan.getStartRow(),
-          scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt));
+          scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(), this.readPt, true));
 
       // Seek all scanners to the start of the Row (or if the exact matching row
       // key does not exist, then to the start of the next matching Row).
       // Always check bloom filter to optimize the top row seek for delete
       // family marker.
-      seekScannersWithCheckpoint(scanners, matcher.getStartKey(),
-        explicitColumnQuery && lazySeekEnabledGlobally, parallelSeekEnabled);
+      seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
+        parallelSeekEnabled);
 
       // set storeLimit
       this.storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -323,7 +317,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     scanners = selectScannersFrom(store, scanners);
 
     // Seek all scanners to the initial key
-    seekScannersWithCheckpoint(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
+    seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
     addCurrentScanners(scanners);
     // Combine all seeked scanners with a heap
     resetKVHeap(scanners, comparator);
@@ -332,7 +326,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private void seekAllScanner(ScanInfo scanInfo, List<? extends KeyValueScanner> scanners)
     throws IOException {
     // Seek all scanners to the initial key
-    seekScannersWithCheckpoint(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
+    seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
     addCurrentScanners(scanners);
     resetKVHeap(scanners, comparator);
   }
@@ -393,25 +387,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   boolean isScanUsePread() {
     return this.scanUsePread;
-  }
-
-  /**
-   * Seek the specified scanners with the given key. Delegates to
-   * {@link #seekScanners(List, Cell, boolean, boolean)}, but also checkpoints the scanners
-   * afterward if this StoreScanner has been checkpointed yet.
-   * @param scanners       the scanners to seek
-   * @param seekKey        the key to seek to
-   * @param isLazy         true if lazy seek
-   * @param isParallelSeek true if using parallel seek
-   */
-  private void seekScannersWithCheckpoint(List<? extends KeyValueScanner> scanners, Cell seekKey,
-    boolean isLazy, boolean isParallelSeek) throws IOException {
-    seekScanners(scanners, seekKey, isLazy, isParallelSeek);
-    if (checkpointed) {
-      for (KeyValueScanner scanner : scanners) {
-        scanner.checkpoint(State.START);
-      }
-    }
   }
 
   /**
@@ -1007,8 +982,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // Eagerly creating scanners so that we have the ref counting ticking on the newly created
       // store files. In case of stream scanners this eager creation does not induce performance
       // penalty because in scans (that uses stream scanners) the next() call is bound to happen.
+      // Set checkpointingEnabled to true here, because we handle checkpointing and retainBlock
       List<KeyValueScanner> scanners = store.getScanners(sfs, cacheBlocks, get, usePread,
-        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false);
+        isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt, false, true);
       flushedstoreFileScanners.addAll(scanners);
       if (!CollectionUtils.isEmpty(memStoreScanners)) {
         clearAndClose(memStoreScannersAfterFlush);
@@ -1046,7 +1022,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Seek the new scanners to the last key
-    seekScannersWithCheckpoint(scanners, lastTop, false, parallelSeekEnabled);
+    seekScanners(scanners, lastTop, false, parallelSeekEnabled);
     // remove the older memstore scanner
     for (int i = currentScanners.size() - 1; i >= 0; i--) {
       if (!currentScanners.get(i).isFileScanner()) {
@@ -1146,13 +1122,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     try {
       // We must have a store instance here so no null check
       // recreate the scanners on the current file scanners
+      // Set checkpointingEnabled to true here, because we handle checkpointing and retainBlock
       fileScanners = store.recreateScanners(scannersToClose, cacheBlocks, false, false, matcher,
         scan.getStartRow(), scan.includeStartRow(), scan.getStopRow(), scan.includeStopRow(),
-        readPt, false);
+        readPt, false, true);
       if (fileScanners == null) {
         return;
       }
-      seekScannersWithCheckpoint(fileScanners, lastTop, false, parallelSeekEnabled);
+      seekScanners(fileScanners, lastTop, false, parallelSeekEnabled);
       newCurrentScanners = new ArrayList<>(fileScanners.size() + memstoreScanners.size());
       newCurrentScanners.addAll(fileScanners);
       newCurrentScanners.addAll(memstoreScanners);
@@ -1279,7 +1256,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public void checkpoint(State state) {
-    this.checkpointed = true;
     if (this.heap != null) {
       this.heap.checkpoint(state);
     }

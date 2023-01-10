@@ -770,7 +770,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         .build();
       halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
         .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
-      HFileScanner scanner = halfReader.getScanner(false, false, false);
+      HFileScanner scanner = halfReader.getScanner(false, false, false, false);
       scanner.seekTo();
       do {
         halfWriter.append(scanner.getCell());

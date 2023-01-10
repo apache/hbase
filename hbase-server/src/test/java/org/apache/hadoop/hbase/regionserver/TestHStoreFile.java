@@ -578,7 +578,7 @@ public class TestHStoreFile {
 
   private static StoreFileScanner getStoreFileScanner(StoreFileReader reader, boolean cacheBlocks,
     boolean pread) {
-    return reader.getStoreFileScanner(cacheBlocks, pread, false, 0, 0, false);
+    return reader.getStoreFileScanner(cacheBlocks, pread, false, 0, 0, false, false);
   }
 
   private static final String localFormatter = "%010d";

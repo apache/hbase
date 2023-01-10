@@ -144,12 +144,6 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
     initializeScanners(scan, additionalScanners);
-
-    // set initial checkpoint, which enables eager releasing in all StoreScanners. StoreScanner
-    // calls retainBlock() if a cell is included, and HFileReaderImpl releases exhausted blocks
-    // if retainBlock() was never called. Additionally below we will do more checkpointing if
-    // filters are included on the scan.
-    checkpoint(State.START);
   }
 
   private void initializeScanners(Scan scan, List<KeyValueScanner> additionalScanners)

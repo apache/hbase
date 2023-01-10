@@ -201,7 +201,7 @@ public class TestCompoundBloomFilter {
     sf.initReader();
     StoreFileReader r = sf.getReader();
     final boolean pread = true; // does not really matter
-    StoreFileScanner scanner = r.getStoreFileScanner(true, pread, false, 0, 0, false);
+    StoreFileScanner scanner = r.getStoreFileScanner(true, pread, false, 0, 0, false, false);
 
     {
       // Test for false negatives (not allowed).

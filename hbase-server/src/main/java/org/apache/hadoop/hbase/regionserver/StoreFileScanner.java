@@ -75,9 +75,9 @@ public class StoreFileScanner implements KeyValueScanner {
    * Implements a {@link KeyValueScanner} on top of the specified {@link HFileScanner}
    * @param useMVCC                     If true, scanner will filter out updates with MVCC larger
    *                                    than {@code readPt}.
+   * @param hasMVCC                     Set to true if underlying store file reader has MVCC info.
    * @param readPt                      MVCC value to use to filter out the updates newer than this
    *                                    scanner.
-   * @param hasMVCC                     Set to true if underlying store file reader has MVCC info.
    * @param scannerOrder                Order of the scanner relative to other scanners. See
    *                                    {@link KeyValueScanner#getScannerOrder()}.
    * @param canOptimizeForNonNullColumn {@code true} if we can make sure there is no null column,
@@ -102,7 +102,7 @@ public class StoreFileScanner implements KeyValueScanner {
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean useDropBehind, long readPt)
     throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, usePread, isCompaction, useDropBehind, null,
-      readPt);
+      readPt, false);
   }
 
   /**
@@ -111,7 +111,7 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(Collection<HStoreFile> files,
     boolean cacheBlocks, boolean usePread, boolean isCompaction, boolean canUseDrop,
-    ScanQueryMatcher matcher, long readPt) throws IOException {
+    ScanQueryMatcher matcher, long readPt, boolean checkpointingEnabled) throws IOException {
     if (files.isEmpty()) {
       return Collections.emptyList();
     }
@@ -130,10 +130,11 @@ public class StoreFileScanner implements KeyValueScanner {
         HStoreFile sf = sortedFiles.remove();
         StoreFileScanner scanner;
         if (usePread) {
-          scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn);
+          scanner = sf.getPreadScanner(cacheBlocks, readPt, i, canOptimizeForNonNullColumn,
+            checkpointingEnabled);
         } else {
           scanner = sf.getStreamScanner(canUseDrop, cacheBlocks, isCompaction, readPt, i,
-            canOptimizeForNonNullColumn);
+            canOptimizeForNonNullColumn, checkpointingEnabled);
         }
         scanners.add(scanner);
       }
@@ -160,8 +161,8 @@ public class StoreFileScanner implements KeyValueScanner {
     boolean succ = false;
     try {
       for (int i = 0, n = sortedFiles.size(); i < n; i++) {
-        scanners.add(
-          sortedFiles.get(i).getStreamScanner(canUseDropBehind, false, true, readPt, i, false));
+        scanners.add(sortedFiles.get(i).getStreamScanner(canUseDropBehind, false, true, readPt, i,
+          false, false));
       }
       succ = true;
     } finally {

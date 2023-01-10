@@ -408,7 +408,7 @@ public class HFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       super.setUp();
-      this.scanner = this.reader.getScanner(conf, false, false);
+      this.scanner = this.reader.getScanner(conf, false, false, false);
       this.scanner.seekTo();
     }
 
@@ -437,7 +437,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(conf, false, true);
+      HFileScanner scanner = this.reader.getScanner(conf, false, true, false);
       byte[] b = getRandomRow();
       if (scanner.seekTo(createCell(b)) < 0) {
         LOG.info("Not able to seekTo " + new String(b));
@@ -462,7 +462,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(conf, false, false);
+      HFileScanner scanner = this.reader.getScanner(conf, false, false, false);
       byte[] b = getRandomRow();
       // System.out.println("Random row: " + new String(b));
       Cell c = createCell(b);
@@ -500,7 +500,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      HFileScanner scanner = this.reader.getScanner(conf, false, true);
+      HFileScanner scanner = this.reader.getScanner(conf, false, true, false);
       byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
       scanner.seekTo(createCell(gaussianRandomRowBytes));
       for (int ii = 0; ii < 30; ii++) {

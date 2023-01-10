@@ -91,7 +91,7 @@ public class TestHFileInlineToRootChunkConversion {
 
     HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, true, conf);
     // Scanner doesn't do Cells yet. Fix.
-    HFileScanner scanner = reader.getScanner(conf, true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true, false);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
         .setRow(keys.get(i)).setFamily(HConstants.EMPTY_BYTE_ARRAY)

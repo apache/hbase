@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -311,6 +312,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     protected final boolean cacheBlocks;
     protected final boolean pread;
     protected final boolean isCompaction;
+    private final boolean checkpointingEnabled;
     private int currKeyLen;
     private int currValueLen;
     private int currMemstoreTSLen;
@@ -339,7 +341,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
     // Updated to the current prevBlocks size when checkpoint is called. Used to eagerly release
     // any blocks accumulated in the fetching of a row, if that row is thrown away due to filterRow.
-    private int lastCheckpointIndex = -1;
+    private int lastCheckpointIndex = 0;
 
     // Updated by retainBlock(), when a cell is included from the current block. Is reset whenever
     // curBlock gets updated. Only honored when lastCheckpointIndex >= 0, meaning a checkpoint
@@ -351,11 +353,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
     public HFileScannerImpl(final HFile.Reader reader, final boolean cacheBlocks,
-      final boolean pread, final boolean isCompaction) {
+      final boolean pread, final boolean isCompaction, boolean checkpointingEnabled) {
       this.reader = reader;
       this.cacheBlocks = cacheBlocks;
       this.pread = pread;
       this.isCompaction = isCompaction;
+      this.checkpointingEnabled = checkpointingEnabled;
     }
 
     void updateCurrBlockRef(HFileBlock block) {
@@ -380,10 +383,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private void handlePrevBlock() {
       // We don't have to keep ref to heap block
       if (this.curBlock != null && this.curBlock.isSharedMem()) {
-        if (shouldRetainBlock || lastCheckpointIndex < 0) {
-          prevBlocks.add(this.curBlock);
-        } else {
+        if (checkpointingEnabled && !shouldRetainBlock) {
           this.curBlock.release();
+        } else {
+          prevBlocks.add(this.curBlock);
         }
       }
       shouldRetainBlock = false;
@@ -396,9 +399,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         }
       });
       this.prevBlocks.clear();
-      if (lastCheckpointIndex > 0) {
-        this.lastCheckpointIndex = 0;
-      }
+      this.lastCheckpointIndex = 0;
       if (returnAll && this.curBlock != null) {
         this.curBlock.release();
         this.curBlock = null;
@@ -1086,6 +1087,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     @Override
     public void checkpoint(State state) {
+      if (!checkpointingEnabled) {
+        return;
+      }
+
       if (state == State.FILTERED) {
         assert lastCheckpointIndex >= 0;
         for (int i = lastCheckpointIndex; i < prevBlocks.size(); i++) {
@@ -1102,6 +1107,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     @Override
     public void retainBlock() {
+      if (!checkpointingEnabled) {
+        return;
+      }
       shouldRetainBlock = true;
     }
   }
@@ -1516,8 +1524,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     private final DataBlockEncoder dataBlockEncoder;
 
     public EncodedScanner(HFile.Reader reader, boolean cacheBlocks, boolean pread,
-      boolean isCompaction, HFileContext meta, Configuration conf) {
-      super(reader, cacheBlocks, pread, isCompaction);
+      boolean isCompaction, boolean checkpointingEnabled, Configuration conf, HFileContext meta) {
+      super(reader, cacheBlocks, pread, isCompaction, checkpointingEnabled);
       DataBlockEncoding encoding = reader.getDataBlockEncoding();
       dataBlockEncoder = encoding.getEncoder();
       decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(conf, meta);
@@ -1707,36 +1715,46 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
    * in a Scanner. Letting go of your references to the scanner is sufficient. NOTE: Do not use this
    * overload of getScanner for compactions. See
-   * {@link #getScanner(Configuration, boolean, boolean, boolean)}
-   * @param conf        Store configuration.
-   * @param cacheBlocks True if we should cache blocks read in by this scanner.
-   * @param pread       Use positional read rather than seek+read if true (pread is better for
-   *                    random reads, seek+read is better scanning).
+   * {@link HFile.Reader#getScanner(Configuration, boolean, boolean, boolean, boolean)}
+   * @param conf                 Store configuration.
+   * @param cacheBlocks          True if we should cache blocks read in by this scanner.
+   * @param pread                Use positional read rather than seek+read if true (pread is better
+   *                             for random reads, seek+read is better scanning).
+   * @param checkpointingEnabled if true, blocks will only be retained as they are iterated if
+   *                             {@link Shipper#retainBlock()} is called. Further,
+   *                             {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks can
+   *                             be released early at safe checkpoints.
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, final boolean pread) {
-    return getScanner(conf, cacheBlocks, pread, false);
+  public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, final boolean pread,
+    boolean checkpointingEnabled) {
+    return getScanner(conf, cacheBlocks, pread, false, checkpointingEnabled);
   }
 
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
    * in a Scanner. Letting go of your references to the scanner is sufficient.
-   * @param conf         Store configuration.
-   * @param cacheBlocks  True if we should cache blocks read in by this scanner.
-   * @param pread        Use positional read rather than seek+read if true (pread is better for
-   *                     random reads, seek+read is better scanning).
-   * @param isCompaction is scanner being used for a compaction?
+   * @param conf                 Store configuration.
+   * @param cacheBlocks          True if we should cache blocks read in by this scanner.
+   * @param pread                Use positional read rather than seek+read if true (pread is better
+   *                             for random reads, seek+read is better scanning).
+   * @param isCompaction         is scanner being used for a compaction?
+   * @param checkpointingEnabled if true, blocks will only be retained as they are iterated if
+   *                             {@link Shipper#retainBlock()} is called. Further,
+   *                             {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks can
+   *                             be released early at safe checkpoints.
    * @return Scanner on this file.
    */
   @Override
   public HFileScanner getScanner(Configuration conf, boolean cacheBlocks, final boolean pread,
-    final boolean isCompaction) {
+    final boolean isCompaction, boolean checkpointingEnabled) {
     if (dataBlockEncoder.useEncodedScanner()) {
-      return new EncodedScanner(this, cacheBlocks, pread, isCompaction, this.hfileContext, conf);
+      return new EncodedScanner(this, cacheBlocks, pread, isCompaction, checkpointingEnabled, conf,
+        this.hfileContext);
     }
-    return new HFileScannerImpl(this, cacheBlocks, pread, isCompaction);
+    return new HFileScannerImpl(this, cacheBlocks, pread, isCompaction, checkpointingEnabled);
   }
 
   public int getMajorVersion() {

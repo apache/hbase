@@ -543,9 +543,9 @@ public class HStoreFile implements StoreFile {
    * Must be called after initReader.
    */
   public StoreFileScanner getPreadScanner(boolean cacheBlocks, long readPt, long scannerOrder,
-    boolean canOptimizeForNonNullColumn) {
+    boolean canOptimizeForNonNullColumn, boolean checkpointingEnabled) {
     return getReader().getStoreFileScanner(cacheBlocks, true, false, readPt, scannerOrder,
-      canOptimizeForNonNullColumn);
+      canOptimizeForNonNullColumn, checkpointingEnabled);
   }
 
   /**
@@ -554,10 +554,10 @@ public class HStoreFile implements StoreFile {
    * Must be called after initReader.
    */
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
-    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
-    throws IOException {
+    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn,
+    boolean checkpointingEnabled) throws IOException {
     return createStreamReader(canUseDropBehind).getStoreFileScanner(cacheBlocks, false,
-      isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn);
+      isCompaction, readPt, scannerOrder, canOptimizeForNonNullColumn, checkpointingEnabled);
   }
 
   /**

@@ -131,7 +131,7 @@ public class TestRowPrefixBloomFilter {
   }
 
   private static StoreFileScanner getStoreFileScanner(StoreFileReader reader) {
-    return reader.getStoreFileScanner(false, false, false, 0, 0, false);
+    return reader.getStoreFileScanner(false, false, false, 0, 0, false, false);
   }
 
   private void writeStoreFile(final Path f, BloomType bt, int expKeys) throws IOException {

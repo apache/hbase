@@ -139,11 +139,17 @@ public class StoreFileReader {
    *                                    {@link KeyValueScanner#getScannerOrder()}.
    * @param canOptimizeForNonNullColumn {@code true} if we can make sure there is no null column,
    *                                    otherwise {@code false}. This is a hint for optimization.
+   * @param checkpointingEnabled        if true, blocks will only be retained as they are iterated
+   *                                    if {@link Shipper#retainBlock()} is called. Further,
+   *                                    {@link Shipper#checkpoint(Shipper.State)} is enabled so
+   *                                    blocks can be released early at safe checkpoints.
    * @return a scanner
    */
   public StoreFileScanner getStoreFileScanner(boolean cacheBlocks, boolean pread,
-    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn) {
-    return new StoreFileScanner(this, getScanner(cacheBlocks, pread, isCompaction), !isCompaction,
+    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn,
+    boolean checkpointingEnabled) {
+    return new StoreFileScanner(this,
+      getScanner(cacheBlocks, pread, isCompaction, checkpointingEnabled), !isCompaction,
       reader.hasMVCCInfo(), readPt, scannerOrder, canOptimizeForNonNullColumn);
   }
 
@@ -190,7 +196,7 @@ public class StoreFileReader {
    */
   @Deprecated
   public HFileScanner getScanner(boolean cacheBlocks, boolean pread) {
-    return getScanner(cacheBlocks, pread, false);
+    return getScanner(cacheBlocks, pread, false, false);
   }
 
   /**
@@ -203,8 +209,9 @@ public class StoreFileReader {
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
    */
   @Deprecated
-  public HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction) {
-    return reader.getScanner(conf, cacheBlocks, pread, isCompaction);
+  public HFileScanner getScanner(boolean cacheBlocks, boolean pread, boolean isCompaction,
+    boolean checkpointingEnabled) {
+    return reader.getScanner(conf, cacheBlocks, pread, isCompaction, checkpointingEnabled);
   }
 
   public void close(boolean evictOnClose) throws IOException {

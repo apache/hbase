@@ -634,7 +634,7 @@ public class HStore
         long verificationStartTime = EnvironmentEdgeManager.currentTime();
         LOG.info("Full verification started for bulk load hfile: {}", srcPath);
         Cell prevCell = null;
-        HFileScanner scanner = reader.getScanner(conf, false, false, false);
+        HFileScanner scanner = reader.getScanner(conf, false, false, false, false);
         scanner.seekTo();
         do {
           Cell cell = scanner.getCell();
@@ -949,25 +949,30 @@ public class HStore
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, byte[] stopRow, long readPt)
     throws IOException {
     return getScanners(cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow, false,
-      readPt);
+      readPt, false);
   }
 
   /**
    * Get all scanners with no filtering based on TTL (that happens further down the line).
-   * @param cacheBlocks     cache the blocks or not
-   * @param usePread        true to use pread, false if not
-   * @param isCompaction    true if the scanner is created for compaction
-   * @param matcher         the scan query matcher
-   * @param startRow        the start row
-   * @param includeStartRow true to include start row, false if not
-   * @param stopRow         the stop row
-   * @param includeStopRow  true to include stop row, false if not
-   * @param readPt          the read point of the current scan
+   * @param cacheBlocks          cache the blocks or not
+   * @param usePread             true to use pread, false if not
+   * @param isCompaction         true if the scanner is created for compaction
+   * @param matcher              the scan query matcher
+   * @param startRow             the start row
+   * @param includeStartRow      true to include start row, false if not
+   * @param stopRow              the stop row
+   * @param includeStopRow       true to include stop row, false if not
+   * @param readPt               the read point of the current scan
+   * @param checkpointingEnabled if true, blocks will only be retained as they are iterated if
+   *                             {@link Shipper#retainBlock()} is called. Further,
+   *                             {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks can
+   *                             be released early at safe checkpoints.
    * @return all scanners for this store
    */
   public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean usePread,
     boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow, boolean includeStartRow,
-    byte[] stopRow, boolean includeStopRow, long readPt) throws IOException {
+    byte[] stopRow, boolean includeStopRow, long readPt, boolean checkpointingEnabled)
+    throws IOException {
     Collection<HStoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
     this.storeEngine.readLock();
@@ -991,8 +996,9 @@ public class HStore
       // TODO this used to get the store files in descending order,
       // but now we get them in ascending order, which I think is
       // actually more correct, since memstore get put at the end.
-      List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(
-        storeFilesToScan, cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+      List<StoreFileScanner> sfScanners =
+        StoreFileScanner.getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread,
+          isCompaction, false, matcher, readPt, checkpointingEnabled);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1028,14 +1034,18 @@ public class HStore
    * @param stopRow                the stop row
    * @param readPt                 the read point of the current scan
    * @param includeMemstoreScanner true if memstore has to be included
+   * @param checkpointingEnabled   if true, blocks will only be retained as they are iterated if
+   *                               {@link Shipper#retainBlock()} is called. Further,
+   *                               {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks
+   *                               can be released early at safe checkpoints.
    * @return scanners on the given files and on the memstore if specified
    */
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean isGet, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
-    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner)
-    throws IOException {
+    byte[] startRow, byte[] stopRow, long readPt, boolean includeMemstoreScanner,
+    boolean checkpointingEnabled) throws IOException {
     return getScanners(files, cacheBlocks, usePread, isCompaction, matcher, startRow, true, stopRow,
-      false, readPt, includeMemstoreScanner);
+      false, readPt, includeMemstoreScanner, checkpointingEnabled);
   }
 
   /**
@@ -1052,12 +1062,16 @@ public class HStore
    * @param includeStopRow         true to include stop row, false if not
    * @param readPt                 the read point of the current scan
    * @param includeMemstoreScanner true if memstore has to be included
+   * @param checkpointingEnabled   if true, blocks will only be retained as they are iterated if
+   *                               {@link Shipper#retainBlock()} is called. Further,
+   *                               {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks
+   *                               can be released early at safe checkpoints.
    * @return scanners on the given files and on the memstore if specified
    */
   public List<KeyValueScanner> getScanners(List<HStoreFile> files, boolean cacheBlocks,
     boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
     boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-    boolean includeMemstoreScanner) throws IOException {
+    boolean includeMemstoreScanner, boolean checkpointingEnabled) throws IOException {
     List<KeyValueScanner> memStoreScanners = null;
     if (includeMemstoreScanner) {
       this.storeEngine.readLock();
@@ -1069,7 +1083,7 @@ public class HStore
     }
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(files,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+        cacheBlocks, usePread, isCompaction, false, matcher, readPt, checkpointingEnabled);
       List<KeyValueScanner> scanners = new ArrayList<>(sfScanners.size() + 1);
       scanners.addAll(sfScanners);
       // Then the memstore scanners
@@ -1723,12 +1737,16 @@ public class HStore
    * @param includeStopRow         should the scan include the stop row
    * @param readPt                 the read point of the current scane
    * @param includeMemstoreScanner whether the current scanner should include memstorescanner
+   * @param checkpointingEnabled   if true, blocks will only be retained as they are iterated if
+   *                               {@link Shipper#retainBlock()} is called. Further,
+   *                               {@link Shipper#checkpoint(Shipper.State)} is enabled so blocks
+   *                               can be released early at safe checkpoints.
    * @return list of scanners recreated on the current Scanners
    */
   public List<KeyValueScanner> recreateScanners(List<KeyValueScanner> currentFileScanners,
     boolean cacheBlocks, boolean usePread, boolean isCompaction, ScanQueryMatcher matcher,
     byte[] startRow, boolean includeStartRow, byte[] stopRow, boolean includeStopRow, long readPt,
-    boolean includeMemstoreScanner) throws IOException {
+    boolean includeMemstoreScanner, boolean checkpointingEnabled) throws IOException {
     this.storeEngine.readLock();
     try {
       Map<String, HStoreFile> name2File =
@@ -1752,7 +1770,7 @@ public class HStore
         return null;
       }
       return getScanners(filesToReopen, cacheBlocks, false, false, matcher, startRow,
-        includeStartRow, stopRow, includeStopRow, readPt, false);
+        includeStartRow, stopRow, includeStopRow, readPt, false, checkpointingEnabled);
     } finally {
       this.storeEngine.readUnlock();
     }

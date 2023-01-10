@@ -85,7 +85,7 @@ public class HFileTestBase {
     HFileScanner scanner = null;
     HFile.Reader reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
-      scanner = reader.getScanner(conf, false, false);
+      scanner = reader.getScanner(conf, false, false, false);
       assertTrue("Initial seekTo failed", scanner.seekTo());
       do {
         Cell kv = scanner.getCell();
@@ -105,7 +105,7 @@ public class HFileTestBase {
     LOG.info("Random seeking with " + fileContext);
     reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
-      scanner = reader.getScanner(conf, false, true);
+      scanner = reader.getScanner(conf, false, true, false);
       assertTrue("Initial seekTo failed", scanner.seekTo());
       for (i = 0; i < 100; i++) {
         KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));

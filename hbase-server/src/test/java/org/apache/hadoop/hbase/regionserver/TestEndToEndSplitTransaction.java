@@ -133,7 +133,7 @@ public class TestEndToEndSplitTransaction {
           .filter(s -> s.isReference() && !scanner.containsKey(r.getRegionInfo().getEncodedName()))
           .forEach(sf -> {
             StoreFileReader reader = ((HStoreFile) sf).getReader();
-            reader.getStoreFileScanner(true, false, false, 0, 0, false);
+            reader.getStoreFileScanner(true, false, false, 0, 0, false, false);
             scanner.put(r.getRegionInfo().getEncodedName(), reader);
             LOG.info("Got reference to file = " + sf.getPath() + ",for region = "
               + r.getRegionInfo().getEncodedName());

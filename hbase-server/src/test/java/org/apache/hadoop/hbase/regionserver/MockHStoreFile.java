@@ -152,17 +152,17 @@ public class MockHStoreFile extends HStoreFile {
 
   @Override
   public StoreFileScanner getPreadScanner(boolean cacheBlocks, long readPt, long scannerOrder,
-    boolean canOptimizeForNonNullColumn) {
+    boolean canOptimizeForNonNullColumn, boolean checkpointingEnabled) {
     return getReader().getStoreFileScanner(cacheBlocks, true, false, readPt, scannerOrder,
-      canOptimizeForNonNullColumn);
+      canOptimizeForNonNullColumn, false);
   }
 
   @Override
   public StoreFileScanner getStreamScanner(boolean canUseDropBehind, boolean cacheBlocks,
-    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn)
-    throws IOException {
+    boolean isCompaction, long readPt, long scannerOrder, boolean canOptimizeForNonNullColumn,
+    boolean checkpointingEnabled) throws IOException {
     return getReader().getStoreFileScanner(cacheBlocks, false, isCompaction, readPt, scannerOrder,
-      canOptimizeForNonNullColumn);
+      canOptimizeForNonNullColumn, false);
   }
 
   @Override

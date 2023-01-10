@@ -102,11 +102,11 @@ public class TestHFileReaderImpl {
 
     int blocksRetained;
     try (HFileReaderImpl.HFileScannerImpl scanner =
-      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, false)) {
       scanner.seekTo();
 
-      // no checkpoint occurred, so we should retain all of these blocks despite
-      // not calling retainBlock
+      // checkpointing is disabled, so we should retain all of these blocks
+      // no need to call retainBlock
       while (scanner.next()) {
         // pass
       }
@@ -116,12 +116,11 @@ public class TestHFileReaderImpl {
     }
 
     try (HFileReaderImpl.HFileScannerImpl scanner =
-      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, true)) {
       scanner.seekTo();
 
-      // we call checkpoint on this scanner, so none of the below blocks should be retained since
-      // we never call retainBlock
-      scanner.checkpoint(Shipper.State.START);
+      // checkpointing is enabled, but we are not calling retainBlock. so we expect no blocks
+      // to be retained bleow
 
       while (scanner.next()) {
         // pass
@@ -131,11 +130,28 @@ public class TestHFileReaderImpl {
     }
 
     try (HFileReaderImpl.HFileScannerImpl scanner =
-      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true)) {
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, true)) {
       scanner.seekTo();
 
-      // we call checkpoint and retainBlock, so we expect to retain all the blocks.
-      scanner.checkpoint(Shipper.State.START);
+      // checkpointing is enabled, and we will call retainBlock on just the first one. we
+      // expect just 1 block to be retained
+      scanner.retainBlock();
+
+      while (scanner.next()) {
+        // pass
+      }
+
+      // expect the same number of blocks as the first time with no checkpoint
+      assertEquals(1, scanner.prevBlocks.size());
+    }
+
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, true)) {
+      scanner.seekTo();
+
+      // checkpointing is enabled, and we will call retainBlock on every next.
+      // we expect the same number of blocks to be retained as in the original case where
+      // checkpointing was disabled above.
       scanner.retainBlock();
 
       while (scanner.next()) {
@@ -161,7 +177,7 @@ public class TestHFileReaderImpl {
     HFile.Reader reader = HFile.createReader(fs, p, cacheConfig, true, conf);
 
     HFileReaderImpl.HFileScannerImpl scanner =
-      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true);
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, true);
 
     // we do an initial checkpoint. but we'll override it below, which is to prove that
     // checkpoints can supersede each other (by updating index). if that didn't work, we'd see
@@ -177,6 +193,7 @@ public class TestHFileReaderImpl {
     // skip the first prevBlock entry by calling checkpoint START at that point
     // once we get another prevBlocks entry we finish up with FILTERED
     while (scanner.next()) {
+      // retainBlock on all of these so we can test releasing by checkpoint.
       scanner.retainBlock();
       if (scanner.prevBlocks.size() > 0) {
         if (started) {
@@ -238,7 +255,7 @@ public class TestHFileReaderImpl {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf, bucketcache), true, conf);
 
     // warm cache
-    HFileScanner scanner = reader.getScanner(conf, true, true);
+    HFileScanner scanner = reader.getScanner(conf, true, true, false);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.close();
@@ -248,7 +265,7 @@ public class TestHFileReaderImpl {
     }
 
     // reopen again.
-    scanner = reader.getScanner(conf, true, true);
+    scanner = reader.getScanner(conf, true, true, false);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("i"));
@@ -263,7 +280,7 @@ public class TestHFileReaderImpl {
     }
 
     // case 2
-    scanner = reader.getScanner(conf, true, true);
+    scanner = reader.getScanner(conf, true, true, false);
     scanner.seekTo(toKV("i"));
     assertEquals("i", toRowStr(scanner.getCell()));
     scanner.seekBefore(toKV("c"));

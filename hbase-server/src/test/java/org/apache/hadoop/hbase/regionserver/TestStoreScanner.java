@@ -66,7 +66,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1118,112 +1117,5 @@ public class TestStoreScanner {
       results.clear();
       assertEquals(false, scan.next(results));
     }
-  }
-
-  /**
-   * test that we call checkpoint on new scanners after flush, iff the StoreScanner itself has been
-   * checkpointed
-   */
-  @Test
-  public void testCheckpointNewScannersAfterFlush() throws IOException {
-    List<KeyValueScanner> scanners = scanFixture(kvs);
-    List<KeyValueScanner> otherScanners = new ArrayList<>();
-
-    // We want to increment this counter anything checkpoint is called on these new scanners
-    AtomicInteger checkpointed = new AtomicInteger();
-    for (KeyValueScanner scanner : scanFixture(kvs)) {
-      KeyValueScanner mockedScanner = Mockito.spy(scanner);
-      Mockito.doAnswer(invocationOnMock -> checkpointed.incrementAndGet()).when(mockedScanner)
-        .checkpoint(Shipper.State.START);
-      otherScanners.add(mockedScanner);
-    }
-
-    HStore mockStore = Mockito.mock(HStore.class);
-    Mockito.when(mockStore.getScanners(Mockito.any(), Mockito.anyBoolean(), Mockito.anyBoolean(),
-      Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.any(),
-      Mockito.anyLong(), Mockito.anyBoolean())).thenReturn(otherScanners);
-    Mockito.when(mockStore.getComparator()).thenReturn(CellComparator.getInstance());
-
-    HStoreFile mockedFile = Mockito.mock(HStoreFile.class);
-
-    try (StoreScanner scan =
-      new StoreScanner(mockStore, new Scan(), scanInfo, getCols("a", "d"), scanners)) {
-      scan.updateReaders(Collections.singletonList(mockedFile), Collections.emptyList());
-      List<Cell> results = new ArrayList<>();
-      scan.next(results);
-    }
-
-    // no checkpoint should occur, because the StoreScanner itself has not been checkpointed
-    assertEquals(0, checkpointed.get());
-
-    try (StoreScanner scan =
-      new StoreScanner(mockStore, new Scan(), scanInfo, getCols("a", "d"), scanners)) {
-      scan.checkpoint(Shipper.State.START);
-      scan.updateReaders(Collections.singletonList(mockedFile), Collections.emptyList());
-      List<Cell> results = new ArrayList<>();
-      scan.next(results);
-    }
-
-    // StoreScanner has been checkpointed, so checkpoint should occur on new scanners
-    assertEquals(otherScanners.size(), checkpointed.get());
-  }
-
-  /**
-   * test that we call checkpoint on new scanners after switching to stream read, iff the
-   * StoreScanner itself has been checkpointed
-   */
-  @Test
-  public void testCheckpointAfterSwitchToStreamRead() throws IOException {
-    Configuration confForStream = new Configuration(CONF);
-    confForStream.setInt(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
-    // Same as the usual scanInfo in this class, but with pread max bytes set low so we trigger
-    // switch to stream below
-    ScanInfo scanInfoForStream = new ScanInfo(confForStream, CF, scanInfo.getMinVersions(),
-      scanInfo.getMaxVersions(), scanInfo.getTtl(), scanInfo.getKeepDeletedCells(),
-      HConstants.DEFAULT_BLOCKSIZE, scanInfo.getTimeToPurgeDeletes(), scanInfo.getComparator(),
-      scanInfo.isNewVersionBehavior());
-
-    List<KeyValueScanner> scanners = scanFixture(kvs);
-    List<KeyValueScanner> otherScanners = new ArrayList<>();
-
-    // We want to increment this counter anything checkpoint is called on these new scanners
-    AtomicInteger checkpointed = new AtomicInteger();
-    for (KeyValueScanner scanner : scanFixture(kvs)) {
-      KeyValueScanner mockedScanner = Mockito.spy(scanner);
-      Mockito.doAnswer(invocationOnMock -> checkpointed.incrementAndGet()).when(mockedScanner)
-        .checkpoint(Shipper.State.START);
-      otherScanners.add(mockedScanner);
-    }
-
-    HStore mockStore = Mockito.mock(HStore.class);
-    Mockito
-      .when(mockStore.recreateScanners(Mockito.any(), Mockito.anyBoolean(), Mockito.anyBoolean(),
-        Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.anyBoolean(), Mockito.any(),
-        Mockito.anyBoolean(), Mockito.anyLong(), Mockito.anyBoolean()))
-      .thenReturn(otherScanners);
-    Mockito.when(mockStore.getComparator()).thenReturn(CellComparator.getInstance());
-
-    try (StoreScanner scan =
-      new StoreScanner(mockStore, new Scan(), scanInfoForStream, getCols("a", "d"), scanners)) {
-      List<Cell> results = new ArrayList<>();
-      scan.next(results);
-      scan.trySwitchToStreamRead();
-      scan.next(results);
-    }
-
-    // no checkpoint should occur, because the StoreScanner itself has not been checkpointed
-    assertEquals(0, checkpointed.get());
-
-    try (StoreScanner scan =
-      new StoreScanner(mockStore, new Scan(), scanInfoForStream, getCols("a", "d"), scanners)) {
-      scan.checkpoint(Shipper.State.START);
-      List<Cell> results = new ArrayList<>();
-      scan.next(results);
-      scan.trySwitchToStreamRead();
-      scan.next(results);
-    }
-
-    // StoreScanner has been checkpointed, so checkpoint should occur on new scanners
-    assertEquals(otherScanners.size(), checkpointed.get());
   }
 }

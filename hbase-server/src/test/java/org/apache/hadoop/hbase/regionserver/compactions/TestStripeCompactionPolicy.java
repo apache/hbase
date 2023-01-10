@@ -874,7 +874,7 @@ public class TestStripeCompactionPolicy {
     when(r.getBloomFilterType()).thenReturn(BloomType.NONE);
     when(r.getHFileReader()).thenReturn(mock(HFile.Reader.class));
     when(r.getStoreFileScanner(anyBoolean(), anyBoolean(), anyBoolean(), anyLong(), anyLong(),
-      anyBoolean())).thenReturn(mock(StoreFileScanner.class));
+      anyBoolean(), false)).thenReturn(mock(StoreFileScanner.class));
     when(sf.getReader()).thenReturn(r);
     when(sf.getBulkLoadTimestamp()).thenReturn(OptionalLong.empty());
     when(r.getMaxTimestamp()).thenReturn(TimeRange.INITIAL_MAX_TIMESTAMP);

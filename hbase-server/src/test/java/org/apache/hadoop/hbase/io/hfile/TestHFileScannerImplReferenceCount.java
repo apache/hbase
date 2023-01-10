@@ -196,7 +196,7 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
       .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
       .getHFileBlock();
@@ -279,7 +279,7 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
       .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
       .getHFileBlock();
@@ -408,7 +408,7 @@ public class TestHFileScannerImplReferenceCount {
     // We've build a HFile tree with index = 16.
     Assert.assertEquals(16, reader.getTrailer().getNumDataIndexLevels());
 
-    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false);
+    HFileScannerImpl scanner = (HFileScannerImpl) reader.getScanner(conf, true, true, false, false);
     HFileBlock block1 = reader.getDataBlockIndexReader()
       .loadDataBlockWithScanInfo(firstCell, null, true, true, false, DataBlockEncoding.NONE, reader)
       .getHFileBlock();

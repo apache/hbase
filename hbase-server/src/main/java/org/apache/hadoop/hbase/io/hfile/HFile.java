@@ -390,7 +390,7 @@ public final class HFile {
     CellComparator getComparator();
 
     HFileScanner getScanner(Configuration conf, boolean cacheBlocks, boolean pread,
-      boolean isCompaction);
+      boolean isCompaction, boolean checkpointingEnabled);
 
     HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
 
@@ -420,7 +420,8 @@ public final class HFile {
 
     HFileBlockIndex.ByteArrayKeyBlockIndexReader getMetaBlockIndexReader();
 
-    HFileScanner getScanner(Configuration conf, boolean cacheBlocks, boolean pread);
+    HFileScanner getScanner(Configuration conf, boolean cacheBlocks, boolean pread,
+      boolean checkpointingEnabled);
 
     /**
      * Retrieves general Bloom filter metadata as appropriate for each {@link HFile} version. Knows

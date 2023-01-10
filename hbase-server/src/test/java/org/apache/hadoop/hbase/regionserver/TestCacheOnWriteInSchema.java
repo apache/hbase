@@ -233,7 +233,7 @@ public class TestCacheOnWriteInSchema {
     HFile.Reader reader = sf.getReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled
-      HFileScanner scanner = reader.getScanner(conf, false, false);
+      HFileScanner scanner = reader.getScanner(conf, false, false, false);
       assertTrue(testDescription, scanner.seekTo());
       // Cribbed from io.hfile.TestCacheOnWrite
       long offset = 0;

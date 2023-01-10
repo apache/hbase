@@ -88,7 +88,7 @@ public class TestStoreFileScannerWithTagCompression {
     storeFileInfo.initHFileInfo(context);
     StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
     storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
-    StoreFileScanner s = reader.getStoreFileScanner(false, false, false, 0, 0, false);
+    StoreFileScanner s = reader.getStoreFileScanner(false, false, false, 0, 0, false, false);
     try {
       // Now do reseek with empty KV to position to the beginning of the file
       KeyValue k = KeyValueUtil.createFirstOnRow(Bytes.toBytes("k2"));

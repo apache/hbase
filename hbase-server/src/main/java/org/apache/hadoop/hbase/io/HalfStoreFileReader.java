@@ -92,8 +92,8 @@ public class HalfStoreFileReader extends StoreFileReader {
 
   @Override
   public HFileScanner getScanner(final boolean cacheBlocks, final boolean pread,
-    final boolean isCompaction) {
-    final HFileScanner s = super.getScanner(cacheBlocks, pread, isCompaction);
+    final boolean isCompaction, boolean checkpointingEnabled) {
+    final HFileScanner s = super.getScanner(cacheBlocks, pread, isCompaction, checkpointingEnabled);
     return new HFileScanner() {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
@@ -325,7 +325,7 @@ public class HalfStoreFileReader extends StoreFileReader {
   @Override
   public Optional<Cell> getFirstKey() {
     if (!firstKeySeeked) {
-      HFileScanner scanner = getScanner(true, true, false);
+      HFileScanner scanner = getScanner(true, true, false, false);
       try {
         if (scanner.seekTo()) {
           this.firstKey = Optional.ofNullable(scanner.getKey());

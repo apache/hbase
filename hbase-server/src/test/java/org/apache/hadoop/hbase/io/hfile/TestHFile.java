@@ -655,7 +655,7 @@ public class TestHFile {
     System.out.println(cacheConf.toString());
     // Load up the index.
     // Get a scanner that caches and that does not use pread.
-    HFileScanner scanner = reader.getScanner(conf, true, false);
+    HFileScanner scanner = reader.getScanner(conf, true, false, false);
     // Align scanner at start of the file.
     scanner.seekTo();
     readAllRecords(scanner);
@@ -742,7 +742,7 @@ public class TestHFile {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, mFile).build();
     Reader reader = createReaderFromStream(context, cacheConf, conf);
     // No data -- this should return false.
-    assertFalse(reader.getScanner(conf, false, false).seekTo());
+    assertFalse(reader.getScanner(conf, false, false, false).seekTo());
     someReadingWithMetaBlock(reader);
     fs.delete(mFile, true);
     reader.close();
