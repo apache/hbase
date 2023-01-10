@@ -31,5 +31,4 @@ after:
 
     - description: "Publish RPM"
       commands:
-        - echo "Will upload to $YUM_REPO"
-        - rpm-upload --rpms-dir=$WORKSPACE/generated_rpms/ --repo-name $YUM_REPO
+        - ./rpm-build/upload-rpm.sh
