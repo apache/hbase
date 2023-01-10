@@ -802,6 +802,46 @@ public class TestBlockEvictionFromClient {
   }
 
   @Test
+  public void testStreamScanWithRowFilterMixedRows() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // we expect 2 because each of "ROW" and "ROW3" have 1 cell that match the filter
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan.addColumn(FAMILY, QUALIFIER)
+          .setFilter(new FilterList(FilterList.Operator.MUST_PASS_ONE,
+            new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW)),
+            new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW3)))),
+        testCase.cache, 2, new ExpectedResult(ROW, FAMILY, QUALIFIER, data2),
+        new ExpectedResult(ROW3, FAMILY, QUALIFIER, data));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithRowOffset() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // we expect 4, because 2 rows (ROW and ROW1) have enough columns in FAMILY to exceed offset.
+      // ROW has 1 column, and ROW1 has 3. Each retains 1 block.
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan.addFamily(FAMILY).setRowOffsetPerColumnFamily(1), testCase.cache, 4,
+        new ExpectedResult(ROW, FAMILY, QUALIFIER2, data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier2"), data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier3"), data2),
+        new ExpectedResult(ROW1, FAMILY, Bytes.toBytes("testQualifier4"), data2));
+    }
+  }
+
+  @Test
+  public void testStreamScanWithRowOffsetAndRowFilter() throws Throwable {
+    try (TestCase testCase = setupStreamScanTest()) {
+      // we expect 1 because while both ROW and ROW1 have enough columns to exceed offset, we
+      // drop ROW1 due to filterRow in RegionScannerImpl.
+      assertNoBlocksWithRef(testCase.table,
+        testCase.baseScan.addFamily(FAMILY).setRowOffsetPerColumnFamily(1)
+          .setFilter(new RowFilter(CompareOperator.EQUAL, new BinaryComparator(ROW))),
+        testCase.cache, 1, new ExpectedResult(ROW, FAMILY, QUALIFIER2, data2));
+    }
+  }
+
+  @Test
   public void testStreamScanWithSingleColumnValueExcludeFilter() throws Throwable {
     try (TestCase testCase = setupStreamScanTest()) {
       // We expect 5 blocks. Initially, all 7 storefiles are opened. But FAMILY is essential due to
