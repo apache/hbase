@@ -2872,10 +2872,10 @@
         <version>2.7.3</version>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>makeBom</goal>
             </goals>
+            <phase>package</phase>
           </execution>
         </executions>
       </plugin>
