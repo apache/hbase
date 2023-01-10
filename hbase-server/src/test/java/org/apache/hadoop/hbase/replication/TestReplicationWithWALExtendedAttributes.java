@@ -282,6 +282,15 @@ public class TestReplicationWithWALExtendedAttributes {
       attachWALExtendedAttributesToMutation(mutation, attributeList);
     }
 
+    @Override
+    public void postReplicationSinkBatchMutate(
+      ObserverContext<RegionServerCoprocessorEnvironment> ctx, AdminProtos.WALEntry walEntry,
+      Mutation mutation) throws IOException {
+      RegionServerObserver.super.postReplicationSinkBatchMutate(ctx, walEntry, mutation);
+      LOG.info("WALEntry extended attributes: {}", walEntry.getKey().getExtendedAttributesList());
+      LOG.info("Mutation attributes: {}", mutation.getAttributesMap());
+    }
+
     private void attachWALExtendedAttributesToMutation(Mutation mutation,
       List<WALProtos.Attribute> attributeList) {
       if (attributeList != null) {

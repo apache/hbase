@@ -204,6 +204,8 @@ public class ReplicationSink {
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
+      Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
+        new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
         TableName table = TableName.valueOf(entry.getKey().getTableName().toByteArray());
         if (this.walEntrySinkFilter != null) {
@@ -271,6 +273,8 @@ public class ReplicationSink {
                 HConstants.EMPTY_BYTE_ARRAY);
               if (rsServerHost != null) {
                 rsServerHost.preReplicationSinkBatchMutate(entry, mutation);
+                mutationsToWalEntriesPairs.getFirst().add(mutation);
+                mutationsToWalEntriesPairs.getSecond().add(entry);
               }
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
@@ -292,6 +296,14 @@ public class ReplicationSink {
           batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
+      }
+
+      if (rsServerHost != null) {
+        List<Mutation> mutations = mutationsToWalEntriesPairs.getFirst();
+        List<WALEntry> walEntries = mutationsToWalEntriesPairs.getSecond();
+        for (int i = 0; i < mutations.size(); i++) {
+          rsServerHost.postReplicationSinkBatchMutate(walEntries.get(i), mutations.get(i));
+        }
       }
 
       if (bulkLoadsPerClusters != null) {

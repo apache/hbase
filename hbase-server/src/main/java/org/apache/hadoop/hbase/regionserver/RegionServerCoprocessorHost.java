@@ -179,6 +179,16 @@ public class RegionServerCoprocessorHost
     });
   }
 
+  public void postReplicationSinkBatchMutate(AdminProtos.WALEntry walEntry, Mutation mutation)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postReplicationSinkBatchMutate(this, walEntry, mutation);
+      }
+    });
+  }
+
   public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
     throws IOException {
     if (this.coprocEnvironments.isEmpty()) {

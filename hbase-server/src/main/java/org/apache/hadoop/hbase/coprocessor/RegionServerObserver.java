@@ -154,4 +154,19 @@ public interface RegionServerObserver {
     Mutation mutation) throws IOException {
 
   }
+
+  /**
+   * This will be called after replication sink mutations are executed on the sink table as part of
+   * batch call.
+   * @param ctx      the environment to interact with the framework and region server.
+   * @param walEntry wal entry from which mutation is formed.
+   * @param mutation mutation to be applied at sink cluster.
+   * @throws IOException if something goes wrong.
+   */
+  default void postReplicationSinkBatchMutate(
+    ObserverContext<RegionServerCoprocessorEnvironment> ctx, AdminProtos.WALEntry walEntry,
+    Mutation mutation) throws IOException {
+
+  }
+
 }
