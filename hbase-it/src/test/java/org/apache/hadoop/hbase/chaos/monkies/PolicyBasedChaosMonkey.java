@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.chaos.monkies;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,14 +120,31 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   /** Selects and returns ceil(ratio * items.length) random items from the given array */
   public static <T> List<T> selectRandomItems(T[] items, float ratio) {
+    /*
+     * N.b. `ratio` values are not validated. Be aware of excessive values and floating point
+     * arithmetic rounding. Guard against negative input to Random#next() and exceeding boundaries
+     * in call to List#subList.
+     */
+
     // clamp ratio to [0.0,1.0]
     ratio = Math.max(Math.min(ratio, 1.0f), 0.0f);
+
     final int selectedNumber = (int) Math.ceil(items.length * ratio);
-    final ReservoirSample<T> sample = new ReservoirSample<>(selectedNumber);
-    sample.add(Arrays.stream(items));
-    final List<T> shuffledItems = sample.getSamplingResult();
+
+    // shuffle a copy of the input, not the input.
+    final List<T> shuffledItems = new ArrayList<>(items.length);
+    shuffledItems.addAll(Arrays.asList(items));
     Collections.shuffle(shuffledItems);
-    return shuffledItems;
+
+    if (selectedNumber >= items.length) {
+      return shuffledItems;
+    }
+
+    // apply basic sanity check on sublist selection range.
+    final int startIndex =
+      Math.max(0, ThreadLocalRandom.current().nextInt(items.length - selectedNumber));
+    final int endIndex = Math.min(items.length, startIndex + selectedNumber);
+    return shuffledItems.subList(startIndex, endIndex);
   }
 
   @Override
