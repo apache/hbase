@@ -59,6 +59,12 @@ public class ChoreService {
    */
   @InterfaceAudience.Private
   public final static int MIN_CORE_POOL_SIZE = 1;
+  /**
+   * The initial number of threads in the core pool for the {@link ChoreService}.
+   */
+  public static final String CHORE_SERVICE_INITIAL_POOL_SIZE =
+    "hbase.choreservice.initial.pool.size";
+  public static final int DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE = 1;
 
   /**
    * This thread pool is used to schedule all of the Chores
