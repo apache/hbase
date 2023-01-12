@@ -7756,7 +7756,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return r.openHRegion(null);
   }
 
-  public static void warmupHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
+  public static HRegion warmupHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
     final Configuration conf, final RegionServerServices rsServices,
     final CancelableProgressable reporter) throws IOException {
 
@@ -7773,6 +7773,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, null);
     r.initializeWarmup(reporter);
+    r.close();
+    return r;
   }
 
   /**
