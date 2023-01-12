@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.chaos.actions.DumpHdfsClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.ForceBalancerAction;
 import org.apache.hadoop.hbase.chaos.actions.GracefulRollingRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartActiveNameNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomDataNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomZKNodeAction;
@@ -56,6 +57,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       // only allow 2 servers to be dead.
       new RollingBatchRestartRsAction(5000, 1.0f, 2, true),
       new ForceBalancerAction(),
+      new RestartActiveNameNodeAction(60000),
       new RestartRandomDataNodeAction(60000),
       new RestartRandomZKNodeAction(60000),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
