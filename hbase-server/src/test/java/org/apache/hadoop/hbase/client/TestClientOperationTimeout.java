@@ -273,7 +273,7 @@ public class TestClientOperationTimeout {
 
       MetricsConnection metrics =
         ((ConnectionImplementation) specialConnection).getConnectionMetrics();
-      long metaCacheNumClearServerPreFailure = metrics.getMetaCacheNumClearServer().getCount();
+      long metaCacheNumClearServerPreFailure = metrics.getMetaCacheNumClearRegion().getCount();
 
       // meta scan should take up most of the timeout but not all
       DELAY_META_SCAN = 300;
@@ -293,7 +293,7 @@ public class TestClientOperationTimeout {
 
         // We expect that the error caused by FAIL_BATCH would clear the meta cache but
         // the OperationTimeoutExceededException should not. So only allow new cache clear here
-        long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearServer().getCount();
+        long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearRegion().getCount();
         Assert.assertEquals(metaCacheNumClearServerPreFailure + 1,
           metaCacheNumClearServerPostFailure);
 
