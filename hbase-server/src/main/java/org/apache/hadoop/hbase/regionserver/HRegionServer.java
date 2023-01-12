@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.ChoreService.CHORE_SERVICE_INITIAL_POOL_SIZE;
+import static org.apache.hadoop.hbase.ChoreService.DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
@@ -708,7 +710,9 @@ public class HRegionServer extends Thread
       // and M (An M IS A HRS now). Need to refactor so less duplication between M and its super
       // Master expects Constructor to put up web servers. Ugh.
       // class HRS. TODO.
-      this.choreService = new ChoreService(getName(), true);
+      int choreServiceInitialSize =
+        conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
+      this.choreService = new ChoreService(getName(), choreServiceInitialSize, true);
       this.executorService = new ExecutorService(getName());
       putUpWebUI();
       span.setStatus(StatusCode.OK);
