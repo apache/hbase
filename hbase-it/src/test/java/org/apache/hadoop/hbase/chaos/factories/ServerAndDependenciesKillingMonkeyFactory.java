@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.chaos.factories;
 
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
+import org.apache.hadoop.hbase.chaos.actions.DumpHdfsClusterStatusAction;
 import org.apache.hadoop.hbase.chaos.actions.ForceBalancerAction;
 import org.apache.hadoop.hbase.chaos.actions.GracefulRollingRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
@@ -64,7 +65,8 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
     // @formatter:on
 
     // Action to log more info for debugging
-    Action[] actions2 = new Action[] { new DumpClusterStatusAction() };
+    Action[] actions2 =
+      new Action[] { new DumpClusterStatusAction(), new DumpHdfsClusterStatusAction() };
 
     return new PolicyBasedChaosMonkey(properties, util,
       new CompositeSequentialPolicy(new DoActionsOncePolicy(60 * 1000, actions1),
