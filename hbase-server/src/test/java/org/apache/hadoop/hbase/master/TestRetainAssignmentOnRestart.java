@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure.FORCE_REGION_RETAINMENT;
 import static org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure.FORCE_REGION_RETAINMENT_WAIT;
+import static org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -236,7 +236,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   @Test
   public void testForceRetainAssignment() throws Exception {
     UTIL.getConfiguration().setBoolean(FORCE_REGION_RETAINMENT, true);
-    UTIL.getConfiguration().setLong(FORCE_REGION_RETAINMENT_WAIT, 2000);
+    UTIL.getConfiguration().setLong(FORCE_REGION_RETAINMENT_WAIT, 100);
     setupCluster();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();
@@ -258,17 +258,17 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       for (int k = 0; k < NUM_OF_RS && !found; k++) {
         found = serverName.getPort() == rsPorts[k];
       }
+      LOG.info("Server {} has regions? {}", serverName, found);
       assertTrue(found);
     }
 
     // Server to be restarted
     ServerName deadRS = threads.get(0).getRegionServer().getServerName();
-    List<RegionInfo> deadRSRegions = snapshot.getRegionServerToRegionMap().get(deadRS);
     LOG.info("\n\nStopping {} server", deadRS);
     cluster.stopRegionServer(deadRS);
 
     LOG.info("\n\nSleeping a bit");
-    Thread.sleep(1000);
+    Thread.sleep(2000);
 
     LOG.info("\n\nStarting region server {} second time with the same port", deadRS);
     cluster.getConf().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
@@ -282,7 +282,6 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
       UTIL.waitTableAvailable(TABLE);
     }
     UTIL.waitUntilNoRegionsInTransition(60000);
-
     snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
     Map<RegionInfo, ServerName> newRegionToRegionServerMap = snapshot.getRegionToRegionServerMap();
@@ -309,7 +308,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
-    UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
+    UTIL.getConfiguration().setBoolean(MASTER_SCP_RETAIN_ASSIGNMENT, true);
     UTIL.startMiniCluster(StartTestingClusterOption.builder().masterClass(HMasterForTest.class)
       .numRegionServers(NUM_OF_RS).build());
 
