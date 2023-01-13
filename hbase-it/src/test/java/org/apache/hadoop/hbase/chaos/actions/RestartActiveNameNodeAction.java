@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
@@ -78,26 +80,30 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
         final String hadoopHAZkNodePath = ZNodePaths.joinZNode(
           (hadoopHAZkNode != null && hadoopHAZkNode.equals("/")) ? "" : hadoopHAZkNode,
           nameServiceID);
-        final List<String> subChildren = ZKUtil.listChildrenNoWatch(zkw, hadoopHAZkNodePath);
+        final List<String> subChildren =
+          Optional.ofNullable(ZKUtil.listChildrenNoWatch(zkw, hadoopHAZkNodePath))
+            .orElse(Collections.emptyList());
         for (final String eachEntry : subChildren) {
-          if (eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
-            byte[] data = rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME),
-              false, null);
-            ActiveNodeInfo proto = ActiveNodeInfo.parseFrom(data);
-            activeNamenode = proto.getHostname();
-            activeNamenodePort = proto.getPort();
+          if (!eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
+            continue;
           }
+          byte[] data =
+            rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME), false, null);
+          ActiveNodeInfo proto = ActiveNodeInfo.parseFrom(data);
+          activeNamenode = proto.getHostname();
+          activeNamenodePort = proto.getPort();
         }
       }
     }
 
     if (activeNamenode == null) {
-      throw new Exception("No active Name node found in zookeeper under " + hadoopHAZkNode);
-    } else {
-      getLogger().info("Found Active NameNode host: {}", activeNamenode);
-      final ServerName activeNNHost = ServerName.valueOf(activeNamenode, activeNamenodePort, -1L);
-      getLogger().info("Restarting Active NameNode: {}", activeNamenode);
-      restartNameNode(activeNNHost, this.sleepTime);
+      getLogger().info("No active Name node found in zookeeper under '{}'", hadoopHAZkNode);
+      return;
     }
+
+    getLogger().info("Found Active NameNode host: {}", activeNamenode);
+    final ServerName activeNNHost = ServerName.valueOf(activeNamenode, activeNamenodePort, -1L);
+    getLogger().info("Restarting Active NameNode: {}", activeNamenode);
+    restartNameNode(activeNNHost, this.sleepTime);
   }
 }

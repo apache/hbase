@@ -73,6 +73,6 @@ public class DumpHdfsClusterStatusAction extends Action {
     }
     // TODO: add more on NN, JNs, and ZK.
     // TODO: Print how long process has been up.
-    LOG.info(sb.toString());
+    getLogger().info(sb.toString());
   }
 }
