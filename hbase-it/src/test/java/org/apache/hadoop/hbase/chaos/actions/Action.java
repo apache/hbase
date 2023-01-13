@@ -282,10 +282,10 @@ public abstract class Action {
   }
 
   protected void startJournalNode(ServerName server) throws IOException {
-    getLogger().info("Starting journalnode :-{}", server.getHostname());
+    getLogger().info("Starting journalnode {}", server.getHostname());
     cluster.startJournalNode(server);
     cluster.waitForJournalNodeToStart(server, startNameNodeTimeout);
-    getLogger().info("Started journalnode: {}", server);
+    getLogger().info("Started journalnode {}", server);
   }
 
   protected void unbalanceRegions(ClusterMetrics clusterStatus, List<ServerName> fromServers,
