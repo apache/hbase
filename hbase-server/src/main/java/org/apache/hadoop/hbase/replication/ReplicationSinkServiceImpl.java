@@ -59,12 +59,8 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   public void replicateLogEntries(List<AdminProtos.WALEntry> entries, CellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
     String sourceHFileArchiveDirPath) throws IOException {
-    RegionServerCoprocessorHost rsServerHost = null;
-    if (server instanceof HRegionServer) {
-      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
-    }
     this.replicationSink.replicateEntries(entries, cells, replicationClusterId,
-      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, rsServerHost);
+      sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath);
   }
 
   @Override
@@ -78,7 +74,11 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
 
   @Override
   public void startReplicationService() throws IOException {
-    this.replicationSink = new ReplicationSink(this.conf);
+    RegionServerCoprocessorHost rsServerHost = null;
+    if (server instanceof HRegionServer) {
+      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
+    }
+    this.replicationSink = new ReplicationSink(this.conf, rsServerHost);
     this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
       "ReplicationSinkStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }

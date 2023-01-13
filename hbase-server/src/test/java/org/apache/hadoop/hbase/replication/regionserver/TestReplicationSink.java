@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -129,7 +130,9 @@ public class TestReplicationSink {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     TEST_UTIL.startMiniCluster(3);
-    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()));
+    RegionServerCoprocessorHost rsCpHost =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
+    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), rsCpHost);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
     Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
@@ -167,7 +170,7 @@ public class TestReplicationSink {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Scan scan = new Scan();
     ResultScanner scanRes = table1.getScanner(scan);
     assertEquals(BATCH_SIZE, scanRes.next(BATCH_SIZE).length);
@@ -184,7 +187,7 @@ public class TestReplicationSink {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
-      baseNamespaceDir, hfileArchiveDir, null);
+      baseNamespaceDir, hfileArchiveDir);
 
     entries = new ArrayList<>(BATCH_SIZE);
     cells = new ArrayList<>();
@@ -194,7 +197,7 @@ public class TestReplicationSink {
     }
 
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Scan scan = new Scan();
     ResultScanner scanRes = table1.getScanner(scan);
     assertEquals(BATCH_SIZE / 2, scanRes.next(BATCH_SIZE).length);
@@ -208,7 +211,7 @@ public class TestReplicationSink {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
-      baseNamespaceDir, hfileArchiveDir, null);
+      baseNamespaceDir, hfileArchiveDir);
 
     ResultScanner resultScanner = table1.getScanner(new Scan());
     int totalRows = 0;
@@ -224,7 +227,7 @@ public class TestReplicationSink {
         i % 2 != 0 ? KeyValue.Type.Put : KeyValue.Type.DeleteColumn, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells), replicationClusterId,
-      baseNamespaceDir, hfileArchiveDir, null);
+      baseNamespaceDir, hfileArchiveDir);
     resultScanner = table1.getScanner(new Scan());
     totalRows = 0;
     while (resultScanner.next() != null) {
@@ -245,7 +248,7 @@ public class TestReplicationSink {
     }
 
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Scan scan = new Scan();
     ResultScanner scanRes = table2.getScanner(scan);
     for (Result res : scanRes) {
@@ -268,7 +271,7 @@ public class TestReplicationSink {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     entries = new ArrayList<>(3);
     cells = new ArrayList<>();
     entries.add(createEntry(TABLE_NAME1, 0, KeyValue.Type.DeleteColumn, cells));
@@ -276,7 +279,7 @@ public class TestReplicationSink {
     entries.add(createEntry(TABLE_NAME1, 2, KeyValue.Type.DeleteColumn, cells));
 
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
 
     Scan scan = new Scan();
     ResultScanner scanRes = table1.getScanner(scan);
@@ -299,7 +302,7 @@ public class TestReplicationSink {
       entries.add(createEntry(TABLE_NAME1, i, KeyValue.Type.Put, cells));
     }
     SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     Get get = new Get(Bytes.toBytes(1));
     Result res = table1.get(get);
     assertEquals(0, res.size());
@@ -315,7 +318,7 @@ public class TestReplicationSink {
     }
     try {
       SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
       Assert.fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
     }
@@ -329,7 +332,7 @@ public class TestReplicationSink {
         admin.disableTable(TABLE_NAME1);
         try {
           SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-            replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+            replicationClusterId, baseNamespaceDir, hfileArchiveDir);
           Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
         } catch (RetriesExhaustedException e) {
         } finally {
@@ -410,7 +413,7 @@ public class TestReplicationSink {
     }
     // 7. Replicate the bulk loaded entry
     SINK.replicateEntries(entries, CellUtil.createCellScanner(edit.getCells().iterator()),
-      replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+      replicationClusterId, baseNamespaceDir, hfileArchiveDir);
     try (ResultScanner scanner = table1.getScanner(new Scan())) {
       // 8. Assert data is replicated
       assertEquals(numRows, scanner.next(numRows).length);
@@ -433,7 +436,7 @@ public class TestReplicationSink {
     cells.clear(); // cause IndexOutOfBoundsException
     try {
       SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
       Assert.fail("Should re-throw ArrayIndexOutOfBoundsException.");
     } catch (ArrayIndexOutOfBoundsException e) {
       errorCount++;
@@ -448,7 +451,7 @@ public class TestReplicationSink {
     }
     try {
       SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-        replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+        replicationClusterId, baseNamespaceDir, hfileArchiveDir);
       Assert.fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
       errorCount++;
@@ -466,7 +469,7 @@ public class TestReplicationSink {
         admin.disableTable(TABLE_NAME1);
         try {
           SINK.replicateEntries(entries, CellUtil.createCellScanner(cells.iterator()),
-            replicationClusterId, baseNamespaceDir, hfileArchiveDir, null);
+            replicationClusterId, baseNamespaceDir, hfileArchiveDir);
           Assert.fail("Should re-throw IOException.");
         } catch (IOException e) {
           errorCount++;

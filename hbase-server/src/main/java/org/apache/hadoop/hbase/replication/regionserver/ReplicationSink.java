@@ -114,13 +114,17 @@ public class ReplicationSink {
   private final int rowSizeWarnThreshold;
   private boolean replicationSinkTrackerEnabled;
 
+  private final RegionServerCoprocessorHost rsServerHost;
+
   /**
    * Create a sink for replication
    * @param conf conf object
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf) throws IOException {
+  public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost)
+    throws IOException {
     this.conf = HBaseConfiguration.create(conf);
+    this.rsServerHost = rsServerHost;
     rowSizeWarnThreshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
@@ -186,12 +190,11 @@ public class ReplicationSink {
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
    *                                   directory
    * @param sourceHFileArchiveDirPath  Path that point to the source cluster hfile archive directory
-   * @param rsServerHost               regionserver coproc host.
    * @throws IOException If failed to replicate the data
    */
   public void replicateEntries(List<WALEntry> entries, final CellScanner cells,
     String replicationClusterId, String sourceBaseNamespaceDirPath,
-    String sourceHFileArchiveDirPath, RegionServerCoprocessorHost rsServerHost) throws IOException {
+    String sourceHFileArchiveDirPath) throws IOException {
     if (entries.isEmpty()) {
       return;
     }
