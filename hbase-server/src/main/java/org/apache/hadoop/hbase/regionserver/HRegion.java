@@ -7756,8 +7756,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return r.openHRegion(null);
   }
 
-  public static HRegion warmupHRegion(final RegionInfo info, final TableDescriptor htd, final WAL wal,
-    final Configuration conf, final RegionServerServices rsServices,
+  public static HRegion warmupHRegion(final RegionInfo info, final TableDescriptor htd,
+    final WAL wal, final Configuration conf, final RegionServerServices rsServices,
     final CancelableProgressable reporter) throws IOException {
 
     Objects.requireNonNull(info, "RegionInfo cannot be null");
