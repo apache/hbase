@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -129,7 +130,9 @@ public class TestReplicationSink {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     TEST_UTIL.startMiniCluster(3);
-    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()));
+    RegionServerCoprocessorHost rsCpHost =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
+    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), rsCpHost);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
     Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());

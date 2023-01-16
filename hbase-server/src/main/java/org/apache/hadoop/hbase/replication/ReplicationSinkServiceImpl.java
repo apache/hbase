@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -72,7 +74,11 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
 
   @Override
   public void startReplicationService() throws IOException {
-    this.replicationSink = new ReplicationSink(this.conf);
+    RegionServerCoprocessorHost rsServerHost = null;
+    if (server instanceof HRegionServer) {
+      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
+    }
+    this.replicationSink = new ReplicationSink(this.conf, rsServerHost);
     this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
       "ReplicationSinkStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
