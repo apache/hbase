@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -120,13 +121,17 @@ public class ReplicationSink {
   private final int rowSizeWarnThreshold;
   private boolean replicationSinkTrackerEnabled;
 
+  private final RegionServerCoprocessorHost rsServerHost;
+
   /**
    * Create a sink for replication
    * @param conf conf object
    * @throws IOException thrown when HDFS goes bad or bad file name
    */
-  public ReplicationSink(Configuration conf) throws IOException {
+  public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost)
+    throws IOException {
     this.conf = HBaseConfiguration.create(conf);
+    this.rsServerHost = rsServerHost;
     rowSizeWarnThreshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
@@ -185,6 +190,8 @@ public class ReplicationSink {
   /**
    * Replicate this array of entries directly into the local cluster using the native client. Only
    * operates against raw protobuf type saving on a conversion from pb to pojo.
+   * @param entries                    WAL entries to be replicated.
+   * @param cells                      cell scanner for iteration.
    * @param replicationClusterId       Id which will uniquely identify source cluster FS client
    *                                   configurations in the replication configuration directory
    * @param sourceBaseNamespaceDirPath Path that point to the source cluster base namespace
@@ -205,6 +212,8 @@ public class ReplicationSink {
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
+      Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
+        new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
         TableName table = TableName.valueOf(entry.getKey().getTableName().toByteArray());
         if (this.walEntrySinkFilter != null) {
@@ -268,6 +277,11 @@ public class ReplicationSink {
                 clusterIds.add(toUUID(clusterId));
               }
               mutation.setClusterIds(clusterIds);
+              if (rsServerHost != null) {
+                rsServerHost.preReplicationSinkBatchMutate(entry, mutation);
+                mutationsToWalEntriesPairs.getFirst().add(mutation);
+                mutationsToWalEntriesPairs.getSecond().add(entry);
+              }
               addToHashMultiMap(rowMap, table, clusterIds, mutation);
             }
             if (CellUtil.isDelete(cell)) {
@@ -288,6 +302,14 @@ public class ReplicationSink {
           batch(entry.getKey(), entry.getValue().values(), rowSizeWarnThreshold);
         }
         LOG.debug("Finished replicating mutations.");
+      }
+
+      if (rsServerHost != null) {
+        List<Mutation> mutations = mutationsToWalEntriesPairs.getFirst();
+        List<WALEntry> walEntries = mutationsToWalEntriesPairs.getSecond();
+        for (int i = 0; i < mutations.size(); i++) {
+          rsServerHost.postReplicationSinkBatchMutate(walEntries.get(i), mutations.get(i));
+        }
       }
 
       if (bulkLoadsPerClusters != null) {

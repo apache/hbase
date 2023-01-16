@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -185,7 +187,11 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
   @Override
   public void startReplicationService() throws IOException {
     this.replicationManager.init();
-    this.replicationSink = new ReplicationSink(this.conf);
+    RegionServerCoprocessorHost rsServerHost = null;
+    if (server instanceof HRegionServer) {
+      rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
+    }
+    this.replicationSink = new ReplicationSink(this.conf, rsServerHost);
     this.scheduleThreadPool.scheduleAtFixedRate(
       new ReplicationStatisticsTask(this.replicationSink, this.replicationManager),
       statsThreadPeriod, statsThreadPeriod, TimeUnit.SECONDS);
