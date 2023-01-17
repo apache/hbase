@@ -109,6 +109,24 @@ public class TestMasterRegistry {
   }
 
   @Test
+  public void testMasterPortDefaults() throws IOException {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set(HConstants.MASTER_ADDRS_KEY, "localhost");
+    try (MasterRegistry registry = new MasterRegistry(conf)) {
+      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
+      ServerName sn = parsedMasters.get(0);
+      assertEquals(HConstants.DEFAULT_MASTER_PORT, sn.getPort());
+    }
+    final int CUSTOM_MASTER_PORT = 9999;
+    conf.setInt(HConstants.MASTER_PORT, CUSTOM_MASTER_PORT);
+    try (MasterRegistry registry = new MasterRegistry(conf)) {
+      List<ServerName> parsedMasters = new ArrayList<>(registry.getParsedServers());
+      ServerName sn = parsedMasters.get(0);
+      assertEquals(CUSTOM_MASTER_PORT, sn.getPort());
+    }
+  }
+
+  @Test
   public void testRegistryRPCs() throws Exception {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     HMaster activeMaster = TEST_UTIL.getHBaseCluster().getMaster();
