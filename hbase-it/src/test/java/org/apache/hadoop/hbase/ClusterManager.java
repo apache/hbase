@@ -31,9 +31,10 @@ interface ClusterManager extends Configurable {
   /**
    * Type of the service daemon
    */
-  public static enum ServiceType {
+  enum ServiceType {
     HADOOP_NAMENODE("namenode"),
     HADOOP_DATANODE("datanode"),
+    HADOOP_JOURNALNODE("journalnode"),
     HADOOP_JOBTRACKER("jobtracker"),
     HADOOP_TASKTRACKER("tasktracker"),
     ZOOKEEPER_SERVER("QuorumPeerMain"),
