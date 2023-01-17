@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.chaos.actions.GracefulRollingRestartRsAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveNameNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomDataNodeAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartRandomJournalNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsExceptMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRandomZKNodeAction;
 import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
@@ -59,6 +60,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new ForceBalancerAction(),
       new RestartActiveNameNodeAction(60000),
       new RestartRandomDataNodeAction(60000),
+      new RestartRandomJournalNodeAction(60000),
       new RestartRandomZKNodeAction(60000),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
