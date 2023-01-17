@@ -87,6 +87,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 @InterfaceAudience.Private
 class BlockingRpcConnection extends RpcConnection implements Runnable {
 
+  private static final HungConnectionTracker HUNG_CONNECTION_TRACKER = new HungConnectionTracker();
+
   private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
 
   private final BlockingRpcClient rpcClient;
@@ -626,7 +628,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // from here, we do not throw any exception to upper layer as the call has been tracked in
       // the pending calls map.
       try {
-        call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
+        HUNG_CONNECTION_TRACKER.track(Thread.currentThread(), call, remoteId.getAddress(), socket);
+        DataOutputStream stream = MockOutputStreamWithTimeout.maybeMock(this.out);
+        call.callStats.setRequestSizeBytes(write(stream, requestHeader, call.param, cellBlock));
       } catch (Throwable t) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Error while writing {}", call.toShortString());
@@ -634,6 +638,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         IOException e = IPCUtil.toIOE(t);
         closeConn(e);
         return;
+      } finally {
+        HUNG_CONNECTION_TRACKER.complete(Thread.currentThread());
       }
     } finally {
       if (cellBlock != null) {

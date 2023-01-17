@@ -153,4 +153,17 @@ class Call {
   public long getStartTime() {
     return this.callStats.getStartTime();
   }
+
+  /**
+   * HubSpot modification: This isn't necessary for normal hbase client code, but is needed for
+   * {@link HungConnectionTracker}. We can delete this once that gets cleaned up.
+   */
+  public int getRemainingTime() {
+    if (timeout == 0) {
+      return Integer.MAX_VALUE;
+    }
+
+    int remaining = timeout - (int) (EnvironmentEdgeManager.currentTime() - getStartTime());
+    return remaining > 0 ? remaining : 0;
+  }
 }
