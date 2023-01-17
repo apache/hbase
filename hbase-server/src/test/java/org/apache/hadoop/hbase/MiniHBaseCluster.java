@@ -378,6 +378,31 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
+  public void startJournalNode(ServerName serverName) {
+    LOG.warn("Starting journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void killJournalNode(ServerName serverName) {
+    LOG.warn("Aborting journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void stopJournalNode(ServerName serverName) {
+    LOG.warn("Stopping journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForJournalNodeToStart(ServerName serverName, long timeout) {
+    LOG.warn("Waiting for journalnodes to start on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForJournalNodeToStop(ServerName serverName, long timeout) {
+    LOG.warn("Waiting for journalnodes to stop on mini cluster is not supported");
+  }
+
+  @Override
   public void startMaster(String hostname, int port) throws IOException {
     this.startMaster();
   }
