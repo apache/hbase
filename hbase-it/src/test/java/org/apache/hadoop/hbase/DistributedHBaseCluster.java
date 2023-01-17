@@ -56,7 +56,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
    * restarted instances of the same server will have different ServerName and will not coincide
    * with past dead ones. So there's no need to cleanup this list.
    */
-  private Set<ServerName> killedRegionServers = new HashSet<>();
+  private final Set<ServerName> killedRegionServers = new HashSet<>();
 
   public DistributedHBaseCluster(Configuration conf, ClusterManager clusterManager)
     throws IOException {
@@ -247,6 +247,37 @@ public class DistributedHBaseCluster extends HBaseCluster {
     waitForServiceToStop(ServiceType.HADOOP_NAMENODE, serverName, timeout);
   }
 
+  @Override
+  public void startJournalNode(ServerName serverName) throws IOException {
+    LOG.info("Starting journal node on: {}", serverName.getServerName());
+    clusterManager.start(ServiceType.HADOOP_JOURNALNODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void killJournalNode(ServerName serverName) throws IOException {
+    LOG.info("Aborting journal node on: {}", serverName.getServerName());
+    clusterManager.kill(ServiceType.HADOOP_JOURNALNODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void stopJournalNode(ServerName serverName) throws IOException {
+    LOG.info("Stopping journal node on: {}", serverName.getServerName());
+    clusterManager.stop(ServiceType.HADOOP_JOURNALNODE, serverName.getHostname(),
+      serverName.getPort());
+  }
+
+  @Override
+  public void waitForJournalNodeToStart(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStart(ServiceType.HADOOP_JOURNALNODE, serverName, timeout);
+  }
+
+  @Override
+  public void waitForJournalNodeToStop(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStop(ServiceType.HADOOP_JOURNALNODE, serverName, timeout);
+  }
+
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
     LOG.info("Waiting for service: {} to stop: {}", service, serverName.getServerName());
@@ -263,7 +294,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
   private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting for service: {} to start: ", service, serverName.getServerName());
+    LOG.info("Waiting for service: {} to start: {}", service, serverName.getServerName());
     long start = System.currentTimeMillis();
 
     while ((System.currentTimeMillis() - start) < timeout) {
@@ -358,8 +389,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     LOG.info("Restoring cluster - started");
 
     // do a best effort restore
-    boolean success = true;
-    success = restoreMasters(initial, current) & success;
+    boolean success = restoreMasters(initial, current);
     success = restoreRegionServers(initial, current) & success;
     success = restoreAdmin() & success;
 

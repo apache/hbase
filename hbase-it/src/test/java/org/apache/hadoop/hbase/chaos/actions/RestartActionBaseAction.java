@@ -120,4 +120,17 @@ public abstract class RestartActionBaseAction extends Action {
     getLogger().info("Starting name node: {}", server);
     startNameNode(server);
   }
+
+  void restartJournalNode(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+    getLogger().info("Killing journal node: {}", server);
+    killJournalNode(server);
+    sleep(sleepTime);
+    getLogger().info("Starting journal node: {}", server);
+    startJournalNode(server);
+  }
 }
