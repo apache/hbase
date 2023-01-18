@@ -546,6 +546,9 @@ public class TestRegionsRecoveryChore {
       public float getPrefetchCacheRatio() {
         return 0.0f;
       }
+
+      @Override
+      public String getServerName() { return null; }
     };
     return regionMetrics;
   }

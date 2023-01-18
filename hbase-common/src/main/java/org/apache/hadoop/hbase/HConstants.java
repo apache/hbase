@@ -1317,6 +1317,11 @@ public final class HConstants {
   // hbase-common?
 
   /**
+   * Prefetch persistence path key
+   */
+  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file.list.path";
+
+  /**
    * Current ioengine options in include: heap, offheap and file:PATH (where PATH is the path to the
    * file that will host the file-based cache. See BucketCache#getIOEngineFromName() for list of
    * supported ioengine options.

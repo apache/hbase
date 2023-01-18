@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNull;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -51,6 +52,7 @@ public class TestStochasticLoadBalancerBalanceCluster extends StochasticBalancer
    */
   @Test
   public void testBalanceCluster() throws Exception {
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     loadBalancer.onConfigurationChange(conf);
     for (int[] mockCluster : clusterStateMocks) {
       Map<ServerName, List<RegionInfo>> servers = mockClusterServers(mockCluster);

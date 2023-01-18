@@ -232,7 +232,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         clusterState.put(server, Collections.emptyList());
       }
     }
-    return new BalancerClusterState(regions, clusterState, null, this.regionFinder, rackManager);
+    return new BalancerClusterState(regions, clusterState, null, this.regionFinder, rackManager, null);
   }
 
   private List<ServerName> findIdleServers(List<ServerName> servers) {

@@ -141,4 +141,7 @@ public interface RegionMetrics {
 
   /** Returns the ratio of files already in cache */
   float getPrefetchCacheRatio();
+
+  /** Returns the name of the server hosting this region */
+  String getServerName();
 }

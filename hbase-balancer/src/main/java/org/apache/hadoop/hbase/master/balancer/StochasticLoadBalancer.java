@@ -129,6 +129,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
+  // Map of old prefetch ratio (region name ---> old server name ---> old prefetch ratio)
+  Map<String, Map<String, Float>> historicRegionServerPrefetchRatio =
+    new HashMap<String, Map<String, Float>>();
+
   // values are defaults
   private int maxSteps = DEFAULT_MAX_STEPS;
   private boolean runMaxSteps = DEFAULT_RUN_MAX_STEPS;
@@ -298,7 +302,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       finder = this.regionFinder;
     }
     BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager,
+        historicRegionServerPrefetchRatio);
 
     initCosts(cluster);
     curOverallCost = computeCost(cluster, Double.MAX_VALUE);
@@ -470,7 +475,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
     BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager,
+        historicRegionServerPrefetchRatio);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
@@ -721,6 +727,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private void updateRegionLoad() {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
+    // The old prefetch ratio of a region on a region server is stored for finding out if the region
+    // was prefetched on the old server before moving it to the new server because of the server
+    // crash procedure.
     Map<String, Deque<BalancerRegionLoad>> oldLoads = loads;
     loads = new HashMap<>();
 
@@ -728,10 +737,23 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
         String regionNameAsString = RegionInfo.getRegionNameAsString(regionName);
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(regionNameAsString);
+        String oldServerName = null;
+        float oldPrefetchRatio = 0.0f;
         if (rLoads == null) {
           rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
-        } else if (rLoads.size() >= numRegionLoadsToRemember) {
-          rLoads.remove();
+        } else {
+          // Get the old server name and the prefetch ratio for this region on this server
+          oldServerName = rLoads.getLast().getServerName();
+          oldPrefetchRatio = rLoads.getLast().getPrefetchCacheRatio();
+          if (rLoads.size() >= numRegionLoadsToRemember) {
+            rLoads.remove();
+          }
+        }
+        if (oldServerName != null && !oldServerName.equals(rm.getServerName())) {
+          // Record the old region server prefetch ratio
+          Map<String, Float> serverPrefetchRatio = new HashMap<>();
+          serverPrefetchRatio.put(oldServerName, oldPrefetchRatio);
+          historicRegionServerPrefetchRatio.put(regionNameAsString, serverPrefetchRatio);
         }
         rLoads.add(new BalancerRegionLoad(rm));
         loads.put(regionNameAsString, rLoads);

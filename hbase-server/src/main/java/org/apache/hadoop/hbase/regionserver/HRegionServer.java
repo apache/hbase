@@ -1571,7 +1571,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
       .setLastMajorCompactionTs(r.getOldestHfileTs(true))
-      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached);
+      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached)
+      .setServerName(serverName.getServerName());
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }

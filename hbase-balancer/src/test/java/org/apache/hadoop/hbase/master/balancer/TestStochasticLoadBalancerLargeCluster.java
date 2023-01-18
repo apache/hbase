@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -39,6 +40,7 @@ public class TestStochasticLoadBalancerLargeCluster extends StochasticBalancerTe
     int numTables = 100;
     int replication = 1;
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 6 * 60 * 1000);
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     loadBalancer.onConfigurationChange(conf);
     testWithClusterWithIteration(numNodes, numRegions, numRegionsPerServer, replication, numTables,
       true, true);

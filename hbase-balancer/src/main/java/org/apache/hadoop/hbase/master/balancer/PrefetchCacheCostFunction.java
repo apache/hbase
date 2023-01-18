@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -26,15 +27,20 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class PrefetchCacheCostFunction extends CostFunction {
+  private static final String PREFETCH_CACHE_COST_KEY =
+    "hbase.master.balancer.stochastic.prefetchCacheCost";
+  private static final float DEFAULT_PREFETCH_COST = 500;
+
   private String prefetchedFileListPath;
-  private float prefetchRatio;
+  private double prefetchRatio;
   private float bestPrefetchRatio;
 
-  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file-list.path";
-
   PrefetchCacheCostFunction(Configuration conf) {
-    prefetchedFileListPath = conf.get(PREFETCH_PERSISTENCE_PATH_KEY);
-    this.setMultiplier(prefetchedFileListPath == null ? 0 : 1);
+    prefetchedFileListPath = conf.get(HConstants.PREFETCH_PERSISTENCE_PATH_KEY);
+    // Disable the prefetch cache cost function if the prefetched file list persistence is not
+    // enabled
+    this.setMultiplier(prefetchedFileListPath == null ? 0.0f :
+      conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));
     prefetchRatio = 0.0f;
     bestPrefetchRatio = 0.0f;
   }
@@ -61,8 +67,8 @@ public class PrefetchCacheCostFunction extends CostFunction {
 
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
-    float oldServerPrefetch = getWeightedPrefetchRatio(region, oldServer);
-    float newServerPrefetch = getWeightedPrefetchRatio(region, newServer);
+    float oldServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, oldServer);
+    float newServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, newServer);
     float prefetchDelta = newServerPrefetch - oldServerPrefetch;
     float normalizeDelta = bestPrefetchRatio == 0.0f ? 0.0f : prefetchDelta / bestPrefetchRatio;
     prefetchRatio += normalizeDelta;
@@ -71,9 +77,5 @@ public class PrefetchCacheCostFunction extends CostFunction {
   @Override
   public final void updateWeight(double[] weights) {
     weights[StochasticLoadBalancer.GeneratorType.PREFETCH.ordinal()] += cost();
-  }
-
-  private float getWeightedPrefetchRatio(int region, int server) {
-    return cluster.getOrComputeWeightedPrefetchRatio(region, server);
   }
 }

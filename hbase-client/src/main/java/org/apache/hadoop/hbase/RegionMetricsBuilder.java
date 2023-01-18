@@ -80,7 +80,8 @@ public final class RegionMetricsBuilder {
           ClusterStatusProtos.StoreSequenceId::getSequenceId)))
       .setUncompressedStoreFileSize(
         new Size(regionLoadPB.getStoreUncompressedSizeMB(), Size.Unit.MEGABYTE))
-      .setPrefetchCacheRatio(regionLoadPB.getPrefetchCacheRatio()).build();
+      .setPrefetchCacheRatio(regionLoadPB.getPrefetchCacheRatio())
+      .setServerName(regionLoadPB.getServerName()).build();
   }
 
   private static List<ClusterStatusProtos.StoreSequenceId>
@@ -120,7 +121,8 @@ public final class RegionMetricsBuilder {
       .addAllStoreCompleteSequenceId(toStoreSequenceId(regionMetrics.getStoreSequenceId()))
       .setStoreUncompressedSizeMB(
         (int) regionMetrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE))
-      .setPrefetchCacheRatio(regionMetrics.getPrefetchCacheRatio()).build();
+      .setPrefetchCacheRatio(regionMetrics.getPrefetchCacheRatio())
+      .setServerName(regionMetrics.getServerName()).build();
   }
 
   public static RegionMetricsBuilder newBuilder(byte[] name) {
@@ -155,6 +157,7 @@ public final class RegionMetricsBuilder {
   private long blocksTotalWeight;
   private CompactionState compactionState;
   private float prefetchCacheRatio;
+  private String serverName;
 
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
@@ -295,6 +298,11 @@ public final class RegionMetricsBuilder {
     return this;
   }
 
+  public RegionMetricsBuilder setServerName(String serverName) {
+    this.serverName = serverName;
+    return this;
+  }
+
   public RegionMetrics build() {
     return new RegionMetricsImpl(name, storeCount, storeFileCount, storeRefCount,
       maxCompactedStoreFileRefCount, compactingCellCount, compactedCellCount, storeFileSize,
@@ -302,7 +310,7 @@ public final class RegionMetricsBuilder {
       uncompressedStoreFileSize, writeRequestCount, readRequestCount, cpRequestCount,
       filteredReadRequestCount, completedSequenceId, storeSequenceIds, dataLocality,
       lastMajorCompactionTimestamp, dataLocalityForSsd, blocksLocalWeight, blocksLocalWithSsdWeight,
-      blocksTotalWeight, compactionState, prefetchCacheRatio);
+      blocksTotalWeight, compactionState, prefetchCacheRatio, serverName);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -334,6 +342,7 @@ public final class RegionMetricsBuilder {
     private final long blocksTotalWeight;
     private final CompactionState compactionState;
     private final float prefetchCacheRatio;
+    private final String serverName;
 
     RegionMetricsImpl(byte[] name, int storeCount, int storeFileCount, int storeRefCount,
       int maxCompactedStoreFileRefCount, final long compactingCellCount, long compactedCellCount,
@@ -343,7 +352,7 @@ public final class RegionMetricsBuilder {
       long filteredReadRequestCount, long completedSequenceId, Map<byte[], Long> storeSequenceIds,
       float dataLocality, long lastMajorCompactionTimestamp, float dataLocalityForSsd,
       long blocksLocalWeight, long blocksLocalWithSsdWeight, long blocksTotalWeight,
-      CompactionState compactionState, float prefetchCacheRatio) {
+      CompactionState compactionState, float prefetchCacheRatio, String serverName) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -372,6 +381,7 @@ public final class RegionMetricsBuilder {
       this.blocksTotalWeight = blocksTotalWeight;
       this.compactionState = compactionState;
       this.prefetchCacheRatio = prefetchCacheRatio;
+      this.serverName = serverName;
     }
 
     @Override
@@ -515,6 +525,11 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public String getServerName() {
+      return serverName;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb =
         Strings.appendKeyValue(new StringBuilder(), "storeCount", this.getStoreCount());
@@ -555,6 +570,7 @@ public final class RegionMetricsBuilder {
       Strings.appendKeyValue(sb, "blocksTotalWeight", blocksTotalWeight);
       Strings.appendKeyValue(sb, "compactionState", compactionState);
       Strings.appendKeyValue(sb, "prefetchCacheRatio", this.getPrefetchCacheRatio());
+      Strings.appendKeyValue(sb, "serverName", this.getServerName());
       return sb.toString();
     }
   }

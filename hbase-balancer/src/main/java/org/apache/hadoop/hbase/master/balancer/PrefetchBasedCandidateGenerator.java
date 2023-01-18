@@ -20,57 +20,40 @@ package org.apache.hadoop.hbase.master.balancer;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 class PrefetchBasedCandidateGenerator extends CandidateGenerator {
+  private static final Logger LOG = LoggerFactory.getLogger(PrefetchBasedCandidateGenerator.class);
+
+  private static float PREFETCH_RATIO_DIFF_FACTOR = 1.25f;
+
   @Override
   BalanceAction generate(BalancerClusterState cluster) {
     // iterate through regions until you find one that is not on ideal host
     // start from a random point to avoid always balance the regions in front
     if (cluster.numRegions > 0) {
-      int startIndex = ThreadLocalRandom.current().nextInt(cluster.numRegions);
+      int startRegionIndex = ThreadLocalRandom.current().nextInt(cluster.numRegions);
+      int toServerIndex;
       for (int i = 0; i < cluster.numRegions; i++) {
-        int region = (startIndex + i) % cluster.numRegions;
-        int currentServer = cluster.regionIndexToServerIndex[region];
-        if (currentServer != cluster.getOrComputeServerWithBestPrefetchRatio()[region]) {
-          Optional<BalanceAction> potential = tryMoveOrSwap(cluster, currentServer, region,
-            cluster.getOrComputeServerWithBestPrefetchRatio()[region]);
-          if (potential.isPresent()) {
-            return potential.get();
-          }
+        int region = (startRegionIndex + i) % cluster.numRegions;
+        int currentServerIndex = cluster.regionIndexToServerIndex[region];
+        float currentPrefetchRatio =
+          cluster.getOrComputeWeightedPrefetchRatio(region, currentServerIndex);
+
+        // Check if there is a server with a better historical prefetch ratio
+        toServerIndex = pickOtherRandomServer(cluster, currentServerIndex);
+        float toServerPrefetchRatio =
+          cluster.getOrComputeWeightedPrefetchRatio(region, toServerIndex);
+
+        // If the prefetch ratio on the target server is significantly higher, move the region.
+        if (currentPrefetchRatio > 0 &&
+          (toServerPrefetchRatio / currentPrefetchRatio) > PREFETCH_RATIO_DIFF_FACTOR) {
+          return getAction(currentServerIndex, region, toServerIndex, -1);
         }
       }
     }
     return BalanceAction.NULL_ACTION;
-  }
-
-  private Optional<BalanceAction> tryMoveOrSwap(BalancerClusterState cluster, int fromServer,
-    int fromRegion, int toServer) {
-    // Try move first. We know apriori fromRegion has the highest locality on toServer
-    if (cluster.serverHasTooFewRegions(toServer)) {
-      return Optional.of(getAction(fromServer, fromRegion, toServer, -1));
-    }
-    // Compare prefetch gain/loss from swapping fromRegion with regions on toServer
-    float fromRegionPrefetchDelta = getWeightedPrefetch(cluster, fromRegion, toServer)
-      - getWeightedPrefetch(cluster, fromRegion, fromServer);
-    int toServertotalRegions = cluster.regionsPerServer[toServer].length;
-    if (toServertotalRegions > 0) {
-      int startIndex = ThreadLocalRandom.current().nextInt(toServertotalRegions);
-      for (int i = 0; i < toServertotalRegions; i++) {
-        int toRegionIndex = (startIndex + i) % toServertotalRegions;
-        int toRegion = cluster.regionsPerServer[toServer][toRegionIndex];
-        float toRegionPrefetchDelta = getWeightedPrefetch(cluster, toRegion, fromServer)
-          - getWeightedPrefetch(cluster, toRegion, toServer);
-        // If prefetch would remain neutral or improve, attempt the swap
-        if (fromRegionPrefetchDelta + toRegionPrefetchDelta >= 0) {
-          return Optional.of(getAction(fromServer, fromRegion, toServer, toRegion));
-        }
-      }
-    }
-    return Optional.empty();
-  }
-
-  private float getWeightedPrefetch(BalancerClusterState cluster, int region, int server) {
-    return cluster.getOrComputeWeightedPrefetchRatio(region, server);
   }
 }
