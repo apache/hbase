@@ -1072,6 +1072,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       AuthResult result = AuthResult.allow("cloneSnapshot " + snapshot.getName(),
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
       AccessChecker.logResult(result);
+    } else if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
+      requireNamespacePermission(ctx, "cloneSnapshot",
+        hTableDescriptor.getTableName().getNamespaceAsString(), Action.ADMIN);
     } else {
       accessChecker.requirePermission(user, "cloneSnapshot " + snapshot.getName(), null,
         Action.ADMIN);
