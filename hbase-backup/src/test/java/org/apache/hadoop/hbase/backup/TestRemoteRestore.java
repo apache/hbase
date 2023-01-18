@@ -17,13 +17,21 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
+import org.apache.hadoop.hbase.backup.mapreduce.MapReduceHFileSplitterJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -67,6 +75,53 @@ public class TestRemoteRestore extends TestBackupBase {
     TableName[] tablemap = new TableName[] { table1_restore };
     getBackupAdmin().restore(BackupUtils.createRestoreRequest(BACKUP_REMOTE_ROOT_DIR, backupId,
       false, tableset, tablemap, false));
+    Admin hba = TEST_UTIL.getAdmin();
+    assertTrue(hba.tableExists(table1_restore));
+    TEST_UTIL.deleteTable(table1_restore);
+    hba.close();
+  }
+
+  /**
+   * Verify that restore jobs can be run on a standalone mapreduce cluster. Ensures hfiles output
+   * via {@link MapReduceHFileSplitterJob} exist on correct filesystem.
+   * @throws Exception if doing the backup or an operation on the tables fails
+   */
+  @Test
+  public void testFullRestoreRemoteWithAlternateRestoreOutputDir() throws Exception {
+    LOG.info("test remote full backup on a single table with alternate restore output dir");
+    String backupId =
+      backupTables(BackupType.FULL, toList(table1.getNameAsString()), BACKUP_REMOTE_ROOT_DIR);
+    LOG.info("backup complete");
+    TableName[] tableset = new TableName[] { table1 };
+    TableName[] tablemap = new TableName[] { table1_restore };
+
+    HBaseTestingUtility mrTestUtil = new HBaseTestingUtility();
+    mrTestUtil.setZkCluster(TEST_UTIL.getZkCluster());
+    mrTestUtil.startMiniDFSCluster(3);
+    mrTestUtil.startMiniMapReduceCluster();
+
+    Configuration testUtilConf = TEST_UTIL.getConnection().getConfiguration();
+    Configuration conf = new Configuration(mrTestUtil.getConfiguration());
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT,
+      testUtilConf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    conf.set(HConstants.MASTER_ADDRS_KEY, testUtilConf.get(HConstants.MASTER_ADDRS_KEY));
+
+    new BackupAdminImpl(ConnectionFactory.createConnection(conf))
+      .restore(new RestoreRequest.Builder().withBackupRootDir(BACKUP_REMOTE_ROOT_DIR)
+        .withRestoreRootDir(BACKUP_ROOT_DIR).withBackupId(backupId).withCheck(false)
+        .withFromTables(tableset).withToTables(tablemap).withOvewrite(false).build());
+
+    Path hfileOutputPath = new Path(
+      new Path(conf.get(MapReduceHFileSplitterJob.BULK_OUTPUT_CONF_KEY)).toUri().getPath());
+
+    // files exist on hbase cluster
+    FileSystem fileSystem = FileSystem.get(TEST_UTIL.getConfiguration());
+    assertTrue(fileSystem.exists(hfileOutputPath));
+
+    // files don't exist on MR cluster
+    fileSystem = FileSystem.get(conf);
+    assertFalse(fileSystem.exists(hfileOutputPath));
+
     Admin hba = TEST_UTIL.getAdmin();
     assertTrue(hba.tableExists(table1_restore));
     TEST_UTIL.deleteTable(table1_restore);
