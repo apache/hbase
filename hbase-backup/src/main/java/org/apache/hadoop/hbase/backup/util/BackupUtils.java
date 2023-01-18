@@ -689,21 +689,38 @@ public final class BackupUtils {
     return isValid;
   }
 
-  public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
-    throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    String tmp =
-      conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
-    Path path = new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
-      + EnvironmentEdgeManager.currentTime());
+  public static Path getBulkOutputDir(Path restoreRootDir, String tableName, Configuration conf,
+    boolean deleteOnExit) throws IOException {
+    FileSystem fs = restoreRootDir.getFileSystem(conf);
+    Path path = new Path(restoreRootDir,
+      "bulk_output-" + tableName + "-" + EnvironmentEdgeManager.currentTime());
     if (deleteOnExit) {
       fs.deleteOnExit(path);
     }
     return path;
   }
 
-  public static Path getBulkOutputDir(String tableName, Configuration conf) throws IOException {
-    return getBulkOutputDir(tableName, conf, true);
+  public static Path getBulkOutputDir(Path restoreRootDir, String tableName, Configuration conf)
+    throws IOException {
+    return getBulkOutputDir(restoreRootDir, tableName, conf, true);
+  }
+
+  public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
+    throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    return getBulkOutputDir(getTmpRestoreOutputDir(fs, conf), tableName, conf, deleteOnExit);
+  }
+
+  /**
+   * Build temporary output path
+   * @param fs   filesystem for default output dir
+   * @param conf configuration
+   * @return output path
+   */
+  public static Path getTmpRestoreOutputDir(FileSystem fs, Configuration conf) {
+    String tmp =
+      conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
+    return new Path(tmp);
   }
 
   public static String getFileNameCompatibleString(TableName table) {
