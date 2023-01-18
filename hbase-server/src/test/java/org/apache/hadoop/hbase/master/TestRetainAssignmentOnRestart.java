@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure.FORCE_REGION_RETAINMENT;
-import static org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure.FORCE_REGION_RETAINMENT_WAIT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT_WAIT;
 import static org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -192,6 +192,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     cluster.stopMaster(0);
     cluster.waitForMasterToStop(master.getServerName(), 5000);
     cluster.stopRegionServer(deadRS);
+    cluster.waitForRegionServerToStop(deadRS, 5000);
 
     LOG.info("\n\nSleeping a bit");
     Thread.sleep(2000);
