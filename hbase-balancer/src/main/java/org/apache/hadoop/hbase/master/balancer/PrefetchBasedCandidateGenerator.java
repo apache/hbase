@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -48,8 +47,10 @@ class PrefetchBasedCandidateGenerator extends CandidateGenerator {
           cluster.getOrComputeWeightedPrefetchRatio(region, toServerIndex);
 
         // If the prefetch ratio on the target server is significantly higher, move the region.
-        if (currentPrefetchRatio > 0 &&
-          (toServerPrefetchRatio / currentPrefetchRatio) > PREFETCH_RATIO_DIFF_FACTOR) {
+        if (
+          currentPrefetchRatio > 0
+            && (toServerPrefetchRatio / currentPrefetchRatio) > PREFETCH_RATIO_DIFF_FACTOR
+        ) {
           return getAction(currentServerIndex, region, toServerIndex, -1);
         }
       }

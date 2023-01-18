@@ -548,7 +548,9 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
-      public String getServerName() { return null; }
+      public String getServerName() {
+        return null;
+      }
     };
     return regionMetrics;
   }

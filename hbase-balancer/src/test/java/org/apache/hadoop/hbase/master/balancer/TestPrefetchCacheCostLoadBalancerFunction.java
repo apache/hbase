@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.master.balancer.StochasticBalancerTestBase
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,9 +83,12 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
     // Test 3: The regions were hosted and fully prefetched on a server but later moved to other
     // because of server crash procedure. The regions are partially prefetched on the server they
     // are currently hosted on
-    new int[][] { new int[] { 1, 2, 1 },
-      new int[] { 0, 50, 0, 100 }, // Region 0 is currently hosted and partially prefetched on
-                                   // server 0, but was fully prefetched on server 2 previously
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 50, 0, 100 }, // Region 0 is currently
+                                                                      // hosted and partially
+                                                                      // prefetched on
+                                                                      // server 0, but was fully
+                                                                      // prefetched on server 2
+                                                                      // previously
       new int[] { 1, 100, 50, 0 }, // Region 1 is currently hosted and partially prefetched on
                                    // server 1, but was fully prefetched on server 0 previously
       new int[] { 1, 0, 50, 100 }, // Region 2 is currently hosted and partially prefetched on
@@ -96,22 +100,27 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
     // Test 4: The regions were hosted and fully prefetched on a server, but later moved to other
     // server because of server crash procedure. The regions are not at all prefetched on the server
     // they are currently hosted on
-    new int[][] { new int[] { 1, 1, 2 },
-      new int[] { 0, 0, 0, 100 }, // Region 0 is currently hosted but not prefetched on server 0,
-                                  // but was fully prefetched on server 2 previously
+    new int[][] { new int[] { 1, 1, 2 }, new int[] { 0, 0, 0, 100 }, // Region 0 is currently hosted
+                                                                     // but not prefetched on server
+                                                                     // 0,
+                                                                     // but was fully prefetched on
+                                                                     // server 2 previously
       new int[] { 2, 100, 0, 0 }, // Region 1 is currently hosted but not prefetched on server 2,
                                   // but was fully prefetched on server 0 previously
       new int[] { 1, 0, 0, 100 }, // Region 2 is currently hosted but not prefetched on server 1,
                                   // but was fully prefetched on server 2 previously
-      new int[]  { 2, 0, 100, 0 }, // Region 3 is currently hosted but not prefetched on server 2,
-                                   // but was fully prefetched on server 1 previously
+      new int[] { 2, 0, 100, 0 }, // Region 3 is currently hosted but not prefetched on server 2,
+                                  // but was fully prefetched on server 1 previously
     },
 
     // Test 5: The regions were partially prefetched on old servers, before moving to the new server
     // where also, they are partially prefetched
-    new int[][] { new int[] { 2, 1, 1 },
-      new int[] { 1, 50, 50, 0 }, // Region 0 is hosted and partially prefetched on server 1, but
-                                  // was previously hosted and partially prefetched on server 0
+    new int[][] { new int[] { 2, 1, 1 }, new int[] { 1, 50, 50, 0 }, // Region 0 is hosted and
+                                                                     // partially prefetched on
+                                                                     // server 1, but
+                                                                     // was previously hosted and
+                                                                     // partially prefetched on
+                                                                     // server 0
       new int[] { 2, 0, 50, 50 }, // Region 1 is hosted and partially prefetched on server 2, but
                                   // was previously hosted and partially prefetched on server 1
       new int[] { 0, 50, 0, 50 }, // Region 2 is hosted and partially prefetched on server 0, but
@@ -122,9 +131,11 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
 
     // Test 6: The regions are less prefetched on the new servers as compared to what they were
     // prefetched on the server before they were moved to the new servers
-    new int[][] { new int[] { 1, 2, 1 },
-      new int[] { 0, 30, 70, 0 }, // Region 0 is hosted and prefetched 30% on server 0, but was
-                                  // previously hosted and prefetched 70% on server 1
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 0, 30, 70, 0 }, // Region 0 is hosted and
+                                                                     // prefetched 30% on server 0,
+                                                                     // but was
+                                                                     // previously hosted and
+                                                                     // prefetched 70% on server 1
       new int[] { 2, 70, 0, 30 }, // Region 1 is hosted and prefetched 30% on server 2, but was
                                   // previously hosted and prefetched 70% on server 0
       new int[] { 1, 70, 30, 0 }, // Region 2 is hosted and prefetched 30% on server 1, but was
@@ -135,9 +146,11 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
 
     // Test 7: The regions are more prefetched on the new servers as compared to what they were
     // prefetched on the server before they were moved to the new servers
-    new int[][] { new int[] { 2, 1, 1 },
-      new int[] { 2, 0, 20, 80 }, // Region 0 is hosted and 80% prefetched on server 2, but was
-                                  // previously hosted and 20% prefetched on server 1
+    new int[][] { new int[] { 2, 1, 1 }, new int[] { 2, 0, 20, 80 }, // Region 0 is hosted and 80%
+                                                                     // prefetched on server 2, but
+                                                                     // was
+                                                                     // previously hosted and 20%
+                                                                     // prefetched on server 1
       new int[] { 2, 20, 0, 80 }, // Region 1 is hosted and 80% prefetched on server 2, but was
                                   // previously hosted and 20% prefetched on server 0
       new int[] { 1, 20, 80, 0 }, // Region 2 is hosted and 80% prefetched on server 1, but was
@@ -148,10 +161,14 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
 
     // Test 8: The regions are randomly assigned to the server with some regions historically
     // hosted on other region servers
-    new int[][] { new int[] { 1, 2, 1 },
-      new int[] { 1, 0, 34, 58 }, // Region 0 is hosted and partially prefetched on server 1,
-                                  // but was previously hosted and partially prefetched on server 2
-                                  // current prefetch < historical prefetch
+    new int[][] { new int[] { 1, 2, 1 }, new int[] { 1, 0, 34, 58 }, // Region 0 is hosted and
+                                                                     // partially prefetched on
+                                                                     // server 1,
+                                                                     // but was previously hosted
+                                                                     // and partially prefetched on
+                                                                     // server 2
+                                                                     // current prefetch <
+                                                                     // historical prefetch
       new int[] { 2, 78, 0, 100 }, // Region 1 is hosted and fully prefetched on server 2,
                                    // but was previously hosted and partially prefetched on server 0
                                    // current prefetch > historical prefetch
@@ -160,8 +177,7 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
                                   // current prefetch == historical prefetch
       new int[] { 0, 96, 0, 0 }, // Region 3 is hosted and partially prefetched on server 0
                                  // No historical prefetch
-    },
-  };
+    }, };
 
   @Test
   public void testVerifyPrefetchCostFunctionEnabled() {
@@ -187,8 +203,9 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
 
     for (int test = 0; test < clusterRegionPrefetchMocks.length; test++) {
       int[][] clusterRegionLocations = clusterRegionPrefetchMocks[test];
-      TestPrefetchCacheCostLoadBalancerFunction.MockClusterForPrefetch
-        cluster = new TestPrefetchCacheCostLoadBalancerFunction.MockClusterForPrefetch(clusterRegionLocations);
+      TestPrefetchCacheCostLoadBalancerFunction.MockClusterForPrefetch cluster =
+        new TestPrefetchCacheCostLoadBalancerFunction.MockClusterForPrefetch(
+          clusterRegionLocations);
       costFunction.prepare(cluster);
       double cost = costFunction.cost();
       assertEquals(expectedPrefetch[test], cost, 0.01);
@@ -214,7 +231,8 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
           if (regionsArray[i][j] > 0 && serverIndex != regionsArray[i][0]) {
             // This is the historical prefetch value
             Map<String, Float> historicalPrefetch = new HashMap<>();
-            historicalPrefetch.put(servers[serverIndex].getServerName(), (float)regionsArray[i][j]);
+            historicalPrefetch.put(servers[serverIndex].getServerName(),
+              (float) regionsArray[i][j]);
             historicalPrefetchRatio.put(regions[regionIndex].getRegionNameAsString(),
               historicalPrefetch);
           }
@@ -223,7 +241,8 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
       historicalRegionServerPrefetchRatio = historicalPrefetchRatio;
     }
 
-    @Override public int getRegionSizeMB(int region) {
+    @Override
+    public int getRegionSizeMB(int region) {
       return 1;
     }
 
@@ -242,12 +261,16 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
       // ids may change when a server is marked as dead or a new server is added.
       String regionNameAsString = regions[region].getRegionNameAsString();
       String serverNameAsString = servers[regionServerIndex].getServerName();
-      if (historicalRegionServerPrefetchRatio != null &&
-        historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)) {
-        Map<String, Float> serverPrefetchRatio = historicalRegionServerPrefetchRatio.get(regionNameAsString);
+      if (
+        historicalRegionServerPrefetchRatio != null
+          && historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)
+      ) {
+        Map<String, Float> serverPrefetchRatio =
+          historicalRegionServerPrefetchRatio.get(regionNameAsString);
         if (serverPrefetchRatio.containsKey(serverNameAsString)) {
           prefetchRatio = serverPrefetchRatio.get(serverNameAsString);
-          // The old prefetch cache ratio has been accounted for and hence, clear up this information
+          // The old prefetch cache ratio has been accounted for and hence, clear up this
+          // information
           // as it is not needed anymore
           historicalRegionServerPrefetchRatio.remove(regionNameAsString, serverPrefetchRatio);
         }

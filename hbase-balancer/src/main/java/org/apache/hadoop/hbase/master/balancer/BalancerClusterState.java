@@ -586,8 +586,8 @@ class BalancerClusterState {
 
       // The region is currently hosted on this region server. Now, get the prefetch cache ratio
       // for this region on this region server
-      prefetchRatio = regionLoadList == null ? 0.0f : regionLoadList.getLast()
-        .getPrefetchCacheRatio();
+      prefetchRatio =
+        regionLoadList == null ? 0.0f : regionLoadList.getLast().getPrefetchCacheRatio();
 
       return prefetchRatio;
     }
@@ -598,8 +598,10 @@ class BalancerClusterState {
     // may change when a server is marked as dead or a new server is added.
     String regionNameAsString = regions[region].getRegionNameAsString();
     String serverNameAsString = servers[regionServerIndex].getServerName();
-    if (historicalRegionServerPrefetchRatio != null &&
-      historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)) {
+    if (
+      historicalRegionServerPrefetchRatio != null
+        && historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)
+    ) {
       Map<String, Float> serverPrefetchRatio =
         historicalRegionServerPrefetchRatio.get(regionNameAsString);
       if (serverPrefetchRatio.containsKey(serverNameAsString)) {
@@ -633,32 +635,37 @@ class BalancerClusterState {
           // If the server currently hosting the region has equal prefetch ratio to a historical
           // server, consider the current server to keep hosting the region
           bestPrefetchRatio = prefetchRatio;
-        } else if (prefetchRatio == bestPrefetchRatio &&
-          server == regionIndexToServerIndex[region]) {
-          // If two servers have the same prefetch ratio, the the server currently hostring the
-          // region should retain the region
-          serverWithBestPrefetchRatio = server;
-        }
+        } else
+          if (prefetchRatio == bestPrefetchRatio && server == regionIndexToServerIndex[region]) {
+            // If two servers have the same prefetch ratio, the the server currently hostring the
+            // region should retain the region
+            serverWithBestPrefetchRatio = server;
+          }
       }
       regionServerIndexWithBestPrefetchRatio[region] = serverWithBestPrefetchRatio;
     }
   }
 
   private float getOrComputeRegionPrefetchRatio(int region, int server) {
-    if (regionServerIndexWithBestPrefetchRatio == null ||
-      regionIndexServerIndexPrefetchRatio.isEmpty()) {
+    if (
+      regionServerIndexWithBestPrefetchRatio == null
+        || regionIndexServerIndexPrefetchRatio.isEmpty()
+    ) {
       computeRegionServerPrefetchRatio();
     }
 
     Map<Integer, Integer> tempMap = new HashMap<>();
     tempMap.put(region, server);
-    return regionIndexServerIndexPrefetchRatio.containsKey(tempMap) ?
-      regionIndexServerIndexPrefetchRatio.get(tempMap) : 0.0f;
+    return regionIndexServerIndexPrefetchRatio.containsKey(tempMap)
+      ? regionIndexServerIndexPrefetchRatio.get(tempMap)
+      : 0.0f;
   }
 
   public int[] getOrComputeServerWithBestPrefetchRatio() {
-    if (regionIndexServerIndexPrefetchRatio.isEmpty() ||
-      regionServerIndexWithBestPrefetchRatio == null) {
+    if (
+      regionIndexServerIndexPrefetchRatio.isEmpty()
+        || regionServerIndexWithBestPrefetchRatio == null
+    ) {
       computeRegionServerPrefetchRatio();
     }
     return regionServerIndexWithBestPrefetchRatio;

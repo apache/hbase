@@ -71,5 +71,7 @@ class BalancerRegionLoad {
     return prefetchCacheRatio;
   }
 
-  public String getServerName() { return serverName; }
+  public String getServerName() {
+    return serverName;
+  }
 }

@@ -39,8 +39,9 @@ public class PrefetchCacheCostFunction extends CostFunction {
     prefetchedFileListPath = conf.get(HConstants.PREFETCH_PERSISTENCE_PATH_KEY);
     // Disable the prefetch cache cost function if the prefetched file list persistence is not
     // enabled
-    this.setMultiplier(prefetchedFileListPath == null ? 0.0f :
-      conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));
+    this.setMultiplier(prefetchedFileListPath == null
+      ? 0.0f
+      : conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));
     prefetchRatio = 0.0f;
     bestPrefetchRatio = 0.0f;
   }
