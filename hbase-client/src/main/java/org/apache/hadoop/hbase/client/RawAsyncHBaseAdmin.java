@@ -223,8 +223,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -325,6 +329,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
@@ -561,6 +567,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return getTableNames(RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables));
   }
 
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return this.<List<TableName>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableNamesByStateRequest,
+        ListTableNamesByStateResponse, List<TableName>> call(controller, stub,
+          ListTableNamesByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableNamesByState(c, req, done),
+          (resp) -> ProtobufUtil.toTableNameList(resp.getTableNamesList())))
+      .call();
+  }
+
   private CompletableFuture<List<TableName>> getTableNames(GetTableNamesRequest request) {
     return this.<List<TableName>> newMasterCaller()
       .action((controller, stub) -> this.<GetTableNamesRequest, GetTableNamesResponse,
@@ -577,6 +594,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ListTableDescriptorsByNamespaceResponse, List<TableDescriptor>> call(controller, stub,
           ListTableDescriptorsByNamespaceRequest.newBuilder().setNamespaceName(name).build(),
           (s, c, req, done) -> s.listTableDescriptorsByNamespace(c, req, done),
+          (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return this.<List<TableDescriptor>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableDescriptorsByStateRequest,
+        ListTableDescriptorsByStateResponse, List<TableDescriptor>> call(controller, stub,
+          ListTableDescriptorsByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableDescriptorsByState(c, req, done),
           (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
       .call();
   }
@@ -3732,6 +3760,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
     });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    GetReplicationPeerStateRequest.Builder request = GetReplicationPeerStateRequest.newBuilder();
+    request.setPeerId(peerId);
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<GetReplicationPeerStateRequest,
+        GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
+          (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
+          resp -> resp.getIsEnabled()))
+      .call();
   }
 
   @Override

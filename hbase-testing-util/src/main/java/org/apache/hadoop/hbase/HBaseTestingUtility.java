@@ -495,7 +495,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Cleans the test data directory on the test filesystem.
-   * @return True if we removed the test dirs n
+   * @return True if we removed the test dirs
    */
   public boolean cleanupDataTestDirOnTestFS() throws IOException {
     boolean ret = getTestFileSystem().delete(dataTestDirOnTestFS, true);
@@ -505,7 +505,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Cleans a subdirectory under the test data directory on the test filesystem.
-   * @return True if we removed child n
+   * @return True if we removed child
    */
   public boolean cleanupDataTestDirOnTestFS(String subdirName) throws IOException {
     Path cpath = getDataTestDirOnTestFS(subdirName);
@@ -564,7 +564,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Start a minidfscluster.
-   * @param servers How many DNs to start. n * @see #shutdownMiniDFSCluster()
+   * @param servers How many DNs to start.
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers) throws Exception {
@@ -575,7 +576,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Start a minidfscluster. This is useful if you want to run datanode on distinct hosts for things
    * like HDFS block location verification. If you start MiniDFSCluster without host names, all
    * instances of the datanodes will have the same host name.
-   * @param hosts hostnames DNs to run on. n * @see #shutdownMiniDFSCluster()
+   * @param hosts hostnames DNs to run on.
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(final String hosts[]) throws Exception {
@@ -589,7 +591,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Start a minidfscluster. Can only create one.
    * @param servers How many DNs to start.
-   * @param hosts   hostnames DNs to run on. n * @see #shutdownMiniDFSCluster()
+   * @param hosts   hostnames DNs to run on.
+   * @see #shutdownMiniDFSCluster()
    * @return The mini dfs cluster created.
    */
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[]) throws Exception {
@@ -613,11 +616,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirsAndSetProperties();
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
-    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
-      "ERROR");
-
     this.dfsCluster =
       new MiniDFSCluster(0, this.conf, servers, true, true, true, null, racks, hosts, null);
     this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
@@ -639,10 +637,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   public MiniDFSCluster startMiniDFSClusterForTestWAL(int namenodePort) throws IOException {
     createDirsAndSetProperties();
-    // Error level to skip some warnings specific to the minicluster. See HBASE-4709
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.util.MBeans.class.getName(), "ERROR");
-    Log4jUtils.setLogLevel(org.apache.hadoop.metrics2.impl.MetricsSystemImpl.class.getName(),
-      "ERROR");
     dfsCluster =
       new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null, null, null, null);
     this.dfsClusterFixer = new FsDatasetAsyncDiskServiceFixer(dfsCluster);
@@ -762,7 +756,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Shuts down instance created by call to {@link #startMiniDFSCluster(int)} or does nothing. n
+   * Shuts down instance created by call to {@link #startMiniDFSCluster(int)} or does nothing.
    */
   public void shutdownMiniDFSCluster() throws IOException {
     if (this.dfsCluster != null) {
@@ -1115,9 +1109,6 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, option.getNumRegionServers());
     }
 
-    // Avoid log flooded with chore execution time, see HBASE-24646 for more details.
-    Log4jUtils.setLogLevel(org.apache.hadoop.hbase.ScheduledChore.class.getName(), "INFO");
-
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, option.getNumMasters(),
       option.getNumAlwaysStandByMasters(), option.getNumRegionServers(), option.getRsPorts(),
@@ -1332,7 +1323,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Returns the path to the default root dir the minicluster uses. If <code>create</code> is true,
    * a new root directory path is fetched irrespective of whether it has been fetched before or not.
    * If false, previous path is used. Note: this does not cause the root dir to be created.
-   * @return Fully qualified path for the default hbase root dir n
+   * @return Fully qualified path for the default hbase root dir
    */
   public Path getDefaultRootDirPath(boolean create) throws IOException {
     if (!create) {
@@ -1345,7 +1336,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Same as {{@link HBaseTestingUtility#getDefaultRootDirPath(boolean create)} except that
    * <code>create</code> flag is false. Note: this does not cause the root dir to be created.
-   * @return Fully qualified path for the default hbase root dir n
+   * @return Fully qualified path for the default hbase root dir
    */
   public Path getDefaultRootDirPath() throws IOException {
     return getDefaultRootDirPath(false);
@@ -1358,7 +1349,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param create This flag decides whether to get a new root or data directory path or not, if it
    *               has been fetched already. Note : Directory will be made irrespective of whether
    *               path has been fetched or not. If directory already exists, it will be overwritten
-   * @return Fully qualified path to hbase root dir n
+   * @return Fully qualified path to hbase root dir
    */
   public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
@@ -1372,7 +1363,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Same as {@link HBaseTestingUtility#createRootDir(boolean create)} except that
    * <code>create</code> flag is false.
-   * @return Fully qualified path to hbase root dir n
+   * @return Fully qualified path to hbase root dir
    */
   public Path createRootDir() throws IOException {
     return createRootDir(false);
@@ -1382,7 +1373,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Creates a hbase walDir in the user's home directory. Normally you won't make use of this
    * method. Root hbaseWALDir is created for you as part of mini cluster startup. You'd only use
    * this method if you were doing manual operation.
-   * @return Fully qualified path to hbase root dir n
+   * @return Fully qualified path to hbase root dir
    */
   public Path createWALRootDir() throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
@@ -1431,14 +1422,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Create a table. nn * @return A Table instance for the created table. n
+   * Create a table.
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, String family) throws IOException {
     return createTable(tableName, new String[] { family });
   }
 
   /**
-   * Create a table. nn * @return A Table instance for the created table. n
+   * Create a table.
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, String[] families) throws IOException {
     List<byte[]> fams = new ArrayList<>(families.length);
@@ -1449,14 +1442,16 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Create a table. nn * @return A Table instance for the created table. n
+   * Create a table.
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[] family) throws IOException {
     return createTable(tableName, new byte[][] { family });
   }
 
   /**
-   * Create a table with multiple regions. nnn * @return A Table instance for the created table. n
+   * Create a table with multiple regions.
+   * @return A Table instance for the created table.
    */
   public Table createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
     throws IOException {
@@ -1469,22 +1464,25 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Create a table. nn * @return A Table instance for the created table. n
+   * Create a table.
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, (byte[][]) null);
   }
 
   /**
-   * Create a table with multiple regions. nn * @return A Table instance for the created table. n
+   * Create a table with multiple regions.
+   * @return A Table instance for the created table.
    */
   public Table createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
     return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE);
   }
 
   /**
-   * Create a table with multiple regions. n * @param replicaCount replica count. n * @return A
-   * Table instance for the created table. n
+   * Create a table with multiple regions.
+   * @param replicaCount replica count.
+   * @return A Table instance for the created table.
    */
   public Table createMultiRegionTable(TableName tableName, int replicaCount, byte[][] families)
     throws IOException {
@@ -1492,7 +1490,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Create a table. nnn * @return A Table instance for the created table. n
+   * Create a table.
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
     throws IOException {
@@ -1591,7 +1590,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Create a table.
    * @param htd       table descriptor
    * @param splitRows array of split keys
-   * @return A Table instance for the created table. n
+   * @return A Table instance for the created table.
    */
   public Table createTable(TableDescriptor htd, byte[][] splitRows) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(htd);
@@ -1928,7 +1927,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param conf configuration
    * @param desc table descriptor
    * @param wal  wal for this region.
-   * @return created hregion n
+   * @return created hregion
    */
   public HRegion createLocalHRegion(RegionInfo info, Configuration conf, TableDescriptor desc,
     WAL wal) throws IOException {
@@ -1936,8 +1935,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * nnnnn * @return A region on which you must call
-   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done. n
+   * Return a region on which you must call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
+   * when done.
    */
   public HRegion createLocalHRegion(TableName tableName, byte[] startKey, byte[] stopKey,
     Configuration conf, boolean isReadOnly, Durability durability, WAL wal, byte[]... families)
@@ -1978,7 +1977,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Provide an existing table name to truncate. Scans the table and issues a delete for each row
    * read.
    * @param tableName existing table
-   * @return HTable to that new table n
+   * @return HTable to that new table
    */
   public Table deleteTableData(TableName tableName) throws IOException {
     Table table = getConnection().getTable(tableName);
@@ -2025,7 +2024,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Load table with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Family
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadTable(final Table t, final byte[] f) throws IOException {
     return loadTable(t, new byte[][] { f });
@@ -2035,7 +2034,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Load table with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Family
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadTable(final Table t, final byte[] f, boolean writeToWAL) throws IOException {
     return loadTable(t, new byte[][] { f }, null, writeToWAL);
@@ -2045,7 +2044,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Load table of multiple column families with rows from 'aaa' to 'zzz'.
    * @param t Table
    * @param f Array of Families to load
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadTable(final Table t, final byte[][] f) throws IOException {
     return loadTable(t, f, null);
@@ -2056,7 +2055,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param t     Table
    * @param f     Array of Families to load
    * @param value the values of the cells. If null is passed, the row key is used as value
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value) throws IOException {
     return loadTable(t, f, value, true);
@@ -2067,7 +2066,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param t     Table
    * @param f     Array of Families to load
    * @param value the values of the cells. If null is passed, the row key is used as value
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadTable(final Table t, final byte[][] f, byte[] value, boolean writeToWAL)
     throws IOException {
@@ -2154,7 +2153,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * @param r     Region
    * @param f     Family
    * @param flush flush the cache if true
-   * @return Count of rows loaded. n
+   * @return Count of rows loaded.
    */
   public int loadRegion(final HRegion r, final byte[] f, final boolean flush) throws IOException {
     byte[] k = new byte[3];
@@ -2403,7 +2402,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Create rows in hbase:meta for regions of the specified table with the specified start keys. The
    * first startKey should be a 0 length byte array if you want to form a proper range of regions.
-   * nnn * @return list of region info for regions added to meta n
+   * @return list of region info for regions added to meta
    */
   public List<RegionInfo> createMultiRegionsInMeta(final Configuration conf,
     final TableDescriptor htd, byte[][] startKeys) throws IOException {
@@ -2540,9 +2539,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     }
   }
 
-  /*
-   * Find any other region server which is different from the one identified by parameter n
-   * * @return another region server
+  /**
+   * Find any other region server which is different from the one identified by parameter
+   * @return another region server
    */
   public HRegionServer getOtherRegionServer(HRegionServer rs) {
     for (JVMClusterUtil.RegionServerThread rst : getMiniHBaseCluster().getRegionServerThreads()) {
@@ -2557,7 +2556,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Tool to get the reference to the region server object that holds the region of the specified
    * user table.
    * @param tableName user table to lookup in hbase:meta
-   * @return region server that holds it, null if the row doesn't exist nn
+   * @return region server that holds it, null if the row doesn't exist
    */
   public HRegionServer getRSForFirstRegionInTable(TableName tableName)
     throws IOException, InterruptedException {
@@ -2750,7 +2749,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Expire the Master's session n
+   * Expire the Master's session
    */
   public void expireMasterSession() throws Exception {
     HMaster master = getMiniHBaseCluster().getMaster();
@@ -2992,7 +2991,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Closes the region containing the given row.
    * @param row   The row to find the containing region.
-   * @param table The table to find the region. n
+   * @param table The table to find the region.
    */
   public void unassignRegionByRow(byte[] row, RegionLocator table) throws IOException {
     HRegionLocation hrl = table.getRegionLocation(row);
@@ -3069,7 +3068,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Wait until all regions in a table have been assigned. Waits default timeout before giving up
    * (30 seconds).
-   * @param table Table to wait on. nn
+   * @param table Table to wait on.
    */
   public void waitTableAvailable(TableName table) throws InterruptedException, IOException {
     waitTableAvailable(table.getName(), 30000);
@@ -3166,7 +3165,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * have been all assigned.
    * @see #waitTableEnabled(TableName, long)
    * @param table         Table to wait on.
-   * @param timeoutMillis Time to wait on it being marked enabled. nn
+   * @param timeoutMillis Time to wait on it being marked enabled.
    */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
     throws InterruptedException, IOException {
@@ -3180,7 +3179,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Waits for a table to be 'disabled'. Disabled means that table is set as 'disabled' Will timeout
    * after default period (30 seconds)
-   * @param table Table to wait on. nn
+   * @param table Table to wait on.
    */
   public void waitTableDisabled(byte[] table) throws InterruptedException, IOException {
     waitTableDisabled(table, 30000);
@@ -3194,7 +3193,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Waits for a table to be 'disabled'. Disabled means that table is set as 'disabled'
    * @param table         Table to wait on.
-   * @param timeoutMillis Time to wait on it being marked disabled. nn
+   * @param timeoutMillis Time to wait on it being marked disabled.
    */
   public void waitTableDisabled(byte[] table, long timeoutMillis)
     throws InterruptedException, IOException {
@@ -3204,7 +3203,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Make sure that at least the specified number of region servers are running
    * @param num minimum number of region servers that should be running
-   * @return true if we started some servers n
+   * @return true if we started some servers
    */
   public boolean ensureSomeRegionServersAvailable(final int num) throws IOException {
     boolean startedServer = false;
@@ -3221,7 +3220,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Make sure that at least the specified number of region servers are running. We don't count the
    * ones that are currently stopping or are stopped.
    * @param num minimum number of region servers that should be running
-   * @return true if we started some servers n
+   * @return true if we started some servers
    */
   public boolean ensureSomeNonStoppedRegionServersAvailable(final int num) throws IOException {
     boolean startedServer = ensureSomeRegionServersAvailable(num);
@@ -3248,7 +3247,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Use it getting new instances of FileSystem. Only works for DistributedFileSystem w/o Kerberos.
    * @param c                     Initial configuration
    * @param differentiatingSuffix Suffix to differentiate this user from others.
-   * @return A new configuration instance with a different user set into it. n
+   * @return A new configuration instance with a different user set into it.
    */
   public static User getDifferentUser(final Configuration c, final String differentiatingSuffix)
     throws IOException {
@@ -3290,7 +3289,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * failed 4 times.  Pipeline was 127.0.0.1:53687, 127.0.0.1:53683. Will retry...
    * </pre>
    *
-   * @param stream A DFSClient.DFSOutputStream. nnnnn
+   * @param stream A DFSClient.DFSOutputStream.
    */
   public static void setMaxRecoveryErrorCount(final OutputStream stream, final int max) {
     try {
@@ -3327,7 +3326,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   /**
    * Move region to destination server and wait till region is completely moved and online
    * @param destRegion region to move
-   * @param destServer destination server of the region nn
+   * @param destServer destination server of the region
    */
   public void moveRegionAndWait(RegionInfo destRegion, ServerName destServer)
     throws InterruptedException, IOException {
@@ -3349,7 +3348,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * Wait until all regions for a table in hbase:meta have a non-empty info:server, up to a
    * configuable timeout value (default is 60 seconds) This means all regions have been deployed,
    * master has been informed and updated hbase:meta with the regions deployed server.
-   * @param tableName the table name n
+   * @param tableName the table name
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName) throws IOException {
     waitUntilAllRegionsAssigned(tableName,
@@ -3357,7 +3356,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Waith until all system table's regions get assigned n
+   * Waith until all system table's regions get assigned
    */
   public void waitUntilAllSystemRegionsAssigned() throws IOException {
     waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
@@ -3368,7 +3367,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * timeout. This means all regions have been deployed, master has been informed and updated
    * hbase:meta with the regions deployed server.
    * @param tableName the table name
-   * @param timeout   timeout, in milliseconds n
+   * @param timeout   timeout, in milliseconds
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
     throws IOException {
@@ -3477,8 +3476,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Create region split keys between startkey and endKey nn * @param numRegions the number of
-   * regions to be created. it has to be greater than 3.
+   * Create region split keys between startkey and endKey
+   * @param numRegions the number of regions to be created. it has to be greater than 3.
    * @return resulting split keys
    */
   public byte[][] getRegionSplitStartKeys(byte[] startKey, byte[] endKey, int numRegions) {
@@ -3957,21 +3956,21 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /**
    * Wait until no regions in transition.
-   * @param timeout How long to wait. n
+   * @param timeout How long to wait.
    */
   public void waitUntilNoRegionsInTransition(final long timeout) throws IOException {
     waitFor(timeout, predicateNoRegionsInTransition());
   }
 
   /**
-   * Wait until no regions in transition. (time limit 15min) n
+   * Wait until no regions in transition. (time limit 15min)
    */
   public void waitUntilNoRegionsInTransition() throws IOException {
     waitUntilNoRegionsInTransition(15 * 60000);
   }
 
   /**
-   * Wait until labels is ready in VisibilityLabelsCache. nn
+   * Wait until labels is ready in VisibilityLabelsCache.
    */
   public void waitLabelAvailable(long timeoutMillis, final String... labels) {
     final VisibilityLabelsCache labelsCache = VisibilityLabelsCache.get();

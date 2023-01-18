@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.skyscreamer.jsonassert.JSONAssert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +63,8 @@ public class TestTaskMonitor {
     assertEquals(task.getDescription(), taskFromTm.getDescription());
     assertEquals(-1, taskFromTm.getCompletionTimestamp());
     assertEquals(MonitoredTask.State.RUNNING, taskFromTm.getState());
+    assertEquals(task.getStatus(), taskFromTm.getStatus());
+    assertEquals("status unset", taskFromTm.getStatus());
 
     // Mark it as finished
     task.markComplete("Finished!");
@@ -228,7 +231,7 @@ public class TestTaskMonitor {
 
   @Test
   public void testClone() throws Exception {
-    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl();
+    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl("test");
     monitor.abort("abort RPC");
     TestParam testParam = new TestParam("param1");
     monitor.setRPC("method1", new Object[] { testParam }, 0);
@@ -238,7 +241,7 @@ public class TestTaskMonitor {
     assertEquals(clone.getStatus(), monitor.getStatus());
     assertEquals(clone.toString(), monitor.toString());
     assertEquals(clone.toMap(), monitor.toMap());
-    assertEquals(clone.toJSON(), monitor.toJSON());
+    JSONAssert.assertEquals(clone.toJSON(), monitor.toJSON(), true);
 
     // mark complete and make param dirty
     monitor.markComplete("complete RPC");

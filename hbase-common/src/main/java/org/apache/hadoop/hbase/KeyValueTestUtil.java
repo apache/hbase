@@ -55,8 +55,8 @@ public class KeyValueTestUtil {
 
   /**
    * Checks whether KeyValues from kvCollection2 are contained in kvCollection1. The comparison is
-   * made without distinguishing MVCC version of the KeyValues nn * @return true if KeyValues from
-   * kvCollection2 are contained in kvCollection1
+   * made without distinguishing MVCC version of the KeyValues
+   * @return true if KeyValues from kvCollection2 are contained in kvCollection1
    */
   public static boolean containsIgnoreMvccVersion(Collection<? extends Cell> kvCollection1,
     Collection<? extends Cell> kvCollection2) {

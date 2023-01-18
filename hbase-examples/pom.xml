@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-build-configuration</artifactId>
-    <version>3.0.0-alpha-4-SNAPSHOT</version>
+    <version>${revision}</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-examples</artifactId>
@@ -33,7 +33,7 @@
     <!--Version of protobuf that hbase uses internally (we shade our pb)
          Must match what is out in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>3.17.3</internal.protobuf.version>
+    <internal.protobuf.version>3.21.9</internal.protobuf.version>
   </properties>
   <dependencies>
     <dependency>

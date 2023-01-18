@@ -92,7 +92,7 @@ public abstract class FilterListBase extends FilterBase {
    * the current child, we should set the traverse result (transformed cell) of previous node(s) as
    * the initial value. (HBASE-18879).
    * @param c The cell in question.
-   * @return the transformed cell. n
+   * @return the transformed cell.
    */
   @Override
   public Cell transformCell(Cell c) throws IOException {

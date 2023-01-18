@@ -90,9 +90,8 @@ public interface DataBlockEncoder {
   EncodedSeeker createSeeker(HFileBlockDecodingContext decodingCtx);
 
   /**
-   * Creates a encoder specific encoding context n * store configuration n * encoding strategy used
-   * n * header bytes to be written, put a dummy header here if the header is unknown n * HFile meta
-   * data
+   * Creates a encoder specific encoding context store configuration encoding strategy used header
+   * bytes to be written, put a dummy header here if the header is unknown HFile meta data
    * @return a newly created encoding context
    */
   HFileBlockEncodingContext newDataBlockEncodingContext(Configuration conf,
@@ -100,7 +99,7 @@ public interface DataBlockEncoder {
 
   /**
    * Creates an encoder specific decoding context, which will prepare the data before actual
-   * decoding n * store configuration n * HFile meta data
+   * decoding store configuration HFile meta data
    * @return a newly created decoding context
    */
   HFileBlockDecodingContext newDataBlockDecodingContext(Configuration conf, HFileContext meta);

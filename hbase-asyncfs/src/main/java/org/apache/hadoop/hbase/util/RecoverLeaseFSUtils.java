@@ -72,14 +72,14 @@ public final class RecoverLeaseFSUtils {
    * file's primary node. If all is well, it should return near immediately. But, as is common, it
    * is the very primary node that has crashed and so the namenode will be stuck waiting on a socket
    * timeout before it will ask another datanode to start the recovery. It does not help if we call
-   * recoverLease in the meantime and in particular, subsequent to the socket timeout, a
-   * recoverLease invocation will cause us to start over from square one (possibly waiting on socket
-   * timeout against primary node). So, in the below, we do the following: 1. Call recoverLease. 2.
-   * If it returns true, break. 3. If it returns false, wait a few seconds and then call it again.
-   * 4. If it returns true, break. 5. If it returns false, wait for what we think the datanode
-   * socket timeout is (configurable) and then try again. 6. If it returns true, break. 7. If it
-   * returns false, repeat starting at step 5. above. If HDFS-4525 is available, call it every
-   * second and we might be able to exit early.
+   * recoverLease in the meantime and in particular, after the socket timeout, a recoverLease
+   * invocation will cause us to start over from square one (possibly waiting on socket timeout
+   * against primary node). So, in the below, we do the following: 1. Call recoverLease. 2. If it
+   * returns true, break. 3. If it returns false, wait a few seconds and then call it again. 4. If
+   * it returns true, break. 5. If it returns false, wait for what we think the datanode socket
+   * timeout is (configurable) and then try again. 6. If it returns true, break. 7. If it returns
+   * false, repeat starting at step 5. above. If HDFS-4525 is available, call it every second, and
+   * we might be able to exit early.
    */
   private static boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
     final Configuration conf, final CancelableProgressable reporter) throws IOException {
@@ -89,10 +89,10 @@ public final class RecoverLeaseFSUtils {
     // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
     // beyond that limit 'to be safe'.
     long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 900000) + startWaiting;
-    // This setting should be a little bit above what the cluster dfs heartbeat is set to.
+    // This setting should be a little above what the cluster dfs heartbeat is set to.
     long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 4000);
     // This should be set to how long it'll take for us to timeout against primary datanode if it
-    // is dead. We set it to 64 seconds, 4 second than the default READ_TIMEOUT in HDFS, the
+    // is dead. We set it to 64 seconds, 4 seconds than the default READ_TIMEOUT in HDFS, the
     // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY. If recovery is still failing after this
     // timeout, then further recovery will take liner backoff with this base, to avoid endless
     // preemptions when this value is not properly configured.
@@ -118,7 +118,7 @@ public final class RecoverLeaseFSUtils {
           Thread.sleep(firstPause);
         } else {
           // Cycle here until (subsequentPause * nbAttempt) elapses. While spinning, check
-          // isFileClosed if available (should be in hadoop 2.0.5... not in hadoop 1 though.
+          // isFileClosed if available (should be in hadoop 2.0.5... not in hadoop 1 though).
           long localStartWaiting = EnvironmentEdgeManager.currentTime();
           while (
             (EnvironmentEdgeManager.currentTime() - localStartWaiting)

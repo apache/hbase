@@ -69,10 +69,25 @@ public class ZNodePaths {
   // znode used for log splitting work assignment
   public final String splitLogZNode;
   // znode containing the state of the load balancer
+  /**
+   * @deprecated Since 2.6.0, will be removed in 4.0.0. We use master local region to store this
+   *             state.
+   */
+  @Deprecated
   public final String balancerZNode;
   // znode containing the state of region normalizer
+  /**
+   * @deprecated Since 2.6.0, will be removed in 4.0.0. We use master local region to store this
+   *             state.
+   */
+  @Deprecated
   public final String regionNormalizerZNode;
   // znode containing the state of all switches, currently there are split and merge child node.
+  /**
+   * @deprecated Since 2.6.0, will be removed in 4.0.0. We use master local region to store this
+   *             state.
+   */
+  @Deprecated
   public final String switchZNode;
   // znode of indicating master maintenance mode
   public final String masterMaintZNode;
@@ -86,7 +101,12 @@ public class ZNodePaths {
   // znode containing queues of hfile references to be replicated
   public final String hfileRefsZNode;
   // znode containing the state of the snapshot auto-cleanup
-  final String snapshotCleanupZNode;
+  /**
+   * @deprecated Since 2.6.0, will be removed in 4.0.0. We use master local region to store this
+   *             state.
+   */
+  @Deprecated
+  public final String snapshotCleanupZNode;
 
   public ZNodePaths(Configuration conf) {
     baseZNode = conf.get(ZOOKEEPER_ZNODE_PARENT, DEFAULT_ZOOKEEPER_ZNODE_PARENT);
@@ -144,7 +164,7 @@ public class ZNodePaths {
 
   /**
    * Parses the meta replicaId from the passed path.
-   * @param path the name of the full path which includes baseZNode. n
+   * @param path the name of the full path which includes baseZNode.
    */
   public int getMetaReplicaIdFromPath(String path) {
     // Extract the znode from path. The prefix is of the following format.
@@ -155,7 +175,7 @@ public class ZNodePaths {
 
   /**
    * Parse the meta replicaId from the passed znode
-   * @param znode the name of the znode, does not include baseZNode n
+   * @param znode the name of the znode, does not include baseZNode
    */
   public int getMetaReplicaIdFromZNode(String znode) {
     return znode.equals(metaZNodePrefix)

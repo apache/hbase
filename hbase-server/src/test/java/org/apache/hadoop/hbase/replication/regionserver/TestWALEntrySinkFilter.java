@@ -101,7 +101,7 @@ public class TestWALEntrySinkFilter {
    * Test filter. Filter will filter out any write time that is <= 5 (BOUNDARY). We count how many
    * items we filter out and we count how many cells make it through for distribution way down below
    * in the Table#batch implementation. Puts in place a custom DevNullConnection so we can insert
-   * our counting Table. n
+   * our counting Table.
    */
   @Test
   public void testWALEntryFilter() throws IOException {
@@ -113,7 +113,7 @@ public class TestWALEntrySinkFilter {
       IfTimeIsGreaterThanBOUNDARYWALEntrySinkFilterImpl.class, WALEntrySinkFilter.class);
     conf.setClass(ClusterConnectionFactory.HBASE_SERVER_CLUSTER_CONNECTION_IMPL,
       DevNullAsyncClusterConnection.class, AsyncClusterConnection.class);
-    ReplicationSink sink = new ReplicationSink(conf);
+    ReplicationSink sink = new ReplicationSink(conf, null);
     // Create some dumb walentries.
     List<AdminProtos.WALEntry> entries = new ArrayList<>();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();

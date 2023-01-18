@@ -127,7 +127,7 @@ public class TestRegionServerOnlineConfigChange {
   }
 
   /**
-   * Test that the configurations in the CompactionConfiguration class change properly. n
+   * Test that the configurations in the CompactionConfiguration class change properly.
    */
   @Test
   public void testCompactionConfigurationOnlineChange() throws IOException {

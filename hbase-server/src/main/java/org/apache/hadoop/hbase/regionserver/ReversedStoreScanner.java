@@ -36,8 +36,9 @@ public class ReversedStoreScanner extends StoreScanner implements KeyValueScanne
   /**
    * Opens a scanner across memstore, snapshot, and all StoreFiles. Assumes we are not in a
    * compaction.
-   * @param store   who we scan n * @param scan the spec
-   * @param columns which columns we are scanning n
+   * @param store   who we scan
+   * @param scan    the spec
+   * @param columns which columns we are scanning
    */
   public ReversedStoreScanner(HStore store, ScanInfo scanInfo, Scan scan,
     NavigableSet<byte[]> columns, long readPt) throws IOException {

@@ -87,7 +87,7 @@ public class MunkresAssignment {
    * Construct a new problem instance with the specified cost matrix. The cost matrix must be
    * rectangular, though not necessarily square. If one dimension is greater than the other, some
    * elements in the greater dimension will not be assigned. The input cost matrix will not be
-   * modified. n
+   * modified.
    */
   public MunkresAssignment(float[][] costMatrix) {
     // The algorithm assumes that the number of columns is at least as great as

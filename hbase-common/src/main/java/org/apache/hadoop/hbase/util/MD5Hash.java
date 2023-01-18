@@ -29,8 +29,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class MD5Hash {
 
   /**
-   * Given a byte array, returns in MD5 hash as a hex string. n * @return SHA1 hash as a 32
-   * character hex string.
+   * Given a byte array, returns in MD5 hash as a hex string.
+   * @return SHA1 hash as a 32 character hex string.
    */
   public static String getMD5AsHex(byte[] key) {
     return getMD5AsHex(key, 0, key.length);
@@ -39,8 +39,8 @@ public class MD5Hash {
   /**
    * Given a byte array, returns its MD5 hash as a hex string. Only "length" number of bytes
    * starting at "offset" within the byte array are used.
-   * @param key the key to hash (variable length byte array) nn * @return MD5 hash as a 32 character
-   *            hex string.
+   * @param key the key to hash (variable length byte array)
+   * @return MD5 hash as a 32 character hex string.
    */
   public static String getMD5AsHex(byte[] key, int offset, int length) {
     try {

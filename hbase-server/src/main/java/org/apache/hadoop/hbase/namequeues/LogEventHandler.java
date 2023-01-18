@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -70,7 +71,8 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
         namedQueueServices.put(namedQueueService.getEvent(), namedQueueService);
       } catch (InstantiationException | IllegalAccessException | NoSuchMethodException
         | InvocationTargetException e) {
-        LOG.warn("Unable to instantiate/add NamedQueueService implementor {} to service map.", clz);
+        LOG.warn("Unable to instantiate/add NamedQueueService implementor {} to service map.", clz,
+          e);
       }
     }
   }
@@ -105,8 +107,8 @@ class LogEventHandler implements EventHandler<RingBufferEnvelope> {
    * Add all in memory queue records to system table. The implementors can use system table or
    * direct HDFS file or ZK as persistence system.
    */
-  void persistAll(NamedQueuePayload.NamedQueueEvent namedQueueEvent) {
-    namedQueueServices.get(namedQueueEvent).persistAll();
+  void persistAll(NamedQueuePayload.NamedQueueEvent namedQueueEvent, Connection connection) {
+    namedQueueServices.get(namedQueueEvent).persistAll(connection);
   }
 
   /**

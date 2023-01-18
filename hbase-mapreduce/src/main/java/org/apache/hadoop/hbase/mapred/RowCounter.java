@@ -65,9 +65,7 @@ public class RowCounter extends Configured implements Tool {
     }
   }
 
-  /**
-   * n * @return the JobConf n
-   */
+  /** Returns the JobConf */
   public JobConf createSubmittableJob(String[] args) throws IOException {
     JobConf c = new JobConf(getConf(), getClass());
     c.setJobName(NAME);
@@ -104,9 +102,6 @@ public class RowCounter extends Configured implements Tool {
     return 0;
   }
 
-  /**
-   * nn
-   */
   public static void main(String[] args) throws Exception {
     int errCode = ToolRunner.run(HBaseConfiguration.create(), new RowCounter(), args);
     System.exit(errCode);

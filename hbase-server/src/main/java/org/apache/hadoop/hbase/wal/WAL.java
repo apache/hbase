@@ -67,8 +67,8 @@ public interface WAL extends Closeable, WALFileLengthProvider {
    * Roll the log writer. That is, start writing log messages to a new file.
    * <p/>
    * The implementation is synchronized in order to make sure there's one rollWriter running at any
-   * given time. n * If true, force creation of a new writer even if no entries have been written to
-   * the current writer
+   * given time. If true, force creation of a new writer even if no entries have been written to the
+   * current writer
    * @return If lots of logs, flush the stores of returned regions so next time through we can clean
    *         logs. Returns null if nothing to flush. Names are actual region names as returned by
    *         {@link RegionInfo#getEncodedName()}
@@ -269,14 +269,14 @@ public interface WAL extends Closeable, WALFileLengthProvider {
     }
 
     /**
-     * Gets the edit n
+     * Gets the edit
      */
     public WALEdit getEdit() {
       return edit;
     }
 
     /**
-     * Gets the key n
+     * Gets the key
      */
     public WALKeyImpl getKey() {
       return key;

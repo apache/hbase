@@ -86,7 +86,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Copy-constructor n
+   * Copy-constructor
    */
   public Get(Get get) {
     this(get.getRow());
@@ -125,7 +125,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Create a Get operation for the specified row. nnn
+   * Create a Get operation for the specified row.
    */
   public Get(byte[] row, int rowOffset, int rowLength) {
     Mutation.checkRow(row, rowOffset, rowLength);
@@ -133,7 +133,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Create a Get operation for the specified row. n
+   * Create a Get operation for the specified row.
    */
   public Get(ByteBuffer row) {
     Mutation.checkRow(row);
@@ -294,7 +294,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Method for retrieving the get's row n
+   * Method for retrieving the get's row
    */
   @Override
   public byte[] getRow() {
@@ -326,7 +326,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Method for retrieving the get's TimeRange n
+   * Method for retrieving the get's TimeRange
    */
   public TimeRange getTimeRange() {
     return this.tr;
@@ -357,7 +357,7 @@ public class Get extends Query implements Row {
   }
 
   /**
-   * Method for retrieving the get's familyMap n
+   * Method for retrieving the get's familyMap
    */
   public Map<byte[], NavigableSet<byte[]>> getFamilyMap() {
     return this.familyMap;
@@ -365,7 +365,7 @@ public class Get extends Query implements Row {
 
   /**
    * Compile the table and column family (i.e. schema) information into a String. Useful for parsing
-   * and aggregation by debugging, logging, and administration tools. n
+   * and aggregation by debugging, logging, and administration tools.
    */
   @Override
   public Map<String, Object> getFingerprint() {
@@ -382,7 +382,7 @@ public class Get extends Query implements Row {
    * Compile the details beyond the scope of getFingerprint (row, columns, timestamps, etc.) into a
    * Map along with the fingerprinted information. Useful for debugging, logging, and administration
    * tools.
-   * @param maxCols a limit on the number of columns output prior to truncation n
+   * @param maxCols a limit on the number of columns output prior to truncation
    */
   @Override
   public Map<String, Object> toMap(int maxCols) {

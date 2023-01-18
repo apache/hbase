@@ -20,16 +20,14 @@
 #
 # Specifically, it's used for the flaky test reporting job defined in
 # dev-support/flaky-tests/flaky-reporting.Jenkinsfile
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 COPY . /hbase/dev-support
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-      curl='7.58.0-*' \
-      python2.7='2.7.17-*' \
-      python-pip='9.0.1-*' \
-      python-setuptools='39.0.1-*' \
+      curl='7.81.0-*' \
+      python3-pip='22.0.2+dfsg-*' \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN pip install -r /hbase/dev-support/python-requirements.txt
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir -r /hbase/dev-support/python-requirements.txt

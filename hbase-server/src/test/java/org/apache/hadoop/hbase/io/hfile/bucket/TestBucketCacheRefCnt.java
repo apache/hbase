@@ -110,8 +110,6 @@ public class TestBucketCacheRefCnt {
   // Flakey TestBucketCacheRefCnt.testBlockInRAMCache:121 expected:<3> but was:<2>
   public void testBlockInRAMCache() throws IOException {
     cache = create(1, 1000);
-    // Set this to true;
-    cache.wait_when_cache = true;
     disableWriter();
     final String prefix = "testBlockInRamCache";
     try {
@@ -319,8 +317,6 @@ public class TestBucketCacheRefCnt {
    *    by Thread2 and the content of Block1 would be overwritten after it is freed, which may
    *    cause a serious error.
    * </pre>
-   *
-   * n
    */
   @Test
   public void testReplacingBlockAndGettingBlockConcurrently() throws Exception {

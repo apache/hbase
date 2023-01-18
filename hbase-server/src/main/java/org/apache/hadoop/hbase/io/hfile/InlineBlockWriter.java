@@ -30,16 +30,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface InlineBlockWriter {
 
   /**
-   * Determines whether there is a new block to be written out. n * whether the file is being
-   * closed, in which case we need to write out all available data and not wait to accumulate
-   * another block
+   * Determines whether there is a new block to be written out. whether the file is being closed, in
+   * which case we need to write out all available data and not wait to accumulate another block
    */
   boolean shouldWriteBlock(boolean closing);
 
   /**
    * Writes the block to the provided stream. Must not write any magic records. Called only if
-   * {@link #shouldWriteBlock(boolean)} returned true. n * a stream (usually a compressing stream)
-   * to write the block to
+   * {@link #shouldWriteBlock(boolean)} returned true. a stream (usually a compressing stream) to
+   * write the block to
    */
   void writeInlineBlock(DataOutput out) throws IOException;
 

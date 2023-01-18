@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
 import org.slf4j.Logger;
@@ -57,39 +59,51 @@ public class RestartActiveNameNodeAction extends RestartActionBaseAction {
   @Override
   public void perform() throws Exception {
     getLogger().info("Performing action: Restart active namenode");
-    Configuration conf = CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf()).getConf();
-    String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
-    if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
-      throw new Exception("HA for namenode is not enabled");
-    }
-    ZKWatcher zkw = null;
-    RecoverableZooKeeper rzk = null;
+
+    final String hadoopHAZkNode;
     String activeNamenode = null;
-    String hadoopHAZkNode = conf.get(ZK_PARENT_ZNODE_KEY, ZK_PARENT_ZNODE_DEFAULT);
-    try {
-      zkw = new ZKWatcher(conf, "get-active-namenode", null);
-      rzk = zkw.getRecoverableZooKeeper();
-      String hadoopHAZkNodePath = ZNodePaths.joinZNode(hadoopHAZkNode, nameServiceID);
-      List<String> subChildern = ZKUtil.listChildrenNoWatch(zkw, hadoopHAZkNodePath);
-      for (String eachEntry : subChildern) {
-        if (eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
+    int activeNamenodePort = -1;
+    try (final DistributedFileSystem dfs = HdfsActionUtils.createDfs(getConf())) {
+      final Configuration conf = dfs.getConf();
+      hadoopHAZkNode = conf.get(ZK_PARENT_ZNODE_KEY, ZK_PARENT_ZNODE_DEFAULT);
+      final String nameServiceID = DFSUtil.getNamenodeNameServiceId(conf);
+
+      if (!HAUtil.isHAEnabled(conf, nameServiceID)) {
+        getLogger().info("HA for HDFS is not enabled; skipping");
+        return;
+      }
+      try (final ZKWatcher zkw = new ZKWatcher(conf, "get-active-namenode", null)) {
+        final RecoverableZooKeeper rzk = zkw.getRecoverableZooKeeper();
+        // If hadoopHAZkNode == '/', pass '' instead because then joinZNode will return '//' as a
+        // prefix
+        // which zk doesn't like as a prefix on the path.
+        final String hadoopHAZkNodePath = ZNodePaths.joinZNode(
+          (hadoopHAZkNode != null && hadoopHAZkNode.equals("/")) ? "" : hadoopHAZkNode,
+          nameServiceID);
+        final List<String> subChildren =
+          Optional.ofNullable(ZKUtil.listChildrenNoWatch(zkw, hadoopHAZkNodePath))
+            .orElse(Collections.emptyList());
+        for (final String eachEntry : subChildren) {
+          if (!eachEntry.contains(ACTIVE_NN_LOCK_NAME)) {
+            continue;
+          }
           byte[] data =
             rzk.getData(ZNodePaths.joinZNode(hadoopHAZkNodePath, ACTIVE_NN_LOCK_NAME), false, null);
           ActiveNodeInfo proto = ActiveNodeInfo.parseFrom(data);
           activeNamenode = proto.getHostname();
+          activeNamenodePort = proto.getPort();
         }
       }
-    } finally {
-      if (zkw != null) {
-        zkw.close();
-      }
     }
+
     if (activeNamenode == null) {
-      throw new Exception("No active Name node found in zookeeper under " + hadoopHAZkNode);
+      getLogger().info("No active Name node found in zookeeper under '{}'", hadoopHAZkNode);
+      return;
     }
-    getLogger().info("Found active namenode host:" + activeNamenode);
-    ServerName activeNNHost = ServerName.valueOf(activeNamenode, -1, -1);
-    getLogger().info("Restarting Active NameNode :" + activeNamenode);
-    restartNameNode(activeNNHost, sleepTime);
+
+    getLogger().info("Found Active NameNode host: {}", activeNamenode);
+    final ServerName activeNNHost = ServerName.valueOf(activeNamenode, activeNamenodePort, -1L);
+    getLogger().info("Restarting Active NameNode: {}", activeNamenode);
+    restartNameNode(activeNNHost, this.sleepTime);
   }
 }

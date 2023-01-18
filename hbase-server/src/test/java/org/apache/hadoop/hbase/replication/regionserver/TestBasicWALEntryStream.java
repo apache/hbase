@@ -611,7 +611,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     localLogQueue.enqueueLog(emptyLog, fakeWalGroupId);
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(fs, conf, localLogQueue, 0,
       getDummyFilter(), source, fakeWalGroupId);
-    reader.run();
+    reader.start();
+    reader.join();
     // ReplicationSourceWALReaderThread#handleEofException method will
     // remove empty log from logQueue.
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
@@ -650,7 +651,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
       getDummyFilter(), source, fakeWalGroupId);
     assertEquals("Initial log queue size is not correct", 2,
       localLogQueue.getQueueSize(fakeWalGroupId));
-    reader.run();
+    reader.start();
+    reader.join();
 
     // remove empty log from logQueue.
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));

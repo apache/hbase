@@ -907,7 +907,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   /**
-   * Execute a list of mutations. nnn
+   * Execute a list of mutations.
    */
   private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
     final OperationQuota quota, final List<ClientProtos.Action> mutations, final CellScanner cells,
@@ -1497,7 +1497,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Close a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1529,7 +1529,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Compact a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1593,7 +1593,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Flush a region on the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1773,7 +1773,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Get some information of the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -1874,7 +1874,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    * errors are put in the response as FAILED_OPENING.
    * </p>
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -2249,7 +2249,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Roll the WAL writer of the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   public RollWALWriterResponse rollWALWriter(final RpcController controller,
@@ -2270,7 +2270,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Stop the region server.
    * @param controller the RPC controller
-   * @param request    the request n
+   * @param request    the request
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
@@ -2453,7 +2453,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Get data from a table.
    * @param controller the RPC controller
-   * @param request    the get request n
+   * @param request    the get request
    */
   @Override
   public GetResponse get(final RpcController controller, final GetRequest request)
@@ -2651,7 +2651,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
    * @param rpcc    the RPC controller
-   * @param request the multi request n
+   * @param request the multi request
    */
   @Override
   public MultiResponse multi(final RpcController rpcc, final MultiRequest request)
@@ -3487,7 +3487,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   /**
    * Scan data in a table.
    * @param controller the RPC controller
-   * @param request    the scan request n
+   * @param request    the scan request
    */
   @Override
   public ScanResponse scan(final RpcController controller, final ScanRequest request)
@@ -3862,9 +3862,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       ? ProtobufUtil.toServerName(request.getDestinationServer())
       : null;
     long procId = request.getCloseProcId();
+    boolean evictCache = request.getEvictCache();
     if (server.submitRegionProcedure(procId)) {
-      server.getExecutorService()
-        .submit(UnassignRegionHandler.create(server, encodedName, procId, false, destination));
+      server.getExecutorService().submit(
+        UnassignRegionHandler.create(server, encodedName, procId, false, destination, evictCache));
     }
   }
 

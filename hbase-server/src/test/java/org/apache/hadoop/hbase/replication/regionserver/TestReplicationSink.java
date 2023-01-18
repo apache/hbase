@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -129,7 +130,9 @@ public class TestReplicationSink {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     TEST_UTIL.startMiniCluster(3);
-    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()));
+    RegionServerCoprocessorHost rsCpHost =
+      TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getRegionServerCoprocessorHost();
+    SINK = new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), rsCpHost);
     table1 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAME1);
     table2 = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAME2);
     Path rootDir = CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration());
@@ -157,7 +160,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a whole batch of entries n
+   * Insert a whole batch of entries
    */
   @Test
   public void testBatchSink() throws Exception {
@@ -174,7 +177,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert a mix of puts and deletes n
+   * Insert a mix of puts and deletes
    */
   @Test
   public void testMixedPutDelete() throws Exception {
@@ -234,7 +237,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert to 2 different tables n
+   * Insert to 2 different tables
    */
   @Test
   public void testMixedPutTables() throws Exception {
@@ -258,7 +261,7 @@ public class TestReplicationSink {
   }
 
   /**
-   * Insert then do different types of deletes n
+   * Insert then do different types of deletes
    */
   @Test
   public void testMixedDeletes() throws Exception {
@@ -285,7 +288,7 @@ public class TestReplicationSink {
 
   /**
    * Puts are buffered, but this tests when a delete (not-buffered) is applied before the actual Put
-   * that creates it. n
+   * that creates it.
    */
   @Test
   public void testApplyDeleteBeforePut() throws Exception {

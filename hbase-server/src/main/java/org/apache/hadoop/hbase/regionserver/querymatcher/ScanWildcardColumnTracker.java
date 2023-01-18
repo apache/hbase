@@ -184,7 +184,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   }
 
   /**
-   * We can never know a-priori if we are done, so always return false. n
+   * We can never know a-priori if we are done, so always return false.
    */
   @Override
   public boolean done() {

@@ -76,7 +76,7 @@ public interface ServerMetrics {
   Map<String, List<ReplicationLoadSource>> getReplicationLoadSourceMap();
 
   /**
-   * Call directly from client such as hbase shell n
+   * Call directly from client such as hbase shell
    */
   @Nullable
   ReplicationLoadSink getReplicationLoadSink();

@@ -200,7 +200,7 @@ public class CacheConfig {
   }
 
   /**
-   * Constructs a cache configuration copied from the specified configuration. n
+   * Constructs a cache configuration copied from the specified configuration.
    */
   public CacheConfig(CacheConfig cacheConf) {
     this.cacheDataOnRead = cacheConf.cacheDataOnRead;

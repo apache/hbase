@@ -111,7 +111,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn
+   * Constructor for protobuf deserialization only.
    */
   protected SingleColumnValueFilter(final byte[] family, final byte[] qualifier,
     final CompareOperator op, org.apache.hadoop.hbase.filter.ByteArrayComparable comparator,

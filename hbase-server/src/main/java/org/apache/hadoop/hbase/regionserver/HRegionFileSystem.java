@@ -360,7 +360,7 @@ public class HRegionFileSystem {
   /**
    * Returns true if the specified family has reference files
    * @param familyName Column Family Name
-   * @return true if family contains reference files n
+   * @return true if family contains reference files
    */
   public boolean hasReferences(final String familyName) throws IOException {
     Path storeDir = getStoreDir(familyName);
@@ -382,7 +382,7 @@ public class HRegionFileSystem {
   /**
    * Check whether region has Reference file
    * @param htd table desciptor of the region
-   * @return true if region has reference file n
+   * @return true if region has reference file
    */
   public boolean hasReferences(final TableDescriptor htd) throws IOException {
     for (ColumnFamilyDescriptor family : htd.getColumnFamilies()) {
@@ -465,7 +465,7 @@ public class HRegionFileSystem {
    * Move the file from a build/temp location to the main family store directory.
    * @param familyName Family that will gain the file
    * @param buildPath  {@link Path} to the file to commit.
-   * @return The new {@link Path} of the committed file n
+   * @return The new {@link Path} of the committed file
    */
   public Path commitStoreFile(final String familyName, final Path buildPath) throws IOException {
     Path dstPath = preCommitStoreFile(familyName, buildPath, -1, false);
@@ -480,7 +480,7 @@ public class HRegionFileSystem {
    * @param seqNum          Sequence Number to append to the file name (less then 0 if no sequence
    *                        number)
    * @param generateNewName False if you want to keep the buildPath name
-   * @return The new {@link Path} of the to be committed file n
+   * @return The new {@link Path} of the to be committed file
    */
   private Path preCommitStoreFile(final String familyName, final Path buildPath, final long seqNum,
     final boolean generateNewName) throws IOException {
@@ -506,7 +506,7 @@ public class HRegionFileSystem {
    * Moves file from staging dir to region dir
    * @param buildPath {@link Path} to the file to commit.
    * @param dstPath {@link Path} to the file under region dir
-   * @return The {@link Path} of the committed file n
+   * @return The {@link Path} of the committed file
    */
   Path commitStoreFile(final Path buildPath, Path dstPath) throws IOException {
     // rename is not necessary in case of direct-insert stores
@@ -550,7 +550,7 @@ public class HRegionFileSystem {
    * @param familyName Family that will gain the file
    * @param srcPath    {@link Path} to the file to import
    * @param seqNum     Bulk Load sequence number
-   * @return The destination {@link Path} of the bulk loaded file n
+   * @return The destination {@link Path} of the bulk loaded file
    */
   Pair<Path, Path> bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
     throws IOException {
@@ -585,7 +585,7 @@ public class HRegionFileSystem {
 
   /**
    * Remove daughter region
-   * @param regionInfo daughter {@link RegionInfo} n
+   * @param regionInfo daughter {@link RegionInfo}
    */
   void cleanupDaughterRegion(final RegionInfo regionInfo) throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
@@ -771,7 +771,7 @@ public class HRegionFileSystem {
 
   /**
    * Remove merged region
-   * @param mergedRegion {@link RegionInfo} n
+   * @param mergedRegion {@link RegionInfo}
    */
   public void cleanupMergedRegion(final RegionInfo mergedRegion) throws IOException {
     Path regionDir = new Path(this.tableDir, mergedRegion.getEncodedName());
@@ -816,7 +816,7 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Commit a merged region, making it ready for use. n
+   * Commit a merged region, making it ready for use.
    */
   public void commitMergedRegion(List<Path> allMergedFiles, MasterProcedureEnv env)
     throws IOException {
@@ -834,9 +834,7 @@ public class HRegionFileSystem {
   // Create/Open/Delete Helpers
   // ===========================================================================
 
-  /**
-   * n * @return Content of the file we write out to the filesystem under a region n
-   */
+  /** Returns Content of the file we write out to the filesystem under a region */
   private static byte[] getRegionInfoFileContent(final RegionInfo hri) throws IOException {
     return RegionInfo.toDelimitedByteArray(hri);
   }
@@ -1070,9 +1068,9 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Creates a directory. Assumes the user has already checked for this directory existence. n
-   * * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
-   * whether the directory exists or not, and returns true if it exists. n
+   * Creates a directory. Assumes the user has already checked for this directory existence.
+   * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
+   *         whether the directory exists or not, and returns true if it exists.
    */
   boolean createDir(Path dir) throws IOException {
     int i = 0;
@@ -1094,8 +1092,8 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Renames a directory. Assumes the user has already checked for this directory existence. nn
-   * * @return true if rename is successful. n
+   * Renames a directory. Assumes the user has already checked for this directory existence.
+   * @return true if rename is successful.
    */
   boolean rename(Path srcpath, Path dstPath) throws IOException {
     IOException lastIOE = null;
@@ -1119,8 +1117,8 @@ public class HRegionFileSystem {
   }
 
   /**
-   * Deletes a directory. Assumes the user has already checked for this directory existence. n
-   * * @return true if the directory is deleted. n
+   * Deletes a directory. Assumes the user has already checked for this directory existence.
+   * @return true if the directory is deleted.
    */
   boolean deleteDir(Path dir) throws IOException {
     IOException lastIOE = null;
@@ -1152,9 +1150,9 @@ public class HRegionFileSystem {
 
   /**
    * Creates a directory for a filesystem and configuration object. Assumes the user has already
-   * checked for this directory existence. nnn * @return the result of fs.mkdirs(). In case
-   * underlying fs throws an IOException, it checks whether the directory exists or not, and returns
-   * true if it exists. n
+   * checked for this directory existence.
+   * @return the result of fs.mkdirs(). In case underlying fs throws an IOException, it checks
+   *         whether the directory exists or not, and returns true if it exists.
    */
   private static boolean createDirOnFileSystem(FileSystem fs, Configuration conf, Path dir)
     throws IOException {

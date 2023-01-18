@@ -80,9 +80,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
     return this.serverName.hashCode();
   }
 
-  /**
-   * n
-   */
+  /** Returns regionInfo */
   public RegionInfo getRegion() {
     return regionInfo;
   }

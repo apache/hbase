@@ -161,3 +161,10 @@ message TransitReplicationPeerSyncReplicationStateRequest {
 message TransitReplicationPeerSyncReplicationStateResponse {
   required uint64 proc_id = 1;
 }
+
+message GetReplicationPeerStateRequest {
+  required string peer_id = 1;
+}
+message GetReplicationPeerStateResponse {
+  required bool is_enabled = 1;
+}

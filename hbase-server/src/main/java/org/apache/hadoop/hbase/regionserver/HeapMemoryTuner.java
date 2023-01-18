@@ -32,8 +32,8 @@ import org.apache.yetus.audience.InterfaceStability;
 public interface HeapMemoryTuner extends Configurable {
 
   /**
-   * Perform the heap memory tuning operation. n * @return <code>TunerResult</code> including the
-   * heap percentage for memstore and block cache
+   * Perform the heap memory tuning operation.
+   * @return <code>TunerResult</code> including the heap percentage for memstore and block cache
    */
   TunerResult tune(TunerContext context);
 }

@@ -105,6 +105,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableDescriptorsByState(isEnabled));
+  }
+
+  @Override
   public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(includeSysTables));
   }
@@ -113,6 +118,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<List<TableName>> listTableNames(Pattern pattern,
     boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(pattern, includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableNamesByState(isEnabled));
   }
 
   @Override
@@ -479,6 +489,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<Void> disableTableReplication(TableName tableName) {
     return wrap(rawAdmin.disableTableReplication(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    return wrap(rawAdmin.isReplicationPeerEnabled(peerId));
   }
 
   @Override

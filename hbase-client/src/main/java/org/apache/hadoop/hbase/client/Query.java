@@ -47,9 +47,6 @@ public abstract class Query extends OperationWithAttributes {
   protected Map<byte[], TimeRange> colFamTimeRangeMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   protected Boolean loadColumnFamiliesOnDemand = null;
 
-  /**
-   * n
-   */
   public Filter getFilter() {
     return filter;
   }
@@ -67,7 +64,7 @@ public abstract class Query extends OperationWithAttributes {
   }
 
   /**
-   * Sets the authorizations to be used by this Query n
+   * Sets the authorizations to be used by this Query
    */
   public Query setAuthorizations(Authorizations authorizations) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY,
@@ -133,7 +130,7 @@ public abstract class Query extends OperationWithAttributes {
    * Specify region replica id where Query will fetch data from. Use this together with
    * {@link #setConsistency(Consistency)} passing {@link Consistency#TIMELINE} to read data from a
    * specific replicaId. <br>
-   * <b> Expert: </b>This is an advanced API exposed. Only use it if you know what you are doing n
+   * <b> Expert: </b>This is an advanced API exposed. Only use it if you know what you are doing
    */
   public Query setReplicaId(int Id) {
     this.targetReplicaId = Id;
@@ -209,7 +206,7 @@ public abstract class Query extends OperationWithAttributes {
    * Column Family time ranges take precedence over the global time range.
    * @param cf       the column family for which you want to restrict
    * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive n
+   * @param maxStamp maximum timestamp value, exclusive
    */
 
   public Query setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) {

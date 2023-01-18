@@ -175,6 +175,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    throw new NotImplementedException("listTableDescriptorsByState not supported in ThriftAdmin");
+  }
+
+  @Override
   public TableName[] listTableNames() throws IOException {
     return listTableNames(null);
   }
@@ -193,6 +198,11 @@ public class ThriftAdmin implements Admin {
     } catch (TException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    throw new NotImplementedException("listTableNamesByState not supported in ThriftAdmin");
   }
 
   @Override
@@ -1029,6 +1039,11 @@ public class ThriftAdmin implements Admin {
     SyncReplicationState state) {
     throw new NotImplementedException(
       "transitReplicationPeerSyncReplicationStateAsync not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    throw new NotImplementedException("isReplicationPeerEnabled not supported in ThriftAdmin");
   }
 
   @Override

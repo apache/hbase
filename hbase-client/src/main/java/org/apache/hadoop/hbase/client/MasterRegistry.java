@@ -72,17 +72,31 @@ public class MasterRegistry extends AbstractRpcBasedConnectionRegistry {
   private static final String MASTER_ADDRS_CONF_SEPARATOR = ",";
 
   /**
+   * Supplies the default master port we should use given the provided configuration.
+   * @param conf Configuration to parse from.
+   */
+  private static int getDefaultMasterPort(Configuration conf) {
+    final int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
+    if (port == 0) {
+      // Master port may be set to 0. We should substitute the default port in that case.
+      return HConstants.DEFAULT_MASTER_PORT;
+    }
+    return port;
+  }
+
+  /**
    * Parses the list of master addresses from the provided configuration. Supported format is comma
    * separated host[:port] values. If no port number if specified, default master port is assumed.
    * @param conf Configuration to parse from.
    */
   public static Set<ServerName> parseMasterAddrs(Configuration conf) throws UnknownHostException {
-    Set<ServerName> masterAddrs = new HashSet<>();
-    String configuredMasters = getMasterAddr(conf);
+    final int defaultPort = getDefaultMasterPort(conf);
+    final Set<ServerName> masterAddrs = new HashSet<>();
+    final String configuredMasters = getMasterAddr(conf);
     for (String masterAddr : Splitter.onPattern(MASTER_ADDRS_CONF_SEPARATOR)
       .split(configuredMasters)) {
-      HostAndPort masterHostPort =
-        HostAndPort.fromString(masterAddr.trim()).withDefaultPort(HConstants.DEFAULT_MASTER_PORT);
+      final HostAndPort masterHostPort =
+        HostAndPort.fromString(masterAddr.trim()).withDefaultPort(defaultPort);
       masterAddrs.add(ServerName.valueOf(masterHostPort.toString(), ServerName.NON_STARTCODE));
     }
     Preconditions.checkArgument(!masterAddrs.isEmpty(), "At least one master address is needed");

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.ChoreService.CHORE_SERVICE_INITIAL_POOL_SIZE;
+import static org.apache.hadoop.hbase.ChoreService.DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 
@@ -278,7 +280,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
       initializeFileSystem();
 
-      this.choreService = new ChoreService(getName(), true);
+      int choreServiceInitialSize =
+        conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
+      this.choreService = new ChoreService(getName(), choreServiceInitialSize, true);
       this.executorService = new ExecutorService(getName());
 
       this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
@@ -577,7 +581,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   /**
-   * get NamedQueue Provider to add different logs to ringbuffer n
+   * get NamedQueue Provider to add different logs to ringbuffer
    */
   public NamedQueueRecorder getNamedQueueRecorder() {
     return this.namedQueueRecorder;

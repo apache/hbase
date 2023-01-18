@@ -130,7 +130,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
     this.scannerReadPoints = region.scannerReadPoints;
     this.rsServices = region.getRegionServerServices();
-    synchronized (scannerReadPoints) {
+    region.smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
+    try {
       if (mvccReadPoint > 0) {
         this.readPt = mvccReadPoint;
       } else if (hasNonce(region, nonce)) {
@@ -139,6 +140,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
         this.readPt = region.getReadPoint(isolationLevel);
       }
       scannerReadPoints.put(this, this.readPt);
+    } finally {
+      region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
     }
     initializeScanners(scan, additionalScanners);
   }

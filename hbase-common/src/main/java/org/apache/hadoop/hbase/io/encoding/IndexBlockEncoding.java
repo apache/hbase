@@ -91,7 +91,7 @@ public enum IndexBlockEncoding {
   /**
    * Writes id bytes to the given array starting from offset.
    * @param dest   output array
-   * @param offset starting offset of the output array n
+   * @param offset starting offset of the output array
    */
   public void writeIdInBytes(byte[] dest, int offset) throws IOException {
     System.arraycopy(idInBytes, 0, dest, offset, ID_SIZE);

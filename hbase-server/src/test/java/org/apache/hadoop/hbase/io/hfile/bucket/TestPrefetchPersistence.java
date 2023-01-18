@@ -118,7 +118,6 @@ public class TestPrefetchPersistence {
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
-    bucketCache.wait_when_cache = true;
     cacheConf = new CacheConfig(conf, bucketCache);
 
     long usedSize = bucketCache.getAllocator().getUsedSize();
@@ -138,7 +137,6 @@ public class TestPrefetchPersistence {
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
-    bucketCache.wait_when_cache = true;
     assertFalse(new File(testDir + "/bucket.persistence").exists());
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertTrue(usedSize != 0);

@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.SharedConnection;
 import org.apache.hadoop.hbase.coprocessor.BaseEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -39,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @InterfaceAudience.Private
 public class RegionServerCoprocessorHost
@@ -162,6 +165,26 @@ public class RegionServerCoprocessorHost
       @Override
       public void call(RegionServerObserver observer) throws IOException {
         observer.postReplicateLogEntries(this);
+      }
+    });
+  }
+
+  public void preReplicationSinkBatchMutate(AdminProtos.WALEntry walEntry, Mutation mutation)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.preReplicationSinkBatchMutate(this, walEntry, mutation);
+      }
+    });
+  }
+
+  public void postReplicationSinkBatchMutate(AdminProtos.WALEntry walEntry, Mutation mutation)
+    throws IOException {
+    execOperation(coprocEnvironments.isEmpty() ? null : new RegionServerObserverOperation() {
+      @Override
+      public void call(RegionServerObserver observer) throws IOException {
+        observer.postReplicationSinkBatchMutate(this, walEntry, mutation);
       }
     });
   }

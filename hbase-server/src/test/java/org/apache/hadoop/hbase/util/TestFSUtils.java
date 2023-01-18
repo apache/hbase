@@ -498,7 +498,7 @@ public class TestFSUtils {
 
   /**
    * Ugly test that ensures we can get at the hedged read counters in dfsclient. Does a bit of
-   * preading with hedged reads enabled using code taken from hdfs TestPread. n
+   * preading with hedged reads enabled using code taken from hdfs TestPread.
    */
   @Test
   public void testDFSHedgedReadMetrics() throws Exception {

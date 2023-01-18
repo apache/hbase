@@ -50,13 +50,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
- * The base class for load balancers. It provides the the functions used to by
- * {@code AssignmentManager} to assign regions in the edge cases. It doesn't provide an
- * implementation of the actual balancing algorithm.
+ * The base class for load balancers. It provides the functions used to by {@code AssignmentManager}
+ * to assign regions in the edge cases. It doesn't provide an implementation of the actual balancing
+ * algorithm.
  * <p/>
  * Since 3.0.0, all the balancers will be wrapped inside a {@code RSGroupBasedLoadBalancer}, it will
  * be in charge of the synchronization of balancing and configuration changing, so we do not need to
- * synchronized by ourselves.
+ * synchronize by ourselves.
  */
 @InterfaceAudience.Private
 public abstract class BaseLoadBalancer implements LoadBalancer {
@@ -297,7 +297,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return Collections.singletonMap(servers.get(0), new ArrayList<>(regions.keySet()));
     }
 
-    // Group all of the old assignments by their hostname.
+    // Group all the old assignments by their hostname.
     // We can't group directly by ServerName since the servers all have
     // new start-codes.
 
@@ -484,7 +484,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   /**
-   * Round robin a list of regions to a list of servers
+   * Round-robin a list of regions to a list of servers
    */
   private void roundRobinAssignment(BalancerClusterState cluster, List<RegionInfo> regions,
     List<ServerName> servers, Map<ServerName, List<RegionInfo>> assignments) {

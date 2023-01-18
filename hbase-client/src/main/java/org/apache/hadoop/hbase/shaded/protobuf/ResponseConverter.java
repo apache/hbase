@@ -90,7 +90,7 @@ public final class ResponseConverter {
    * @param request  the original protocol buffer MultiRequest
    * @param response the protocol buffer MultiResponse to convert
    * @param cells    Cells to go with the passed in <code>proto</code>. Can be null.
-   * @return the results that were in the MultiResponse (a Result or an Exception). n
+   * @return the results that were in the MultiResponse (a Result or an Exception).
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
     final MultiResponse response, final CellScanner cells) throws IOException {
@@ -103,7 +103,7 @@ public final class ResponseConverter {
    * @param indexMap Used to support RowMutations/CheckAndMutate in batch
    * @param response the protocol buffer MultiResponse to convert
    * @param cells    Cells to go with the passed in <code>proto</code>. Can be null.
-   * @return the results that were in the MultiResponse (a Result or an Exception). n
+   * @return the results that were in the MultiResponse (a Result or an Exception).
    */
   public static org.apache.hadoop.hbase.client.MultiResponse getResults(final MultiRequest request,
     final Map<Integer, Integer> indexMap, final MultiResponse response, final CellScanner cells)
@@ -247,7 +247,8 @@ public final class ResponseConverter {
   }
 
   /**
-   * Wrap a throwable to an action result. n * @return an action result builder
+   * Wrap a throwable to an action result.
+   * @return an action result builder
    */
   public static ResultOrException.Builder buildActionResult(final Throwable t) {
     ResultOrException.Builder builder = ResultOrException.newBuilder();
@@ -256,7 +257,8 @@ public final class ResponseConverter {
   }
 
   /**
-   * Wrap a throwable to an action result. n * @return an action result builder
+   * Wrap a throwable to an action result.
+   * @return an action result builder
    */
   public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r) {
     ResultOrException.Builder builder = ResultOrException.newBuilder();
@@ -264,9 +266,7 @@ public final class ResponseConverter {
     return builder;
   }
 
-  /**
-   * n * @return NameValuePair of the exception name to stringified version os exception.
-   */
+  /** Returns NameValuePair of the exception name to stringified version os exception. */
   public static NameBytesPair buildException(final Throwable t) {
     NameBytesPair.Builder parameterBuilder = NameBytesPair.newBuilder();
     parameterBuilder.setName(t.getClass().getName());
@@ -307,7 +307,8 @@ public final class ResponseConverter {
   }
 
   /**
-   * A utility to build a GetServerInfoResponse. nn * @return the response
+   * A utility to build a GetServerInfoResponse.
+   * @return the response
    */
   public static GetServerInfoResponse buildGetServerInfoResponse(final ServerName serverName,
     final int webuiPort) {
@@ -322,7 +323,8 @@ public final class ResponseConverter {
   }
 
   /**
-   * A utility to build a GetOnlineRegionResponse. n * @return the response
+   * A utility to build a GetOnlineRegionResponse.
+   * @return the response
    */
   public static GetOnlineRegionResponse
     buildGetOnlineRegionResponse(final List<RegionInfo> regions) {
@@ -405,7 +407,7 @@ public final class ResponseConverter {
   }
 
   /**
-   * Create Results from the cells using the cells meta data. nnn
+   * Create Results from the cells using the cells meta data.
    */
   public static Result[] getResults(CellScanner cellScanner, ScanResponse response)
     throws IOException {

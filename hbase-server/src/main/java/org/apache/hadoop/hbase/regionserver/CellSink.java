@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface CellSink {
   /**
    * Append the given cell
-   * @param cell the cell to be added n
+   * @param cell the cell to be added
    */
   void append(Cell cell) throws IOException;
 }

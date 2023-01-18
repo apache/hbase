@@ -18,14 +18,11 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
-import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,18 +45,15 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   @Override
   public void perform() throws Exception {
     getLogger().info("Performing action: Restart random data node");
-    ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getDataNodes());
+    final ServerName server = PolicyBasedChaosMonkey.selectRandomItem(getDataNodes());
     restartDataNode(server, sleepTime);
   }
 
-  public ServerName[] getDataNodes() throws IOException {
-    DistributedFileSystem fs =
-      (DistributedFileSystem) CommonFSUtils.getRootDir(getConf()).getFileSystem(getConf());
-    DFSClient dfsClient = fs.getClient();
-    List<ServerName> hosts = new ArrayList<>();
-    for (DatanodeInfo dataNode : dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
-      hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
+  private ServerName[] getDataNodes() throws IOException {
+    try (final DistributedFileSystem dfs = HdfsActionUtils.createDfs(getConf())) {
+      final DFSClient dfsClient = dfs.getClient();
+      return Arrays.stream(dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE))
+        .map(dn -> ServerName.valueOf(dn.getHostName(), -1, -1)).toArray(ServerName[]::new);
     }
-    return hosts.toArray(new ServerName[0]);
   }
 }
