@@ -413,8 +413,8 @@ public class CatalogJanitor extends ScheduledChore {
         return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
-      LOG.error(
-        "Error trying to determine if region exists, " + "assuming exists and has references", ioe);
+      LOG.error("Error trying to determine if region exists, assuming exists and has references",
+        ioe);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
 
