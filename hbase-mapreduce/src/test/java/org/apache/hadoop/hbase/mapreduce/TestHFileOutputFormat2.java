@@ -599,22 +599,33 @@ public class TestHFileOutputFormat2 {
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
     boolean putSortReducer, String tableStr) throws Exception {
-    doIncrementalLoadTest(shouldChangeRegions, shouldKeepLocality, putSortReducer,
+    doIncrementalLoadTest(shouldChangeRegions, shouldKeepLocality, putSortReducer, false,
       Arrays.asList(tableStr));
   }
 
   @Test
   public void testMultiMRIncrementalLoadWithPutSortReducer() throws Exception {
     LOG.info("\nStarting test testMultiMRIncrementalLoadWithPutSortReducer\n");
-    doIncrementalLoadTest(false, false, true,
+    doIncrementalLoadTest(false, false, true, false,
+      Arrays.stream(TABLE_NAMES).map(TableName::getNameAsString).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testMultiMRIncrementalLoadWithPutSortReducerWithNamespaceInPath() throws Exception {
+    LOG.info("\nStarting test testMultiMRIncrementalLoadWithPutSortReducerWithNamespaceInPath\n");
+    doIncrementalLoadTest(false, false, true, true,
       Arrays.stream(TABLE_NAMES).map(TableName::getNameAsString).collect(Collectors.toList()));
   }
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
-    boolean putSortReducer, List<String> tableStr) throws Exception {
+    boolean putSortReducer, boolean shouldWriteToTableWithNamespace, List<String> tableStr)
+    throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(MultiTableHFileOutputFormat.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
+    if (shouldWriteToTableWithNamespace) {
+      conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
+    }
     int hostCount = 1;
     int regionNum = 5;
     if (shouldKeepLocality) {
@@ -651,7 +662,7 @@ public class TestHFileOutputFormat2 {
     Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
     // Generate the bulk load files
     runIncrementalPELoad(conf, tableInfo, testDir, putSortReducer);
-    if (writeMultipleTables) {
+    if (shouldWriteToTableWithNamespace) {
       testDir = new Path(testDir, "default");
     }
 

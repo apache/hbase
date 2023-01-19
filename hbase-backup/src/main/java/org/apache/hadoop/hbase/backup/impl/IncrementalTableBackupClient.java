@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -397,6 +398,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     Path bulkOutputPath = getBulkOutputDir();
     conf.set(WALPlayer.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+    conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
     conf.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
     conf.set(JOB_NAME_CONF_KEY, jobname);
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };

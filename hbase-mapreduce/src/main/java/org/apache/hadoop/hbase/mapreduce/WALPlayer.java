@@ -80,14 +80,6 @@ public class WALPlayer extends Configured implements Tool {
 
   protected static final String tableSeparator = ";";
 
-  // This relies on Hadoop Configuration to handle warning about deprecated configs and
-  // to set the correct non-deprecated configs when an old one shows up.
-  static {
-    Configuration.addDeprecation("hlog.bulk.output", BULK_OUTPUT_CONF_KEY);
-    Configuration.addDeprecation("hlog.input.tables", TABLES_KEY);
-    Configuration.addDeprecation("hlog.input.tablesmap", TABLE_MAP_KEY);
-  }
-
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   public WALPlayer() {
@@ -116,11 +108,12 @@ public class WALPlayer extends Configured implements Tool {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
             }
+            KeyValue keyValue = KeyValueUtil.ensureKeyValue(cell);
             byte[] outKey = multiTableSupport
               ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator),
-                CellUtil.cloneRow(KeyValueUtil.ensureKeyValue(cell)))
-              : CellUtil.cloneRow(KeyValueUtil.ensureKeyValue(cell));
-            context.write(new ImmutableBytesWritable(outKey), KeyValueUtil.ensureKeyValue(cell));
+                CellUtil.cloneRow(keyValue))
+              : CellUtil.cloneRow(keyValue);
+            context.write(new ImmutableBytesWritable(outKey), keyValue);
           }
         }
       } catch (InterruptedException e) {
@@ -342,6 +335,8 @@ public class WALPlayer extends Configured implements Tool {
       // if no mapping is specified, map each table to itself
       tableMap = tables;
     }
+
+    boolean multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
     conf.set(FileInputFormat.INPUT_DIR, inputDirs);
@@ -355,6 +350,10 @@ public class WALPlayer extends Configured implements Tool {
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     if (hfileOutPath != null) {
       LOG.debug("add incremental job :" + hfileOutPath + " from " + inputDirs);
+
+      if (!multiTableSupport && tables.length != 1) {
+        throw new IOException("Exactly one table must be specified for the bulk export option");
+      }
 
       // the bulk HFile case
       List<TableName> tableNames = getTableNameList(tables);
@@ -371,7 +370,13 @@ public class WALPlayer extends Configured implements Tool {
           RegionLocator regionLocator = conn.getRegionLocator(tableName);
           tableInfoList.add(new TableInfo(table.getDescriptor(), regionLocator));
         }
-        MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
+        if (multiTableSupport) {
+          MultiTableHFileOutputFormat.configureIncrementalLoad(job, tableInfoList);
+        } else {
+          TableInfo tableInfo = tableInfoList.get(0);
+          HFileOutputFormat2.configureIncrementalLoad(job, tableInfo.getTableDescriptor(),
+            tableInfo.getRegionLocator());
+        }
       }
       TableMapReduceUtil.addDependencyJarsForClasses(job.getConfiguration(),
         org.apache.hbase.thirdparty.com.google.common.base.Preconditions.class);
