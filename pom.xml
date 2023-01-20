@@ -2527,6 +2527,19 @@
           </formats>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>2.7.3</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>makeBom</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <extensions>
       <extension>
