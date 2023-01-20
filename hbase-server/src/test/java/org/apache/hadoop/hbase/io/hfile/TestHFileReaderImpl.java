@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -96,23 +97,22 @@ public class TestHFileReaderImpl {
       (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, false)) {
       scanner.seekTo();
 
-      assertTrue("expected non-zero block size on first request",
-        scanner.getCurrentBlockSizeOnce() > 0);
-      assertEquals("expected zero block size on second request", 0,
-        scanner.getCurrentBlockSizeOnce());
+      scanner.recordBlockSize(
+        size -> assertTrue("expected non-zero block size on first request", size > 0));
+      scanner.recordBlockSize(
+        size -> assertEquals("expected zero block size on second request", 0, (int) size));
 
-      int blocks = 0;
+      AtomicInteger blocks = new AtomicInteger(0);
       while (scanner.next()) {
-        int blockSize = scanner.getCurrentBlockSizeOnce();
-        if (blockSize > 0) {
-          blocks++;
+        scanner.recordBlockSize(size -> {
+          blocks.incrementAndGet();
           // there's only 2 cells in the second block
           assertTrue("expected remaining block to be less than block size",
-            blockSize < toKV("a").getLength() * 3);
-        }
+            size < toKV("a").getLength() * 3);
+        });
       }
 
-      assertEquals("expected only one remaining block but got " + blocks, 1, blocks);
+      assertEquals("expected only one remaining block but got " + blocks.get(), 1, blocks.get());
     }
   }
 

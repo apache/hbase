@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -420,12 +421,11 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public int getCurrentBlockSizeOnce() {
-      if (providedCurrentBlockSize || curBlock == null) {
-        return 0;
+    public void recordBlockSize(Consumer<Integer> blockSizeConsumer) {
+      if (!providedCurrentBlockSize && curBlock != null) {
+        providedCurrentBlockSize = true;
+        blockSizeConsumer.accept(curBlock.getUncompressedSizeWithoutHeader());
       }
-      providedCurrentBlockSize = true;
-      return curBlock.getUncompressedSizeWithoutHeader();
     }
 
     // Returns the #bytes in HFile for the current cell. Used to skip these many bytes in current

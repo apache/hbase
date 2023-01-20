@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.function.Consumer;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -287,8 +288,8 @@ public class SegmentScanner implements KeyValueScanner {
   }
 
   @Override
-  public int getCurrentBlockSizeOnce() {
-    return 0;
+  public void recordBlockSize(Consumer<Integer> blockSizeConsumer) {
+    // do nothing
   }
 
   @Override
