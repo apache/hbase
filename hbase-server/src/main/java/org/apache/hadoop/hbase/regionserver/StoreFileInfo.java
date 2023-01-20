@@ -107,7 +107,7 @@ public class StoreFileInfo implements Configurable {
   // Counter that is incremented every time a scanner is created on the
   // store file. It is decremented when the scan on the store file is
   // done.
-  private final AtomicInteger refCount = new AtomicInteger(0);
+  final AtomicInteger refCount = new AtomicInteger(0);
 
   /**
    * Create a Store File Info
@@ -274,13 +274,12 @@ public class StoreFileInfo implements Configurable {
     return this.hdfsBlocksDistribution;
   }
 
-  public StoreFileReader createReader(ReaderContext context, CacheConfig cacheConf)
-    throws IOException {
+  StoreFileReader createReader(ReaderContext context, CacheConfig cacheConf) throws IOException {
     StoreFileReader reader = null;
     if (this.reference != null) {
-      reader = new HalfStoreFileReader(context, hfileInfo, cacheConf, reference, this, conf);
+      reader = new HalfStoreFileReader(context, hfileInfo, cacheConf, reference, refCount, conf);
     } else {
-      reader = new StoreFileReader(context, hfileInfo, cacheConf, this, conf);
+      reader = new StoreFileReader(context, hfileInfo, cacheConf, refCount, conf);
     }
     return reader;
   }
@@ -650,7 +649,7 @@ public class StoreFileInfo implements Configurable {
     return this.noReadahead;
   }
 
-  public HFileInfo getHFileInfo() {
+  HFileInfo getHFileInfo() {
     return hfileInfo;
   }
 
@@ -680,18 +679,6 @@ public class StoreFileInfo implements Configurable {
 
   public void initHFileInfo(ReaderContext context) throws IOException {
     this.hfileInfo = new HFileInfo(context, conf);
-  }
-
-  int getRefCount() {
-    return this.refCount.get();
-  }
-
-  int increaseRefCount() {
-    return this.refCount.incrementAndGet();
-  }
-
-  int decreaseRefCount() {
-    return this.refCount.decrementAndGet();
   }
 
 }

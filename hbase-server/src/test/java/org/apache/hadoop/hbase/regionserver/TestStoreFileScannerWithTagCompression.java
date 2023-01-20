@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -58,7 +60,8 @@ public class TestStoreFileScannerWithTagCompression {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-  private static Path ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFileScannerWithTagCompression");
+  private static String ROOT_DIR =
+    TEST_UTIL.getDataTestDir("TestStoreFileScannerWithTagCompression").toString();
   private static FileSystem fs = null;
 
   @BeforeClass
@@ -70,10 +73,7 @@ public class TestStoreFileScannerWithTagCompression {
   @Test
   public void testReseek() throws Exception {
     // write the file
-    if (!fs.exists(ROOT_DIR)) {
-      fs.mkdirs(ROOT_DIR);
-    }
-    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
+    Path f = new Path(ROOT_DIR, "testReseek");
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).withIncludesTags(true)
       .withCompressTags(true).withDataBlockEncoding(DataBlockEncoding.PREFIX).build();
     // Make a store file and write data to it.
@@ -84,10 +84,10 @@ public class TestStoreFileScannerWithTagCompression {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
-    storeFileInfo.initHFileInfo(context);
-    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
-    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    StoreFileReader reader =
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     StoreFileScanner s = reader.getStoreFileScanner(false, false, false, 0, 0, false);
     try {
       // Now do reseek with empty KV to position to the beginning of the file
