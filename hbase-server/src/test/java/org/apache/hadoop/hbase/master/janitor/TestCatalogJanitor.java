@@ -21,8 +21,12 @@ import static org.apache.hadoop.hbase.util.HFileArchiveTestingUtil.assertArchive
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,6 +38,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -52,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor.SplitParentFirstComparator;
@@ -124,6 +130,100 @@ public class TestCatalogJanitor {
     boolean split) {
     return RegionInfoBuilder.newBuilder(tableName).setStartKey(startKey).setEndKey(endKey)
       .setSplit(split).build();
+  }
+
+  @Test
+  public void testCleanMerge() throws IOException {
+    TableDescriptor td = createTableDescriptorForCurrentMethod();
+    // Create regions.
+    RegionInfo merged =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("aaa"), Bytes.toBytes("eee"));
+    RegionInfo parenta =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("aaa"), Bytes.toBytes("ccc"));
+    RegionInfo parentb =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
+
+    List<RegionInfo> parents = new ArrayList<>();
+    parents.add(parenta);
+    parents.add(parentb);
+
+    Path rootdir = this.masterServices.getMasterFileSystem().getRootDir();
+    Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, merged, td.getColumnFamilies()[0].getName());
+
+    Path parentaRef = createMergeReferenceFile(storedir, merged, parenta);
+    Path parentbRef = createMergeReferenceFile(storedir, merged, parentb);
+
+    // references exist, should not clean
+    assertFalse(CatalogJanitor.cleanMergeRegion(masterServices, merged, parents));
+
+    masterServices.getMasterFileSystem().getFileSystem().delete(parentaRef, false);
+
+    // one reference still exists, should not clean
+    assertFalse(CatalogJanitor.cleanMergeRegion(masterServices, merged, parents));
+
+    masterServices.getMasterFileSystem().getFileSystem().delete(parentbRef, false);
+
+    // all references removed, should clean
+    assertTrue(CatalogJanitor.cleanMergeRegion(masterServices, merged, parents));
+  }
+
+  @Test
+  public void testDontCleanMergeIfFileSystemException() throws IOException {
+    TableDescriptor td = createTableDescriptorForCurrentMethod();
+    // Create regions.
+    RegionInfo merged =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("aaa"), Bytes.toBytes("eee"));
+    RegionInfo parenta =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("aaa"), Bytes.toBytes("ccc"));
+    RegionInfo parentb =
+      createRegionInfo(td.getTableName(), Bytes.toBytes("ccc"), Bytes.toBytes("eee"));
+
+    List<RegionInfo> parents = new ArrayList<>();
+    parents.add(parenta);
+    parents.add(parentb);
+
+    Path rootdir = this.masterServices.getMasterFileSystem().getRootDir();
+    Path tabledir = CommonFSUtils.getTableDir(rootdir, td.getTableName());
+    Path storedir =
+      HRegionFileSystem.getStoreHomedir(tabledir, merged, td.getColumnFamilies()[0].getName());
+    createMergeReferenceFile(storedir, merged, parenta);
+
+    MasterServices mockedMasterServices = spy(masterServices);
+    MasterFileSystem mockedMasterFileSystem = spy(masterServices.getMasterFileSystem());
+    FileSystem mockedFileSystem = spy(masterServices.getMasterFileSystem().getFileSystem());
+
+    when(mockedMasterServices.getMasterFileSystem()).thenReturn(mockedMasterFileSystem);
+    when(mockedMasterFileSystem.getFileSystem()).thenReturn(mockedFileSystem);
+
+    // throw on the first exists check
+    doThrow(new IOException("Some exception")).when(mockedFileSystem).exists(any());
+
+    assertFalse(CatalogJanitor.cleanMergeRegion(mockedMasterServices, merged, parents));
+
+    // throw on the second exists check (within HRegionfileSystem)
+    AtomicBoolean returned = new AtomicBoolean(false);
+    doAnswer(invocationOnMock -> {
+      if (!returned.get()) {
+        returned.set(true);
+        return masterServices.getMasterFileSystem().getFileSystem()
+          .exists(invocationOnMock.getArgument(0));
+      }
+      throw new IOException("Some exception");
+    }).when(mockedFileSystem).exists(any());
+
+    assertFalse(CatalogJanitor.cleanMergeRegion(mockedMasterServices, merged, parents));
+  }
+
+  private Path createMergeReferenceFile(Path storeDir, RegionInfo mergedRegion,
+    RegionInfo parentRegion) throws IOException {
+    Reference ref = Reference.createTopReference(mergedRegion.getStartKey());
+    long now = EnvironmentEdgeManager.currentTime();
+    // Reference name has this format: StoreFile#REF_NAME_PARSER
+    Path p = new Path(storeDir, Long.toString(now) + "." + parentRegion.getEncodedName());
+    FileSystem fs = this.masterServices.getMasterFileSystem().getFileSystem();
+    return ref.write(fs, p);
   }
 
   /**
