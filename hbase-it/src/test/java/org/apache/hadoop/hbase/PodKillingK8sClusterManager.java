@@ -24,6 +24,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1PodStatus;
 import io.kubernetes.client.util.ClientBuilder;
 import java.io.IOException;
 import java.util.Collections;
@@ -48,23 +49,24 @@ import org.slf4j.LoggerFactory;
  * overrun each other but generally succeed.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class KubernetesClusterManager extends Configured implements ClusterManager {
-  private static final Logger LOG = LoggerFactory.getLogger(KubernetesClusterManager.class);
+public class PodKillingK8sClusterManager extends Configured implements ClusterManager {
+  private static final Logger LOG = LoggerFactory.getLogger(PodKillingK8sClusterManager.class);
 
   private static final String NAMESPACE_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".namespace";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".namespace";
+  private static final String DEFAULT_NAMESPACE = "default";
   private static final String ZOOKEEPER_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".zookeeper_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".zookeeper_role";
   private static final String NAMENODE_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".namenode_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".namenode_role";
   private static final String JOURNALNODE_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".journalnode_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".journalnode_role";
   private static final String DATANODE_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".datanode_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".datanode_role";
   private static final String MASTER_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".master_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".master_role";
   private static final String REGIONSERVER_ROLE_SELECTOR_CONF_KEY =
-    KubernetesClusterManager.class.getCanonicalName() + ".regionserver_role";
+    PodKillingK8sClusterManager.class.getCanonicalName() + ".regionserver_role";
   private static final Set<ServiceType> SUPPORTED_SERVICE_TYPES = buildSupportedServiceTypesSet();
 
   private CoreV1Api api;
@@ -96,11 +98,11 @@ public class KubernetesClusterManager extends Configured implements ClusterManag
       return;
     }
     super.setConf(configuration);
-    this.namespace = configuration.get(NAMESPACE_CONF_KEY);
+    namespace = configuration.get(NAMESPACE_CONF_KEY, DEFAULT_NAMESPACE);
     LOG.info(
       "Configuration={}, namespace={}, hbase.rootdir={}, hbase.zookeeper.quorum={}, "
         + "hbase.client.zookeeper.quorum={}",
-      configuration, this.namespace, configuration.get("hbase.rootdir"),
+      configuration, namespace, configuration.get("hbase.rootdir"),
       configuration.get("hbase.zookeeper.quorum"),
       configuration.get("hbase.client.zookeeper.quorum"));
     final CoreV1Api coreV1Api;
@@ -111,7 +113,7 @@ public class KubernetesClusterManager extends Configured implements ClusterManag
     } catch (IOException ioe) {
       throw new RuntimeException("Failed Kubernetes ApiClient construction", ioe);
     }
-    this.api = coreV1Api;
+    api = coreV1Api;
   }
 
   @Override
@@ -195,7 +197,13 @@ public class KubernetesClusterManager extends Configured implements ClusterManag
         LOG.warn("Listing of namespace '{}' contains entry with empty pod name.", namespace);
         continue;
       }
-      if (hostname.startsWith(podName)) {
+      final String status =
+        Optional.of(item).map(V1Pod::getStatus).map(V1PodStatus::getPhase).orElse(null);
+      if (status == null) {
+        LOG.warn("Status of pod {}.{} not returned by the API.", namespace, podName);
+        return false;
+      }
+      if (hostname.startsWith(podName) && "running".equalsIgnoreCase(status)) {
         return true;
       }
     }
