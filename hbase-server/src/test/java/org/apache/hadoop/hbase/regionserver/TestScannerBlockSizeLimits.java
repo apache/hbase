@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnPaginationFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -170,12 +171,12 @@ public class TestScannerBlockSizeLimits {
   }
 
   /**
-   * After RegionScannerImpl.populateResults, row filters are run. If row is excluded, nextRow() is
-   * called which might accumulate more block IO. Validates that in this case we still honor block
-   * limits.
+   * After RegionScannerImpl.populateResults, row filters are run. If row is excluded due to
+   * filter.filterRow(), nextRow() is called which might accumulate more block IO. Validates that in
+   * this case we still honor block limits.
    */
   @Test
-  public void testCheckLimitAfterFilteringRowCells() throws IOException {
+  public void testCheckLimitAfterFilteringRowCellsDueToFilterRow() throws IOException {
     Table table = TEST_UTIL.getConnection().getTable(TABLE);
 
     ResultScanner scanner = table.getScanner(getBaseScan().withStartRow(Bytes.toBytes(1), true)
@@ -220,6 +221,35 @@ public class TestScannerBlockSizeLimits {
     // through. So that accounts for 11 rpcs.
     assertEquals(2, cursors);
     assertEquals(11, metrics.countOfRPCcalls.get());
+  }
+
+  /**
+   * After RegionScannerImpl.populateResults, row filters are run. If row is excluded due to
+   * filter.filterRowCells(), we fall through to a final results.isEmpty() check near the end of the
+   * method. If results are empty at this point (which they are), nextRow() is called which might
+   * accumulate more block IO. Validates that in this case we still honor block limits.
+   */
+  @Test
+  public void testCheckLimitAfterFilteringRowCells() throws IOException {
+    Table table = TEST_UTIL.getConnection().getTable(TABLE);
+
+    ResultScanner scanner = table
+      .getScanner(getBaseScan().withStartRow(Bytes.toBytes(1), true).addColumn(FAMILY1, COLUMN1)
+        .setReadType(Scan.ReadType.STREAM).setFilter(new SingleColumnValueExcludeFilter(FAMILY1,
+          COLUMN1, CompareOperator.EQUAL, new BinaryComparator(DATA))));
+
+    // Since we use SingleColumnValueExcludeFilter and dont include any other columns, the column
+    // we load to test ends up being excluded from the result. So we only expect cursors here.
+    for (Result result : scanner) {
+      assertTrue(result.isCursor());
+    }
+
+    ScanMetrics metrics = scanner.getScanMetrics();
+
+    // Our filter causes us to read the first column of each row, then INCLUDE_AND_SEEK_NEXT_ROW.
+    // So we load 1 block per row, and there are 9 rows. Our max scan size is large enough to
+    // return 2 full blocks, with some overflow. So we are able to squeeze this all into 4 RPCs.
+    assertEquals(4, metrics.countOfRPCcalls.get());
   }
 
   /**

@@ -610,9 +610,11 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         }
         if (!shouldStop) {
-          // Read nothing as the cells were filtered, but still need to check time limit.
-          // We also check size limit because we might have read blocks in getting to this point.
-          if (scannerContext.checkAnyLimitReached(limitScope)) {
+          // We check size limit because we might have read blocks in the nextRow call above, or
+          // in the call populateResults call. Only scans with hasFilterRow should reach this point,
+          // and for those scans which filter row _cells_ this is the only place we can actually
+          // enforce that the scan does not exceed limits since it bypasses all other checks above.
+          if (scannerContext.checkSizeLimit(limitScope)) {
             return true;
           }
           continue;
