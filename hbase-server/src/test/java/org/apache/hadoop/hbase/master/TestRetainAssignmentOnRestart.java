@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
-import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT_WAIT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT_WAIT_INTERVAL;
 import static org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -237,7 +237,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
   @Test
   public void testForceRetainAssignment() throws Exception {
     UTIL.getConfiguration().setBoolean(FORCE_REGION_RETAINMENT, true);
-    UTIL.getConfiguration().setLong(FORCE_REGION_RETAINMENT_WAIT, 100);
+    UTIL.getConfiguration().setLong(FORCE_REGION_RETAINMENT_WAIT_INTERVAL, 50);
     setupCluster();
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     SingleProcessHBaseCluster cluster = UTIL.getHBaseCluster();

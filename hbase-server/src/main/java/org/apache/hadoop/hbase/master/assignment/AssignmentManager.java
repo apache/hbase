@@ -158,10 +158,10 @@ public class AssignmentManager {
   public static final boolean DEFAULT_FORCE_REGION_RETAINMENT = false;
 
   /** The wait time in millis before checking again if the region's previous RS is back online */
-  public static final String FORCE_REGION_RETAINMENT_WAIT =
-    "hbase.master.scp.retain.assignment.force.wait";
+  public static final String FORCE_REGION_RETAINMENT_WAIT_INTERVAL =
+    "hbase.master.scp.retain.assignment.force.wait-interval";
 
-  public static final int DEFAULT_FORCE_REGION_RETAINMENT_WAIT = 100;
+  public static final long DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL = 50;
 
   /**
    * The number of times to check if the region's previous RS is back online, before giving up and
@@ -170,7 +170,7 @@ public class AssignmentManager {
   public static final String FORCE_REGION_RETAINMENT_RETRIES =
     "hbase.master.scp.retain.assignment.force.retries";
 
-  public static final long DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
+  public static final int DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
 
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
@@ -222,9 +222,9 @@ public class AssignmentManager {
 
   private final boolean forceRegionRetainment;
 
-  private final int forceRegionRetainmentWait;
+  private final long forceRegionRetainmentWaitInterval;
 
-  private final long forceRegionRetainmentRetries;
+  private final int forceRegionRetainmentRetries;
 
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
@@ -268,10 +268,10 @@ public class AssignmentManager {
 
     forceRegionRetainment =
       conf.getBoolean(FORCE_REGION_RETAINMENT, DEFAULT_FORCE_REGION_RETAINMENT);
-    forceRegionRetainmentWait =
-      conf.getInt(FORCE_REGION_RETAINMENT_WAIT, DEFAULT_FORCE_REGION_RETAINMENT_WAIT);
+    forceRegionRetainmentWaitInterval = conf.getLong(FORCE_REGION_RETAINMENT_WAIT_INTERVAL,
+      DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL);
     forceRegionRetainmentRetries =
-      conf.getLong(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
+      conf.getInt(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
   }
 
   private void mirrorMetaLocations() throws IOException, KeeperException {
@@ -446,11 +446,11 @@ public class AssignmentManager {
     return forceRegionRetainment;
   }
 
-  public int getForceRegionRetainmentWait() {
-    return forceRegionRetainmentWait;
+  public long getForceRegionRetainmentWaitInterval() {
+    return forceRegionRetainmentWaitInterval;
   }
 
-  public long getForceRegionRetainmentRetries() {
+  public int getForceRegionRetainmentRetries() {
     return forceRegionRetainmentRetries;
   }
 

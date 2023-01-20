@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -132,7 +133,9 @@ public class TransitRegionStateProcedure
 
   private boolean isSplit;
 
-  private long retries;
+  private RetryCounter forceRetainmentRetryCounter;
+
+  private long forceRetainmentTotalWait;
 
   public TransitRegionStateProcedure() {
   }
@@ -171,6 +174,16 @@ public class TransitRegionStateProcedure
     }
     evictCache =
       env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    initForceRetainmentRetryCounter(env);
+  }
+
+  private void initForceRetainmentRetryCounter(MasterProcedureEnv env) {
+    if (env.getAssignmentManager().isForceRegionRetainment()) {
+      forceRetainmentRetryCounter =
+        new RetryCounter(env.getAssignmentManager().getForceRegionRetainmentRetries(),
+          env.getAssignmentManager().getForceRegionRetainmentWaitInterval(), TimeUnit.MILLISECONDS);
+      forceRetainmentTotalWait = 0;
+    }
   }
 
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
@@ -202,19 +215,23 @@ public class TransitRegionStateProcedure
     ServerName newNameForServer = serverManager.findServerWithSameHostnamePortWithLock(lastHost);
     boolean isOnline = serverManager.createDestinationServersList().contains(newNameForServer);
 
-    if (!isOnline && retries < env.getAssignmentManager().getForceRegionRetainmentRetries()) {
-      retries++;
-      LOG.info("Suspending the TRSP PID={} because {} is true and previous host {} "
-        + "for region is not yet online.", this.getProcId(), FORCE_REGION_RETAINMENT, lastHost);
-      setTimeout(env.getAssignmentManager().getForceRegionRetainmentWait());
+    if (!isOnline && forceRetainmentRetryCounter.shouldRetry()) {
+      int backoff =
+        Math.toIntExact(forceRetainmentRetryCounter.getBackoffTimeAndIncrementAttempts());
+      forceRetainmentTotalWait += backoff;
+      LOG.info(
+        "Suspending the TRSP PID={} for {}ms because {} is true and previous host {} "
+          + "for region is not yet online.",
+        this.getProcId(), backoff, FORCE_REGION_RETAINMENT, lastHost);
+      setTimeout(backoff);
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
       throw new ProcedureSuspendedException();
     }
     LOG.info(
       "{} is true. TRSP PID={} waited {}ms for host {} to come back online. "
         + "Did host come back online? {}",
-      FORCE_REGION_RETAINMENT, this.getProcId(),
-      (retries * env.getAssignmentManager().getForceRegionRetainmentWait()), lastHost, isOnline);
+      FORCE_REGION_RETAINMENT, this.getProcId(), forceRetainmentTotalWait, lastHost, isOnline);
+    initForceRetainmentRetryCounter(env);
   }
 
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)
