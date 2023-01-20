@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -184,13 +183,13 @@ public class CatalogJanitor extends ScheduledChore {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           if (LOG.isDebugEnabled()) {
-            LOG.debug("In maintenence mode, not cleaning");
+            LOG.debug("In mainteneace mode, not cleaning");
           }
           break;
         }
 
         List<RegionInfo> parents = MetaTableAccessor.getMergeRegions(e.getValue().rawCells());
-        if (parents != null && cleanMergeRegion(e.getKey(), parents)) {
+        if (parents != null && cleanMergeRegion(this.services, e.getKey(), parents)) {
           gcs++;
         }
       }
@@ -203,7 +202,7 @@ public class CatalogJanitor extends ScheduledChore {
         if (this.services.isInMaintenanceMode()) {
           // Stop cleaning if the master is in maintenance mode
           if (LOG.isDebugEnabled()) {
-            LOG.debug("In maintenence mode, not cleaning");
+            LOG.debug("In maintenance mode, not cleaning");
           }
           break;
         }
@@ -250,30 +249,24 @@ public class CatalogJanitor extends ScheduledChore {
    * @return true if we delete references in merged region on hbase:meta and archive the files on
    *         the file system
    */
-  private boolean cleanMergeRegion(final RegionInfo mergedRegion, List<RegionInfo> parents)
-    throws IOException {
+  static boolean cleanMergeRegion(MasterServices services, final RegionInfo mergedRegion,
+    List<RegionInfo> parents) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Cleaning merged region {}", mergedRegion);
     }
-    FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-    Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = CommonFSUtils.getTableDir(rootdir, mergedRegion.getTable());
-    TableDescriptor htd = getDescriptor(mergedRegion.getTable());
-    HRegionFileSystem regionFs = null;
-    try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(this.services.getConfiguration(), fs,
-        tabledir, mergedRegion, true);
-    } catch (IOException e) {
-      LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
-    }
-    if (regionFs == null || !regionFs.hasReferences(htd)) {
+
+    Pair<Boolean, Boolean> result =
+      checkRegionReferences(services, mergedRegion.getTable(), mergedRegion);
+
+    if (hasNoReferences(result)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
           "Deleting parents ({}) from fs; merged child {} no longer holds references", parents
             .stream().map(r -> RegionInfo.getShortNameToLog(r)).collect(Collectors.joining(", ")),
           mergedRegion);
       }
-      ProcedureExecutor<MasterProcedureEnv> pe = this.services.getMasterProcedureExecutor();
+
+      ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCMultipleMergedRegionsProcedure mergeRegionProcedure =
         new GCMultipleMergedRegionsProcedure(pe.getEnvironment(), mergedRegion, parents);
       pe.submitProcedure(mergeRegionProcedure);
@@ -282,7 +275,15 @@ public class CatalogJanitor extends ScheduledChore {
           mergedRegion);
       }
       return true;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "Deferring cleanup up of {} parents of merged region {}, because references "
+            + "still exist in merged region or we encountered an exception in checking",
+          parents.size(), mergedRegion.getEncodedName());
+      }
     }
+
     return false;
   }
 
@@ -334,8 +335,10 @@ public class CatalogJanitor extends ScheduledChore {
     }
     // Run checks on each daughter split.
     PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
-    Pair<Boolean, Boolean> a = checkDaughterInFs(services, parent, daughters.getFirst());
-    Pair<Boolean, Boolean> b = checkDaughterInFs(services, parent, daughters.getSecond());
+    Pair<Boolean, Boolean> a =
+      checkRegionReferences(services, parent.getTable(), daughters.getFirst());
+    Pair<Boolean, Boolean> b =
+      checkRegionReferences(services, parent.getTable(), daughters.getSecond());
     if (hasNoReferences(a) && hasNoReferences(b)) {
       String daughterA =
         daughters.getFirst() != null ? daughters.getFirst().getShortNameToLog() : "null";
@@ -388,59 +391,45 @@ public class CatalogJanitor extends ScheduledChore {
   }
 
   /**
-   * Checks if a daughter region -- either splitA or splitB -- still holds references to parent.
-   * @param parent   Parent region
-   * @param daughter Daughter region
-   * @return A pair where the first boolean says whether or not the daughter region directory exists
-   *         in the filesystem and then the second boolean says whether the daughter has references
-   *         to the parent.
+   * Checks if a region still holds references to parent.
+   * @param tableName The table for the region
+   * @param region    The region to check
+   * @return A pair where the first boolean says whether the region directory exists in the
+   *         filesystem and then the second boolean says whether the region has references to a
+   *         parent.
    */
-  private static Pair<Boolean, Boolean> checkDaughterInFs(MasterServices services,
-    final RegionInfo parent, final RegionInfo daughter) throws IOException {
-    if (daughter == null) {
+  private static Pair<Boolean, Boolean> checkRegionReferences(MasterServices services,
+    TableName tableName, RegionInfo region) throws IOException {
+    if (region == null) {
       return new Pair<>(Boolean.FALSE, Boolean.FALSE);
     }
 
     FileSystem fs = services.getMasterFileSystem().getFileSystem();
     Path rootdir = services.getMasterFileSystem().getRootDir();
-    Path tabledir = CommonFSUtils.getTableDir(rootdir, daughter.getTable());
-
-    Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
-
-    HRegionFileSystem regionFs;
+    Path tabledir = CommonFSUtils.getTableDir(rootdir, tableName);
+    Path regionDir = new Path(tabledir, region.getEncodedName());
 
     try {
-      if (!CommonFSUtils.isExists(fs, daughterRegionDir)) {
+      if (!CommonFSUtils.isExists(fs, regionDir)) {
         return new Pair<>(Boolean.FALSE, Boolean.FALSE);
       }
     } catch (IOException ioe) {
-      LOG.error("Error trying to determine if daughter region exists, "
-        + "assuming exists and has references", ioe);
+      LOG.error("Error trying to determine if region exists, assuming exists and has references",
+        ioe);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
 
-    boolean references = false;
-    TableDescriptor parentDescriptor = services.getTableDescriptors().get(parent.getTable());
+    TableDescriptor tableDescriptor = services.getTableDescriptors().get(tableName);
     try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(services.getConfiguration(), fs,
-        tabledir, daughter, true);
-
-      for (ColumnFamilyDescriptor family : parentDescriptor.getColumnFamilies()) {
-        references = regionFs.hasReferences(family.getNameAsString());
-        if (references) {
-          break;
-        }
-      }
+      HRegionFileSystem regionFs = HRegionFileSystem
+        .openRegionFromFileSystem(services.getConfiguration(), fs, tabledir, region, true);
+      boolean references = regionFs.hasReferences(tableDescriptor);
+      return new Pair<>(Boolean.TRUE, references);
     } catch (IOException e) {
-      LOG.error("Error trying to determine referenced files from : " + daughter.getEncodedName()
-        + ", to: " + parent.getEncodedName() + " assuming has references", e);
+      LOG.error("Error trying to determine if region {} has references, assuming it does",
+        region.getEncodedName(), e);
       return new Pair<>(Boolean.TRUE, Boolean.TRUE);
     }
-    return new Pair<>(Boolean.TRUE, references);
-  }
-
-  private TableDescriptor getDescriptor(final TableName tableName) throws IOException {
-    return this.services.getTableDescriptors().get(tableName);
   }
 
   private void updateAssignmentManagerMetrics() {
