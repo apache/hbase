@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
@@ -178,18 +180,15 @@ public class TestRowPrefixBloomFilter {
     float expErr = 2 * prefixRowCount * suffixRowCount * err;
     int expKeys = fixedLengthExpKeys;
     // write the file
-    if (!fs.exists(testDir)) {
-      fs.mkdirs(testDir);
-    }
-    Path f = StoreFileWriter.getUniqueFile(fs, testDir);
+    Path f = new Path(testDir, name.getMethodName());
     writeStoreFile(f, bt, expKeys);
 
     // read the file
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
-    storeFileInfo.initHFileInfo(context);
-    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
-    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    StoreFileReader reader =
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -252,17 +251,14 @@ public class TestRowPrefixBloomFilter {
     FileSystem fs = FileSystem.getLocal(conf);
     int expKeys = fixedLengthExpKeys;
     // write the file
-    if (!fs.exists(testDir)) {
-      fs.mkdirs(testDir);
-    }
-    Path f = StoreFileWriter.getUniqueFile(fs, testDir);
+    Path f = new Path(testDir, name.getMethodName());
     writeStoreFile(f, bt, expKeys);
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
-    storeFileInfo.initHFileInfo(context);
-    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
-    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    StoreFileReader reader =
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -308,17 +304,14 @@ public class TestRowPrefixBloomFilter {
     FileSystem fs = FileSystem.getLocal(conf);
     int expKeys = fixedLengthExpKeys;
     // write the file
-    if (!fs.exists(testDir)) {
-      fs.mkdirs(testDir);
-    }
-    Path f = StoreFileWriter.getUniqueFile(fs, testDir);
+    Path f = new Path(testDir, name.getMethodName());
     writeStoreFile(f, bt, expKeys);
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
-    storeFileInfo.initHFileInfo(context);
-    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
-    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+    HFileInfo fileInfo = new HFileInfo(context, conf);
+    StoreFileReader reader =
+      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
+    fileInfo.initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 

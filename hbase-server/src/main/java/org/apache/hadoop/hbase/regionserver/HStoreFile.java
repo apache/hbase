@@ -349,12 +349,12 @@ public class HStoreFile implements StoreFile {
   }
 
   public int getRefCount() {
-    return fileInfo.getRefCount();
+    return fileInfo.refCount.get();
   }
 
   /** Returns true if the file is still used in reads */
   public boolean isReferencedInReads() {
-    int rc = fileInfo.getRefCount();
+    int rc = fileInfo.refCount.get();
     assert rc >= 0; // we should not go negative.
     return rc > 0;
   }
@@ -653,11 +653,11 @@ public class HStoreFile implements StoreFile {
   }
 
   long increaseRefCount() {
-    return this.fileInfo.increaseRefCount();
+    return this.fileInfo.refCount.incrementAndGet();
   }
 
   long decreaseRefCount() {
-    return this.fileInfo.decreaseRefCount();
+    return this.fileInfo.refCount.decrementAndGet();
   }
 
   static void increaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {

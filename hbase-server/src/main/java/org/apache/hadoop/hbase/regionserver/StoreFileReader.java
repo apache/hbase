@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -77,26 +78,24 @@ public class StoreFileReader {
   private int prefixLength = -1;
   protected Configuration conf;
 
-  /**
-   * All {@link StoreFileReader} for the same StoreFile will share the
-   * {@link StoreFileInfo#refCount}. Counter that is incremented every time a scanner is created on
-   * the store file. It is decremented when the scan on the store file is done.
-   */
-  private final StoreFileInfo storeFileInfo;
+  // Counter that is incremented every time a scanner is created on the
+  // store file. It is decremented when the scan on the store file is
+  // done. All StoreFileReader for the same StoreFile will share this counter.
+  private final AtomicInteger refCount;
   private final ReaderContext context;
 
-  private StoreFileReader(HFile.Reader reader, StoreFileInfo storeFileInfo, ReaderContext context,
+  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, ReaderContext context,
     Configuration conf) {
     this.reader = reader;
     bloomFilterType = BloomType.NONE;
-    this.storeFileInfo = storeFileInfo;
+    this.refCount = refCount;
     this.context = context;
     this.conf = conf;
   }
 
   public StoreFileReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
-    StoreFileInfo storeFileInfo, Configuration conf) throws IOException {
-    this(HFile.createReader(context, fileInfo, cacheConf, conf), storeFileInfo, context, conf);
+    AtomicInteger refCount, Configuration conf) throws IOException {
+    this(HFile.createReader(context, fileInfo, cacheConf, conf), refCount, context, conf);
   }
 
   void copyFields(StoreFileReader storeFileReader) throws IOException {
@@ -121,7 +120,7 @@ public class StoreFileReader {
    */
   @InterfaceAudience.Private
   StoreFileReader() {
-    this.storeFileInfo = null;
+    this.refCount = new AtomicInteger(0);
     this.reader = null;
     this.context = null;
   }
@@ -152,7 +151,7 @@ public class StoreFileReader {
    * is opened.
    */
   int getRefCount() {
-    return storeFileInfo.getRefCount();
+    return refCount.get();
   }
 
   /**
@@ -160,7 +159,7 @@ public class StoreFileReader {
    * count so reader is not close until some object is holding the lock
    */
   void incrementRefCount() {
-    storeFileInfo.increaseRefCount();
+    refCount.incrementAndGet();
   }
 
   /**
@@ -168,7 +167,7 @@ public class StoreFileReader {
    * count, and also, if this is not the common pread reader, we should close it.
    */
   void readCompleted() {
-    storeFileInfo.decreaseRefCount();
+    refCount.decrementAndGet();
     if (context.getReaderType() == ReaderType.STREAM) {
       try {
         reader.close(false);
