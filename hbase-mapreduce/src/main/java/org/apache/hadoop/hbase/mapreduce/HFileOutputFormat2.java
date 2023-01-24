@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -153,6 +154,17 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
   static final String DATABLOCK_ENCODING_FAMILIES_CONF_KEY =
     "hbase.mapreduce.hfileoutputformat.families.datablock.encoding";
 
+  // When MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY is enabled, should table names be written
+  // with namespace included. Enabling this means downstream jobs which use this output will
+  // need to account for namespace when finding the directory of the job output.
+  // For example: a table named my-table in namespace default would be in `/output/default/my-table`
+  // instead of current `/output/my-table`
+  // This will be the behavior when upgrading to hbase 3.0.
+  public static final String TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY =
+    "hbase.hfileoutputformat.tablename.namespace.inclusive";
+
+  private static final boolean TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_DEFAULT_VALUE = false;
+
   // This constant is public since the client can modify this when setting
   // up their conf object and thus refer to this symbol.
   // It is present for backwards compatibility reasons. Use it only to
@@ -201,6 +213,8 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     final Configuration conf = context.getConfiguration();
     final boolean writeMultipleTables =
       conf.getBoolean(MULTI_TABLE_HFILEOUTPUTFORMAT_CONF_KEY, false);
+    final boolean writeToTableWithNamespace = conf.getBoolean(
+      TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_DEFAULT_VALUE);
     final String writeTableNames = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
     if (writeTableNames == null || writeTableNames.isEmpty()) {
       throw new IllegalArgumentException("" + OUTPUT_TABLE_NAME_CONF_KEY + " cannot be empty");
@@ -254,7 +268,10 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         byte[] tableNameBytes = null;
         if (writeMultipleTables) {
           tableNameBytes = MultiTableHFileOutputFormat.getTableName(row.get());
-          tableNameBytes = TableName.valueOf(tableNameBytes).toBytes();
+          tableNameBytes = writeToTableWithNamespace
+            ? TableName.valueOf(tableNameBytes).getNameWithNamespaceInclAsString()
+              .getBytes(Charset.defaultCharset())
+            : TableName.valueOf(tableNameBytes).toBytes();
           if (!allTableNames.contains(Bytes.toString(tableNameBytes))) {
             throw new IllegalArgumentException(
               "TableName " + Bytes.toString(tableNameBytes) + " not expected");
@@ -264,6 +281,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         }
         Path tableRelPath = getTableRelativePath(tableNameBytes);
         byte[] tableAndFamily = getTableNameSuffixedWithFamily(tableNameBytes, family);
+
         WriterLength wl = this.writers.get(tableAndFamily);
 
         // If this is a new column family, verify that the directory exists
@@ -290,7 +308,6 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         if (wl == null || wl.writer == null) {
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
-
             String tableName = Bytes.toString(tableNameBytes);
             if (tableName != null) {
               try (
@@ -611,6 +628,9 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     job.setOutputValueClass(MapReduceExtendedCell.class);
     job.setOutputFormatClass(cls);
 
+    final boolean writeToTableWithNamespace = conf.getBoolean(
+      TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_DEFAULT_VALUE);
+
     if (multiTableInfo.stream().distinct().count() != multiTableInfo.size()) {
       throw new IllegalArgumentException("Duplicate entries found in TableInfo argument");
     }
@@ -650,7 +670,9 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
     for (TableInfo tableInfo : multiTableInfo) {
       regionLocators.add(tableInfo.getRegionLocator());
-      allTableNames.add(tableInfo.getRegionLocator().getName().getNameAsString());
+      allTableNames.add(writeMultipleTables && writeToTableWithNamespace
+        ? tableInfo.getRegionLocator().getName().getNameWithNamespaceInclAsString()
+        : tableInfo.getRegionLocator().getName().getNameAsString());
       tableDescriptors.add(tableInfo.getTableDescriptor());
     }
     // Record tablenames for creating writer by favored nodes, and decoding compression,

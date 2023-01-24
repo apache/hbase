@@ -500,6 +500,7 @@
     <module>hbase-asyncfs</module>
     <module>hbase-logging</module>
     <module>hbase-compression</module>
+    <module>hbase-backup</module>
     <module>hubspot-client-bundles</module>
   </modules>
   <scm>
@@ -855,6 +856,11 @@
         <version>${project.version}</version>
         <type>test-jar</type>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-backup</artifactId>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
