@@ -733,7 +733,7 @@ function hbaseprotoc_rebuild
   # Need to run 'install' instead of 'compile' because shading plugin
   # is hooked-up to 'install'; else hbase-protocol-shaded is left with
   # half of its process done.
-  modules_workers patch hbaseprotoc install -DskipTests -X -DHBasePatchProcess
+  modules_workers patch hbaseprotoc install -DskipTests -DHBasePatchProcess
 
   # shellcheck disable=SC2153
   until [[ $i -eq "${#MODULE[@]}" ]]; do
