@@ -154,6 +154,25 @@ public class AssignmentManager {
     "hbase.master.assign.regions.on.unknown.servers";
   private static final boolean DEFAULT_PROCESS_UNKNOWN_RS_ON_STARTUP = true;
 
+  public static final String FORCE_REGION_RETAINMENT = "hbase.master.scp.retain.assignment.force";
+
+  public static final boolean DEFAULT_FORCE_REGION_RETAINMENT = false;
+
+  /** The wait time in millis before checking again if the region's previous RS is back online */
+  public static final String FORCE_REGION_RETAINMENT_WAIT_INTERVAL =
+    "hbase.master.scp.retain.assignment.force.wait-interval";
+
+  public static final long DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL = 50;
+
+  /**
+   * The number of times to check if the region's previous RS is back online, before giving up and
+   * proceeding with assignment on a new RS
+   */
+  public static final String FORCE_REGION_RETAINMENT_RETRIES =
+    "hbase.master.scp.retain.assignment.force.retries";
+
+  public static final int DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
+
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
 
@@ -200,6 +219,12 @@ public class AssignmentManager {
 
   private Thread assignThread;
 
+  private final boolean forceRegionRetainment;
+
+  private final long forceRegionRetainmentWaitInterval;
+
+  private final int forceRegionRetainmentRetries;
+
   public AssignmentManager(final MasterServices master) {
     this(master, new RegionStateStore(master));
   }
@@ -238,6 +263,13 @@ public class AssignmentManager {
     }
     minVersionToMoveSysTables =
       conf.get(MIN_VERSION_MOVE_SYS_TABLES_CONFIG, DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
+
+    forceRegionRetainment =
+      conf.getBoolean(FORCE_REGION_RETAINMENT, DEFAULT_FORCE_REGION_RETAINMENT);
+    forceRegionRetainmentWaitInterval = conf.getLong(FORCE_REGION_RETAINMENT_WAIT_INTERVAL,
+      DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL);
+    forceRegionRetainmentRetries =
+      conf.getInt(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
   }
 
   public void start() throws IOException, KeeperException {
@@ -374,6 +406,18 @@ public class AssignmentManager {
 
   int getAssignMaxAttempts() {
     return assignMaxAttempts;
+  }
+
+  public boolean isForceRegionRetainment() {
+    return forceRegionRetainment;
+  }
+
+  public long getForceRegionRetainmentWaitInterval() {
+    return forceRegionRetainmentWaitInterval;
+  }
+
+  public int getForceRegionRetainmentRetries() {
+    return forceRegionRetainmentRetries;
   }
 
   int getAssignRetryImmediatelyMaxAttempts() {
