@@ -107,6 +107,10 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-backup</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>${compat.module}</artifactId>
       <version>${project.version}</version>
     </dependency>

@@ -86,7 +86,7 @@ public class FSTableDescriptors implements TableDescriptors {
   /**
    * The file name prefix used to store HTD in HDFS
    */
-  static final String TABLEINFO_FILE_PREFIX = ".tableinfo";
+  public static final String TABLEINFO_FILE_PREFIX = ".tableinfo";
 
   public static final String TABLEINFO_DIR = ".tabledesc";
 

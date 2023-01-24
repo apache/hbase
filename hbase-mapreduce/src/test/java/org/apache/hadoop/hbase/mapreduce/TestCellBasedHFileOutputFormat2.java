@@ -566,22 +566,33 @@ public class TestCellBasedHFileOutputFormat2 {
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
     boolean putSortReducer, String tableStr) throws Exception {
-    doIncrementalLoadTest(shouldChangeRegions, shouldKeepLocality, putSortReducer,
+    doIncrementalLoadTest(shouldChangeRegions, shouldKeepLocality, putSortReducer, false,
       Arrays.asList(tableStr));
   }
 
   @Test
   public void testMultiMRIncrementalLoadWithPutSortReducer() throws Exception {
     LOG.info("\nStarting test testMultiMRIncrementalLoadWithPutSortReducer\n");
-    doIncrementalLoadTest(false, false, true,
+    doIncrementalLoadTest(false, false, true, false,
+      Arrays.stream(TABLE_NAMES).map(TableName::getNameAsString).collect(Collectors.toList()));
+  }
+
+  @Test
+  public void testMultiMRIncrementalLoadWithPutSortReducerWithNamespaceInPath() throws Exception {
+    LOG.info("\nStarting test testMultiMRIncrementalLoadWithPutSortReducerWithNamespaceInPath\n");
+    doIncrementalLoadTest(false, false, true, true,
       Arrays.stream(TABLE_NAMES).map(TableName::getNameAsString).collect(Collectors.toList()));
   }
 
   private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality,
-    boolean putSortReducer, List<String> tableStr) throws Exception {
+    boolean putSortReducer, boolean shouldWriteToTableWithNamespace, List<String> tableStr)
+    throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     conf.setBoolean(MultiTableHFileOutputFormat.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
+    if (shouldWriteToTableWithNamespace) {
+      conf.setBoolean(HFileOutputFormat2.TABLE_NAME_WITH_NAMESPACE_INCLUSIVE_KEY, true);
+    }
     int hostCount = 1;
     int regionNum = 5;
     if (shouldKeepLocality) {
@@ -616,13 +627,17 @@ public class TestCellBasedHFileOutputFormat2 {
     Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
     // Generate the bulk load files
     runIncrementalPELoad(conf, tableInfo, testDir, putSortReducer);
+    if (shouldWriteToTableWithNamespace) {
+      testDir = new Path(testDir, "default");
+    }
 
     for (Table tableSingle : allTables.values()) {
       // This doesn't write into the table, just makes files
       assertEquals("HFOF should not touch actual table", 0, util.countRows(tableSingle));
     }
     int numTableDirs = 0;
-    for (FileStatus tf : testDir.getFileSystem(conf).listStatus(testDir)) {
+    FileStatus[] fss = testDir.getFileSystem(conf).listStatus(testDir);
+    for (FileStatus tf : fss) {
       Path tablePath = testDir;
 
       if (writeMultipleTables) {
@@ -636,7 +651,8 @@ public class TestCellBasedHFileOutputFormat2 {
 
       // Make sure that a directory was created for every CF
       int dir = 0;
-      for (FileStatus f : tablePath.getFileSystem(conf).listStatus(tablePath)) {
+      fss = tablePath.getFileSystem(conf).listStatus(tablePath);
+      for (FileStatus f : fss) {
         for (byte[] family : FAMILIES) {
           if (Bytes.toString(family).equals(f.getPath().getName())) {
             ++dir;
