@@ -406,7 +406,7 @@ public class ServerManager {
    * Assumes onlineServers is locked.
    * @return ServerName with matching hostname and port.
    */
-  private ServerName findServerWithSameHostnamePortWithLock(final ServerName serverName) {
+  public ServerName findServerWithSameHostnamePortWithLock(final ServerName serverName) {
     ServerName end =
       ServerName.valueOf(serverName.getHostname(), serverName.getPort(), Long.MAX_VALUE);
 
