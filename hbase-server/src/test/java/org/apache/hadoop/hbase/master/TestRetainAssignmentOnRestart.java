@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT_WAIT_INTERVAL;
+import static org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +36,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -190,6 +192,7 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     cluster.stopMaster(0);
     cluster.waitForMasterToStop(master.getServerName(), 5000);
     cluster.stopRegionServer(deadRS);
+    cluster.waitForRegionServerToStop(deadRS, 5000);
 
     LOG.info("\n\nSleeping a bit");
     Thread.sleep(2000);
@@ -228,13 +231,85 @@ public class TestRetainAssignmentOnRestart extends AbstractTestRestartCluster {
     }
   }
 
+  /**
+   * This tests the force retaining assignments upon an RS restart, even when master triggers an SCP
+   */
+  @Test
+  public void testForceRetainAssignment() throws Exception {
+    UTIL.getConfiguration().setBoolean(FORCE_REGION_RETAINMENT, true);
+    UTIL.getConfiguration().setLong(FORCE_REGION_RETAINMENT_WAIT_INTERVAL, 50);
+    setupCluster();
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
+    assertEquals(NUM_OF_RS, threads.size());
+    int[] rsPorts = new int[NUM_OF_RS];
+    for (int i = 0; i < NUM_OF_RS; i++) {
+      rsPorts[i] = threads.get(i).getRegionServer().getServerName().getPort();
+    }
+
+    // We don't have to use SnapshotOfRegionAssignmentFromMeta. We use it here because AM used to
+    // use it to load all user region placements
+    SnapshotOfRegionAssignmentFromMeta snapshot =
+      new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
+    snapshot.initialize();
+    Map<RegionInfo, ServerName> regionToRegionServerMap = snapshot.getRegionToRegionServerMap();
+    for (ServerName serverName : regionToRegionServerMap.values()) {
+      boolean found = false; // Test only, no need to optimize
+      for (int k = 0; k < NUM_OF_RS && !found; k++) {
+        found = serverName.getPort() == rsPorts[k];
+      }
+      LOG.info("Server {} has regions? {}", serverName, found);
+      assertTrue(found);
+    }
+
+    // Server to be restarted
+    ServerName deadRS = threads.get(0).getRegionServer().getServerName();
+    LOG.info("\n\nStopping {} server", deadRS);
+    cluster.stopRegionServer(deadRS);
+
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+
+    LOG.info("\n\nStarting region server {} second time with the same port", deadRS);
+    cluster.getConf().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
+    cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, deadRS.getPort());
+    cluster.startRegionServer();
+
+    ensureServersWithSamePort(master, rsPorts);
+
+    // Wait till master is initialized and all regions are assigned
+    for (TableName TABLE : TABLES) {
+      UTIL.waitTableAvailable(TABLE);
+    }
+    UTIL.waitUntilNoRegionsInTransition(60000);
+    snapshot = new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
+    snapshot.initialize();
+    Map<RegionInfo, ServerName> newRegionToRegionServerMap = snapshot.getRegionToRegionServerMap();
+    assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
+    for (Map.Entry<RegionInfo, ServerName> entry : newRegionToRegionServerMap.entrySet()) {
+      ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
+      ServerName currentServer = entry.getValue();
+      LOG.info(
+        "Key=" + entry.getKey() + " oldServer=" + oldServer + ", currentServer=" + currentServer);
+      assertEquals(entry.getKey().toString(), oldServer.getAddress(), currentServer.getAddress());
+
+      if (deadRS.getPort() == oldServer.getPort()) {
+        // Restarted RS start code wont be same
+        assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
+      } else {
+        assertEquals(oldServer.getStartcode(), currentServer.getStartcode());
+      }
+    }
+  }
+
   private void setupCluster() throws Exception, IOException, InterruptedException {
     // Set Zookeeper based connection registry since we will stop master and start a new master
     // without populating the underlying config for the connection.
     UTIL.getConfiguration().set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
     // Enable retain assignment during ServerCrashProcedure
-    UTIL.getConfiguration().setBoolean(ServerCrashProcedure.MASTER_SCP_RETAIN_ASSIGNMENT, true);
+    UTIL.getConfiguration().setBoolean(MASTER_SCP_RETAIN_ASSIGNMENT, true);
     UTIL.startMiniCluster(StartMiniClusterOption.builder().masterClass(HMasterForTest.class)
       .numRegionServers(NUM_OF_RS).build());
 
