@@ -40,10 +40,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @Category({ ClientTests.class, MediumTests.class })
 @RunWith(MockitoJUnitRunner.class)
-public class TestConnectionImplementation {
+public class TestConnectionImplementationCacheMasterState {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionImplementation.class);
+    HBaseClassTestRule.forClass(TestConnectionImplementationCacheMasterState.class);
   private static final IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
 
   @BeforeClass
