@@ -556,8 +556,9 @@
     <compat.module>hbase-hadoop2-compat</compat.module>
     <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
     <!--This property is for hadoops netty. HBase netty
-         comes in via hbase-thirdparty hbase-shaded-netty-->
-    <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
+         comes in via hbase-thirdparty hbase-shaded-netty.
+         Note this is overridden by hadoop-specific profiles below. -->
+    <netty.hadoop.version>3.10.6.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.13.0</audience-annotations.version>
     <!--
@@ -3172,7 +3173,7 @@
         <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
         <!--This property is for hadoops netty. HBase netty
              comes in via hbase-thirdparty hbase-shaded-netty-->
-        <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
+        <netty.hadoop.version>3.10.6.Final</netty.hadoop.version>
       </properties>
       <dependencyManagement>
         <dependencies>
