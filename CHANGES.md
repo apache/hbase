@@ -18,6 +18,72 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.3 - Unreleased (as of 2023-01-25)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27506](https://issues.apache.org/jira/browse/HBASE-27506) | Optionally disable sorting directories by size in CleanerChore |  Minor | . |
+| [HBASE-27503](https://issues.apache.org/jira/browse/HBASE-27503) | Support replace \<FILE-PATH\> in GC\_OPTS for ZGC |  Minor | scripts |
+| [HBASE-27512](https://issues.apache.org/jira/browse/HBASE-27512) | Add file \`.git-blame-ignore-revs\` for \`git blame\` |  Trivial | . |
+| [HBASE-27487](https://issues.apache.org/jira/browse/HBASE-27487) | Slow meta can create pathological feedback loop with multigets |  Major | . |
+| [HBASE-27466](https://issues.apache.org/jira/browse/HBASE-27466) | hbase client metrics per user specified identity on hconnections. |  Major | Client |
+| [HBASE-27490](https://issues.apache.org/jira/browse/HBASE-27490) | Locating regions for all actions of batch requests can exceed operation timeout |  Major | . |
+| [HBASE-22924](https://issues.apache.org/jira/browse/HBASE-22924) | GitHUB PR job should use when clause to filter to just PRs. |  Minor | build, community |
+| [HBASE-27491](https://issues.apache.org/jira/browse/HBASE-27491) | AsyncProcess should not clear meta cache for RejectedExecutionException |  Major | . |
+| [HBASE-27459](https://issues.apache.org/jira/browse/HBASE-27459) | Improve our hbase\_docker to be able to build and start standalone clusters other than master branch |  Major | scripts |
+| [HBASE-27530](https://issues.apache.org/jira/browse/HBASE-27530) | Fix comment syntax errors |  Trivial | documentation |
+| [HBASE-27253](https://issues.apache.org/jira/browse/HBASE-27253) | Make slow log configs updatable with configuration observer |  Major | . |
+| [HBASE-27540](https://issues.apache.org/jira/browse/HBASE-27540) | Client metrics for success/failure counts. |  Major | Client |
+| [HBASE-27233](https://issues.apache.org/jira/browse/HBASE-27233) | Read blocks into off-heap if caching is disabled for read |  Major | . |
+| [HBASE-27531](https://issues.apache.org/jira/browse/HBASE-27531) | AsyncRequestFutureImpl unnecessarily clears meta cache for full server |  Major | . |
+| [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | Make the initial corePoolSize configurable for ChoreService |  Major | conf |
+| [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink |  Major | Coprocessors, Replication |
+| [HBASE-27562](https://issues.apache.org/jira/browse/HBASE-27562) | Publish SBOM artifacts |  Major | java |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27463](https://issues.apache.org/jira/browse/HBASE-27463) | Reset sizeOfLogQueue when refresh replication source |  Minor | Replication |
+| [HBASE-27510](https://issues.apache.org/jira/browse/HBASE-27510) | Should use 'org.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible' |  Major | . |
+| [HBASE-27484](https://issues.apache.org/jira/browse/HBASE-27484) | FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
+| [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | Client meta cache clear by exception metrics are missing some cases |  Minor | . |
+| [HBASE-27519](https://issues.apache.org/jira/browse/HBASE-27519) | Another case for FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
+| [HBASE-27498](https://issues.apache.org/jira/browse/HBASE-27498) | Observed lot of threads blocked in ConnectionImplementation.getKeepAliveMasterService |  Major | Client |
+| [HBASE-27524](https://issues.apache.org/jira/browse/HBASE-27524) | Fix python requirements problem |  Major | scripts, security |
+| [HBASE-27390](https://issues.apache.org/jira/browse/HBASE-27390) | getClusterMetrics NullPointerException when ServerTask status null |  Major | . |
+| [HBASE-27485](https://issues.apache.org/jira/browse/HBASE-27485) | HBaseTestingUtility minicluster requires log4j2 |  Major | test |
+| [HBASE-27566](https://issues.apache.org/jira/browse/HBASE-27566) | Bump gitpython from 3.1.29 to 3.1.30 in /dev-support |  Major | scripts, security |
+| [HBASE-27563](https://issues.apache.org/jira/browse/HBASE-27563) | ChaosMonkey sometimes generates invalid boundaries for random item selection |  Minor | integration tests |
+| [HBASE-27561](https://issues.apache.org/jira/browse/HBASE-27561) | hbase.master.port is ignored in processing of hbase.masters |  Minor | Client |
+| [HBASE-27564](https://issues.apache.org/jira/browse/HBASE-27564) | Add default encryption type for MiniKDC to fix failed tests on JDK11+ |  Major | . |
+| [HBASE-27579](https://issues.apache.org/jira/browse/HBASE-27579) | CatalogJanitor can cause data loss due to errors during cleanMergeRegion |  Blocker | . |
+| [HBASE-27589](https://issues.apache.org/jira/browse/HBASE-27589) | Rename TestConnectionImplementation in hbase-it to fix javadoc failure |  Blocker | Client, documentation |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27557](https://issues.apache.org/jira/browse/HBASE-27557) | [JDK17] Update shade plugin version |  Minor | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | Modify README.txt to mention how to contribue |  Major | community |
+| [HBASE-27567](https://issues.apache.org/jira/browse/HBASE-27567) | Introduce ChaosMonkey Action to print HDFS Cluster status |  Minor | integration tests |
+| [HBASE-27568](https://issues.apache.org/jira/browse/HBASE-27568) | ChaosMonkey add support for JournalNodes |  Major | integration tests |
+| [HBASE-27575](https://issues.apache.org/jira/browse/HBASE-27575) | Bump future from 0.18.2 to 0.18.3 in /dev-support |  Minor | . |
+| [HBASE-27578](https://issues.apache.org/jira/browse/HBASE-27578) | Upgrade hbase-thirdparty to 4.1.4 |  Blocker | dependencies, security |
+
+
 ## Release 2.5.2 - Unreleased (as of 2022-11-24)
 
 

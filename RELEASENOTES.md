@@ -16,6 +16,77 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.3 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27506](https://issues.apache.org/jira/browse/HBASE-27506) | *Minor* | **Optionally disable sorting directories by size in CleanerChore**
+
+Added \`hbase.cleaner.directory.sorting\` configuration to enable the CleanerChore to sort the subdirectories by consumed space and start the cleaning with the largest subdirectory. Enabled by default.
+
+
+---
+
+* [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | *Minor* | **Client meta cache clear by exception metrics are missing some cases**
+
+Patch available at https://github.com/apache/hbase/pull/4902
+
+
+---
+
+* [HBASE-27490](https://issues.apache.org/jira/browse/HBASE-27490) | *Major* | **Locating regions for all actions of batch requests can exceed operation timeout**
+
+The first step of submitting a multi request is to resolve all region locations for all actions in the request. If meta is slow, previously it was possible to exceed the configured operation timeout in this phase. Now, the operation timeout will be checked before each region location lookup. Once exceeded, the multi request will be failed but the region locations that had been looked up should remain in the cache (making future requests more likely to succeed).
+
+
+---
+
+* [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | *Major* | **Modify README.txt to mention how to contribue**
+
+Remove README.txt and replace it with README.md.
+Add a 'How to Contribute' section to tell contributors how to acquire a jira account.
+
+
+---
+
+* [HBASE-27498](https://issues.apache.org/jira/browse/HBASE-27498) | *Major* | **Observed lot of threads blocked in ConnectionImplementation.getKeepAliveMasterService**
+
+added hbase.client.master.state.cache.timeout.sec for sync connection implementation ConnectionImplementation such that cached the master is running state instead always refresh the master states per RPC call.
+
+
+---
+
+* [HBASE-27233](https://issues.apache.org/jira/browse/HBASE-27233) | *Major* | **Read blocks into off-heap if caching is disabled for read**
+
+Using Scan.setCacheBlocks(false) with on-heap LRUBlockCache will now result in significantly less heap allocations for those scans if hbase.server.allocator.pool.enabled is enabled. Previously all allocations went to on-heap if LRUBlockCache was used, but now it will go to the off-heap pool if cache blocks is enabled.
+
+
+---
+
+* [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | *Major* | **Make the initial corePoolSize configurable for ChoreService**
+
+Add 'hbase.choreservice.initial.pool.size' configuration property to set the initial number of threads for the ChoreService.
+
+
+---
+
+* [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | *Major* | **Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink**
+
+New regionserver coproc endpoints that can be used by coproc at the replication sink cluster if WAL has extended attributes. 
+Using the new endpoints, WAL extended attributes can be transferred to Mutation attributes at the replication sink cluster.
+
+
+---
+
+* [HBASE-27575](https://issues.apache.org/jira/browse/HBASE-27575) | *Minor* | **Bump future from 0.18.2 to 0.18.3 in /dev-support**
+
+pushed to 2.4, 2.5, branch-2, and master
+
+
+
 # HBASE  2.5.2 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
