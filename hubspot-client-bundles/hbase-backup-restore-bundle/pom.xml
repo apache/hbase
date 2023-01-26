@@ -13,6 +13,14 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.hubspot.hbase</groupId>
+      <artifactId>hbase-client-bundle</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.hubspot.hbase</groupId>
+      <artifactId>hbase-mapreduce-bundle</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol-shaded</artifactId>
     </dependency>
@@ -53,66 +61,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-client</artifactId>
-      <exclusions>
-        <!-- these 2 compat modules are for metrics, but not used by the client metrics. -->
-        <exclusion>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase-hadoop-compat</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hbase</groupId>
-          <artifactId>hbase-hadoop2-compat</artifactId>
-        </exclusion>
-        <!-- unnecessary or conflicting dependencies to exclude from the jar -->
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jruby.joni</groupId>
-          <artifactId>joni</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jruby.jcodings</groupId>
-          <artifactId>jcodings</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hbase</groupId>
-      <artifactId>hbase-mapreduce</artifactId>
-      <exclusions>
-        <!-- unnecessary or conflicting dependencies to exclude from the jar -->
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>tomcat</groupId>
-          <artifactId>jasper-runtime</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
