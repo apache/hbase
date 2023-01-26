@@ -17,6 +17,7 @@
   <modules>
     <module>hbase-client-bundle</module>
     <module>hbase-mapreduce-bundle</module>
+    <module>hbase-backup-restore-bundle</module>
   </modules>
 
   <properties>
@@ -44,6 +45,11 @@
       <dependency>
         <groupId>com.hubspot.hbase</groupId>
         <artifactId>hbase-mapreduce-bundle</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.hubspot.hbase</groupId>
+        <artifactId>hbase-backup-restore-bundle</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>
