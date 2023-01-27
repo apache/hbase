@@ -3214,6 +3214,7 @@
           --add-opens java.base/java.lang=ALL-UNNAMED
           --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
           --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-opens java.base/java.util=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
           ${hbase-surefire.argLine}</argLine>
