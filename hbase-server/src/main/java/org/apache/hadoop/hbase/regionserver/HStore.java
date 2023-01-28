@@ -243,6 +243,8 @@ public class HStore
   // SFT implementations.
   private final Supplier<StoreFileWriterCreationTracker> storeFileWriterCreationTrackerFactory;
 
+  private final boolean warmup;
+
   /**
    * Constructor
    * @param family    HColumnDescriptor for this column
@@ -290,6 +292,7 @@ public class HStore
       this.compactionCheckMultiplier = DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER;
     }
 
+    this.warmup = warmup;
     this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
     storeEngine.initialize(warmup);
     // if require writing to tmp dir first, then we just return null, which indicate that we do not
@@ -740,7 +743,7 @@ public class HStore
           public Void call() throws IOException {
             boolean evictOnClose =
               getCacheConfig() != null ? getCacheConfig().shouldEvictOnClose() : true;
-            f.closeStoreFile(evictOnClose);
+            f.closeStoreFile(!warmup && evictOnClose);
             return null;
           }
         });
