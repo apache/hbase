@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.CompactionState;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -125,7 +126,7 @@ public class TestWarmupRegion {
    */
   @After
   public void tearDown() throws Exception {
-    // Nothing to do.
+    TEST_UTIL.deleteTable(TABLENAME);
   }
 
   protected void runwarmup() throws InterruptedException {
@@ -168,5 +169,17 @@ public class TestWarmupRegion {
       TEST_UTIL.getMiniHBaseCluster().getMaster().move(info.getEncodedNameAsBytes(), destName);
       serverid = (serverid + 1) % 2;
     }
+  }
+
+  @Test
+  public void testWarmupAndClose() throws IOException {
+    HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    HRegion region = TEST_UTIL.getMiniHBaseCluster().getRegions(TABLENAME).get(0);
+    RegionInfo info = region.getRegionInfo();
+
+    TableDescriptor htd = table.getDescriptor();
+    HRegion warmedUpRegion =
+      warmupHRegion(info, htd, rs.getWAL(info), rs.getConfiguration(), rs, null);
+    assertTrue(warmedUpRegion.isClosed());
   }
 }
