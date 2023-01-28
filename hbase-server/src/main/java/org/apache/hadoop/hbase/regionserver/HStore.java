@@ -226,6 +226,8 @@ public class HStore
 
   private final StoreContext storeContext;
 
+  private final boolean warmup;
+
   /**
    * Constructor
    * @param family    HColumnDescriptor for this column
@@ -279,6 +281,7 @@ public class HStore
         conf.getInt("hbase.hstore.close.check.interval", 10 * 1000 * 1000 /* 10 MB */);
     }
 
+    this.warmup = warmup;
     this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
     List<HStoreFile> hStoreFiles = loadStoreFiles(warmup);
     // Move the storeSize calculation out of loadStoreFiles() method, because the secondary read
@@ -918,7 +921,7 @@ public class HStore
             public Void call() throws IOException {
               boolean evictOnClose =
                 getCacheConfig() != null ? getCacheConfig().shouldEvictOnClose() : true;
-              f.closeStoreFile(evictOnClose);
+              f.closeStoreFile(!warmup && evictOnClose);
               return null;
             }
           });
