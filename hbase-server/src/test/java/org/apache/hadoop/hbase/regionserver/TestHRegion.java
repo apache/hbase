@@ -32,7 +32,9 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -182,7 +184,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -415,9 +416,8 @@ public class TestHRegion {
     long onePutSize = region.getMemStoreDataSize();
     assertTrue(onePutSize > 0);
 
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
-    doThrow(new IOException()).when(mockedCPHost)
-      .postBatchMutate(Mockito.<MiniBatchOperationInProgress<Mutation>> any());
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
+    doThrow(new IOException()).when(mockedCPHost).postBatchMutate(any());
     region.setCoprocessorHost(mockedCPHost);
 
     put = new Put(value);
@@ -3387,25 +3387,24 @@ public class TestHRegion {
     final long initSize = region.getDataInMemoryWithoutWAL();
     // save normalCPHost and replaced by mockedCPHost
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
     // Because the preBatchMutate returns void, we can't do usual Mockito when...then form. Must
     // do below format (from Mockito doc).
-    Mockito.doAnswer(new Answer<Void>() {
+    doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         MiniBatchOperationInProgress<Mutation> mb = invocation.getArgument(0);
         mb.addOperationsFromCP(0, new Mutation[] { addPut });
         return null;
       }
-    }).when(mockedCPHost).preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class));
+    }).when(mockedCPHost).preBatchMutate(isA(MiniBatchOperationInProgress.class));
     ColumnFamilyDescriptorBuilder builder =
       ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY_BYTES);
     ScanInfo info = new ScanInfo(CONF, builder.build(), Long.MAX_VALUE, Long.MAX_VALUE,
       region.getCellComparator());
-    Mockito.when(mockedCPHost.preFlushScannerOpen(Mockito.any(HStore.class), Mockito.any()))
-      .thenReturn(info);
-    Mockito
-      .when(mockedCPHost.preFlush(Mockito.any(), Mockito.any(StoreScanner.class), Mockito.any()))
+    when(mockedCPHost.preFlushScannerOpen(any(HStore.class), any())).thenReturn(info);
+
+    when(mockedCPHost.preFlush(any(), any(StoreScanner.class), any()))
       .thenAnswer(i -> i.getArgument(1));
     region.setCoprocessorHost(mockedCPHost);
 
@@ -5106,8 +5105,8 @@ public class TestHRegion {
   public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
     RegionInfo info;
     try {
-      FileSystem fs = Mockito.mock(FileSystem.class);
-      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+      FileSystem fs = mock(FileSystem.class);
+      when(fs.exists(any())).thenThrow(new IOException());
       TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
       ColumnFamilyDescriptor columnFamilyDescriptor =
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
