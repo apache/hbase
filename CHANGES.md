@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.5.3 - Unreleased (as of 2023-01-25)
+## Release 2.5.3 - Unreleased (as of 2023-01-29)
 
 
 
@@ -43,6 +43,7 @@
 | [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | Make the initial corePoolSize configurable for ChoreService |  Major | conf |
 | [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink |  Major | Coprocessors, Replication |
 | [HBASE-27562](https://issues.apache.org/jira/browse/HBASE-27562) | Publish SBOM artifacts |  Major | java |
+| [HBASE-27583](https://issues.apache.org/jira/browse/HBASE-27583) | Remove -X option when building protoc check in nightly and pre commit job |  Major | jenkins, scripts |
 
 
 ### BUG FIXES:
@@ -59,11 +60,16 @@
 | [HBASE-27390](https://issues.apache.org/jira/browse/HBASE-27390) | getClusterMetrics NullPointerException when ServerTask status null |  Major | . |
 | [HBASE-27485](https://issues.apache.org/jira/browse/HBASE-27485) | HBaseTestingUtility minicluster requires log4j2 |  Major | test |
 | [HBASE-27566](https://issues.apache.org/jira/browse/HBASE-27566) | Bump gitpython from 3.1.29 to 3.1.30 in /dev-support |  Major | scripts, security |
+| [HBASE-27560](https://issues.apache.org/jira/browse/HBASE-27560) | CatalogJanitor consistencyCheck cannot report the hole on last region if next table is disabled in meta |  Minor | hbck2 |
 | [HBASE-27563](https://issues.apache.org/jira/browse/HBASE-27563) | ChaosMonkey sometimes generates invalid boundaries for random item selection |  Minor | integration tests |
 | [HBASE-27561](https://issues.apache.org/jira/browse/HBASE-27561) | hbase.master.port is ignored in processing of hbase.masters |  Minor | Client |
 | [HBASE-27564](https://issues.apache.org/jira/browse/HBASE-27564) | Add default encryption type for MiniKDC to fix failed tests on JDK11+ |  Major | . |
 | [HBASE-27579](https://issues.apache.org/jira/browse/HBASE-27579) | CatalogJanitor can cause data loss due to errors during cleanMergeRegion |  Blocker | . |
 | [HBASE-27589](https://issues.apache.org/jira/browse/HBASE-27589) | Rename TestConnectionImplementation in hbase-it to fix javadoc failure |  Blocker | Client, documentation |
+| [HBASE-27592](https://issues.apache.org/jira/browse/HBASE-27592) | Update hadoop netty version for hadoop-2.0 profile |  Major | . |
+| [HBASE-27586](https://issues.apache.org/jira/browse/HBASE-27586) | Bump up commons-codec to 1.15 |  Major | dependencies, security |
+| [HBASE-27585](https://issues.apache.org/jira/browse/HBASE-27585) | Bump up jruby to 9.3.9.0 and related joni and jcodings to 2.1.43 and 1.0.57 respectively |  Major | jruby, security |
+| [HBASE-27547](https://issues.apache.org/jira/browse/HBASE-27547) | Close store file readers after region warmup |  Major | regionserver |
 
 
 ### SUB-TASKS:
@@ -71,6 +77,8 @@
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
 | [HBASE-27557](https://issues.apache.org/jira/browse/HBASE-27557) | [JDK17] Update shade plugin version |  Minor | . |
+| [HBASE-25516](https://issues.apache.org/jira/browse/HBASE-25516) | [JDK17] reflective access Field.class.getDeclaredField("modifiers") not supported |  Major | Filesystem Integration |
+| [HBASE-27591](https://issues.apache.org/jira/browse/HBASE-27591) | [JDK17] Fix failure TestImmutableScan#testScanCopyConstructor |  Minor | . |
 
 
 ### OTHER:
@@ -78,10 +86,12 @@
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
 | [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | Modify README.txt to mention how to contribue |  Major | community |
+| [HBASE-27548](https://issues.apache.org/jira/browse/HBASE-27548) | Bump jettison from 1.5.1 to 1.5.2 |  Major | dependabot, dependencies, security |
 | [HBASE-27567](https://issues.apache.org/jira/browse/HBASE-27567) | Introduce ChaosMonkey Action to print HDFS Cluster status |  Minor | integration tests |
 | [HBASE-27568](https://issues.apache.org/jira/browse/HBASE-27568) | ChaosMonkey add support for JournalNodes |  Major | integration tests |
 | [HBASE-27575](https://issues.apache.org/jira/browse/HBASE-27575) | Bump future from 0.18.2 to 0.18.3 in /dev-support |  Minor | . |
 | [HBASE-27578](https://issues.apache.org/jira/browse/HBASE-27578) | Upgrade hbase-thirdparty to 4.1.4 |  Blocker | dependencies, security |
+| [HBASE-27588](https://issues.apache.org/jira/browse/HBASE-27588) | "Instantiating StoreFileTracker impl" INFO level logging is too chatty |  Minor | . |
 
 
 ## Release 2.5.2 - Unreleased (as of 2022-11-24)
