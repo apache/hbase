@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -48,13 +49,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesP
  * <li>1 - means that this byte in provided row key is NOT fixed, i.e. row key's byte at this
  * position can be different from the one in provided row key</li>
  * </ul>
- * Example: Let's assume row key format is userId_actionId_year_month. Length of userId is fixed and
- * is 4, length of actionId is 2 and year and month are 4 and 2 bytes long respectively. Let's
- * assume that we need to fetch all users that performed certain action (encoded as "99") in Jan of
- * any year. Then the pair (row key, fuzzy info) would be the following: row key = "????_99_????_01"
- * (one can use any value instead of "?") fuzzy info =
- * "\x01\x01\x01\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x00\x00" I.e. fuzzy info tells the matching
- * mask is "????_99_????_01", where at ? can be any value.
+ * Example:
+ * <p/>
+ * Let's assume row key format is userId_actionId_year_month. Length of userId is fixed and is 4,
+ * length of actionId is 2 and year and month are 4 and 2 bytes long respectively.
+ * <p/>
+ * Let's assume that we need to fetch all users that performed certain action (encoded as "99") in
+ * Jan of any year. Then the pair (row key, fuzzy info) would be the following:
+ *
+ * <pre>
+ * row key = "????_99_????_01" (one can use any value instead of "?")
+ * fuzzy info = "\x01\x01\x01\x01\x00\x00\x00\x00\x01\x01\x01\x01\x00\x00\x00"
+ * </pre>
+ *
+ * I.e. fuzzy info tells the matching mask is "????_99_????_01", where at ? can be any value.
  */
 @InterfaceAudience.Public
 public class FuzzyRowFilter extends FilterBase {
@@ -71,6 +79,15 @@ public class FuzzyRowFilter extends FilterBase {
 
   private final byte processedWildcardMask;
   private List<Pair<byte[], byte[]>> fuzzyKeysData;
+  // Used to record whether we want to skip the current row.
+  // Usually we should use filterRowKey here but in the current scan implementation, if filterRowKey
+  // returns true, we will just skip to next row, instead of calling getNextCellHint to determine
+  // the actual next row, so we need to implement filterCell and return SEEK_NEXT_USING_HINT to let
+  // upper layer call getNextCellHint.
+  // And if we do not implement filterRow, sometimes we will get incorrect result when using
+  // FuzzyRowFilter together with other filters, please see the description for HBASE-26967 for more
+  // details.
+  private boolean filterRow;
   private boolean done = false;
 
   /**
@@ -173,6 +190,16 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   @Override
+  public void reset() throws IOException {
+    filterRow = false;
+  }
+
+  @Override
+  public boolean filterRow() throws IOException {
+    return filterRow;
+  }
+
+  @Override
   public ReturnCode filterCell(final Cell c) {
     final int startIndex = lastFoundIndex >= 0 ? lastFoundIndex : 0;
     final int size = fuzzyKeysData.size();
@@ -189,7 +216,7 @@ public class FuzzyRowFilter extends FilterBase {
     }
     // NOT FOUND -> seek next using hint
     lastFoundIndex = -1;
-
+    filterRow = true;
     return ReturnCode.SEEK_NEXT_USING_HINT;
   }
 
