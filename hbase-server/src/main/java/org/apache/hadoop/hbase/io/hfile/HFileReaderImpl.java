@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -421,7 +421,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public void recordBlockSize(Consumer<Integer> blockSizeConsumer) {
+    public void recordBlockSize(IntConsumer blockSizeConsumer) {
       if (!providedCurrentBlockSize && curBlock != null) {
         providedCurrentBlockSize = true;
         blockSizeConsumer.accept(curBlock.getUncompressedSizeWithoutHeader());

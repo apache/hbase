@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -65,7 +65,7 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   }
 
   @Override
-  public void recordBlockSize(Consumer<Integer> blockSizeConsumer) {
+  public void recordBlockSize(IntConsumer blockSizeConsumer) {
     // do nothing
   }
 

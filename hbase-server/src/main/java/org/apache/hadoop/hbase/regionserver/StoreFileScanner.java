@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -452,7 +452,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public void recordBlockSize(Consumer<Integer> blockSizeConsumer) {
+  public void recordBlockSize(IntConsumer blockSizeConsumer) {
     hfs.recordBlockSize(blockSizeConsumer);
   }
 

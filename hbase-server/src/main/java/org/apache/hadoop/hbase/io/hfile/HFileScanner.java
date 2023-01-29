@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -147,5 +147,5 @@ public interface HFileScanner extends Shipper, Closeable {
    * Implementations should ensure that blockSizeConsumer is only called once per block.
    * @param blockSizeConsumer to be called with block size in bytes, once per block.
    */
-  void recordBlockSize(Consumer<Integer> blockSizeConsumer);
+  void recordBlockSize(IntConsumer blockSizeConsumer);
 }

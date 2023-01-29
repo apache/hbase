@@ -3342,8 +3342,19 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         // maxResultSize - either we can reach this much size for all cells(being read) data or sum
         // of heap size occupied by cells(being read). Cell data means its key and value parts.
         // maxQuotaResultSize - max results just from server side configuration and quotas, without
+
         // user's specified max. We use this for evaluating limits based on blocks (not cells).
-        contextBuilder.setSizeLimit(sizeScope, maxResultSize, maxResultSize, maxQuotaResultSize);
+        // We may have accumulated some results in coprocessor preScannerNext call. We estimate
+        // block and cell size of those using call to addSize. Update our maximums for scanner
+        // context so we can account for them in the real scan.
+        long maxCellSize = maxResultSize;
+        long maxBlockSize = maxQuotaResultSize;
+        if (rpcCall != null) {
+          maxBlockSize -= rpcCall.getResponseBlockSize();
+          maxCellSize -= rpcCall.getResponseCellSize();
+        }
+
+        contextBuilder.setSizeLimit(sizeScope, maxCellSize, maxCellSize, maxBlockSize);
         contextBuilder.setBatchLimit(scanner.getBatch());
         contextBuilder.setTimeLimit(timeScope, timeLimit);
         contextBuilder.setTrackMetrics(trackMetrics);
@@ -3620,6 +3631,15 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         if (region.getCoprocessorHost() != null) {
           Boolean bypass = region.getCoprocessorHost().preScannerNext(scanner, results, rows);
           if (!results.isEmpty()) {
+            // If scanner CP added results to list, we want to account for cell and block size of
+            // that work. We estimate this using addSize, since CP does not get ScannerContext. If
+            // !done, the actual scan call below will use more accurate ScannerContext block and
+            // cell size tracking for the rest of the request. The two result sets will be added
+            // together in the RpcCall accounting.
+            // This here is just an estimate (see addSize for more details on estimation). We don't
+            // pass lastBlock to the scan call below because the real scan uses ScannerContext,
+            // which does not use lastBlock tracking. This may result in over counting by 1 block,
+            // but that is unlikely since addSize is already a rough estimate.
             Object lastBlock = null;
             for (Result r : results) {
               lastBlock = addSize(rpcCall, r, lastBlock);
