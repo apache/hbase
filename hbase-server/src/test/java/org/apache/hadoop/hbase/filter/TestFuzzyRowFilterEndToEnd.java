@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,6 +28,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -370,7 +372,6 @@ public class TestFuzzyRowFilterEndToEnd {
     assertEquals(expectedSize, found);
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testFilterList() throws Exception {
     String cf = "f";
@@ -413,7 +414,6 @@ public class TestFuzzyRowFilterEndToEnd {
 
   }
 
-  @SuppressWarnings("unchecked")
   private void runTest(Table hTable, int expectedSize) throws IOException {
     // [0, 2, ?, ?, ?, ?, 0, 0, 0, 1]
     byte[] fuzzyKey1 = new byte[10];
@@ -470,5 +470,58 @@ public class TestFuzzyRowFilterEndToEnd {
     LOG.info("found " + results.size() + " results");
 
     assertEquals(expectedSize, results.size());
+  }
+
+  @Test
+  public void testHBASE26967() throws IOException {
+    byte[] row1 = Bytes.toBytes("1");
+    byte[] row2 = Bytes.toBytes("2");
+    String cf1 = "f1";
+    String cf2 = "f2";
+    String cq1 = "col1";
+    String cq2 = "col2";
+
+    Table ht =
+      TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), new String[] { cf1, cf2 });
+
+    // Put data
+    List<Put> puts = Lists.newArrayList();
+    puts.add(new Put(row1).addColumn(Bytes.toBytes(cf1), Bytes.toBytes(cq1), Bytes.toBytes("a1")));
+    puts.add(new Put(row1).addColumn(Bytes.toBytes(cf2), Bytes.toBytes(cq2), Bytes.toBytes("a2")));
+    puts.add(new Put(row2).addColumn(Bytes.toBytes(cf1), Bytes.toBytes(cq1), Bytes.toBytes("b1")));
+    puts.add(new Put(row2).addColumn(Bytes.toBytes(cf2), Bytes.toBytes(cq2), Bytes.toBytes("b2")));
+    ht.put(puts);
+
+    TEST_UTIL.flush();
+
+    // FuzzyRowFilter
+    List<Pair<byte[], byte[]>> data = Lists.newArrayList();
+    byte[] fuzzyKey = Bytes.toBytes("1");
+    byte[] mask = new byte[] { 0 };
+    data.add(new Pair<>(fuzzyKey, mask));
+    FuzzyRowFilter fuzzyRowFilter = new FuzzyRowFilter(data);
+
+    // SingleColumnValueFilter
+    Filter singleColumnValueFilter = new SingleColumnValueFilter(Bytes.toBytes(cf2),
+      Bytes.toBytes(cq2), CompareOperator.EQUAL, Bytes.toBytes("x"));
+
+    // FilterList
+    FilterList filterList = new FilterList(Operator.MUST_PASS_ONE);
+    filterList.addFilter(Lists.newArrayList(fuzzyRowFilter, singleColumnValueFilter));
+
+    Scan scan = new Scan();
+    scan.setFilter(filterList);
+
+    ResultScanner scanner = ht.getScanner(scan);
+    Result rs = scanner.next();
+    assertEquals(0, Bytes.compareTo(row1, rs.getRow()));
+
+    // The two cells (1,f1,col1,a1) (1,f2,col2,a2)
+    assertEquals(2, rs.listCells().size());
+
+    // Only one row who's rowKey=1
+    assertNull(scanner.next());
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name.getMethodName()));
   }
 }

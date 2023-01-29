@@ -85,7 +85,7 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Fitlers that never filter by modifying the returned List of Cells can inherit this
+   * Filters that never filter by modifying the returned List of Cells can inherit this
    * implementation that does nothing. {@inheritDoc}
    */
   @Override
