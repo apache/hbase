@@ -92,6 +92,14 @@ public class TaskMonitor {
     return createStatus(description, ignore, false);
   }
 
+  /**
+   * Create a monitored task for users to inquire about the status
+   * @param description   description of the status
+   * @param ignore        whether to ignore to track(e.g. show/clear/expire) the task in the
+   *                      {@link TaskMonitor}
+   * @param enableJournal enable when the task contains some stage journals
+   * @return a monitored task
+   */
   public synchronized MonitoredTask createStatus(String description, boolean ignore,
     boolean enableJournal) {
     MonitoredTask stat = new MonitoredTaskImpl(enableJournal, description);
@@ -105,6 +113,18 @@ public class TaskMonitor {
       tasks.add(pair);
     }
     return proxy;
+  }
+
+  /**
+   * Create a task group which contains a series of monitored tasks for users to inquire about the
+   * status
+   * @param ignoreSubTasksInTaskMonitor whether to ignore to track(e.g. show/clear/expire) the task
+   *                                    in the {@link TaskMonitor}
+   * @param description                 description of the status
+   * @return a group of monitored tasks
+   */
+  public static TaskGroup createTaskGroup(boolean ignoreSubTasksInTaskMonitor, String description) {
+    return new TaskGroup(ignoreSubTasksInTaskMonitor, description);
   }
 
   public synchronized MonitoredRPCHandler createRPCStatus(String description) {
