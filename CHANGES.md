@@ -70,6 +70,7 @@
 | [HBASE-27586](https://issues.apache.org/jira/browse/HBASE-27586) | Bump up commons-codec to 1.15 |  Major | dependencies, security |
 | [HBASE-27585](https://issues.apache.org/jira/browse/HBASE-27585) | Bump up jruby to 9.3.9.0 and related joni and jcodings to 2.1.43 and 1.0.57 respectively |  Major | jruby, security |
 | [HBASE-27547](https://issues.apache.org/jira/browse/HBASE-27547) | Close store file readers after region warmup |  Major | regionserver |
+| [HBASE-26967](https://issues.apache.org/jira/browse/HBASE-26967) | FilterList with FuzzyRowFilter and SingleColumnValueFilter evaluated with operator MUST\_PASS\_ONE doesn't work as expected |  Critical | Filters |
 
 
 ### SUB-TASKS:
