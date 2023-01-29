@@ -87,7 +87,7 @@ public class TestHFileReaderImpl {
    * Test that we only count block size once per block while scanning
    */
   @Test
-  public void testGetCurrentBlockSizeOnce() throws IOException {
+  public void testRecordBlockSize() throws IOException {
     Path p = makeNewFile();
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();

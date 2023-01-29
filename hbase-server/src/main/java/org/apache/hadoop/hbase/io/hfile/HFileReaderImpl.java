@@ -337,7 +337,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
     // unreferenced block please.
     protected HFileBlock curBlock;
-    // Whether we returned a result for curBlock's size in getCurrentBlockSizeOnce().
+    // Whether we returned a result for curBlock's size in recordBlockSize().
     // gets reset whenever curBlock is changed.
     private boolean providedCurrentBlockSize = false;
     // Previous blocks that were used in the course of the read
