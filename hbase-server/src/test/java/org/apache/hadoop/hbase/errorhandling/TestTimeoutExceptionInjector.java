@@ -18,6 +18,12 @@
 package org.apache.hadoop.hbase.errorhandling;
 
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -25,7 +31,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,11 +52,11 @@ public class TestTimeoutExceptionInjector {
   @Test
   public void testTimerTrigger() {
     final long time = 10000000; // pick a value that is very far in the future
-    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    ForeignExceptionListener listener = mock(ForeignExceptionListener.class);
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any());
+    verify(listener, times(1)).receive(any());
   }
 
   /**
@@ -60,11 +65,11 @@ public class TestTimeoutExceptionInjector {
   @Test
   public void testTimerPassesOnErrorInfo() {
     final long time = 1000000;
-    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    ForeignExceptionListener listener = mock(ForeignExceptionListener.class);
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.start();
     timer.trigger();
-    Mockito.verify(listener).receive(Mockito.any());
+    verify(listener).receive(any());
   }
 
   /**
@@ -74,7 +79,7 @@ public class TestTimeoutExceptionInjector {
   @Test
   public void testStartAfterComplete() throws InterruptedException {
     final long time = 10;
-    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    ForeignExceptionListener listener = mock(ForeignExceptionListener.class);
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.complete();
     try {
@@ -84,7 +89,7 @@ public class TestTimeoutExceptionInjector {
       LOG.debug("Correctly failed timer: " + e.getMessage());
     }
     Thread.sleep(time + 1);
-    Mockito.verifyZeroInteractions(listener);
+    verifyNoInteractions(listener);
   }
 
   /**
@@ -94,7 +99,7 @@ public class TestTimeoutExceptionInjector {
   @Test
   public void testStartAfterTrigger() throws InterruptedException {
     final long time = 10;
-    ForeignExceptionListener listener = Mockito.mock(ForeignExceptionListener.class);
+    ForeignExceptionListener listener = mock(ForeignExceptionListener.class);
     TimeoutExceptionInjector timer = new TimeoutExceptionInjector(listener, time);
     timer.trigger();
     try {
@@ -104,7 +109,7 @@ public class TestTimeoutExceptionInjector {
       LOG.debug("Correctly failed timer: " + e.getMessage());
     }
     Thread.sleep(time * 2);
-    Mockito.verify(listener, Mockito.times(1)).receive(Mockito.any());
-    Mockito.verifyNoMoreInteractions(listener);
+    verify(listener, times(1)).receive(any());
+    verifyNoMoreInteractions(listener);
   }
 }
