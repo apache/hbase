@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.backup.example;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,7 +66,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -186,7 +189,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
     List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    Mockito.doReturn(regions).when(rss).getRegions();
+    doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
       new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -239,7 +242,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
     List<HRegion> regions = new ArrayList<>();
     regions.add(region);
-    Mockito.doReturn(regions).when(rss).getRegions();
+    doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner =
       new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(region, TEST_FAM);
@@ -249,7 +252,7 @@ public class TestZooKeeperTableArchiveClient {
     HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
     regions = new ArrayList<>();
     regions.add(otherRegion);
-    Mockito.doReturn(regions).when(rss).getRegions();
+    doReturn(regions).when(rss).getRegions();
     final CompactedHFilesDischarger compactionCleaner1 =
       new CompactedHFilesDischarger(100, stop, rss, false);
     loadFlushAndCompact(otherRegion, TEST_FAM);
@@ -365,10 +368,10 @@ public class TestZooKeeperTableArchiveClient {
   private CountDownLatch setupCleanerWatching(LongTermArchivingHFileCleaner cleaner,
     List<BaseHFileCleanerDelegate> cleaners, final int expected) {
     // replace the cleaner with one that we can can check
-    BaseHFileCleanerDelegate delegateSpy = Mockito.spy(cleaner);
+    BaseHFileCleanerDelegate delegateSpy = spy(cleaner);
     final int[] counter = new int[] { 0 };
     final CountDownLatch finished = new CountDownLatch(1);
-    Mockito.doAnswer(new Answer<Iterable<FileStatus>>() {
+    doAnswer(new Answer<Iterable<FileStatus>>() {
 
       @Override
       public Iterable<FileStatus> answer(InvocationOnMock invocation) throws Throwable {
@@ -384,7 +387,7 @@ public class TestZooKeeperTableArchiveClient {
 
         return ret;
       }
-    }).when(delegateSpy).getDeletableFiles(Mockito.anyListOf(FileStatus.class));
+    }).when(delegateSpy).getDeletableFiles(anyList());
     cleaners.set(0, delegateSpy);
 
     return finished;
