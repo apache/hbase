@@ -1,5 +1,4 @@
 # RELEASENOTES
-
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,10 +15,88 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+-->
+# HBASE  2.4.16 Release Notes
 
-# Be careful doing manual edits in this file. Do not change format
-# of release header or remove the below marker. This file is generated.
-# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | *Major* | **The personality script set wrong hadoop2 check version for branch-2**
+
+This only affects branch-2 but for aliging the personality scripts across all active branches, we apply it to all active branches.
+
+
+---
+
+* [HBASE-27443](https://issues.apache.org/jira/browse/HBASE-27443) | *Major* | **Use java11 in the general check of our jenkins job**
+
+Change to use java 11 in nightly and pre commit jobs.
+
+Bump error prone to 2.16 and force using jdk11 when error prone is enabled.
+
+
+---
+
+* [HBASE-27506](https://issues.apache.org/jira/browse/HBASE-27506) | *Minor* | **Optionally disable sorting directories by size in CleanerChore**
+
+Added \`hbase.cleaner.directory.sorting\` configuration to enable the CleanerChore to sort the subdirectories by consumed space and start the cleaning with the largest subdirectory. Enabled by default.
+
+
+---
+
+* [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | *Minor* | **Client meta cache clear by exception metrics are missing some cases**
+
+Patch available at https://github.com/apache/hbase/pull/4902
+
+
+---
+
+* [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | *Major* | **Modify README.txt to mention how to contribue**
+
+Remove README.txt and replace it with README.md.
+Add a 'How to Contribute' section to tell contributors how to acquire a jira account.
+
+
+---
+
+* [HBASE-27498](https://issues.apache.org/jira/browse/HBASE-27498) | *Major* | **Observed lot of threads blocked in ConnectionImplementation.getKeepAliveMasterService**
+
+added hbase.client.master.state.cache.timeout.sec for sync connection implementation ConnectionImplementation such that cached the master is running state instead always refresh the master states per RPC call.
+
+
+---
+
+* [HBASE-27556](https://issues.apache.org/jira/browse/HBASE-27556) | *Major* | **Backport HBASE-23340 to branch-2.4**
+
+
+Previously the LogCleaner chores had their own ZK client. If they encounter Session expired error, the LogCleaner chore will never succeed again despite the HMaster continuing to run. With this change, the LogCleaner chores now share the underlying ZK of the HMaster (similar to HFileCleaner chores). So now, if an unrecoverable session expiration occurs, the hmaster will abort and cleaner chores will not be left as zombies.
+
+
+---
+
+* [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | *Major* | **Make the initial corePoolSize configurable for ChoreService**
+
+Add 'hbase.choreservice.initial.pool.size' configuration property to set the initial number of threads for the ChoreService.
+
+
+---
+
+* [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | *Major* | **Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink**
+
+New regionserver coproc endpoints that can be used by coproc at the replication sink cluster if WAL has extended attributes. 
+Using the new endpoints, WAL extended attributes can be transferred to Mutation attributes at the replication sink cluster.
+
+
+---
+
+* [HBASE-27575](https://issues.apache.org/jira/browse/HBASE-27575) | *Minor* | **Bump future from 0.18.2 to 0.18.3 in /dev-support**
+
+pushed to 2.4, 2.5, branch-2, and master
+
+
+
 # HBASE  2.4.15 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.

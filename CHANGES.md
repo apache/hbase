@@ -1,4 +1,3 @@
-# HBASE Changelog
 
 <!---
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -16,10 +15,110 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+-->
+# HBASE Changelog
 
-# Be careful doing manual edits in this file. Do not change format
-# of release header or remove the below marker. This file is generated.
-# DO NOT REMOVE THIS MARKER; FOR INTERPOLATING CHANGES!-->
+## Release 2.4.16 - Unreleased (as of 2023-01-30)
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27159](https://issues.apache.org/jira/browse/HBASE-27159) | Emit source metrics for BlockCacheExpressHitPercent |  Minor | BlockCache, metrics |
+| [HBASE-27450](https://issues.apache.org/jira/browse/HBASE-27450) | Update all our python scripts to use python3 |  Major | scripts |
+| [HBASE-27414](https://issues.apache.org/jira/browse/HBASE-27414) | Search order for locations in  HFileLink |  Minor | Performance |
+| [HBASE-27506](https://issues.apache.org/jira/browse/HBASE-27506) | Optionally disable sorting directories by size in CleanerChore |  Minor | . |
+| [HBASE-26320](https://issues.apache.org/jira/browse/HBASE-26320) | Separate Log Cleaner DirScanPool to prevent the OLDWALs from filling up the disk when archive is large |  Major | Operability |
+| [HBASE-27503](https://issues.apache.org/jira/browse/HBASE-27503) | Support replace \<FILE-PATH\> in GC\_OPTS for ZGC |  Minor | scripts |
+| [HBASE-27512](https://issues.apache.org/jira/browse/HBASE-27512) | Add file \`.git-blame-ignore-revs\` for \`git blame\` |  Trivial | . |
+| [HBASE-27487](https://issues.apache.org/jira/browse/HBASE-27487) | Slow meta can create pathological feedback loop with multigets |  Major | . |
+| [HBASE-22924](https://issues.apache.org/jira/browse/HBASE-22924) | GitHUB PR job should use when clause to filter to just PRs. |  Minor | build, community |
+| [HBASE-27491](https://issues.apache.org/jira/browse/HBASE-27491) | AsyncProcess should not clear meta cache for RejectedExecutionException |  Major | . |
+| [HBASE-27459](https://issues.apache.org/jira/browse/HBASE-27459) | Improve our hbase\_docker to be able to build and start standalone clusters other than master branch |  Major | scripts |
+| [HBASE-27530](https://issues.apache.org/jira/browse/HBASE-27530) | Fix comment syntax errors |  Trivial | documentation |
+| [HBASE-27540](https://issues.apache.org/jira/browse/HBASE-27540) | Client metrics for success/failure counts. |  Major | Client |
+| [HBASE-27565](https://issues.apache.org/jira/browse/HBASE-27565) | Make the initial corePoolSize configurable for ChoreService |  Major | conf |
+| [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink |  Major | Coprocessors, Replication |
+| [HBASE-27562](https://issues.apache.org/jira/browse/HBASE-27562) | Publish SBOM artifacts |  Major | java |
+| [HBASE-27583](https://issues.apache.org/jira/browse/HBASE-27583) | Remove -X option when building protoc check in nightly and pre commit job |  Major | jenkins, scripts |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27426](https://issues.apache.org/jira/browse/HBASE-27426) | Region server abort with failing to list region servers. |  Major | Zookeeper |
+| [HBASE-27440](https://issues.apache.org/jira/browse/HBASE-27440) | metrics method removeHistogramMetrics trigger serious memory leak |  Major | metrics, regionserver |
+| [HBASE-25983](https://issues.apache.org/jira/browse/HBASE-25983) | javadoc generation fails on openjdk-11.0.11+9 |  Major | documentation, pom |
+| [HBASE-27446](https://issues.apache.org/jira/browse/HBASE-27446) | Spotbugs 4.7.2 report a lot of logging errors when generating report |  Major | build, jenkins, scripts |
+| [HBASE-27437](https://issues.apache.org/jira/browse/HBASE-27437) | TestHeapSize is flaky |  Major | test |
+| [HBASE-27472](https://issues.apache.org/jira/browse/HBASE-27472) | The personality script set wrong hadoop2 check version for branch-2 |  Major | jenkins, scripts |
+| [HBASE-27473](https://issues.apache.org/jira/browse/HBASE-27473) | Fix spotbugs warnings in hbase-rest Client.getResponseBody |  Major | REST |
+| [HBASE-27480](https://issues.apache.org/jira/browse/HBASE-27480) | Skip error prone for hadoop2/3 checkes in our nightly jobs |  Major | jenkins, scripts |
+| [HBASE-27469](https://issues.apache.org/jira/browse/HBASE-27469) | IllegalArgumentException is thrown by SnapshotScannerHDFSAclController when dropping a table |  Major | snapshots |
+| [HBASE-27001](https://issues.apache.org/jira/browse/HBASE-27001) | The deleted variable cannot be printed out |  Minor | . |
+| [HBASE-27379](https://issues.apache.org/jira/browse/HBASE-27379) | numOpenConnections metric is one less than the actual |  Minor | metrics |
+| [HBASE-27423](https://issues.apache.org/jira/browse/HBASE-27423) | Upgrade hbase-thirdparty to 4.1.3 and upgrade Jackson for CVE-2022-42003/42004 |  Major | security |
+| [HBASE-27464](https://issues.apache.org/jira/browse/HBASE-27464) | In memory compaction 'COMPACT' may cause data corruption when adding cells large than maxAlloc(default 256k) size |  Critical | in-memory-compaction |
+| [HBASE-27445](https://issues.apache.org/jira/browse/HBASE-27445) | result of DirectMemoryUtils#getDirectMemorySize may be wrong |  Minor | UI |
+| [HBASE-27504](https://issues.apache.org/jira/browse/HBASE-27504) | Remove duplicated config 'hbase.normalizer.merge.min\_region\_age.days' in hbase-default.xml |  Minor | conf |
+| [HBASE-27463](https://issues.apache.org/jira/browse/HBASE-27463) | Reset sizeOfLogQueue when refresh replication source |  Minor | Replication |
+| [HBASE-27484](https://issues.apache.org/jira/browse/HBASE-27484) | FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
+| [HBASE-27494](https://issues.apache.org/jira/browse/HBASE-27494) | Client meta cache clear by exception metrics are missing some cases |  Minor | . |
+| [HBASE-27519](https://issues.apache.org/jira/browse/HBASE-27519) | Another case for FNFE on StoreFileScanner after a flush followed by a compaction |  Major | . |
+| [HBASE-27498](https://issues.apache.org/jira/browse/HBASE-27498) | Observed lot of threads blocked in ConnectionImplementation.getKeepAliveMasterService |  Major | Client |
+| [HBASE-27524](https://issues.apache.org/jira/browse/HBASE-27524) | Fix python requirements problem |  Major | scripts, security |
+| [HBASE-27566](https://issues.apache.org/jira/browse/HBASE-27566) | Bump gitpython from 3.1.29 to 3.1.30 in /dev-support |  Major | scripts, security |
+| [HBASE-27560](https://issues.apache.org/jira/browse/HBASE-27560) | CatalogJanitor consistencyCheck cannot report the hole on last region if next table is disabled in meta |  Minor | hbck2 |
+| [HBASE-27563](https://issues.apache.org/jira/browse/HBASE-27563) | ChaosMonkey sometimes generates invalid boundaries for random item selection |  Minor | integration tests |
+| [HBASE-27561](https://issues.apache.org/jira/browse/HBASE-27561) | hbase.master.port is ignored in processing of hbase.masters |  Minor | Client |
+| [HBASE-27564](https://issues.apache.org/jira/browse/HBASE-27564) | Add default encryption type for MiniKDC to fix failed tests on JDK11+ |  Major | . |
+| [HBASE-27579](https://issues.apache.org/jira/browse/HBASE-27579) | CatalogJanitor can cause data loss due to errors during cleanMergeRegion |  Blocker | . |
+| [HBASE-27589](https://issues.apache.org/jira/browse/HBASE-27589) | Rename TestConnectionImplementation in hbase-it to fix javadoc failure |  Blocker | Client, documentation |
+| [HBASE-27586](https://issues.apache.org/jira/browse/HBASE-27586) | Bump up commons-codec to 1.15 |  Major | dependencies, security |
+| [HBASE-27585](https://issues.apache.org/jira/browse/HBASE-27585) | Bump up jruby to 9.3.9.0 and related joni and jcodings to 2.1.43 and 1.0.57 respectively |  Major | jruby, security |
+| [HBASE-27547](https://issues.apache.org/jira/browse/HBASE-27547) | Close store file readers after region warmup |  Major | regionserver |
+| [HBASE-26967](https://issues.apache.org/jira/browse/HBASE-26967) | FilterList with FuzzyRowFilter and SingleColumnValueFilter evaluated with operator MUST\_PASS\_ONE doesn't work as expected |  Critical | Filters |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27479](https://issues.apache.org/jira/browse/HBASE-27479) | Flaky Test testClone in TestTaskMonitor |  Trivial | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27475](https://issues.apache.org/jira/browse/HBASE-27475) | Use different jdks when running hadoopcheck in personality scripts |  Critical | jenkins, scripts |
+| [HBASE-27556](https://issues.apache.org/jira/browse/HBASE-27556) | Backport HBASE-23340 to branch-2.4 |  Major | . |
+| [HBASE-27557](https://issues.apache.org/jira/browse/HBASE-27557) | [JDK17] Update shade plugin version |  Minor | . |
+| [HBASE-25516](https://issues.apache.org/jira/browse/HBASE-25516) | [JDK17] reflective access Field.class.getDeclaredField("modifiers") not supported |  Major | Filesystem Integration |
+| [HBASE-27591](https://issues.apache.org/jira/browse/HBASE-27591) | [JDK17] Fix failure TestImmutableScan#testScanCopyConstructor |  Minor | . |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27431](https://issues.apache.org/jira/browse/HBASE-27431) | Remove TestRemoteTable.testLimitedScan |  Trivial | REST, test |
+| [HBASE-27425](https://issues.apache.org/jira/browse/HBASE-27425) | Run flaky test job more often |  Minor | test |
+| [HBASE-27441](https://issues.apache.org/jira/browse/HBASE-27441) | Use jdk 11.0.16 instead of 11.0.16.1 for branch-2.4 |  Major | build, scripts |
+| [HBASE-27460](https://issues.apache.org/jira/browse/HBASE-27460) | Fix the hadolint errors after HBASE-27456 |  Major | scripts |
+| [HBASE-27443](https://issues.apache.org/jira/browse/HBASE-27443) | Use java11 in the general check of our jenkins job |  Major | build, jenkins |
+| [HBASE-27513](https://issues.apache.org/jira/browse/HBASE-27513) | Modify README.txt to mention how to contribue |  Major | community |
+| [HBASE-27548](https://issues.apache.org/jira/browse/HBASE-27548) | Bump jettison from 1.5.1 to 1.5.2 |  Major | dependabot, dependencies, security |
+| [HBASE-27567](https://issues.apache.org/jira/browse/HBASE-27567) | Introduce ChaosMonkey Action to print HDFS Cluster status |  Minor | integration tests |
+| [HBASE-27568](https://issues.apache.org/jira/browse/HBASE-27568) | ChaosMonkey add support for JournalNodes |  Major | integration tests |
+| [HBASE-27575](https://issues.apache.org/jira/browse/HBASE-27575) | Bump future from 0.18.2 to 0.18.3 in /dev-support |  Minor | . |
+| [HBASE-27578](https://issues.apache.org/jira/browse/HBASE-27578) | Upgrade hbase-thirdparty to 4.1.4 |  Blocker | dependencies, security |
+| [HBASE-27456](https://issues.apache.org/jira/browse/HBASE-27456) | Upgrade the dockerfile used in nightly and pre commit to ubuntu 22.04 |  Major | jenkins, scripts |
+
+
 ## Release 2.4.15 - 2022-10-21
 
 
