@@ -569,7 +569,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
-    if (!scannerContext.getKeepProgress()) {
+    if (!scannerContext.getKeepProgress() && !scannerContext.getSkippingRow()) {
       scannerContext.clearProgress();
     }
 
@@ -611,6 +611,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // here, we still need to scan all the qualifiers before returning...
           scannerContext.returnImmediately();
         }
+
+        heap.recordBlockSize(scannerContext::incrementBlockProgress);
+
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
@@ -748,6 +751,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           default:
             throw new RuntimeException("UNEXPECTED");
+        }
+
+        // One last chance to break due to size limit. The INCLUDE* cases above already check
+        // limit and continue. For the various filtered cases, we need to check because block
+        // size limit may have been exceeded even if we don't add cells to result list.
+        if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_CELLS)) {
+          return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
       } while ((cell = this.heap.peek()) != null);
 

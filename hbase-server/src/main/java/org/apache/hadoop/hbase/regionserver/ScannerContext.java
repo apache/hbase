@@ -103,6 +103,13 @@ public class ScannerContext {
   boolean keepProgress;
   private static boolean DEFAULT_KEEP_PROGRESS = false;
 
+  /**
+   * Allows temporarily ignoring limits and skipping tracking of batch and size progress. Used when
+   * skipping to the next row, in which case all processed cells are thrown away so should not count
+   * towards progress.
+   */
+  boolean skippingRow = false;
+
   private Cell lastPeekedCell = null;
 
   // Set this to true will have the same behavior with reaching the time limit.
@@ -123,7 +130,7 @@ public class ScannerContext {
     }
 
     // Progress fields are initialized to 0
-    progress = new ProgressFields(0, 0, 0);
+    progress = new ProgressFields(0, 0, 0, 0);
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
@@ -148,7 +155,9 @@ public class ScannerContext {
    * @return true if the progress tracked so far in this instance will be considered during an
    *         invocation of {@link InternalScanner#next(java.util.List)} or
    *         {@link RegionScanner#next(java.util.List)}. false when the progress tracked so far
-   *         should not be considered and should instead be wiped away via {@link #clearProgress()}
+   *         should not be considered and should instead be wiped away via {@link #clearProgress()}.
+   *         This only applies to per-row progress, like batch and data/heap size. Block size is
+   *         never reset because it tracks all of the blocks scanned for an entire request.
    */
   boolean getKeepProgress() {
     return keepProgress;
@@ -159,9 +168,31 @@ public class ScannerContext {
   }
 
   /**
+   * In this mode, only block size progress is tracked, and limits are ignored. We set this mode
+   * when skipping to next row, in which case all cells returned a thrown away so should not count
+   * towards progress.
+   * @return true if we are in skipping row mode.
+   */
+  public boolean getSkippingRow() {
+    return skippingRow;
+  }
+
+  /**
+   * @param skippingRow set true to cause disabling of collecting per-cell progress or enforcing any
+   *                    limits. This is used when trying to skip over all cells in a row, in which
+   *                    case those cells are thrown away so should not count towards progress.
+   */
+  void setSkippingRow(boolean skippingRow) {
+    this.skippingRow = skippingRow;
+  }
+
+  /**
    * Progress towards the batch limit has been made. Increment internal tracking of batch progress
    */
   void incrementBatchProgress(int batch) {
+    if (skippingRow) {
+      return;
+    }
     int currentBatch = progress.getBatch();
     progress.setBatch(currentBatch + batch);
   }
@@ -170,6 +201,9 @@ public class ScannerContext {
    * Progress towards the size limit has been made. Increment internal tracking of size progress
    */
   void incrementSizeProgress(long dataSize, long heapSize) {
+    if (skippingRow) {
+      return;
+    }
     long curDataSize = progress.getDataSize();
     progress.setDataSize(curDataSize + dataSize);
     long curHeapSize = progress.getHeapSize();
@@ -182,6 +216,17 @@ public class ScannerContext {
    */
   @Deprecated
   void updateTimeProgress() {
+
+  }
+
+  /**
+   * Progress towards the block limit has been made. Increment internal track of block progress
+   */
+  void incrementBlockProgress(int blockSize) {
+    if (blockSize > 0) {
+      long curBlockSize = progress.getBlockSize();
+      progress.setBlockSize(curBlockSize + blockSize);
+    }
   }
 
   int getBatchProgress() {
@@ -212,6 +257,10 @@ public class ScannerContext {
     setProgress(batchProgress, sizeProgress, heapSizeProgress);
   }
 
+  long getBlockSizeProgress() {
+    return progress.getBlockSize();
+  }
+
   void setProgress(int batchProgress, long sizeProgress, long heapSizeProgress) {
     setBatchProgress(batchProgress);
     setSizeProgress(sizeProgress, heapSizeProgress);
@@ -235,10 +284,12 @@ public class ScannerContext {
 
   /**
    * Clear away any progress that has been made so far. All progress fields are reset to initial
-   * values
+   * values. Only clears progress that should reset between rows. {@link #getBlockSizeProgress()} is
+   * not reset because it increments for all blocks scanned whether the result is included or
+   * filtered.
    */
   void clearProgress() {
-    progress.setFields(0, 0, 0);
+    progress.setFields(0, 0, 0, getBlockSizeProgress());
   }
 
   /**
@@ -275,7 +326,7 @@ public class ScannerContext {
   /** Returns true if the size limit can be enforced in the checker's scope */
   boolean hasSizeLimit(LimitScope checkerScope) {
     return limits.canEnforceSizeLimitFromScope(checkerScope)
-      && (limits.getDataSize() > 0 || limits.getHeapSize() > 0);
+      && (limits.getDataSize() > 0 || limits.getHeapSize() > 0 || limits.getBlockSize() > 0);
   }
 
   /** Returns true if the time limit can be enforced in the checker's scope */
@@ -320,7 +371,7 @@ public class ScannerContext {
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkBatchLimit(LimitScope checkerScope) {
-    return hasBatchLimit(checkerScope) && progress.getBatch() >= limits.getBatch();
+    return !skippingRow && hasBatchLimit(checkerScope) && progress.getBatch() >= limits.getBatch();
   }
 
   /**
@@ -328,8 +379,10 @@ public class ScannerContext {
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkSizeLimit(LimitScope checkerScope) {
-    return hasSizeLimit(checkerScope) && (progress.getDataSize() >= limits.getDataSize()
-      || progress.getHeapSize() >= limits.getHeapSize());
+    return !skippingRow && hasSizeLimit(checkerScope)
+      && (progress.getDataSize() >= limits.getDataSize()
+        || progress.getHeapSize() >= limits.getHeapSize()
+        || progress.getBlockSize() >= limits.getBlockSize());
   }
 
   /**
@@ -338,7 +391,7 @@ public class ScannerContext {
    * @return true when the limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkTimeLimit(LimitScope checkerScope) {
-    return hasTimeLimit(checkerScope)
+    return !skippingRow && hasTimeLimit(checkerScope)
       && (returnImmediately || EnvironmentEdgeManager.currentTime() >= limits.getTime());
   }
 
@@ -414,10 +467,12 @@ public class ScannerContext {
       return this;
     }
 
-    public Builder setSizeLimit(LimitScope sizeScope, long dataSizeLimit, long heapSizeLimit) {
+    public Builder setSizeLimit(LimitScope sizeScope, long dataSizeLimit, long heapSizeLimit,
+      long blockSizeLimit) {
       limits.setDataSize(dataSizeLimit);
       limits.setHeapSize(heapSizeLimit);
       limits.setSizeScope(sizeScope);
+      limits.setBlockSize(blockSizeLimit);
       return this;
     }
 
@@ -563,6 +618,9 @@ public class ScannerContext {
     // The sum of heap space occupied by all tracked cells. This includes Cell POJO's overhead as
     // such AND data cells of Cells which are in on heap area.
     long heapSize = DEFAULT_SIZE;
+    // The total amount of block bytes that have been loaded in order to process cells for the
+    // request.
+    long blockSize = DEFAULT_SIZE;
 
     LimitScope timeScope = DEFAULT_SCOPE;
     long time = DEFAULT_TIME;
@@ -576,19 +634,21 @@ public class ScannerContext {
     void copy(LimitFields limitsToCopy) {
       if (limitsToCopy != null) {
         setFields(limitsToCopy.getBatch(), limitsToCopy.getSizeScope(), limitsToCopy.getDataSize(),
-          limitsToCopy.getHeapSize(), limitsToCopy.getTimeScope(), limitsToCopy.getTime());
+          limitsToCopy.getHeapSize(), limitsToCopy.getBlockSize(), limitsToCopy.getTimeScope(),
+          limitsToCopy.getTime());
       }
     }
 
     /**
      * Set all fields together.
      */
-    void setFields(int batch, LimitScope sizeScope, long dataSize, long heapSize,
+    void setFields(int batch, LimitScope sizeScope, long dataSize, long heapSize, long blockSize,
       LimitScope timeScope, long time) {
       setBatch(batch);
       setSizeScope(sizeScope);
       setDataSize(dataSize);
       setHeapSize(heapSize);
+      setBlockSize(blockSize);
       setTimeScope(timeScope);
       setTime(time);
     }
@@ -614,12 +674,20 @@ public class ScannerContext {
       return this.heapSize;
     }
 
+    long getBlockSize() {
+      return this.blockSize;
+    }
+
     void setDataSize(long dataSize) {
       this.dataSize = dataSize;
     }
 
     void setHeapSize(long heapSize) {
       this.heapSize = heapSize;
+    }
+
+    void setBlockSize(long blockSize) {
+      this.blockSize = blockSize;
     }
 
     /** Returns {@link LimitScope} indicating scope in which the size limit is enforced */
@@ -678,6 +746,9 @@ public class ScannerContext {
       sb.append(", heapSize:");
       sb.append(heapSize);
 
+      sb.append(", blockSize:");
+      sb.append(blockSize);
+
       sb.append(", sizeScope:");
       sb.append(sizeScope);
 
@@ -706,18 +777,22 @@ public class ScannerContext {
     // The sum of heap space occupied by all tracked cells. This includes Cell POJO's overhead as
     // such AND data cells of Cells which are in on heap area.
     long heapSize = DEFAULT_SIZE;
+    // The total amount of block bytes that have been loaded in order to process cells for the
+    // request.
+    long blockSize = DEFAULT_SIZE;
 
-    ProgressFields(int batch, long size, long heapSize) {
-      setFields(batch, size, heapSize);
+    ProgressFields(int batch, long size, long heapSize, long blockSize) {
+      setFields(batch, size, heapSize, blockSize);
     }
 
     /**
      * Set all fields together.
      */
-    void setFields(int batch, long dataSize, long heapSize) {
+    void setFields(int batch, long dataSize, long heapSize, long blockSize) {
       setBatch(batch);
       setDataSize(dataSize);
       setHeapSize(heapSize);
+      setBlockSize(blockSize);
     }
 
     int getBatch() {
@@ -736,8 +811,16 @@ public class ScannerContext {
       return this.heapSize;
     }
 
+    long getBlockSize() {
+      return this.blockSize;
+    }
+
     void setDataSize(long dataSize) {
       this.dataSize = dataSize;
+    }
+
+    void setBlockSize(long blockSize) {
+      this.blockSize = blockSize;
     }
 
     void setHeapSize(long heapSize) {
@@ -757,6 +840,9 @@ public class ScannerContext {
 
       sb.append(", heapSize:");
       sb.append(heapSize);
+
+      sb.append(", blockSize:");
+      sb.append(blockSize);
 
       sb.append("}");
       return sb.toString();
