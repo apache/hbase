@@ -500,7 +500,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           results.clear();
 
           // Read nothing as the rowkey was filtered, but still need to check time limit
-          if (scannerContext.checkTimeLimit(limitScope)) {
+          // We also check size limit because we might have read blocks in getting to this point.
+          if (scannerContext.checkAnyLimitReached(limitScope)) {
             return true;
           }
           continue;
@@ -558,8 +559,9 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           // This row was totally filtered out, if this is NOT the last row,
           // we should continue on. Otherwise, nothing else to do.
           if (!shouldStop) {
-            // Read nothing as the cells was filtered, but still need to check time limit
-            if (scannerContext.checkTimeLimit(limitScope)) {
+            // Read nothing as the cells was filtered, but still need to check time limit.
+            // We also check size limit because we might have read blocks in getting to this point.
+            if (scannerContext.checkAnyLimitReached(limitScope)) {
               return true;
             }
             continue;
@@ -605,6 +607,13 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         }
         if (!shouldStop) {
+          // We check size limit because we might have read blocks in the nextRow call above, or
+          // in the call populateResults call. Only scans with hasFilterRow should reach this point,
+          // and for those scans which filter row _cells_ this is the only place we can actually
+          // enforce that the scan does not exceed limits since it bypasses all other checks above.
+          if (scannerContext.checkSizeLimit(limitScope)) {
+            return true;
+          }
           continue;
         }
       }
@@ -702,13 +711,21 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   protected boolean nextRow(ScannerContext scannerContext, Cell curRowCell) throws IOException {
     assert this.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
+
+    // Enable skipping row mode, which disables limits and skips tracking progress for all
+    // but block size. We keep tracking block size because skipping a row in this way
+    // might involve reading blocks along the way.
+    scannerContext.setSkippingRow(true);
+
     Cell next;
     while ((next = this.storeHeap.peek()) != null && CellUtil.matchingRows(next, curRowCell)) {
       // Check for thread interrupt status in case we have been signaled from
       // #interruptRegionOperation.
       region.checkInterrupt();
-      this.storeHeap.next(MOCKED_LIST);
+      this.storeHeap.next(MOCKED_LIST, scannerContext);
     }
+
+    scannerContext.setSkippingRow(false);
     resetFilters();
 
     // Calling the hook in CP which allows it to do a fast forward

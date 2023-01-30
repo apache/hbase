@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
@@ -112,5 +113,10 @@ public class DelegatingKeyValueScanner implements KeyValueScanner {
   @Override
   public Cell getNextIndexedKey() {
     return delegate.getNextIndexedKey();
+  }
+
+  @Override
+  public void recordBlockSize(IntConsumer blockSizeConsumer) {
+    delegate.recordBlockSize(blockSizeConsumer);
   }
 }

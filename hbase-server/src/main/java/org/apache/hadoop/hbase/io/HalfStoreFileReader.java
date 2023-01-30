@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -277,6 +278,11 @@ public class HalfStoreFileReader extends StoreFileReader {
       @Override
       public void shipped() throws IOException {
         this.delegate.shipped();
+      }
+
+      @Override
+      public void recordBlockSize(IntConsumer blockSizeConsumer) {
+        this.delegate.recordBlockSize(blockSizeConsumer);
       }
     };
   }

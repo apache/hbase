@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -333,6 +334,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
     // unreferenced block please.
     protected HFileBlock curBlock;
+    // Whether we returned a result for curBlock's size in recordBlockSize().
+    // gets reset whenever curBlock is changed.
+    private boolean providedCurrentBlockSize = false;
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
@@ -352,6 +356,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         prevBlocks.add(this.curBlock);
       }
       this.curBlock = block;
+      this.providedCurrentBlockSize = false;
     }
 
     void reset() {
@@ -410,6 +415,14 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         reader.unbufferStream();
       }
       this.returnBlocks(true);
+    }
+
+    @Override
+    public void recordBlockSize(IntConsumer blockSizeConsumer) {
+      if (!providedCurrentBlockSize && curBlock != null) {
+        providedCurrentBlockSize = true;
+        blockSizeConsumer.accept(curBlock.getUncompressedSizeWithoutHeader());
+      }
     }
 
     // Returns the #bytes in HFile for the current cell. Used to skip these many bytes in current

@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,6 +81,39 @@ public class TestHFileReaderImpl {
     writer.close();
     fout.close();
     return ncTFile;
+  }
+
+  /**
+   * Test that we only count block size once per block while scanning
+   */
+  @Test
+  public void testRecordBlockSize() throws IOException {
+    Path p = makeNewFile();
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    HFile.Reader reader = HFile.createReader(fs, p, CacheConfig.DISABLED, true, conf);
+
+    try (HFileReaderImpl.HFileScannerImpl scanner =
+      (HFileReaderImpl.HFileScannerImpl) reader.getScanner(conf, true, true, false)) {
+      scanner.seekTo();
+
+      scanner.recordBlockSize(
+        size -> assertTrue("expected non-zero block size on first request", size > 0));
+      scanner.recordBlockSize(
+        size -> assertEquals("expected zero block size on second request", 0, (int) size));
+
+      AtomicInteger blocks = new AtomicInteger(0);
+      while (scanner.next()) {
+        scanner.recordBlockSize(size -> {
+          blocks.incrementAndGet();
+          // there's only 2 cells in the second block
+          assertTrue("expected remaining block to be less than block size",
+            size < toKV("a").getLength() * 3);
+        });
+      }
+
+      assertEquals("expected only one remaining block but got " + blocks.get(), 1, blocks.get());
+    }
   }
 
   @Test

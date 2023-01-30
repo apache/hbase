@@ -45,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
-import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -3309,8 +3308,7 @@ public class RSRpcServices
   // return whether we have more results in region.
   private void scan(HBaseRpcController controller, ScanRequest request, RegionScannerHolder rsh,
     long maxQuotaResultSize, int maxResults, int limitOfRows, List<Result> results,
-    ScanResponse.Builder builder, MutableObject<Object> lastBlock, RpcCall rpcCall)
-    throws IOException {
+    ScanResponse.Builder builder, RpcCall rpcCall) throws IOException {
     HRegion region = rsh.r;
     RegionScanner scanner = rsh.s;
     long maxResultSize;
@@ -3370,7 +3368,19 @@ public class RSRpcServices
         ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
         // maxResultSize - either we can reach this much size for all cells(being read) data or sum
         // of heap size occupied by cells(being read). Cell data means its key and value parts.
-        contextBuilder.setSizeLimit(sizeScope, maxResultSize, maxResultSize);
+        // maxQuotaResultSize - max results just from server side configuration and quotas, without
+        // user's specified max. We use this for evaluating limits based on blocks (not cells).
+        // We may have accumulated some results in coprocessor preScannerNext call. We estimate
+        // block and cell size of those using call to addSize. Update our maximums for scanner
+        // context so we can account for them in the real scan.
+        long maxCellSize = maxResultSize;
+        long maxBlockSize = maxQuotaResultSize;
+        if (rpcCall != null) {
+          maxBlockSize -= rpcCall.getResponseBlockSize();
+          maxCellSize -= rpcCall.getResponseCellSize();
+        }
+
+        contextBuilder.setSizeLimit(sizeScope, maxCellSize, maxCellSize, maxBlockSize);
         contextBuilder.setBatchLimit(scanner.getBatch());
         contextBuilder.setTimeLimit(timeScope, timeLimit);
         contextBuilder.setTrackMetrics(trackMetrics);
@@ -3425,7 +3435,6 @@ public class RSRpcServices
             }
             boolean mayHaveMoreCellsInRow = scannerContext.mayHaveMoreCellsInRow();
             Result r = Result.create(values, null, stale, mayHaveMoreCellsInRow);
-            lastBlock.setValue(addSize(rpcCall, r, lastBlock.getValue()));
             results.add(r);
             numOfResults++;
             if (!mayHaveMoreCellsInRow && limitOfRows > 0) {
@@ -3454,12 +3463,18 @@ public class RSRpcServices
           limitReached = sizeLimitReached || timeLimitReached || resultsLimitReached;
 
           if (limitReached || !moreRows) {
+            // With block size limit, we may exceed size limit without collecting any results.
+            // In this case we want to send heartbeat and/or cursor. We don't want to send heartbeat
+            // or cursor if results were collected, for example for cell size or heap size limits.
+            boolean sizeLimitReachedWithoutResults = sizeLimitReached && results.isEmpty();
             // We only want to mark a ScanResponse as a heartbeat message in the event that
             // there are more values to be read server side. If there aren't more values,
             // marking it as a heartbeat is wasteful because the client will need to issue
             // another ScanRequest only to realize that they already have all the values
-            if (moreRows && timeLimitReached) {
-              // Heartbeat messages occur when the time limit has been reached.
+            if (moreRows && (timeLimitReached || sizeLimitReachedWithoutResults)) {
+              // Heartbeat messages occur when the time limit has been reached, or size limit has
+              // been reached before collecting any results. This can happen for heavily filtered
+              // scans which scan over too many blocks.
               builder.setHeartbeatMessage(true);
               if (rsh.needCursor) {
                 Cell cursorCell = scannerContext.getLastPeekedCell();
@@ -3471,6 +3486,10 @@ public class RSRpcServices
             break;
           }
           values.clear();
+        }
+        if (rpcCall != null) {
+          rpcCall.incrementResponseBlockSize(scannerContext.getBlockSizeProgress());
+          rpcCall.incrementResponseCellSize(scannerContext.getHeapSizeProgress());
         }
         builder.setMoreResultsInRegion(moreRows);
         // Check to see if the client requested that we track metrics server side. If the
@@ -3633,7 +3652,6 @@ public class RSRpcServices
     } else {
       limitOfRows = -1;
     }
-    MutableObject<Object> lastBlock = new MutableObject<>();
     boolean scannerClosed = false;
     try {
       List<Result> results = new ArrayList<>(Math.min(rows, 512));
@@ -3643,8 +3661,18 @@ public class RSRpcServices
         if (region.getCoprocessorHost() != null) {
           Boolean bypass = region.getCoprocessorHost().preScannerNext(scanner, results, rows);
           if (!results.isEmpty()) {
+            // If scanner CP added results to list, we want to account for cell and block size of
+            // that work. We estimate this using addSize, since CP does not get ScannerContext. If
+            // !done, the actual scan call below will use more accurate ScannerContext block and
+            // cell size tracking for the rest of the request. The two result sets will be added
+            // together in the RpcCall accounting.
+            // This here is just an estimate (see addSize for more details on estimation). We don't
+            // pass lastBlock to the scan call below because the real scan uses ScannerContext,
+            // which does not use lastBlock tracking. This may result in over counting by 1 block,
+            // but that is unlikely since addSize is already a rough estimate.
+            Object lastBlock = null;
             for (Result r : results) {
-              lastBlock.setValue(addSize(rpcCall, r, lastBlock.getValue()));
+              lastBlock = addSize(rpcCall, r, lastBlock);
             }
           }
           if (bypass != null && bypass.booleanValue()) {
@@ -3653,7 +3681,7 @@ public class RSRpcServices
         }
         if (!done) {
           scan((HBaseRpcController) controller, request, rsh, maxQuotaResultSize, rows, limitOfRows,
-            results, builder, lastBlock, rpcCall);
+            results, builder, rpcCall);
         } else {
           builder.setMoreResultsInRegion(!results.isEmpty());
         }
