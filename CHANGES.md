@@ -98,6 +98,7 @@
 | [HBASE-27557](https://issues.apache.org/jira/browse/HBASE-27557) | [JDK17] Update shade plugin version |  Minor | . |
 | [HBASE-25516](https://issues.apache.org/jira/browse/HBASE-25516) | [JDK17] reflective access Field.class.getDeclaredField("modifiers") not supported |  Major | Filesystem Integration |
 | [HBASE-27591](https://issues.apache.org/jira/browse/HBASE-27591) | [JDK17] Fix failure TestImmutableScan#testScanCopyConstructor |  Minor | . |
+| [HBASE-27581](https://issues.apache.org/jira/browse/HBASE-27581) | [JDK17] Fix failure TestHBaseTestingUtil#testResolvePortConflict |  Minor | test |
 
 
 ### OTHER:
