@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.HRegion.BulkLoadListener;
+import org.apache.hadoop.hbase.regionserver.throttle.BulkLoadThrottler;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
@@ -106,6 +107,11 @@ public class SecureBulkLoadManager {
   private UserProvider userProvider;
   private ConcurrentHashMap<UserGroupInformation, MutableInt> ugiReferenceCounter;
   private AsyncConnection conn;
+  private Long defaultBulkLoadBandwidth;
+  public final static String HBASE_BULKLOAD_NODE_BANDWIDTH =
+    "hbase.regionserver.bulkload.node.bandwidth";
+  public final static Long DEFAULT_HBASE_BULKLOAD_NODE_BANDWIDTH = 0L;
+  private BulkLoadThrottler bulkLoadThrottler;
 
   SecureBulkLoadManager(Configuration conf, AsyncConnection conn) {
     this.conf = conf;
@@ -130,6 +136,13 @@ public class SecureBulkLoadManager {
         fs.setPermission(baseStagingDir, PERM_HIDDEN);
       }
     }
+    defaultBulkLoadBandwidth =
+      conf.getLong(HBASE_BULKLOAD_NODE_BANDWIDTH, DEFAULT_HBASE_BULKLOAD_NODE_BANDWIDTH);
+    bulkLoadThrottler = new BulkLoadThrottler(defaultBulkLoadBandwidth, conf);
+  }
+
+  public BulkLoadThrottler getBulkLoadThrottler() {
+    return bulkLoadThrottler;
   }
 
   public void stop() throws IOException {
@@ -286,8 +299,10 @@ public class SecureBulkLoadManager {
             // We call bulkLoadHFiles as requesting user
             // To enable access prior to staging
             return region.bulkLoadHFiles(familyPaths, true,
-              new SecureBulkLoadListener(fs, bulkToken, conf), request.getCopyFile(), clusterIds,
-              request.getReplicate());
+              (bulkLoadThrottler != null && bulkLoadThrottler.isEnabled())
+                ? new SecureBulkLoadListener(fs, bulkToken, conf, bulkLoadThrottler)
+                : new SecureBulkLoadListener(fs, bulkToken, conf),
+              request.getCopyFile(), clusterIds, request.getReplicate(), null);
           } catch (Exception e) {
             LOG.error("Failed to complete bulk load", e);
           }
@@ -348,6 +363,16 @@ public class SecureBulkLoadManager {
     private FileSystem srcFs = null;
     private Map<String, FsPermission> origPermissions = null;
     private Map<String, String> origSources = null;
+    private BulkLoadThrottler bulkLoadThrottler;
+
+    public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf,
+      BulkLoadThrottler bulkLoadThrottler) {
+      this.fs = fs;
+      this.stagingDir = stagingDir;
+      this.conf = conf;
+      this.origPermissions = new HashMap<>();
+      this.bulkLoadThrottler = bulkLoadThrottler;
+    }
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
@@ -389,10 +414,18 @@ public class SecureBulkLoadManager {
       if (!FSUtils.isSameHdfs(conf, srcFs, fs)) {
         LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than "
           + "the destination filesystem. Copying file over to destination staging dir.");
-        FileUtil.copy(srcFs, p, fs, stageP, false, conf);
+        if (null != bulkLoadThrottler && bulkLoadThrottler.isEnabled()) {
+          bulkLoadThrottler.copy(srcFs, p, fs, stageP, false, conf);
+        } else {
+          FileUtil.copy(srcFs, p, fs, stageP, false, conf);
+        }
       } else if (copyFile) {
         LOG.debug("Bulk-load file " + srcPath + " is copied to destination staging dir.");
-        FileUtil.copy(srcFs, p, fs, stageP, false, conf);
+        if (null != bulkLoadThrottler && bulkLoadThrottler.isEnabled()) {
+          bulkLoadThrottler.copy(srcFs, p, fs, stageP, false, conf);
+        } else {
+          FileUtil.copy(srcFs, p, fs, stageP, false, conf);
+        }
       } else {
         LOG.debug("Moving " + p + " to " + stageP);
         FileStatus origFileStatus = fs.getFileStatus(p);

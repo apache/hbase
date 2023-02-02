@@ -3402,6 +3402,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       LOG.info("Update region server coprocessors because the configuration has changed");
       this.rsHost = new RegionServerCoprocessorHost(this, newConf);
     }
+
+    long oldBandWidth = secureBulkLoadManager.getBulkLoadThrottler().getConf().getLong(
+      SecureBulkLoadManager.HBASE_BULKLOAD_NODE_BANDWIDTH,
+      SecureBulkLoadManager.DEFAULT_HBASE_BULKLOAD_NODE_BANDWIDTH);
+    long newBandWidth = newConf.getLong(SecureBulkLoadManager.HBASE_BULKLOAD_NODE_BANDWIDTH,
+      SecureBulkLoadManager.DEFAULT_HBASE_BULKLOAD_NODE_BANDWIDTH);
+    if (oldBandWidth != newBandWidth) {
+      LOG.info("ConfigurationChange bulkload oldBandWidth is {} " + "newBandWidth is {}",
+        oldBandWidth, newBandWidth);
+      this.secureBulkLoadManager.getBulkLoadThrottler().setConf(newConf);
+    }
   }
 
   @Override

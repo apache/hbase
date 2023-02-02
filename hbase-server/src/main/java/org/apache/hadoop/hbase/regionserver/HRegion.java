@@ -149,6 +149,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
+import org.apache.hadoop.hbase.regionserver.throttle.BulkLoadThrottler;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -7140,7 +7141,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
     boolean assignSeqId, BulkLoadListener bulkLoadListener) throws IOException {
-    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false, null, true);
+    return bulkLoadHFiles(familyPaths, assignSeqId, bulkLoadListener, false, null, true, null);
   }
 
   /**
@@ -7185,7 +7186,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public Map<byte[], List<Path>> bulkLoadHFiles(Collection<Pair<byte[], String>> familyPaths,
     boolean assignSeqId, BulkLoadListener bulkLoadListener, boolean copyFile,
-    List<String> clusterIds, boolean replicate) throws IOException {
+    List<String> clusterIds, boolean replicate, BulkLoadThrottler bulkLoadThrottler)
+    throws IOException {
     long seqId = -1;
     Map<byte[], List<Path>> storeFiles = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     Map<String, Long> storeFilesSizes = new HashMap<>();
@@ -7281,7 +7283,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           Pair<Path, Path> pair = null;
           if (reqTmp) {
-            pair = store.preBulkLoadHFile(finalPath, seqId);
+            pair = store.preBulkLoadHFile(finalPath, seqId,
+              (bulkLoadThrottler != null && bulkLoadThrottler.isEnabled())
+                ? bulkLoadThrottler
+                : null);
           } else {
             Path livePath = new Path(finalPath);
             pair = new Pair<>(livePath, livePath);
