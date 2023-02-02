@@ -2967,7 +2967,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3017,7 +3017,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3075,7 +3075,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3132,7 +3132,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
