@@ -616,6 +616,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
               threadGroup.setDaemon(false);
             }
           }
+        } catch (NoSuchFieldException e) {
+          LOG.debug("NoSuchFieldException: " + e.getMessage()
+            + "; It might because your Hadoop version > 3.2.3 or 3.3.4, "
+            + "See HBASE-27595 for details.");
         } catch (Exception e) {
           LOG.warn("failed to reset thread pool timeout for FsDatasetAsyncDiskService", e);
         }
