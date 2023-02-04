@@ -41,7 +41,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.CompactionState;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -50,6 +53,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
@@ -68,6 +72,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class that test tags
@@ -77,6 +83,8 @@ public class TestTags {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestTags.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestTags.class);
 
   static boolean useFilter = false;
 
@@ -102,6 +110,71 @@ public class TestTags {
   @After
   public void tearDown() {
     useFilter = false;
+  }
+
+  /**
+   * Test that we can do reverse scans when writing tags and using DataBlockEncoding. Fails with an
+   * exception for PREFIX, DIFF, and FAST_DIFF prior to HBASE-27580
+   */
+  @Test
+  public void testReverseScanWithDBE() throws IOException {
+    byte[] family = Bytes.toBytes("0");
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+        testReverseScanWithDBE(connection, encoding, family);
+      }
+    }
+  }
+
+  private void testReverseScanWithDBE(Connection conn, DataBlockEncoding encoding, byte[] family)
+    throws IOException {
+    LOG.info("Running test with DBE={}", encoding);
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName() + "-" + encoding);
+    TEST_UTIL.createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(family).setDataBlockEncoding(encoding).build())
+      .build(), null);
+
+    Table table = conn.getTable(tableName);
+
+    int maxRows = 10;
+    byte[] val1 = new byte[10];
+    byte[] val2 = new byte[10];
+    Bytes.random(val1);
+    Bytes.random(val2);
+
+    for (int i = 0; i < maxRows; i++) {
+      if (i == maxRows / 2) {
+        TEST_UTIL.flush(tableName);
+      }
+      table.put(new Put(Bytes.toBytes(i)).addColumn(family, Bytes.toBytes(1), val1)
+        .addColumn(family, Bytes.toBytes(2), val2).setTTL(600_000));
+    }
+
+    TEST_UTIL.flush(table.getName());
+
+    Scan scan = new Scan();
+    scan.setReversed(true);
+
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      for (int i = maxRows - 1; i >= 0; i--) {
+        Result row = scanner.next();
+        assertEquals(2, row.size());
+
+        Cell cell1 = row.getColumnLatestCell(family, Bytes.toBytes(1));
+        assertTrue(CellUtil.matchingRows(cell1, Bytes.toBytes(i)));
+        assertTrue(CellUtil.matchingValue(cell1, val1));
+
+        Cell cell2 = row.getColumnLatestCell(family, Bytes.toBytes(2));
+        assertTrue(CellUtil.matchingRows(cell2, Bytes.toBytes(i)));
+        assertTrue(CellUtil.matchingValue(cell2, val2));
+      }
+    }
+
   }
 
   @Test
