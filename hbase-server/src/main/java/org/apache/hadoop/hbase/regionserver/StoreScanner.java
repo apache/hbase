@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.Cell;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
@@ -573,6 +576,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       scannerContext.clearProgress();
     }
 
+    Optional<RpcCall> rpcCall =
+      matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
+
     int count = 0;
     long totalBytesRead = 0;
     // track the cells for metrics only if it is a user read request.
@@ -613,7 +619,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scannerContext.returnImmediately();
         }
 
-        heap.recordBlockSize(scannerContext::incrementBlockProgress);
+        heap.recordBlockSize(blockSize -> {
+          if (rpcCall.isPresent()) {
+            rpcCall.get().incrementResponseBlockSize(blockSize);
+          }
+          scannerContext.incrementBlockProgress(blockSize);
+        });
 
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
