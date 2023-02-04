@@ -26,7 +26,6 @@ import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,7 +47,6 @@ import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CacheEvictionStatsBuilder;
 import org.apache.hadoop.hbase.Cell;
@@ -764,7 +762,6 @@ public class RSRpcServices
     List<ClientProtos.Action> mutations = null;
     long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
     IOException sizeIOE = null;
-    Object lastBlock = null;
     ClientProtos.ResultOrException.Builder resultOrExceptionBuilder =
       ResultOrException.newBuilder();
     boolean hasResultOrException = false;
@@ -889,7 +886,7 @@ public class RSRpcServices
           } else {
             pbResult = ProtobufUtil.toResult(r);
           }
-          lastBlock = addSize(context, r, lastBlock);
+          addSize(context, r);
           hasResultOrException = true;
           resultOrExceptionBuilder.setResult(pbResult);
         }
@@ -1375,44 +1372,17 @@ public class RSRpcServices
   }
 
   /**
-   * Method to account for the size of retained cells and retained data blocks.
-   * @param context   rpc call context
-   * @param r         result to add size.
-   * @param lastBlock last block to check whether we need to add the block size in context.
+   * Method to account for the size of retained cells.
+   * @param context rpc call context
+   * @param r       result to add size.
    * @return an object that represents the last referenced block from this response.
    */
-  Object addSize(RpcCallContext context, Result r, Object lastBlock) {
+  void addSize(RpcCallContext context, Result r) {
     if (context != null && r != null && !r.isEmpty()) {
       for (Cell c : r.rawCells()) {
         context.incrementResponseCellSize(PrivateCellUtil.estimatedSerializedSizeOf(c));
-
-        // Since byte buffers can point all kinds of crazy places it's harder to keep track
-        // of which blocks are kept alive by what byte buffer.
-        // So we make a guess.
-        if (c instanceof ByteBufferExtendedCell) {
-          ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) c;
-          ByteBuffer bb = bbCell.getValueByteBuffer();
-          if (bb != lastBlock) {
-            context.incrementResponseBlockSize(bb.capacity());
-            lastBlock = bb;
-          }
-        } else {
-          // We're using the last block being the same as the current block as
-          // a proxy for pointing to a new block. This won't be exact.
-          // If there are multiple gets that bounce back and forth
-          // Then it's possible that this will over count the size of
-          // referenced blocks. However it's better to over count and
-          // use two rpcs than to OOME the regionserver.
-          byte[] valueArray = c.getValueArray();
-          if (valueArray != lastBlock) {
-            context.incrementResponseBlockSize(valueArray.length);
-            lastBlock = valueArray;
-          }
-        }
-
       }
     }
-    return lastBlock;
   }
 
   /** Returns Remote client's ip and port else null if can't be determined. */
@@ -2599,7 +2569,7 @@ public class RSRpcServices
           pbr = ProtobufUtil.toResultNoData(r);
           ((HBaseRpcController) controller)
             .setCellScanner(CellUtil.createCellScanner(r.rawCells()));
-          addSize(context, r, null);
+          addSize(context, r);
         } else {
           pbr = ProtobufUtil.toResult(r);
         }
@@ -2986,7 +2956,7 @@ public class RSRpcServices
         boolean clientCellBlockSupported = isClientCellBlockSupport(context);
         addResult(builder, result.getResult(), controller, clientCellBlockSupported);
         if (clientCellBlockSupported) {
-          addSize(context, result.getResult(), null);
+          addSize(context, result.getResult());
         }
       } else {
         Result r = null;
@@ -3018,7 +2988,7 @@ public class RSRpcServices
         boolean clientCellBlockSupported = isClientCellBlockSupport(context);
         addResult(builder, r, controller, clientCellBlockSupported);
         if (clientCellBlockSupported) {
-          addSize(context, r, null);
+          addSize(context, r);
         }
       }
       return builder.build();
@@ -3370,9 +3340,10 @@ public class RSRpcServices
         // of heap size occupied by cells(being read). Cell data means its key and value parts.
         // maxQuotaResultSize - max results just from server side configuration and quotas, without
         // user's specified max. We use this for evaluating limits based on blocks (not cells).
-        // We may have accumulated some results in coprocessor preScannerNext call. We estimate
-        // block and cell size of those using call to addSize. Update our maximums for scanner
-        // context so we can account for them in the real scan.
+        // We may have accumulated some results in coprocessor preScannerNext call. Subtract any
+        // cell or block size from maximum here so we adhere to total limits of request.
+        // Note: we track block size in StoreScanner. If the CP hook got cells from hbase, it will
+        // have accumulated block bytes. If not, this will be 0 for block size.
         long maxCellSize = maxResultSize;
         long maxBlockSize = maxQuotaResultSize;
         if (rpcCall != null) {
@@ -3488,7 +3459,6 @@ public class RSRpcServices
           values.clear();
         }
         if (rpcCall != null) {
-          rpcCall.incrementResponseBlockSize(scannerContext.getBlockSizeProgress());
           rpcCall.incrementResponseCellSize(scannerContext.getHeapSizeProgress());
         }
         builder.setMoreResultsInRegion(moreRows);
@@ -3661,18 +3631,11 @@ public class RSRpcServices
         if (region.getCoprocessorHost() != null) {
           Boolean bypass = region.getCoprocessorHost().preScannerNext(scanner, results, rows);
           if (!results.isEmpty()) {
-            // If scanner CP added results to list, we want to account for cell and block size of
-            // that work. We estimate this using addSize, since CP does not get ScannerContext. If
-            // !done, the actual scan call below will use more accurate ScannerContext block and
-            // cell size tracking for the rest of the request. The two result sets will be added
-            // together in the RpcCall accounting.
-            // This here is just an estimate (see addSize for more details on estimation). We don't
-            // pass lastBlock to the scan call below because the real scan uses ScannerContext,
-            // which does not use lastBlock tracking. This may result in over counting by 1 block,
-            // but that is unlikely since addSize is already a rough estimate.
-            Object lastBlock = null;
             for (Result r : results) {
-              lastBlock = addSize(rpcCall, r, lastBlock);
+              // add cell size from CP results so we can track response size and update limits
+              // when calling scan below if !done. We'll also have tracked block size if the CP
+              // got results from hbase, since StoreScanner tracks that for all calls automatically.
+              addSize(rpcCall, r);
             }
           }
           if (bypass != null && bypass.booleanValue()) {
