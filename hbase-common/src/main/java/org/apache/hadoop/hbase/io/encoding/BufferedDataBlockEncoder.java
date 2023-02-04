@@ -789,6 +789,15 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       currentBuffer.rewind();
       if (tagCompressionContext != null) {
         tagCompressionContext.clear();
+        // Prior seekToKeyInBlock may have reset this to false if we fell back to previous
+        // seeker state. This is an optimization so we don't have to uncompress tags again when
+        // reading last state.
+        // In case of rewind, we are starting from the beginning of the buffer, so we need
+        // to uncompress any tags we see.
+        // It may make sense to reset this in setCurrentBuffer as well, but we seem to only call
+        // setCurrentBuffer after StoreFileScanner.seekAtOrAfter which calls next to consume the
+        // seeker state. Rewind is called by seekBefore, which doesn't and leaves us in this state.
+        current.uncompressTags = true;
       }
       decodeFirst();
       current.setKey(current.keyBuffer, current.memstoreTS);
@@ -815,7 +824,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
           try {
             current.tagsCompressedLength = tagCompressionContext.uncompressTags(currentBuffer,
               current.tagsBuffer, 0, current.tagsLength);
-          } catch (IOException e) {
+          } catch (Exception e) {
             throw new RuntimeException("Exception while uncompressing tags", e);
           }
         } else {
