@@ -97,6 +97,7 @@
             <th>Processing Time</th>
             <th>Queue Time</th>
             <th>Response Size</th>
+            <th>Block Bytes Scanned</th>
             <th>Client Address</th>
             <th>Server Class</th>
             <th>Method Name</th>
@@ -115,6 +116,7 @@
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
+              <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
              <td><%=r.getClientAddress()%></td>
              <td><%=r.getServerClass()%></td>
              <td><%=r.getMethodName()%></td>
@@ -138,6 +140,7 @@
             <th>Processing Time</th>
             <th>Queue Time</th>
             <th>Response Size</th>
+            <th>Block Bytes Scanned</th>
             <th>Client Address</th>
             <th>Server Class</th>
             <th>Method Name</th>
@@ -156,6 +159,7 @@
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=StringUtils.byteDesc(r.getResponseSize())%></td>
+              <td><%=StringUtils.byteDesc(r.getBlockBytesScanned())%></td>
              <td><%=r.getClientAddress()%></td>
              <td><%=r.getServerClass()%></td>
              <td><%=r.getMethodName()%></td>

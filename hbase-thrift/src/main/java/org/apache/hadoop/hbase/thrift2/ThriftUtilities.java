@@ -1650,6 +1650,7 @@ public class ThriftUtilities {
       tOnlineLogRecord.setQueueTime(slowLogRecord.getQueueTime());
       tOnlineLogRecord.setRegionName(slowLogRecord.getRegionName());
       tOnlineLogRecord.setResponseSize(slowLogRecord.getResponseSize());
+      tOnlineLogRecord.setBlockBytesScanned(slowLogRecord.getBlockBytesScanned());
       tOnlineLogRecord.setServerClass(slowLogRecord.getServerClass());
       tOnlineLogRecord.setStartTime(slowLogRecord.getStartTime());
       tOnlineLogRecord.setUserName(slowLogRecord.getUserName());
@@ -1673,6 +1674,7 @@ public class ThriftUtilities {
         .setParam(tSlowLogRecord.getParam()).setProcessingTime(tSlowLogRecord.getProcessingTime())
         .setQueueTime(tSlowLogRecord.getQueueTime()).setRegionName(tSlowLogRecord.getRegionName())
         .setResponseSize(tSlowLogRecord.getResponseSize())
+        .setBlockBytesScanned(tSlowLogRecord.getBlockBytesScanned())
         .setServerClass(tSlowLogRecord.getServerClass()).setStartTime(tSlowLogRecord.getStartTime())
         .setUserName(tSlowLogRecord.getUserName()).build())
       .collect(Collectors.toList());

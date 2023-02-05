@@ -428,6 +428,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       // Use the raw request call size for now.
       long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
+      long responseBlockSize = call.getResponseBlockSize();
       if (call.isClientCellBlockSupported()) {
         // Include the payload size in HBaseRpcController
         responseSize += call.getResponseCellSize();
@@ -441,20 +442,21 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
       boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
-      boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
+      boolean tooLarge = (warnResponseSize > -1
+        && (responseSize > warnResponseSize || responseBlockSize > warnResponseSize));
       if (tooSlow || tooLarge) {
         final String userName = call.getRequestUserName().orElse(StringUtils.EMPTY);
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
         logResponse(param, md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
           tooLarge, tooSlow, status.getClient(), startTime, processingTime, qTime, responseSize,
-          userName);
+          responseBlockSize, userName);
         if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
           // send logs to ring buffer owned by slowLogRecorder
           final String className =
             server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
           this.namedQueueRecorder.addRecord(new RpcLogDetails(call, param, status.getClient(),
-            responseSize, className, tooSlow, tooLarge));
+            responseSize, responseBlockSize, className, tooSlow, tooLarge));
         }
       }
       return new Pair<>(result, controller.cellScanner());
@@ -482,22 +484,23 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Logs an RPC response to the LOG file, producing valid JSON objects for client Operations.
-   * @param param          The parameters received in the call.
-   * @param methodName     The name of the method invoked
-   * @param call           The string representation of the call
-   * @param tooLarge       To indicate if the event is tooLarge
-   * @param tooSlow        To indicate if the event is tooSlow
-   * @param clientAddress  The address of the client who made this call.
-   * @param startTime      The time that the call was initiated, in ms.
-   * @param processingTime The duration that the call took to run, in ms.
-   * @param qTime          The duration that the call spent on the queue prior to being initiated,
-   *                       in ms.
-   * @param responseSize   The size in bytes of the response buffer.
-   * @param userName       UserName of the current RPC Call
+   * @param param             The parameters received in the call.
+   * @param methodName        The name of the method invoked
+   * @param call              The string representation of the call
+   * @param tooLarge          To indicate if the event is tooLarge
+   * @param tooSlow           To indicate if the event is tooSlow
+   * @param clientAddress     The address of the client who made this call.
+   * @param startTime         The time that the call was initiated, in ms.
+   * @param processingTime    The duration that the call took to run, in ms.
+   * @param qTime             The duration that the call spent on the queue prior to being
+   *                          initiated, in ms.
+   * @param responseSize      The size in bytes of the response buffer.
+   * @param blockBytesScanned The size of block bytes scanned to retrieve the response.
+   * @param userName          UserName of the current RPC Call
    */
   void logResponse(Message param, String methodName, String call, boolean tooLarge, boolean tooSlow,
     String clientAddress, long startTime, int processingTime, int qTime, long responseSize,
-    String userName) {
+    long blockBytesScanned, String userName) {
     final String className = server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<>();
@@ -505,6 +508,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     responseInfo.put("processingtimems", processingTime);
     responseInfo.put("queuetimems", qTime);
     responseInfo.put("responsesize", responseSize);
+    responseInfo.put("blockbytesscanned", blockBytesScanned);
     responseInfo.put("client", clientAddress);
     responseInfo.put("class", className);
     responseInfo.put("method", methodName);
