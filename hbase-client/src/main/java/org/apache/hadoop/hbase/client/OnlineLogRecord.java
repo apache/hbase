@@ -59,6 +59,7 @@ final public class OnlineLogRecord extends LogEntry {
   private final int processingTime;
   private final int queueTime;
   private final long responseSize;
+  private final long blockBytesScanned;
   private final String clientAddress;
   private final String serverClass;
   private final String methodName;
@@ -86,6 +87,13 @@ final public class OnlineLogRecord extends LogEntry {
 
   public long getResponseSize() {
     return responseSize;
+  }
+
+  /**
+   * Return the amount of block bytes scanned to retrieve the response cells.
+   */
+  public long getBlockBytesScanned() {
+    return blockBytesScanned;
   }
 
   public String getClientAddress() {
@@ -129,14 +137,15 @@ final public class OnlineLogRecord extends LogEntry {
   }
 
   private OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
-    final long responseSize, final String clientAddress, final String serverClass,
-    final String methodName, final String callDetails, final String param, final String regionName,
-    final String userName, final int multiGetsCount, final int multiMutationsCount,
-    final int multiServiceCalls) {
+    final long responseSize, final long blockBytesScanned, final String clientAddress,
+    final String serverClass, final String methodName, final String callDetails, final String param,
+    final String regionName, final String userName, final int multiGetsCount,
+    final int multiMutationsCount, final int multiServiceCalls) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
     this.responseSize = responseSize;
+    this.blockBytesScanned = blockBytesScanned;
     this.clientAddress = clientAddress;
     this.serverClass = serverClass;
     this.methodName = methodName;
@@ -154,6 +163,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int processingTime;
     private int queueTime;
     private long responseSize;
+    private long blockBytesScanned;
     private String clientAddress;
     private String serverClass;
     private String methodName;
@@ -182,6 +192,14 @@ final public class OnlineLogRecord extends LogEntry {
 
     public OnlineLogRecordBuilder setResponseSize(long responseSize) {
       this.responseSize = responseSize;
+      return this;
+    }
+
+    /**
+     * Sets the amount of block bytes scanned to retrieve the response cells.
+     */
+    public OnlineLogRecordBuilder setBlockBytesScanned(long blockBytesScanned) {
+      this.blockBytesScanned = blockBytesScanned;
       return this;
     }
 
@@ -236,9 +254,9 @@ final public class OnlineLogRecord extends LogEntry {
     }
 
     public OnlineLogRecord build() {
-      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize, clientAddress,
-        serverClass, methodName, callDetails, param, regionName, userName, multiGetsCount,
-        multiMutationsCount, multiServiceCalls);
+      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
+        blockBytesScanned, clientAddress, serverClass, methodName, callDetails, param, regionName,
+        userName, multiGetsCount, multiMutationsCount, multiServiceCalls);
     }
   }
 
@@ -256,7 +274,8 @@ final public class OnlineLogRecord extends LogEntry {
 
     return new EqualsBuilder().append(startTime, that.startTime)
       .append(processingTime, that.processingTime).append(queueTime, that.queueTime)
-      .append(responseSize, that.responseSize).append(multiGetsCount, that.multiGetsCount)
+      .append(responseSize, that.responseSize).append(blockBytesScanned, that.blockBytesScanned)
+      .append(multiGetsCount, that.multiGetsCount)
       .append(multiMutationsCount, that.multiMutationsCount)
       .append(multiServiceCalls, that.multiServiceCalls).append(clientAddress, that.clientAddress)
       .append(serverClass, that.serverClass).append(methodName, that.methodName)
@@ -267,9 +286,9 @@ final public class OnlineLogRecord extends LogEntry {
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37).append(startTime).append(processingTime).append(queueTime)
-      .append(responseSize).append(clientAddress).append(serverClass).append(methodName)
-      .append(callDetails).append(param).append(regionName).append(userName).append(multiGetsCount)
-      .append(multiMutationsCount).append(multiServiceCalls).toHashCode();
+      .append(responseSize).append(blockBytesScanned).append(clientAddress).append(serverClass)
+      .append(methodName).append(callDetails).append(param).append(regionName).append(userName)
+      .append(multiGetsCount).append(multiMutationsCount).append(multiServiceCalls).toHashCode();
   }
 
   @Override
@@ -281,11 +300,11 @@ final public class OnlineLogRecord extends LogEntry {
   public String toString() {
     return new ToStringBuilder(this).append("startTime", startTime)
       .append("processingTime", processingTime).append("queueTime", queueTime)
-      .append("responseSize", responseSize).append("clientAddress", clientAddress)
-      .append("serverClass", serverClass).append("methodName", methodName)
-      .append("callDetails", callDetails).append("param", param).append("regionName", regionName)
-      .append("userName", userName).append("multiGetsCount", multiGetsCount)
-      .append("multiMutationsCount", multiMutationsCount)
+      .append("responseSize", responseSize).append("blockBytesScanned", blockBytesScanned)
+      .append("clientAddress", clientAddress).append("serverClass", serverClass)
+      .append("methodName", methodName).append("callDetails", callDetails).append("param", param)
+      .append("regionName", regionName).append("userName", userName)
+      .append("multiGetsCount", multiGetsCount).append("multiMutationsCount", multiMutationsCount)
       .append("multiServiceCalls", multiServiceCalls).toString();
   }
 

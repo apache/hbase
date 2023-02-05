@@ -3306,6 +3306,7 @@ public final class ProtobufUtil {
         .setParam(slowLogPayload.getParam()).setProcessingTime(slowLogPayload.getProcessingTime())
         .setQueueTime(slowLogPayload.getQueueTime()).setRegionName(slowLogPayload.getRegionName())
         .setResponseSize(slowLogPayload.getResponseSize())
+        .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
         .setUserName(slowLogPayload.getUserName()).build();
     return onlineLogRecord;

@@ -91,6 +91,8 @@ public class SlowLogTableAccessor {
           Bytes.toBytes(slowLogPayload.getRegionName()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
           Bytes.toBytes(Long.toString(slowLogPayload.getResponseSize())))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("block_bytes_scanned"),
+          Bytes.toBytes(Long.toString(slowLogPayload.getBlockBytesScanned())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("server_class"),
           Bytes.toBytes(slowLogPayload.getServerClass()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("start_time"),
