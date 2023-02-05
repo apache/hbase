@@ -481,7 +481,7 @@ struct TLogQueryFilter {
 
 /**
  * Thrift wrapper around
- * org.apache.hadoop.hbase.client.OnlineLogRecordrd
+ * org.apache.hadoop.hbase.client.OnlineLogRecord
  */
 struct TOnlineLogRecord {
   1: required i64 startTime
@@ -498,6 +498,7 @@ struct TOnlineLogRecord {
   12: required i32 multiMutationsCount
   13: required i32 multiServiceCalls
   14: optional string regionName
+  15: optional i64 blockBytesScanned
 }
 
 //
