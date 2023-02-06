@@ -46,8 +46,15 @@ public class HungConnectionTracker {
   private static final long CHECK_INTERVAL_MILLIS = 700;
   private static final Logger LOG = LoggerFactory.getLogger(HungConnectionTracker.class);
   private static final long INTERRUPT_BUFFER_WINDOW_NANOS = TimeUnit.MILLISECONDS.toNanos(1_000);
-  private static final boolean IS_TARGET_JAVA_VERSION =
-    System.getProperty("java.specification.version").startsWith("11");
+  private static final String[] SUPPORTED_JAVA_VERSIONS = { "11", "17" };
+  private static boolean IS_TARGET_JAVA_VERSION;
+  static {
+    for (String v : SUPPORTED_JAVA_VERSIONS) {
+      if (System.getProperty("java.specification.version").startsWith(v)) {
+        IS_TARGET_JAVA_VERSION = true;
+      }
+    }
+  }
 
   public static final LongAdder INTERRUPTED = new LongAdder();
 
