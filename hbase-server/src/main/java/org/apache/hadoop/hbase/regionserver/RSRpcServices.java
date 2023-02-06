@@ -718,7 +718,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         if (
           context != null && context.isRetryImmediatelySupported()
             && (context.getResponseCellSize() > maxQuotaResultSize
-              || context.getResponseBlockSize() + context.getResponseExceptionSize()
+              || context.getBlockBytesScanned() + context.getResponseExceptionSize()
                   > maxQuotaResultSize)
         ) {
 
@@ -730,7 +730,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
             //
             // Instead just create the exception and then store it.
             sizeIOE = new MultiActionResultTooLarge("Max size exceeded" + " CellSize: "
-              + context.getResponseCellSize() + " BlockSize: " + context.getResponseBlockSize());
+              + context.getResponseCellSize() + " BlockSize: " + context.getBlockBytesScanned());
 
             // Only report the exception once since there's only one request that
             // caused the exception. Otherwise this number will dominate the exceptions count.
@@ -3313,7 +3313,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         long maxCellSize = maxResultSize;
         long maxBlockSize = maxQuotaResultSize;
         if (rpcCall != null) {
-          maxBlockSize -= rpcCall.getResponseBlockSize();
+          maxBlockSize -= rpcCall.getBlockBytesScanned();
           maxCellSize -= rpcCall.getResponseCellSize();
         }
 
@@ -3431,6 +3431,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         // Check to see if the client requested that we track metrics server side. If the
         // client requested metrics, retrieve the metrics from the scanner context.
         if (trackMetrics) {
+          // rather than increment yet another counter in StoreScanner, just set the value here
+          // from block size progress before writing into the response
+          scannerContext.getMetrics().countOfBlockBytesScanned
+            .set(scannerContext.getBlockSizeProgress());
           Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
           ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
           NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();

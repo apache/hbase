@@ -47,6 +47,8 @@ public class ServerSideScanMetrics {
   public static final String COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME = "ROWS_SCANNED";
   public static final String COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME = "ROWS_FILTERED";
 
+  public static final String BLOCK_BYTES_SCANNED_KEY_METRIC_NAME = "BLOCK_BYTES_SCANNED";
+
   /**
    * number of rows filtered during scan RPC
    */
@@ -58,6 +60,9 @@ public class ServerSideScanMetrics {
    * since rows may be filtered.
    */
   public final AtomicLong countOfRowsScanned = createCounter(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME);
+
+  public final AtomicLong countOfBlockBytesScanned =
+    createCounter(BLOCK_BYTES_SCANNED_KEY_METRIC_NAME);
 
   public void setCounter(String counterName, long value) {
     AtomicLong c = this.counters.get(counterName);
