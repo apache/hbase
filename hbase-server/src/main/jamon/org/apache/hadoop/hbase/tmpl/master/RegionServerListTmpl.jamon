@@ -35,6 +35,9 @@ HMaster master;
         org.apache.hadoop.hbase.util.VersionInfo;
         org.apache.hadoop.hbase.util.Pair;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+        org.apache.hadoop.hbase.net.Address;
+        org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
+        org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 </%import>
 
 <%if (servers != null && servers.size() > 0)%>
@@ -91,6 +94,11 @@ Arrays.sort(serverNames);
     <th>Version</th>
     <th>Requests Per Second</th>
     <th>Num. Regions</th>
+    <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
+      <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) %>
+        <th style="vertical-align: middle;" rowspan="2">RSGroup</th>
+      </%if>
+    </%if>
 </tr>
 </thead>
 <tbody>
@@ -101,6 +109,16 @@ Arrays.sort(serverNames);
     String state = "Normal";
     String masterVersion = VersionInfo.getVersion();
     Set<ServerName> decommissionedServers = new HashSet<>(master.listDecommissionedRegionServers());
+    String rsGroupName = "default";
+    List<RSGroupInfo> groups;
+    Map<Address, RSGroupInfo> server2GroupMap = new HashMap<>();
+    if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+      && RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) {
+        groups = master.getRSGroupInfoManager().listRSGroups();
+        groups.forEach(group -> {
+          group.getServers().forEach(address -> server2GroupMap.put(address, group));
+        });
+    }
     for (ServerName serverName: serverNames) {
     if (decommissionedServers.contains(serverName)) {
         state = "Decommissioned";
@@ -123,6 +141,10 @@ Arrays.sort(serverNames);
         lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
     }
     long startcode = serverName.getStartcode();
+    if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+      && RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) {
+        rsGroupName = server2GroupMap.get(serverName.getAddress()).getName();
+      }
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; &></td>
@@ -132,6 +154,11 @@ Arrays.sort(serverNames);
     <td><% version %></td>
     <td><% String.format("%,.0f", requestsPerSecond) %></td>
     <td><% String.format("%,d", numRegionsOnline) %></td>
+    <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
+      <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) %>
+        <td><% rsGroupName %></td>
+      </%if>
+    </%if>
 </tr>
 <%java>
 }
