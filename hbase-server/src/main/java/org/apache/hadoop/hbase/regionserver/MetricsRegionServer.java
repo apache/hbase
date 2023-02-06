@@ -151,44 +151,45 @@ public class MetricsRegionServer {
     serverSource.updateCheckAndPut(t);
   }
 
-  public void updateCheckAndMutate(HRegion region, long t) {
+  public void updateCheckAndMutate(HRegion region, long time, long blockBytesScanned) {
     if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateCheckAndMutate(t);
+      region.getMetricsTableRequests().updateCheckAndMutate(time, blockBytesScanned);
     }
-    serverSource.updateCheckAndMutate(t);
+    serverSource.updateCheckAndMutate(time, blockBytesScanned);
+    userAggregate.updateCheckAndMutate(blockBytesScanned);
   }
 
-  public void updateGet(HRegion region, long t) {
+  public void updateGet(HRegion region, long time, long blockBytesScanned) {
     if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateGet(t);
+      region.getMetricsTableRequests().updateGet(time, blockBytesScanned);
     }
-    if (t > slowMetricTime) {
+    if (time > slowMetricTime) {
       serverSource.incrSlowGet();
     }
-    serverSource.updateGet(t);
-    userAggregate.updateGet(t);
+    serverSource.updateGet(time, blockBytesScanned);
+    userAggregate.updateGet(time, blockBytesScanned);
   }
 
-  public void updateIncrement(HRegion region, long t) {
+  public void updateIncrement(HRegion region, long time, long blockBytesScanned) {
     if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateIncrement(t);
+      region.getMetricsTableRequests().updateIncrement(time, blockBytesScanned);
     }
-    if (t > slowMetricTime) {
+    if (time > slowMetricTime) {
       serverSource.incrSlowIncrement();
     }
-    serverSource.updateIncrement(t);
-    userAggregate.updateIncrement(t);
+    serverSource.updateIncrement(time, blockBytesScanned);
+    userAggregate.updateIncrement(time, blockBytesScanned);
   }
 
-  public void updateAppend(HRegion region, long t) {
+  public void updateAppend(HRegion region, long time, long blockBytesScanned) {
     if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateAppend(t);
+      region.getMetricsTableRequests().updateAppend(time, blockBytesScanned);
     }
-    if (t > slowMetricTime) {
+    if (time > slowMetricTime) {
       serverSource.incrSlowAppend();
     }
-    serverSource.updateAppend(t);
-    userAggregate.updateAppend(t);
+    serverSource.updateAppend(time, blockBytesScanned);
+    userAggregate.updateAppend(time, blockBytesScanned);
   }
 
   public void updateReplay(long t) {
@@ -196,19 +197,12 @@ public class MetricsRegionServer {
     userAggregate.updateReplay(t);
   }
 
-  public void updateScanSize(HRegion region, long scanSize) {
+  public void updateScan(HRegion region, long time, long responseCellSize, long blockBytesScanned) {
     if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateScanSize(scanSize);
+      region.getMetricsTableRequests().updateScan(time, responseCellSize, blockBytesScanned);
     }
-    serverSource.updateScanSize(scanSize);
-  }
-
-  public void updateScanTime(HRegion region, long t) {
-    if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateScanTime(t);
-    }
-    serverSource.updateScanTime(t);
-    userAggregate.updateScanTime(t);
+    serverSource.updateScan(time, responseCellSize, blockBytesScanned);
+    userAggregate.updateScan(time, blockBytesScanned);
   }
 
   public void updateSplitTime(long t) {
@@ -301,4 +295,5 @@ public class MetricsRegionServer {
   public void incrScannerLeaseExpired() {
     serverSource.incrScannerLeaseExpired();
   }
+
 }

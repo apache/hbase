@@ -455,12 +455,12 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public long getResponseBlockSize() {
+  public long getBlockBytesScanned() {
     return responseBlockSize;
   }
 
   @Override
-  public void incrementResponseBlockSize(long blockSize) {
+  public void incrementBlockBytesScanned(long blockSize) {
     responseBlockSize += blockSize;
   }
 

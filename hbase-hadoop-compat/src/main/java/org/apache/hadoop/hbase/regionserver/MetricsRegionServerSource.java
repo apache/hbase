@@ -84,27 +84,32 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   /**
    * Update checkAndMutate histogram
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned for the check portion of the request
    */
-  void updateCheckAndMutate(long t);
+  void updateCheckAndMutate(long time, long blockBytesScanned);
 
   /**
    * Update the Get time histogram .
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned for the request
    */
-  void updateGet(long t);
+  void updateGet(long time, long blockBytesScanned);
 
   /**
    * Update the Increment time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned fetching the current value to
+   *                          increment
    */
-  void updateIncrement(long t);
+  void updateIncrement(long time, long blockBytesScanned);
 
   /**
    * Update the Append time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned fetching the current value to append
    */
-  void updateAppend(long t);
+  void updateAppend(long time, long blockBytesScanned);
 
   /**
    * Update the Replay time histogram.
@@ -113,15 +118,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updateReplay(long t);
 
   /**
-   * Update the scan size.
-   * @param scanSize size of the scan
+   * Update the scan metrics.
+   * @param time              response time of scan
+   * @param responseCellSize  size of the scan resposne
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  void updateScanSize(long scanSize);
-
-  /**
-   * Update the scan time.
-   */
-  void updateScanTime(long t);
+  void updateScan(long time, long responseCellSize, long blockBytesScanned);
 
   /**
    * Increment the number of slow Puts that have happened.
@@ -438,6 +440,13 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String SCAN_SIZE_KEY = "scanSize";
   String SCAN_TIME_KEY = "scanTime";
 
+  String BLOCK_BYTES_SCANNED_KEY = "blockBytesScannedCount";
+  String BLOCK_BYTES_SCANNED_DESC = "Count of block bytes scanned by read requests";
+  String GET_BLOCK_BYTES_SCANNED_KEY = "getBlockBytesScanned";
+  String SCAN_BLOCK_BYTES_SCANNED_KEY = "scanBlockBytesScanned";
+  String CHECK_AND_MUTATE_BLOCK_BYTES_SCANNED_KEY = "checkAndMutateBlockBytesScanned";
+  String INCREMENT_BLOCK_BYTES_SCANNED_KEY = "incrementBlockBytesScanned";
+  String APPEND_BLOCK_BYTES_SCANNED_KEY = "appendBlockBytesScanned";
   String SLOW_PUT_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";
   String SLOW_DELETE_KEY = "slowDeleteCount";
