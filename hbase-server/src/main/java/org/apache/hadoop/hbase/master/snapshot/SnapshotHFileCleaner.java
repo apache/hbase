@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.master.snapshot;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,8 +67,10 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+    List<FileStatus> filesList =
+      StreamSupport.stream(files.spliterator(), false).collect(Collectors.toList());
     try {
-      return cache.getUnreferencedFiles(files, master.getSnapshotManager());
+      return cache.getUnreferencedFiles(filesList, master.getSnapshotManager());
     } catch (CorruptedSnapshotException cse) {
       LOG.debug("Corrupted in-progress snapshot file exception, ignored ", cse);
     } catch (IOException e) {
