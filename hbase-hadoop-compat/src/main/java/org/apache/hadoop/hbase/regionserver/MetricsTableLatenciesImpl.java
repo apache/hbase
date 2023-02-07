@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -26,6 +26,10 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Ticker;
+import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+
 /**
  * Implementation of {@link MetricsTableLatencies} to track latencies for one table in a
  * RegionServer.
@@ -33,7 +37,27 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsTableLatenciesImpl extends BaseSourceImpl implements MetricsTableLatencies {
 
-  private final HashMap<TableName, TableHistograms> histogramsByTable = new HashMap<>();
+  public MockTicker getTicker() {
+    return ticker;
+  }
+
+  private final MockTicker ticker = new MockTicker();
+  private final Cache<TableName, TableHistograms> histogramsByTable =
+    CacheBuilder.newBuilder().ticker(ticker).expireAfterAccess(5, TimeUnit.MINUTES).build();
+
+  public static class MockTicker extends Ticker {
+    private long start = Ticker.systemTicker().read();
+    private long elapsedNano = 0;
+
+    @Override
+    public long read() {
+      return start + elapsedNano;
+    }
+
+    public void addElapsedTime(long elapsedNano) {
+      this.elapsedNano = elapsedNano;
+    }
+  }
 
   public static class TableHistograms {
     final MetricHistogram getTimeHisto;
@@ -124,14 +148,17 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   }
 
   public TableHistograms getOrCreateTableHistogram(String tableName) {
-    // TODO Java8's ConcurrentHashMap#computeIfAbsent would be stellar instead
     final TableName tn = TableName.valueOf(tableName);
-    TableHistograms latency = histogramsByTable.get(tn);
+    TableHistograms latency = histogramsByTable.getIfPresent(tn);
     if (latency == null) {
       latency = new TableHistograms(getMetricsRegistry(), tn);
       histogramsByTable.put(tn, latency);
     }
     return latency;
+  }
+
+  public TableHistograms getTableHistogram(TableName tableName) {
+    return histogramsByTable.getIfPresent(tableName);
   }
 
   public MetricsTableLatenciesImpl() {

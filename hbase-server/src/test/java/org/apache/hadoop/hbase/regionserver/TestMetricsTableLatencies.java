@@ -18,9 +18,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -118,5 +121,25 @@ public class TestMetricsTableLatencies {
       MetricsTableLatenciesImpl.qualifyMetricsName(tn1,
         MetricsTableQueryMeterImpl.TABLE_WRITE_QUERY_PER_SECOND + "_" + "count"),
       500L, latenciesImpl);
+  }
+
+  @Test
+  public void testTableLatenciesMetricsExpired() {
+    TableName tn1 = TableName.valueOf("table1");
+    MetricsTableLatencies latencies =
+      CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
+    assertTrue("'latencies' is actually " + latencies.getClass(),
+      latencies instanceof MetricsTableLatenciesImpl);
+    MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
+
+    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(false);
+    tableMetrics.updateGet(tn1, 500L);
+    assertNotNull(latenciesImpl.getTableHistogram(tn1));
+
+    MetricsTableLatenciesImpl.MockTicker ticker = latenciesImpl.getTicker();
+    ticker.addElapsedTime(TimeUnit.NANOSECONDS.convert(1, TimeUnit.MINUTES));
+    assertNotNull(latenciesImpl.getTableHistogram(tn1));
+    ticker.addElapsedTime(TimeUnit.NANOSECONDS.convert(10, TimeUnit.MINUTES));
+    assertNull(latenciesImpl.getTableHistogram(tn1));
   }
 }
