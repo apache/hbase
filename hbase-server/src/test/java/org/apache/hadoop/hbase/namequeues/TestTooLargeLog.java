@@ -86,7 +86,7 @@ public class TestTooLargeLog {
     // issues coming from that slow log entry. We will re-enable below.
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     regionServer.getConfiguration().setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, false);
-    regionServer.updateConfiguration();
+    regionServer.getRSRpcServices().onConfigurationChange(regionServer.getConfiguration());
 
     byte[] family = Bytes.toBytes("0");
     Table table = TEST_UTIL.createTable(TableName.valueOf("testLogLargeBlockBytesScanned"), family);
@@ -98,7 +98,7 @@ public class TestTooLargeLog {
 
     // Turn on slow log so we capture large scan below
     regionServer.getConfiguration().setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
-    regionServer.updateConfiguration();
+    regionServer.getRSRpcServices().onConfigurationChange(regionServer.getConfiguration());
 
     Scan scan = new Scan();
     scan.setCaching(1);
