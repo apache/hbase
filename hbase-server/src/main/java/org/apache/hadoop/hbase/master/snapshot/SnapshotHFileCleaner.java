@@ -67,6 +67,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+    // Converting to List to initialization cost in the snapshot lock in SnapshotFileCache
     List<FileStatus> filesList =
       StreamSupport.stream(files.spliterator(), false).collect(Collectors.toList());
     try {
