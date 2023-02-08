@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Histogram;
 import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
@@ -72,6 +73,12 @@ public class MetricsTableRequests {
   private final static String CHECK_AND_DELETE_TIME = "checkAndDeleteTime";
   private final static String CHECK_AND_PUT_TIME = "checkAndPutTime";
   private final static String CHECK_AND_MUTATE_TIME = "checkAndMutateTime";
+  String BLOCK_BYTES_SCANNED_KEY = "blockBytesScannedCount";
+  String GET_BLOCK_BYTES_SCANNED_KEY = "getBlockBytesScanned";
+  String SCAN_BLOCK_BYTES_SCANNED_KEY = "scanBlockBytesScanned";
+  String CHECK_AND_MUTATE_BLOCK_BYTES_SCANNED_KEY = "checkAndMutateBlockBytesScanned";
+  String INCREMENT_BLOCK_BYTES_SCANNED_KEY = "incrementBlockBytesScanned";
+  String APPEND_BLOCK_BYTES_SCANNED_KEY = "appendBlockBytesScanned";
   private final static String TABLE_READ_QUERY_PER_SECOND = "tableReadQueryPerSecond";
   private final static String TABLE_WRITE_QUERY_PER_SECOND = "tableWriteQueryPerSecond";
 
@@ -87,6 +94,12 @@ public class MetricsTableRequests {
   private Histogram checkAndDeleteTimeHistogram;
   private Histogram checkAndPutTimeHistogram;
   private Histogram checkAndMutateTimeHistogram;
+  private Counter blockBytesScannedCount;
+  private Histogram checkAndMutateBlockBytesScanned;
+  private Histogram getBlockBytesScanned;
+  private Histogram incrementBlockBytesScanned;
+  private Histogram appendBlockBytesScanned;
+  private Histogram scanBlockBytesScanned;
 
   private Meter readMeter;
   private Meter writeMeter;
@@ -133,6 +146,13 @@ public class MetricsTableRequests {
         checkAndDeleteTimeHistogram = registry.histogram(CHECK_AND_DELETE_TIME);
         checkAndPutTimeHistogram = registry.histogram(CHECK_AND_PUT_TIME);
         checkAndMutateTimeHistogram = registry.histogram(CHECK_AND_MUTATE_TIME);
+        blockBytesScannedCount = registry.counter(BLOCK_BYTES_SCANNED_KEY);
+        checkAndMutateBlockBytesScanned =
+          registry.histogram(CHECK_AND_MUTATE_BLOCK_BYTES_SCANNED_KEY);
+        getBlockBytesScanned = registry.histogram(GET_BLOCK_BYTES_SCANNED_KEY);
+        incrementBlockBytesScanned = registry.histogram(INCREMENT_BLOCK_BYTES_SCANNED_KEY);
+        appendBlockBytesScanned = registry.histogram(APPEND_BLOCK_BYTES_SCANNED_KEY);
+        scanBlockBytesScanned = registry.histogram(SCAN_BLOCK_BYTES_SCANNED_KEY);
       }
 
       if (enabTableQueryMeterMetrics) {
@@ -208,51 +228,63 @@ public class MetricsTableRequests {
 
   /**
    * Update the Get time histogram .
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  public void updateGet(long t) {
+  public void updateGet(long time, long blockBytesScanned) {
     if (isEnableTableLatenciesMetrics()) {
-      getTimeHistogram.update(t);
+      getTimeHistogram.update(time);
+      if (blockBytesScanned > 0) {
+        blockBytesScannedCount.increment(blockBytesScanned);
+        getBlockBytesScanned.update(blockBytesScanned);
+      }
     }
   }
 
   /**
    * Update the Increment time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  public void updateIncrement(long t) {
+  public void updateIncrement(long time, long blockBytesScanned) {
     if (isEnableTableLatenciesMetrics()) {
-      incrementTimeHistogram.update(t);
+      incrementTimeHistogram.update(time);
+      if (blockBytesScanned > 0) {
+        blockBytesScannedCount.increment(blockBytesScanned);
+        incrementBlockBytesScanned.update(blockBytesScanned);
+      }
     }
   }
 
   /**
    * Update the Append time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  public void updateAppend(long t) {
+  public void updateAppend(long time, long blockBytesScanned) {
     if (isEnableTableLatenciesMetrics()) {
-      appendTimeHistogram.update(t);
+      appendTimeHistogram.update(time);
+      if (blockBytesScanned > 0) {
+        blockBytesScannedCount.increment(blockBytesScanned);
+        appendBlockBytesScanned.update(blockBytesScanned);
+      }
     }
   }
 
   /**
-   * Update the scan size.
-   * @param scanSize size of the scan
+   * Update the scan metrics.
+   * @param time              response time of scan
+   * @param responseCellSize  size of the scan resposne
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  public void updateScanSize(long scanSize) {
+  public void updateScan(long time, long responseCellSize, long blockBytesScanned) {
     if (isEnableTableLatenciesMetrics()) {
-      scanSizeHistogram.update(scanSize);
-    }
-  }
-
-  /**
-   * Update the scan time.
-   * @param t time it took
-   */
-  public void updateScanTime(long t) {
-    if (isEnableTableLatenciesMetrics()) {
-      scanTimeHistogram.update(t);
+      scanTimeHistogram.update(time);
+      scanSizeHistogram.update(responseCellSize);
+      if (blockBytesScanned > 0) {
+        blockBytesScannedCount.increment(blockBytesScanned);
+        scanBlockBytesScanned.update(blockBytesScanned);
+      }
     }
   }
 
@@ -280,9 +312,13 @@ public class MetricsTableRequests {
    * Update the CheckAndMutate time histogram.
    * @param time time it took
    */
-  public void updateCheckAndMutate(long time) {
+  public void updateCheckAndMutate(long time, long blockBytesScanned) {
     if (isEnableTableLatenciesMetrics()) {
       checkAndMutateTimeHistogram.update(time);
+      if (blockBytesScanned > 0) {
+        blockBytesScannedCount.increment(blockBytesScanned);
+        checkAndMutateBlockBytesScanned.update(blockBytesScanned);
+      }
     }
   }
 
