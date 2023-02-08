@@ -7280,7 +7280,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               reqTmp ? null : fs.getRegionDir().toString());
           }
           Pair<Path, Path> pair = null;
-          if (reqTmp || (!StoreFileInfo.isHFile(finalPath))) {
+          if (reqTmp || !StoreFileInfo.isHFile(finalPath)) {
             pair = store.preBulkLoadHFile(finalPath, seqId);
           } else {
             Path livePath = new Path(finalPath);
