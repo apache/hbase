@@ -67,7 +67,11 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    // Converting to List to initialization cost in the snapshot lock in SnapshotFileCache
+    // The Iterable is lazy evaluated, so if we just pass this Iterable in, we will access the HFile
+    // storage inside the snapshot lock, which could take a lot of time (for example, several
+    // seconds), and block all other operations, especially other cleaners.
+    // So here we convert it to List first, to force it evaluated before calling
+    // getUnreferencedFiles, so we will not hold snapshot lock for a long time.
     List<FileStatus> filesList =
       StreamSupport.stream(files.spliterator(), false).collect(Collectors.toList());
     try {
