@@ -131,9 +131,9 @@ public class RegionStateStore {
 
   /**
    * Queries META table for the passed region encoded name, delegating action upon results to the
-   * <code>RegionStateVisitor</code> passed as second parameter.
+   * {@code RegionStateVisitor} passed as second parameter.
    * @param regionEncodedName encoded name for the Region we want to query META for.
-   * @param visitor           The <code>RegionStateVisitor</code> instance to react over the query
+   * @param visitor           The {@code RegionStateVisitor} instance to react over the query
    *                          results.
    * @throws IOException If some error occurs while querying META or parsing results.
    */
@@ -360,8 +360,10 @@ public class RegionStateStore {
     // default OFFLINE state. If Master gets restarted after this step, start up sequence of
     // master tries to assign these offline regions. This is followed by re-assignments of the
     // daughter regions from resumed {@link SplitTableRegionProcedure}
-    MetaTableAccessor.addRegionStateToPut(putA, RegionState.State.CLOSED);
-    MetaTableAccessor.addRegionStateToPut(putB, RegionState.State.CLOSED);
+    MetaTableAccessor.addRegionStateToPut(putA, RegionInfo.DEFAULT_REPLICA_ID,
+      RegionState.State.CLOSED);
+    MetaTableAccessor.addRegionStateToPut(putB, RegionInfo.DEFAULT_REPLICA_ID,
+      RegionState.State.CLOSED);
 
     // new regions, openSeqNum = 1 is fine.
     addSequenceNum(putA, 1, splitA.getReplicaId());
@@ -405,7 +407,8 @@ public class RegionStateStore {
     // default OFFLINE state. If Master gets restarted after this step, start up sequence of
     // master tries to assign this offline region. This is followed by re-assignments of the
     // merged region from resumed {@link MergeTableRegionsProcedure}
-    MetaTableAccessor.addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
+    MetaTableAccessor.addRegionStateToPut(putOfMerged, RegionInfo.DEFAULT_REPLICA_ID,
+      RegionState.State.CLOSED);
     mutations.add(putOfMerged);
     // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
     // if crash after merge happened but before we got to here.. means in-memory

@@ -98,7 +98,7 @@ public class TestHBCKSCP extends TestSCPBase {
     HMaster master = cluster.getMaster();
     // Get a Region that is on the server.
     RegionInfo rsRI = master.getAssignmentManager().getRegionsOnServer(rsServerName).get(0);
-    Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    Result r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
     // Assert region is OPEN.
     assertEquals(RegionState.State.OPEN.toString(),
       Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
@@ -125,7 +125,7 @@ public class TestHBCKSCP extends TestSCPBase {
     // cleaned up by an SCP or by anything else.
     assertTrue(searchMeta(master, rsServerName));
     // Assert region is OPEN on dead server still.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
     assertEquals(RegionState.State.OPEN.toString(),
       Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     serverName = CatalogFamilyFormat.getServerName(r, 0);
@@ -140,7 +140,7 @@ public class TestHBCKSCP extends TestSCPBase {
       Threads.sleep(10);
     }
     // After SCP, assert region is OPEN on new server.
-    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI.getRegionName());
+    r = MetaTableAccessor.getRegionResult(master.getConnection(), rsRI);
     assertEquals(RegionState.State.OPEN.toString(),
       Bytes.toString(r.getValue(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER)));
     serverName = CatalogFamilyFormat.getServerName(r, 0);

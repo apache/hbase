@@ -224,7 +224,7 @@ public class TestRegionMergeTransactionOnCluster {
       RegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
       TableDescriptor tableDescriptor = MASTER.getTableDescriptors().get(tableName);
       Result mergedRegionResult =
-        MetaTableAccessor.getRegionResult(MASTER.getConnection(), mergedRegionInfo.getRegionName());
+        MetaTableAccessor.getRegionResult(MASTER.getConnection(), mergedRegionInfo);
 
       // contains merge reference in META
       assertTrue(CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells()));
@@ -300,7 +300,7 @@ public class TestRegionMergeTransactionOnCluster {
       // Wait around a bit to give stuff a chance to complete.
       while (true) {
         mergedRegionResult = MetaTableAccessor.getRegionResult(TEST_UTIL.getConnection(),
-          mergedRegionInfo.getRegionName());
+          mergedRegionInfo);
         if (CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells())) {
           LOG.info("Waiting on cleanup of merge columns {}",
             Arrays.asList(mergedRegionResult.rawCells()).stream().map(c -> c.toString())
