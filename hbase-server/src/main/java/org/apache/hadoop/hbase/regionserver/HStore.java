@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
+import org.apache.hadoop.hbase.regionserver.throttle.BulkLoadThrottler;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -673,9 +674,11 @@ public class HStore
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
    * @param seqNum sequence Id associated with the HFile
    */
-  public Pair<Path, Path> preBulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
+  public Pair<Path, Path> preBulkLoadHFile(String srcPathStr, long seqNum,
+    BulkLoadThrottler bulkLoadThrottler) throws IOException {
     Path srcPath = new Path(srcPathStr);
-    return getRegionFileSystem().bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
+    return getRegionFileSystem().bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum,
+      bulkLoadThrottler);
   }
 
   public Path bulkLoadHFile(byte[] family, String srcPathStr, Path dstPath) throws IOException {

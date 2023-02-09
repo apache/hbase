@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.regionserver.throttle.BulkLoadThrottler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -552,8 +553,8 @@ public class HRegionFileSystem {
    * @param seqNum     Bulk Load sequence number
    * @return The destination {@link Path} of the bulk loaded file
    */
-  Pair<Path, Path> bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
-    throws IOException {
+  Pair<Path, Path> bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum,
+    BulkLoadThrottler bulkLoadThrottler) throws IOException {
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
     srcPath = srcFs.resolvePath(srcPath);
@@ -567,7 +568,11 @@ public class HRegionFileSystem {
       LOG.info("Bulk-load file " + srcPath + " is on different filesystem than "
         + "the destination store. Copying file over to destination filesystem.");
       Path tmpPath = createTempName();
-      FileUtil.copy(realSrcFs, srcPath, fs, tmpPath, false, conf);
+      if (bulkLoadThrottler != null && bulkLoadThrottler.isEnabled()) {
+        bulkLoadThrottler.copy(realSrcFs, srcPath, fs, tmpPath, false, conf);
+      } else {
+        FileUtil.copy(realSrcFs, srcPath, fs, tmpPath, false, conf);
+      }
       LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
       srcPath = tmpPath;
     }
