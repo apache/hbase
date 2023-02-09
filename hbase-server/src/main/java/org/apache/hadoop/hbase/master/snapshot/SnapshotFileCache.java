@@ -178,15 +178,11 @@ public class SnapshotFileCache implements Stoppable {
    * at that point, cache will still think the file system contains that file and return
    * <tt>true</tt>, even if it is no longer present (false positive). However, if the file never was
    * on the filesystem, we will never find it and always return <tt>false</tt>.
-   * @param files file to check, NOTE: Relies that files are loaded from hdfs before method is
-   *              called (NOT LAZY)
+   * @param files file to check
    * @return <tt>unReferencedFiles</tt> the collection of files that do not have snapshot references
    * @throws IOException if there is an unexpected error reaching the filesystem.
    */
-  // XXX this is inefficient to synchronize on the method, when what we really need to guard against
-  // is an illegal access to the cache. Really we could do a mutex-guarded pointer swap on the
-  // cache, but that seems overkill at the moment and isn't necessarily a bottleneck.
-  public Iterable<FileStatus> getUnreferencedFiles(Iterable<FileStatus> files,
+  public Iterable<FileStatus> getUnreferencedFiles(List<FileStatus> files,
     final SnapshotManager snapshotManager) throws IOException {
     List<FileStatus> unReferencedFiles = Lists.newArrayList();
     List<String> snapshotsInProgress = null;
