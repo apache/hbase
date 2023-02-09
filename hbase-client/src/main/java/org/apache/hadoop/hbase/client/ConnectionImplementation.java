@@ -400,7 +400,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         return false;
       }
       try {
-        LOG.info("Getting master state using rpc call");
+        LOG.trace("Getting master state using rpc call");
         return this.masterServiceState.isMasterRunning();
       } catch (UndeclaredThrowableException e) {
         // It's somehow messy, but we can receive exceptions such as
@@ -1941,7 +1941,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private boolean isKeepAliveMasterConnectedAndRunning() {
-    LOG.info("Getting master connection state from TTL Cache");
+    LOG.trace("Getting master connection state from TTL Cache");
     return masterStateSupplier.get();
   }
 
