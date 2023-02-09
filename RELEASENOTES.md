@@ -75,7 +75,7 @@ Add 'hbase.choreservice.initial.pool.size' configuration property to set the ini
 
 * [HBASE-27529](https://issues.apache.org/jira/browse/HBASE-27529) | *Major* | **Provide RS coproc ability to attach WAL extended attributes to mutations at replication sink**
 
-New regionserver coproc endpoints that can be used by coproc at the replication sink cluster if WAL has extended attributes. 
+New regionserver coproc endpoints that can be used by coproc at the replication sink cluster if WAL has extended attributes.
 Using the new endpoints, WAL extended attributes can be transferred to Mutation attributes at the replication sink cluster.
 
 
