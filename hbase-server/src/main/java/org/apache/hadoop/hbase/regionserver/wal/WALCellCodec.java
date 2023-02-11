@@ -197,18 +197,20 @@ public class WALCellCodec implements Codec {
 
   private static byte[] uncompressByteString(ByteString bs, Dictionary dict) throws IOException {
     InputStream in = bs.newInput();
-    byte status = (byte) in.read();
+    byte status = StreamUtils.readByte(in);
     if (status == Dictionary.NOT_IN_DICTIONARY) {
       byte[] arr = new byte[StreamUtils.readRawVarint32(in)];
       int bytesRead = in.read(arr);
       if (bytesRead != arr.length) {
         throw new IOException("Cannot read; wanted " + arr.length + ", but got " + bytesRead);
       }
-      if (dict != null) dict.addEntry(arr, 0, arr.length);
+      if (dict != null) {
+        dict.addEntry(arr, 0, arr.length);
+      }
       return arr;
     } else {
       // Status here is the higher-order byte of index of the dictionary entry.
-      short dictIdx = StreamUtils.toShort(status, (byte) in.read());
+      short dictIdx = StreamUtils.toShort(status, StreamUtils.readByte(in));
       byte[] entry = dict.getEntry(dictIdx);
       if (entry == null) {
         throw new IOException("Missing dictionary entry for index " + dictIdx);
@@ -350,7 +352,7 @@ public class WALCellCodec implements Codec {
     }
 
     private int readIntoArray(byte[] to, int offset, Dictionary dict) throws IOException {
-      byte status = (byte) in.read();
+      byte status = StreamUtils.readByte(in);
       if (status == Dictionary.NOT_IN_DICTIONARY) {
         // status byte indicating that data to be read is not in dictionary.
         // if this isn't in the dictionary, we need to add to the dictionary.
@@ -360,7 +362,7 @@ public class WALCellCodec implements Codec {
         return length;
       } else {
         // the status byte also acts as the higher order byte of the dictionary entry.
-        short dictIdx = StreamUtils.toShort(status, (byte) in.read());
+        short dictIdx = StreamUtils.toShort(status, StreamUtils.readByte(in));
         byte[] entry = dict.getEntry(dictIdx);
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
