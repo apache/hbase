@@ -98,6 +98,9 @@ public class ProtobufLogReader extends ReaderBase {
   // cell codec classname
   private String codecClsName = null;
 
+  // a flag indicate that whether we need to reset compression context when seeking back
+  private boolean resetCompression;
+
   @InterfaceAudience.Private
   public long trailerSize() {
     if (trailerPresent) {
@@ -160,6 +163,9 @@ public class ProtobufLogReader extends ReaderBase {
   @Override
   public void reset() throws IOException {
     String clsName = initInternal(null, false);
+    if (resetCompression) {
+      resetCompression();
+    }
     initAfterCompression(clsName); // We need a new decoder (at least).
   }
 
@@ -361,6 +367,8 @@ public class ProtobufLogReader extends ReaderBase {
     WALKey.Builder builder = WALKey.newBuilder();
     long size = 0;
     boolean resetPosition = false;
+    // by default, we should reset the compression when seeking back after reading something
+    resetCompression = true;
     try {
       long available = -1;
       try {
@@ -372,6 +380,14 @@ public class ProtobufLogReader extends ReaderBase {
         // available may be < 0 on local fs for instance. If so, can't depend on it.
         available = this.inputStream.available();
         if (available > 0 && available < size) {
+          // if we quit here, we have just read the length, no actual data yet, which means we
+          // haven't put anything into the compression dictionary yet, so when seeking back to the
+          // last good position, we do not need to reset compression context.
+          // This is very useful for saving the extra effort for reconstructing the compression
+          // dictionary, where we need to read from the beginning instead of just seek to the
+          // position, as DFSInputStream implement the available method, so in most cases we will
+          // reach here if there are not enough data.
+          resetCompression = false;
           throw new EOFException("Available stream not enough for edit, "
             + "inputStream.available()= " + this.inputStream.available() + ", " + "entry size= "
             + size + " at offset = " + this.inputStream.getPos());

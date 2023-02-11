@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -204,6 +205,22 @@ public class StreamUtils {
       }
     }
     return new Pair<>(result, newOffset - offset);
+  }
+
+  /**
+   * Read a byte from the given stream using the read method, and throw EOFException if it returns
+   * -1, like the implementation in {@code DataInputStream}.
+   * <p/>
+   * This is useful because casting the return value of read method into byte directly will make us
+   * lose the ability to check whether there is a byte and its value is -1 or we reach EOF, as
+   * casting int -1 to byte also returns -1.
+   */
+  public static byte readByte(InputStream in) throws IOException {
+    int r = in.read();
+    if (r < 0) {
+      throw new EOFException();
+    }
+    return (byte) r;
   }
 
   public static short toShort(byte hi, byte lo) {

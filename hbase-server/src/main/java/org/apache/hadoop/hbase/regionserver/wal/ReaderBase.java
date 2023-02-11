@@ -45,7 +45,7 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
    * Compression context to use reading. Can be null if no compression.
    */
   protected CompressionContext compressionContext = null;
-  protected boolean emptyCompressionContext = true;
+  private boolean emptyCompressionContext = true;
 
   /**
    * Default constructor.
@@ -128,6 +128,17 @@ public abstract class ReaderBase implements AbstractFSWALProvider.Reader {
       }
     }
     seekOnFs(pos);
+  }
+
+  /**
+   * Clear the {@link ReaderBase#compressionContext}, and also set {@link #emptyCompressionContext}
+   * to true, so when seeking, we will try to skip to the position and reconstruct the dictionary.
+   */
+  protected final void resetCompression() {
+    if (compressionContext != null) {
+      compressionContext.clear();
+      emptyCompressionContext = true;
+    }
   }
 
   /**
