@@ -107,7 +107,7 @@ public class TagCompressionContext {
     throws IOException {
     int endOffset = offset + length;
     while (offset < endOffset) {
-      byte status = (byte) src.read();
+      byte status = StreamUtils.readByte(src);
       if (status == Dictionary.NOT_IN_DICTIONARY) {
         int tagLen = StreamUtils.readRawVarint32(src);
         offset = Bytes.putAsShort(dest, offset, tagLen);
@@ -115,7 +115,7 @@ public class TagCompressionContext {
         tagDict.addEntry(dest, offset, tagLen);
         offset += tagLen;
       } else {
-        short dictIdx = StreamUtils.toShort(status, (byte) src.read());
+        short dictIdx = StreamUtils.toShort(status, StreamUtils.readByte(src));
         byte[] entry = tagDict.getEntry(dictIdx);
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
