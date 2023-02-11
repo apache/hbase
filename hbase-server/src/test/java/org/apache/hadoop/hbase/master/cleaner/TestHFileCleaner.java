@@ -71,6 +71,9 @@ public class TestHFileCleaner {
 
   private static DirScanPool POOL;
 
+  private static String MOCK_ARCHIVED_HFILE_DIR =
+    HConstants.HFILE_ARCHIVE_DIRECTORY + "/namespace/table/region";
+
   @BeforeClass
   public static void setupCluster() throws Exception {
     // have to use a minidfs cluster because the localfs doesn't modify file times correctly
@@ -162,8 +165,7 @@ public class TestHFileCleaner {
         + "org.apache.hadoop.hbase.mob.ManualMobMaintHFileCleaner");
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, ttl);
     Server server = new DummyServer();
-    Path archivedHfileDir =
-      new Path(UTIL.getDataTestDirOnTestFS(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path archivedHfileDir = new Path(UTIL.getDataTestDirOnTestFS(), MOCK_ARCHIVED_HFILE_DIR);
     FileSystem fs = FileSystem.get(conf);
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir, POOL);
 
