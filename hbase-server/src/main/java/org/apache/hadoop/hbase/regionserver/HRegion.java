@@ -935,7 +935,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         + " should have at least one column family.");
     }
 
-    MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this, true);
+    MonitoredTask status =
+      TaskMonitor.get().createStatus("Initializing region " + this, false, true);
     long nextSeqId = -1;
     try {
       nextSeqId = initializeRegionInternals(reporter, status);
@@ -1544,7 +1545,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
       "Closing region " + this.getRegionInfo().getEncodedName() + (abort ? " due to abort" : ""),
-      true);
+      false, true);
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {

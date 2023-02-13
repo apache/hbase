@@ -287,8 +287,8 @@ public class WALSplitter {
     boolean cancelled = false;
     int editsCount = 0;
     int editsSkipped = 0;
-    MonitoredTask status =
-      TaskMonitor.get().createStatus("Splitting " + wal + " to temporary staging area.", true);
+    MonitoredTask status = TaskMonitor.get()
+      .createStatus("Splitting " + wal + " to temporary staging area.", false, true);
     Reader walReader = null;
     this.fileBeingSplit = walStatus;
     long startTS = EnvironmentEdgeManager.currentTime();
