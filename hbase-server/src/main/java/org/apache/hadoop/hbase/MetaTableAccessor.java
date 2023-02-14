@@ -192,7 +192,8 @@ public final class MetaTableAccessor {
     RegionLocations locations = CatalogFamilyFormat.getRegionLocations(r);
     return locations == null
       ? null
-      : locations.getRegionLocation(parsedInfo == null ? RegionInfo.DEFAULT_REPLICA_ID : parsedInfo.getReplicaId());
+      : locations.getRegionLocation(
+        parsedInfo == null ? RegionInfo.DEFAULT_REPLICA_ID : parsedInfo.getReplicaId());
   }
 
   /**
@@ -219,7 +220,6 @@ public final class MetaTableAccessor {
 
   /**
    * Gets the result in hbase:meta for the specified region.
-   *
    * @param connection connection we're using
    * @param regionInfo region we're looking for
    * @return result of the specified region
@@ -636,7 +636,8 @@ public final class MetaTableAccessor {
    * @throws IllegalArgumentException when the provided RegionInfo is not the default replica.
    */
   public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
-    return addRegionInfo(new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), ts), regionInfo);
+    return addRegionInfo(new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), ts),
+      regionInfo);
   }
 
   /**
@@ -647,7 +648,8 @@ public final class MetaTableAccessor {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
     if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
-      throw new IllegalArgumentException("Can't make delete for a replica region. Operate on the primary");
+      throw new IllegalArgumentException(
+        "Can't make delete for a replica region. Operate on the primary");
     }
     Delete delete = new Delete(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo));
     delete.addFamily(HConstants.CATALOG_FAMILY, ts);

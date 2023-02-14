@@ -299,8 +299,8 @@ public class TestRegionMergeTransactionOnCluster {
 
       // Wait around a bit to give stuff a chance to complete.
       while (true) {
-        mergedRegionResult = MetaTableAccessor.getRegionResult(TEST_UTIL.getConnection(),
-          mergedRegionInfo);
+        mergedRegionResult =
+          MetaTableAccessor.getRegionResult(TEST_UTIL.getConnection(), mergedRegionInfo);
         if (CatalogFamilyFormat.hasMergeRegions(mergedRegionResult.rawCells())) {
           LOG.info("Waiting on cleanup of merge columns {}",
             Arrays.asList(mergedRegionResult.rawCells()).stream().map(c -> c.toString())
