@@ -129,8 +129,8 @@ public abstract class TakeSnapshotHandler extends EventHandler
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, workingDirFs);
     // update the running tasks
-    this.status = TaskMonitor.get()
-      .createStatus("Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable, true);
+    this.status = TaskMonitor.get().createStatus(
+      "Taking " + snapshot.getType() + " snapshot on table: " + snapshotTable, false, true);
     this.snapshotManifest =
       SnapshotManifest.create(conf, rootFs, workingDir, snapshot, monitor, status);
   }

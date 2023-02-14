@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -200,16 +201,18 @@ public class ActiveMasterManager extends ZKListener {
    * Block until becoming the active master. Method blocks until there is not another active master
    * and our attempt to become the new active master is successful. This also makes sure that we are
    * watching the master znode so will be notified if another master dies.
-   * @param checkInterval the interval to check if the master is stopped
-   * @param startupStatus the monitor status to track the progress
+   * @param checkInterval    the interval to check if the master is stopped
+   * @param startupTaskGroup the task group for master startup to track the progress
    * @return True if no issue becoming active master else false if another master was running or if
    *         some other problem (zookeeper, stop flag has been set on this Master)
    */
-  boolean blockUntilBecomingActiveMaster(int checkInterval, MonitoredTask startupStatus) {
+  boolean blockUntilBecomingActiveMaster(int checkInterval, TaskGroup startupTaskGroup) {
+    MonitoredTask blockUntilActive =
+      startupTaskGroup.addTask("Blocking until becoming active master");
     String backupZNode = ZNodePaths
       .joinZNode(this.watcher.getZNodePaths().backupMasterAddressesZNode, this.sn.toString());
     while (!(master.isAborted() || master.isStopped())) {
-      startupStatus.setStatus("Trying to register in ZK as active master");
+      blockUntilActive.setStatus("Trying to register in ZK as active master");
       // Try to become the active master, watch if there is another master.
       // Write out our ServerName as versioned bytes.
       try {
@@ -228,7 +231,7 @@ public class ActiveMasterManager extends ZKListener {
           ZNodeClearer.writeMyEphemeralNodeOnDisk(this.sn.toString());
 
           // We are the master, return
-          startupStatus.setStatus("Successfully registered as active master.");
+          blockUntilActive.setStatus("Successfully registered as active master.");
           this.clusterHasActiveMaster.set(true);
           activeMasterServerName = sn;
           LOG.info("Registered as active master=" + this.sn);
@@ -273,7 +276,7 @@ public class ActiveMasterManager extends ZKListener {
           }
         }
         LOG.info(msg);
-        startupStatus.setStatus(msg);
+        blockUntilActive.setStatus(msg);
       } catch (KeeperException ke) {
         master.abort("Received an unexpected KeeperException, aborting", ke);
         return false;
