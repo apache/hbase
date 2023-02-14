@@ -68,12 +68,25 @@ public class TestLRUDictionary {
   @Test
   public void testPassingSameArrayToAddEntry() {
     // Add random predefined byte array, in this case a random byte array from
-    // HConstants. Assert that when we add, we get new index. Thats how it
-    // works.
+    // HConstants.
+    // Assert that when we add, we get old index.
+    // Because we DO NOT need to write a new one.
     int len = HConstants.CATALOG_FAMILY.length;
     int index = testee.addEntry(HConstants.CATALOG_FAMILY, 0, len);
-    assertFalse(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
-    assertFalse(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
+    assertTrue(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
+    assertTrue(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
+  }
+
+  @Test
+  public void testPassingSameArrayToAddEntryThenEvict() {
+    testee.init(3);
+    byte[] byte0 = Bytes.toBytes(0);
+    byte[] byte1 = Bytes.toBytes(1);
+    assertEquals(0, testee.addEntry(byte0, 0, byte0.length));
+    assertEquals(0, testee.addEntry(byte0, 0, byte0.length));
+    assertEquals(0, testee.addEntry(byte0, 0, byte0.length));
+    assertEquals(1, testee.addEntry(byte1, 0, byte1.length));
+    assertEquals(0, testee.addEntry(byte0, 0, byte0.length));
   }
 
   @Test
