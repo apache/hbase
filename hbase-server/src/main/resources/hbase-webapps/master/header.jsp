@@ -74,6 +74,7 @@
             <% if (HBaseConfiguration.isShowConfInServlet()) { %>
             <li><a href="/conf">HBase Configuration</a></li>
             <% } %>
+            <li><a href="/startupProgress.jsp">Startup Progress</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
