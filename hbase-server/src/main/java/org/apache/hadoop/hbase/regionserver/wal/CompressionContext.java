@@ -25,6 +25,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumMap;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.BoundedDelegatingInputStream;
@@ -105,7 +106,7 @@ public class CompressionContext {
       return compressed;
     }
 
-    public int decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
+    public void decompress(InputStream in, int inLength, byte[] outArray, int outOffset,
       int outLength) throws IOException {
 
       // Our input is a sequence of bounded byte ranges (call them segments), with
@@ -122,11 +123,16 @@ public class CompressionContext {
       } else {
         lowerIn.setDelegate(in, inLength);
       }
-
-      // Caller must handle short reads.
-      // With current Hadoop compression codecs all 'outLength' bytes are read in here, so not
-      // an issue for now.
-      return compressedIn.read(outArray, outOffset, outLength);
+      if (outLength == 0) {
+        // The BufferedInputStream will return earlier and skip reading anything if outLength == 0,
+        // but in fact for an empty value, the compressed output still contains some metadata so the
+        // compressed size is not 0, so here we need to manually skip inLength bytes otherwise the
+        // next read on this stream will start from an invalid position and cause critical problem,
+        // such as data loss when splitting wal or replicating wal.
+        IOUtils.skipFully(in, inLength);
+      } else {
+        IOUtils.readFully(compressedIn, outArray, outOffset, outLength);
+      }
     }
 
     public void clear() {

@@ -45,7 +45,7 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompressedWALValueCompression.class);
 
-  @Parameters
+  @Parameters(name = "{index}: compression={0}")
   public static List<Object[]> params() {
     return HBaseTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
@@ -78,5 +78,4 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
     doTest(tableName);
   }
-
 }

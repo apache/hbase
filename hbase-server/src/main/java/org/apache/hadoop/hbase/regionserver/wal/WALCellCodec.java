@@ -380,13 +380,9 @@ public class WALCellCodec implements Codec {
     private void readCompressedValue(InputStream in, byte[] outArray, int outOffset,
       int expectedLength) throws IOException {
       int compressedLen = StreamUtils.readRawVarint32(in);
-      int read = compression.getValueCompressor().decompress(in, compressedLen, outArray, outOffset,
+      compression.getValueCompressor().decompress(in, compressedLen, outArray, outOffset,
         expectedLength);
-      if (read != expectedLength) {
-        throw new IOException("ValueCompressor state error: short read");
-      }
     }
-
   }
 
   public static class EnsureKvEncoder extends BaseEncoder {
