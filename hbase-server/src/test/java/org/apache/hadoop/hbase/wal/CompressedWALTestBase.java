@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -26,8 +28,9 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellBuilderFactory;
+import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -82,33 +85,42 @@ public class CompressedWALTestBase {
 
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
-      kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
+      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setType(Cell.Type.Put)
+        .setRow(row).setFamily(family).setQualifier(Bytes.toBytes(i)).setValue(value).build());
+      kvs.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
+        .setType(Cell.Type.DeleteFamily).setRow(row).setFamily(family).build());
       wal.appendData(regionInfo, new WALKeyImpl(regionInfo.getEncodedNameAsBytes(), tableName,
         System.currentTimeMillis(), mvcc, scopes), kvs);
+      wal.sync();
     }
-    wal.sync();
     final Path walPath = AbstractFSWALProvider.getCurrentFileName(wal);
     wals.shutdown();
 
     // Confirm the WAL can be read back
-    WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
-    int count = 0;
-    WAL.Entry entry = new WAL.Entry();
-    while (reader.next(entry) != null) {
-      count++;
-      List<Cell> cells = entry.getEdit().getCells();
-      assertTrue("Should be one KV per WALEdit", cells.size() == 1);
-      for (Cell cell : cells) {
-        assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
-          cell.getRowLength(), row, 0, row.length));
-        assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
-          cell.getFamilyLength(), family, 0, family.length));
-        assertTrue("Incorrect value", Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength(), value, 0, value.length));
-      }
-    }
-    assertEquals("Should have read back as many KVs as written", total, count);
-    reader.close();
-  }
+    try (WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath)) {
+      int count = 0;
+      WAL.Entry entry = new WAL.Entry();
+      while (reader.next(entry) != null) {
+        count++;
+        List<Cell> cells = entry.getEdit().getCells();
+        assertThat("Should be two KVs per WALEdit", cells, hasSize(2));
+        Cell putCell = cells.get(0);
+        assertEquals(Cell.Type.Put, putCell.getType());
+        assertTrue("Incorrect row", Bytes.equals(putCell.getRowArray(), putCell.getRowOffset(),
+          putCell.getRowLength(), row, 0, row.length));
+        assertTrue("Incorrect family", Bytes.equals(putCell.getFamilyArray(),
+          putCell.getFamilyOffset(), putCell.getFamilyLength(), family, 0, family.length));
+        assertTrue("Incorrect value", Bytes.equals(putCell.getValueArray(),
+          putCell.getValueOffset(), putCell.getValueLength(), value, 0, value.length));
 
+        Cell deleteCell = cells.get(1);
+        assertEquals(Cell.Type.DeleteFamily, deleteCell.getType());
+        assertTrue("Incorrect row", Bytes.equals(deleteCell.getRowArray(),
+          deleteCell.getRowOffset(), deleteCell.getRowLength(), row, 0, row.length));
+        assertTrue("Incorrect family", Bytes.equals(deleteCell.getFamilyArray(),
+          deleteCell.getFamilyOffset(), deleteCell.getFamilyLength(), family, 0, family.length));
+      }
+      assertEquals("Should have read back as many KVs as written", total, count);
+    }
+  }
 }
