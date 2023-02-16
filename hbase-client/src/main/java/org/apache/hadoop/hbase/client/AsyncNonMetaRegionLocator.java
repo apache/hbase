@@ -299,37 +299,80 @@ class AsyncNonMetaRegionLocator {
     LOG.trace("Try adding {} to cache", locs);
     byte[] startKey = locs.getRegionLocation().getRegion().getStartKey();
     for (;;) {
-      RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
-      if (oldLocs == null) {
-        return locs;
-      }
-      // check whether the regions are the same, this usually happens when table is split/merged, or
-      // deleted and recreated again.
-      RegionInfo region = locs.getRegionLocation().getRegion();
-      RegionInfo oldRegion = oldLocs.getRegionLocation().getRegion();
-      if (region.getEncodedName().equals(oldRegion.getEncodedName())) {
-        RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
-        if (isEqual(mergedLocs, oldLocs)) {
-          // the merged one is the same with the old one, give up
-          LOG.trace("Will not add {} to cache because the old value {} "
-            + " is newer than us or has the same server name."
-            + " Maybe it is updated before we replace it", locs, oldLocs);
-          return oldLocs;
-        }
-        if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
-          return mergedLocs;
-        }
-      } else {
-        // the region is different, here we trust the one we fetched. This maybe wrong but finally
-        // the upper layer can detect this and trigger removal of the wrong locations
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("The newnly fetch region {} is different from the old one {} for row '{}',"
-            + " try replaing the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
-        }
-        if (tableCache.cache.replace(startKey, oldLocs, locs)) {
+      // synchronize here because we may need to make multiple modifications in
+      // cleanOverlappingRegions, and we want them to be atomic
+      synchronized (tableCache) {
+        RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
+        if (oldLocs == null) {
+          cleanOverlappingRegions(locs, tableCache);
           return locs;
         }
+        // check whether the regions are the same, this usually happens when table is split/merged,
+        // or
+        // deleted and recreated again.
+        RegionInfo region = locs.getRegionLocation().getRegion();
+        RegionInfo oldRegion = oldLocs.getRegionLocation().getRegion();
+        if (region.getEncodedName().equals(oldRegion.getEncodedName())) {
+          RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
+          if (isEqual(mergedLocs, oldLocs)) {
+            // the merged one is the same with the old one, give up
+            LOG.trace("Will not add {} to cache because the old value {} "
+              + " is newer than us or has the same server name."
+              + " Maybe it is updated before we replace it", locs, oldLocs);
+            return oldLocs;
+          }
+          if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
+            cleanOverlappingRegions(locs, tableCache);
+            return mergedLocs;
+          }
+        } else {
+          // the region is different, here we trust the one we fetched. This maybe wrong but finally
+          // the upper layer can detect this and trigger removal of the wrong locations
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+              "The newly fetch region {} is different from the old one {} for row '{}',"
+                + " try replaying the old one...",
+              region, oldRegion, Bytes.toStringBinary(startKey));
+          }
+          if (tableCache.cache.replace(startKey, oldLocs, locs)) {
+            cleanOverlappingRegions(locs, tableCache);
+            return locs;
+          }
+        }
       }
+    }
+  }
+
+  /**
+   * When caching a location, the region may have been the result of a merge. Check to see if the
+   * region's boundaries overlap any other cached locations. Those would have been merge parents
+   * which no longer exist. We need to proactively clear them out to avoid a case where a merged
+   * region which receives no requests never gets cleared. This causes requests to other merged
+   * regions after it to see the wrong cached location. See HBASE-27650
+   * @param locations  the new location that was just cached
+   * @param tableCache the tableCache containing that and other locations for this table.
+   */
+  private void cleanOverlappingRegions(RegionLocations locations, TableCache tableCache) {
+    RegionInfo region = locations.getRegionLocation().getRegion();
+
+    boolean isLast = Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW);
+
+    while (true) {
+      Map.Entry<byte[], RegionLocations> overlap =
+        isLast ? tableCache.cache.lastEntry() : tableCache.cache.floorEntry(region.getEndKey());
+      if (
+        overlap == null || overlap.getValue() == locations
+          || Bytes.equals(overlap.getKey(), region.getStartKey())
+      ) {
+        break;
+      }
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removing cached location {} because it overlaps with new location {}",
+          overlap.getValue(), locations);
+      }
+
+      tableCache.cache.remove(overlap.getKey());
     }
   }
 
@@ -442,6 +485,10 @@ class AsyncNonMetaRegionLocator {
       recordCacheHit();
       return locs;
     } else {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Requested row {} comes after region end key of {} for cached location {}",
+          Bytes.toStringBinary(row), Bytes.toStringBinary(endKey), locs);
+      }
       recordCacheMiss();
       return null;
     }
