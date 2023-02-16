@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -850,7 +851,7 @@ public class TestConnectionImplementation {
   private int setNumTries(ConnectionImplementation hci, int newVal) throws Exception {
     Field numTries = hci.getClass().getDeclaredField("numTries");
     numTries.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    Field modifiersField = ReflectionUtils.getModifiersField();
     modifiersField.setAccessible(true);
     modifiersField.setInt(numTries, numTries.getModifiers() & ~Modifier.FINAL);
     final int prevNumRetriesVal = (Integer) numTries.get(hci);
