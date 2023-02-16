@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -100,7 +103,7 @@ public class TestActiveMasterManager {
       assertFalse(activeMasterManager.getActiveMasterServerName().isPresent());
 
       // First test becoming the active master uninterrupted
-      MonitoredTask status = Mockito.mock(MonitoredTask.class);
+      TaskGroup status = mockTaskGroup();
       clusterStatusTracker.setClusterUp();
 
       activeMasterManager.blockUntilBecomingActiveMaster(100, status);
@@ -149,7 +152,8 @@ public class TestActiveMasterManager {
       // First test becoming the active master uninterrupted
       ClusterStatusTracker clusterStatusTracker = ms1.getClusterStatusTracker();
       clusterStatusTracker.setClusterUp();
-      activeMasterManager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
+
+      activeMasterManager.blockUntilBecomingActiveMaster(100, mockTaskGroup());
       assertTrue(activeMasterManager.clusterHasActiveMaster.get());
       assertMaster(zk, firstMasterAddress);
       assertMaster(zk, activeMasterManager.getActiveMasterServerName().get());
@@ -215,7 +219,7 @@ public class TestActiveMasterManager {
       ServerName sn1 = ServerName.valueOf("localhost", 1, -1);
       DummyMaster master1 = new DummyMaster(zk, sn1);
       ActiveMasterManager activeMasterManager = master1.getActiveMasterManager();
-      activeMasterManager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
+      activeMasterManager.blockUntilBecomingActiveMaster(100, mockTaskGroup());
       assertEquals(sn1, activeMasterManager.getActiveMasterServerName().get());
       assertEquals(0, activeMasterManager.getBackupMasters().size());
       // Add backup masters
@@ -268,10 +272,17 @@ public class TestActiveMasterManager {
 
     @Override
     public void run() {
-      manager.blockUntilBecomingActiveMaster(100, Mockito.mock(MonitoredTask.class));
+      manager.blockUntilBecomingActiveMaster(100, mockTaskGroup());
       LOG.info("Second master has become the active master!");
       isActiveMaster = true;
     }
+  }
+
+  private static TaskGroup mockTaskGroup() {
+    TaskGroup taskGroup = Mockito.mock(TaskGroup.class);
+    MonitoredTask task = Mockito.mock(MonitoredTask.class);
+    when(taskGroup.addTask(any())).thenReturn(task);
+    return taskGroup;
   }
 
   public static class NodeDeletionListener extends ZKListener {
