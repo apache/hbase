@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.chaos;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -224,10 +225,11 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
           } catch (Exception e) {
             break;
           }
-          zk.getData(path, false, getTaskForExecutionCallback, new String(data));
+          zk.getData(path, false, getTaskForExecutionCallback,
+            new String(data, StandardCharsets.UTF_8));
           break;
         case OK:
-          String cmd = new String(data);
+          String cmd = new String(data, StandardCharsets.UTF_8);
           LOG.info("Executing command : " + cmd);
           String status = ChaosConstants.TASK_COMPLETION_STRING;
           try {
@@ -368,7 +370,8 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
    */
   public void setStatusOfTaskZNode(String taskZNode, String status) {
     LOG.info("Setting status of Task ZNode: " + taskZNode + " status : " + status);
-    zk.setData(taskZNode, status.getBytes(), -1, setStatusOfTaskZNodeCallback, null);
+    zk.setData(taskZNode, status.getBytes(StandardCharsets.UTF_8), -1, setStatusOfTaskZNodeCallback,
+      null);
   }
 
   /**

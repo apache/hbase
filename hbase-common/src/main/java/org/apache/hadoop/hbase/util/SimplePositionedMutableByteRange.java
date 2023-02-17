@@ -70,7 +70,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
 
   /**
    * Create a new {@code PositionedByteRange} over a new backing array of size {@code capacity}. The
-   * range's offset and length are 0 and {@code capacity}, respectively. n * the size of the backing
+   * range's offset and length are 0 and {@code capacity}, respectively. the size of the backing
    * array.
    */
   public SimplePositionedMutableByteRange(int capacity) {
@@ -78,17 +78,15 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   }
 
   /**
-   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. n * The array to
-   * wrap.
+   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. The array to wrap.
    */
   public SimplePositionedMutableByteRange(byte[] bytes) {
     set(bytes);
   }
 
   /**
-   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. n * The array to
-   * wrap. n * The offset into {@code bytes} considered the beginning of this range. n * The length
-   * of this range.
+   * Create a new {@code PositionedByteRange} over the provided {@code bytes}. The array to wrap.
+   * The offset into {@code bytes} considered the beginning of this range. The length of this range.
    */
   public SimplePositionedMutableByteRange(byte[] bytes, int offset, int length) {
     set(bytes, offset, length);
@@ -130,7 +128,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
 
   /**
    * Update the beginning of this range. {@code offset + length} may not be greater than
-   * {@code bytes.length}. Resets {@code position} to 0. n * the new start of this range.
+   * {@code bytes.length}. Resets {@code position} to 0. the new start of this range.
    * @return this.
    */
   @Override
@@ -143,7 +141,7 @@ public class SimplePositionedMutableByteRange extends AbstractPositionedByteRang
   /**
    * Update the length of this range. {@code offset + length} should not be greater than
    * {@code bytes.length}. If {@code position} is greater than the new {@code length}, sets
-   * {@code position} to {@code length}. n * The new length of this range.
+   * {@code position} to {@code length}. The new length of this range.
    * @return this.
    */
   @Override

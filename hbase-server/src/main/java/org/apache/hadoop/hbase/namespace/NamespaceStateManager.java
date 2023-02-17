@@ -70,8 +70,8 @@ class NamespaceStateManager {
   }
 
   /**
-   * Check if adding a region violates namespace quota, if not update namespace cache. nnn * @return
-   * true, if region can be added to table.
+   * Check if adding a region violates namespace quota, if not update namespace cache.
+   * @return true, if region can be added to table.
    * @throws IOException Signals that an I/O exception has occurred.
    */
   synchronized boolean checkAndUpdateNamespaceRegionCount(TableName name, byte[] regionName,

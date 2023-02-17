@@ -77,8 +77,8 @@ public final class PrettyPrinter {
 
   /**
    * Convert a human readable string to its value.
-   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit) nn * @return the value
-   *      corresponding to the human readable string
+   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
+   * @return the value corresponding to the human readable string
    */
   public static String valueOf(final String pretty, final Unit unit) throws HBaseException {
     StringBuilder value = new StringBuilder();
@@ -155,7 +155,8 @@ public final class PrettyPrinter {
    * Convert a human readable time interval to seconds. Examples of the human readable time
    * intervals are: 50 DAYS 1 HOUR 30 MINUTES , 25000 SECONDS etc. The units of time specified can
    * be in uppercase as well as lowercase. Also, if a single number is specified without any time
-   * unit, it is assumed to be in seconds. n * @return value in seconds
+   * unit, it is assumed to be in seconds.
+   * @return value in seconds
    */
   private static long humanReadableIntervalToSec(final String humanReadableInterval)
     throws HBaseException {
@@ -261,7 +262,7 @@ public final class PrettyPrinter {
    * KB , 25000 B etc. The units of size specified can be in uppercase as well as lowercase. Also,
    * if a single number is specified without any time unit, it is assumed to be in bytes.
    * @param humanReadableSize human readable size
-   * @return value in bytes n
+   * @return value in bytes
    */
   private static long humanReadableSizeToBytes(final String humanReadableSize)
     throws HBaseException {

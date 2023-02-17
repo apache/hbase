@@ -70,9 +70,7 @@ public final class TagUtil {
     return carryForwardTags(null, cell);
   }
 
-  /**
-   * Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if none.
-   */
+  /** Add to <code>tagsOrNull</code> any Tags <code>cell</code> is carrying or null if none. */
   public static List<Tag> carryForwardTags(final List<Tag> tagsOrNull, final Cell cell) {
     Iterator<Tag> itr = PrivateCellUtil.tagsIterator(cell);
     if (itr == EMPTY_TAGS_ITR) {
@@ -166,9 +164,7 @@ public final class TagUtil {
     return b;
   }
 
-  /**
-   * Iterator returned when no Tags. Used by CellUtil too.
-   */
+  /** Iterator returned when no Tags. Used by CellUtil too. */
   static final Iterator<Tag> EMPTY_TAGS_ITR = new Iterator<Tag>() {
     @Override
     public boolean hasNext() {

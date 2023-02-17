@@ -71,7 +71,7 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   /**
-   * Constructor for protobuf deserialization only. nnnnnn
+   * Constructor for protobuf deserialization only.
    */
   protected SingleColumnValueExcludeFilter(final byte[] family, final byte[] qualifier,
     final CompareOperator op, ByteArrayComparable comparator, final boolean filterIfMissing,

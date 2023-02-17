@@ -34,8 +34,7 @@ public class LeaseException extends DoNotRetryIOException {
   }
 
   /**
-   * n
-   */
+   *   */
   public LeaseException(String message) {
     super(message);
   }

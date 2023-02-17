@@ -46,7 +46,7 @@ interface StoreFlushContext {
   /**
    * Commit the flush - add the store file to the store and clear the memstore snapshot. Requires
    * pausing scans. A very short operation
-   * @return whether compaction is required n
+   * @return whether compaction is required
    */
   boolean commit(MonitoredTask status) throws IOException;
 
@@ -55,12 +55,12 @@ interface StoreFlushContext {
    * primary region. Adds the new files to the store, and drops the snapshot depending on
    * dropMemstoreSnapshot argument.
    * @param fileNames            names of the flushed files
-   * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot n
+   * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
    */
   void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot) throws IOException;
 
   /**
-   * Abort the snapshot preparation. Drops the snapshot if any. n
+   * Abort the snapshot preparation. Drops the snapshot if any.
    */
   void abort() throws IOException;
 

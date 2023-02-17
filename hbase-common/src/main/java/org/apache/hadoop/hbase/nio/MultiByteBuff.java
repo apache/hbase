@@ -149,8 +149,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Fetches the byte at the given index. Does not change position of the underlying ByteBuffers n
-   * * @return the byte at the given index
+   * Fetches the byte at the given index. Does not change position of the underlying ByteBuffers
+   * @return the byte at the given index
    */
   @Override
   public byte get(int index) {
@@ -201,8 +201,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Fetches the int at the given index. Does not change position of the underlying ByteBuffers n
-   * * @return the int value at the given index
+   * Fetches the int at the given index. Does not change position of the underlying ByteBuffers
+   * @return the int value at the given index
    */
   @Override
   public int getInt(int index) {
@@ -235,8 +235,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Fetches the short at the given index. Does not change position of the underlying ByteBuffers n
-   * * @return the short value at the given index
+   * Fetches the short at the given index. Does not change position of the underlying ByteBuffers
+   * @return the short value at the given index
    */
   @Override
   public short getShort(int index) {
@@ -347,8 +347,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Fetches the long at the given index. Does not change position of the underlying ByteBuffers n
-   * * @return the long value at the given index
+   * Fetches the long at the given index. Does not change position of the underlying ByteBuffers
+   * @return the long value at the given index
    */
   @Override
   public long getLong(int index) {
@@ -388,7 +388,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Sets this MBB's position to the given value. n * @return this object
+   * Sets this MBB's position to the given value.
+   * @return this object
    */
   @Override
   public MultiByteBuff position(int position) {
@@ -569,7 +570,7 @@ public class MultiByteBuff extends ByteBuff {
 
   /**
    * Copies the content from this MBB's current position to the byte array and fills it. Also
-   * advances the position of the MBB by the length of the byte[]. n
+   * advances the position of the MBB by the length of the byte[].
    */
   @Override
   public void get(byte[] dst) {
@@ -578,9 +579,7 @@ public class MultiByteBuff extends ByteBuff {
 
   /**
    * Copies the specified number of bytes from this MBB's current position to the byte[]'s offset.
-   * Also advances the position of the MBB by the given length. n * @param offset within the current
-   * array
-   * @param length upto which the bytes to be copied
+   * Also advances the position of the MBB by the given length.
    */
   @Override
   public void get(byte[] dst, int offset, int length) {
@@ -617,7 +616,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Marks the limit of this MBB. n * @return This MBB
+   * Marks the limit of this MBB.
+   * @return This MBB
    */
   @Override
   public MultiByteBuff limit(int limit) {
@@ -688,8 +688,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Writes a byte to this MBB at the current position and increments the position n * @return this
-   * object
+   * Writes a byte to this MBB at the current position and increments the position
+   * @return this object
    */
   @Override
   public MultiByteBuff put(byte b) {
@@ -878,23 +878,16 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   private static byte int0(int x) {
-    return (byte) (x);
+    return (byte) x;
   }
 
-  /**
-   * Copies from the given byte[] to this MBB n * @return this MBB
-   */
+  /** Copies from the given byte[] to this MBB */
   @Override
   public final MultiByteBuff put(byte[] src) {
     return put(src, 0, src.length);
   }
 
-  /**
-   * Copies from the given byte[] to this MBB n * @param offset the position in the byte array from
-   * which the copy should be done
-   * @param length the length upto which the copy should happen
-   * @return this MBB
-   */
+  /** Copies from the given byte[] to this MBB. */
   @Override
   public MultiByteBuff put(byte[] src, int offset, int length) {
     checkRefCount();
@@ -965,11 +958,11 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   private static byte long0(long x) {
-    return (byte) (x);
+    return (byte) x;
   }
 
   /**
-   * Jumps the current position of this MBB by specified length. n
+   * Jumps the current position of this MBB by specified length.
    */
   @Override
   public MultiByteBuff skip(int length) {
@@ -991,7 +984,7 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Jumps back the current position of this MBB by specified length. n
+   * Jumps back the current position of this MBB by specified length.
    */
   @Override
   public MultiByteBuff moveBack(int length) {
@@ -1118,8 +1111,8 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   /**
-   * Copy the content from this MBB to a byte[] based on the given offset and length n * the
-   * position from where the copy should start n * the length upto which the copy has to be done
+   * Copy the content from this MBB to a byte[] based on the given offset and length the position
+   * from where the copy should start the length upto which the copy has to be done
    * @return byte[] with the copied contents from this MBB.
    */
   @Override

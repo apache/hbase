@@ -177,7 +177,8 @@ public class TestHFileWriterV3 {
     // Comparator class name is stored in the trailer in version 3.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
-      new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator, trailer.getNumDataIndexLevels());
+      new HFileBlockIndex.CellBasedKeyBlockIndexReaderV2(comparator,
+        trailer.getNumDataIndexLevels());
     HFileBlockIndex.BlockIndexReader metaBlockIndexReader =
       new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
 

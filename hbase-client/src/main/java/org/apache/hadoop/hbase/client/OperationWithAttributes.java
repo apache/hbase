@@ -106,7 +106,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
    * This method allows you to set an identifier on an operation. The original motivation for this
    * was to allow the identifier to be used in slow query logging, but this could obviously be
    * useful in other places. One use of this could be to put a class.method identifier in here to
-   * see where the slow query is coming from. n * id to set for the scan
+   * see where the slow query is coming from. id to set for the scan
    */
   public OperationWithAttributes setId(String id) {
     setAttribute(ID_ATRIBUTE, Bytes.toBytes(id));

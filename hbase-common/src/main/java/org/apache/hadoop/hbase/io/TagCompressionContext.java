@@ -57,7 +57,7 @@ public class TagCompressionContext {
    * @param out    Stream to which the compressed tags to be written
    * @param in     Source where tags are available
    * @param offset Offset for the tags bytes
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void compressTags(OutputStream out, byte[] in, int offset, int length) throws IOException {
     int pos = offset;
@@ -76,12 +76,13 @@ public class TagCompressionContext {
    * @param out    Stream to which the compressed tags to be written
    * @param in     Source buffer where tags are available
    * @param offset Offset for the tags byte buffer
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void compressTags(OutputStream out, ByteBuffer in, int offset, int length)
     throws IOException {
     if (in.hasArray()) {
-      compressTags(out, in.array(), offset, length);
+      // Offset we are given is relative to ByteBuffer#arrayOffset
+      compressTags(out, in.array(), in.arrayOffset() + offset, length);
     } else {
       int pos = offset;
       int endOffset = pos + length;
@@ -100,13 +101,13 @@ public class TagCompressionContext {
    * @param src    Stream where the compressed tags are available
    * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
-   * @param length Length of all tag bytes n
+   * @param length Length of all tag bytes
    */
   public void uncompressTags(InputStream src, byte[] dest, int offset, int length)
     throws IOException {
     int endOffset = offset + length;
     while (offset < endOffset) {
-      byte status = (byte) src.read();
+      byte status = StreamUtils.readByte(src);
       if (status == Dictionary.NOT_IN_DICTIONARY) {
         int tagLen = StreamUtils.readRawVarint32(src);
         offset = Bytes.putAsShort(dest, offset, tagLen);
@@ -114,7 +115,7 @@ public class TagCompressionContext {
         tagDict.addEntry(dest, offset, tagLen);
         offset += tagLen;
       } else {
-        short dictIdx = StreamUtils.toShort(status, (byte) src.read());
+        short dictIdx = StreamUtils.toShort(status, StreamUtils.readByte(src));
         byte[] entry = tagDict.getEntry(dictIdx);
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
@@ -132,7 +133,7 @@ public class TagCompressionContext {
    * @param dest   Destination array where to write the uncompressed tags
    * @param offset Offset in destination where tags to be written
    * @param length Length of all tag bytes
-   * @return bytes count read from source to uncompress all tags. n
+   * @return bytes count read from source to uncompress all tags.
    */
   public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length) throws IOException {
     int srcBeginPos = src.position();

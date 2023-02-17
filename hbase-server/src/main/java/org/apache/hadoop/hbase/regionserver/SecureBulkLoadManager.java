@@ -459,8 +459,8 @@ public class SecureBulkLoadManager {
     }
 
     /**
-     * Check if the path is referencing a file. This is mainly needed to avoid symlinks. n * @return
-     * true if the p is a file n
+     * Check if the path is referencing a file. This is mainly needed to avoid symlinks.
+     * @return true if the p is a file
      */
     private boolean isFile(Path p) throws IOException {
       FileStatus status = srcFs.getFileStatus(p);

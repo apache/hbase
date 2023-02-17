@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -299,9 +300,7 @@ public class StoreFileScanner implements KeyValueScanner {
     closed = true;
   }
 
-  /**
-   * nn * @return false if not found or if k is after the end. n
-   */
+  /** Returns false if not found or if k is after the end. */
   public static boolean seekAtOrAfter(HFileScanner s, Cell k) throws IOException {
     int result = s.seekTo(k);
     if (result < 0) {
@@ -450,6 +449,11 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean isFileScanner() {
     return true;
+  }
+
+  @Override
+  public void recordBlockSize(IntConsumer blockSizeConsumer) {
+    hfs.recordBlockSize(blockSizeConsumer);
   }
 
   @Override

@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 
@@ -35,9 +39,9 @@ public class X509TestContextProvider {
 
     private final X509KeyType certKeyType;
 
-    private final String keyPassword;
+    private final char[] keyPassword;
 
-    CacheKey(X509KeyType caKeyType, X509KeyType certKeyType, String keyPassword) {
+    CacheKey(X509KeyType caKeyType, X509KeyType certKeyType, char[] keyPassword) {
       this.caKeyType = caKeyType;
       this.certKeyType = certKeyType;
       this.keyPassword = keyPassword;
@@ -45,7 +49,7 @@ public class X509TestContextProvider {
 
     @Override
     public int hashCode() {
-      return Objects.hash(caKeyType, certKeyType, keyPassword);
+      return Objects.hash(caKeyType, certKeyType, Arrays.hashCode(keyPassword));
     }
 
     @Override
@@ -55,7 +59,7 @@ public class X509TestContextProvider {
       }
       CacheKey other = (CacheKey) obj;
       return caKeyType == other.caKeyType && certKeyType == other.certKeyType
-        && Objects.equals(keyPassword, other.keyPassword);
+        && Arrays.equals(keyPassword, other.keyPassword);
     }
   }
 
@@ -79,7 +83,21 @@ public class X509TestContextProvider {
     this.tempDir = tempDir;
   }
 
-  public X509TestContext get(X509KeyType caKeyType, X509KeyType certKeyType, String keyPassword) {
+  public X509TestContext get(X509KeyType caKeyType, X509KeyType certKeyType, char[] keyPassword) {
     return ctxs.getUnchecked(new CacheKey(caKeyType, certKeyType, keyPassword));
   }
+
+  static Collection<Object[]> defaultParams() {
+    List<Object[]> params = new ArrayList<>();
+    int paramIndex = 0;
+    for (X509KeyType caKeyType : X509KeyType.values()) {
+      for (X509KeyType certKeyType : X509KeyType.values()) {
+        for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
+          params.add(new Object[] { caKeyType, certKeyType, keyPassword, paramIndex++ });
+        }
+      }
+    }
+    return params;
+  }
+
 }

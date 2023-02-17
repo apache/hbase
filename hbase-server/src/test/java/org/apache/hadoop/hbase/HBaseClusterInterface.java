@@ -263,6 +263,41 @@ public abstract class HBaseClusterInterface implements Closeable, Configurable {
     throws IOException;
 
   /**
+   * Starts a new journalnode on the given hostname or if this is a mini/local cluster, silently
+   * logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startJournalNode(ServerName serverName) throws IOException;
+
+  /**
+   * Kills the journalnode process if this is a distributed cluster, otherwise, this causes master
+   * to exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killJournalNode(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the journalnode if this is a distributed cluster, otherwise silently logs warning
+   * message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopJournalNode(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified journalnode to join the cluster
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForJournalNodeToStart(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
+   * Wait for the specified journalnode to stop
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForJournalNodeToStop(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
    * Starts a new master on the given hostname or if this is a mini/local cluster, starts a master
    * locally.
    * @param hostname the hostname to start the master on

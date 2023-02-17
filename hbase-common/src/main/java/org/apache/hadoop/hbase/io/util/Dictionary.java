@@ -80,7 +80,7 @@ public interface Dictionary {
    * @param data   the data to be written in byte[]
    * @param offset the offset
    * @param length length to be written
-   * @param dict   the dictionary whose contents are to written n
+   * @param dict   the dictionary whose contents are to written
    */
   public static void write(OutputStream out, byte[] data, int offset, int length, Dictionary dict)
     throws IOException {
@@ -103,7 +103,7 @@ public interface Dictionary {
    * @param data   the data to be written in ByteBuffer
    * @param offset the offset
    * @param length length to be written
-   * @param dict   the dictionary whose contents are to written n
+   * @param dict   the dictionary whose contents are to written
    */
   public static void write(OutputStream out, ByteBuffer data, int offset, int length,
     Dictionary dict) throws IOException {

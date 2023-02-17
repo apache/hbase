@@ -33,13 +33,15 @@ public interface OnlineRegions {
 
   /**
    * Return {@link Region} instance. Only works if caller is in same context, in same JVM. Region is
-   * not serializable. n * @return Region for the passed encoded <code>encodedRegionName</code> or
-   * null if named region is not member of the online regions.
+   * not serializable.
+   * @return Region for the passed encoded <code>encodedRegionName</code> or null if named region is
+   *         not member of the online regions.
    */
   Region getRegion(String encodedRegionName);
 
   /**
-   * Get all online regions of a table in this RS. n * @return List of Region
+   * Get all online regions of a table in this RS.
+   * @return List of Region
    * @throws java.io.IOException
    */
   List<? extends Region> getRegions(TableName tableName) throws IOException;

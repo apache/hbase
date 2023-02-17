@@ -67,14 +67,6 @@ mkdir -p "${PATCHDIR}"
 mkdir "${PATCHDIR}/machine"
 "${SOURCEDIR}/dev-support/gather_machine_environment.sh" "${PATCHDIR}/machine"
 
-# If CHANGE_URL is set (e.g., Github Branch Source plugin), process it.
-# Otherwise exit, because we don't want HBase to do a
-# full build.  We wouldn't normally do this check for smaller
-# projects. :)
-if [[ -z "${CHANGE_URL}" ]]; then
-  echo "Full build skipped" > "${PATCHDIR}/report.html"
-  exit 0
-fi
 # enable debug output for yetus
 if [[ "true" = "${DEBUG}" ]]; then
   YETUS_ARGS+=("--debug")
@@ -156,6 +148,9 @@ if [[ -n "${SUREFIRE_FIRST_PART_FORK_COUNT}" ]]; then
 fi
 if [[ -n "${SUREFIRE_SECOND_PART_FORK_COUNT}" ]]; then
   YETUS_ARGS+=("--surefire-second-part-fork-count=${SUREFIRE_SECOND_PART_FORK_COUNT}")
+fi
+if [[ -n "${JAVA8_HOME}" ]]; then
+  YETUS_ARGS+=("--java8-home=${JAVA8_HOME}")
 fi
 
 echo "Launching yetus with command line:"

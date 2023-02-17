@@ -96,7 +96,7 @@ public class ScanDeleteTracker implements DeleteTracker {
 
   /**
    * Check if the specified Cell buffer has been deleted by a previously seen delete.
-   * @param cell - current cell to check if deleted by a previously seen delete n
+   * @param cell - current cell to check if deleted by a previously seen delete
    */
   @Override
   public DeleteResult isDeleted(Cell cell) {

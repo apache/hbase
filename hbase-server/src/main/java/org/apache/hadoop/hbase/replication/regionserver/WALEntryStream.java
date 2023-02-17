@@ -321,6 +321,8 @@ class WALEntryStream implements Closeable {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
+      justification = "HDFS-4380")
   private void openReader(Path path) throws IOException {
     try {
       // Detect if this is a new file, if so get a new reader else
@@ -371,6 +373,8 @@ class WALEntryStream implements Closeable {
     }
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
+      justification = "HDFS-4380")
   private void resetReader() throws IOException {
     try {
       currentEntry = null;

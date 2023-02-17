@@ -933,7 +933,7 @@ public class HFileBlock implements Cacheable {
       // We need to cache the unencoded/uncompressed size before changing the block state
       int rawBlockSize = 0;
       if (this.getEncodingState() != null) {
-        rawBlockSize = blockSizeWritten();
+        rawBlockSize = encodedBlockSizeWritten();
       }
       // We need to set state before we can package the block up for cache-on-write. In a way, the
       // block is ready, but not yet encoded or compressed.
@@ -1471,7 +1471,7 @@ public class HFileBlock implements Cacheable {
       boolean peekIntoNextBlock, long fileOffset, boolean pread) throws IOException {
       if (!pread) {
         // Seek + read. Better for scanning.
-        HFileUtil.seekOnMultipleSources(istream, fileOffset);
+        istream.seek(fileOffset);
         long realOffset = istream.getPos();
         if (realOffset != fileOffset) {
           throw new IOException("Tried to seek to " + fileOffset + " to read " + size

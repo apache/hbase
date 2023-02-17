@@ -21,12 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -48,8 +46,6 @@ public class SlowLogTableAccessor {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlowLogTableAccessor.class);
 
-  private static Connection connection;
-
   /**
    * hbase:slowlog table name - can be enabled with config -
    * hbase.regionserver.slowlog.systable.enabled
@@ -66,10 +62,10 @@ public class SlowLogTableAccessor {
   /**
    * Add slow/large log records to hbase:slowlog table
    * @param slowLogPayloads List of SlowLogPayload to process
-   * @param configuration   Configuration to use for connection
+   * @param connection      connection
    */
   public static void addSlowLogRecords(final List<TooSlowLog.SlowLogPayload> slowLogPayloads,
-    final Configuration configuration) {
+    Connection connection) {
     List<Put> puts = new ArrayList<>(slowLogPayloads.size());
     for (TooSlowLog.SlowLogPayload slowLogPayload : slowLogPayloads) {
       final byte[] rowKey = getRowKey(slowLogPayload);
@@ -91,6 +87,8 @@ public class SlowLogTableAccessor {
           Bytes.toBytes(slowLogPayload.getRegionName()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("response_size"),
           Bytes.toBytes(Long.toString(slowLogPayload.getResponseSize())))
+        .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("block_bytes_scanned"),
+          Bytes.toBytes(Long.toString(slowLogPayload.getBlockBytesScanned())))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("server_class"),
           Bytes.toBytes(slowLogPayload.getServerClass()))
         .addColumn(HConstants.SLOWLOG_INFO_FAMILY, Bytes.toBytes("start_time"),
@@ -102,24 +100,10 @@ public class SlowLogTableAccessor {
       puts.add(put);
     }
     try {
-      if (connection == null) {
-        createConnection(configuration);
-      }
       doPut(connection, puts);
     } catch (Exception e) {
       LOG.warn("Failed to add slow/large log records to hbase:slowlog table.", e);
     }
-  }
-
-  private static synchronized void createConnection(Configuration configuration)
-    throws IOException {
-    Configuration conf = new Configuration(configuration);
-    // rpc timeout: 20s
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 20000);
-    // retry count: 5
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
-    conf.setInt(HConstants.HBASE_CLIENT_SERVERSIDE_RETRIES_MULTIPLIER, 1);
-    connection = ConnectionFactory.createConnection(conf);
   }
 
   /**
@@ -140,5 +124,4 @@ public class SlowLogTableAccessor {
     final long rowKeyLong = Long.parseLong(timeAndHashcode);
     return Bytes.toBytes(rowKeyLong);
   }
-
 }

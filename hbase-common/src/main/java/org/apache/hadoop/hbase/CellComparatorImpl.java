@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Comparator;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -662,9 +661,8 @@ public class CellComparatorImpl implements CellComparator {
   /**
    * Compares the row part of the cell with a simple plain byte[] like the stopRow in Scan. This
    * should be used with context where for hbase:meta cells the
-   * {{@link MetaCellComparator#META_COMPARATOR} should be used n * the cell to be compared n * the
-   * kv serialized byte[] to be compared with n * the offset in the byte[] n * the length in the
-   * byte[]
+   * {{@link MetaCellComparator#META_COMPARATOR} should be used the cell to be compared the kv
+   * serialized byte[] to be compared with the offset in the byte[] the length in the byte[]
    * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger than byte[], -1
    *         otherwise
    */
@@ -691,11 +689,11 @@ public class CellComparatorImpl implements CellComparator {
     int rFamLength = right.getFamilyLength();
     int lQualLength = left.getQualifierLength();
     int rQualLength = right.getQualifierLength();
-    if (lFamLength + lQualLength == 0 && left.getTypeByte() == Type.Minimum.getCode()) {
+    if (lFamLength + lQualLength == 0 && left.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    if (rFamLength + rQualLength == 0 && right.getTypeByte() == Type.Minimum.getCode()) {
+    if (rFamLength + rQualLength == 0 && right.getTypeByte() == KeyValue.Type.Minimum.getCode()) {
       return -1;
     }
     if (lFamLength != rFamLength) {

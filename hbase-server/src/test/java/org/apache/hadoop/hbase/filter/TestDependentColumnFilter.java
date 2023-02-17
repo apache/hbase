@@ -138,7 +138,7 @@ public class TestDependentColumnFilter {
 
   /**
    * This shouldn't be confused with TestFilter#verifyScan as expectedKeys is not the per row total,
-   * but the scan total nnnn
+   * but the scan total
    */
   private void verifyScan(Scan s, long expectedRows, long expectedCells) throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
@@ -213,7 +213,7 @@ public class TestDependentColumnFilter {
   }
 
   /**
-   * Test that the filter correctly drops rows without a corresponding timestamp n
+   * Test that the filter correctly drops rows without a corresponding timestamp
    */
   @Test
   public void testFilterDropping() throws Exception {

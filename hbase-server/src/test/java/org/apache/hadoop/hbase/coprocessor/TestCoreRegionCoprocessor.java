@@ -101,7 +101,7 @@ public class TestCoreRegionCoprocessor {
 
   /**
    * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to access
-   * a RegionServerServices instance. Assert the opposite too. Do it to RegionCoprocessors. n
+   * a RegionServerServices instance. Assert the opposite too. Do it to RegionCoprocessors.
    */
   @Test
   public void testCoreRegionCoprocessor() throws IOException {

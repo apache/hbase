@@ -423,7 +423,7 @@ public class TestLogRolling extends AbstractTestLogRolling {
   }
 
   /**
-   * Test that WAL is rolled when all data nodes in the pipeline have been restarted. n
+   * Test that WAL is rolled when all data nodes in the pipeline have been restarted.
    */
   @Test
   public void testLogRollOnPipelineRestart() throws Exception {

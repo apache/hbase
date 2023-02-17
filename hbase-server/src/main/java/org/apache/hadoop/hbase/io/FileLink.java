@@ -117,12 +117,10 @@ public class FileLink {
         res = in.read();
       } catch (FileNotFoundException e) {
         res = tryOpen().read();
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        res = tryOpen().read();
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        res = tryOpen().read();
       }
-      if (res > 0) pos += 1;
+      if (res > 0) {
+        pos += 1;
+      }
       return res;
     }
 
@@ -138,12 +136,10 @@ public class FileLink {
         n = in.read(b, off, len);
       } catch (FileNotFoundException e) {
         n = tryOpen().read(b, off, len);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        n = tryOpen().read(b, off, len);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        n = tryOpen().read(b, off, len);
       }
-      if (n > 0) pos += n;
+      if (n > 0) {
+        pos += n;
+      }
       assert (in.getPos() == pos);
       return n;
     }
@@ -154,10 +150,6 @@ public class FileLink {
       try {
         n = in.read(position, buffer, offset, length);
       } catch (FileNotFoundException e) {
-        n = tryOpen().read(position, buffer, offset, length);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        n = tryOpen().read(position, buffer, offset, length);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
         n = tryOpen().read(position, buffer, offset, length);
       }
       return n;
@@ -174,10 +166,6 @@ public class FileLink {
         in.readFully(position, buffer, offset, length);
       } catch (FileNotFoundException e) {
         tryOpen().readFully(position, buffer, offset, length);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        tryOpen().readFully(position, buffer, offset, length);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        tryOpen().readFully(position, buffer, offset, length);
       }
     }
 
@@ -189,13 +177,11 @@ public class FileLink {
         skipped = in.skip(n);
       } catch (FileNotFoundException e) {
         skipped = tryOpen().skip(n);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        skipped = tryOpen().skip(n);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        skipped = tryOpen().skip(n);
       }
 
-      if (skipped > 0) pos += skipped;
+      if (skipped > 0) {
+        pos += skipped;
+      }
       return skipped;
     }
 
@@ -205,10 +191,6 @@ public class FileLink {
         return in.available();
       } catch (FileNotFoundException e) {
         return tryOpen().available();
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        return tryOpen().available();
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
-        return tryOpen().available();
       }
     }
 
@@ -217,10 +199,6 @@ public class FileLink {
       try {
         in.seek(pos);
       } catch (FileNotFoundException e) {
-        tryOpen().seek(pos);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        tryOpen().seek(pos);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
         tryOpen().seek(pos);
       }
       this.pos = pos;
@@ -237,10 +215,6 @@ public class FileLink {
       try {
         res = in.seekToNewSource(targetPos);
       } catch (FileNotFoundException e) {
-        res = tryOpen().seekToNewSource(targetPos);
-      } catch (NullPointerException e) { // HDFS 1.x - DFSInputStream.getBlockAt()
-        res = tryOpen().seekToNewSource(targetPos);
-      } catch (AssertionError e) { // assert in HDFS 1.x - DFSInputStream.getBlockAt()
         res = tryOpen().seekToNewSource(targetPos);
       }
       if (res) pos = targetPos;

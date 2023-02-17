@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -210,7 +212,7 @@ public class HStoreFile implements StoreFile {
    *                       actually present in the HFile, because column family configuration might
    *                       change. If this is {@link BloomType#NONE}, the existing Bloom filter is
    *                       ignored.
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false. n
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica) throws IOException {
@@ -341,12 +343,12 @@ public class HStoreFile implements StoreFile {
   }
 
   public int getRefCount() {
-    return fileInfo.refCount.get();
+    return fileInfo.getRefCount();
   }
 
   /** Returns true if the file is still used in reads */
   public boolean isReferencedInReads() {
-    int rc = fileInfo.refCount.get();
+    int rc = fileInfo.getRefCount();
     assert rc >= 0; // we should not go negative.
     return rc > 0;
   }
@@ -567,7 +569,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * @param evictOnClose whether to evict blocks belonging to this file n
+   * @param evictOnClose whether to evict blocks belonging to this file
    */
   public synchronized void closeStoreFile(boolean evictOnClose) throws IOException {
     if (this.initialReader != null) {
@@ -577,7 +579,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Delete this file n
+   * Delete this file
    */
   public void deleteStoreFile() throws IOException {
     boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
@@ -642,5 +644,27 @@ public class HStoreFile implements StoreFile {
 
   Set<String> getCompactedStoreFiles() {
     return Collections.unmodifiableSet(this.compactedStoreFiles);
+  }
+
+  long increaseRefCount() {
+    return this.fileInfo.increaseRefCount();
+  }
+
+  long decreaseRefCount() {
+    return this.fileInfo.decreaseRefCount();
+  }
+
+  static void increaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::increaseRefCount);
+  }
+
+  static void decreaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::decreaseRefCount);
   }
 }

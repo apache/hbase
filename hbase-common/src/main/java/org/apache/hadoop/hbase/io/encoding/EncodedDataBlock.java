@@ -143,8 +143,9 @@ public class EncodedDataBlock {
             ByteBufferUtils.skip(decompressedData, tagsLen);
           }
         }
-        KeyValue kv = new KeyValue(decompressedData.array(), offset,
-          (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
+        KeyValue kv =
+          new KeyValue(decompressedData.array(), decompressedData.arrayOffset() + offset,
+            (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
         if (meta.isIncludesMvcc()) {
           long mvccVersion = ByteBufferUtils.readVLong(decompressedData);
           kv.setSequenceId(mvccVersion);
@@ -180,7 +181,7 @@ public class EncodedDataBlock {
    * @param inputBuffer Array to be compressed.
    * @param offset      Offset to beginning of the data.
    * @param length      Length to be compressed.
-   * @return Size of compressed data in bytes. n
+   * @return Size of compressed data in bytes.
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification = "No sure what findbugs wants but looks to me like no NPE")
@@ -271,7 +272,7 @@ public class EncodedDataBlock {
         if (this.meta.isIncludesMvcc()) {
           memstoreTS = ByteBufferUtils.readVLong(in);
         }
-        kv = new KeyValue(in.array(), kvOffset,
+        kv = new KeyValue(in.array(), in.arrayOffset() + kvOffset,
           (int) KeyValue.getKeyValueDataStructureSize(klength, vlength, tagsLength));
         kv.setSequenceId(memstoreTS);
         this.dataBlockEncoder.encode(kv, encodingCtx, out);

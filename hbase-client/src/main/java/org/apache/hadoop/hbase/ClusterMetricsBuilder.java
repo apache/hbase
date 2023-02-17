@@ -47,6 +47,8 @@ public final class ClusterMetricsBuilder {
           .collect(Collectors.toList()))
         .addAllDeadServers(metrics.getDeadServerNames().stream().map(ProtobufUtil::toServerName)
           .collect(Collectors.toList()))
+        .addAllUnknownServers(metrics.getUnknownServerNames().stream()
+          .map(ProtobufUtil::toServerName).collect(Collectors.toList()))
         .addAllLiveServers(metrics.getLiveServerMetrics().entrySet().stream()
           .map(s -> ClusterStatusProtos.LiveServerInfo.newBuilder()
             .setServer(ProtobufUtil.toServerName(s.getKey()))
@@ -89,6 +91,7 @@ public final class ClusterMetricsBuilder {
       builder.setHbaseVersion(
         FSProtos.HBaseVersionFileContent.newBuilder().setVersion(metrics.getHBaseVersion()));
     }
+
     return builder.build();
   }
 
@@ -99,6 +102,8 @@ public final class ClusterMetricsBuilder {
         .collect(Collectors.toMap(e -> ProtobufUtil.toServerName(e.getServer()),
           ServerMetricsBuilder::toServerMetrics)))
       .setDeadServerNames(proto.getDeadServersList().stream().map(ProtobufUtil::toServerName)
+        .collect(Collectors.toList()))
+      .setUnknownServerNames(proto.getUnknownServersList().stream().map(ProtobufUtil::toServerName)
         .collect(Collectors.toList()))
       .setBackerMasterNames(proto.getBackupMastersList().stream().map(ProtobufUtil::toServerName)
         .collect(Collectors.toList()))
@@ -151,6 +156,8 @@ public final class ClusterMetricsBuilder {
         return ClusterMetrics.Option.LIVE_SERVERS;
       case DEAD_SERVERS:
         return ClusterMetrics.Option.DEAD_SERVERS;
+      case UNKNOWN_SERVERS:
+        return ClusterMetrics.Option.UNKNOWN_SERVERS;
       case REGIONS_IN_TRANSITION:
         return ClusterMetrics.Option.REGIONS_IN_TRANSITION;
       case CLUSTER_ID:
@@ -192,6 +199,8 @@ public final class ClusterMetricsBuilder {
         return ClusterStatusProtos.Option.LIVE_SERVERS;
       case DEAD_SERVERS:
         return ClusterStatusProtos.Option.DEAD_SERVERS;
+      case UNKNOWN_SERVERS:
+        return ClusterStatusProtos.Option.UNKNOWN_SERVERS;
       case REGIONS_IN_TRANSITION:
         return ClusterStatusProtos.Option.REGIONS_IN_TRANSITION;
       case CLUSTER_ID:
@@ -246,6 +255,7 @@ public final class ClusterMetricsBuilder {
   @Nullable
   private String hbaseVersion;
   private List<ServerName> deadServerNames = Collections.emptyList();
+  private List<ServerName> unknownServerNames = Collections.emptyList();
   private Map<ServerName, ServerMetrics> liveServerMetrics = new TreeMap<>();
   @Nullable
   private ServerName masterName;
@@ -273,6 +283,11 @@ public final class ClusterMetricsBuilder {
 
   public ClusterMetricsBuilder setDeadServerNames(List<ServerName> value) {
     this.deadServerNames = value;
+    return this;
+  }
+
+  public ClusterMetricsBuilder setUnknownServerNames(List<ServerName> value) {
+    this.unknownServerNames = value;
     return this;
   }
 
@@ -338,15 +353,17 @@ public final class ClusterMetricsBuilder {
   }
 
   public ClusterMetrics build() {
-    return new ClusterMetricsImpl(hbaseVersion, deadServerNames, liveServerMetrics, masterName,
-      backupMasterNames, regionsInTransition, clusterId, masterCoprocessorNames, balancerOn,
-      masterInfoPort, serversName, tableRegionStatesCount, masterTasks, decommissionedServerNames);
+    return new ClusterMetricsImpl(hbaseVersion, deadServerNames, unknownServerNames,
+      liveServerMetrics, masterName, backupMasterNames, regionsInTransition, clusterId,
+      masterCoprocessorNames, balancerOn, masterInfoPort, serversName, tableRegionStatesCount,
+      masterTasks, decommissionedServerNames);
   }
 
   private static class ClusterMetricsImpl implements ClusterMetrics {
     @Nullable
     private final String hbaseVersion;
     private final List<ServerName> deadServerNames;
+    private final List<ServerName> unknownServerNames;
     private final List<ServerName> decommissionedServerNames;
     private final Map<ServerName, ServerMetrics> liveServerMetrics;
     @Nullable
@@ -364,13 +381,15 @@ public final class ClusterMetricsBuilder {
     private final List<ServerTask> masterTasks;
 
     ClusterMetricsImpl(String hbaseVersion, List<ServerName> deadServerNames,
-      Map<ServerName, ServerMetrics> liveServerMetrics, ServerName masterName,
-      List<ServerName> backupMasterNames, List<RegionState> regionsInTransition, String clusterId,
-      List<String> masterCoprocessorNames, Boolean balancerOn, int masterInfoPort,
-      List<ServerName> serversName, Map<TableName, RegionStatesCount> tableRegionStatesCount,
-      List<ServerTask> masterTasks, List<ServerName> decommissionedServerNames) {
+      List<ServerName> unknownServerNames, Map<ServerName, ServerMetrics> liveServerMetrics,
+      ServerName masterName, List<ServerName> backupMasterNames,
+      List<RegionState> regionsInTransition, String clusterId, List<String> masterCoprocessorNames,
+      Boolean balancerOn, int masterInfoPort, List<ServerName> serversName,
+      Map<TableName, RegionStatesCount> tableRegionStatesCount, List<ServerTask> masterTasks,
+      List<ServerName> decommissionedServerNames) {
       this.hbaseVersion = hbaseVersion;
       this.deadServerNames = Preconditions.checkNotNull(deadServerNames);
+      this.unknownServerNames = Preconditions.checkNotNull(unknownServerNames);
       this.decommissionedServerNames = Preconditions.checkNotNull(decommissionedServerNames);
       this.liveServerMetrics = Preconditions.checkNotNull(liveServerMetrics);
       this.masterName = masterName;
@@ -393,6 +412,11 @@ public final class ClusterMetricsBuilder {
     @Override
     public List<ServerName> getDeadServerNames() {
       return Collections.unmodifiableList(deadServerNames);
+    }
+
+    @Override
+    public List<ServerName> getUnknownServerNames() {
+      return Collections.unmodifiableList(unknownServerNames);
     }
 
     @Override
@@ -486,6 +510,14 @@ public final class ClusterMetricsBuilder {
       sb.append("\nNumber of dead region servers: " + deadServerSize);
       if (deadServerSize > 0) {
         for (ServerName serverName : getDeadServerNames()) {
+          sb.append("\n  " + serverName);
+        }
+      }
+
+      int unknownServerSize = getUnknownServerNames().size();
+      sb.append("\nNumber of unknown region servers: " + unknownServerSize);
+      if (unknownServerSize > 0) {
+        for (ServerName serverName : getUnknownServerNames()) {
           sb.append("\n  " + serverName);
         }
       }

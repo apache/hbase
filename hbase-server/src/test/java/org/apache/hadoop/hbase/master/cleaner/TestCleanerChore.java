@@ -17,19 +17,28 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
@@ -38,6 +47,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -49,6 +59,8 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+
 @Category({ MasterTests.class, SmallTests.class })
 public class TestCleanerChore {
 
@@ -59,15 +71,17 @@ public class TestCleanerChore {
   private static final Logger LOG = LoggerFactory.getLogger(TestCleanerChore.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static DirScanPool POOL;
+  private static ChoreService SERVICE;
 
   @BeforeClass
   public static void setup() {
     POOL = DirScanPool.getHFileCleanerScanPool(UTIL.getConfiguration());
+    SERVICE = new ChoreService("cleaner", 2, true);
   }
 
   @AfterClass
   public static void cleanup() throws Exception {
-    // delete and recreate the test directory, ensuring a clean test dir between tests
+    SERVICE.shutdown();
     UTIL.cleanupTestDir();
     POOL.shutdownNow();
   }
@@ -114,7 +128,6 @@ public class TestCleanerChore {
     fs.create(file).close();
     assertTrue("test file didn't get created.", fs.exists(file));
     final AtomicBoolean fails = new AtomicBoolean(true);
-
     FilterFileSystem filtered = new FilterFileSystem(fs) {
       public FileStatus[] listStatus(Path f) throws IOException {
         if (fails.get()) {
@@ -126,25 +139,38 @@ public class TestCleanerChore {
 
     AllValidPaths chore =
       new AllValidPaths("test-retry-ioe", stop, conf, filtered, testDir, confKey, POOL);
+    SERVICE.scheduleChore(chore);
+    try {
+      // trouble talking to the filesystem
+      // and verify that it accurately reported the failure.
+      CompletableFuture<Boolean> errorFuture = chore.triggerCleanerNow();
+      ExecutionException e = assertThrows(ExecutionException.class, () -> errorFuture.get());
+      assertThat(e.getCause(), instanceOf(IOException.class));
+      assertThat(e.getCause().getMessage(), containsString("whomp"));
 
-    // trouble talking to the filesystem
-    Boolean result = chore.runCleaner();
+      // verify that it couldn't clean the files.
+      assertTrue("test rig failed to inject failure.", fs.exists(file));
+      assertTrue("test rig failed to inject failure.", fs.exists(child));
 
-    // verify that it couldn't clean the files.
-    assertTrue("test rig failed to inject failure.", fs.exists(file));
-    assertTrue("test rig failed to inject failure.", fs.exists(child));
-    // and verify that it accurately reported the failure.
-    assertFalse("chore should report that it failed.", result);
+      // filesystem is back
+      fails.set(false);
+      for (;;) {
+        CompletableFuture<Boolean> succFuture = chore.triggerCleanerNow();
+        // the reset of the future is async, so it is possible that we get the previous future
+        // again.
+        if (succFuture != errorFuture) {
+          // verify that it accurately reported success.
+          assertTrue("chore should claim it succeeded.", succFuture.get());
+          break;
+        }
+      }
+      // verify everything is gone.
+      assertFalse("file should have been destroyed.", fs.exists(file));
+      assertFalse("directory should have been destroyed.", fs.exists(child));
 
-    // filesystem is back
-    fails.set(false);
-    result = chore.runCleaner();
-
-    // verify everything is gone.
-    assertFalse("file should have been destroyed.", fs.exists(file));
-    assertFalse("directory should have been destroyed.", fs.exists(child));
-    // and verify that it accurately reported success.
-    assertTrue("chore should claim it succeeded.", result);
+    } finally {
+      chore.cancel();
+    }
   }
 
   @Test
@@ -536,6 +562,57 @@ public class TestCleanerChore {
     assertEquals(1, CleanerChore.calculatePoolSize("0.0"));
   }
 
+  @Test
+  public void testTriggerCleaner() throws Exception {
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    fs.mkdirs(testDir);
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, AlwaysDelete.class.getName());
+    final AllValidPaths chore =
+      new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir, confKey, POOL);
+    try {
+      SERVICE.scheduleChore(chore);
+      assertTrue(chore.triggerCleanerNow().get());
+      chore.setEnabled(false);
+      // should still runnable
+      assertTrue(chore.triggerCleanerNow().get());
+    } finally {
+      chore.cancel();
+    }
+  }
+
+  @Test
+  public void testRescheduleNoConcurrencyRun() throws Exception {
+    Stoppable stop = new StoppableImplementation();
+    Configuration conf = UTIL.getConfiguration();
+    Path testDir = UTIL.getDataTestDir();
+    FileSystem fs = UTIL.getTestFileSystem();
+    fs.mkdirs(testDir);
+    fs.createNewFile(new Path(testDir, "test"));
+    String confKey = "hbase.test.cleaner.delegates";
+    conf.set(confKey, GetConcurrency.class.getName());
+    AtomicInteger maxConcurrency = new AtomicInteger();
+    final AllValidPaths chore = new AllValidPaths("test-file-cleaner", stop, conf, fs, testDir,
+      confKey, POOL, ImmutableMap.of("maxConcurrency", maxConcurrency));
+    try {
+      SERVICE.scheduleChore(chore);
+      for (int i = 0; i < 100; i++) {
+        chore.triggerNow();
+        Thread.sleep(5 + ThreadLocalRandom.current().nextInt(5));
+      }
+      Thread.sleep(1000);
+      // set a barrier here to make sure that the previous runs are also finished
+      assertFalse(chore.triggerCleanerNow().get());
+      // make sure we do not have multiple cleaner runs at the same time
+      assertEquals(1, maxConcurrency.get());
+    } finally {
+      chore.cancel();
+    }
+  }
+
   private void createFiles(FileSystem fs, Path parentDir, int numOfFiles) throws IOException {
     for (int i = 0; i < numOfFiles; i++) {
       int xMega = 1 + ThreadLocalRandom.current().nextInt(3); // size of each file is between 1~3M
@@ -556,6 +633,11 @@ public class TestCleanerChore {
       super(name, Integer.MAX_VALUE, s, conf, fs, oldFileDir, confkey, pool);
     }
 
+    public AllValidPaths(String name, Stoppable s, Configuration conf, FileSystem fs,
+      Path oldFileDir, String confkey, DirScanPool pool, Map<String, Object> params) {
+      super(name, Integer.MAX_VALUE, s, conf, fs, oldFileDir, confkey, pool, params, null);
+    }
+
     // all paths are valid
     @Override
     protected boolean validate(Path file) {
@@ -573,6 +655,45 @@ public class TestCleanerChore {
   public static class NeverDelete extends BaseHFileCleanerDelegate {
     @Override
     public boolean isFileDeletable(FileStatus fStat) {
+      return false;
+    }
+  }
+
+  public static class GetConcurrency extends BaseHFileCleanerDelegate {
+
+    private final AtomicInteger concurrency = new AtomicInteger();
+
+    private AtomicInteger maxConcurrency;
+
+    @Override
+    public void init(Map<String, Object> params) {
+      maxConcurrency = (AtomicInteger) params.get("maxConcurrency");
+    }
+
+    @Override
+    public void preClean() {
+      int c = concurrency.incrementAndGet();
+      while (true) {
+        int cur = maxConcurrency.get();
+        if (c <= cur) {
+          break;
+        }
+
+        if (maxConcurrency.compareAndSet(cur, c)) {
+          break;
+        }
+      }
+    }
+
+    @Override
+    public void postClean() {
+      concurrency.decrementAndGet();
+    }
+
+    @Override
+    protected boolean isFileDeletable(FileStatus fStat) {
+      // sleep a while to slow down the process
+      Threads.sleepWithoutInterrupt(10 + ThreadLocalRandom.current().nextInt(10));
       return false;
     }
   }

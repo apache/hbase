@@ -144,12 +144,22 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.listTableDescriptors(pattern, includeSysTables);
   }
 
+  @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    return admin.listTableDescriptorsByState(isEnabled);
+  }
+
   public TableName[] listTableNames() throws IOException {
     return admin.listTableNames();
   }
 
   public TableName[] listTableNames(Pattern pattern, boolean includeSysTables) throws IOException {
     return admin.listTableNames(pattern, includeSysTables);
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    return admin.listTableNamesByState(isEnabled);
   }
 
   public TableDescriptor getDescriptor(TableName tableName)
@@ -674,6 +684,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public Future<Void> transitReplicationPeerSyncReplicationStateAsync(String peerId,
     SyncReplicationState state) throws IOException {
     return admin.transitReplicationPeerSyncReplicationStateAsync(peerId, state);
+  }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return admin.isReplicationPeerEnabled(peerId);
   }
 
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)

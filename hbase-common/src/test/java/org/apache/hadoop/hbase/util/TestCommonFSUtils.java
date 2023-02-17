@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -78,13 +77,6 @@ public class TestCommonFSUtils {
     assertTrue(CommonFSUtils.isStartingWithPath(rootdir, fullyQualifiedPath.toString()));
     assertFalse(CommonFSUtils.isMatchingTail(fullPath, new Path("x")));
     assertFalse(CommonFSUtils.isMatchingTail(new Path("x"), fullPath));
-  }
-
-  private void WriteDataToHDFS(FileSystem fs, Path file, int dataSize) throws Exception {
-    FSDataOutputStream out = fs.create(file);
-    byte[] data = new byte[dataSize];
-    out.write(data, 0, dataSize);
-    out.close();
   }
 
   @Test

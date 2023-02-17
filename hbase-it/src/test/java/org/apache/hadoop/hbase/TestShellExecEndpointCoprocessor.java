@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -106,7 +107,8 @@ public class TestShellExecEndpointCoprocessor {
     assertFalse("the response from a background task should have no stderr", resp.hasStderr());
 
     Waiter.waitFor(conn.getConfiguration(), 5_000, () -> testFile.length() > 0);
-    final String content = new String(Files.readAllBytes(testFile.toPath())).trim();
+    final String content =
+      new String(Files.readAllBytes(testFile.toPath()), StandardCharsets.UTF_8).trim();
     assertEquals("hello world", content);
   }
 

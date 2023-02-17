@@ -213,7 +213,7 @@ public class BaseTestHBaseFsck {
 
   /**
    * Setup a clean table before we start mucking with it. It will set tbl which needs to be closed
-   * after test nnn
+   * after test
    */
   void setupTable(TableName tablename) throws Exception {
     setupTableWithRegionReplica(tablename, 1);
@@ -221,7 +221,7 @@ public class BaseTestHBaseFsck {
 
   /**
    * Setup a clean table with a certain region_replica count It will set tbl which needs to be
-   * closed after test n
+   * closed after test
    */
   void setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tablename);
@@ -244,7 +244,7 @@ public class BaseTestHBaseFsck {
 
   /**
    * Setup a clean table with a mob-enabled column.
-   * @param tablename The name of a table to be created. n
+   * @param tablename The name of a table to be created.
    */
   void setupMobTable(TableName tablename) throws Exception {
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tablename);
@@ -332,7 +332,8 @@ public class BaseTestHBaseFsck {
 
   /**
    * We don't have an easy way to verify that a flush completed, so we loop until we find a
-   * legitimate hfile and return it. nn * @return Path of a flushed hfile. n
+   * legitimate hfile and return it.
+   * @return Path of a flushed hfile.
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
     Path tableDir = CommonFSUtils.getTableDir(CommonFSUtils.getRootDir(conf), table);
@@ -357,7 +358,7 @@ public class BaseTestHBaseFsck {
    * Gets flushed mob files.
    * @param fs    The current file system.
    * @param table The current table name.
-   * @return Path of a flushed hfile. n
+   * @return Path of a flushed hfile.
    */
   Path getFlushedMobFile(FileSystem fs, TableName table) throws IOException {
     Path famDir = MobUtils.getMobFamilyPath(conf, table, FAM_STR);

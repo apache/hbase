@@ -18,7 +18,10 @@
 package org.apache.hadoop.hbase.http.lib;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -36,7 +39,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestStaticUserWebFilter {
@@ -46,9 +48,8 @@ public class TestStaticUserWebFilter {
     HBaseClassTestRule.forClass(TestStaticUserWebFilter.class);
 
   private FilterConfig mockConfig(String username) {
-    FilterConfig mock = Mockito.mock(FilterConfig.class);
-    Mockito.doReturn(username).when(mock)
-      .getInitParameter(ServerConfigurationKeys.HBASE_HTTP_STATIC_USER);
+    FilterConfig mock = mock(FilterConfig.class);
+    doReturn(username).when(mock).getInitParameter(ServerConfigurationKeys.HBASE_HTTP_STATIC_USER);
     return mock;
   }
 
@@ -65,7 +66,7 @@ public class TestStaticUserWebFilter {
 
     suf.doFilter(mock(HttpServletRequest.class), mock(ServletResponse.class), chain);
 
-    Mockito.verify(chain).doFilter(wrapperArg.capture(), Mockito.<ServletResponse> anyObject());
+    verify(chain).doFilter(wrapperArg.capture(), any());
 
     HttpServletRequestWrapper wrapper = wrapperArg.getValue();
     assertEquals("myuser", wrapper.getUserPrincipal().getName());

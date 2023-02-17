@@ -83,7 +83,7 @@ if [[ -n "${HADOOP_PROFILE}" ]]; then
   fi
 fi
 
-if [[ -n "${SKIP_ERROR_PRONE}" ]]; then
+if [[ "${SKIP_ERRORPRONE}" = "true" ]]; then
   YETUS_ARGS=("--skip-errorprone" "${YETUS_ARGS[@]}")
 fi
 
@@ -99,6 +99,10 @@ fi
 # pass asf nightlies url in
 if [[ -n "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" ]]; then
   YETUS_ARGS=("--asf-nightlies-general-check-base=${ASF_NIGHTLIES_GENERAL_CHECK_BASE}" "${YETUS_ARGS[@]}")
+fi
+
+if [[ -n "${JAVA8_HOME}" ]]; then
+  YETUS_ARGS=("--java8-home=${JAVA8_HOME}" "${YETUS_ARGS[@]}")
 fi
 
 if [[ true !=  "${USE_YETUS_PRERELEASE}" ]]; then

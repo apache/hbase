@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -42,6 +44,9 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescriptor;
 
@@ -178,6 +183,7 @@ class ReplicationSourceWALReader extends Thread {
     }
     LOG.trace("updating TimeStampOfLastAttempted to {}, from entry {}, for source queue: {}",
       entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
+    updateReplicationMarkerEdit(entry, batch.getLastWalPosition());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
@@ -341,6 +347,10 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   protected final Entry filterEntry(Entry entry) {
+    // Always replicate if this edit is Replication Marker edit.
+    if (entry != null && WALEdit.isReplicationMarkerEdit(entry.getEdit())) {
+      return entry;
+    }
     Entry filtered = filter.filter(entry);
     if (entry != null && (filtered == null || filtered.getEdit().size() == 0)) {
       LOG.trace("Filtered entry for replication: {}", entry);
@@ -449,6 +459,36 @@ class ReplicationSourceWALReader extends Thread {
       }
     }
     return totalStoreFilesSize;
+  }
+
+  /*
+   * Create @ReplicationMarkerDescriptor with region_server_name, wal_name and offset and set to
+   * cell's value.
+   */
+  private void updateReplicationMarkerEdit(Entry entry, long offset) {
+    WALEdit edit = entry.getEdit();
+    // Return early if it is not ReplicationMarker edit.
+    if (!WALEdit.isReplicationMarkerEdit(edit)) {
+      return;
+    }
+    List<Cell> cells = edit.getCells();
+    Preconditions.checkArgument(cells.size() == 1, "ReplicationMarker should have only 1 cell");
+    Cell cell = cells.get(0);
+    // Create a descriptor with region_server_name, wal_name and offset
+    WALProtos.ReplicationMarkerDescriptor.Builder builder =
+      WALProtos.ReplicationMarkerDescriptor.newBuilder();
+    builder.setRegionServerName(this.source.getServer().getServerName().getHostname());
+    builder.setWalName(getCurrentPath().getName());
+    builder.setOffset(offset);
+    WALProtos.ReplicationMarkerDescriptor descriptor = builder.build();
+
+    // Create a new KeyValue
+    KeyValue kv = new KeyValue(CellUtil.cloneRow(cell), CellUtil.cloneFamily(cell),
+      CellUtil.cloneQualifier(cell), cell.getTimestamp(), descriptor.toByteArray());
+    ArrayList<Cell> newCells = new ArrayList<>();
+    newCells.add(kv);
+    // Update edit with new cell.
+    edit.setCells(newCells);
   }
 
   /**

@@ -53,7 +53,7 @@ public class ScanInfo {
       + (4 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_BOOLEAN));
 
   /**
-   * n * @param family {@link ColumnFamilyDescriptor} describing the column family
+   * @param family             {@link ColumnFamilyDescriptor} describing the column family
    * @param ttl                Store's TTL (in ms)
    * @param timeToPurgeDeletes duration in ms after which a delete marker can be purged during a
    *                           major compaction.
@@ -75,7 +75,7 @@ public class ScanInfo {
   }
 
   /**
-   * n * @param family Name of this store's column family
+   * @param family             Name of this store's column family
    * @param minVersions        Store's MIN_VERSIONS setting
    * @param maxVersions        Store's VERSIONS setting
    * @param ttl                Store's TTL (in ms)

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.BLOCK_CACHE_KEY_KEY;
 
 import io.opentelemetry.api.common.Attributes;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -40,12 +42,14 @@ import org.apache.hadoop.hbase.SizeCachedByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -333,6 +337,9 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // RegionScannerImpl#handleException). Call the releaseIfNotCurBlock() to release the
     // unreferenced block please.
     protected HFileBlock curBlock;
+    // Whether we returned a result for curBlock's size in recordBlockSize().
+    // gets reset whenever curBlock is changed.
+    private boolean providedCurrentBlockSize = false;
     // Previous blocks that were used in the course of the read
     protected final ArrayList<HFileBlock> prevBlocks = new ArrayList<>();
 
@@ -352,6 +359,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         prevBlocks.add(this.curBlock);
       }
       this.curBlock = block;
+      this.providedCurrentBlockSize = false;
     }
 
     void reset() {
@@ -410,6 +418,14 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         reader.unbufferStream();
       }
       this.returnBlocks(true);
+    }
+
+    @Override
+    public void recordBlockSize(IntConsumer blockSizeConsumer) {
+      if (!providedCurrentBlockSize && curBlock != null) {
+        providedCurrentBlockSize = true;
+        blockSizeConsumer.accept(curBlock.getUncompressedSizeWithoutHeader());
+      }
     }
 
     // Returns the #bytes in HFile for the current cell. Used to skip these many bytes in current
@@ -516,8 +532,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
      * Within a loaded block, seek looking for the last key that is smaller than (or equal to?) the
      * key we are interested in. A note on the seekBefore: if you have seekBefore = true, AND the
      * first key in the block = key, then you'll get thrown exceptions. The caller has to check for
-     * that case and load the previous block as appropriate. n * the key to find n * find the key
-     * before the given key in case of exact match.
+     * that case and load the previous block as appropriate. the key to find find the key before the
+     * given key in case of exact match.
      * @return 0 in case of an exact key match, 1 in case of an inexact match, -2 in case of an
      *         inexact match and furthermore, the input key less than the first key of current
      *         block(e.g. using a faked index key)
@@ -1084,7 +1100,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    * and its encoding vs. {@code expectedDataBlockEncoding}. Unpacks the block as necessary.
    */
   private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
-    boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
+    boolean updateCacheMetrics, BlockType expectedBlockType,
     DataBlockEncoding expectedDataBlockEncoding) throws IOException {
     // Check cache for block. If found return.
     BlockCache cache = cacheConf.getBlockCache().orElse(null);
@@ -1189,7 +1205,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
       cacheBlock &= cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory());
       HFileBlock cachedBlock =
-        getCachedBlock(cacheKey, cacheBlock, false, true, true, BlockType.META, null);
+        getCachedBlock(cacheKey, cacheBlock, false, true, BlockType.META, null);
       if (cachedBlock != null) {
         assert cachedBlock.isUnpacked() : "Packed block leak.";
         // Return a distinct 'shallow copy' of the block,
@@ -1215,27 +1231,49 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
-   * If expected block is data block, we'll allocate the ByteBuff of block from
-   * {@link org.apache.hadoop.hbase.io.ByteBuffAllocator} and it's usually an off-heap one,
-   * otherwise it will allocate from heap.
+   * Whether we use heap or not depends on our intent to cache the block. We want to avoid
+   * allocating to off-heap if we intend to cache into the on-heap L1 cache. Otherwise, it's more
+   * efficient to allocate to off-heap since we can control GC ourselves for those. So our decision
+   * here breaks down as follows: <br>
+   * If block cache is disabled, don't use heap. If we're not using the CombinedBlockCache, use heap
+   * unless caching is disabled for the request. Otherwise, only use heap if caching is enabled and
+   * the expected block type is not DATA (which goes to off-heap L2 in combined cache).
    * @see org.apache.hadoop.hbase.io.hfile.HFileBlock.FSReader#readBlockData(long, long, boolean,
    *      boolean, boolean)
    */
-  private boolean shouldUseHeap(BlockType expectedBlockType) {
+  private boolean shouldUseHeap(BlockType expectedBlockType, boolean cacheBlock) {
     if (!cacheConf.getBlockCache().isPresent()) {
       return false;
-    } else if (!cacheConf.isCombinedBlockCache()) {
-      // Block to cache in LruBlockCache must be an heap one. So just allocate block memory from
-      // heap for saving an extra off-heap to heap copying.
-      return true;
     }
-    return expectedBlockType != null && !expectedBlockType.isData();
+
+    // we only cache a block if cacheBlock is true and caching-on-read is enabled in CacheConfig
+    // we can really only check for that if have an expectedBlockType
+    if (expectedBlockType != null) {
+      cacheBlock &= cacheConf.shouldCacheBlockOnRead(expectedBlockType.getCategory());
+    }
+
+    if (!cacheConf.isCombinedBlockCache()) {
+      // Block to cache in LruBlockCache must be an heap one, if caching enabled. So just allocate
+      // block memory from heap for saving an extra off-heap to heap copying in that case.
+      return cacheBlock;
+    }
+
+    return cacheBlock && expectedBlockType != null && !expectedBlockType.isData();
   }
 
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, final boolean cacheBlock,
     boolean pread, final boolean isCompaction, boolean updateCacheMetrics,
     BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+    return readBlock(dataBlockOffset, onDiskBlockSize, cacheBlock, pread, isCompaction,
+      updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding, false);
+  }
+
+  @Override
+  public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize, final boolean cacheBlock,
+    boolean pread, final boolean isCompaction, boolean updateCacheMetrics,
+    BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding, boolean cacheOnly)
+    throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException(path + " block index not loaded");
     }
@@ -1255,23 +1293,26 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
       new BlockCacheKey(name, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
     Attributes attributes = Attributes.of(BLOCK_CACHE_KEY_KEY, cacheKey.toString());
 
+    boolean cacheable = cacheBlock && cacheIfCompactionsOff();
+
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     final Span span = Span.current();
     try {
       while (true) {
         // Check cache for block. If found return.
-        if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
+        if (cacheConf.shouldReadBlockFromCache(expectedBlockType) && !cacheOnly) {
           if (useLock) {
             lockEntry = offsetLock.getLockEntry(dataBlockOffset);
           }
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
-          HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
-            updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
+          HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, updateCacheMetrics,
+            expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("From Cache {}", cachedBlock);
+              LOG.trace("Block for file {} is coming from Cache {}",
+                Bytes.toString(cachedBlock.getHFileContext().getTableName()), cachedBlock);
             }
             span.addEvent("block cache hit", attributes);
             assert cachedBlock.isUnpacked() : "Packed block leak.";
@@ -1295,7 +1336,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
             return cachedBlock;
           }
 
-          if (!useLock && cacheBlock && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
+          if (!useLock && cacheable && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
             // check cache again with lock
             useLock = true;
             continue;
@@ -1306,17 +1347,39 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         span.addEvent("block cache miss", attributes);
         // Load block from filesystem.
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, pread,
-          !isCompaction, shouldUseHeap(expectedBlockType));
-        validateBlockType(hfileBlock, expectedBlockType);
-        HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
+          !isCompaction, shouldUseHeap(expectedBlockType, cacheable));
+        try {
+          validateBlockType(hfileBlock, expectedBlockType);
+        } catch (IOException e) {
+          hfileBlock.release();
+          throw e;
+        }
         BlockType.BlockCategory category = hfileBlock.getBlockType().getCategory();
+        final boolean cacheCompressed = cacheConf.shouldCacheCompressed(category);
+        final boolean cacheOnRead = cacheConf.shouldCacheBlockOnRead(category);
 
+        // Don't need the unpacked block back and we're storing the block in the cache compressed
+        if (cacheOnly && cacheCompressed && cacheOnRead) {
+          LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
+          // Cache the block if necessary
+          cacheConf.getBlockCache().ifPresent(cache -> {
+            if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
+              cache.cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(), cacheOnly);
+            }
+          });
+
+          if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
+            HFile.DATABLOCK_READ_COUNT.increment();
+          }
+          return hfileBlock;
+        }
+        HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         // Cache the block if necessary
         cacheConf.getBlockCache().ifPresent(cache -> {
-          if (cacheBlock && cacheConf.shouldCacheBlockOnRead(category)) {
-            cache.cacheBlock(cacheKey,
-              cacheConf.shouldCacheCompressed(category) ? hfileBlock : unpacked,
-              cacheConf.isInMemory());
+          if (cacheable && cacheConf.shouldCacheBlockOnRead(category)) {
+            // Using the wait on cache during compaction and prefetching.
+            cache.cacheBlock(cacheKey, cacheCompressed ? hfileBlock : unpacked,
+              cacheConf.isInMemory(), cacheOnly);
           }
         });
         if (unpacked != hfileBlock) {
@@ -1615,10 +1678,12 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /**
    * Create a Scanner on this file. No seeks or reads are done on creation. Call
    * {@link HFileScanner#seekTo(Cell)} to position an start the read. There is nothing to clean up
-   * in a Scanner. Letting go of your references to the scanner is sufficient. n * Store
-   * configuration. n * True if we should cache blocks read in by this scanner. n * Use positional
-   * read rather than seek+read if true (pread is better for random reads, seek+read is better
-   * scanning). n * is scanner being used for a compaction?
+   * in a Scanner. Letting go of your references to the scanner is sufficient.
+   * @param conf         Store configuration.
+   * @param cacheBlocks  True if we should cache blocks read in by this scanner.
+   * @param pread        Use positional read rather than seek+read if true (pread is better for
+   *                     random reads, seek+read is better scanning).
+   * @param isCompaction is scanner being used for a compaction?
    * @return Scanner on this file.
    */
   @Override
@@ -1637,5 +1702,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public void unbufferStream() {
     fsBlockReader.unbufferStream();
+  }
+
+  protected boolean cacheIfCompactionsOff() {
+    return (!StoreFileInfo.isReference(name) && !HFileLink.isHFileLink(name))
+      || !conf.getBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, true);
   }
 }

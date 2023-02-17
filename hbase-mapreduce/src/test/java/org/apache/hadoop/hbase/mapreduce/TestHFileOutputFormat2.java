@@ -822,7 +822,7 @@ public class TestHFileOutputFormat2 {
 
   /**
    * Test for {@link HFileOutputFormat2#createFamilyCompressionMap(Configuration)}. Tests that the
-   * family compression map is correctly serialized into and deserialized from configuration n
+   * family compression map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -888,7 +888,7 @@ public class TestHFileOutputFormat2 {
 
   /**
    * Test for {@link HFileOutputFormat2#createFamilyBloomTypeMap(Configuration)}. Tests that the
-   * family bloom type map is correctly serialized into and deserialized from configuration n
+   * family bloom type map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -949,7 +949,7 @@ public class TestHFileOutputFormat2 {
 
   /**
    * Test for {@link HFileOutputFormat2#createFamilyBlockSizeMap(Configuration)}. Tests that the
-   * family block size map is correctly serialized into and deserialized from configuration n
+   * family block size map is correctly serialized into and deserialized from configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test
@@ -1014,7 +1014,7 @@ public class TestHFileOutputFormat2 {
   /**
    * Test for {@link HFileOutputFormat2#createFamilyDataBlockEncodingMap(Configuration)}. Tests that
    * the family data block encoding map is correctly serialized into and deserialized from
-   * configuration n
+   * configuration
    */
   @Ignore("Goes zombie too frequently; needs work. See HBASE-14563")
   @Test

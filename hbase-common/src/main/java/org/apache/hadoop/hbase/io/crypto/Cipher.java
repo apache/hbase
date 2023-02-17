@@ -86,7 +86,7 @@ public abstract class Cipher {
    * @param out     the output stream to wrap
    * @param context the encryption context
    * @param iv      initialization vector
-   * @return the encrypting wrapper n
+   * @return the encrypting wrapper
    */
   public abstract OutputStream createEncryptionStream(OutputStream out, Context context, byte[] iv)
     throws IOException;
@@ -95,7 +95,7 @@ public abstract class Cipher {
    * Create an encrypting output stream given an initialized encryptor
    * @param out       the output stream to wrap
    * @param encryptor the encryptor
-   * @return the encrypting wrapper n
+   * @return the encrypting wrapper
    */
   public abstract OutputStream createEncryptionStream(OutputStream out, Encryptor encryptor)
     throws IOException;
@@ -105,7 +105,7 @@ public abstract class Cipher {
    * @param in      the input stream to wrap
    * @param context the encryption context
    * @param iv      initialization vector
-   * @return the decrypting wrapper n
+   * @return the decrypting wrapper
    */
   public abstract InputStream createDecryptionStream(InputStream in, Context context, byte[] iv)
     throws IOException;
@@ -114,7 +114,7 @@ public abstract class Cipher {
    * Create a decrypting output stream given an initialized decryptor
    * @param in        the input stream to wrap
    * @param decryptor the decryptor
-   * @return the decrypting wrapper n
+   * @return the decrypting wrapper
    */
   public abstract InputStream createDecryptionStream(InputStream in, Decryptor decryptor)
     throws IOException;

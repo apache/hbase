@@ -911,12 +911,11 @@ public final class ZKUtil {
    * <li>runSequentialOnMultiFailure is true
    * </ul>
    * on calling multi, we get a ZooKeeper exception that can be handled by a sequential call(*), we
-   * retry the operations one-by-one (sequentially). n * - zk reference n * - if true when we get a
-   * ZooKeeper exception that could retry the operations one-by-one (sequentially) n * - path of the
+   * retry the operations one-by-one (sequentially). - zk reference - if true when we get a
+   * ZooKeeper exception that could retry the operations one-by-one (sequentially) - path of the
    * parent node(s)
-   * @throws KeeperException.NotEmptyException if node has children while deleting n * if unexpected
-   *                                           ZooKeeper exception n * if an invalid path is
-   *                                           specified
+   * @throws KeeperException.NotEmptyException if node has children while deleting if unexpected
+   *                                           ZooKeeper exception if an invalid path is specified
    */
   public static void deleteChildrenRecursivelyMultiOrSequential(ZKWatcher zkw,
     boolean runSequentialOnMultiFailure, String... pathRoots) throws KeeperException {
@@ -947,12 +946,11 @@ public final class ZKUtil {
    * <li>runSequentialOnMultiFailure is true
    * </ul>
    * on calling multi, we get a ZooKeeper exception that can be handled by a sequential call(*), we
-   * retry the operations one-by-one (sequentially). n * - zk reference n * - if true when we get a
-   * ZooKeeper exception that could retry the operations one-by-one (sequentially) n * - path of the
+   * retry the operations one-by-one (sequentially). - zk reference - if true when we get a
+   * ZooKeeper exception that could retry the operations one-by-one (sequentially) - path of the
    * parent node(s)
-   * @throws KeeperException.NotEmptyException if node has children while deleting n * if unexpected
-   *                                           ZooKeeper exception n * if an invalid path is
-   *                                           specified
+   * @throws KeeperException.NotEmptyException if node has children while deleting if unexpected
+   *                                           ZooKeeper exception if an invalid path is specified
    */
   public static void deleteNodeRecursivelyMultiOrSequential(ZKWatcher zkw,
     boolean runSequentialOnMultiFailure, String... pathRoots) throws KeeperException {
@@ -1043,9 +1041,9 @@ public final class ZKUtil {
 
   /**
    * BFS Traversal of all the children under path, with the entries in the list, in the same order
-   * as that of the traversal. Lists all the children without setting any watches. n * - zk
-   * reference n * - path of node
-   * @return list of children znodes under the path n * if unexpected ZooKeeper exception
+   * as that of the traversal. Lists all the children without setting any watches. - zk reference -
+   * path of node
+   * @return list of children znodes under the path if unexpected ZooKeeper exception
    */
   private static List<String> listChildrenBFSNoWatch(ZKWatcher zkw, final String znode)
     throws KeeperException {
@@ -1072,9 +1070,9 @@ public final class ZKUtil {
 
   /**
    * BFS Traversal of all the children under path, with the entries in the list, in the same order
-   * as that of the traversal. Lists all the children and set watches on to them. n * - zk reference
-   * n * - path of node
-   * @return list of children znodes under the path n * if unexpected ZooKeeper exception
+   * as that of the traversal. Lists all the children and set watches on to them. - zk reference -
+   * path of node
+   * @return list of children znodes under the path if unexpected ZooKeeper exception
    */
   private static List<String> listChildrenBFSAndWatchThem(ZKWatcher zkw, final String znode)
     throws KeeperException {

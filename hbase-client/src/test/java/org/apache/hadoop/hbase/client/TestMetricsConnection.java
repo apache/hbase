@@ -20,9 +20,12 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -61,14 +64,16 @@ public class TestMetricsConnection {
   private static final ThreadPoolExecutor BATCH_POOL =
     (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
 
+  private static final String MOCK_CONN_STR = "mocked-connection";
+
   @BeforeClass
   public static void beforeClass() {
-    METRICS = new MetricsConnection("mocked-connection", () -> BATCH_POOL, () -> null);
+    METRICS = MetricsConnection.getMetricsConnection(MOCK_CONN_STR, () -> BATCH_POOL, () -> null);
   }
 
   @AfterClass
   public static void afterClass() {
-    METRICS.shutdown();
+    MetricsConnection.deleteMetricsConnection(MOCK_CONN_STR);
   }
 
   @Test
@@ -81,13 +86,59 @@ public class TestMetricsConnection {
     AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
-    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.get().scope);
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
+      metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
     impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue("Metrics should be present", metrics.isPresent());
-    assertEquals(scope, metrics.get().scope);
+    assertEquals(scope, metrics.get().getMetricScope());
+  }
+
+  @Test
+  public void testMetricsWithMutiConnections() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+    conf.set(MetricsConnection.METRICS_SCOPE_KEY, "unit-test");
+
+    User user = User.getCurrent();
+
+    /* create multiple connections */
+    final int num = 3;
+    AsyncConnectionImpl impl;
+    List<AsyncConnectionImpl> connList = new ArrayList<AsyncConnectionImpl>();
+    for (int i = 0; i < num; i++) {
+      impl = new AsyncConnectionImpl(conf, null, null, null, user);
+      connList.add(impl);
+    }
+
+    /* verify metrics presence */
+    impl = connList.get(0);
+    Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present", metrics.isPresent());
+
+    /* verify connection count in a shared metrics */
+    long count = metrics.get().getConnectionCount();
+    assertEquals("Failed to verify connection count." + count, count, num);
+
+    /* close some connections */
+    for (int i = 0; i < num - 1; i++) {
+      connList.get(i).close();
+    }
+
+    /* verify metrics presence again */
+    impl = connList.get(num - 1);
+    metrics = impl.getConnectionMetrics();
+    assertTrue("Metrics should be present after some of connections are closed.",
+      metrics.isPresent());
+
+    /* verify count of remaining connections */
+    count = metrics.get().getConnectionCount();
+    assertEquals("Connection count suppose to be 1 but got: " + count, count, 1);
+
+    /* shutdown */
+    impl.close();
   }
 
   @Test
@@ -99,40 +150,55 @@ public class TestMetricsConnection {
 
     for (int i = 0; i < loop; i++) {
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Get"),
-        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Scan"),
-        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Multi"),
-        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats());
+        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats(), true);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.APPEND, new Append(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.DELETE, new Delete(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(foo)))
           .setRegion(region).build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
           .build(),
-        MetricsConnection.newCallStats());
+        MetricsConnection.newCallStats(), false);
     }
+    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcFailureCountPrefix =
+      "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
+    String metricKey;
+    long metricVal;
+    Counter counter;
     for (String method : new String[] { "Get", "Scan", "Mutate" }) {
-      final String metricKey = "rpcCount_" + ClientService.getDescriptor().getName() + "_" + method;
-      final long metricVal = METRICS.rpcCounters.get(metricKey).getCount();
+      metricKey = rpcCountPrefix + method;
+      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+      metricKey = rpcFailureCountPrefix + method;
+      counter = METRICS.getRpcCounters().get(metricKey);
+      metricVal = (counter != null) ? counter.getCount() : 0;
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
     }
-    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] { METRICS.getTracker,
-      METRICS.scanTracker, METRICS.multiTracker, METRICS.appendTracker, METRICS.deleteTracker,
-      METRICS.incrementTracker, METRICS.putTracker }) {
+    metricKey = rpcFailureCountPrefix + "Multi";
+    counter = METRICS.getRpcCounters().get(metricKey);
+    metricVal = (counter != null) ? counter.getCount() : 0;
+    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
+      METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
+      METRICS.getAppendTracker(), METRICS.getDeleteTracker(), METRICS.getIncrementTracker(),
+      METRICS.getPutTracker() }) {
       assertEquals("Failed to invoke callTimer on " + t, loop, t.callTimer.getCount());
       assertEquals("Failed to invoke reqHist on " + t, loop, t.reqHist.getCount());
       assertEquals("Failed to invoke respHist on " + t, loop, t.respHist.getCount());

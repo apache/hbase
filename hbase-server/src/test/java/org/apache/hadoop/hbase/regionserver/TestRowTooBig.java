@@ -105,7 +105,7 @@ public class TestRowTooBig {
 
   /**
    * Usecase: - create a row with 1M cells, 10 bytes in each - flush & run major compaction - try to
-   * Get whole row. OOME happened in StoreScanner.next(..). n
+   * Get whole row. OOME happened in StoreScanner.next(..).
    */
   @Test(expected = RowTooBigException.class)
   public void testScanAcrossManySmallColumns() throws IOException {

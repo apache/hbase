@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.monitoring.TaskGroup;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -53,9 +54,11 @@ public class AlwaysStandByHMaster extends HMaster {
     /**
      * An implementation that never transitions to an active master.
      */
-    boolean blockUntilBecomingActiveMaster(int checkInterval, MonitoredTask startupStatus) {
+    @Override
+    boolean blockUntilBecomingActiveMaster(int checkInterval, TaskGroup startupTaskGroup) {
+      MonitoredTask loopTask = startupTaskGroup.addTask("Stay as a standby master.");
       while (!(master.isAborted() || master.isStopped())) {
-        startupStatus.setStatus("Forever looping to stay as a standby master.");
+        loopTask.setStatus("Forever looping to stay as a standby master.");
         try {
           activeMasterServerName = null;
           try {

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -261,29 +260,43 @@ public abstract class Action {
   }
 
   protected void killNameNode(ServerName server) throws IOException {
-    getLogger().info("Killing namenode :-{}", server.getHostname());
+    getLogger().info("Killing namenode {}", server.getHostname());
     cluster.killNameNode(server);
     cluster.waitForNameNodeToStop(server, killNameNodeTimeout);
-    getLogger().info("Killed namenode:{}. Reported num of rs:{}", server,
+    getLogger().info("Killed namenode {}. Reported num of rs:{}", server,
       cluster.getClusterMetrics().getLiveServerMetrics().size());
   }
 
   protected void startNameNode(ServerName server) throws IOException {
-    getLogger().info("Starting Namenode :-{}", server.getHostname());
+    getLogger().info("Starting namenode {}", server.getHostname());
     cluster.startNameNode(server);
     cluster.waitForNameNodeToStart(server, startNameNodeTimeout);
-    getLogger().info("Started namenode:{}", server);
+    getLogger().info("Started namenode {}", server);
+  }
+
+  protected void killJournalNode(ServerName server) throws IOException {
+    getLogger().info("Killing journalnode {}", server.getHostname());
+    cluster.killJournalNode(server);
+    cluster.waitForJournalNodeToStop(server, killNameNodeTimeout);
+    getLogger().info("Killed journalnode {}", server);
+  }
+
+  protected void startJournalNode(ServerName server) throws IOException {
+    getLogger().info("Starting journalnode {}", server.getHostname());
+    cluster.startJournalNode(server);
+    cluster.waitForJournalNodeToStart(server, startNameNodeTimeout);
+    getLogger().info("Started journalnode {}", server);
   }
 
   protected void unbalanceRegions(ClusterMetrics clusterStatus, List<ServerName> fromServers,
     List<ServerName> toServers, double fractionOfRegions) throws Exception {
-    List<byte[]> victimRegions = new LinkedList<>();
+    List<byte[]> victimRegions = new ArrayList<>();
     for (Map.Entry<ServerName, ServerMetrics> entry : clusterStatus.getLiveServerMetrics()
       .entrySet()) {
       ServerName sn = entry.getKey();
       ServerMetrics serverLoad = entry.getValue();
       // Ugh.
-      List<byte[]> regions = new LinkedList<>(serverLoad.getRegionMetrics().keySet());
+      List<byte[]> regions = new ArrayList<>(serverLoad.getRegionMetrics().keySet());
       int victimRegionCount = (int) Math.ceil(fractionOfRegions * regions.size());
       getLogger().debug("Removing {} regions from {}", victimRegionCount, sn);
       Random rand = ThreadLocalRandom.current();

@@ -32,8 +32,7 @@ public class FailedSyncBeforeLogCloseException extends FailedLogCloseException {
   }
 
   /**
-   * n
-   */
+   *   */
   public FailedSyncBeforeLogCloseException(String msg) {
     super(msg);
   }

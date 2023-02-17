@@ -1556,6 +1556,14 @@ public final class HConstants {
     "hbase.regionserver.slowlog.systable.enabled";
   public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
 
+  @Deprecated
+  // since <need to know the version number> and will be removed in <version number>
+  // Instead use hbase.regionserver.named.queue.chore.duration config property
+  public static final String SLOW_LOG_SYS_TABLE_CHORE_DURATION_KEY =
+    "hbase.slowlog.systable.chore.duration";
+  // Default 10 mins.
+  public static final int DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
+
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";
 
@@ -1570,6 +1578,22 @@ public final class HConstants {
    * Default value of {@link #BATCH_ROWS_THRESHOLD_NAME}
    */
   public static final int BATCH_ROWS_THRESHOLD_DEFAULT = 5000;
+
+  /**
+   * In some scenarios, such as the elastic scaling scenario on the cloud, the HBase client may not
+   * be able to resolve the hostname of the newly added node. If the network is interconnected, the
+   * client can actually access the HBase cluster nodes through ip. However, since the HBase client
+   * obtains the Master/RS address info from or the ZK or the meta table, so the Master/RS of the
+   * HBase cluster needs to expose the service with ip instead of the hostname. Therefore, We can
+   * use hostname by default, but at the same time, we can also provide a config to support whether
+   * to use ip for Master/RS service. See HBASE-27304 for details.
+   */
+  public final static String HBASE_SERVER_USEIP_ENABLED_KEY = "hbase.server.useip.enabled";
+
+  /**
+   * Default value of {@link #HBASE_SERVER_USEIP_ENABLED_KEY}
+   */
+  public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

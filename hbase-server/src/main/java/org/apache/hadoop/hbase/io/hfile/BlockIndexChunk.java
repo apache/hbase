@@ -18,25 +18,37 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
-import org.apache.hadoop.fs.FSDataInputStream;
+import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-class HFileUtil {
+public interface BlockIndexChunk {
 
-  /**
-   * guards against NullPointer utility which tries to seek on the DFSIS and will try an alternative
-   * source if the FSDataInputStream throws an NPE HBASE-17501 nnn
-   */
-  static public void seekOnMultipleSources(FSDataInputStream istream, long offset)
-    throws IOException {
-    try {
-      // attempt to seek inside of current blockReader
-      istream.seek(offset);
-    } catch (NullPointerException e) {
-      // retry the seek on an alternate copy of the data
-      // this can occur if the blockReader on the DFSInputStream is null
-      istream.seekToNewSource(offset);
-    }
-  }
+  List<byte[]> getBlockKeys();
+
+  List<Integer> getSecondaryIndexOffsetMarks();
+
+  int getEntryBySubEntry(long k);
+
+  void add(byte[] firstKey, long blockOffset, int onDiskDataSize);
+
+  void add(byte[] firstKey, long blockOffset, int onDiskDataSize, long curTotalNumSubEntries);
+
+  int getRootSize();
+
+  int getCurTotalNonRootEntrySize();
+
+  int getNonRootSize();
+
+  int getNumEntries();
+
+  byte[] getBlockKey(int i);
+
+  long getBlockOffset(int i);
+
+  int getOnDiskDataSize(int i);
+
+  byte[] getMidKeyMetadata() throws IOException;
+
+  void clear();
 }

@@ -402,7 +402,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
    * @param dir Directory to create file in.
    * @return random filename inside passed <code>dir</code>
    */
-  static Path getUniqueFile(final FileSystem fs, final Path dir) throws IOException {
+  public static Path getUniqueFile(final FileSystem fs, final Path dir) throws IOException {
     if (!fs.getFileStatus(dir).isDirectory()) {
       throw new IOException("Expecting " + dir.toString() + " to be a directory");
     }

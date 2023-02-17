@@ -1610,7 +1610,7 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # clear dead region servers
+    # list dead region servers
     def list_deadservers
       @admin.listDeadServers.to_a
     end
@@ -1629,6 +1629,12 @@ module Hbase
         end
       end
       @admin.clearDeadServers(servers).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # list unknown region servers
+    def list_unknownservers
+      @admin.listUnknownServers.to_a
     end
 
     #----------------------------------------------------------------------------------------------
@@ -1878,6 +1884,12 @@ module Hbase
     # Flush master local region
     def flush_master_store()
       @admin.flushMasterStore()
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of enable or disabled tables in hbase
+    def list_tables_by_state(isEnabled)
+      @admin.listTableNamesByState(isEnabled).map(&:getNameAsString)
     end
   end
   # rubocop:enable Metrics/ClassLength

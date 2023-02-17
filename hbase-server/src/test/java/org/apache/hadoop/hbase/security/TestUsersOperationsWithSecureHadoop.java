@@ -88,7 +88,7 @@ public class TestUsersOperationsWithSecureHadoop {
    * <p>
    * <b> hbase.regionserver.kerberos.principal </b>
    * <p>
-   * <b> hbase.regionserver.keytab.file </b> n
+   * <b> hbase.regionserver.keytab.file </b>
    */
   @Test
   public void testUserLoginInSecureHadoop() throws Exception {

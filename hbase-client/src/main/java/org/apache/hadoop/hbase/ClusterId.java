@@ -53,7 +53,8 @@ public class ClusterId {
   /**
    * Parse the serialized representation of the {@link ClusterId}
    * @param bytes A pb serialized {@link ClusterId} instance with pb magic prefix
-   * @return An instance of {@link ClusterId} made from <code>bytes</code> n * @see #toByteArray()
+   * @return An instance of {@link ClusterId} made from <code>bytes</code>
+   * @see #toByteArray()
    */
   public static ClusterId parseFrom(final byte[] bytes) throws DeserializationException {
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
@@ -79,9 +80,7 @@ public class ClusterId {
     return builder.setClusterId(this.id).build();
   }
 
-  /**
-   * n * @return A {@link ClusterId} made from the passed in <code>cid</code>
-   */
+  /** Returns A {@link ClusterId} made from the passed in <code>cid</code> */
   public static ClusterId convert(final ClusterIdProtos.ClusterId cid) {
     return new ClusterId(cid.getClusterId());
   }

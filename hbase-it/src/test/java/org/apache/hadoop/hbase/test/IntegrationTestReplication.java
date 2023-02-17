@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -43,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -109,7 +111,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
    * Wrapper around an HBase ClusterID allowing us to get admin connections and configurations for
    * it
    */
-  protected class ClusterID {
+  protected static class ClusterID {
     private final Configuration configuration;
     private Connection connection = null;
 
@@ -121,10 +123,10 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      */
     public ClusterID(Configuration base, String key) {
       configuration = new Configuration(base);
-      String[] parts = key.split(":");
-      configuration.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
-      configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, parts[1]);
-      configuration.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
+      Iterator<String> iter = Splitter.on(':').split(key).iterator();
+      configuration.set(HConstants.ZOOKEEPER_QUORUM, iter.next());
+      configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, iter.next());
+      configuration.set(HConstants.ZOOKEEPER_ZNODE_PARENT, iter.next());
     }
 
     @Override
@@ -150,8 +152,20 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       this.connection = null;
     }
 
-    public boolean equals(ClusterID other) {
-      return this.toString().equalsIgnoreCase(other.toString());
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+      if (!(other instanceof ClusterID)) {
+        return false;
+      }
+      return toString().equalsIgnoreCase(other.toString());
+    }
+
+    @Override
+    public int hashCode() {
+      return toString().hashCode();
     }
   }
 
@@ -171,7 +185,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     /**
      * This tears down any tables that existed from before and rebuilds the tables and schemas on
      * the source cluster. It then sets up replication from the source to the sink cluster by using
-     * the {@link org.apache.hadoop.hbase.client.Admin} connection. n
+     * the {@link org.apache.hadoop.hbase.client.Admin} connection.
      */
     protected void setupTablesAndReplication() throws Exception {
       TableName tableName = getTableName(source.getConfiguration());
@@ -247,7 +261,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
 
     /**
      * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Generator} in the
-     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication. n
+     * source cluster. This assumes that the tables have been setup via setupTablesAndReplication.
      */
     protected void runGenerator() throws Exception {
       Path outputPath = new Path(outputDir);
@@ -268,7 +282,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
      * Run the {@link org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList.Verify} in the sink
      * cluster. If replication is working properly the data written at the source cluster should be
      * available in the sink cluster after a reasonable gap
-     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster n
+     * @param expectedNumNodes the number of nodes we are expecting to see in the sink cluster
      */
     protected void runVerify(long expectedNumNodes) throws Exception {
       Path outputPath = new Path(outputDir);
@@ -306,7 +320,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       if (!noReplicationSetup) {
         setupTablesAndReplication();
       }
-      int expectedNumNodes = 0;
+      long expectedNumNodes = 0;
       for (int i = 0; i < numIterations; i++) {
         LOG.info("Starting iteration = " + i);
 

@@ -97,7 +97,7 @@ public class TestSimpleMutableByteRange {
     offset += len;
     len = r.putVLong(offset, Long.MAX_VALUE);
     offset += len;
-    len = r.putVLong(offset, Long.MIN_VALUE);
+    r.putVLong(offset, Long.MIN_VALUE);
 
     offset = 0;
     Assert.assertEquals(i1, r.getInt(offset));

@@ -53,14 +53,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDe
 public abstract class MasterProcedureManager extends ProcedureManager implements Stoppable {
   /**
    * Initialize a globally barriered procedure for master.
-   * @param master Master service interface nnn
+   * @param master Master service interface
    */
   public abstract void initialize(MasterServices master, MetricsMaster metricsMaster)
     throws KeeperException, IOException, UnsupportedOperationException;
 
   /**
    * Execute a distributed procedure on cluster
-   * @param desc Procedure description n
+   * @param desc Procedure description
    */
   public void execProcedure(ProcedureDescription desc) throws IOException {
   }
@@ -68,7 +68,7 @@ public abstract class MasterProcedureManager extends ProcedureManager implements
   /**
    * Execute a distributed procedure on cluster with return data.
    * @param desc Procedure description
-   * @return data returned from the procedure execution, null if no data n
+   * @return data returned from the procedure execution, null if no data
    */
   public byte[] execProcedureWithRet(ProcedureDescription desc) throws IOException {
     return null;
@@ -84,7 +84,7 @@ public abstract class MasterProcedureManager extends ProcedureManager implements
   /**
    * Check if the procedure is finished successfully
    * @param desc Procedure description
-   * @return true if the specified procedure is finished successfully n
+   * @return true if the specified procedure is finished successfully
    */
   public abstract boolean isProcedureDone(ProcedureDescription desc) throws IOException;
 }

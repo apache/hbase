@@ -37,7 +37,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
  * @see #getRunningSimpleKdcServer(File, Supplier)
  */
 public final class SimpleKdcServerUtil {
-  protected static final Logger LOG = LoggerFactory.getLogger(SimpleKdcServerUtil.class);
+  static final Logger LOG = LoggerFactory.getLogger(SimpleKdcServerUtil.class);
 
   private SimpleKdcServerUtil() {
   }

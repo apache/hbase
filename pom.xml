@@ -38,7 +38,7 @@
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
-  <version>3.0.0-alpha-4-SNAPSHOT</version>
+  <version>${revision}</version>
   <packaging>pom</packaging>
   <name>Apache HBase</name>
   <description>Apache HBase is the Hadoop database. Use it when you need
@@ -461,6 +461,12 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
+      <id>shahrs87</id>
+      <name>Rushabh Shah</name>
+      <email>shahrs87@apache.org</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
       <id>sakthi</id>
       <name>Sakthi Vel</name>
       <email>sakthi@apache.org</email>
@@ -645,6 +651,12 @@
       <email>bbeaudreault@apache.org</email>
       <timezone>-5</timezone>
     </developer>
+    <developer>
+      <id>heliangjun</id>
+      <name>Liangjun He</name>
+      <email>heliangjun@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
   </developers>
   <mailingLists>
     <mailingList>
@@ -749,6 +761,7 @@
     </site>
   </distributionManagement>
   <properties>
+    <revision>3.0.0-alpha-4-SNAPSHOT</revision>
     <!-- override on command line to have generated LICENSE files include
          diagnostic info for verifying notice requirements -->
     <license.debug.print.included>false</license.debug.print.included>
@@ -768,7 +781,8 @@
     <compileSource>1.8</compileSource>
     <releaseTarget>8</releaseTarget>
     <!-- Build dependencies -->
-    <maven.min.version>3.0.4</maven.min.version>
+    <!-- The $revision feature is introduced in 3.5.0 -->
+    <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <hadoop-three.version>3.2.4</hadoop-three.version>
@@ -780,10 +794,15 @@
          comes in via hbase-thirdparty hbase-shaded-netty-->
     <netty.hadoop.version>3.10.5.Final</netty.hadoop.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
-    <audience-annotations.version>0.5.0</audience-annotations.version>
+    <audience-annotations.version>0.13.0</audience-annotations.version>
+    <!--
+      The version used when generating javadoc, 0.13.0 is the latest version which supports jdk8.
+      When building with jdk11, we will use 0.14.1, please see the build-with-jdk11 profile.
+    -->
+    <javadoc.audience-annotations.version>0.13.0</javadoc.audience-annotations.version>
     <avro.version>1.11.0</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
-    <commons-codec.version>1.13</commons-codec.version>
+    <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.6</commons-validator.version>
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
@@ -792,20 +811,20 @@
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.13.3</jackson.version>
-    <jackson.databind.version>2.13.3</jackson.databind.version>
+    <jackson.version>2.14.1</jackson.version>
+    <jackson.databind.version>2.14.1</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.3.4.0</jruby.version>
+    <jruby.version>9.3.9.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.15.0</opentelemetry.version>
     <opentelemetry-javaagent.version>1.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
-    <mockito-core.version>2.28.2</mockito-core.version>
+    <mockito.version>4.11.0</mockito.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
@@ -814,12 +833,13 @@
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
-    <jettison.version>1.3.8</jettison.version>
+    <jettison.version>1.5.2</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.42</joni.version>
-    <jcodings.version>1.0.56</jcodings.version>
+    <joni.version>2.1.43</joni.version>
+    <jcodings.version>1.0.57</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.67</bouncycastle.version>
+    <bouncycastle.version>1.70</bouncycastle.version>
+    <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <curator.version>4.2.0</curator.version>
@@ -833,7 +853,7 @@
     -->
     <checkstyle.version>8.29</checkstyle.version>
     <exec.maven.version>1.6.0</exec.maven.version>
-    <error-prone.version>2.10.0</error-prone.version>
+    <error-prone.version>2.16</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
@@ -846,21 +866,21 @@
     <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
     <os.maven.version>1.5.0.Final</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
-    <spotbugs.version>4.2.2</spotbugs.version>
-    <spotbugs.maven.version>4.2.0</spotbugs.maven.version>
+    <spotbugs.version>4.7.3</spotbugs.version>
+    <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
     <surefire.version>3.0.0-M6</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
-    <spotless.version>2.24.1</spotless.version>
+    <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
     <aircompressor.version>0.21</aircompressor.version>
-    <brotli4j.version>1.7.1</brotli4j.version>
+    <brotli4j.version>1.8.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.1.1</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -931,8 +951,7 @@
         this parameter by invoking mvn with -Dbuild.id=$BUILD_ID-->
     <build.id>${maven.build.timestamp}</build.id>
     <shell-executable>bash</shell-executable>
-    <!-- TODO HBASE-15041 clean up our javadocs so jdk8 linter can be used.
-         property as of javadoc-plugin 3.0.0 -->
+    <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
@@ -1526,9 +1545,10 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>${mockito-core.version}</version>
-        <scope>test</scope>
+        <artifactId>mockito-bom</artifactId>
+        <version>${mockito.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>io.opentelemetry</groupId>
@@ -1562,6 +1582,12 @@
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk15on</artifactId>
         <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <version>${skyscreamer.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1765,8 +1791,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <configuration>
-            <source>${compileSource}</source>
-            <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
             <useIncrementalCompilation>false</useIncrementalCompilation>
@@ -2100,6 +2124,33 @@
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <configuration>
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+          <updatePomFile>true</updatePomFile>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+            <phase>process-resources</phase>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+            <phase>clean</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -2714,12 +2765,12 @@
               "* @throws ExceptionType"
               "* @return returnType"'
               Multiline to allow anchors on newlines
+              See https://errorprone.info/bugpattern/EmptyBlockTag
             -->
             <replaceRegex>
               <name>Remove unhelpful javadoc stubs</name>
               <searchRegex>(?m)^ *\* *@(?:param|throws|return) *\w* *\n</searchRegex>
-              <!-- spotless manve plugin does not allow empty here, so use \n -->
-              <replacement>\n</replacement>
+              <replacement/>
             </replaceRegex>
             <!--
               e.g., rewrite
@@ -2730,7 +2781,8 @@
                */
               to
               /** Returns blabla */
-              See https://errorprone.info/bugpattern/EmptyBlockTag
+              See https://errorprone.info/bugpattern/MissingSummary
+              https://google.github.io/styleguide/javaguide.html#s7.2-summary-fragment
             -->
             <replaceRegex>
               <name>Purge single returns tag multi line</name>
@@ -2814,6 +2866,19 @@
             </format>
           </formats>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>2.7.3</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>makeBom</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
     <extensions>
@@ -2902,7 +2967,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -2952,7 +3017,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -2981,7 +3046,7 @@
               <docletArtifact>
                 <groupId>org.apache.yetus</groupId>
                 <artifactId>audience-annotations</artifactId>
-                <version>${audience-annotations.version}</version>
+                <version>${javadoc.audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>apidocs</destDir>
@@ -3010,7 +3075,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3038,7 +3103,7 @@
               <docletArtifact>
                 <groupId>org.apache.yetus</groupId>
                 <artifactId>audience-annotations</artifactId>
-                <version>${audience-annotations.version}</version>
+                <version>${javadoc.audience-annotations.version}</version>
               </docletArtifact>
               <useStandardDocletOptions>true</useStandardDocletOptions>
               <destDir>testapidocs</destDir>
@@ -3067,7 +3132,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3128,29 +3193,30 @@
     <profile>
       <id>build-with-jdk8</id>
       <activation>
-        <jdk>[1.8,)</jdk>
+        <jdk>1.8</jdk>
       </activation>
-      <build>
-        <pluginManagement>
-          <plugins/>
-        </pluginManagement>
-      </build>
+      <properties>
+        <maven.compiler.source>${compileSource}</maven.compiler.source>
+        <maven.compiler.target>${compileSource}</maven.compiler.target>
+      </properties>
     </profile>
     <profile>
       <id>build-with-jdk11</id>
       <activation>
-        <jdk>[1.11,)</jdk>
+        <jdk>[11,)</jdk>
       </activation>
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
         <!-- TODO: replicate logic for windows support -->
-        <argLine>-Dio.netty.tryReflectionSetAccessible=true
+        <argLine>-Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
           --add-opens java.base/java.lang=ALL-UNNAMED
           --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
           --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-opens java.base/java.util=ALL-UNNAMED
+          --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
           ${hbase-surefire.argLine}</argLine>
@@ -3159,7 +3225,37 @@
           TODO: replicate logic for windows
         -->
         <surefire.Xmx>2200m</surefire.Xmx>
+        <!--
+          com.sun.javadoc and com.sun.tools.doclets are both deprecated in java 11 and will
+          fail the javadoc generating, so we need to use yetus 0.14.1 where it uses jdk.javadoc
+          and jdk.javadoc.doclet instead
+        -->
+        <javadoc.audience-annotations.version>0.14.1</javadoc.audience-annotations.version>
       </properties>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <version>${maven.javadoc.version}</version>
+              <configuration>
+                <source>${compileSource}</source>
+                <!--
+                  Need to add this option to ignore the source errors, epsecially that we reference
+                  test code in hbase-testing-util's main code.
+                -->
+                <additionalOptions>--ignore-source-errors</additionalOptions>
+                <additionalJOptions>
+                  <additionalJOption>-J-Xmx2G</additionalJOption>
+                  <additionalJOption>-J--add-exports</additionalJOption>
+                  <additionalJOption>-Jjdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED</additionalJOption>
+                </additionalJOptions>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
     <!-- profile activated by the Jenkins patch testing job -->
     <profile>
@@ -3365,6 +3461,10 @@
             <version>${hadoop-three.version}</version>
             <exclusions>
               <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
               </exclusion>
@@ -3424,6 +3524,22 @@
             <version>${hadoop-three.version}</version>
             <type>test-jar</type>
             <exclusions>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>jsr311-api</artifactId>
+              </exclusion>
               <exclusion>
                 <groupId>org.codehaus.jackson</groupId>
                 <artifactId>*</artifactId>
@@ -3644,36 +3760,6 @@
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-hdfs</artifactId>
-            <version>${hadoop-three.version}</version>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <exclusions>
-              <exclusion>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>ch.qos.reload4j</groupId>
-                <artifactId>reload4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-reload4j</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
             <version>${hadoop-three.version}</version>
             <exclusions>
@@ -3798,7 +3884,6 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop-three.version}</version>
-            <classifier>tests</classifier>
             <type>test-jar</type>
             <exclusions>
               <exclusion>
@@ -3944,6 +4029,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>bouncycastle</groupId>
+                <artifactId>bcprov-jdk15</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

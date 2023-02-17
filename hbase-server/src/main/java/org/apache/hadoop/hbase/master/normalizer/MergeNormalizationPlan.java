@@ -59,6 +59,15 @@ final class MergeNormalizationPlan implements NormalizationPlan {
   }
 
   @Override
+  public long getPlanSizeMb() {
+    long total = 0;
+    for (NormalizationTarget target : normalizationTargets) {
+      total += target.getRegionSizeMb();
+    }
+    return total;
+  }
+
+  @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
       .append("normalizationTargets", normalizationTargets).toString();

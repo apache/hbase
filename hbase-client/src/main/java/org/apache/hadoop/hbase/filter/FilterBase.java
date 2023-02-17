@@ -71,7 +71,7 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Fitlers that never filter by modifying the returned List of Cells can inherit this
+   * Filters that never filter by modifying the returned List of Cells can inherit this
    * implementation that does nothing. {@inheritDoc}
    */
   @Override
@@ -134,9 +134,9 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
-   * Default implementation so that writers of custom filters aren't forced to implement. n
-   * * @return true if and only if the fields of the filter that are serialized are equal to the
-   * corresponding fields in other. Used for testing.
+   * Default implementation so that writers of custom filters aren't forced to implement.
+   * @return true if and only if the fields of the filter that are serialized are equal to the
+   *         corresponding fields in other. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter other) {

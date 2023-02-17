@@ -296,7 +296,7 @@ public class AbstractTestSecureIPC {
   }
 
   /**
-   * Test various combinations of Server and Client configuration for Crypto AES. n
+   * Test various combinations of Server and Client configuration for Crypto AES.
    */
   @Test
   public void testDifferentConfWithCryptoAES() throws Exception {

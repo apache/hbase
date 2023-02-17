@@ -92,7 +92,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   private static final String MULTI_SERVICE_CALLS = "multi.service_calls";
 
   private final boolean authorize;
-  private final boolean isOnlineLogProviderEnabled;
+  private volatile boolean isOnlineLogProviderEnabled;
   protected boolean isSecurityEnabled;
 
   public static final byte CURRENT_VERSION = 0;
@@ -196,8 +196,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   protected static final Gson GSON = GsonUtil.createGsonWithDisableHtmlEscaping().create();
 
   protected final int maxRequestSize;
-  protected final int warnResponseTime;
-  protected final int warnResponseSize;
+  protected volatile int warnResponseTime;
+  protected volatile int warnResponseSize;
 
   protected final int minClientRequestTimeout;
 
@@ -255,11 +255,13 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Constructs a server listening on the named port and address.
-   * @param server      hosting instance of {@link Server}. We will do authentications if an
-   *                    instance else pass null for no authentication check.
-   * @param name        Used keying this rpc servers' metrics and for naming the Listener thread.
-   * @param services    A list of services.
-   * @param bindAddress Where to listen nn * @param reservoirEnabled Enable ByteBufferPool or not.
+   * @param server           hosting instance of {@link Server}. We will do authentications if an
+   *                         instance else pass null for no authentication check.
+   * @param name             Used keying this rpc servers' metrics and for naming the Listener
+   *                         thread.
+   * @param services         A list of services.
+   * @param bindAddress      Where to listen
+   * @param reservoirEnabled Enable ByteBufferPool or not.
    */
   public RpcServer(final Server server, final String name,
     final List<BlockingServiceAndInterface> services, final InetSocketAddress bindAddress,
@@ -273,8 +275,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     this.maxQueueSizeInBytes =
       this.conf.getLong("hbase.ipc.server.max.callqueue.size", DEFAULT_MAX_CALLQUEUE_SIZE);
 
-    this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
-    this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
+    this.warnResponseTime = getWarnResponseTime(conf);
+    this.warnResponseSize = getWarnResponseSize(conf);
     this.minClientRequestTimeout =
       conf.getInt(MIN_CLIENT_REQUEST_TIMEOUT, DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT);
     this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
@@ -295,8 +297,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       saslProps = Collections.emptyMap();
     }
 
-    this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
-      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+    this.isOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(conf);
     this.scheduler = scheduler;
   }
 
@@ -309,6 +310,35 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     if (authorize) {
       refreshAuthManager(newConf, new HBasePolicyProvider());
     }
+    refreshSlowLogConfiguration(newConf);
+  }
+
+  private void refreshSlowLogConfiguration(Configuration newConf) {
+    boolean newIsOnlineLogProviderEnabled = getIsOnlineLogProviderEnabled(newConf);
+    if (isOnlineLogProviderEnabled != newIsOnlineLogProviderEnabled) {
+      isOnlineLogProviderEnabled = newIsOnlineLogProviderEnabled;
+    }
+    int newWarnResponseTime = getWarnResponseTime(newConf);
+    if (warnResponseTime != newWarnResponseTime) {
+      warnResponseTime = newWarnResponseTime;
+    }
+    int newWarnResponseSize = getWarnResponseSize(newConf);
+    if (warnResponseSize != newWarnResponseSize) {
+      warnResponseSize = newWarnResponseSize;
+    }
+  }
+
+  private static boolean getIsOnlineLogProviderEnabled(Configuration conf) {
+    return conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
+      HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+  }
+
+  private static int getWarnResponseTime(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
+  }
+
+  private static int getWarnResponseSize(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
@@ -398,6 +428,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       // Use the raw request call size for now.
       long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
+      long responseBlockSize = call.getResponseBlockSize();
       if (call.isClientCellBlockSupported()) {
         // Include the payload size in HBaseRpcController
         responseSize += call.getResponseCellSize();
@@ -411,20 +442,21 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
       boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
-      boolean tooLarge = (responseSize > warnResponseSize && warnResponseSize > -1);
+      boolean tooLarge = (warnResponseSize > -1
+        && (responseSize > warnResponseSize || responseBlockSize > warnResponseSize));
       if (tooSlow || tooLarge) {
         final String userName = call.getRequestUserName().orElse(StringUtils.EMPTY);
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
         logResponse(param, md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
           tooLarge, tooSlow, status.getClient(), startTime, processingTime, qTime, responseSize,
-          userName);
+          responseBlockSize, userName);
         if (this.namedQueueRecorder != null && this.isOnlineLogProviderEnabled) {
           // send logs to ring buffer owned by slowLogRecorder
           final String className =
             server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
           this.namedQueueRecorder.addRecord(new RpcLogDetails(call, param, status.getClient(),
-            responseSize, className, tooSlow, tooLarge));
+            responseSize, responseBlockSize, className, tooSlow, tooLarge));
         }
       }
       return new Pair<>(result, controller.cellScanner());
@@ -452,22 +484,23 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Logs an RPC response to the LOG file, producing valid JSON objects for client Operations.
-   * @param param          The parameters received in the call.
-   * @param methodName     The name of the method invoked
-   * @param call           The string representation of the call
-   * @param tooLarge       To indicate if the event is tooLarge
-   * @param tooSlow        To indicate if the event is tooSlow
-   * @param clientAddress  The address of the client who made this call.
-   * @param startTime      The time that the call was initiated, in ms.
-   * @param processingTime The duration that the call took to run, in ms.
-   * @param qTime          The duration that the call spent on the queue prior to being initiated,
-   *                       in ms.
-   * @param responseSize   The size in bytes of the response buffer.
-   * @param userName       UserName of the current RPC Call
+   * @param param             The parameters received in the call.
+   * @param methodName        The name of the method invoked
+   * @param call              The string representation of the call
+   * @param tooLarge          To indicate if the event is tooLarge
+   * @param tooSlow           To indicate if the event is tooSlow
+   * @param clientAddress     The address of the client who made this call.
+   * @param startTime         The time that the call was initiated, in ms.
+   * @param processingTime    The duration that the call took to run, in ms.
+   * @param qTime             The duration that the call spent on the queue prior to being
+   *                          initiated, in ms.
+   * @param responseSize      The size in bytes of the response buffer.
+   * @param blockBytesScanned The size of block bytes scanned to retrieve the response.
+   * @param userName          UserName of the current RPC Call
    */
   void logResponse(Message param, String methodName, String call, boolean tooLarge, boolean tooSlow,
     String clientAddress, long startTime, int processingTime, int qTime, long responseSize,
-    String userName) {
+    long blockBytesScanned, String userName) {
     final String className = server == null ? StringUtils.EMPTY : server.getClass().getSimpleName();
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<>();
@@ -475,6 +508,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     responseInfo.put("processingtimems", processingTime);
     responseInfo.put("queuetimems", qTime);
     responseInfo.put("responsesize", responseSize);
+    responseInfo.put("blockbytesscanned", blockBytesScanned);
     responseInfo.put("client", clientAddress);
     responseInfo.put("class", className);
     responseInfo.put("method", methodName);
@@ -776,7 +810,6 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   /**
    * Returns the remote side ip address when invoked inside an RPC Returns null incase of an error.
-   * n
    */
   public static InetAddress getRemoteIp() {
     RpcCall call = CurCall.get();

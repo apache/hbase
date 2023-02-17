@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.wal;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -46,9 +45,7 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestCompressedWALValueCompression.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
-  @Parameters
+  @Parameters(name = "{index}: compression={0}")
   public static List<Object[]> params() {
     return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
   }
@@ -81,5 +78,4 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
     doTest(tableName);
   }
-
 }

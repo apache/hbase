@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.namequeues.LogHandlerUtils;
@@ -115,6 +116,7 @@ public class SlowLogQueueService implements NamedQueueService {
     final RpcCall rpcCall = rpcLogDetails.getRpcCall();
     final String clientAddress = rpcLogDetails.getClientAddress();
     final long responseSize = rpcLogDetails.getResponseSize();
+    final long blockBytesScanned = rpcLogDetails.getBlockBytesScanned();
     final String className = rpcLogDetails.getClassName();
     final TooSlowLog.SlowLogPayload.Type type = getLogType(rpcLogDetails);
     if (type == null) {
@@ -157,8 +159,9 @@ public class SlowLogQueueService implements NamedQueueService {
       .setParam(slowLogParams != null ? slowLogParams.getParams() : StringUtils.EMPTY)
       .setProcessingTime(processingTime).setQueueTime(qTime)
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
-      .setResponseSize(responseSize).setServerClass(className).setStartTime(startTime).setType(type)
-      .setUserName(userName).build();
+      .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
+      .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName)
+      .build();
     slowLogQueue.add(slowLogPayload);
     if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
@@ -223,12 +226,12 @@ public class SlowLogQueueService implements NamedQueueService {
    * table.
    */
   @Override
-  public void persistAll() {
+  public void persistAll(Connection connection) {
     if (!isOnlineLogProviderEnabled) {
       return;
     }
     if (slowLogPersistentService != null) {
-      slowLogPersistentService.addAllLogsToSysTable();
+      slowLogPersistentService.addAllLogsToSysTable(connection);
     }
   }
 

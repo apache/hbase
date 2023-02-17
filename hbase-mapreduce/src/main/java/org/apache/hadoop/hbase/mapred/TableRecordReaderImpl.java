@@ -154,7 +154,6 @@ public class TableRecordReaderImpl {
   }
 
   /**
-   * n *
    * @see org.apache.hadoop.mapred.RecordReader#createKey()
    */
   public ImmutableBytesWritable createKey() {
@@ -162,7 +161,6 @@ public class TableRecordReaderImpl {
   }
 
   /**
-   * n *
    * @see org.apache.hadoop.mapred.RecordReader#createValue()
    */
   public Result createValue() {

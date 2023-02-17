@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.ChoreService.CHORE_SERVICE_INITIAL_POOL_SIZE;
+import static org.apache.hadoop.hbase.ChoreService.DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 
@@ -252,9 +254,15 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
       InetSocketAddress addr = rpcServices.getSocketAddress();
-      String hostName = StringUtils.isBlank(useThisHostnameInstead)
-        ? addr.getHostName()
-        : this.useThisHostnameInstead;
+
+      // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+      // see HBASE-27304 for details.
+      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+      String isaHostName =
+        useIp ? addr.getAddress().getHostAddress() : addr.getAddress().getHostName();
+      String hostName =
+        StringUtils.isBlank(useThisHostnameInstead) ? isaHostName : useThisHostnameInstead;
       serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
       // login the zookeeper client principal (if using security)
       ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
@@ -272,7 +280,9 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
       initializeFileSystem();
 
-      this.choreService = new ChoreService(getName(), true);
+      int choreServiceInitialSize =
+        conf.getInt(CHORE_SERVICE_INITIAL_POOL_SIZE, DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE);
+      this.choreService = new ChoreService(getName(), choreServiceInitialSize, true);
       this.executorService = new ExecutorService(getName());
 
       this.metaRegionLocationCache = new MetaRegionLocationCache(zooKeeper);
@@ -571,7 +581,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   }
 
   /**
-   * get NamedQueue Provider to add different logs to ringbuffer n
+   * get NamedQueue Provider to add different logs to ringbuffer
    */
   public NamedQueueRecorder getNamedQueueRecorder() {
     return this.namedQueueRecorder;

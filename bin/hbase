@@ -108,6 +108,7 @@ show_usage() {
   echo "  cellcounter      Run CellCounter tool"
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
+  echo "  credential       Run the Hadoop Credential Shell"
   echo "  CLASSNAME        Run the class named CLASSNAME"
 }
 
@@ -494,7 +495,7 @@ add_jdk11_deps_to_classpath() {
 }
 
 add_jdk11_jvm_flags() {
-  HBASE_OPTS="$HBASE_OPTS -Dio.netty.tryReflectionSetAccessible=true --illegal-access=permit --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS -Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED"
 }
 
 add_opentelemetry_agent() {
@@ -762,6 +763,8 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
   fi
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
+elif [ "$COMMAND" = "credential" ] ; then
+  CLASS='org.apache.hadoop.security.alias.CredentialShell'
 else
   CLASS=$COMMAND
 if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
@@ -872,7 +875,7 @@ if [ "${DEBUG}" = "true" ]; then
 fi
 
 # resolve the command arguments
-read -r -a CMD_ARGS <<< "$@"
+CMD_ARGS=("$@")
 if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
   CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
 fi

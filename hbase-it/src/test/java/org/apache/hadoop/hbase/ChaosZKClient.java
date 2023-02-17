@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -111,7 +112,7 @@ public class ChaosZKClient {
       zk.create(
         CHAOS_AGENT_STATUS_ZNODE + ZNODE_PATH_SEPARATOR + taskObject.getTaskHostname()
           + ZNODE_PATH_SEPARATOR + TASK_PREFIX,
-        taskObject.getCommand().getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE,
+        taskObject.getCommand().getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,
         CreateMode.EPHEMERAL_SEQUENTIAL, submitTaskCallback, taskObject);
       long start = EnvironmentEdgeManager.currentTime();
 
@@ -189,7 +190,7 @@ public class ChaosZKClient {
       case OK:
         if (ctx != null) {
 
-          String status = new String(data);
+          String status = new String(data, StandardCharsets.UTF_8);
           taskStatus = status;
           switch (status) {
             case TASK_COMPLETION_STRING:

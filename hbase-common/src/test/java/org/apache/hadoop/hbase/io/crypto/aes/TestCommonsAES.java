@@ -19,13 +19,11 @@ package org.apache.hadoop.hbase.io.crypto.aes;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.security.AccessController;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.SecureRandom;
@@ -119,12 +117,8 @@ public class TestCommonsAES {
     private static final long serialVersionUID = 1L;
     private SecureRandom rng;
 
-    public TestRNG() {
-      try {
-        rng = SecureRandom.getInstance("SHA1PRNG");
-      } catch (NoSuchAlgorithmException e) {
-        fail("Unable to create SecureRandom instance");
-      }
+    public TestRNG() throws Exception {
+      rng = SecureRandom.getInstance("SHA1PRNG");
     }
 
     @Override

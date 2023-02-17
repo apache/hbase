@@ -333,6 +333,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBlockCacheHitCachingCount() {
+    return 16;
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     return 417;
   }
@@ -340,6 +345,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getBlockCachePrimaryMissCount() {
     return 421;
+  }
+
+  @Override
+  public long getBlockCacheMissCachingCount() {
+    return 17;
   }
 
   @Override

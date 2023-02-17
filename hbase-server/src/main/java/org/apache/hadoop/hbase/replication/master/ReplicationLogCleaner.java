@@ -67,6 +67,12 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   }
 
   @Override
+  public void postClean() {
+    // release memory
+    wals = null;
+  }
+
+  @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     // all members of this class are null if replication is disabled,
     // so we cannot filter the files

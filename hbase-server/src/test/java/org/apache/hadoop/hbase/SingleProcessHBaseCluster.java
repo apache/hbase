@@ -210,8 +210,6 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
       try {
         LOG.info("Hook closing fs=" + this.fs);
         this.fs.close();
-      } catch (NullPointerException npe) {
-        LOG.debug("Need to fix these: " + npe.toString());
       } catch (IOException e) {
         LOG.warn("Running hook", e);
       }
@@ -372,6 +370,31 @@ public class SingleProcessHBaseCluster extends HBaseClusterInterface {
   @Override
   public void waitForNameNodeToStop(ServerName serverName, long timeout) throws IOException {
     LOG.warn("Waiting for namenodes to stop on mini cluster is not supported");
+  }
+
+  @Override
+  public void startJournalNode(ServerName serverName) {
+    LOG.warn("Starting journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void killJournalNode(ServerName serverName) {
+    LOG.warn("Aborting journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void stopJournalNode(ServerName serverName) {
+    LOG.warn("Stopping journalnodes on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForJournalNodeToStart(ServerName serverName, long timeout) {
+    LOG.warn("Waiting for journalnodes to start on mini cluster is not supported");
+  }
+
+  @Override
+  public void waitForJournalNodeToStop(ServerName serverName, long timeout) {
+    LOG.warn("Waiting for journalnodes to stop on mini cluster is not supported");
   }
 
   @Override

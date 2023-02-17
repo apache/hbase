@@ -147,6 +147,11 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    return get(admin.listTableDescriptorsByState(isEnabled));
+  }
+
+  @Override
   public TableName[] listTableNames() throws IOException {
     return get(admin.listTableNames()).toArray(new TableName[0]);
   }
@@ -154,6 +159,11 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public TableName[] listTableNames(Pattern pattern, boolean includeSysTables) throws IOException {
     return get(admin.listTableNames(pattern, includeSysTables)).toArray(new TableName[0]);
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    return get(admin.listTableNamesByState(isEnabled));
   }
 
   @Override
@@ -874,6 +884,11 @@ class AdminOverAsyncAdmin implements Admin {
   public Future<Void> transitReplicationPeerSyncReplicationStateAsync(String peerId,
     SyncReplicationState state) throws IOException {
     return admin.transitReplicationPeerSyncReplicationState(peerId, state);
+  }
+
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return get(admin.isReplicationPeerEnabled(peerId));
   }
 
   @Override

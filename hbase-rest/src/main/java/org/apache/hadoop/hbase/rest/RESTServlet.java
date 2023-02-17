@@ -53,6 +53,8 @@ public class RESTServlet implements Constants {
   }
 
   /** Returns the RESTServlet singleton instance */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public synchronized static RESTServlet getInstance() {
     assert (INSTANCE != null);
     return INSTANCE;
@@ -66,8 +68,10 @@ public class RESTServlet implements Constants {
   /**
    * @param conf         Existing configuration to use in rest servlet
    * @param userProvider the login user provider
-   * @return the RESTServlet singleton instance n
+   * @return the RESTServlet singleton instance
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
+      justification = "singleton pattern")
   public synchronized static RESTServlet getInstance(Configuration conf, UserProvider userProvider)
     throws IOException {
     if (INSTANCE == null) {
@@ -86,7 +90,7 @@ public class RESTServlet implements Constants {
   /**
    * Constructor with existing configuration
    * @param conf         existing configuration
-   * @param userProvider the login user provider n
+   * @param userProvider the login user provider
    */
   RESTServlet(final Configuration conf, final UserProvider userProvider) throws IOException {
     this.realUser = userProvider.getCurrent().getUGI();

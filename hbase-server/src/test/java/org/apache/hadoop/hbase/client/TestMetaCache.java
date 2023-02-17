@@ -176,8 +176,8 @@ public class TestMetaCache {
     table.put(put);
 
     // obtain the client metrics
-    long preGetRegionClears = metrics.metaCacheNumClearRegion.getCount();
-    long preGetServerClears = metrics.metaCacheNumClearServer.getCount();
+    long preGetRegionClears = metrics.getMetaCacheNumClearRegion().getCount();
+    long preGetServerClears = metrics.getMetaCacheNumClearServer().getCount();
 
     // attempt a get on the test table
     Get get = new Get(row);
@@ -189,8 +189,8 @@ public class TestMetaCache {
     }
 
     // verify that no cache clearing took place
-    long postGetRegionClears = metrics.metaCacheNumClearRegion.getCount();
-    long postGetServerClears = metrics.metaCacheNumClearServer.getCount();
+    long postGetRegionClears = metrics.getMetaCacheNumClearRegion().getCount();
+    long postGetServerClears = metrics.getMetaCacheNumClearServer().getCount();
     assertEquals(preGetRegionClears, postGetRegionClears);
     assertEquals(preGetServerClears, postGetServerClears);
   }
@@ -308,7 +308,7 @@ public class TestMetaCache {
 
     /**
      * Throw some exceptions. Mostly throw exceptions which do not clear meta cache. Periodically
-     * throw NotSevingRegionException which clears the meta cache. n
+     * throw NotSevingRegionException which clears the meta cache.
      */
     private void throwSomeExceptions(FakeRSRpcServices rpcServices,
       HBaseProtos.RegionSpecifier regionSpec) throws ServiceException {

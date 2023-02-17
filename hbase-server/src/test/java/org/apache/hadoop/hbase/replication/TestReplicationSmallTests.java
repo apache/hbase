@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -440,5 +441,20 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         Thread.sleep(SLEEP_TIME);
       }
     }
+  }
+
+  /**
+   * Test for HBASE-27448 Add an admin method to get replication enabled state
+   */
+  @Test
+  public void testGetReplicationPeerState() throws Exception {
+
+    // Test disable replication peer
+    hbaseAdmin.disableReplicationPeer("2");
+    assertFalse(hbaseAdmin.isReplicationPeerEnabled("2"));
+
+    // Test enable replication peer
+    hbaseAdmin.enableReplicationPeer("2");
+    assertTrue(hbaseAdmin.isReplicationPeerEnabled("2"));
   }
 }

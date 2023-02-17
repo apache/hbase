@@ -203,8 +203,8 @@ public final class MetaTableLocator {
    * Load the meta region state from the meta region server ZNode.
    * @param zkw       reference to the {@link ZKWatcher} which also contains configuration and
    *                  operation
-   * @param replicaId the ID of the replica n * @throws KeeperException if a ZooKeeper operation
-   *                  fails
+   * @param replicaId the ID of the replica
+   * @throws KeeperException if a ZooKeeper operation fails
    */
   public static RegionState getMetaRegionState(ZKWatcher zkw, int replicaId)
     throws KeeperException {

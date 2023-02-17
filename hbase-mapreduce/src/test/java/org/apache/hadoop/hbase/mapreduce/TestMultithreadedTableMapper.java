@@ -93,7 +93,7 @@ public class TestMultithreadedTableMapper {
   public static class ProcessContentsMapper extends TableMapper<ImmutableBytesWritable, Put> {
 
     /**
-     * Pass the key, and reversed value to reduce nnnn
+     * Pass the key, and reversed value to reduce
      */
     @Override
     public void map(ImmutableBytesWritable key, Result value, Context context)
@@ -118,7 +118,7 @@ public class TestMultithreadedTableMapper {
   }
 
   /**
-   * Test multithreadedTableMappper map/reduce against a multi-region table nnn
+   * Test multithreadedTableMappper map/reduce against a multi-region table
    */
   @Test
   public void testMultithreadedTableMapper()
@@ -184,7 +184,8 @@ public class TestMultithreadedTableMapper {
   /**
    * Looks at every value of the mapreduce output and verifies that indeed the values have been
    * reversed.
-   * @param table Table to scan. n * @throws NullPointerException if we failed to find a cell value
+   * @param table Table to scan.
+   * @throws NullPointerException if we failed to find a cell value
    */
   private void verifyAttempt(final Table table) throws IOException, NullPointerException {
     Scan scan = new Scan();

@@ -58,6 +58,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value = "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
     justification = "It has been like this forever")
+@SuppressWarnings("MixedMutabilityReturnType")
 public class Bytes implements Comparable<Bytes> {
 
   // Using the charset canonical name for String/byte[] conversions is much
@@ -186,16 +187,12 @@ public class Bytes implements Comparable<Bytes> {
     return this.bytes;
   }
 
-  /**
-   * @param b Use passed bytes as backing array for this instance.
-   */
+  /** Use passed bytes as backing array for this instance. */
   public void set(final byte[] b) {
     set(b, 0, b.length);
   }
 
-  /**
-   * @param b Use passed bytes as backing array for this instance. nn
-   */
+  /** Use passed bytes as backing array for this instance. */
   public void set(final byte[] b, final int offset, final int length) {
     this.bytes = b;
     this.offset = offset;
@@ -211,9 +208,7 @@ public class Bytes implements Comparable<Bytes> {
     return this.length;
   }
 
-  /**
-   * n
-   */
+  /** Return the offset into the buffer. */
   public int getOffset() {
     return this.offset;
   }
@@ -236,16 +231,14 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Compares the bytes in this object to the specified byte array n * @return Positive if left is
-   * bigger than right, 0 if they are equal, and negative if left is smaller than right.
+   * Compares the bytes in this object to the specified byte array
+   * @return Positive if left is bigger than right, 0 if they are equal, and negative if left is
+   *         smaller than right.
    */
   public int compareTo(final byte[] that) {
     return BYTES_RAWCOMPARATOR.compare(this.bytes, this.offset, this.length, that, 0, that.length);
   }
 
-  /**
-   * @see Object#equals(Object)
-   */
   @Override
   public boolean equals(Object right_obj) {
     if (right_obj instanceof byte[]) {
@@ -257,15 +250,13 @@ public class Bytes implements Comparable<Bytes> {
     return false;
   }
 
-  /**
-   * @see Object#toString()
-   */
   @Override
   public String toString() {
     return Bytes.toString(bytes, offset, length);
   }
 
   /**
+   * Convert a list of byte[] to an array
    * @param array List of byte [].
    * @return Array of byte [].
    */
@@ -278,21 +269,15 @@ public class Bytes implements Comparable<Bytes> {
     return results;
   }
 
-  /**
-   * Returns a copy of the bytes referred to by this writable
-   */
+  /** Returns a copy of the bytes referred to by this writable */
   public byte[] copyBytes() {
     return Arrays.copyOfRange(bytes, offset, offset + length);
   }
 
-  /**
-   * Byte array comparator class.
-   */
+  /** Byte array comparator class. */
   @InterfaceAudience.Public
   public static class ByteArrayComparator implements RawComparator<byte[]> {
-    /**
-     * Constructor
-     */
+
     public ByteArrayComparator() {
       super();
     }
@@ -338,14 +323,10 @@ public class Bytes implements Comparable<Bytes> {
     }
   }
 
-  /**
-   * Pass this to TreeMaps where byte [] are keys.
-   */
+  /** Pass this to TreeMaps where byte [] are keys. */
   public final static Comparator<byte[]> BYTES_COMPARATOR = new ByteArrayComparator();
 
-  /**
-   * Use comparing byte arrays, byte-by-byte
-   */
+  /** Use comparing byte arrays, byte-by-byte */
   public final static RawComparator<byte[]> BYTES_RAWCOMPARATOR = new ByteArrayComparator();
 
   /**
@@ -485,6 +466,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Convert a byte[] into a string. Charset is assumed to be UTF-8.
    * @param b Presumed UTF-8 encoded byte array.
    * @return String made from <code>b</code>
    */
@@ -553,7 +535,8 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Write a printable representation of a byte array.
-   * @param b byte array n * @see #toStringBinary(byte[], int, int)
+   * @param b byte array
+   * @see #toStringBinary(byte[], int, int)
    */
   public static String toStringBinary(final byte[] b) {
     if (b == null) return "null";
@@ -768,7 +751,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Presumes float encoded as IEEE 754 floating-point "single format"
+   * Put a float value out to the specified byte array position. Presumes float encoded as IEEE 754
+   * floating-point "single format"
    * @param bytes byte array
    * @return Float made from passed byte array.
    */
@@ -777,7 +761,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Presumes float encoded as IEEE 754 floating-point "single format"
+   * Put a float value out to the specified byte array position. Presumes float encoded as IEEE 754
+   * floating-point "single format"
    * @param bytes  array to convert
    * @param offset offset into array
    * @return Float made from passed byte array.
@@ -787,6 +772,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Put a float value out to the specified byte array position.
    * @param bytes  byte array
    * @param offset offset to write to
    * @param f      float value
@@ -796,33 +782,24 @@ public class Bytes implements Comparable<Bytes> {
     return putInt(bytes, offset, Float.floatToRawIntBits(f));
   }
 
-  /**
-   * @param f float value
-   * @return the float represented as byte []
-   */
+  /** Return the float represented as byte[] */
   public static byte[] toBytes(final float f) {
     // Encode it as int
     return Bytes.toBytes(Float.floatToRawIntBits(f));
   }
 
-  /**
-   * @param bytes byte array
-   * @return Return double made from passed bytes.
-   */
+  /** Return double made from passed bytes. */
   public static double toDouble(final byte[] bytes) {
     return toDouble(bytes, 0);
   }
 
-  /**
-   * @param bytes  byte array
-   * @param offset offset where double is
-   * @return Return double made from passed bytes.
-   */
+  /** Return double made from passed bytes. */
   public static double toDouble(final byte[] bytes, final int offset) {
     return Double.longBitsToDouble(toLong(bytes, offset, SIZEOF_LONG));
   }
 
   /**
+   * Put a double value out to the specified byte array position as the IEEE 754 double format.
    * @param bytes  byte array
    * @param offset offset to write to
    * @param d      value
@@ -1031,9 +1008,7 @@ public class Bytes implements Comparable<Bytes> {
     return offset + SIZEOF_SHORT;
   }
 
-  /**
-   * Convert a BigDecimal value to a byte array n * @return the byte array
-   */
+  /** Convert a BigDecimal value to a byte array */
   public static byte[] toBytes(BigDecimal val) {
     byte[] valueBytes = val.unscaledValue().toByteArray();
     byte[] result = new byte[valueBytes.length + SIZEOF_INT];
@@ -1042,16 +1017,12 @@ public class Bytes implements Comparable<Bytes> {
     return result;
   }
 
-  /**
-   * Converts a byte array to a BigDecimal n * @return the char value
-   */
+  /** Converts a byte array to a BigDecimal */
   public static BigDecimal toBigDecimal(byte[] bytes) {
     return toBigDecimal(bytes, 0, bytes.length);
   }
 
-  /**
-   * Converts a byte array to a BigDecimal value nnn * @return the char value
-   */
+  /** Converts a byte array to a BigDecimal value */
   public static BigDecimal toBigDecimal(byte[] bytes, int offset, final int length) {
     if (bytes == null || length < SIZEOF_INT + 1 || (offset + length > bytes.length)) {
       return null;
@@ -1082,6 +1053,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Encode a long value as a variable length integer.
    * @param vint Integer to make a vint of.
    * @return Vint as bytes array.
    */
@@ -1120,6 +1092,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Reads a zero-compressed encoded long from input buffer and returns it.
    * @param buffer buffer to convert
    * @return vint bytes as an integer.
    */
@@ -1161,6 +1134,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Lexicographically compare two arrays.
    * @param left  left operand
    * @param right right operand
    * @return 0 if equal, &lt; 0 if left is less than right, etc.
@@ -1480,6 +1454,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Lexicographically determine the equality of two arrays.
    * @param left  left operand
    * @param right right operand
    * @return True if equal
@@ -1500,6 +1475,16 @@ public class Bytes implements Comparable<Bytes> {
     return compareTo(left, right) == 0;
   }
 
+  /**
+   * Lexicographically determine the equality of two arrays.
+   * @param left        left operand
+   * @param leftOffset  offset into left operand
+   * @param leftLen     length of left operand
+   * @param right       right operand
+   * @param rightOffset offset into right operand
+   * @param rightLen    length of right operand
+   * @return True if equal
+   */
   public static boolean equals(final byte[] left, int leftOffset, int leftLen, final byte[] right,
     int rightOffset, int rightLen) {
     // short circuit case
@@ -1524,6 +1509,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Lexicographically determine the equality of two byte[], one as ByteBuffer.
    * @param a   left operand
    * @param buf right operand
    * @return True if equal
@@ -1553,6 +1539,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Calculate a hash code from a given byte array.
    * @param b bytes to hash
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the passed in array. This
    *         method is what {@link org.apache.hadoop.io.Text} use calculating hash code.
@@ -1562,6 +1549,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Calculate a hash code from a given byte array.
    * @param b      value
    * @param length length of the value
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the passed in array. This
@@ -1572,6 +1560,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Calculate a hash code from a given byte array suitable for use as a key in maps.
    * @param b bytes to hash
    * @return A hash of <code>b</code> as an Integer that can be used as key in Maps.
    */
@@ -1580,6 +1569,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Calculate a hash code from a given byte array suitable for use as a key in maps.
    * @param b      bytes to hash
    * @param length length to hash
    * @return A hash of <code>b</code> as an Integer that can be used as key in Maps.
@@ -1589,6 +1579,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Concatenate byte arrays.
    * @param a lower half
    * @param b upper half
    * @return New array that has a in lower half and b in upper half.
@@ -1598,6 +1589,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Concatenate byte arrays.
    * @param a first third
    * @param b second third
    * @param c third third
@@ -1612,6 +1604,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Concatenate byte arrays.
    * @param arrays all the arrays to concatenate together.
    * @return New array made from the concatenation of the given arrays.
    */
@@ -1630,6 +1623,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Make a new byte array from a subset of bytes at the head of another.
    * @param a      array
    * @param length amount of bytes to grab
    * @return First <code>length</code> bytes from <code>a</code>
@@ -1644,6 +1638,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Make a new byte array from a subset of bytes at the tail of another.
    * @param a      array
    * @param length amount of bytes to snarf
    * @return Last <code>length</code> bytes from <code>a</code>
@@ -1658,6 +1653,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Make a new byte array from a subset of bytes at the head of another, zero padded as desired.
    * @param a      array
    * @param length new array size
    * @return Value in <code>a</code> plus <code>length</code> prepended 0 bytes
@@ -1671,6 +1667,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Make a new byte array from a subset of bytes at the tail of another, zero padded as desired.
    * @param a      array
    * @param length new array size
    * @return Value in <code>a</code> plus <code>length</code> appended 0 bytes
@@ -1816,6 +1813,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Calculate the hash code for a given range of bytes.
    * @param bytes  array to hash
    * @param offset offset to start from
    * @param length length to hash
@@ -1828,6 +1826,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Create an array of byte[] given an array of String.
    * @param t operands
    * @return Array of byte arrays made from passed array of Text
    */
@@ -1840,6 +1839,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Create an array of byte[] given an array of String.
    * @param t operands
    * @return Array of binary byte arrays made from passed array of binary strings
    */
@@ -1852,6 +1852,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Create a byte[][] where first and only entry is <code>column</code>
    * @param column operand
    * @return A byte array of a byte array where first and only entry is <code>column</code>
    */
@@ -1860,6 +1861,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Create a byte[][] where first and only entry is <code>column</code>
    * @param column operand
    * @return A byte array of a byte array where first and only entry is <code>column</code>
    */
@@ -1995,7 +1997,7 @@ public class Bytes implements Comparable<Bytes> {
     for (int i = 0; i < value.length; i++) {
       int cur = ((int) amo % 256) * sign;
       amo = (amo >> 8);
-      int val = ((~value[value.length - i - 1]) & 0x0ff) + 1;
+      int val = (~value[value.length - i - 1] & 0x0ff) + 1;
       int total = cur - val;
       if (total >= 0) {
         amo += sign;
@@ -2055,7 +2057,7 @@ public class Bytes implements Comparable<Bytes> {
    * Copy the byte array given in parameter and return an instance of a new byte array with the same
    * length and the same content.
    * @param bytes the byte array to copy from
-   * @return a copy of the given designated byte array nn
+   * @return a copy of the given designated byte array
    */
   public static byte[] copy(byte[] bytes, final int offset, final int length) {
     if (bytes == null) return null;
@@ -2208,6 +2210,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Return true if target is present as an element anywhere in the given array.
    * @param array  an array of {@code byte} values, possibly empty
    * @param target a primitive {@code byte} value
    * @return {@code true} if {@code target} is present as an element anywhere in {@code array}.
@@ -2217,6 +2220,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Return true if target is present as an element anywhere in the given array.
    * @param array  an array of {@code byte} values, possibly empty
    * @param target an array of {@code byte}
    * @return {@code true} if {@code target} is present anywhere in {@code array}
@@ -2234,7 +2238,7 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Fill given array with zeros at the specified position. nnn
+   * Fill given array with zeros at the specified position.
    */
   public static void zero(byte[] b, int offset, int length) {
     checkPositionIndex(offset, b.length, "offset");
@@ -2317,7 +2321,8 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Create a byte array which is multiple given bytes nn * @return byte array
+   * Create a byte array which is multiple given bytes
+   * @return byte array
    */
   public static byte[] multiple(byte[] srcBytes, int multiNum) {
     if (multiNum <= 0) {
@@ -2372,7 +2377,7 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Create a byte array from a string of hash digits. The length of the string must be a multiple
-   * of 2 n
+   * of 2
    */
   public static byte[] fromHex(String hex) {
     checkArgument(hex.length() % 2 == 0, "length must be a multiple of 2");

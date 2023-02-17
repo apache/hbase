@@ -1075,10 +1075,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       + getValueLength() + "/seqid=" + seqId;
   }
 
-  /**
-   * @param k Key portion of a KeyValue.
-   * @return Key as a String, empty string if k is null.
-   */
+  /** Return key as a String, empty string if k is null. */
   public static String keyToString(final byte[] k) {
     if (k == null) {
       return "";
@@ -1328,10 +1325,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return getTimestampOffset(getKeyLength());
   }
 
-  /**
-   * @param keylength Pass if you have it to save on a int creation.
-   * @return Timestamp offset
-   */
+  /** Return the timestamp offset */
   private int getTimestampOffset(final int keylength) {
     return getKeyOffset() + keylength - TIMESTAMP_TYPE_SIZE;
   }
@@ -1343,6 +1337,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
+   * Update the timestamp.
    * @param now Time to set into <code>this</code> IFF timestamp ==
    *            {@link HConstants#LATEST_TIMESTAMP} (else, its a noop).
    * @return True is we modified this.
@@ -1386,17 +1381,13 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return key;
   }
 
-  /**
-   * n
-   */
+  /** Return the timestamp. */
   @Override
   public long getTimestamp() {
     return getTimestamp(getKeyLength());
   }
 
-  /**
-   * @param keylength Pass if you have it to save on a int creation. n
-   */
+  /** Return the timestamp. */
   long getTimestamp(final int keylength) {
     int tsOffset = getTimestampOffset(keylength);
     return Bytes.toLong(this.bytes, tsOffset);
@@ -1408,13 +1399,12 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return getTypeByte(getKeyLength());
   }
 
+  /** Return the KeyValue.TYPE byte representation */
   byte getTypeByte(int keyLength) {
     return this.bytes[this.offset + keyLength - 1 + ROW_OFFSET];
   }
 
-  /**
-   * This returns the offset where the tag actually starts.
-   */
+  /** Return the offset where the tag data starts. */
   @Override
   public int getTagsOffset() {
     int tagsLen = getTagsLength();
@@ -1424,9 +1414,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     return this.offset + this.length - tagsLen;
   }
 
-  /**
-   * This returns the total length of the tag bytes
-   */
+  /** Return the total length of the tag bytes */
   @Override
   public int getTagsLength() {
     int tagsLen = this.length - (getKeyLength() + getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE);
@@ -1466,6 +1454,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
+   * Find index of passed delimiter walking from start of buffer forwards.
    * @param b         the kv serialized byte[] to process
    * @param delimiter input delimeter to fetch index from start
    * @return Index of delimiter having started from start of <code>b</code> moving rightward.
@@ -1749,6 +1738,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
+     * Compares the rows of a cell
      * @param left  left cell to compare rows for
      * @param right right cell to compare rows for
      * @return Result comparing rows.
@@ -1850,8 +1840,8 @@ public class KeyValue implements ExtendedCell, Cloneable {
      * Compare columnFamily, qualifier, timestamp, and key type (everything except the row). This
      * method is used both in the normal comparator and the "same-prefix" comparator. Note that we
      * are assuming that row portions of both KVs have already been parsed and found identical, and
-     * we don't validate that assumption here. n * the length of the common prefix of the two
-     * key-values being compared, including row length and row
+     * we don't validate that assumption here. the length of the common prefix of the two key-values
+     * being compared, including row length and row
      */
     private int compareWithoutRow(int commonPrefix, byte[] left, int loffset, int llength,
       byte[] right, int roffset, int rlength, short rowlength) {
@@ -1996,6 +1986,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
     }
 
     /**
+     * Compares the row of two keyvalues for equality
      * @param left       left cell to compare row
      * @param lrowlength left row length
      * @param right      right cell to compare row
@@ -2124,6 +2115,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
   }
 
   /**
+   * Create a KeyValue reading from <code>in</code>
    * @param in Where to read bytes from. Creates a byte array to hold the KeyValue backing bytes
    *           copied from the steam.
    * @return KeyValue created by deserializing from <code>in</code> OR if we find a length of zero,
@@ -2250,7 +2242,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return fixed + ClassSize.sizeOfByteArray(length);
     } else {
       // only count the number of bytes
-      return fixed + length;
+      return (long) fixed + length;
     }
   }
 
@@ -2339,6 +2331,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return this.bytes[getFamilyOffset() - 1];
     }
 
+    @Override
     int getFamilyLengthPosition(int rowLength) {
       return this.offset + Bytes.SIZEOF_SHORT + rowLength;
     }
@@ -2378,6 +2371,7 @@ public class KeyValue implements ExtendedCell, Cloneable {
       return getTypeByte(getKeyLength());
     }
 
+    @Override
     byte getTypeByte(int keyLength) {
       return this.bytes[this.offset + keyLength - 1];
     }

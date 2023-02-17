@@ -78,7 +78,9 @@ pipeline {
                     environment {
                         // customized per parallel stage
                         PLUGINS = "${GENERAL_CHECK_PLUGINS}"
-                        SET_JAVA_HOME = '/usr/lib/jvm/java-8'
+                        SET_JAVA_HOME = "/usr/lib/jvm/java-11"
+                        JAVA8_HOME = "/usr/lib/jvm/java-8"
+                        HADOOP_PROFILE = '3.0'
                         WORKDIR_REL = "${WORKDIR_REL_GENERAL_CHECK}"
                         // identical for all parallel stages
                         WORKDIR = "${WORKSPACE}/${WORKDIR_REL}"
@@ -89,6 +91,10 @@ pipeline {
                         DOCKERFILE = "${WORKDIR}/${DOCKERFILE_REL}"
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         ASF_NIGHTLIES_GENERAL_CHECK_BASE="${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}"
+                    }
+                    when {
+                        // this will return true if the pipeline is building a change request, such as a GitHub pull request.
+                        changeRequest()
                     }
                     steps {
                         dir("${SOURCEDIR}") {
@@ -143,14 +149,14 @@ pipeline {
                             if [ -d "${PATCHDIR}/branch-site" ]; then
                               echo "Remove ${PATCHDIR}/branch-site for saving space"
                               rm -rf "${PATCHDIR}/branch-site"
-                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
+                              python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/branch-site" > "${PATCHDIR}/branch-site.html"
                             else
                               echo "No branch-site, skipping"
                             fi
                             if [ -d "${PATCHDIR}/patch-site" ]; then
                               echo "Remove ${PATCHDIR}/patch-site for saving space"
                               rm -rf "${PATCHDIR}/patch-site"
-                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
+                              python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_GENERAL_CHECK_BASE}/patch-site" > "${PATCHDIR}/patch-site.html"
                             else
                               echo "No patch-site, skipping"
                             fi
@@ -213,6 +219,10 @@ pipeline {
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         SKIP_ERRORPRONE = true
                     }
+                    when {
+                        // this will return true if the pipeline is building a change request, such as a GitHub pull request.
+                        changeRequest()
+                    }
                     steps {
                         dir("${SOURCEDIR}") {
                             checkout scm
@@ -282,7 +292,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi
@@ -345,6 +355,10 @@ pipeline {
                         YETUS_DRIVER = "${WORKDIR}/${YETUS_DRIVER_REL}"
                         SKIP_ERRORPRONE = true
                     }
+                    when {
+                        // this will return true if the pipeline is building a change request, such as a GitHub pull request.
+                        changeRequest()
+                    }
                     steps {
                         dir("${SOURCEDIR}") {
                             checkout scm
@@ -414,7 +428,7 @@ pipeline {
                             if [ -f "${PATCHDIR}/test_logs.zip" ]; then
                               echo "Remove ${PATCHDIR}/test_logs.zip for saving space"
                               rm -rf "${PATCHDIR}/test_logs.zip"
-                              python2 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
+                              python3 ${SOURCEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/${WORKDIR_REL}/${PATCH_REL}" > "${PATCHDIR}/test_logs.html"
                             else
                               echo "No test_logs.zip, skipping"
                             fi

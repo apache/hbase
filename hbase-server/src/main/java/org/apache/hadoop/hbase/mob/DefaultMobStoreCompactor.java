@@ -353,6 +353,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
       (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
 
     Cell mobCell = null;
+    List<String> committedMobWriterFileNames = new ArrayList<>();
     try {
 
       mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
@@ -434,8 +435,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                     if (len > maxMobFileSize) {
                       LOG.debug("Closing output MOB File, length={} file={}, store={}", len,
                         mobFileWriter.getPath().getName(), getStoreInfo());
-                      commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                      mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
+                      mobFileWriter = switchToNewMobWriter(mobFileWriter, fd, mobCells, major,
+                        request, committedMobWriterFileNames);
                       fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                       mobCells = 0;
                     }
@@ -478,8 +479,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
                   // file compression yet)
                   long len = mobFileWriter.getPos();
                   if (len > maxMobFileSize) {
-                    commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                    mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
+                    mobFileWriter = switchToNewMobWriter(mobFileWriter, fd, mobCells, major,
+                      request, committedMobWriterFileNames);
                     fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                     mobCells = 0;
                   }
@@ -530,8 +531,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
             if (ioOptimizedMode) {
               long len = mobFileWriter.getPos();
               if (len > maxMobFileSize) {
-                commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
-                mobFileWriter = newMobWriter(fd, major, request.getWriterCreationTracker());
+                mobFileWriter = switchToNewMobWriter(mobFileWriter, fd, mobCells, major, request,
+                  committedMobWriterFileNames);
                 fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
                 mobCells = 0;
               }
@@ -570,6 +571,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         }
         cells.clear();
       } while (hasMore);
+      // Commit last MOB writer
+      commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
       finished = true;
     } catch (InterruptedException e) {
       progress.cancel();
@@ -591,11 +594,10 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         LOG.debug("Aborting writer for {} because of a compaction failure, Store {}",
           mobFileWriter.getPath(), getStoreInfo());
         abortWriter(mobFileWriter);
+        deleteCommittedMobFiles(committedMobWriterFileNames);
       }
     }
 
-    // Commit last MOB writer
-    commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
     mobStore.updateCellsCountCompactedFromMob(cellsCountCompactedFromMob);
     mobStore.updateCellsCountCompactedToMob(cellsCountCompactedToMob);
     mobStore.updateCellsSizeCompactedFromMob(cellsSizeCompactedFromMob);
@@ -679,6 +681,36 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     writer.close();
     clearThreadLocals();
     return newFiles;
+  }
+
+  private StoreFileWriter switchToNewMobWriter(StoreFileWriter mobFileWriter, FileDetails fd,
+    long mobCells, boolean major, CompactionRequestImpl request,
+    List<String> committedMobWriterFileNames) throws IOException {
+    commitOrAbortMobWriter(mobFileWriter, fd.maxSeqId, mobCells, major);
+    committedMobWriterFileNames.add(mobFileWriter.getPath().getName());
+    return newMobWriter(fd, major, request.getWriterCreationTracker());
+  }
+
+  private void deleteCommittedMobFiles(List<String> fileNames) {
+    if (fileNames.isEmpty()) {
+      return;
+    }
+    Path mobColumnFamilyPath =
+      MobUtils.getMobFamilyPath(conf, store.getTableName(), store.getColumnFamilyName());
+    for (String fileName : fileNames) {
+      if (fileName == null) {
+        continue;
+      }
+      Path path = new Path(mobColumnFamilyPath, fileName);
+      try {
+        if (store.getFileSystem().exists(path)) {
+          store.getFileSystem().delete(path, false);
+        }
+      } catch (IOException e) {
+        LOG.warn("Failed to delete the mob file {} for an failed mob compaction.", path, e);
+      }
+    }
+
   }
 
 }

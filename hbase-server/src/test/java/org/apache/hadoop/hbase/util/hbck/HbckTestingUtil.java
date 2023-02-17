@@ -80,7 +80,7 @@ public class HbckTestingUtil {
 
   /**
    * Runs hbck with the -sidelineCorruptHFiles option
-   * @param table table constraint n
+   * @param table table constraint
    */
   public static HBaseFsck doHFileQuarantine(Configuration conf, TableName table) throws Exception {
     String[] args =

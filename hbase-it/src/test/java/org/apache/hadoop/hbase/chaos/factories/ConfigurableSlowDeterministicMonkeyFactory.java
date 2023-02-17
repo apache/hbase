@@ -18,11 +18,15 @@
 package org.apache.hadoop.hbase.chaos.factories;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministicMonkeyFactory {
 
@@ -32,6 +36,7 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
   final static String HEAVY_ACTIONS = "heavy.actions";
   final static String TABLE_PARAM = "\\$table_name";
 
+  @SuppressWarnings("ImmutableEnumChecker")
   public enum SupportedTypes {
     FLOAT(p -> Float.parseFloat(p)),
     LONG(p -> Long.parseLong(p)),
@@ -56,12 +61,13 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
       return super.getHeavyWeightedActions();
     } else {
       try {
-        String[] actionClasses = actions.split(";");
-        Action[] heavyActions = new Action[actionClasses.length];
-        for (int i = 0; i < actionClasses.length; i++) {
-          heavyActions[i] = instantiateAction(actionClasses[i]);
+        List<String> actionClasses = Splitter.on(';').splitToList(actions);
+        Action[] heavyActions = new Action[actionClasses.size()];
+        int i = 0;
+        for (String action : actionClasses) {
+          heavyActions[i++] = instantiateAction(action);
         }
-        LOG.info("Created actions {}", heavyActions);
+        LOG.info("Created actions {}", (Object[]) heavyActions); // non-varargs call to LOG#info
         return heavyActions;
       } catch (Exception e) {
         LOG.error("Error trying to instantiate heavy actions. Returning null array.", e);
@@ -72,10 +78,13 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
 
   private Action instantiateAction(String actionString) throws Exception {
     final String packageName = "org.apache.hadoop.hbase.chaos.actions";
-    String[] classAndParams = actionString.split("\\)")[0].split("\\(");
-    String className = packageName + "." + classAndParams[0];
-    String[] params =
-      classAndParams[1].replaceAll(TABLE_PARAM, tableName.getNameAsString()).split(",");
+    Iterable<String> classAndParams =
+      Splitter.on('(').split(Iterables.get(Splitter.on(')').split(actionString), 0));
+    String className = packageName + "." + Iterables.get(classAndParams, 0);
+    String[] params = Splitter.on(',')
+      .splitToStream(
+        Iterables.get(classAndParams, 1).replaceAll(TABLE_PARAM, tableName.getNameAsString()))
+      .toArray(String[]::new);
     LOG.info("About to instantiate action class: {}; With constructor params: {}", className,
       params);
     Class<? extends Action> actionClass = (Class<? extends Action>) Class.forName(className);

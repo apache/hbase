@@ -209,6 +209,7 @@ SKIP_TAG=$SKIP_TAG
 RUNNING_IN_DOCKER=1
 GIT_BRANCH=$GIT_BRANCH
 NEXT_VERSION=$NEXT_VERSION
+PREV_VERSION=$PREV_VERSION
 RELEASE_VERSION=$RELEASE_VERSION
 RELEASE_TAG=$RELEASE_TAG
 GIT_REF=$GIT_REF
@@ -310,7 +311,7 @@ if [ "${HOST_OS}" == "DARWIN" ]; then
   fi
   log "Launching ssh reverse tunnel from the container to gpg agent."
   log "    we should clean this up for you. If that fails the PID is in gpg-proxy.ssh.pid"
-  ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-extra-socket)" \
+  ssh -p 62222 -R "/home/${USER}/.gnupg/S.gpg-agent:$(gpgconf --list-dir agent-socket)" \
       -i "${HOME}/.ssh/id_rsa" -N -n localhost >gpg-proxy.ssh.log 2>&1 &
   echo $! > "${WORKDIR}/gpg-proxy.ssh.pid"
 else
@@ -320,7 +321,7 @@ else
   # agent socket and agent extra socket to your local gpg-agent's extra socket. See the README.txt
   # for an example.
   GPG_PROXY_MOUNT=(--mount \
-      "type=bind,src=$(gpgconf --list-dir agent-extra-socket),dst=/home/${USER}/.gnupg/S.gpg-agent")
+      "type=bind,src=$(gpgconf --list-dir agent-socket),dst=/home/${USER}/.gnupg/S.gpg-agent")
 fi
 
 banner "Building $RELEASE_TAG; output will be at $WORKDIR/output"

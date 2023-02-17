@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,10 +38,10 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,7 +78,7 @@ public class TestHalfStoreFileReader {
    * may or may not be a 'next' in the scanner/file. A bug in the half file scanner was returning -1
    * at the end of the bottom half, and that was causing the infrastructure above to go null causing
    * NPEs and other problems. This test reproduces that failure, and also tests both the bottom and
-   * top of the file while we are at it. n
+   * top of the file while we are at it.
    */
   @Test
   public void testHalfScanAndReseek() throws IOException {
@@ -118,10 +117,12 @@ public class TestHalfStoreFileReader {
   private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom, CacheConfig cacheConf)
     throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
-    HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
-    final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConf,
-      bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
-    fileInfo.initMetaAndIndex(halfreader.getHFileReader());
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, fs.getFileStatus(p), bottom);
+    storeFileInfo.initHFileInfo(context);
+    final HalfStoreFileReader halfreader =
+      (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 
@@ -214,10 +215,12 @@ public class TestHalfStoreFileReader {
   private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
     CacheConfig cacheConfig) throws IOException {
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, p).build();
-    HFileInfo fileInfo = new HFileInfo(context, TEST_UTIL.getConfiguration());
-    final HalfStoreFileReader halfreader = new HalfStoreFileReader(context, fileInfo, cacheConfig,
-      bottom, new AtomicInteger(0), TEST_UTIL.getConfiguration());
-    fileInfo.initMetaAndIndex(halfreader.getHFileReader());
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, fs.getFileStatus(p), bottom);
+    storeFileInfo.initHFileInfo(context);
+    final HalfStoreFileReader halfreader =
+      (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConfig);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(halfreader.getHFileReader());
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
     scanner.seekBefore(seekBefore);

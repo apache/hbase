@@ -390,6 +390,8 @@ Shell.load_command_group(
     locate_region
     list_regions
     clone_table_schema
+    list_enabled_tables
+    list_disabled_tables
   ],
   aliases: {
     'describe' => ['desc']
@@ -475,6 +477,7 @@ Shell.load_command_group(
     clear_compaction_queues
     list_deadservers
     list_liveservers
+    list_unknownservers
     clear_deadservers
     clear_block_cache
     stop_master

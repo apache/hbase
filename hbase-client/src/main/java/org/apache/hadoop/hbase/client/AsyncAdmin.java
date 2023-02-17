@@ -112,6 +112,14 @@ public interface AsyncAdmin {
   CompletableFuture<List<TableDescriptor>> listTableDescriptorsByNamespace(String name);
 
   /**
+   * List all enabled or disabled table descriptors
+   * @param isEnabled is true means return enabled table descriptors, false means return disabled
+   *                  table descriptors
+   * @return a list of table names wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled);
+
+  /**
    * List all of the names of userspace tables.
    * @return a list of table names wrapped by a {@link CompletableFuture}.
    * @see #listTableNames(Pattern, boolean)
@@ -134,6 +142,14 @@ public interface AsyncAdmin {
    * @return a list of table names wrapped by a {@link CompletableFuture}.
    */
   CompletableFuture<List<TableName>> listTableNames(Pattern pattern, boolean includeSysTables);
+
+  /**
+   * List all enabled or disabled table names
+   * @param isEnabled is true means return enabled table names, false means return disabled table
+   *                  names
+   * @return a list of table names wrapped by a {@link CompletableFuture}.
+   */
+  CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled);
 
   /**
    * Get list of table names by namespace.
@@ -211,7 +227,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> enableTable(TableName tableName);
 
   /**
-   * Disable a table. The table has to be in enabled state for it to be disabled. n
+   * Disable a table. The table has to be in enabled state for it to be disabled.
    */
   CompletableFuture<Void> disableTable(TableName tableName);
 
@@ -796,6 +812,14 @@ public interface AsyncAdmin {
   CompletableFuture<Void> disableTableReplication(TableName tableName);
 
   /**
+   * Check if a replication peer is enabled.
+   * @param peerId id of replication peer to check
+   * @return true if replication peer is enabled. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId);
+
+  /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
    * taken. If the table is disabled, an offline snapshot is taken. Snapshots are taken sequentially
    * even when requested concurrently, across all tables. Snapshots are considered unique based on
@@ -1156,7 +1180,7 @@ public interface AsyncAdmin {
   CompletableFuture<Void> stopMaster();
 
   /**
-   * Stop the designated regionserver. n
+   * Stop the designated regionserver.
    */
   CompletableFuture<Void> stopRegionServer(ServerName serverName);
 
@@ -1365,8 +1389,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> normalize(NormalizeTableFilterParams ntfp);
 
   /**
-   * Turn the cleaner chore on/off. n * @return Previous cleaner state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the cleaner chore on/off.
+   * @return Previous cleaner state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> cleanerChoreSwitch(boolean on);
 
@@ -1385,8 +1409,8 @@ public interface AsyncAdmin {
   CompletableFuture<Boolean> runCleanerChore();
 
   /**
-   * Turn the catalog janitor on/off. n * @return the previous state wrapped by a
-   * {@link CompletableFuture}
+   * Turn the catalog janitor on/off.
+   * @return the previous state wrapped by a {@link CompletableFuture}
    */
   CompletableFuture<Boolean> catalogJanitorSwitch(boolean on);
 
@@ -1453,6 +1477,14 @@ public interface AsyncAdmin {
   default CompletableFuture<List<ServerName>> listDeadServers() {
     return this.getClusterMetrics(EnumSet.of(Option.DEAD_SERVERS))
       .thenApply(ClusterMetrics::getDeadServerNames);
+  }
+
+  /**
+   * List all the unknown region servers.
+   */
+  default CompletableFuture<List<ServerName>> listUnknownServers() {
+    return this.getClusterMetrics(EnumSet.of(Option.UNKNOWN_SERVERS))
+      .thenApply(ClusterMetrics::getUnknownServerNames);
   }
 
   /**

@@ -74,9 +74,7 @@ public class BlockCacheUtil {
       }
     }).setPrettyPrinting().create();
 
-  /**
-   * n * @return The block content as String.
-   */
+  /** Returns The block content as String. */
   public static String toString(final CachedBlock cb, final long now) {
     return "filename=" + cb.getFilename() + ", " + toStringMinusFileName(cb, now);
   }
@@ -142,9 +140,7 @@ public class BlockCacheUtil {
     return GSON.toJson(bc);
   }
 
-  /**
-   * n * @return The block content of <code>bc</code> as a String minus the filename.
-   */
+  /** Returns The block content of <code>bc</code> as a String minus the filename. */
   public static String toStringMinusFileName(final CachedBlock cb, final long now) {
     return "offset=" + cb.getOffset() + ", size=" + cb.getSize() + ", age="
       + (now - cb.getCachedTime()) + ", type=" + cb.getBlockType() + ", priority="
@@ -281,9 +277,7 @@ public class BlockCacheUtil {
       new ConcurrentSkipListMap<>();
     FastLongHistogram hist = new FastLongHistogram();
 
-    /**
-     * n * @return True if full.... if we won't be adding any more.
-     */
+    /** Returns True if full.... if we won't be adding any more. */
     public boolean update(final CachedBlock cb) {
       if (isFull()) return true;
       NavigableSet<CachedBlock> set = this.cachedBlockByFile.get(cb.getFilename());

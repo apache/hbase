@@ -24,7 +24,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * A generic, immutable class for pairs of objects both of type <code>T</code>.
- * @param <T>
  * @see Pair if Types differ.
  */
 @InterfaceAudience.Public
@@ -43,14 +42,14 @@ public class PairOfSameType<T> implements Iterable<T> {
   }
 
   /**
-   * Return the first element stored in the pair. n
+   * Return the first element stored in the pair.
    */
   public T getFirst() {
     return first;
   }
 
   /**
-   * Return the second element stored in the pair. n
+   * Return the second element stored in the pair.
    */
   public T getSecond() {
     return second;

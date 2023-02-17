@@ -178,10 +178,11 @@ public class TestIndividualBytesFieldCell {
     assertEquals(kv1.getTagsLength(), ic1.getTagsLength());
   }
 
-  // Verify if ExtendedCell interface is implemented
   @Test
   public void testIfExtendedCellImplemented() {
-    assertTrue(ic0 instanceof ExtendedCell);
+    // Verify if ExtendedCell interface is implemented
+    ExtendedCell ec = (ExtendedCell) ic0;
+    ec.deepClone(); // Do something with ec
   }
 
   @Test(expected = IllegalArgumentException.class)

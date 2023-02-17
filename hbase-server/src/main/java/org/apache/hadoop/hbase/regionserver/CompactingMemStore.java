@@ -543,7 +543,7 @@ public class CompactingMemStore extends AbstractMemStore {
    * cells to currActive.cellSet,so for
    * {@link CompactingMemStore#flushInMemory(MutableSegment)},checkEmpty parameter is false. But if
    * {@link CompactingMemStore#snapshot} called this method,because there is no pending
-   * write,checkEmpty parameter could be true. nn
+   * write,checkEmpty parameter could be true.
    */
   protected void pushActiveToPipeline(MutableSegment currActive, boolean checkEmpty) {
     if (!checkEmpty || !currActive.isEmpty()) {

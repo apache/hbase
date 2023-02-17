@@ -228,6 +228,11 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
+      public List<ServerName> getUnknownServerNames() {
+        return null;
+      }
+
+      @Override
       public List<ServerName> getDecommissionedServerNames() {
         return null;
       }

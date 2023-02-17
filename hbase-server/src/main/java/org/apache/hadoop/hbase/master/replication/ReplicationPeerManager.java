@@ -271,6 +271,15 @@ public class ReplicationPeerManager {
       desc.getSyncReplicationState()));
   }
 
+  public boolean getPeerState(String peerId) throws ReplicationException {
+    ReplicationPeerDescription desc = peers.get(peerId);
+    if (desc != null) {
+      return desc.isEnabled();
+    } else {
+      throw new ReplicationException("Replication Peer of " + peerId + " does not exist.");
+    }
+  }
+
   public void enablePeer(String peerId) throws ReplicationException {
     setPeerState(peerId, true);
   }
@@ -587,8 +596,8 @@ public class ReplicationPeerManager {
     return s1.equals(s2);
   }
 
-  public void acquireSyncReplicationPeerLock() throws InterruptedException {
-    syncReplicationPeerLock.acquire();
+  public boolean tryAcquireSyncReplicationPeerLock() {
+    return syncReplicationPeerLock.tryAcquire();
   }
 
   public void releaseSyncReplicationPeerLock() {

@@ -42,7 +42,7 @@ public interface RegionScanner extends InternalScanner {
 
   /**
    * Do a reseek to the required row. Should not be used to seek to a key which may come before the
-   * current position. Always seeks to the beginning of a row boundary. nn * if row is null
+   * current position. Always seeks to the beginning of a row boundary. if row is null
    */
   boolean reseek(byte[] row) throws IOException;
 

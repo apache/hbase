@@ -36,6 +36,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 /**
@@ -63,7 +64,6 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
   protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestIngest.class);
-  protected IntegrationTestingUtility util;
   protected HBaseClusterInterface cluster;
   protected LoadTestTool loadTool;
 
@@ -137,7 +137,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
         families.add(Bytes.toString(family));
       }
     } else {
-      for (String family : familiesString.split(",")) {
+      for (String family : Splitter.on(',').split(familiesString)) {
         families.add(family);
       }
     }
@@ -168,8 +168,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       LOG.info("Intended run time: " + (runtime / 60000) + " min, left:"
         + ((runtime - (EnvironmentEdgeManager.currentTime() - start)) / 60000) + " min");
 
-      int ret = -1;
-      ret = loadTool.run(getArgsForLoadTestTool("-write",
+      int ret = loadTool.run(getArgsForLoadTestTool("-write",
         String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads), startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;

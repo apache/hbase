@@ -156,7 +156,7 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   /**
    * Creates a table with given table name,specified number of column families<br>
-   * and splitkeys if the table does not already exist. nnn
+   * and splitkeys if the table does not already exist.
    */
   private void setupTableWithSplitkeys(TableName table, int cfs, byte[][] SPLIT_KEYS)
     throws IOException {
@@ -236,7 +236,6 @@ public class TestBulkLoadHFilesSplitRecovery {
 
   /**
    * Checks that all columns have the expected value and that there is the expected number of rows.
-   * n
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
     TableDescriptor htd = util.getAdmin().getDescriptor(table);

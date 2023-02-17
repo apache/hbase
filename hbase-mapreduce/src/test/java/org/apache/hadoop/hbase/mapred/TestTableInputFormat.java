@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.mapred;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -110,15 +110,15 @@ public class TestTableInputFormat {
   /**
    * Setup a table with two rows and values.
    * @param tableName the name of the table to create
-   * @return A Table instance for the created table. n
+   * @return A Table instance for the created table.
    */
   public static Table createTable(byte[] tableName) throws IOException {
     return createTable(tableName, new byte[][] { FAMILY });
   }
 
   /**
-   * Setup a table with two rows and values per column family. n * @return A Table instance for the
-   * created table. n
+   * Setup a table with two rows and values per column family.
+   * @return A Table instance for the created table.
    */
   public static Table createTable(byte[] tableName, byte[][] families) throws IOException {
     Table table = UTIL.createTable(TableName.valueOf(tableName), families);
@@ -153,7 +153,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create table data and run tests on specified htable using the o.a.h.hbase.mapred API. nn
+   * Create table data and run tests on specified htable using the o.a.h.hbase.mapred API.
    */
   static void runTestMapred(Table table) throws IOException {
     org.apache.hadoop.hbase.mapred.TableRecordReader trr =
@@ -181,7 +181,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create a table that IOE's on first scanner next call n
+   * Create a table that IOE's on first scanner next call
    */
   static Table createIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
@@ -207,12 +207,12 @@ public class TestTableInputFormat {
     };
 
     Table htable = spy(createTable(name));
-    doAnswer(a).when(htable).getScanner((Scan) anyObject());
+    doAnswer(a).when(htable).getScanner(any(Scan.class));
     return htable;
   }
 
   /**
-   * Create a table that throws a DoNoRetryIOException on first scanner next call n
+   * Create a table that throws a DoNoRetryIOException on first scanner next call
    */
   static Table createDNRIOEScannerTable(byte[] name, final int failCnt) throws IOException {
     // build up a mock scanner stuff to fail the first time
@@ -240,12 +240,12 @@ public class TestTableInputFormat {
     };
 
     Table htable = spy(createTable(name));
-    doAnswer(a).when(htable).getScanner((Scan) anyObject());
+    doAnswer(a).when(htable).getScanner(any(Scan.class));
     return htable;
   }
 
   /**
-   * Run test assuming no errors using mapred api. n
+   * Run test assuming no errors using mapred api.
    */
   @Test
   public void testTableRecordReader() throws IOException {
@@ -254,7 +254,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming Scanner IOException failure using mapred api, n
+   * Run test assuming Scanner IOException failure using mapred api,
    */
   @Test
   public void testTableRecordReaderScannerFail() throws IOException {
@@ -263,7 +263,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming Scanner IOException failure using mapred api, n
+   * Run test assuming Scanner IOException failure using mapred api,
    */
   @Test(expected = IOException.class)
   public void testTableRecordReaderScannerFailTwice() throws IOException {

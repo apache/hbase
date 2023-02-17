@@ -108,7 +108,9 @@ public class Compressor {
       // if this isn't in the dictionary, we need to add to the dictionary.
       byte[] arr = new byte[length];
       in.readFully(arr);
-      if (dict != null) dict.addEntry(arr, 0, length);
+      if (dict != null) {
+        dict.addEntry(arr, 0, length);
+      }
       return arr;
     } else {
       // Status here is the higher-order byte of index of the dictionary entry

@@ -70,48 +70,51 @@ under the License.
     </tr>
     <tr>
       <td style="test-align: left">
-        2.4.13
+        2.5.3
       </td>
       <td style="test-align: left">
-        2022/07/01
+        2023/02/05
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.13/api_compare_2.4.12_to_2.4.13RC1.html">2.4.13 vs 2.4.12</a>
+        <a href="https://downloads.apache.org/hbase/2.5.3/api_compare_2.5.2_to_2.5.3RC2.html">2.5.3 vs 2.5.2</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.13/CHANGES.md">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.3/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/2.4.13/RELEASENOTES.md">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.5.3/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.13/hbase-2.4.13-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.13/hbase-2.4.13-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-bin.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.13/hbase-2.4.13-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.13/hbase-2.4.13-client-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.3/hbase-2.5.3-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.3/hbase-2.5.3-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.3/hbase-2.5.3-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-client-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.3/hbase-2.5.3-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-hadoop3-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.3/hbase-2.5.3-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.3/hbase-2.5.3-hadoop3-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable release</em></td>
+      <td />
     </tr>
     <tr>
       <td style="test-align: left">
-        1.7.2
+        2.4.16
       </td>
       <td style="test-align: left">
-        2022/08/09
+        2023/02/05
       </td>
       <td style="test-align: left">
-        <a href="https://downloads.apache.org/hbase/1.7.2/api_compare_1.7.1_to_1.7.2RC0.html">1.7.1 vs 1.7.2</a>
+        <a href="https://downloads.apache.org/hbase/2.4.16/api_compare_2.4.15_to_2.4.16RC1.html">2.4.16 vs 2.4.15</a>
       </td>
       <td style="test-align: left">
-        <a href="https://github.com/apache/hbase/blob/rel/1.7.2/CHANGES.txt">Changes</a>
+        <a href="https://downloads.apache.org/hbase/2.4.16/CHANGES.md">Changes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://issues.apache.org/jira/projects/HBASE/versions/12350412">Release Notes</a>
+        <a href="https://downloads.apache.org/hbase/2.4.16/RELEASENOTES.md">Release Notes</a>
       </td>
       <td style="test-align: left">
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.2/hbase-1.7.2-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-src.tar.gz.asc">asc</a>) <br />
-        <a href="https://www.apache.org/dyn/closer.lua/hbase/1.7.2/hbase-1.7.2-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/1.7.2/hbase-1.7.2-bin.tar.gz.asc">asc</a>)
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.16/hbase-2.4.16-src.tar.gz">src</a> (<a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-src.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-src.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.16/hbase-2.4.16-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-bin.tar.gz.asc">asc</a>) <br />
+        <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.16/hbase-2.4.16-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.16/hbase-2.4.16-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td><em>stable release</em></td>
     </tr>
   </table>
   </section>

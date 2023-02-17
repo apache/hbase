@@ -179,7 +179,7 @@ class MutableRegionInfo implements RegionInfo {
   }
 
   /**
-   * Get current table name of the region n
+   * Get current table name of the region
    */
   @Override
   public TableName getTable() {
@@ -231,7 +231,7 @@ class MutableRegionInfo implements RegionInfo {
 
   /**
    * Change the split status flag.
-   * @param split set split status n
+   * @param split set split status
    */
   public MutableRegionInfo setSplit(boolean split) {
     this.split = split;
@@ -252,7 +252,7 @@ class MutableRegionInfo implements RegionInfo {
   /**
    * The parent of a region split is offline while split daughters hold references to the parent.
    * Offlined regions are closed.
-   * @param offLine Set online/offline status. n
+   * @param offLine Set online/offline status.
    */
   public MutableRegionInfo setOffline(boolean offLine) {
     this.offLine = offLine;
