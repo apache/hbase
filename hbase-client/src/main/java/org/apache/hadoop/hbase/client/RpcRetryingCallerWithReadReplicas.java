@@ -81,7 +81,8 @@ public class RpcRetryingCallerWithReadReplicas {
     this.operationTimeout = operationTimeout;
     this.rpcTimeout = rpcTimeout;
     this.timeBeforeReplicas = timeBeforeReplicas;
-    this.rpcRetryingCallerFactory = new RpcRetryingCallerFactory(conf);
+    this.rpcRetryingCallerFactory =
+      new RpcRetryingCallerFactory(conf, cConnection.getConnectionConfiguration());
   }
 
   /**

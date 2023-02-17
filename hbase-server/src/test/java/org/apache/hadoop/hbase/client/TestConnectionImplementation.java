@@ -1138,8 +1138,8 @@ public class TestConnectionImplementation {
 
     private final Class<? extends HBaseServerException> exceptionClass;
 
-    public ThrowingCallerFactory(Configuration conf) {
-      super(conf);
+    public ThrowingCallerFactory(Configuration conf, ConnectionConfiguration connectionConfig) {
+      super(conf, connectionConfig);
       this.exceptionClass =
         conf.getClass("testSpecialPauseException", null, HBaseServerException.class);
     }
