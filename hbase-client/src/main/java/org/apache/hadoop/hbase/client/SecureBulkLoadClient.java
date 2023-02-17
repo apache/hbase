@@ -69,7 +69,7 @@ public class SecureBulkLoadClient {
             return response.getBulkToken();
           }
         };
-      return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null, null)
+      return RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null)
         .<String> newCaller().callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
@@ -91,7 +91,7 @@ public class SecureBulkLoadClient {
           return null;
         }
       };
-      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null, null).<Void> newCaller()
+      RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null).<Void> newCaller()
         .callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {
       throw new IOException(throwable);
