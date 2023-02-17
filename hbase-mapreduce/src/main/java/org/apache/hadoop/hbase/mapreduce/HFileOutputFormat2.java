@@ -415,7 +415,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         HFileContextBuilder contextBuilder = new HFileContextBuilder().withCompression(compression)
           .withDataBlockEncoding(encoding).withChecksumType(StoreUtils.getChecksumType(conf))
           .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blockSize)
-          .withColumnFamily(family).withTableName(tableName);
+          .withColumnFamily(family).withTableName(tableName).withCreateTime(EnvironmentEdgeManager.currentTime());
 
         if (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
           contextBuilder.withIncludesTags(true);
