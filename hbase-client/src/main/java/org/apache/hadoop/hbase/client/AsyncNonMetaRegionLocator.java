@@ -359,7 +359,7 @@ class AsyncNonMetaRegionLocator {
 
     while (true) {
       Map.Entry<byte[], RegionLocations> overlap =
-        isLast ? tableCache.cache.lastEntry() : tableCache.cache.floorEntry(region.getEndKey());
+        isLast ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(region.getEndKey());
       if (
         overlap == null || overlap.getValue() == locations
           || Bytes.equals(overlap.getKey(), region.getStartKey())
@@ -367,9 +367,12 @@ class AsyncNonMetaRegionLocator {
         break;
       }
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Removing cached location {} because it overlaps with new location {}",
-          overlap.getValue(), locations);
+      if (LOG.isInfoEnabled()) {
+        LOG.info(
+          "Removing cached location {} (endKey={}) because it overlaps with new location {} (endKey={})",
+          overlap.getValue(),
+          Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
+          locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
       }
 
       tableCache.cache.remove(overlap.getKey());

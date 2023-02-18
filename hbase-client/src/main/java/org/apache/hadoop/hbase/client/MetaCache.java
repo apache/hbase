@@ -208,7 +208,7 @@ public class MetaCache {
 
     while (true) {
       Entry<byte[], RegionLocations> overlap =
-        isLast ? tableLocations.lastEntry() : tableLocations.floorEntry(region.getEndKey());
+        isLast ? tableLocations.lastEntry() : tableLocations.lowerEntry(region.getEndKey());
       if (
         overlap == null || overlap.getValue() == locations
           || Bytes.equals(overlap.getKey(), region.getStartKey())
@@ -217,8 +217,11 @@ public class MetaCache {
       }
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Removing cached location {} because it overlaps with new location {}",
-          overlap.getValue(), locations);
+        LOG.trace(
+          "Removing cached location {} (endKey={}) because it overlaps with new location {} (endKey={})",
+          overlap.getValue(),
+          Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
+          locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
       }
 
       tableLocations.remove(overlap.getKey());
