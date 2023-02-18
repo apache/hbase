@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.function.Consumer;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -248,12 +247,10 @@ final class AsyncRegionLocationCache {
   }
 
   /**
-   * Removes the location from the cache if it exists and can be removed. Once a change is deemed
-   * possible, calls beforeUpdate callback prior to making a change. Calls afterUpdate callback
-   * after making a change.
+   * Removes the location from the cache if it exists and can be removed.
    * @return true if entry was removed
    */
-  public synchronized boolean remove(HRegionLocation loc, Consumer<HRegionLocation> beforeUpdate) {
+  public synchronized boolean remove(HRegionLocation loc) {
     byte[] startKey = loc.getRegion().getStartKey();
     RegionLocations oldLocs = cache.get(startKey);
     if (oldLocs == null) {
@@ -264,8 +261,6 @@ final class AsyncRegionLocationCache {
     if (!canUpdateOnError(loc, oldLoc)) {
       return false;
     }
-
-    beforeUpdate.accept(loc);
 
     RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
     if (newLocs == null) {

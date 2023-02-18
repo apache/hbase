@@ -536,8 +536,9 @@ class AsyncNonMetaRegionLocator {
   private void removeLocationFromCache(HRegionLocation loc) {
     TableCache tableCache = cache.get(loc.getRegion().getTable());
     if (tableCache != null) {
-      if (tableCache.regionLocationCache.remove(loc, this::updateMetaReplicaSelector)) {
+      if (tableCache.regionLocationCache.remove(loc)) {
         recordClearRegionCache();
+        updateMetaReplicaSelector(loc);
       }
     }
   }
