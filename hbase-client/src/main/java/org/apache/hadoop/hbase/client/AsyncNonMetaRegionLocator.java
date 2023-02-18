@@ -37,6 +37,7 @@ import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -146,8 +147,7 @@ class AsyncNonMetaRegionLocator {
 
   private static final class TableCache {
 
-    private final ConcurrentNavigableMap<byte[], RegionLocations> cache =
-      new ConcurrentSkipListMap<>(BYTES_COMPARATOR);
+    private final RegionLocationCache regionLocationCache = new RegionLocationCache();
 
     private final Set<LocateRequest> pendingRequests = new HashSet<>();
 
@@ -217,6 +217,223 @@ class AsyncNonMetaRegionLocator {
     }
   }
 
+  /**
+   * Wrapper around ConcurrentSkipListMap ensuring proper access to cached items. Updates are
+   * synchronized, but reads are not.
+   */
+  private static final class RegionLocationCache {
+
+    private final ConcurrentNavigableMap<byte[], RegionLocations> cache =
+      new ConcurrentSkipListMap<>(BYTES_COMPARATOR);
+
+    /**
+     * Add the given locations to the cache, merging with existing if necessary. Also cleans out any
+     * previously cached locations which may have been superseded by this one (i.e. in case of
+     * merged regions). See {@link #cleanOverlappingRegions(RegionLocations)}
+     * @param locs the locations to cache
+     * @return the final location (possibly merged) that was added to the cache
+     */
+    public synchronized RegionLocations add(RegionLocations locs) {
+      byte[] startKey = locs.getRegionLocation().getRegion().getStartKey();
+      RegionLocations oldLocs = cache.putIfAbsent(startKey, locs);
+      if (oldLocs == null) {
+        cleanOverlappingRegions(locs);
+        return locs;
+      }
+
+      // check whether the regions are the same, this usually happens when table is split/merged,
+      // or deleted and recreated again.
+      RegionInfo region = locs.getRegionLocation().getRegion();
+      RegionInfo oldRegion = oldLocs.getRegionLocation().getRegion();
+      if (region.getEncodedName().equals(oldRegion.getEncodedName())) {
+        RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
+        if (isEqual(mergedLocs, oldLocs)) {
+          // the merged one is the same with the old one, give up
+          LOG.trace("Will not add {} to cache because the old value {} "
+            + " is newer than us or has the same server name."
+            + " Maybe it is updated before we replace it", locs, oldLocs);
+          return oldLocs;
+        }
+        locs = mergedLocs;
+      } else {
+        // the region is different, here we trust the one we fetched. This maybe wrong but finally
+        // the upper layer can detect this and trigger removal of the wrong locations
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("The newly fetch region {} is different from the old one {} for row '{}',"
+            + " try replaying the old one...", region, oldRegion, Bytes.toStringBinary(startKey));
+        }
+      }
+
+      cache.put(startKey, locs);
+      cleanOverlappingRegions(locs);
+      return locs;
+    }
+
+    /**
+     * When caching a location, the region may have been the result of a merge. Check to see if the
+     * region's boundaries overlap any other cached locations. Those would have been merge parents
+     * which no longer exist. We need to proactively clear them out to avoid a case where a merged
+     * region which receives no requests never gets cleared. This causes requests to other merged
+     * regions after it to see the wrong cached location. See HBASE-27650
+     * @param locations the new location that was just cached
+     */
+    private void cleanOverlappingRegions(RegionLocations locations) {
+      RegionInfo region = locations.getRegionLocation().getRegion();
+
+      boolean isLast = isEmptyStopRow(region.getEndKey());
+
+      while (true) {
+        Map.Entry<byte[], RegionLocations> overlap =
+          isLast ? cache.lastEntry() : cache.lowerEntry(region.getEndKey());
+        if (
+          overlap == null || overlap.getValue() == locations
+            || Bytes.equals(overlap.getKey(), region.getStartKey())
+        ) {
+          break;
+        }
+
+        if (LOG.isInfoEnabled()) {
+          LOG.info(
+            "Removing cached location {} (endKey={}) because it overlaps with "
+              + "new location {} (endKey={})",
+            overlap.getValue(),
+            Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
+            locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
+        }
+
+        cache.remove(overlap.getKey());
+      }
+    }
+
+    private boolean isEqual(RegionLocations locs1, RegionLocations locs2) {
+      HRegionLocation[] locArr1 = locs1.getRegionLocations();
+      HRegionLocation[] locArr2 = locs2.getRegionLocations();
+      if (locArr1.length != locArr2.length) {
+        return false;
+      }
+      for (int i = 0; i < locArr1.length; i++) {
+        // do not need to compare region info
+        HRegionLocation loc1 = locArr1[i];
+        HRegionLocation loc2 = locArr2[i];
+        if (loc1 == null) {
+          if (loc2 != null) {
+            return false;
+          }
+        } else {
+          if (loc2 == null) {
+            return false;
+          }
+          if (loc1.getSeqNum() != loc2.getSeqNum()) {
+            return false;
+          }
+          if (!Objects.equal(loc1.getServerName(), loc2.getServerName())) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    /** Returns all cached RegionLocations */
+    public Collection<RegionLocations> getAll() {
+      return cache.values();
+    }
+
+    /**
+     * Gets the RegionLocations for a given region's startKey. This is a direct lookup, if the key
+     * does not exist in the cache it will return null.
+     * @param startKey region start key to directly look up
+     */
+    public RegionLocations get(byte[] startKey) {
+      return cache.get(startKey);
+    }
+
+    /**
+     * Finds the RegionLocations for the region with the greatest startKey less than or equal to the
+     * given row
+     * @param row row to find locations
+     */
+    public RegionLocations findForRow(byte[] row) {
+      Map.Entry<byte[], RegionLocations> entry = cache.floorEntry(row);
+      if (entry == null) {
+        return null;
+      }
+      return entry.getValue();
+    }
+
+    /**
+     * Finds the RegionLocations for the region with the greatest startKey strictly less than the
+     * given row
+     * @param row row to find locations
+     */
+    public RegionLocations findForBeforeRow(byte[] row) {
+      boolean isEmptyStopRow = isEmptyStopRow(row);
+      Map.Entry<byte[], RegionLocations> entry =
+        isEmptyStopRow ? cache.lastEntry() : cache.lowerEntry(row);
+      if (entry == null) {
+        return null;
+      }
+      return entry.getValue();
+    }
+
+    /**
+     * Removes the location from the cache if it exists and can be removed. Once a change is deemed
+     * possible, calls beforeUpdate callback prior to making a change. Calls afterUpdate callback
+     * after making a change.
+     */
+    public synchronized void remove(HRegionLocation loc, Runnable beforeUpdate,
+      Runnable afterUpdate) {
+      byte[] startKey = loc.getRegion().getStartKey();
+      RegionLocations oldLocs = cache.get(startKey);
+      if (oldLocs == null) {
+        return;
+      }
+
+      HRegionLocation oldLoc = oldLocs.getRegionLocation(loc.getRegion().getReplicaId());
+      if (!canUpdateOnError(loc, oldLoc)) {
+        return;
+      }
+
+      beforeUpdate.run();
+
+      RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
+      if (newLocs == null) {
+        if (cache.remove(startKey, oldLocs)) {
+          afterUpdate.run();
+        }
+      } else {
+        cache.put(startKey, newLocs);
+        afterUpdate.run();
+      }
+    }
+
+    /** Returns the size of the region locations cache */
+    public int size() {
+      return cache.size();
+    }
+
+    /**
+     * Removes serverName from all locations in the cache, fully removing any RegionLocations which
+     * are empty after removing the server from it.
+     * @param serverName server to remove from locations
+     */
+    public synchronized void removeForServer(ServerName serverName) {
+      for (Map.Entry<byte[], RegionLocations> entry : cache.entrySet()) {
+        byte[] regionName = entry.getKey();
+        RegionLocations locs = entry.getValue();
+        RegionLocations newLocs = locs.removeByServer(serverName);
+        if (locs == newLocs) {
+          continue;
+        }
+        if (newLocs.isEmpty()) {
+          cache.remove(regionName, locs);
+        } else {
+          cache.put(regionName, newLocs);
+        }
+      }
+    }
+  }
+
   AsyncNonMetaRegionLocator(AsyncConnectionImpl conn) {
     this.conn = conn;
     this.maxConcurrentLocateRequestPerTable = conn.getConfiguration().getInt(
@@ -264,121 +481,6 @@ class AsyncNonMetaRegionLocator {
     return computeIfAbsent(cache, tableName, TableCache::new);
   }
 
-  private boolean isEqual(RegionLocations locs1, RegionLocations locs2) {
-    HRegionLocation[] locArr1 = locs1.getRegionLocations();
-    HRegionLocation[] locArr2 = locs2.getRegionLocations();
-    if (locArr1.length != locArr2.length) {
-      return false;
-    }
-    for (int i = 0; i < locArr1.length; i++) {
-      // do not need to compare region info
-      HRegionLocation loc1 = locArr1[i];
-      HRegionLocation loc2 = locArr2[i];
-      if (loc1 == null) {
-        if (loc2 != null) {
-          return false;
-        }
-      } else {
-        if (loc2 == null) {
-          return false;
-        }
-        if (loc1.getSeqNum() != loc2.getSeqNum()) {
-          return false;
-        }
-        if (!Objects.equal(loc1.getServerName(), loc2.getServerName())) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  // if we successfully add the locations to cache, return the locations, otherwise return the one
-  // which prevents us being added. The upper layer can use this value to complete pending requests.
-  private RegionLocations addToCache(TableCache tableCache, RegionLocations locs) {
-    LOG.trace("Try adding {} to cache", locs);
-    byte[] startKey = locs.getRegionLocation().getRegion().getStartKey();
-    for (;;) {
-      // synchronize here because we may need to make multiple modifications in
-      // cleanOverlappingRegions, and we want them to be atomic
-      synchronized (tableCache) {
-        RegionLocations oldLocs = tableCache.cache.putIfAbsent(startKey, locs);
-        if (oldLocs == null) {
-          cleanOverlappingRegions(locs, tableCache);
-          return locs;
-        }
-        // check whether the regions are the same, this usually happens when table is split/merged,
-        // or
-        // deleted and recreated again.
-        RegionInfo region = locs.getRegionLocation().getRegion();
-        RegionInfo oldRegion = oldLocs.getRegionLocation().getRegion();
-        if (region.getEncodedName().equals(oldRegion.getEncodedName())) {
-          RegionLocations mergedLocs = oldLocs.mergeLocations(locs);
-          if (isEqual(mergedLocs, oldLocs)) {
-            // the merged one is the same with the old one, give up
-            LOG.trace("Will not add {} to cache because the old value {} "
-              + " is newer than us or has the same server name."
-              + " Maybe it is updated before we replace it", locs, oldLocs);
-            return oldLocs;
-          }
-          if (tableCache.cache.replace(startKey, oldLocs, mergedLocs)) {
-            cleanOverlappingRegions(locs, tableCache);
-            return mergedLocs;
-          }
-        } else {
-          // the region is different, here we trust the one we fetched. This maybe wrong but finally
-          // the upper layer can detect this and trigger removal of the wrong locations
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-              "The newly fetch region {} is different from the old one {} for row '{}',"
-                + " try replaying the old one...",
-              region, oldRegion, Bytes.toStringBinary(startKey));
-          }
-          if (tableCache.cache.replace(startKey, oldLocs, locs)) {
-            cleanOverlappingRegions(locs, tableCache);
-            return locs;
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * When caching a location, the region may have been the result of a merge. Check to see if the
-   * region's boundaries overlap any other cached locations. Those would have been merge parents
-   * which no longer exist. We need to proactively clear them out to avoid a case where a merged
-   * region which receives no requests never gets cleared. This causes requests to other merged
-   * regions after it to see the wrong cached location. See HBASE-27650
-   * @param locations  the new location that was just cached
-   * @param tableCache the tableCache containing that and other locations for this table.
-   */
-  private void cleanOverlappingRegions(RegionLocations locations, TableCache tableCache) {
-    RegionInfo region = locations.getRegionLocation().getRegion();
-
-    boolean isLast = Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW);
-
-    while (true) {
-      Map.Entry<byte[], RegionLocations> overlap =
-        isLast ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(region.getEndKey());
-      if (
-        overlap == null || overlap.getValue() == locations
-          || Bytes.equals(overlap.getKey(), region.getStartKey())
-      ) {
-        break;
-      }
-
-      if (LOG.isInfoEnabled()) {
-        LOG.info(
-          "Removing cached location {} (endKey={}) because it overlaps with new location {} (endKey={})",
-          overlap.getValue(),
-          Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
-          locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
-      }
-
-      tableCache.cache.remove(overlap.getKey());
-    }
-  }
-
   private void complete(TableName tableName, LocateRequest req, RegionLocations locs,
     Throwable error) {
     if (error != null) {
@@ -388,7 +490,7 @@ class AsyncNonMetaRegionLocator {
     Optional<LocateRequest> toSend = Optional.empty();
     TableCache tableCache = getTableCache(tableName);
     if (locs != null) {
-      RegionLocations addedLocs = addToCache(tableCache, locs);
+      RegionLocations addedLocs = tableCache.regionLocationCache.add(locs);
       List<RegionLocationsFutureResult> futureResultList = new ArrayList<>();
       synchronized (tableCache) {
         tableCache.pendingRequests.remove(req);
@@ -468,12 +570,11 @@ class AsyncNonMetaRegionLocator {
 
   private RegionLocations locateRowInCache(TableCache tableCache, TableName tableName, byte[] row,
     int replicaId) {
-    Map.Entry<byte[], RegionLocations> entry = tableCache.cache.floorEntry(row);
-    if (entry == null) {
+    RegionLocations locs = tableCache.regionLocationCache.findForRow(row);
+    if (locs == null) {
       recordCacheMiss();
       return null;
     }
-    RegionLocations locs = entry.getValue();
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     if (loc == null) {
       recordCacheMiss();
@@ -500,13 +601,11 @@ class AsyncNonMetaRegionLocator {
   private RegionLocations locateRowBeforeInCache(TableCache tableCache, TableName tableName,
     byte[] row, int replicaId) {
     boolean isEmptyStopRow = isEmptyStopRow(row);
-    Map.Entry<byte[], RegionLocations> entry =
-      isEmptyStopRow ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(row);
-    if (entry == null) {
+    RegionLocations locs = tableCache.regionLocationCache.findForBeforeRow(row);
+    if (locs == null) {
       recordCacheMiss();
       return null;
     }
-    RegionLocations locs = entry.getValue();
     HRegionLocation loc = locs.getRegionLocation(replicaId);
     if (loc == null) {
       recordCacheMiss();
@@ -619,7 +718,7 @@ class AsyncNonMetaRegionLocator {
             if (info == null || info.isOffline() || info.isSplitParent()) {
               continue;
             }
-            RegionLocations addedLocs = addToCache(tableCache, locs);
+            RegionLocations addedLocs = tableCache.regionLocationCache.add(locs);
             List<RegionLocationsFutureResult> futureResultList = new ArrayList<>();
             synchronized (tableCache) {
               futureResultList.addAll(tableCache.clearCompletedRequests(addedLocs));
@@ -697,43 +796,20 @@ class AsyncNonMetaRegionLocator {
 
   private void removeLocationFromCache(HRegionLocation loc) {
     TableCache tableCache = cache.get(loc.getRegion().getTable());
-    if (tableCache == null) {
-      return;
-    }
-    byte[] startKey = loc.getRegion().getStartKey();
-    for (;;) {
-      RegionLocations oldLocs = tableCache.cache.get(startKey);
-      if (oldLocs == null) {
-        return;
-      }
-      HRegionLocation oldLoc = oldLocs.getRegionLocation(loc.getRegion().getReplicaId());
-      if (!canUpdateOnError(loc, oldLoc)) {
-        return;
-      }
-      // Tell metaReplicaSelector that the location is stale. It will create a stale entry
-      // with timestamp internally. Next time the client looks up the same location,
-      // it will pick a different meta replica region.
-      if (this.metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
-        metaReplicaSelector.onError(loc);
-      }
-
-      RegionLocations newLocs = removeRegionLocation(oldLocs, loc.getRegion().getReplicaId());
-      if (newLocs == null) {
-        if (tableCache.cache.remove(startKey, oldLocs)) {
-          recordClearRegionCache();
-          return;
+    if (tableCache != null) {
+      tableCache.regionLocationCache.remove(loc, () -> {
+        // Tell metaReplicaSelector that the location is stale. It will create a stale entry
+        // with timestamp internally. Next time the client looks up the same location,
+        // it will pick a different meta replica region.
+        if (metaReplicaMode == CatalogReplicaMode.LOAD_BALANCE) {
+          metaReplicaSelector.onError(loc);
         }
-      } else {
-        if (tableCache.cache.replace(startKey, oldLocs, newLocs)) {
-          recordClearRegionCache();
-          return;
-        }
-      }
+      }, this::recordClearRegionCache);
     }
   }
 
   void addLocationToCache(HRegionLocation loc) {
-    addToCache(getTableCache(loc.getRegion().getTable()), createRegionLocations(loc));
+    getTableCache(loc.getRegion().getTable()).regionLocationCache.add(createRegionLocations(loc));
   }
 
   private HRegionLocation getCachedLocation(HRegionLocation loc) {
@@ -741,7 +817,7 @@ class AsyncNonMetaRegionLocator {
     if (tableCache == null) {
       return null;
     }
-    RegionLocations locs = tableCache.cache.get(loc.getRegion().getStartKey());
+    RegionLocations locs = tableCache.regionLocationCache.get(loc.getRegion().getStartKey());
     return locs != null ? locs.getRegionLocation(loc.getRegion().getReplicaId()) : null;
   }
 
@@ -766,8 +842,8 @@ class AsyncNonMetaRegionLocator {
       }
     }
     futureResultList.forEach(RegionLocationsFutureResult::complete);
-    conn.getConnectionMetrics()
-      .ifPresent(metrics -> metrics.incrMetaCacheNumClearRegion(tableCache.cache.size()));
+    conn.getConnectionMetrics().ifPresent(
+      metrics -> metrics.incrMetaCacheNumClearRegion(tableCache.regionLocationCache.size()));
   }
 
   void clearCache() {
@@ -776,19 +852,7 @@ class AsyncNonMetaRegionLocator {
 
   void clearCache(ServerName serverName) {
     for (TableCache tableCache : cache.values()) {
-      for (Map.Entry<byte[], RegionLocations> entry : tableCache.cache.entrySet()) {
-        byte[] regionName = entry.getKey();
-        RegionLocations locs = entry.getValue();
-        RegionLocations newLocs = locs.removeByServer(serverName);
-        if (locs == newLocs) {
-          continue;
-        }
-        if (newLocs.isEmpty()) {
-          tableCache.cache.remove(regionName, locs);
-        } else {
-          tableCache.cache.replace(regionName, locs, newLocs);
-        }
-      }
+      tableCache.regionLocationCache.removeForServer(serverName);
     }
   }
 
@@ -807,6 +871,7 @@ class AsyncNonMetaRegionLocator {
     if (tableCache == null) {
       return 0;
     }
-    return tableCache.cache.values().stream().mapToInt(RegionLocations::numNonNullElements).sum();
+    return tableCache.regionLocationCache.getAll().stream()
+      .mapToInt(RegionLocations::numNonNullElements).sum();
   }
 }

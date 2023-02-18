@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -26,12 +27,16 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
@@ -115,9 +120,38 @@ public class TestMetaCache {
     metrics = asyncConn.getConnectionMetrics().get();
   }
 
+  /**
+   * Test that our cleanOverlappingRegions doesn't incorrectly remove regions from cache.
+   * Originally encountered when using floorEntry rather than lowerEntry.
+   */
+  @Test
+  public void testAddToCacheReverse() throws IOException, InterruptedException {
+    setupConnection(1);
+    TableName tableName = TableName.valueOf("testAddToCache");
+    byte[] family = Bytes.toBytes("CF");
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    int maxSplits = 10;
+    List<byte[]> splits = IntStream.range(1, maxSplits).mapToObj(Bytes::toBytes).collect(Collectors.toList());;
+    TEST_UTIL.getAdmin().createTable(td, splits.toArray(new byte[0][]));
+    TEST_UTIL.waitTableAvailable(tableName);
+    TEST_UTIL.waitUntilNoRegionsInTransition();
+
+    assertEquals(splits.size() + 1, TEST_UTIL.getAdmin().getRegions(tableName).size());
+
+    RegionLocator locatorForTable = conn.getRegionLocator(tableName);
+    for (int i = maxSplits; i >= 0; i--) {
+      locatorForTable.getRegionLocation(Bytes.toBytes(i));
+    }
+
+    for (int i = 0; i < maxSplits; i++) {
+      assertNotNull(locator.getRegionLocationInCache(tableName, Bytes.toBytes(i)));
+    }
+  }
+
   @Test
   public void testMergeEmptyWithMetaCache() throws Throwable {
-    TableName tableName = TableName.valueOf("MergeEmpty");
+    TableName tableName = TableName.valueOf("testMergeEmptyWithMetaCache");
     byte[] family = Bytes.toBytes("CF");
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
@@ -152,14 +186,14 @@ public class TestMetaCache {
       // warm meta cache
       asyncConn.getRegionLocator(tableName).getAllRegionLocations().get();
 
-      Assert.assertEquals(3, TEST_UTIL.getAdmin().getRegions(tableName).size());
+      assertEquals(3, TEST_UTIL.getAdmin().getRegions(tableName).size());
 
       // Merge the 3 regions into one
       TEST_UTIL.getAdmin().mergeRegionsAsync(
         new byte[][] { regionA.getRegionName(), regionB.getRegionName(), regionC.getRegionName() },
         false).get(30, TimeUnit.SECONDS);
 
-      Assert.assertEquals(1, TEST_UTIL.getAdmin().getRegions(tableName).size());
+      assertEquals(1, TEST_UTIL.getAdmin().getRegions(tableName).size());
 
       AsyncTable<?> asyncTable = asyncConn.getTable(tableName);
 
