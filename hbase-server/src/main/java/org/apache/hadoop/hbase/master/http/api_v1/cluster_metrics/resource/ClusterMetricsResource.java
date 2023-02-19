@@ -61,7 +61,6 @@ public class ClusterMetricsResource {
   }
 
   @GET
-  @Path("/")
   public ClusterMetrics getBaseMetrics() throws ExecutionException, InterruptedException {
     final EnumSet<Option> fields =
       EnumSet.of(Option.HBASE_VERSION, Option.CLUSTER_ID, Option.MASTER, Option.BACKUP_MASTERS);
