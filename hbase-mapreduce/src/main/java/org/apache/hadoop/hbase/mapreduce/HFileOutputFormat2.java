@@ -619,9 +619,12 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
 
+    // Order matters here. Hadoop's SerializationFactory runs through serializations in the order
+    // they are registered. Register ExtendedCellSerialization before CellSerialization because both
+    // work for ExtendedCells but ExtendedCellSerialization handles them properly.
     conf.setStrings("io.serializations", conf.get("io.serializations"),
       MutationSerialization.class.getName(), ResultSerialization.class.getName(),
-      CellSerialization.class.getName());
+      ExtendedCellSerialization.class.getName(), CellSerialization.class.getName());
 
     if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
       LOG.info("bulkload locality sensitive enabled");
