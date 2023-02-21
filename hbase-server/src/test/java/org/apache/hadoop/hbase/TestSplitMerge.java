@@ -142,7 +142,7 @@ public class TestSplitMerge {
     RegionInfo mergedRegion = mergedRegions.get(0);
 
     List<RegionInfo> mergeParentRegions =
-      MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion.getRegionName());
+      MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
 
     assertEquals(mergeParentRegions.size(), regionCount);
 
