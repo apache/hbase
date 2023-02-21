@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1750,26 +1751,29 @@ public class AssignmentManager {
   };
 
   /**
-   * Query META if the given <code>RegionInfo</code> exists, adding to
-   * <code>AssignmentManager.regionStateStore</code> cache if the region is found in META.
-   * @param regionEncodedName encoded name for the region to be loaded from META into
-   *                          <code>AssignmentManager.regionStateStore</code> cache
-   * @return <code>RegionInfo</code> instance for the given region if it is present in META and got
-   *         successfully loaded into <code>AssignmentManager.regionStateStore</code> cache,
-   *         <b>null</b> otherwise.
-   * @throws UnknownRegionException if any errors occur while querying meta.
+   * Attempt to load {@code regionInfo} from META, adding any results to the
+   * {@link #regionStateStore} Is NOT aware of replica regions.
+   * @param regionInfo the region to be loaded from META.
+   * @throws IOException If some error occurs while querying META or parsing results.
    */
-  public RegionInfo loadRegionFromMeta(String regionEncodedName) throws UnknownRegionException {
-    try {
-      RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
-      regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
-      return regionStates.getRegionState(regionEncodedName) == null
-        ? null
-        : regionStates.getRegionState(regionEncodedName).getRegion();
-    } catch (IOException e) {
-      throw new UnknownRegionException(
-        "Error trying to load region " + regionEncodedName + " from META", e);
-    }
+  public void populateRegionStatesFromMeta(@NonNull final RegionInfo regionInfo)
+    throws IOException {
+    final String regionEncodedName = RegionInfo.DEFAULT_REPLICA_ID == regionInfo.getReplicaId()
+      ? regionInfo.getEncodedName()
+      : RegionInfoBuilder.newBuilder(regionInfo).setReplicaId(RegionInfo.DEFAULT_REPLICA_ID).build()
+        .getEncodedName();
+    populateRegionStatesFromMeta(regionEncodedName);
+  }
+
+  /**
+   * Attempt to load {@code regionEncodedName} from META, adding any results to the
+   * {@link #regionStateStore} Is NOT aware of replica regions.
+   * @param regionEncodedName encoded name for the region to be loaded from META.
+   * @throws IOException If some error occurs while querying META or parsing results.
+   */
+  public void populateRegionStatesFromMeta(@NonNull String regionEncodedName) throws IOException {
+    final RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
+    regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
   }
 
   private void loadMeta() throws IOException {
@@ -1923,8 +1927,20 @@ public class AssignmentManager {
     return regionStates.getAssignedRegions();
   }
 
+  /**
+   * Resolve a cached {@link RegionInfo} from the region name as a {@code byte[]}.
+   */
   public RegionInfo getRegionInfo(final byte[] regionName) {
     final RegionStateNode regionState = regionStates.getRegionStateNodeFromName(regionName);
+    return regionState != null ? regionState.getRegionInfo() : null;
+  }
+
+  /**
+   * Resolve a cached {@link RegionInfo} from the encoded region name as a {@code String}.
+   */
+  public RegionInfo getRegionInfo(final String encodedRegionName) {
+    final RegionStateNode regionState =
+      regionStates.getRegionStateNodeFromEncodedRegionName(encodedRegionName);
     return regionState != null ? regionState.getRegionInfo() : null;
   }
 
