@@ -177,7 +177,7 @@ public class TestWALPlayer {
     String walInputDir = new Path(cluster.getMaster().getMasterFileSystem().getWALRootDir(),
       HConstants.HREGION_LOGDIR_NAME).toString();
 
-    Configuration configuration = TEST_UTIL.getConfiguration();
+    Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
     String outPath = "/tmp/" + name.getMethodName();
     configuration.set(WALPlayer.BULK_OUTPUT_CONF_KEY, outPath);
     configuration.setBoolean(WALPlayer.MULTI_TABLES_SUPPORT, true);
