@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -1791,15 +1792,10 @@ public class MasterRpcServices extends RSRpcServices
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
     final GetRegionInfoRequest request) throws ServiceException {
-    RegionInfo ri = null;
-    try {
-      ri = getRegionInfo(request.getRegion());
-    } catch (UnknownRegionException ure) {
-      throw new ServiceException(ure);
-    }
-    GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
-    if (ri != null) {
-      builder.setRegionInfo(ProtobufUtil.toRegionInfo(ri));
+    final GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+    final RegionInfo info = getRegionInfo(request.getRegion());
+    if (info != null) {
+      builder.setRegionInfo(ProtobufUtil.toRegionInfo(info));
     } else {
       // Is it a MOB name? These work differently.
       byte[] regionName = request.getRegion().getValue().toByteArray();
@@ -2437,64 +2433,69 @@ public class MasterRpcServices extends RSRpcServices
     SetRegionStateInMetaRequest request) throws ServiceException {
     rpcPreCheck("setRegionStateInMeta");
     SetRegionStateInMetaResponse.Builder builder = SetRegionStateInMetaResponse.newBuilder();
+    final AssignmentManager am = master.getAssignmentManager();
     try {
       for (RegionSpecifierAndState s : request.getStatesList()) {
-        RegionSpecifier spec = s.getRegionSpecifier();
-        String encodedName;
-        if (spec.getType() == RegionSpecifierType.ENCODED_REGION_NAME) {
-          encodedName = spec.getValue().toStringUtf8();
-        } else {
-          // TODO: actually, a full region name can save a lot on meta scan, improve later.
-          encodedName = RegionInfo.encodeRegionName(spec.getValue().toByteArray());
+        final RegionSpecifier spec = s.getRegionSpecifier();
+        final RegionInfo targetRegionInfo = getRegionInfo(spec);
+        final RegionState.State targetState = RegionState.State.convert(s.getState());
+        final RegionState.State currentState = Optional.ofNullable(targetRegionInfo)
+          .map(info -> am.getRegionStates().getRegionState(info)).map(RegionState::getState)
+          .orElseThrow(
+            () -> new ServiceException("No existing state known for region '" + spec + "'."));
+        LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(),
+          targetRegionInfo, currentState, targetState);
+        if (currentState == targetState) {
+          LOG.debug("Proposed state matches current state. {}, {}", targetRegionInfo, currentState);
+          continue;
         }
-        RegionInfo info = this.master.getAssignmentManager().loadRegionFromMeta(encodedName);
-        LOG.trace("region info loaded from meta table: {}", info);
-        RegionState prevState =
-          this.master.getAssignmentManager().getRegionStates().getRegionState(info);
-        RegionState.State newState = RegionState.State.convert(s.getState());
-        LOG.info("{} set region={} state from {} to {}", master.getClientIdAuditPrefix(), info,
-          prevState.getState(), newState);
-        Put metaPut =
-          MetaTableAccessor.makePutFromRegionInfo(info, EnvironmentEdgeManager.currentTime());
-        metaPut.addColumn(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
-          Bytes.toBytes(newState.name()));
-        List<Put> putList = new ArrayList<>();
-        putList.add(metaPut);
-        MetaTableAccessor.putsToMetaTable(this.master.getConnection(), putList);
+        MetaTableAccessor.updateRegionState(master.getConnection(), targetRegionInfo, targetState);
         // Loads from meta again to refresh AM cache with the new region state
-        this.master.getAssignmentManager().loadRegionFromMeta(encodedName);
+        am.populateRegionStatesFromMeta(targetRegionInfo);
         builder.addStates(RegionSpecifierAndState.newBuilder().setRegionSpecifier(spec)
-          .setState(prevState.getState().convert()));
+          .setState(currentState.convert()));
       }
-    } catch (Exception e) {
+    } catch (IOException e) {
       throw new ServiceException(e);
     }
     return builder.build();
   }
 
   /**
-   * Get RegionInfo from Master using content of RegionSpecifier as key.
-   * @return RegionInfo found by decoding <code>rs</code> or null if none found
+   * Get {@link RegionInfo} from Master using content of {@link RegionSpecifier} as key.
+   * @return {@link RegionInfo} found by decoding {@code rs} or {@code null} if {@code rs} is
+   *         unknown to the master.
+   * @throws ServiceException If some error occurs while querying META or parsing results.
    */
-  private RegionInfo getRegionInfo(HBaseProtos.RegionSpecifier rs) throws UnknownRegionException {
-    RegionInfo ri = null;
+  private RegionInfo getRegionInfo(HBaseProtos.RegionSpecifier rs) throws ServiceException {
+    // TODO: this doesn't handle MOB regions. Should it? See the public method #getRegionInfo
+    final AssignmentManager am = master.getAssignmentManager();
+    final String encodedRegionName;
+    final RegionInfo info;
+    // first try resolving from the AM's caches.
     switch (rs.getType()) {
       case REGION_NAME:
         final byte[] regionName = rs.getValue().toByteArray();
-        ri = this.master.getAssignmentManager().getRegionInfo(regionName);
+        encodedRegionName = RegionInfo.encodeRegionName(regionName);
+        info = am.getRegionInfo(regionName);
         break;
       case ENCODED_REGION_NAME:
-        String encodedRegionName = Bytes.toString(rs.getValue().toByteArray());
-        RegionState regionState =
-          this.master.getAssignmentManager().getRegionStates().getRegionState(encodedRegionName);
-        ri = regionState == null
-          ? this.master.getAssignmentManager().loadRegionFromMeta(encodedRegionName)
-          : regionState.getRegion();
+        encodedRegionName = rs.getValue().toStringUtf8();
+        info = am.getRegionInfo(encodedRegionName);
         break;
       default:
-        break;
+        throw new IllegalArgumentException("Unrecognized RegionSpecifierType " + rs.getType());
     }
-    return ri;
+    if (info != null) {
+      return info;
+    }
+    // fall back to a meta scan and check the cache again.
+    try {
+      am.populateRegionStatesFromMeta(encodedRegionName);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return am.getRegionInfo(encodedRegionName);
   }
 
   /**
@@ -2514,28 +2515,22 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.AssignsResponse assigns(RpcController controller,
     MasterProtos.AssignsRequest request) throws ServiceException {
     checkMasterProcedureExecutor();
+    final ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+    final AssignmentManager am = master.getAssignmentManager();
     MasterProtos.AssignsResponse.Builder responseBuilder =
       MasterProtos.AssignsResponse.newBuilder();
-    try {
-      boolean override = request.getOverride();
-      LOG.info("{} assigns, override={}", master.getClientIdAuditPrefix(), override);
-      for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
-        long pid = Procedure.NO_PROC_ID;
-        RegionInfo ri = getRegionInfo(rs);
-        if (ri == null) {
-          LOG.info("Unknown={}", rs);
-        } else {
-          Procedure p = this.master.getAssignmentManager().createOneAssignProcedure(ri, override);
-          if (p != null) {
-            pid = this.master.getMasterProcedureExecutor().submitProcedure(p);
-          }
-        }
-        responseBuilder.addPid(pid);
+    final boolean override = request.getOverride();
+    LOG.info("{} assigns, override={}", master.getClientIdAuditPrefix(), override);
+    for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
+      final RegionInfo info = getRegionInfo(rs);
+      if (info == null) {
+        LOG.info("Unknown region {}", rs);
+        continue;
       }
-      return responseBuilder.build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+      responseBuilder.addPid(Optional.ofNullable(am.createOneAssignProcedure(info, override))
+        .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
+    return responseBuilder.build();
   }
 
   /**
@@ -2547,35 +2542,29 @@ public class MasterRpcServices extends RSRpcServices
   public MasterProtos.UnassignsResponse unassigns(RpcController controller,
     MasterProtos.UnassignsRequest request) throws ServiceException {
     checkMasterProcedureExecutor();
+    final ProcedureExecutor<MasterProcedureEnv> pe = master.getMasterProcedureExecutor();
+    final AssignmentManager am = master.getAssignmentManager();
     MasterProtos.UnassignsResponse.Builder responseBuilder =
       MasterProtos.UnassignsResponse.newBuilder();
-    try {
-      boolean override = request.getOverride();
-      LOG.info("{} unassigns, override={}", master.getClientIdAuditPrefix(), override);
-      for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
-        long pid = Procedure.NO_PROC_ID;
-        RegionInfo ri = getRegionInfo(rs);
-        if (ri == null) {
-          LOG.info("Unknown={}", rs);
-        } else {
-          Procedure p = this.master.getAssignmentManager().createOneUnassignProcedure(ri, override);
-          if (p != null) {
-            pid = this.master.getMasterProcedureExecutor().submitProcedure(p);
-          }
-        }
-        responseBuilder.addPid(pid);
+    final boolean override = request.getOverride();
+    LOG.info("{} unassigns, override={}", master.getClientIdAuditPrefix(), override);
+    for (HBaseProtos.RegionSpecifier rs : request.getRegionList()) {
+      final RegionInfo info = getRegionInfo(rs);
+      if (info == null) {
+        LOG.info("Unknown region {}", rs);
+        continue;
       }
-      return responseBuilder.build();
-    } catch (IOException ioe) {
-      throw new ServiceException(ioe);
+      responseBuilder.addPid(Optional.ofNullable(am.createOneUnassignProcedure(info, override))
+        .map(pe::submitProcedure).orElse(Procedure.NO_PROC_ID));
     }
+    return responseBuilder.build();
   }
 
   /**
    * Bypass specified procedure to completion. Procedure is marked completed but no actual work is
    * done from the current state/ step onwards. Parents of the procedure are also marked for bypass.
    * NOTE: this is a dangerous operation and may be used to unstuck buggy procedures. This may leave
-   * system in inconherent state. This may need to be followed by some cleanup steps/ actions by
+   * system in incoherent state. This may need to be followed by some cleanup steps/ actions by
    * operator.
    * @return BypassProcedureToCompletionResponse indicating success or failure
    */

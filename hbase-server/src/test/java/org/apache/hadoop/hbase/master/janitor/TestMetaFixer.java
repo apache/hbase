@@ -328,10 +328,10 @@ public class TestMetaFixer {
                   && regionStates.getRegionState(pair.getSecond()).isOpened())
             ) {
               // Make sure GC is done.
-              List<RegionInfo> firstParents = MetaTableAccessor
-                .getMergeRegions(services.getConnection(), pair.getFirst().getRegionName());
-              List<RegionInfo> secondParents = MetaTableAccessor
-                .getMergeRegions(services.getConnection(), pair.getSecond().getRegionName());
+              List<RegionInfo> firstParents =
+                MetaTableAccessor.getMergeRegions(services.getConnection(), pair.getFirst());
+              List<RegionInfo> secondParents =
+                MetaTableAccessor.getMergeRegions(services.getConnection(), pair.getSecond());
 
               return (firstParents == null || firstParents.isEmpty())
                 && (secondParents == null || secondParents.isEmpty());
