@@ -652,11 +652,11 @@ public final class MetricsConnection implements StatisticTrackable {
     if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
       if (e instanceof RemoteWithExtrasException) {
-        getMetric(REMOTE_EXCEPTION_CNT_BASE + ((RemoteWithExtrasException)e).getClassName(),
+        getMetric(REMOTE_EXCEPTION_CNT_BASE + ((RemoteWithExtrasException) e).getClassName(),
           rpcCounters, counterFactory).inc();
       } else {
-        getMetric(LOCAL_EXCEPTION_CNT_BASE + e.getClass().getSimpleName(),
-          rpcCounters, counterFactory).inc();
+        getMetric(LOCAL_EXCEPTION_CNT_BASE + e.getClass().getSimpleName(), rpcCounters,
+          counterFactory).inc();
       }
     }
     // this implementation is tied directly to protobuf implementation details. would be better
