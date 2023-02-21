@@ -36,8 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
@@ -119,6 +119,7 @@ public final class MetricsConnection implements StatisticTrackable {
 
   private static final String CNT_BASE = "rpcCount_";
   private static final String FAILURE_CNT_BASE = "rpcFailureCount_";
+  private static final String TOTAL_EXCEPTION_CNT = "rpcTotalExceptions";
   private static final String LOCAL_EXCEPTION_CNT_BASE = "rpcLocalExceptions_";
   private static final String REMOTE_EXCEPTION_CNT_BASE = "rpcRemoteExceptions_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
@@ -651,9 +652,13 @@ public final class MetricsConnection implements StatisticTrackable {
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
-      if (e instanceof RemoteWithExtrasException) {
-        getMetric(REMOTE_EXCEPTION_CNT_BASE + ((RemoteWithExtrasException) e).getClassName(),
-          rpcCounters, counterFactory).inc();
+      getMetric(TOTAL_EXCEPTION_CNT, rpcCounters, counterFactory).inc();
+      if (e instanceof RemoteException) {
+        String fullClassName = ((RemoteException) e).getClassName();
+        String simpleClassName = (fullClassName != null)
+          ? fullClassName.substring(fullClassName.lastIndexOf(".") + 1)
+          : "unknown";
+        getMetric(REMOTE_EXCEPTION_CNT_BASE + simpleClassName, rpcCounters, counterFactory).inc();
       } else {
         getMetric(LOCAL_EXCEPTION_CNT_BASE + e.getClass().getSimpleName(), rpcCounters,
           counterFactory).inc();

@@ -155,7 +155,7 @@ public class TestMetricsConnection {
         GetRequest.getDefaultInstance(), MetricsConnection.newCallStats(), null);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Scan"),
         ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats(),
-        new RemoteWithExtrasException("IOException", null, false, false));
+        new RemoteWithExtrasException("java.io.IOException", null, false, false));
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Multi"),
         MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats(),
         new CallTimeoutException("test with CallTimeoutException"));
@@ -216,6 +216,12 @@ public class TestMetricsConnection {
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+
+    // total exception
+    metricKey = "rpcTotalExceptions";
+    counter = METRICS.getRpcCounters().get(metricKey);
+    metricVal = (counter != null) ? counter.getCount() : 0;
+    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
