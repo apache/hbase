@@ -120,9 +120,8 @@ public final class MetricsConnection implements StatisticTrackable {
 
   private static final String CNT_BASE = "rpcCount_";
   private static final String FAILURE_CNT_BASE = "rpcFailureCount_";
-  private static final String TIMEOUT_CNT_BASE = "rpcExceptionCallTimeout_";
-  private static final String REMOTE_CNT_BASE = "rpcExceptionRemote_";
-  private static final String OTHERS_CNT_BASE = "rpcExceptionOthers_";
+  private static final String LOCAL_EXCEPTION_CNT_BASE = "rpcLocalExceptions_";
+  private static final String REMOTE_EXCEPTION_CNT_BASE = "rpcRemoteExceptions_";
   private static final String DRTN_BASE = "rpcCallDurationMs_";
   private static final String REQ_BASE = "rpcCallRequestSizeBytes_";
   private static final String RESP_BASE = "rpcCallResponseSizeBytes_";
@@ -653,12 +652,12 @@ public final class MetricsConnection implements StatisticTrackable {
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
-      if (e instanceof CallTimeoutException) {
-        getMetric(TIMEOUT_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
-      } else if (e instanceof RemoteWithExtrasException) {
-        getMetric(REMOTE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
+      if (e instanceof RemoteWithExtrasException) {
+        getMetric(REMOTE_EXCEPTION_CNT_BASE + ((RemoteWithExtrasException)e).getClassName(),
+          rpcCounters, counterFactory).inc();
       } else {
-        getMetric(OTHERS_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
+        getMetric(LOCAL_EXCEPTION_CNT_BASE + e.getClass().getSimpleName(),
+          rpcCounters, counterFactory).inc();
       }
     }
     // this implementation is tied directly to protobuf implementation details. would be better

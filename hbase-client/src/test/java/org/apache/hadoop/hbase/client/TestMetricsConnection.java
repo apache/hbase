@@ -184,65 +184,38 @@ public class TestMetricsConnection {
     final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
     final String rpcFailureCountPrefix =
       "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
-    final String rpcTimeoutCountPrefix =
-      "rpcExceptionCallTimeout_" + ClientService.getDescriptor().getName() + "_";
-    final String rpcRemoteCountPrefix =
-      "rpcExceptionRemote_" + ClientService.getDescriptor().getName() + "_";
     String metricKey;
     long metricVal;
     Counter counter;
 
-    for (String method : new String[] { "Get", "Mutate" }) {
+    for (String method : new String[] { "Get", "Scan", "Multi", "Mutate" }) {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
 
-      // no failure
       metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+      if (method.equals("Get") || method.equals("Mutate")) {
+        // no failure
+        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+      } else {
+        // has failure
+        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+      }
     }
 
-    final String scanMethod = "Scan";
-    metricKey = rpcCountPrefix + scanMethod;
-    metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
-    // has failure
-    metricKey = rpcFailureCountPrefix + scanMethod;
-    counter = METRICS.getRpcCounters().get(metricKey);
-    metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
-    // no timeout
-    metricKey = rpcTimeoutCountPrefix + scanMethod;
-    counter = METRICS.getRpcCounters().get(metricKey);
-    metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
-    // has remote
-    metricKey = rpcRemoteCountPrefix + scanMethod;
+    // remote exception
+    metricKey = "rpcRemoteExceptions_IOException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
 
-    final String multiMethod = "Multi";
-    metricKey = rpcCountPrefix + multiMethod;
-    metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
-    // has failure
-    metricKey = rpcFailureCountPrefix + multiMethod;
+    // local exception
+    metricKey = "rpcLocalExceptions_CallTimeoutException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
-    // has timeout
-    metricKey = rpcTimeoutCountPrefix + multiMethod;
-    counter = METRICS.getRpcCounters().get(metricKey);
-    metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
-    // no remote
-    metricKey = rpcRemoteCountPrefix + multiMethod;
-    counter = METRICS.getRpcCounters().get(metricKey);
-    metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
