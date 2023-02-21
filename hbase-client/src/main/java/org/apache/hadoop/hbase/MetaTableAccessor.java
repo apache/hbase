@@ -289,7 +289,8 @@ public class MetaTableAccessor {
     RegionLocations locations = getRegionLocations(r);
     return locations == null
       ? null
-      : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
+      : locations.getRegionLocation(
+        parsedInfo == null ? RegionInfo.DEFAULT_REPLICA_ID : parsedInfo.getReplicaId());
   }
 
   /**
@@ -333,12 +334,12 @@ public class MetaTableAccessor {
   /**
    * Gets the result in hbase:meta for the specified region.
    * @param connection connection we're using
-   * @param regionName region we're looking for
+   * @param regionInfo region we're looking for
    * @return result of the specified region
    */
-  public static Result getRegionResult(Connection connection, byte[] regionName)
+  public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    Get get = new Get(regionName);
+    Get get = new Get(getMetaKeyForRegion(regionInfo));
     get.addFamily(HConstants.CATALOG_FAMILY);
     return get(getMetaHTable(connection), get);
   }
@@ -364,20 +365,20 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Returns Return all regioninfos listed in the 'info:merge*' columns of the
-   * <code>regionName</code> row.
+   * Returns Return all regioninfos listed in the 'info:merge*' columns of the {@code regionInfo}
+   * row.
    */
   @Nullable
-  public static List<RegionInfo> getMergeRegions(Connection connection, byte[] regionName)
+  public static List<RegionInfo> getMergeRegions(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    return getMergeRegions(getRegionResult(connection, regionName).rawCells());
+    return getMergeRegions(getRegionResult(connection, regionInfo).rawCells());
   }
 
   /**
-   * Check whether the given {@code regionName} has any 'info:merge*' columns.
+   * Check whether the given {@code regionInfo} has any 'info:merge*' columns.
    */
-  public static boolean hasMergeRegions(Connection conn, byte[] regionName) throws IOException {
-    return hasMergeRegions(getRegionResult(conn, regionName).rawCells());
+  public static boolean hasMergeRegions(Connection conn, RegionInfo regionInfo) throws IOException {
+    return hasMergeRegions(getRegionResult(conn, regionInfo).rawCells());
   }
 
   /**
@@ -1294,11 +1295,21 @@ public class MetaTableAccessor {
   ////////////////////////
   // Editing operations //
   ////////////////////////
+
   /**
-   * Generates and returns a Put containing the region into for the catalog table
+   * Generates and returns a {@link Put} containing the {@link RegionInfo} for the catalog table.
+   * @throws IllegalArgumentException when the provided RegionInfo is not the default replica.
+   */
+  public static Put makePutFromRegionInfo(RegionInfo regionInfo) throws IOException {
+    return makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
+  }
+
+  /**
+   * Generates and returns a {@link Put} containing the {@link RegionInfo} for the catalog table.
+   * @throws IllegalArgumentException when the provided RegionInfo is not the default replica.
    */
   public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
-    return addRegionInfo(new Put(regionInfo.getRegionName(), ts), regionInfo);
+    return addRegionInfo(new Put(getMetaKeyForRegion(regionInfo), ts), regionInfo);
   }
 
   /**
@@ -1308,7 +1319,11 @@ public class MetaTableAccessor {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
-    Delete delete = new Delete(regionInfo.getRegionName());
+    if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+      throw new IllegalArgumentException(
+        "Can't make delete for a replica region. Operate on the primary");
+    }
+    Delete delete = new Delete(getMetaKeyForRegion(regionInfo));
     delete.addFamily(getCatalogFamily(), ts);
     return delete;
   }
@@ -1399,9 +1414,14 @@ public class MetaTableAccessor {
     }
   }
 
-  private static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  /**
+   * Set the column value corresponding to this {@code replicaId}'s {@link RegionState} to the
+   * provided {@code state}. Mutates the provided {@link Put}.
+   */
+  private static Put addRegionStateToPut(Put put, int replicaId, RegionState.State state)
+    throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-      .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getRegionStateColumn())
+      .setFamily(HConstants.CATALOG_FAMILY).setQualifier(getRegionStateColumn(replicaId))
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
       .build());
     return put;
@@ -1412,9 +1432,9 @@ public class MetaTableAccessor {
    */
   public static void updateRegionState(Connection connection, RegionInfo ri,
     RegionState.State state) throws IOException {
-    Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
-    MetaTableAccessor.putsToMetaTable(connection,
-      Collections.singletonList(addRegionStateToPut(put, state)));
+    final Put put = makePutFromRegionInfo(ri);
+    addRegionStateToPut(put, ri.getReplicaId(), state);
+    putsToMetaTable(connection, Collections.singletonList(put));
   }
 
   /**
@@ -1432,7 +1452,7 @@ public class MetaTableAccessor {
   public static void addSplitsToParent(Connection connection, RegionInfo regionInfo,
     RegionInfo splitA, RegionInfo splitB) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
-      Put put = makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
+      Put put = makePutFromRegionInfo(regionInfo);
       addDaughtersToPut(put, splitA, splitB);
       meta.put(put);
       debugLogMutation(put);
@@ -1483,7 +1503,7 @@ public class MetaTableAccessor {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
         Put put = makePutFromRegionInfo(regionInfo, ts);
         // New regions are added with initial state of CLOSED.
-        addRegionStateToPut(put, RegionState.State.CLOSED);
+        addRegionStateToPut(put, regionInfo.getReplicaId(), RegionState.State.CLOSED);
         // Add empty locations for region replicas so that number of replicas can be cached
         // whenever the primary region is looked up from meta
         for (int i = 1; i < regionReplication; i++) {
@@ -1548,7 +1568,7 @@ public class MetaTableAccessor {
       // default OFFLINE state. If Master gets restarted after this step, start up sequence of
       // master tries to assign this offline region. This is followed by re-assignments of the
       // merged region from resumed {@link MergeTableRegionsProcedure}
-      addRegionStateToPut(putOfMerged, RegionState.State.CLOSED);
+      addRegionStateToPut(putOfMerged, RegionInfo.DEFAULT_REPLICA_ID, RegionState.State.CLOSED);
       mutations.add(putOfMerged);
       // The merged is a new region, openSeqNum = 1 is fine. ServerName may be null
       // if crash after merge happened but before we got to here.. means in-memory
@@ -1606,8 +1626,8 @@ public class MetaTableAccessor {
       // default OFFLINE state. If Master gets restarted after this step, start up sequence of
       // master tries to assign these offline regions. This is followed by re-assignments of the
       // daughter regions from resumed {@link SplitTableRegionProcedure}
-      addRegionStateToPut(putA, RegionState.State.CLOSED);
-      addRegionStateToPut(putB, RegionState.State.CLOSED);
+      addRegionStateToPut(putA, RegionInfo.DEFAULT_REPLICA_ID, RegionState.State.CLOSED);
+      addRegionStateToPut(putB, RegionInfo.DEFAULT_REPLICA_ID, RegionState.State.CLOSED);
 
       addSequenceNum(putA, 1, splitA.getReplicaId()); // new regions, openSeqNum = 1 is fine.
       addSequenceNum(putB, 1, splitB.getReplicaId());
@@ -1820,7 +1840,7 @@ public class MetaTableAccessor {
     throws IOException {
     Delete delete = new Delete(mergeRegion.getRegionName());
     // NOTE: We are doing a new hbase:meta read here.
-    Cell[] cells = getRegionResult(connection, mergeRegion.getRegionName()).rawCells();
+    Cell[] cells = getRegionResult(connection, mergeRegion).rawCells();
     if (cells == null || cells.length == 0) {
       return;
     }

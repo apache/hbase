@@ -110,9 +110,9 @@ public class RegionStateStore {
 
   /**
    * Queries META table for the passed region encoded name, delegating action upon results to the
-   * <code>RegionStateVisitor</code> passed as second parameter.
+   * {@code RegionStateVisitor} passed as second parameter.
    * @param regionEncodedName encoded name for the Region we want to query META for.
-   * @param visitor           The <code>RegionStateVisitor</code> instance to react over the query
+   * @param visitor           The {@code RegionStateVisitor} instance to react over the query
    *                          results.
    * @throws IOException If some error occurs while querying META or parsing results.
    */

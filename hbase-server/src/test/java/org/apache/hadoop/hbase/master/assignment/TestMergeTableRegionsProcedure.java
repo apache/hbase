@@ -205,10 +205,10 @@ public class TestMergeTableRegionsProcedure {
     // the merged regions cleanup.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(true);
     UTIL.getHBaseCluster().getMaster().getCatalogJanitor().triggerNow();
-    byte[] mergedRegion = proc.getMergedRegion().getRegionName();
+    RegionInfo mergedRegion = proc.getMergedRegion();
     while (ris != null && ris.get(0) != null && ris.get(1) != null) {
       ris = MetaTableAccessor.getMergeRegions(UTIL.getConnection(), mergedRegion);
-      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion), ris);
+      LOG.info("{} {}", Bytes.toStringBinary(mergedRegion.getRegionName()), ris);
       Threads.sleep(1000);
     }
     assertEquals(countOfRowsLoaded, UTIL.countRows(tableName));

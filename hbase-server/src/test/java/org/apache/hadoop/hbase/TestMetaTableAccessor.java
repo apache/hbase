@@ -133,20 +133,19 @@ public class TestMetaTableAccessor {
       RegionInfo mergedRegion0 = mergedRegions.get(0);
       RegionInfo mergedRegion1 = mergedRegions.get(1);
 
-      List<RegionInfo> mergeParents =
-        MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
+      List<RegionInfo> mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion0);
       assertTrue(mergeParents.contains(regions.get(0)));
       assertTrue(mergeParents.contains(regions.get(1)));
-      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1.getRegionName());
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1);
       assertTrue(mergeParents.contains(regions.get(2)));
       assertTrue(mergeParents.contains(regions.get(3)));
 
       // Delete merge qualifiers for mergedRegion0, then cannot getMergeRegions again
       MetaTableAccessor.deleteMergeQualifiers(connection, mergedRegion0);
-      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion0.getRegionName());
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion0);
       assertNull(mergeParents);
 
-      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1.getRegionName());
+      mergeParents = MetaTableAccessor.getMergeRegions(connection, mergedRegion1);
       assertTrue(mergeParents.contains(regions.get(2)));
       assertTrue(mergeParents.contains(regions.get(3)));
     }
