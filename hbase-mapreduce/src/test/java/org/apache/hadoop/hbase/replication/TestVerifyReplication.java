@@ -447,6 +447,36 @@ public class TestVerifyReplication extends TestReplicationBase {
     checkRestoreTmpDir(CONF2, tmpPath2, 2);
   }
 
+  @Test
+  public void testVerifyReplicationThreadedRecompares() throws Exception {
+    // Populate the tables with same data
+    runBatchCopyTest();
+
+    // ONLY_IN_PEER_TABLE_ROWS
+    Put put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH)));
+    put.addColumn(noRepfamName, row, row);
+    htable3.put(put);
+
+    // CONTENT_DIFFERENT_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH - 1)));
+    put.addColumn(noRepfamName, row, Bytes.toBytes("diff value"));
+    htable3.put(put);
+
+    // ONLY_IN_SOURCE_TABLE_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH + 1)));
+    put.addColumn(noRepfamName, row, row);
+    htable1.put(put);
+
+    String[] args = new String[] {
+      "--reCompareThreads=10",
+      "--reCompareTries=3",
+      "--peerTableName=" + peerTableName.getNameAsString(),
+      UTIL2.getClusterKey(),
+      tableName.getNameAsString()
+    };
+    runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
+  }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     htable3.close();
