@@ -279,8 +279,8 @@ public class DeleteTableProcedure extends AbstractStateMachineTableProcedure<Del
         for (RegionInfo region : regions) {
           if (RegionReplicaUtil.isDefaultReplica(region)) {
             regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, region));
-            List<RegionInfo> mergeRegions = MetaTableAccessor
-              .getMergeRegions(env.getMasterServices().getConnection(), region.getRegionName());
+            List<RegionInfo> mergeRegions =
+              MetaTableAccessor.getMergeRegions(env.getMasterServices().getConnection(), region);
             if (!CollectionUtils.isEmpty(mergeRegions)) {
               mergeRegions.stream()
                 .forEach(r -> regionDirList.add(FSUtils.getRegionDirFromTableDir(tableDir, r)));

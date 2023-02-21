@@ -72,7 +72,7 @@ public class RegionStates {
 
   // TODO: Replace the ConcurrentSkipListMaps
   /**
-   * RegionName -- i.e. RegionInfo.getRegionName() -- as bytes to {@link RegionStateNode}
+   * A Map from {@link RegionInfo#getRegionName()} to {@link RegionStateNode}
    */
   private final ConcurrentSkipListMap<byte[], RegionStateNode> regionsMap =
     new ConcurrentSkipListMap<>(Bytes.BYTES_COMPARATOR);
@@ -142,6 +142,10 @@ public class RegionStates {
 
   public RegionStateNode getRegionStateNodeFromName(byte[] regionName) {
     return regionsMap.get(regionName);
+  }
+
+  public RegionStateNode getRegionStateNodeFromEncodedRegionName(final String encodedRegionName) {
+    return encodedRegionsMap.get(encodedRegionName);
   }
 
   public RegionStateNode getRegionStateNode(RegionInfo regionInfo) {

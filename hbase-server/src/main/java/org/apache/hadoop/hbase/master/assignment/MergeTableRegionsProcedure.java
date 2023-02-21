@@ -469,10 +469,7 @@ public class MergeTableRegionsProcedure
 
     RegionStates regionStates = env.getAssignmentManager().getRegionStates();
     for (RegionInfo ri : this.regionsToMerge) {
-      if (
-        MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(),
-          ri.getRegionName())
-      ) {
+      if (MetaTableAccessor.hasMergeRegions(env.getMasterServices().getConnection(), ri)) {
         String msg = "Skip merging " + RegionInfo.getShortNameToLog(regionsToMerge)
           + ", because a parent, " + RegionInfo.getShortNameToLog(ri) + ", has a merge qualifier "
           + "(if a 'merge column' in parent, it was recently merged but still has outstanding "

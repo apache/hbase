@@ -1918,7 +1918,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     RegionInfo hri =
       RegionInfoBuilder.newBuilder(hi.getMetaEntry()).setOffline(false).setSplit(false).build();
-    Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+    Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
     mutations.add(p);
 
     meta.mutateRow(mutations);
