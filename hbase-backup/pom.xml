@@ -29,7 +29,6 @@
   <artifactId>hbase-backup</artifactId>
   <name>Apache HBase - Backup</name>
   <description>Backup for HBase</description>
-  <!-- trigger build -->
   <dependencies>
     <!-- Intra-project dependencies -->
     <dependency>
