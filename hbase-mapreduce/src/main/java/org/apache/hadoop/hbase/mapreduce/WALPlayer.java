@@ -318,7 +318,8 @@ public class WALPlayer extends Configured implements Tool {
 
       // WALPlayer needs ExtendedCellSerialization so that sequenceId can be propagated when
       // sorting cells in CellSortReducer
-      conf.setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY, true);
+      job.getConfiguration().setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
+        true);
 
       // the bulk HFile case
       List<TableName> tableNames = getTableNameList(tables);
