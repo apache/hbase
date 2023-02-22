@@ -352,6 +352,11 @@ public class BackupManager implements Closeable {
   public ArrayList<BackupImage> getAncestors(BackupInfo backupInfo, TableName table)
     throws IOException {
     ArrayList<BackupImage> ancestors = getAncestors(backupInfo);
+    return filterAncestorsForTable(ancestors, table);
+  }
+
+  public static ArrayList<BackupImage> filterAncestorsForTable(ArrayList<BackupImage> ancestors,
+    TableName table) {
     ArrayList<BackupImage> tableAncestors = new ArrayList<>();
     for (BackupImage image : ancestors) {
       if (image.hasTable(table)) {

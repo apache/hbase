@@ -125,7 +125,7 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
 
   protected static final byte[] tableSeparator = Bytes.toBytes(";");
 
-  protected static byte[] combineTableNameSuffix(byte[] tableName, byte[] suffix) {
+  public static byte[] combineTableNameSuffix(byte[] tableName, byte[] suffix) {
     return Bytes.add(tableName, tableSeparator, suffix);
   }
 
@@ -881,9 +881,16 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
    * Configure <code>job</code> with a TotalOrderPartitioner, partitioning against
    * <code>splitPoints</code>. Cleans up the partitions file after job exists.
    */
-  static void configurePartitioner(Job job, List<ImmutableBytesWritable> splitPoints,
+  public static void configurePartitioner(Job job, List<ImmutableBytesWritable> splitPoints,
     boolean writeMultipleTables) throws IOException {
     Configuration conf = job.getConfiguration();
+    // todo: need to think if there's a better way
+    if (conf.get(job.getJobName() + ".wrotePartitions") != null) {
+      LOG.info("Already configured partitions, skipping... {}", splitPoints);
+      return;
+    }
+    LOG.info("Configuring partitions {}", splitPoints);
+    conf.set(job.getJobName() + ".wrotePartitions", "true");
     // create the partitions file
     FileSystem fs = FileSystem.get(conf);
     String hbaseTmpFsDir =

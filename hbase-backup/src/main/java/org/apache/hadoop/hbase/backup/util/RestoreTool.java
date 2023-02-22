@@ -145,13 +145,13 @@ public class RestoreTool {
    * the future
    * @param conn            HBase connection
    * @param tableBackupPath backup path
-   * @param logDirs         : incremental backup folders, which contains WAL
-   * @param tableNames      : source tableNames(table names were backuped)
-   * @param newTableNames   : target tableNames(table names to be restored to)
+   * @param hfileDirs       incremental backup folders, which contains hfiles to bulkload
+   * @param tableNames      source tableNames(table names were backuped)
+   * @param newTableNames   target tableNames(table names to be restored to)
    * @param incrBackupId    incremental backup Id
    * @throws IOException exception
    */
-  public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] logDirs,
+  public void incrementalRestoreTable(Connection conn, Path tableBackupPath, Path[] hfileDirs,
     TableName[] tableNames, TableName[] newTableNames, String incrBackupId) throws IOException {
     try (Admin admin = conn.getAdmin()) {
       if (tableNames.length != newTableNames.length) {
@@ -202,7 +202,7 @@ public class RestoreTool {
       }
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
-      restoreService.run(logDirs, tableNames, restoreRootDir, newTableNames, false);
+      restoreService.run(hfileDirs, tableNames, restoreRootDir, newTableNames, false);
     }
   }
 
@@ -226,38 +226,13 @@ public class RestoreTool {
   }
 
   /**
-   * Returns value represent path for:
-   * ""/$USER/SBACKUP_ROOT/backup_id/namespace/table/.hbase-snapshot/
-   * snapshot_1396650097621_namespace_table" this path contains .snapshotinfo, .tabledesc (0.96 and
-   * 0.98) this path contains .snapshotinfo, .data.manifest (trunk)
-   * @param tableName table name
-   * @return path to table info
-   * @throws IOException exception
-   */
-  Path getTableInfoPath(TableName tableName) throws IOException {
-    Path tableSnapShotPath = getTableSnapshotPath(backupRootPath, tableName, backupId);
-    Path tableInfoPath = null;
-
-    // can't build the path directly as the timestamp values are different
-    FileStatus[] snapshots = fs.listStatus(tableSnapShotPath,
-      new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-    for (FileStatus snapshot : snapshots) {
-      tableInfoPath = snapshot.getPath();
-      // SnapshotManifest.DATA_MANIFEST_NAME = "data.manifest";
-      if (tableInfoPath.getName().endsWith("data.manifest")) {
-        break;
-      }
-    }
-    return tableInfoPath;
-  }
-
-  /**
    * Get table descriptor
    * @param tableName is the table backed up
    * @return {@link TableDescriptor} saved in backup image of the table
    */
   TableDescriptor getTableDesc(TableName tableName) throws IOException {
-    Path tableInfoPath = this.getTableInfoPath(tableName);
+    Path tableInfoPath = BackupUtils.getTableInfoPath(fs, backupRootPath, backupId, tableName);
+    ;
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, tableInfoPath);
     SnapshotManifest manifest = SnapshotManifest.open(conf, fs, tableInfoPath, desc);
     TableDescriptor tableDescriptor = manifest.getTableDescriptor();
@@ -307,7 +282,8 @@ public class RestoreTool {
           tableDescriptor = manifest.getTableDescriptor();
         } else {
           tableDescriptor = getTableDesc(tableName);
-          snapshotMap.put(tableName, getTableInfoPath(tableName));
+          snapshotMap.put(tableName,
+            BackupUtils.getTableInfoPath(fs, backupRootPath, backupId, tableName));
         }
         if (tableDescriptor == null) {
           LOG.debug("Found no table descriptor in the snapshot dir, previous schema would be lost");
