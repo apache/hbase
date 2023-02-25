@@ -130,7 +130,7 @@ public class TestMetaCache {
     int maxSplits = 10;
     List<byte[]> splits =
       IntStream.range(1, maxSplits).mapToObj(Bytes::toBytes).collect(Collectors.toList());
-    ;
+
     TEST_UTIL.getAdmin().createTable(td, splits.toArray(new byte[0][]));
     TEST_UTIL.waitTableAvailable(tableName);
     TEST_UTIL.waitUntilNoRegionsInTransition();

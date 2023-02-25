@@ -100,19 +100,19 @@ final class AsyncRegionLocationCache {
   /**
    * When caching a location, the region may have been the result of a merge. Check to see if the
    * region's boundaries overlap any other cached locations in a problematic way. Those would have
-   * been merge parents which no longer exist. We need to proactively clear them out to avoid a
-   * case where a merged region which receives no requests never gets cleared. This causes requests
-   * to other merged regions after it to see the wrong cached location.
+   * been merge parents which no longer exist. We need to proactively clear them out to avoid a case
+   * where a merged region which receives no requests never gets cleared. This causes requests to
+   * other merged regions after it to see the wrong cached location.
    * <p>
    * For example, if we have Start_New < Start_Old < End_Old < End_New, then if we only access
    * within range [End_Old, End_New], then it will always return the old region but it will then
-   * find out the row is not in the range, and try to get the new region, and then we
-   * get [Start_New, End_New), still fall into the same situation.
+   * find out the row is not in the range, and try to get the new region, and then we get
+   * [Start_New, End_New), still fall into the same situation.
    * <p>
-   * If Start_Old is less than Start_New, even if we have overlap, it is not a problem, as when
-   * the row is greater than Start_New, we will locate to the new region, and if the row is less
-   * than Start_New, it will fall into the old region's range and we will try to access the region
-   * and get a NotServing exception, and then we will clean the cache.
+   * If Start_Old is less than Start_New, even if we have overlap, it is not a problem, as when the
+   * row is greater than Start_New, we will locate to the new region, and if the row is less than
+   * Start_New, it will fall into the old region's range and we will try to access the region and
+   * get a NotServing exception, and then we will clean the cache.
    * <p>
    * See HBASE-27650
    * @param locations the new location that was just cached
