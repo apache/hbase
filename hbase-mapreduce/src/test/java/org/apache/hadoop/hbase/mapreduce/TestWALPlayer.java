@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -190,15 +194,12 @@ public class TestWALPlayer {
     Get g = new Get(row);
     Result result = table.get(g);
     byte[] value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
-    assertTrue(
-      "Expected " + Bytes.toStringBinary(column1) + " latest value to be equal to lastVal="
-        + Bytes.toStringBinary(lastVal) + " but was " + Bytes.toStringBinary(value),
-      Bytes.equals(lastVal, value));
+    assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(lastVal)));
 
     table = TEST_UTIL.truncateTable(tableName);
     g = new Get(row);
     result = table.get(g);
-    assertTrue("expected row to be empty after truncate but got " + result, result.isEmpty());
+    assertThat(result.listCells(), nullValue());
 
     BulkLoadHFiles.create(configuration).bulkLoad(tableName,
       new Path(outPath, tableName.getNamespaceAsString() + "/" + tableName.getNameAsString()));
@@ -206,10 +207,9 @@ public class TestWALPlayer {
     g = new Get(row);
     result = table.get(g);
     value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
-    assertTrue(
-      "Expected " + Bytes.toStringBinary(column1) + " latest value to be equal to lastVal="
-        + Bytes.toStringBinary(lastVal) + " but was " + Bytes.toStringBinary(value),
-      Bytes.equals(lastVal, value));
+
+    assertThat(result.listCells(), notNullValue());
+    assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(lastVal)));
   }
 
   /**
