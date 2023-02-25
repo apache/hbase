@@ -130,6 +130,8 @@ public class TestIncrementalBackup extends TestBackupBase {
       byte[] name = regions.get(0).getRegionInfo().getRegionName();
       long startSplitTime = EnvironmentEdgeManager.currentTime();
       try {
+        // todo: this fails, and itd be nice if we could really add a split so we can prove
+        // that our new splits passthrough works (expect split to disappear once we restore)
         admin.splitRegionAsync(name).get();
       } catch (Exception e) {
         // although split fail, this may not affect following check in current API,

@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -54,6 +53,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -122,7 +122,8 @@ public final class BackupUtils {
    * @param conf       configuration
    * @throws IOException exception
    */
-  public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
+  public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo,
+    Map<TableName, List<RegionInfo>> lastFullBackupForTable, Configuration conf)
     throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
@@ -147,18 +148,54 @@ public final class BackupUtils {
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
-        List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
-        // For each region, write the region info to disk
-        LOG.debug("Starting to write region info for table " + table);
-        for (RegionInfo regionInfo : regions) {
-          Path regionDir = FSUtils
-            .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
-          regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
-          writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
-        }
+        copyTableRegionInfosFromParent(table, targetFs, backupInfo,
+          lastFullBackupForTable.get(table), conf);
         LOG.debug("Finished writing region info for table " + table);
       }
     }
+  }
+
+  private static void copyTableRegionInfosFromParent(TableName table, FileSystem targetFs,
+    BackupInfo backupInfo, List<RegionInfo> lastFullBackupForTable, Configuration conf)
+    throws IOException {
+    for (RegionInfo regionInfo : lastFullBackupForTable) {
+      Path regionDir =
+        FSUtils.getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
+      regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
+      writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
+    }
+  }
+
+  /**
+   * Returns value represent path for:
+   * ""/$USER/SBACKUP_ROOT/backup_id/namespace/table/.hbase-snapshot/
+   * snapshot_1396650097621_namespace_table" this path contains .snapshotinfo, .tabledesc (0.96 and
+   * 0.98) this path contains .snapshotinfo, .data.manifest (trunk)
+   * @param tableName table name
+   * @return path to table info
+   * @throws IOException exception
+   */
+  public static Path getTableInfoPath(FileSystem fs, Path backupRootPath, String backupId,
+    TableName tableName) throws IOException {
+    Path tableSnapShotPath = getTableSnapshotPath(backupRootPath, tableName, backupId);
+    Path tableInfoPath = null;
+
+    // can't build the path directly as the timestamp values are different
+    FileStatus[] snapshots = fs.listStatus(tableSnapShotPath,
+      new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    for (FileStatus snapshot : snapshots) {
+      tableInfoPath = snapshot.getPath();
+      // SnapshotManifest.DATA_MANIFEST_NAME = "data.manifest";
+      if (tableInfoPath.getName().endsWith("data.manifest")) {
+        break;
+      }
+    }
+    return tableInfoPath;
+  }
+
+  static Path getTableSnapshotPath(Path backupRootPath, TableName tableName, String backupId) {
+    return new Path(HBackupFileSystem.getTableBackupPath(tableName, backupRootPath, backupId),
+      HConstants.SNAPSHOT_DIR_NAME);
   }
 
   /**

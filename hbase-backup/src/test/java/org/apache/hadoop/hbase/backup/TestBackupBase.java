@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
@@ -52,14 +53,20 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -70,6 +77,10 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * This class is only a base for other integration-level backup tests. Do not add tests here.
@@ -128,10 +139,50 @@ public class TestBackupBase {
         LOG.debug("For incremental backup, current table set is "
           + backupManager.getIncrementalBackupTableSet());
         newTimestamps = ((IncrementalBackupManager) backupManager).getIncrBackupLogFileMap();
+
+        // todo: need to add an abstraction to encapsulate and DRY this up`
+        ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo);
+        Map<TableName, List<RegionInfo>> regionsByTable = new HashMap<>();
+        List<ImmutableBytesWritable> splits = new ArrayList<>();
+        for (TableName table : backupInfo.getTables()) {
+          ArrayList<BackupImage> ancestorsForTable =
+            BackupManager.filterAncestorsForTable(ancestors, table);
+
+          BackupImage backupImage = ancestorsForTable.get(ancestorsForTable.size() - 1);
+          if (backupImage.getType() != BackupType.FULL) {
+            throw new RuntimeException("No full backup found in ancestors for table " + table);
+          }
+
+          String lastFullBackupId = backupImage.getBackupId();
+          Path backupRootDir = new Path(backupInfo.getBackupRootDir());
+
+          FileSystem backupFs = backupRootDir.getFileSystem(conf);
+          Path tableInfoPath =
+            BackupUtils.getTableInfoPath(backupFs, backupRootDir, lastFullBackupId, table);
+          SnapshotProtos.SnapshotDescription snapshotDesc =
+            SnapshotDescriptionUtils.readSnapshotInfo(backupFs, tableInfoPath);
+          SnapshotManifest manifest =
+            SnapshotManifest.open(conf, backupFs, tableInfoPath, snapshotDesc);
+          List<RegionInfo> regionInfos = new ArrayList<>(manifest.getRegionManifests().size());
+          for (SnapshotProtos.SnapshotRegionManifest regionManifest : manifest
+            .getRegionManifests()) {
+            HBaseProtos.RegionInfo regionInfo = regionManifest.getRegionInfo();
+            RegionInfo regionInfoObj = ProtobufUtil.toRegionInfo(regionInfo);
+            // scanning meta doesnt return mob regions, so skip them here too so we keep parity
+            if (Bytes.equals(regionInfoObj.getStartKey(), MobConstants.MOB_REGION_NAME_BYTES)) {
+              continue;
+            }
+
+            regionInfos.add(regionInfoObj);
+            splits.add(new ImmutableBytesWritable(HFileOutputFormat2
+              .combineTableNameSuffix(table.getName(), regionInfoObj.getStartKey())));
+          }
+          regionsByTable.put(table, regionInfos);
+        }
         // copy out the table and region info files for each table
-        BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
+        BackupUtils.copyTableRegionInfo(conn, backupInfo, regionsByTable, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-        convertWALsToHFiles();
+        convertWALsToHFiles(splits);
         incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);

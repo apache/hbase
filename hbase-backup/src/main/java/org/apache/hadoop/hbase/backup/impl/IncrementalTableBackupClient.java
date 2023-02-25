@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
+import static org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,16 +42,25 @@ import org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.apache.hadoop.util.Tool;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
 /**
  * Incremental backup implementation. See the {@link #execute() execute} method.
@@ -276,10 +287,48 @@ public class IncrementalTableBackupClient extends TableBackupClient {
 
     // case INCREMENTAL_COPY:
     try {
+      // todo: need to add an abstraction to encapsulate and DRY this up
+      ArrayList<BackupImage> ancestors = backupManager.getAncestors(backupInfo);
+      Map<TableName, List<RegionInfo>> regionsByTable = new HashMap<>();
+      List<ImmutableBytesWritable> splits = new ArrayList<>();
+      for (TableName table : backupInfo.getTables()) {
+        ArrayList<BackupImage> ancestorsForTable =
+          BackupManager.filterAncestorsForTable(ancestors, table);
+
+        BackupImage backupImage = ancestorsForTable.get(ancestorsForTable.size() - 1);
+        if (backupImage.getType() != BackupType.FULL) {
+          throw new RuntimeException("No full backup found in ancestors for table " + table);
+        }
+
+        String lastFullBackupId = backupImage.getBackupId();
+        Path backupRootDir = new Path(backupInfo.getBackupRootDir());
+
+        FileSystem backupFs = backupRootDir.getFileSystem(conf);
+        Path tableInfoPath =
+          BackupUtils.getTableInfoPath(backupFs, backupRootDir, lastFullBackupId, table);
+        SnapshotProtos.SnapshotDescription snapshotDesc =
+          SnapshotDescriptionUtils.readSnapshotInfo(backupFs, tableInfoPath);
+        SnapshotManifest manifest =
+          SnapshotManifest.open(conf, backupFs, tableInfoPath, snapshotDesc);
+        List<RegionInfo> regionInfos = new ArrayList<>(manifest.getRegionManifests().size());
+        for (SnapshotProtos.SnapshotRegionManifest regionManifest : manifest.getRegionManifests()) {
+          HBaseProtos.RegionInfo regionInfo = regionManifest.getRegionInfo();
+          RegionInfo regionInfoObj = ProtobufUtil.toRegionInfo(regionInfo);
+          // scanning meta doesnt return mob regions, so skip them here too so we keep parity
+          if (Bytes.equals(regionInfoObj.getStartKey(), MobConstants.MOB_REGION_NAME_BYTES)) {
+            continue;
+          }
+
+          regionInfos.add(regionInfoObj);
+          splits.add(new ImmutableBytesWritable(HFileOutputFormat2
+            .combineTableNameSuffix(table.getName(), regionInfoObj.getStartKey())));
+        }
+        regionsByTable.put(table, regionInfos);
+      }
       // copy out the table and region info files for each table
-      BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
+      BackupUtils.copyTableRegionInfo(conn, backupInfo, regionsByTable, conf);
       // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-      convertWALsToHFiles();
+      convertWALsToHFiles(splits);
       incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
         backupInfo.getBackupRootDir());
     } catch (Exception e) {
@@ -359,7 +408,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  protected void convertWALsToHFiles() throws IOException {
+  protected void convertWALsToHFiles(List<ImmutableBytesWritable> splits) throws IOException {
     // get incremental backup file list and prepare parameters for DistCp
     List<String> incrBackupFileList = backupInfo.getIncrBackupFileList();
     // Get list of tables in incremental backup set
@@ -375,7 +424,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
         LOG.warn("Table " + table + " does not exists. Skipping in WAL converter");
       }
     }
-    walToHFiles(incrBackupFileList, tableList);
+    walToHFiles(incrBackupFileList, tableList, splits);
 
   }
 
@@ -385,8 +434,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     }
   }
 
-  protected void walToHFiles(List<String> dirPaths, List<String> tableList) throws IOException {
-    Tool player = new WALPlayer();
+  protected void walToHFiles(List<String> dirPaths, List<String> tableList,
+    List<ImmutableBytesWritable> splits) throws IOException {
+    WALPlayer player = new WALPlayer();
 
     // Player reads all files in arbitrary directory structure and creates
     // a Map task for each file. We use ';' as separator
@@ -401,6 +451,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
     conf.set(JOB_NAME_CONF_KEY, jobname);
     String[] playerArgs = { dirs, StringUtils.join(tableList, ",") };
 
+    player.setSplits(splits);
     try {
       player.setConf(conf);
       int result = player.run(playerArgs);
