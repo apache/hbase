@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.hbase.util.MapReduceExtendedCell;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -147,7 +148,7 @@ public class TestWALPlayer {
     final byte[] row = Bytes.toBytes("row");
     Table table = TEST_UTIL.createTable(tableName, family);
 
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // put a row into the first table
     Put p = new Put(row);
     p.addColumn(family, column1, now, column1);
