@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -137,6 +138,13 @@ public class WALPlayer extends Configured implements Tool {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
             }
+
+            // Set sequenceId from WALKey, since it is not included by WALCellCodec. The sequenceId
+            // on WALKey is the same value that was on the cells in the WALEdit. This enables
+            // CellSortReducer to use sequenceId to disambiguate duplicate cell timestamps.
+            // See HBASE-27649
+            PrivateCellUtil.setSequenceId(cell, key.getSequenceId());
+
             context.write(new ImmutableBytesWritable(CellUtil.cloneRow(cell)),
               new MapReduceExtendedCell(cell));
           }
@@ -344,6 +352,12 @@ public class WALPlayer extends Configured implements Tool {
         throw new IOException("Exactly one table must be specified for the bulk export option");
       }
       TableName tableName = TableName.valueOf(tables[0]);
+
+      // WALPlayer needs ExtendedCellSerialization so that sequenceId can be propagated when
+      // sorting cells in CellSortReducer
+      job.getConfiguration().setBoolean(HFileOutputFormat2.EXTENDED_CELL_SERIALIZATION_ENABLED_KEY,
+        true);
+
       job.setMapperClass(WALCellMapper.class);
       job.setReducerClass(CellSortReducer.class);
       Path outputDir = new Path(hfileOutPath);
