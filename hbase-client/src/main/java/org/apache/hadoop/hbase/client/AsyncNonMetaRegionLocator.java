@@ -260,42 +260,6 @@ class AsyncNonMetaRegionLocator {
     return computeIfAbsent(cache, tableName, () -> new TableCache(tableName));
   }
 
-  /**
-   * When caching a location, the region may have been the result of a merge. Check to see if the
-   * region's boundaries overlap any other cached locations. Those would have been merge parents
-   * which no longer exist. We need to proactively clear them out to avoid a case where a merged
-   * region which receives no requests never gets cleared. This causes requests to other merged
-   * regions after it to see the wrong cached location. See HBASE-27650
-   * @param locations  the new location that was just cached
-   * @param tableCache the tableCache containing that and other locations for this table.
-   */
-  private void cleanOverlappingRegions(RegionLocations locations, TableCache tableCache) {
-    RegionInfo region = locations.getRegionLocation().getRegion();
-
-    boolean isLast = Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW);
-
-    while (true) {
-      Map.Entry<byte[], RegionLocations> overlap =
-        isLast ? tableCache.cache.lastEntry() : tableCache.cache.lowerEntry(region.getEndKey());
-      if (
-        overlap == null || overlap.getValue() == locations
-          || Bytes.equals(overlap.getKey(), region.getStartKey())
-      ) {
-        break;
-      }
-
-      if (LOG.isInfoEnabled()) {
-        LOG.info(
-          "Removing cached location {} (endKey={}) because it overlaps with new location {} (endKey={})",
-          overlap.getValue(),
-          Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
-          locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
-      }
-
-      tableCache.cache.remove(overlap.getKey());
-    }
-  }
-
   private void complete(TableName tableName, LocateRequest req, RegionLocations locs,
     Throwable error) {
     if (error != null) {
@@ -388,12 +352,7 @@ class AsyncNonMetaRegionLocator {
     if (locs == null) {
       recordCacheMiss();
     } else {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Requested row {} comes after region end key of {} for cached location {}",
-          Bytes.toStringBinary(row), Bytes.toStringBinary(endKey), locs);
-      }
-      recordCacheMiss();
-      return null;
+      recordCacheHit();
     }
     return locs;
   }

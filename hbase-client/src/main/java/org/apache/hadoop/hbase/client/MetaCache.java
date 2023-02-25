@@ -112,7 +112,8 @@ public class MetaCache {
 
   /**
    * Put a newly discovered HRegionLocation into the cache. Synchronize here because we may need to
-   * make multiple modifications in cleanOverlappingRegions, and we want them to be atomic.
+   * make multiple modifications in cleanProblematicOverlappedRegions, and we want them to be
+   * atomic.
    * @param tableName The table name.
    * @param source    the source of the new location
    * @param location  the new location
@@ -130,7 +131,7 @@ public class MetaCache {
         LOG.trace("Cached location: " + location);
       }
       addToCachedServers(locations);
-      cleanOverlappingRegions(locations, tableLocations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(locations, tableLocations);
       return;
     }
 
@@ -147,11 +148,10 @@ public class MetaCache {
     // an additional counter on top of seqNum would be necessary to handle them all.
     RegionLocations updatedLocations = oldLocations.updateLocation(location, false, force);
     if (oldLocations != updatedLocations) {
-      if (tableLocations.replace(startKey, oldLocations, updatedLocations)) {
-        cleanOverlappingRegions(updatedLocations, tableLocations);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Changed cached location to: " + location);
-        }
+      tableLocations.put(startKey, updatedLocations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(updatedLocations, tableLocations);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Changed cached location to: " + location);
       }
       addToCachedServers(updatedLocations);
     }
@@ -159,7 +159,8 @@ public class MetaCache {
 
   /**
    * Put a newly discovered HRegionLocation into the cache. Synchronize here because we may need to
-   * make multiple modifications in cleanOverlappingRegions, and we want them to be atomic.
+   * make multiple modifications in cleanProblematicOverlappedRegions, and we want them to be
+   * atomic.
    * @param tableName The table name.
    * @param locations the new locations
    */
@@ -174,7 +175,7 @@ public class MetaCache {
         LOG.trace("Cached location: " + locations);
       }
       addToCachedServers(locations);
-      cleanOverlappingRegions(locations, tableLocations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(locations, tableLocations);
       return;
     }
 
@@ -182,50 +183,12 @@ public class MetaCache {
     // Meta record might be stale - some (probably the same) server has closed the region
     // with later seqNum and told us about the new location.
     RegionLocations mergedLocation = oldLocation.mergeLocations(locations);
-    if (tableLocations.replace(startKey, oldLocation, mergedLocation)) {
-      cleanOverlappingRegions(mergedLocation, tableLocations);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Merged cached locations: " + mergedLocation);
-      }
+    tableLocations.put(startKey, mergedLocation);
+    MetaCacheUtil.cleanProblematicOverlappedRegions(mergedLocation, tableLocations);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Merged cached locations: " + mergedLocation);
     }
     addToCachedServers(locations);
-  }
-
-  /**
-   * When caching a location, the region may have been the result of a merge. Check to see if the
-   * region's boundaries overlap any other cached locations. Those would have been merge parents
-   * which no longer exist. We need to proactively clear them out to avoid a case where a merged
-   * region which receives no requests never gets cleared. This causes requests to other merged
-   * regions after it to see the wrong cached location. See HBASE-27650
-   * @param locations      the new location that was just cached
-   * @param tableLocations the cached locations for this table
-   */
-  private void cleanOverlappingRegions(RegionLocations locations,
-    ConcurrentNavigableMap<byte[], RegionLocations> tableLocations) {
-    RegionInfo region = locations.getRegionLocation().getRegion();
-
-    boolean isLast = Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW);
-
-    while (true) {
-      Entry<byte[], RegionLocations> overlap =
-        isLast ? tableLocations.lastEntry() : tableLocations.lowerEntry(region.getEndKey());
-      if (
-        overlap == null || overlap.getValue() == locations
-          || Bytes.equals(overlap.getKey(), region.getStartKey())
-      ) {
-        break;
-      }
-
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(
-          "Removing cached location {} (endKey={}) because it overlaps with new location {} (endKey={})",
-          overlap.getValue(),
-          Bytes.toStringBinary(overlap.getValue().getRegionLocation().getRegion().getEndKey()),
-          locations, Bytes.toStringBinary(locations.getRegionLocation().getRegion().getEndKey()));
-      }
-
-      tableLocations.remove(overlap.getKey());
-    }
   }
 
   private void addToCachedServers(RegionLocations locations) {
