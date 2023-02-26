@@ -386,10 +386,9 @@ public class ProtobufLogReader extends ReaderBase {
       WALKey walKey = builder.build();
       entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
       if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
-        LOG.trace("WALKey has no KVs that follow it; trying the next one. current offset={}",
+        LOG.debug("WALKey has no KVs that follow it; trying the next one. current offset={}",
           this.inputStream.getPos());
-        seekOnFs(originalPosition);
-        return false;
+        return true;
       }
       int expectedCells = walKey.getFollowingKvCount();
       long posBefore = this.inputStream.getPos();
