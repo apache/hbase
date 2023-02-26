@@ -35,6 +35,9 @@ public class MetaCacheUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaCacheUtil.class);
 
+  private MetaCacheUtil() {
+  }
+
   /**
    * When caching a location, the region may have been the result of a merge. Check to see if the
    * region's boundaries overlap any other cached locations in a problematic way. Those would have

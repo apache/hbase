@@ -57,8 +57,7 @@ final class AsyncRegionLocationCache {
   /**
    * Add the given locations to the cache, merging with existing if necessary. Also cleans out any
    * previously cached locations which may have been superseded by this one (i.e. in case of merged
-   * regions). See
-   * {@link MetaCacheUtil#cleanProblematicOverlappedRegions(RegionLocations, ConcurrentNavigableMap)}
+   * regions). See {@link MetaCacheUtil} cleanProblematicOverlappedRegions
    * @param locs the locations to cache
    * @return the final location (possibly merged) that was added to the cache
    */
