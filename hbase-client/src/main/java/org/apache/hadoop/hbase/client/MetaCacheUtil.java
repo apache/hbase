@@ -74,8 +74,8 @@ final class MetaCacheUtil {
         break;
       }
 
-      if (LOG.isInfoEnabled()) {
-        LOG.info(
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
           "Removing cached location {} (endKey={}) because it overlaps with "
             + "new location {} (endKey={})",
           overlap.getValue(),
