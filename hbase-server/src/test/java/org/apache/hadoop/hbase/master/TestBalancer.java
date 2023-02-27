@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -39,12 +45,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test balancer with disabled table
  */
 @Category({ MasterTests.class, LargeTests.class })
 public class TestBalancer {
+  private static final Logger LOG = LoggerFactory.getLogger(TestBalancer.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -85,8 +94,10 @@ public class TestBalancer {
     Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
       assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
         serverManager.getOnlineServersList());
+    assignments.forEach((k, v) -> LOG.debug("{}: {}", k, v));
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
-    assertFalse(assignments.get(tableName).containsKey(sn1));
+    assertThat(assignments.get(tableName),
+      allOf(notNullValue(), hasEntry(equalTo(sn1), emptyIterable())));
   }
 }

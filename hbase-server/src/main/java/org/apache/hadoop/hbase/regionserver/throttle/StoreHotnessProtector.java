@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -78,7 +79,7 @@ public class StoreHotnessProtector {
   private final static int DEFAULT_PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_NUM = 100;
   private final static int DEFAULT_PARALLEL_PREPARE_PUT_STORE_MULTIPLIER = 2;
 
-  private final Map<byte[], AtomicInteger> preparePutToStoreMap =
+  private final ConcurrentMap<byte[], AtomicInteger> preparePutToStoreMap =
     new ConcurrentSkipListMap<>(Bytes.BYTES_RAWCOMPARATOR);
   private final Region region;
 
@@ -119,7 +120,7 @@ public class StoreHotnessProtector {
   public void update(Configuration conf) {
     init(conf);
     preparePutToStoreMap.clear();
-    LOG.debug("update config: " + toString());
+    LOG.debug("update config: {}", this);
   }
 
   public void start(Map<byte[], List<Cell>> familyMaps) throws RegionTooBusyException {
