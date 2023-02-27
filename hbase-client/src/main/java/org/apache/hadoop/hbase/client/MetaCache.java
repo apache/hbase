@@ -240,7 +240,8 @@ public class MetaCache {
   }
 
   /**
-   * Delete all cached entries.
+   * Delete all cached entries. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
   public synchronized void clearCache() {
     this.cachedRegionLocations.clear();
@@ -248,7 +249,8 @@ public class MetaCache {
   }
 
   /**
-   * Delete all cached entries of a server.
+   * Delete all cached entries of a server. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
   public synchronized void clearCache(final ServerName serverName) {
     // Prior to synchronizing this method, we used to do another check below while synchronizing
@@ -271,7 +273,7 @@ public class MetaCache {
           if (updatedLocations != regionLocations) {
             deletedSomething = true;
             if (updatedLocations.isEmpty()) {
-              tableLocations.remove(e.getKey(), regionLocations);
+              tableLocations.remove(e.getKey());
             } else {
               tableLocations.put(e.getKey(), updatedLocations);
             }
@@ -291,7 +293,8 @@ public class MetaCache {
   }
 
   /**
-   * Delete a cached location, no matter what it is. Called when we were told to not use cache.
+   * Delete a cached location, no matter what it is. Called when we were told to not use cache.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    * @param tableName tableName
    */
   public synchronized void clearCache(final TableName tableName, final byte[] row) {
@@ -300,20 +303,19 @@ public class MetaCache {
     RegionLocations regionLocations = getCachedLocation(tableName, row);
     if (regionLocations != null) {
       byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
-      boolean removed = tableLocations.remove(startKey, regionLocations);
-      if (removed) {
-        if (metrics != null) {
-          metrics.incrMetaCacheNumClearRegion();
-        }
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Removed " + regionLocations + " from cache");
-        }
+      tableLocations.remove(startKey);
+      if (metrics != null) {
+        metrics.incrMetaCacheNumClearRegion();
+      }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removed " + regionLocations + " from cache");
       }
     }
   }
 
   /**
-   * Delete all cached entries of a table.
+   * Delete all cached entries of a table.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
   public synchronized void clearCache(final TableName tableName) {
     if (LOG.isTraceEnabled()) {
@@ -323,7 +325,8 @@ public class MetaCache {
   }
 
   /**
-   * Delete a cached location with specific replicaId.
+   * Delete a cached location with specific replicaId.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    * @param tableName tableName
    * @param row       row key
    * @param replicaId region replica id
@@ -338,7 +341,7 @@ public class MetaCache {
         RegionLocations updatedLocations = regionLocations.remove(replicaId);
         byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
         if (updatedLocations.isEmpty()) {
-          tableLocations.remove(startKey, regionLocations);
+          tableLocations.remove(startKey);
         } else {
           tableLocations.put(startKey, updatedLocations);
         }
@@ -354,7 +357,8 @@ public class MetaCache {
   }
 
   /**
-   * Delete a cached location for a table, row and server
+   * Delete a cached location for a table, row and server. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
   public synchronized void clearCache(final TableName tableName, final byte[] row,
     ServerName serverName) {
@@ -366,7 +370,7 @@ public class MetaCache {
       if (updatedLocations != regionLocations) {
         byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
         if (updatedLocations.isEmpty()) {
-          tableLocations.remove(startKey, regionLocations);
+          tableLocations.remove(startKey);
         } else {
           tableLocations.put(startKey, updatedLocations);
         }
@@ -382,7 +386,8 @@ public class MetaCache {
   }
 
   /**
-   * Deletes the cached location of the region if necessary, based on some error from source.
+   * Deletes the cached location of the region if necessary, based on some error from source.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    * @param hri The region in question.
    */
   public synchronized void clearCache(RegionInfo hri) {
@@ -394,7 +399,7 @@ public class MetaCache {
       RegionLocations updatedLocations = regionLocations.remove(oldLocation);
       if (updatedLocations != regionLocations) {
         if (updatedLocations.isEmpty()) {
-          tableLocations.remove(hri.getStartKey(), regionLocations);
+          tableLocations.remove(hri.getStartKey());
         } else {
           tableLocations.put(hri.getStartKey(), updatedLocations);
         }
