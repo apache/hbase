@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * Util class to DRY common logic between AsyncRegionLocationCache and MetaCache
  */
 @InterfaceAudience.Private
-public class MetaCacheUtil {
+final class MetaCacheUtil {
 
   private static final Logger LOG = LoggerFactory.getLogger(MetaCacheUtil.class);
 
