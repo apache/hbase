@@ -155,8 +155,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
     }
     LOG.warn("Region {} for Table {} has high storeFileRefCount {}, considering it for reopen..",
       regionInfo.getRegionNameAsString(), tableName, regionStoreRefCount);
-    tableToReopenRegionsMap.putIfAbsent(tableName, new ArrayList<>());
-    tableToReopenRegionsMap.get(tableName).add(regionName);
-
+    tableToReopenRegionsMap.computeIfAbsent(tableName, (key) -> new ArrayList<>()).add(regionName);
   }
 }

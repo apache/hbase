@@ -694,9 +694,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
         if (currRegion.isSplitParent()) {
           continue;
         }
-        assignments.putIfAbsent(currTable, new HashMap<>());
-        assignments.get(currTable).putIfAbsent(currServer, new ArrayList<>());
-        assignments.get(currTable).get(currServer).add(currRegion);
+        assignments.computeIfAbsent(currTable, key -> new HashMap<>())
+          .computeIfAbsent(currServer, key -> new ArrayList<>()).add(currRegion);
       }
     }
 
@@ -710,10 +709,14 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     // add all tables that are members of the group
     for (TableName tableName : rsGroupInfo.getTables()) {
       if (assignments.containsKey(tableName)) {
-        result.put(tableName, new HashMap<>());
-        result.get(tableName).putAll(serverMap);
-        result.get(tableName).putAll(assignments.get(tableName));
-        LOG.debug("Adding assignments for {}: {}", tableName, assignments.get(tableName));
+        Map<ServerName, List<RegionInfo>> tableResults = new HashMap<>(serverMap);
+
+        Map<ServerName, List<RegionInfo>> tableAssignments = assignments.get(tableName);
+        tableResults.putAll(tableAssignments);
+
+        result.put(tableName, tableResults);
+
+        LOG.debug("Adding assignments for {}: {}", tableName, tableAssignments);
       }
     }
 
