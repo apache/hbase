@@ -203,20 +203,19 @@ public final class FSUtils {
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
         try {
-          return (FSDataOutputStream) (DistributedFileSystem.class
-            .getDeclaredMethod("create", Path.class, FsPermission.class, boolean.class, int.class,
-              short.class, long.class, Progressable.class, InetSocketAddress[].class)
-            .invoke(backingFs, path, perm, true, CommonFSUtils.getDefaultBufferSize(backingFs),
-              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path),
-              CommonFSUtils.getDefaultBlockSize(backingFs, path), null, favoredNodes));
-        } catch (InvocationTargetException ite) {
-          // Function was properly called, but threw it's own exception.
-          throw new IOException(ite.getCause());
-        } catch (NoSuchMethodException e) {
+              DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
+              DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+                dfs.createFile(path).permission(perm).create()
+                   .overwrite(true)
+                   .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
+                   .replication(replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
+                   .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path))
+                   .favoredNodes(favoredNodes)
+                   .recursive();
+              return builder.build();
+        }catch (IllegalArgumentException | SecurityException  e) {
           LOG.debug("DFS Client does not support most favored nodes create; using default create");
           LOG.trace("Ignoring; use default create", e);
-        } catch (IllegalArgumentException | SecurityException | IllegalAccessException e) {
-          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
         }
       }
     }
