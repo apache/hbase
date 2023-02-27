@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
@@ -90,9 +91,7 @@ public class TestRegionServerHostname {
 
   @Test
   public void testRegionServerHostname() throws Exception {
-    Enumeration<NetworkInterface> netInterfaceList = NetworkInterface.getNetworkInterfaces();
-    while (netInterfaceList.hasMoreElements()) {
-      NetworkInterface ni = netInterfaceList.nextElement();
+    for (NetworkInterface ni : getValidNetworkInterfaces()) {
       Enumeration<InetAddress> addrList = ni.getInetAddresses();
       // iterate through host addresses and use each as hostname
       while (addrList.hasMoreElements()) {
@@ -208,5 +207,23 @@ public class TestRegionServerHostname {
       List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.getZNodePaths().rsZNode);
       assertEquals(expectedRS, servers.size());
     }
+  }
+
+  private boolean ignoreNetworkInterface(NetworkInterface networkInterface) throws Exception {
+    return networkInterface == null || networkInterface.isLoopback() || networkInterface.isVirtual()
+      || !networkInterface.isUp();
+  }
+
+  private List<NetworkInterface> getValidNetworkInterfaces() throws Exception {
+    List<NetworkInterface> validNetworkInterfaces = new ArrayList<>();
+    Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+    while (interfaces.hasMoreElements()) {
+      NetworkInterface networkInterface = interfaces.nextElement();
+      if (ignoreNetworkInterface(networkInterface)) {
+        continue;
+      }
+      validNetworkInterfaces.add(networkInterface);
+    }
+    return validNetworkInterfaces;
   }
 }
