@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -95,8 +96,7 @@ public class TestCompactionWithShippingCoprocessor {
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       // trigger a major compaction
       TEST_UTIL.compact(true);
-      assertThat(SHIPPED_COUNT.get(),
-        Matchers.greaterThan(shippedCountBefore));
+      assertThat(SHIPPED_COUNT.get(), Matchers.greaterThan(shippedCountBefore));
     } finally {
       table.close();
     }
