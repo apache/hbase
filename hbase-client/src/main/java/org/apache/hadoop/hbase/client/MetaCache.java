@@ -45,7 +45,9 @@ public class MetaCache {
   private static final Logger LOG = LoggerFactory.getLogger(MetaCache.class);
 
   /**
-   * Map of table to table {@link HRegionLocation}s.
+   * Map of table to table {@link HRegionLocation}s. <br>
+   * Despite being Concurrent, writes to the map should be synchronized because we have cases where
+   * we need to make multiple updates atomically.
    */
   private final ConcurrentMap<TableName,
     ConcurrentNavigableMap<byte[], RegionLocations>> cachedRegionLocations =
@@ -101,22 +103,28 @@ public class MetaCache {
       return possibleRegion;
     }
 
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Requested row {} comes after region end key of {} for cached location {}",
+        Bytes.toStringBinary(row), Bytes.toStringBinary(endKey), possibleRegion);
+    }
     // Passed all the way through, so we got nothing - complete cache miss
     if (metrics != null) metrics.incrMetaCacheMiss();
     return null;
   }
 
   /**
-   * Put a newly discovered HRegionLocation into the cache.
+   * Put a newly discovered HRegionLocation into the cache. Synchronize here because we may need to
+   * make multiple modifications in cleanProblematicOverlappedRegions, and we want them to be
+   * atomic.
    * @param tableName The table name.
    * @param source    the source of the new location
    * @param location  the new location
    */
-  public void cacheLocation(final TableName tableName, final ServerName source,
+  public synchronized void cacheLocation(final TableName tableName, final ServerName source,
     final HRegionLocation location) {
     assert source != null;
     byte[] startKey = location.getRegion().getStartKey();
-    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
+    ConcurrentNavigableMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
     RegionLocations locations = new RegionLocations(new HRegionLocation[] { location });
     RegionLocations oldLocations = tableLocations.putIfAbsent(startKey, locations);
     boolean isNewCacheEntry = (oldLocations == null);
@@ -125,6 +133,7 @@ public class MetaCache {
         LOG.trace("Cached location: " + location);
       }
       addToCachedServers(locations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(locations, tableLocations);
       return;
     }
 
@@ -141,8 +150,9 @@ public class MetaCache {
     // an additional counter on top of seqNum would be necessary to handle them all.
     RegionLocations updatedLocations = oldLocations.updateLocation(location, false, force);
     if (oldLocations != updatedLocations) {
-      boolean replaced = tableLocations.replace(startKey, oldLocations, updatedLocations);
-      if (replaced && LOG.isTraceEnabled()) {
+      tableLocations.put(startKey, updatedLocations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(updatedLocations, tableLocations);
+      if (LOG.isTraceEnabled()) {
         LOG.trace("Changed cached location to: " + location);
       }
       addToCachedServers(updatedLocations);
@@ -150,13 +160,16 @@ public class MetaCache {
   }
 
   /**
-   * Put a newly discovered HRegionLocation into the cache.
+   * Put a newly discovered HRegionLocation into the cache. Synchronize here because we may need to
+   * make multiple modifications in cleanProblematicOverlappedRegions, and we want them to be
+   * atomic.
    * @param tableName The table name.
    * @param locations the new locations
    */
-  public void cacheLocation(final TableName tableName, final RegionLocations locations) {
+  public synchronized void cacheLocation(final TableName tableName,
+    final RegionLocations locations) {
     byte[] startKey = locations.getRegionLocation().getRegion().getStartKey();
-    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
+    ConcurrentNavigableMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
     RegionLocations oldLocation = tableLocations.putIfAbsent(startKey, locations);
     boolean isNewCacheEntry = (oldLocation == null);
     if (isNewCacheEntry) {
@@ -164,6 +177,7 @@ public class MetaCache {
         LOG.trace("Cached location: " + locations);
       }
       addToCachedServers(locations);
+      MetaCacheUtil.cleanProblematicOverlappedRegions(locations, tableLocations);
       return;
     }
 
@@ -171,8 +185,9 @@ public class MetaCache {
     // Meta record might be stale - some (probably the same) server has closed the region
     // with later seqNum and told us about the new location.
     RegionLocations mergedLocation = oldLocation.mergeLocations(locations);
-    boolean replaced = tableLocations.replace(startKey, oldLocation, mergedLocation);
-    if (replaced && LOG.isTraceEnabled()) {
+    tableLocations.put(startKey, mergedLocation);
+    MetaCacheUtil.cleanProblematicOverlappedRegions(mergedLocation, tableLocations);
+    if (LOG.isTraceEnabled()) {
       LOG.trace("Merged cached locations: " + mergedLocation);
     }
     addToCachedServers(locations);
@@ -186,7 +201,11 @@ public class MetaCache {
     }
   }
 
-  /** Returns Map of cached locations for passed <code>tableName</code> */
+  /**
+   * Returns Map of cached locations for passed <code>tableName</code>.<br>
+   * Despite being Concurrent, writes to the map should be synchronized because we have cases where
+   * we need to make multiple updates atomically.
+   */
   private ConcurrentNavigableMap<byte[], RegionLocations>
     getTableLocations(final TableName tableName) {
     // find the map of cached locations for this table
@@ -221,48 +240,48 @@ public class MetaCache {
   }
 
   /**
-   * Delete all cached entries.
+   * Delete all cached entries. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
-  public void clearCache() {
+  public synchronized void clearCache() {
     this.cachedRegionLocations.clear();
     this.cachedServers.clear();
   }
 
   /**
-   * Delete all cached entries of a server.
+   * Delete all cached entries of a server. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
-  public void clearCache(final ServerName serverName) {
+  public synchronized void clearCache(final ServerName serverName) {
+    // Prior to synchronizing this method, we used to do another check below while synchronizing
+    // on cachedServers. This is no longer necessary since we moved synchronization up.
+    // Prior reason:
+    // We block here, because if there is an error on a server, it's likely that multiple
+    // threads will get the error simultaneously. If there are hundreds of thousand of
+    // region location to check, it's better to do this only once. A better pattern would
+    // be to check if the server is dead when we get the region location.
     if (!this.cachedServers.contains(serverName)) {
       return;
     }
 
     boolean deletedSomething = false;
-    synchronized (this.cachedServers) {
-      // We block here, because if there is an error on a server, it's likely that multiple
-      // threads will get the error simultaneously. If there are hundreds of thousand of
-      // region location to check, it's better to do this only once. A better pattern would
-      // be to check if the server is dead when we get the region location.
-      if (!this.cachedServers.contains(serverName)) {
-        return;
-      }
-      for (ConcurrentMap<byte[], RegionLocations> tableLocations : cachedRegionLocations.values()) {
-        for (Entry<byte[], RegionLocations> e : tableLocations.entrySet()) {
-          RegionLocations regionLocations = e.getValue();
-          if (regionLocations != null) {
-            RegionLocations updatedLocations = regionLocations.removeByServer(serverName);
-            if (updatedLocations != regionLocations) {
-              if (updatedLocations.isEmpty()) {
-                deletedSomething |= tableLocations.remove(e.getKey(), regionLocations);
-              } else {
-                deletedSomething |=
-                  tableLocations.replace(e.getKey(), regionLocations, updatedLocations);
-              }
+    for (ConcurrentMap<byte[], RegionLocations> tableLocations : cachedRegionLocations.values()) {
+      for (Entry<byte[], RegionLocations> e : tableLocations.entrySet()) {
+        RegionLocations regionLocations = e.getValue();
+        if (regionLocations != null) {
+          RegionLocations updatedLocations = regionLocations.removeByServer(serverName);
+          if (updatedLocations != regionLocations) {
+            deletedSomething = true;
+            if (updatedLocations.isEmpty()) {
+              tableLocations.remove(e.getKey());
+            } else {
+              tableLocations.put(e.getKey(), updatedLocations);
             }
           }
         }
       }
-      this.cachedServers.remove(serverName);
     }
+    this.cachedServers.remove(serverName);
     if (deletedSomething) {
       if (metrics != null) {
         metrics.incrMetaCacheNumClearServer();
@@ -274,9 +293,31 @@ public class MetaCache {
   }
 
   /**
-   * Delete all cached entries of a table.
+   * Delete a cached location, no matter what it is. Called when we were told to not use cache.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
+   * @param tableName tableName
    */
-  public void clearCache(final TableName tableName) {
+  public synchronized void clearCache(final TableName tableName, final byte[] row) {
+    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
+
+    RegionLocations regionLocations = getCachedLocation(tableName, row);
+    if (regionLocations != null) {
+      byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
+      tableLocations.remove(startKey);
+      if (metrics != null) {
+        metrics.incrMetaCacheNumClearRegion();
+      }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removed " + regionLocations + " from cache");
+      }
+    }
+  }
+
+  /**
+   * Delete all cached entries of a table.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
+   */
+  public synchronized void clearCache(final TableName tableName) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Removed all cached region locations for table " + tableName);
     }
@@ -284,34 +325,13 @@ public class MetaCache {
   }
 
   /**
-   * Delete a cached location, no matter what it is. Called when we were told to not use cache.
-   * @param tableName tableName
-   */
-  public void clearCache(final TableName tableName, final byte[] row) {
-    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
-
-    RegionLocations regionLocations = getCachedLocation(tableName, row);
-    if (regionLocations != null) {
-      byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
-      boolean removed = tableLocations.remove(startKey, regionLocations);
-      if (removed) {
-        if (metrics != null) {
-          metrics.incrMetaCacheNumClearRegion();
-        }
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Removed " + regionLocations + " from cache");
-        }
-      }
-    }
-  }
-
-  /**
-   * Delete a cached location with specific replicaId.
+   * Delete a cached location with specific replicaId.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    * @param tableName tableName
    * @param row       row key
    * @param replicaId region replica id
    */
-  public void clearCache(final TableName tableName, final byte[] row, int replicaId) {
+  public synchronized void clearCache(final TableName tableName, final byte[] row, int replicaId) {
     ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
 
     RegionLocations regionLocations = getCachedLocation(tableName, row);
@@ -320,29 +340,28 @@ public class MetaCache {
       if (toBeRemoved != null) {
         RegionLocations updatedLocations = regionLocations.remove(replicaId);
         byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
-        boolean removed;
         if (updatedLocations.isEmpty()) {
-          removed = tableLocations.remove(startKey, regionLocations);
+          tableLocations.remove(startKey);
         } else {
-          removed = tableLocations.replace(startKey, regionLocations, updatedLocations);
+          tableLocations.put(startKey, updatedLocations);
         }
 
-        if (removed) {
-          if (metrics != null) {
-            metrics.incrMetaCacheNumClearRegion();
-          }
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Removed " + toBeRemoved + " from cache");
-          }
+        if (metrics != null) {
+          metrics.incrMetaCacheNumClearRegion();
+        }
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Removed " + toBeRemoved + " from cache");
         }
       }
     }
   }
 
   /**
-   * Delete a cached location for a table, row and server
+   * Delete a cached location for a table, row and server. <br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    */
-  public void clearCache(final TableName tableName, final byte[] row, ServerName serverName) {
+  public synchronized void clearCache(final TableName tableName, final byte[] row,
+    ServerName serverName) {
     ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
 
     RegionLocations regionLocations = getCachedLocation(tableName, row);
@@ -350,81 +369,48 @@ public class MetaCache {
       RegionLocations updatedLocations = regionLocations.removeByServer(serverName);
       if (updatedLocations != regionLocations) {
         byte[] startKey = regionLocations.getRegionLocation().getRegion().getStartKey();
-        boolean removed = false;
         if (updatedLocations.isEmpty()) {
-          removed = tableLocations.remove(startKey, regionLocations);
+          tableLocations.remove(startKey);
         } else {
-          removed = tableLocations.replace(startKey, regionLocations, updatedLocations);
+          tableLocations.put(startKey, updatedLocations);
         }
-        if (removed) {
-          if (metrics != null) {
-            metrics.incrMetaCacheNumClearRegion();
-          }
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Removed locations of table: " + tableName + " ,row: " + Bytes.toString(row)
-              + " mapping to server: " + serverName + " from cache");
-          }
+        if (metrics != null) {
+          metrics.incrMetaCacheNumClearRegion();
+        }
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Removed locations of table: " + tableName + " ,row: " + Bytes.toString(row)
+            + " mapping to server: " + serverName + " from cache");
         }
       }
     }
   }
 
   /**
-   * Deletes the cached location of the region if necessary, based on some error from source.
+   * Deletes the cached location of the region if necessary, based on some error from source.<br>
+   * Synchronized because of calls in cacheLocation which need to be executed atomically
    * @param hri The region in question.
    */
-  public void clearCache(RegionInfo hri) {
+  public synchronized void clearCache(RegionInfo hri) {
     ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(hri.getTable());
     RegionLocations regionLocations = tableLocations.get(hri.getStartKey());
     if (regionLocations != null) {
       HRegionLocation oldLocation = regionLocations.getRegionLocation(hri.getReplicaId());
       if (oldLocation == null) return;
       RegionLocations updatedLocations = regionLocations.remove(oldLocation);
-      boolean removed;
       if (updatedLocations != regionLocations) {
         if (updatedLocations.isEmpty()) {
-          removed = tableLocations.remove(hri.getStartKey(), regionLocations);
+          tableLocations.remove(hri.getStartKey());
         } else {
-          removed = tableLocations.replace(hri.getStartKey(), regionLocations, updatedLocations);
+          tableLocations.put(hri.getStartKey(), updatedLocations);
         }
-        if (removed) {
-          if (metrics != null) {
-            metrics.incrMetaCacheNumClearRegion();
-          }
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Removed " + oldLocation + " from cache");
-          }
+        if (metrics != null) {
+          metrics.incrMetaCacheNumClearRegion();
+        }
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Removed " + oldLocation + " from cache");
         }
       }
     }
   }
 
-  public void clearCache(final HRegionLocation location) {
-    if (location == null) {
-      return;
-    }
-    TableName tableName = location.getRegion().getTable();
-    ConcurrentMap<byte[], RegionLocations> tableLocations = getTableLocations(tableName);
-    RegionLocations regionLocations = tableLocations.get(location.getRegion().getStartKey());
-    if (regionLocations != null) {
-      RegionLocations updatedLocations = regionLocations.remove(location);
-      boolean removed;
-      if (updatedLocations != regionLocations) {
-        if (updatedLocations.isEmpty()) {
-          removed = tableLocations.remove(location.getRegion().getStartKey(), regionLocations);
-        } else {
-          removed = tableLocations.replace(location.getRegion().getStartKey(), regionLocations,
-            updatedLocations);
-        }
-        if (removed) {
-          if (metrics != null) {
-            metrics.incrMetaCacheNumClearRegion();
-          }
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Removed " + location + " from cache");
-          }
-        }
-      }
-    }
-  }
 }
