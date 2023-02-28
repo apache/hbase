@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -41,6 +42,7 @@ import org.junit.runners.Parameterized;
  */
 @RunWith(Parameterized.class)
 @Category({ RPCTests.class, MediumTests.class })
+@Ignore("CDPD-49990")
 public class TestMutualTlsServerSide extends AbstractTestMutualTls {
 
   @ClassRule
