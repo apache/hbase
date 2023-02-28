@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -25,7 +26,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * to server and fetch N rows/RPC. These are then shipped to client. At the end of every such batch
  * {@link #shipped()} will get called.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public interface Shipper {
 
   /**
