@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -133,6 +134,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Parser;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -3567,4 +3569,52 @@ public final class ProtobufUtil {
       .setStartTime(task.getStartTime()).setCompletionTime(task.getCompletionTime()).build();
   }
 
+  /**
+   * Check whether this IPBE indicates EOF or not.
+   * <p/>
+   * We will check the exception message, if it is likely the one of
+   * InvalidProtocolBufferException.truncatedMessage, we will consider it as EOF, otherwise not.
+   */
+  public static boolean isEOF(InvalidProtocolBufferException e) {
+    return e.getMessage().contains("input has been truncated");
+  }
+
+  /**
+   * This is a wrapper of the PB message's parseDelimitedFrom. The difference is, if we can not
+   * determine whether there are enough bytes in stream, i.e, the available method does not have a
+   * valid return value, we will try to read all the bytes to a byte array first, and then parse the
+   * pb message with {@link Parser#parseFrom(byte[])} instead of call
+   * {@link Parser#parseDelimitedFrom(InputStream)} directly. This is because even if the bytes are
+   * not enough bytes, {@link Parser#parseDelimitedFrom(InputStream)} could still return without any
+   * errors but just leave us a partial PB message.
+   * @return The PB message if we can parse it successfully, otherwise there will always be an
+   *         exception thrown, will never return {@code null}.
+   */
+  public static <T extends Message> T parseDelimitedFrom(InputStream in, Parser<T> parser)
+    throws IOException {
+    int firstByte = in.read();
+    if (firstByte < 0) {
+      throw new EOFException("EOF while reading message size");
+    }
+    int size = CodedInputStream.readRawVarint32(firstByte, in);
+    int available = in.available();
+    if (available > 0) {
+      if (available < size) {
+        throw new EOFException("Available bytes not enough for parsing PB message, expect at least "
+          + size + " bytes, but only " + available + " bytes available");
+      }
+      // this piece of code is copied from GeneratedMessageV3.parseFrom
+      try {
+        return parser.parseFrom(ByteStreams.limit(in, size));
+      } catch (InvalidProtocolBufferException e) {
+        throw e.unwrapIOException();
+      }
+    } else {
+      // this usually means the stream does not have a proper available implementation, let's read
+      // the content to an byte array before parsing.
+      byte[] bytes = new byte[size];
+      ByteStreams.readFully(in, bytes);
+      return parser.parseFrom(bytes);
+    }
+  }
 }
