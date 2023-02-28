@@ -478,7 +478,7 @@ public class ProtobufLogReader extends ReaderBase {
    * This is used to determine whether we have already reached the WALTrailer. As the size and magic
    * are at the end of the WAL file, it is possible that these two options are missing while
    * writing, so we will consider there is no trailer. And when we actually reach the WALTrailer, we
-   * will try to decode it as WALKey and we will fail but the error could be vary as it is parsing
+   * will try to decode it as WALKey and we will fail but the error could vary as it is parsing
    * WALTrailer actually.
    * @return whether this is a WALTrailer and we should throw EOF to upper layer the file is done
    */
