@@ -261,8 +261,10 @@ public class NettyRpcServer extends RpcServer {
 
         int port = remoteInetAddress.getPort();
 
-        /* our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
-         * engine properly by passing the remote address */
+        /*
+         * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
+         * engine properly by passing the remote address
+         */
         sslHandler = nettySslContext.newHandler(p.channel().alloc(), host, port);
       } else {
         sslHandler = nettySslContext.newHandler(p.channel().alloc());
