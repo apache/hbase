@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
 import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,6 +65,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -267,7 +270,31 @@ public class NettyRpcServer extends RpcServer {
       p.addLast("ssl", new OptionalSslHandler(nettySslContext));
       LOG.debug("Dual mode SSL handler added for channel: {}", p.channel());
     } else {
-      p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
+      SocketAddress remoteAddress = p.channel().remoteAddress();
+      SslHandler sslHandler;
+
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress remoteInetAddress = (InetSocketAddress) remoteAddress;
+        String host;
+
+        if (conf.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true)) {
+          host = remoteInetAddress.getHostName();
+        } else {
+          host = remoteInetAddress.getHostString();
+        }
+
+        int port = remoteInetAddress.getPort();
+
+        /*
+         * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
+         * engine properly by passing the remote address
+         */
+        sslHandler = nettySslContext.newHandler(p.channel().alloc(), host, port);
+      } else {
+        sslHandler = nettySslContext.newHandler(p.channel().alloc());
+      }
+
+      p.addLast("ssl", sslHandler);
       LOG.debug("SSL handler added for channel: {}", p.channel());
     }
   }
