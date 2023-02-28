@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +54,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.Any;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.BytesValue;
+import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
@@ -573,5 +575,22 @@ public class TestProtobufUtil {
     Cell decodedCell = getCellFromProtoResult(protoCell, false);
     List<Tag> decodedTags = PrivateCellUtil.getTags(decodedCell);
     assertEquals(0, decodedTags.size());
+  }
+
+  /**
+   * Used to confirm that we only consider truncatedMessage as EOF
+   */
+  @Test
+  public void testIsEOF() throws Exception {
+    for (Method method : InvalidProtocolBufferException.class.getDeclaredMethods()) {
+      if (
+        method.getParameterCount() == 0
+          && method.getReturnType() == InvalidProtocolBufferException.class
+      ) {
+        method.setAccessible(true);
+        InvalidProtocolBufferException e = (InvalidProtocolBufferException) method.invoke(null);
+        assertEquals(method.getName().equals("truncatedMessage"), ProtobufUtil.isEOF(e));
+      }
+    }
   }
 }
