@@ -18,16 +18,26 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
@@ -38,8 +48,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Category({ MediumTests.class, CoprocessorTests.class })
 public class TestCompactionWithShippingCoprocessor {
+
+  private static final AtomicInteger SHIPPED_COUNT = new AtomicInteger();
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -63,13 +75,17 @@ public class TestCompactionWithShippingCoprocessor {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  /**
+   * Verifies that if a coproc returns an InternalScanner which implements Shipper, the shippped
+   * method is appropriately called in Compactor.
+   */
   @Test
   public void testCoprocScannersExtendingShipperGetShipped() throws Exception {
-    int shippedCountBefore = DelegatingInternalScanner.SHIPPED_COUNT.get();
+    int shippedCountBefore = SHIPPED_COUNT.get();
     final TableName tableName = TableName.valueOf(name.getMethodName());
     // Create a table with block size as 1024
     final Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, 1024,
-      NoOpScanPolicyObserver.class.getName());
+      CompactionObserver.class.getName());
     TEST_UTIL.loadTable(table, FAMILY);
     TEST_UTIL.flush();
     try {
@@ -79,10 +95,52 @@ public class TestCompactionWithShippingCoprocessor {
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
       // trigger a major compaction
       TEST_UTIL.compact(true);
-      assertThat(DelegatingInternalScanner.SHIPPED_COUNT.get(),
+      assertThat(SHIPPED_COUNT.get(),
         Matchers.greaterThan(shippedCountBefore));
     } finally {
       table.close();
+    }
+  }
+
+  public static class CompactionObserver implements RegionCoprocessor, RegionObserver {
+
+    @Override
+    public Optional<RegionObserver> getRegionObserver() {
+      return Optional.of(this);
+    }
+
+    @Override
+    public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> c, Store store,
+      InternalScanner scanner, ScanType scanType, CompactionLifeCycleTracker tracker,
+      CompactionRequest request) throws IOException {
+      return new ShippedObservingScanner(scanner);
+    }
+  }
+
+  public static class ShippedObservingScanner implements InternalScanner, Shipper {
+
+    protected final InternalScanner scanner;
+
+    public ShippedObservingScanner(InternalScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    @Override
+    public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
+      return scanner.next(result, scannerContext);
+    }
+
+    @Override
+    public void close() throws IOException {
+      scanner.close();
+    }
+
+    @Override
+    public void shipped() throws IOException {
+      if (scanner instanceof Shipper) {
+        SHIPPED_COUNT.incrementAndGet();
+        ((Shipper) scanner).shipped();
+      }
     }
   }
 }

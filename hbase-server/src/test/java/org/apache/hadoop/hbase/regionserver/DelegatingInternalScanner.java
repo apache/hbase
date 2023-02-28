@@ -19,17 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class DelegatingInternalScanner implements InternalScanner, Shipper {
-
-  /**
-   * For use in testing whether shipped is called
-   */
-  public static final AtomicInteger SHIPPED_COUNT = new AtomicInteger();
+public class DelegatingInternalScanner implements InternalScanner {
 
   protected final InternalScanner scanner;
 
@@ -47,11 +41,4 @@ public class DelegatingInternalScanner implements InternalScanner, Shipper {
     scanner.close();
   }
 
-  @Override
-  public void shipped() throws IOException {
-    if (scanner instanceof Shipper) {
-      SHIPPED_COUNT.incrementAndGet();
-      ((Shipper) scanner).shipped();
-    }
-  }
 }
