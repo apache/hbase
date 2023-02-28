@@ -1993,11 +1993,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     cacheLocation(hri.getTable(), source, newHrl);
   }
 
-  @Override
-  public void deleteCachedRegionLocation(final HRegionLocation location) {
-    metaCache.clearCache(location);
-  }
-
   /**
    * Update the location with the new value (if the exception is a RegionMovedException) or delete
    * it from the cache. Does nothing if we can be sure from the exception that the location is still
