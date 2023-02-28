@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
@@ -277,6 +278,15 @@ public interface RegionObserver {
    * {@link InternalScanner} with a custom implementation that is returned from this method. The
    * custom scanner can then inspect {@link org.apache.hadoop.hbase.Cell}s from the wrapped scanner,
    * applying its own policy to what gets written.
+   * <p>
+   * If implementations are wrapping the passed in {@link InternalScanner}, they can also have their
+   * implementation implement {@link Shipper} and delegate to the original scanner. This will cause
+   * compactions to free up memory as they progress, which is especially important for people using
+   * off-heap memory pools.
+   * <p>
+   * Keep in mind that when {@link Shipper#shipped()} is called, any cell references you maintain in
+   * your implementation may get corrupted. As such you should make sure to deep clone any cells
+   * that you need to keep reference to across invocations of shipped.
    * @param c        the environment provided by the region server
    * @param store    the store being compacted
    * @param scanner  the scanner over existing data used in the store file rewriting
