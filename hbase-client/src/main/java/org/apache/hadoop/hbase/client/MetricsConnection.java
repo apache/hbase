@@ -558,6 +558,10 @@ public final class MetricsConnection implements StatisticTrackable {
     metaCacheMisses.inc();
   }
 
+  public long getMetaCacheMisses() {
+    return metaCacheMisses.getCount();
+  }
+
   /** Increment the number of meta cache drops requested for entire RegionServer. */
   public void incrMetaCacheNumClearServer() {
     metaCacheNumClearServer.inc();
