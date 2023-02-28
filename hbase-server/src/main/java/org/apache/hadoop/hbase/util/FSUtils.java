@@ -208,8 +208,11 @@ public final class FSUtils {
             .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
             .replication(
               replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
-            .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path))
-            .favoredNodes(favoredNodes).recursive();
+            .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path));
+          if (favoredNodes != null) {
+            builder.favoredNodes(favoredNodes);
+          }
+          builder.recursive();
           return builder.build();
         } catch (IllegalArgumentException | SecurityException e) {
           LOG.debug("DFS Client does not support most favored nodes create; using default create");
