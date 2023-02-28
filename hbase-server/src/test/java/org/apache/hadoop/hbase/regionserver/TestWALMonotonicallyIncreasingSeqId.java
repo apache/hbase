@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -203,11 +204,11 @@ public class TestWALMonotonicallyIncreasingSeqId {
     TEST_UTIL.cleanupTestDir();
   }
 
-  private WAL.Reader createReader(Path logPath, Path oldWalsDir) throws IOException {
+  private WALStreamReader createReader(Path logPath, Path oldWalsDir) throws IOException {
     try {
-      return wals.createReader(fileSystem, logPath);
+      return wals.createStreamReader(fileSystem, logPath);
     } catch (IOException e) {
-      return wals.createReader(fileSystem, new Path(oldWalsDir, logPath.getName()));
+      return wals.createStreamReader(fileSystem, new Path(oldWalsDir, logPath.getName()));
     }
   }
 
@@ -229,7 +230,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
     Thread.sleep(10);
     Path hbaseDir = new Path(walConf.get(HConstants.HBASE_DIR));
     Path oldWalsDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    try (WAL.Reader reader = createReader(logPath, oldWalsDir)) {
+    try (WALStreamReader reader = createReader(logPath, oldWalsDir)) {
       long currentMaxSeqid = 0;
       for (WAL.Entry e; (e = reader.next()) != null;) {
         if (!WALEdit.isMetaEditFamily(e.getEdit().getCells().get(0))) {

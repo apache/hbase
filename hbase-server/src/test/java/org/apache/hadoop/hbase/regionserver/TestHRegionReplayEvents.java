@@ -74,11 +74,13 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
+import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -145,7 +147,7 @@ public class TestHRegionReplayEvents {
   private RegionInfo primaryHri, secondaryHri;
   private HRegion primaryRegion, secondaryRegion;
   private WAL walPrimary, walSecondary;
-  private WAL.Reader reader;
+  private WALStreamReader reader;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -319,8 +321,8 @@ public class TestHRegionReplayEvents {
     return Integer.parseInt(Bytes.toString(put.getRow()));
   }
 
-  WAL.Reader createWALReaderForPrimary() throws FileNotFoundException, IOException {
-    return WALFactory.createReader(TEST_UTIL.getTestFileSystem(),
+  private WALStreamReader createWALReaderForPrimary() throws FileNotFoundException, IOException {
+    return NoEOFWALStreamReader.create(TEST_UTIL.getTestFileSystem(),
       AbstractFSWALProvider.getCurrentFileName(walPrimary), TEST_UTIL.getConfiguration());
   }
 

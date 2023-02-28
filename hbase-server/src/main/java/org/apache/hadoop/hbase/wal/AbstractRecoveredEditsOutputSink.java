@@ -161,7 +161,8 @@ abstract class AbstractRecoveredEditsOutputSink extends OutputSink {
   private void deleteOneWithFewerEntries(RecoveredEditsWriter editsWriter, Path dst)
     throws IOException {
     long dstMinLogSeqNum = -1L;
-    try (WAL.Reader reader = walSplitter.getWalFactory().createReader(walSplitter.walFS, dst)) {
+    try (WALStreamReader reader =
+      walSplitter.getWalFactory().createStreamReader(walSplitter.walFS, dst)) {
       WAL.Entry entry = reader.next();
       if (entry != null) {
         dstMinLogSeqNum = entry.getKey().getSequenceId();
