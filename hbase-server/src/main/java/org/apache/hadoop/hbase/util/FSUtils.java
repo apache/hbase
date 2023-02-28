@@ -85,7 +85,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.Progressable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -203,17 +202,16 @@ public final class FSUtils {
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
         try {
-              DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
-              DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-                dfs.createFile(path).permission(perm).create()
-                   .overwrite(true)
-                   .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
-                   .replication(replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
-                   .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path))
-                   .favoredNodes(favoredNodes)
-                   .recursive();
-              return builder.build();
-        }catch (IllegalArgumentException | SecurityException  e) {
+          DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
+          DistributedFileSystem.HdfsDataOutputStreamBuilder builder = dfs.createFile(path)
+            .permission(perm).create().overwrite(true)
+            .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
+            .replication(
+              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
+            .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path))
+            .favoredNodes(favoredNodes).recursive();
+          return builder.build();
+        } catch (IllegalArgumentException | SecurityException e) {
           LOG.debug("DFS Client does not support most favored nodes create; using default create");
           LOG.trace("Ignoring; use default create", e);
         }
