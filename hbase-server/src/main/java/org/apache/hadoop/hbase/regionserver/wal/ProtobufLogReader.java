@@ -36,8 +36,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
-import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -358,60 +356,46 @@ public class ProtobufLogReader extends ReaderBase {
 
   @Override
   protected boolean readNext(Entry entry) throws IOException {
+    resetCompression = false;
     // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
     long originalPosition = this.inputStream.getPos();
     if (trailerPresent && originalPosition > 0 && originalPosition == this.walEditsStopOffset) {
       LOG.trace("Reached end of expected edits area at offset {}", originalPosition);
       return false;
     }
-    WALKey.Builder builder = WALKey.newBuilder();
-    long size = 0;
     boolean resetPosition = false;
-    // by default, we should reset the compression when seeking back after reading something
-    resetCompression = true;
     try {
-      long available = -1;
+      WALKey walKey;
       try {
-        int firstByte = this.inputStream.read();
-        if (firstByte == -1) {
-          throw new EOFException();
+        walKey = ProtobufUtil.parseDelimitedFrom(inputStream, WALKey.parser());
+      } catch (InvalidProtocolBufferException e) {
+        if (ProtobufUtil.isEOF(e) || isWALTrailer(originalPosition)) {
+          // only rethrow EOF if it indicates an EOF, or we have reached the partial WALTrailer
+          resetPosition = true;
+          throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition="
+            + originalPosition + ", currentPosition=" + this.inputStream.getPos()).initCause(e);
+        } else {
+          throw e;
         }
-        size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
-        // available may be < 0 on local fs for instance. If so, can't depend on it.
-        available = this.inputStream.available();
-        if (available > 0 && available < size) {
-          // if we quit here, we have just read the length, no actual data yet, which means we
-          // haven't put anything into the compression dictionary yet, so when seeking back to the
-          // last good position, we do not need to reset compression context.
-          // This is very useful for saving the extra effort for reconstructing the compression
-          // dictionary, where we need to read from the beginning instead of just seek to the
-          // position, as DFSInputStream implement the available method, so in most cases we will
-          // reach here if there are not enough data.
-          resetCompression = false;
-          throw new EOFException("Available stream not enough for edit, "
-            + "inputStream.available()= " + this.inputStream.available() + ", " + "entry size= "
-            + size + " at offset = " + this.inputStream.getPos());
-        }
-        ProtobufUtil.mergeFrom(builder, ByteStreams.limit(this.inputStream, size), (int) size);
-      } catch (InvalidProtocolBufferException ipbe) {
-        resetPosition = true;
-        throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition="
-          + originalPosition + ", currentPosition=" + this.inputStream.getPos() + ", messageSize="
-          + size + ", currentAvailable=" + available).initCause(ipbe);
+      } catch (EOFException e) {
+        // append more detailed information
+        throw (EOFException) new EOFException("EOF while reading WAL key; originalPosition="
+          + originalPosition + ", currentPosition=" + this.inputStream.getPos()).initCause(e);
       }
-      if (!builder.isInitialized()) {
-        // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
-        // If we can get the KV count, we could, theoretically, try to get next record.
-        throw new EOFException("Partial PB while reading WAL, "
-          + "probably an unexpected EOF, ignoring. current offset=" + this.inputStream.getPos());
-      }
-      WALKey walKey = builder.build();
       entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
       if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
         LOG.debug("WALKey has no KVs that follow it; trying the next one. current offset={}",
           this.inputStream.getPos());
         return true;
       }
+      // Starting from here, we will start to read cells, which will change the content in
+      // compression dictionary, so if we fail in the below operations, when resetting, we also need
+      // to clear the compression context, and read from the beginning to reconstruct the
+      // compression dictionary, instead of seeking to the position directly.
+      // This is very useful for saving the extra effort for reconstructing the compression
+      // dictionary, as DFSInputStream implement the available method, so in most cases we will
+      // not reach here if there are not enough data.
+      resetCompression = true;
       int expectedCells = walKey.getFollowingKvCount();
       long posBefore = this.inputStream.getPos();
       try {
@@ -488,6 +472,54 @@ public class ProtobufLogReader extends ReaderBase {
       return null;
     }
     return null;
+  }
+
+  /**
+   * This is used to determine whether we have already reached the WALTrailer. As the size and magic
+   * are at the end of the WAL file, it is possible that these two options are missing while
+   * writing, so we will consider there is no trailer. And when we actually reach the WALTrailer, we
+   * will try to decode it as WALKey and we will fail but the error could vary as it is parsing
+   * WALTrailer actually.
+   * @return whether this is a WALTrailer and we should throw EOF to upper layer the file is done
+   */
+  private boolean isWALTrailer(long startPosition) throws IOException {
+    // We have nothing in the WALTrailer PB message now so its size is just a int length size and a
+    // magic at the end
+    int trailerSize = PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT;
+    if (fileLength - startPosition >= trailerSize) {
+      // We still have more than trailerSize bytes before reaching the EOF so this is not a trailer.
+      // We also test for == here because if this is a valid trailer, we can read it while opening
+      // the reader so we should not reach here
+      return false;
+    }
+    inputStream.seek(startPosition);
+    for (int i = 0; i < 4; i++) {
+      int r = inputStream.read();
+      if (r == -1) {
+        // we have reached EOF while reading the length, and all bytes read are 0, so we assume this
+        // is a partial trailer
+        return true;
+      }
+      if (r != 0) {
+        // the length is not 0, should not be a trailer
+        return false;
+      }
+    }
+    for (int i = 0; i < PB_WAL_COMPLETE_MAGIC.length; i++) {
+      int r = inputStream.read();
+      if (r == -1) {
+        // we have reached EOF while reading the magic, and all bytes read are matched, so we assume
+        // this is a partial trailer
+        return true;
+      }
+      if (r != (PB_WAL_COMPLETE_MAGIC[i] & 0xFF)) {
+        // does not match magic, should not be a trailer
+        return false;
+      }
+    }
+    // in fact we should not reach here, as this means the trailer bytes are all matched and
+    // complete, then we should not call this method...
+    return true;
   }
 
   @Override
