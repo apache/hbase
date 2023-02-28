@@ -561,6 +561,41 @@ public abstract class TestReplicationSourceManager {
     }
   }
 
+  @Test
+  public void testDisablePeerMetricsCleanup() throws Exception {
+    final String peerId = "DummyPeer";
+    final ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+      .setClusterKey(utility.getZkCluster().getAddress().toString() + ":/hbase").build();
+    try {
+      MetricsReplicationSourceSource globalSource = getGlobalSource();
+      final int globalLogQueueSizeInitial = globalSource.getSizeOfLogQueue();
+      final long sizeOfLatestPath = getSizeOfLatestPath();
+      addPeerAndWait(peerId, peerConfig, true);
+      assertEquals(sizeOfLatestPath + globalLogQueueSizeInitial, globalSource.getSizeOfLogQueue());
+      ReplicationSourceInterface source = manager.getSource(peerId);
+      // Sanity check
+      assertNotNull(source);
+      final int sizeOfSingleLogQueue = source.getSourceMetrics().getSizeOfLogQueue();
+      // Enqueue log and check if metrics updated
+      source.enqueueLog(new Path("abc"));
+      assertEquals(1 + sizeOfSingleLogQueue, source.getSourceMetrics().getSizeOfLogQueue());
+      assertEquals(source.getSourceMetrics().getSizeOfLogQueue() + globalLogQueueSizeInitial,
+        globalSource.getSizeOfLogQueue());
+
+      // Refreshing the peer should decrement the global and single source metrics
+      manager.refreshSources(peerId);
+      assertEquals(globalLogQueueSizeInitial, globalSource.getSizeOfLogQueue());
+
+      source = manager.getSource(peerId);
+      assertNotNull(source);
+      assertEquals(sizeOfSingleLogQueue, source.getSourceMetrics().getSizeOfLogQueue());
+      assertEquals(source.getSourceMetrics().getSizeOfLogQueue() + globalLogQueueSizeInitial,
+        globalSource.getSizeOfLogQueue());
+    } finally {
+      removePeerAndWait(peerId);
+    }
+  }
+
   /**
    * Add a peer and wait for it to initialize
    * @param waitForSource Whether to wait for replication source to initialize

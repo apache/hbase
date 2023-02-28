@@ -406,7 +406,8 @@ public class ReplicationSourceManager implements ReplicationListener {
       ReplicationSourceInterface toRemove = this.sources.remove(peerId);
       if (toRemove != null) {
         LOG.info("Terminate replication source for " + toRemove.getPeerId());
-        toRemove.terminate(terminateMessage, null, true);
+        // Do not clear metrics
+        toRemove.terminate(terminateMessage, null, false);
       }
       src = createSource(peerId, peer);
       this.sources.put(peerId, src);
