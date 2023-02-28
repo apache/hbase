@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.ScannerContext;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.regionserver.ShipperListener;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
@@ -432,7 +432,7 @@ public abstract class Compactor<T extends CellSink> {
       ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
     throughputController.start(compactionName);
-    KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
+    Shipper shipper = (scanner instanceof Shipper) ? (Shipper) scanner : null;
     long shippedCallSizeLimit =
       (long) request.getFiles().size() * this.store.getColumnFamilyDescriptor().getBlocksize();
     try {
@@ -472,7 +472,7 @@ public abstract class Compactor<T extends CellSink> {
             return false;
           }
         }
-        if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
+        if (shipper != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
           if (lastCleanCell != null) {
             // HBASE-16931, set back sequence id to avoid affecting scan order unexpectedly.
             // ShipperListener will do a clone of the last cells it refer, so need to set back
@@ -488,7 +488,7 @@ public abstract class Compactor<T extends CellSink> {
           // we are doing the similar thing. In between the compaction (after every N cells
           // written with collective size of 'shippedCallSizeLimit') we will call shipped which
           // may clear prevBlocks list.
-          kvs.shipped();
+          shipper.shipped();
           bytesWrittenProgressForShippedCall = 0;
         }
         if (lastCleanCell != null) {
