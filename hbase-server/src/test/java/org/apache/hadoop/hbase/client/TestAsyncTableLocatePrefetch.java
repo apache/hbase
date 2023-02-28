@@ -76,7 +76,8 @@ public class TestAsyncTableLocatePrefetch {
     // confirm that the locations of all the regions have been cached.
     assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, Bytes.toBytes("aaa")));
     for (byte[] row : HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE) {
-      assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, row));
+      assertNotNull("Expected location to not be null for " + Bytes.toStringBinary(row),
+        LOCATOR.getRegionLocationInCache(TABLE_NAME, row));
     }
   }
 }
