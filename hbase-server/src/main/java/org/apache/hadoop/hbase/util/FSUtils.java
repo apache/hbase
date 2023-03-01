@@ -201,23 +201,17 @@ public final class FSUtils {
         // compatibility.
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
-        try {
-          DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
-          DistributedFileSystem.HdfsDataOutputStreamBuilder builder = dfs.createFile(path)
-            .permission(perm).create().overwrite(true)
+        DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
+        DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+          dfs.createFile(path).recursive().permission(perm).create().overwrite(true)
             .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
             .replication(
               replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
             .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path));
-          if (favoredNodes != null) {
-            builder.favoredNodes(favoredNodes);
-          }
-          builder.recursive();
-          return builder.build();
-        } catch (IllegalArgumentException | SecurityException e) {
-          LOG.debug("DFS Client does not support most favored nodes create; using default create");
-          LOG.trace("Ignoring; use default create", e);
+        if (favoredNodes != null) {
+          builder.favoredNodes(favoredNodes);
         }
+        return builder.build();
       }
     }
     return CommonFSUtils.create(fs, path, perm, true);
