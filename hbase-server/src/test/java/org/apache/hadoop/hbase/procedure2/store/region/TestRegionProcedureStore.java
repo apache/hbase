@@ -221,6 +221,11 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
+      public RPCProtos.ConnectionHeader getConnectionHeader() {
+        return null;
+      }
+
+      @Override
       public int getRemotePort() {
         return 0;
       }

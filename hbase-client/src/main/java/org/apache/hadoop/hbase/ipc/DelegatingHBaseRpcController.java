@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -110,6 +111,11 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   @Override
   public boolean hasCallTimeout() {
     return delegate.hasCallTimeout();
+  }
+
+  @Override
+  public Map<String, byte[]> getAttributes() {
+    return null;
   }
 
   @Override

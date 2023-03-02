@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -164,6 +165,11 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   @Override
   public boolean hasCallTimeout() {
     return callTimeout != null;
+  }
+
+  @Override
+  public Map<String, byte[]> getAttributes() {
+    return null;
   }
 
   @Override

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.SocketAddress;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -59,7 +60,7 @@ public final class RpcClientFactory {
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
     MetricsConnection metrics) {
-    return createClient(conf, clusterId, null, metrics);
+    return createClient(conf, clusterId, null, metrics, null);
   }
 
   private static String getRpcClientClass(Configuration conf) {
@@ -81,10 +82,11 @@ public final class RpcClientFactory {
    * @return newly created RpcClient
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
-    SocketAddress localAddr, MetricsConnection metrics) {
+    SocketAddress localAddr, MetricsConnection metrics, Map<String, byte[]> connectionAttributes) {
     String rpcClientClass = getRpcClientClass(conf);
-    return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
-      Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
-      new Object[] { conf, clusterId, localAddr, metrics });
+    return ReflectionUtils.instantiateWithCustomCtor(
+      rpcClientClass, new Class[] { Configuration.class, String.class, SocketAddress.class,
+        MetricsConnection.class, Map.class },
+      new Object[] { conf, clusterId, localAddr, metrics, connectionAttributes });
   }
 }

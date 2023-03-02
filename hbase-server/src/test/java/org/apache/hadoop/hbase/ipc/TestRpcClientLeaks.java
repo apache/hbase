@@ -72,7 +72,7 @@ public class TestRpcClientLeaks {
 
     public MyRpcClientImpl(Configuration conf, String clusterId, SocketAddress address,
       MetricsConnection metrics) {
-      super(conf, clusterId, address, metrics);
+      super(conf, clusterId, address, metrics, null);
     }
 
     @Override

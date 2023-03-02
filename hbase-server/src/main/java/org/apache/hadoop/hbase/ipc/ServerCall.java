@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.*;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -205,6 +207,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public RequestHeader getHeader() {
     return this.header;
+  }
+
+  @Override
+  public ConnectionHeader getConnectionHeader() {
+    return this.connection.connectionHeader;
   }
 
   @Override

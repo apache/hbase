@@ -130,7 +130,7 @@ public class TestClientTimeouts {
   public static class RandomTimeoutRpcClient extends BlockingRpcClient {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
       MetricsConnection metrics) {
-      super(conf, clusterId, localAddr, metrics);
+      super(conf, clusterId, localAddr, metrics, null);
     }
 
     // Return my own instance, one that does random timeouts
