@@ -397,6 +397,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
   final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
+  final ReadPointCalculationLock smallestReadPointCalcLock;
 
   /**
    * The sequence ID that was enLongAddered when this region was opened.
@@ -435,19 +436,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    *         this readPoint, are included in every read operation.
    */
   public long getSmallestReadPoint() {
-    long minimumReadPoint;
     // We need to ensure that while we are calculating the smallestReadPoint
     // no new RegionScanners can grab a readPoint that we are unaware of.
-    // We achieve this by synchronizing on the scannerReadPoints object.
-    synchronized (scannerReadPoints) {
-      minimumReadPoint = mvcc.getReadPoint();
+    smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.CALCULATION_LOCK);
+    try {
+      long minimumReadPoint = mvcc.getReadPoint();
       for (Long readPoint : this.scannerReadPoints.values()) {
-        if (readPoint < minimumReadPoint) {
-          minimumReadPoint = readPoint;
-        }
+        minimumReadPoint = Math.min(minimumReadPoint, readPoint);
       }
+      return minimumReadPoint;
+    } finally {
+      smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.CALCULATION_LOCK);
     }
-    return minimumReadPoint;
   }
 
   /*
@@ -812,6 +812,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     setHTableSpecificConf();
     this.scannerReadPoints = new ConcurrentHashMap<>();
+    this.smallestReadPointCalcLock = new ReadPointCalculationLock(conf);
 
     this.busyWaitDuration = conf.getLong("hbase.busy.wait.duration", DEFAULT_BUSY_WAIT_DURATION);
     this.maxBusyWaitMultiplier = conf.getInt("hbase.busy.wait.multiplier.max", 2);
@@ -6994,7 +6995,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // getSmallestReadPoint, before scannerReadPoints is updated.
       IsolationLevel isolationLevel = scan.getIsolationLevel();
       long mvccReadPoint = PackagePrivateFieldAccessor.getMvccReadPoint(scan);
-      synchronized (scannerReadPoints) {
+      region.smallestReadPointCalcLock.lock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
+      try {
         if (mvccReadPoint > 0) {
           this.readPt = mvccReadPoint;
         } else if (
@@ -7005,6 +7007,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           this.readPt = rsServices.getNonceManager().getMvccFromOperationContext(nonceGroup, nonce);
         }
         scannerReadPoints.put(this, this.readPt);
+      } finally {
+        region.smallestReadPointCalcLock.unlock(ReadPointCalculationLock.LockType.RECORDING_LOCK);
       }
       initializeScanners(scan, additionalScanners);
     }
