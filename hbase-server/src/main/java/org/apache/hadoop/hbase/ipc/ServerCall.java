@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.errorprone.annotations.RestrictedApi;
+
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBufferListOutputStream;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,6 +52,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -205,6 +208,11 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   @Override
   public RequestHeader getHeader() {
     return this.header;
+  }
+
+  @Override
+  public RPCProtos.ConnectionHeader getConnectionHeader() {
+    return this.connection.connectionHeader;
   }
 
   @Override

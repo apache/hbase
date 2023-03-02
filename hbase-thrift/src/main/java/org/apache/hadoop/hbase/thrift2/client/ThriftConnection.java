@@ -88,8 +88,8 @@ public class ThriftConnection implements Connection {
   private int operationTimeout;
   private int connectTimeout;
 
-  public ThriftConnection(Configuration conf, ExecutorService pool, final User user)
-    throws IOException {
+  public ThriftConnection(Configuration conf, ExecutorService pool, final User user,
+    Map<String, byte[]> connectionAttributes) throws IOException {
     this.conf = conf;
     this.user = user;
     this.host = conf.get(Constants.HBASE_THRIFT_SERVER_NAME);
@@ -318,6 +318,11 @@ public class ThriftConnection implements Connection {
 
       @Override
       public TableBuilder setWriteRpcTimeout(int timeout) {
+        return this;
+      }
+
+      @Override
+      public TableBuilder setRequestAttribute(String key, byte[] value) {
         return this;
       }
 

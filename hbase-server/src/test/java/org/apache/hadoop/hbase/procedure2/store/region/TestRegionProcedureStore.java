@@ -158,6 +158,7 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
     RpcServer.setCurrentCall(null);
   }
 
+  @SuppressWarnings("checkstyle:methodlength")
   private RpcCall newRpcCallWithDeadline() {
     return new RpcCall() {
       @Override
@@ -217,6 +218,11 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
 
       @Override
       public RPCProtos.RequestHeader getHeader() {
+        return null;
+      }
+
+      @Override
+      public RPCProtos.ConnectionHeader getConnectionHeader() {
         return null;
       }
 

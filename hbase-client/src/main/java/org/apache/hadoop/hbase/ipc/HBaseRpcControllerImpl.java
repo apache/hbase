@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -69,6 +71,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    * block that implements CellScanner.
    */
   private CellScanner cellScanner;
+
+  private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
   public HBaseRpcControllerImpl() {
     this(null, (CellScanner) null);
@@ -164,6 +168,16 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   @Override
   public boolean hasCallTimeout() {
     return callTimeout != null;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
+  }
+
+  @Override
+  public void setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    this.requestAttributes = requestAttributes;
   }
 
   @Override

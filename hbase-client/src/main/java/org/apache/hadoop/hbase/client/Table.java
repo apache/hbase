@@ -979,6 +979,7 @@ public interface Table extends Closeable {
   }
 
   /**
+<<<<<<< HEAD
    * Get timeout (millisecond) of each operation for in Table instance.
    * @deprecated since 2.0 and will be removed in 3.0 version use
    *             {@link #getOperationTimeout(TimeUnit)} instead
@@ -1000,6 +1001,14 @@ public interface Table extends Closeable {
    */
   @Deprecated
   default void setOperationTimeout(int operationTimeout) {
+    throw new NotImplementedException("Add an implementation!");
+  }
+
+  /**
+   * Get the attributes to be submitted with requests
+   * @return map of request attributes
+   */
+  default Map<String, byte[]> getRequestAttributes() {
     throw new NotImplementedException("Add an implementation!");
   }
 }
