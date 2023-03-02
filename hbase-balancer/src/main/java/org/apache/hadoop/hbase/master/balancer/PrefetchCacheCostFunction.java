@@ -35,10 +35,18 @@ public class PrefetchCacheCostFunction extends CostFunction {
   private double prefetchRatio;
   private float bestPrefetchRatio;
 
+  /**
+   * Enables or disables the prefetch cache cost function depending on the parameter
+   * PREFETCH_PERSISTENCE_PATH_KEY. If set, this parameter enables the prefetched file list
+   * persistence.
+   * If this parameter is not set this means that the cache persistence is disabled which means
+   * that the prefetch ratios of regions on region servers cannot be calculated and hence the
+   * regions should be moved based on how much they have been prefetched on a region server.
+   * The prefetch cache cost function is disabled if the multiplier is set to 0.
+   * @param conf Cluster configuration
+   */
   PrefetchCacheCostFunction(Configuration conf) {
     prefetchedFileListPath = conf.get(HConstants.PREFETCH_PERSISTENCE_PATH_KEY);
-    // Disable the prefetch cache cost function if the prefetched file list persistence is not
-    // enabled
     this.setMultiplier(prefetchedFileListPath == null
       ? 0.0f
       : conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));

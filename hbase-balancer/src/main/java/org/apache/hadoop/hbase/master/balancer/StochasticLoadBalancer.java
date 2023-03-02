@@ -465,7 +465,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     RegionHDFSBlockLocationFinder finder = null;
     if (
       (this.localityCost != null) || (this.rackLocalityCost != null)
-        || (this.prefetchCacheCost != null)
     ) {
       finder = this.regionFinder;
     }
