@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
  * <li>Data Locality</li>
  * <li>Memstore Sizes</li>
  * <li>Storefile Sizes</li>
+ * <li>Prefetch</li>
  * </ul>
  * <p>
  * Every cost function returns a number between 0 and 1 inclusive; where 0 is the lowest cost best
@@ -72,6 +73,7 @@ import org.slf4j.LoggerFactory;
  * <li>hbase.master.balancer.stochastic.localityCost</li>
  * <li>hbase.master.balancer.stochastic.memstoreSizeCost</li>
  * <li>hbase.master.balancer.stochastic.storefileSizeCost</li>
+ * <li>hbase.master.balancer.stochastic.prefetchCacheCost</li>
  * </ul>
  * <p>
  * You can also add custom Cost function by setting the the following configuration value:
