@@ -465,9 +465,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // Allow turning this feature off if the locality cost is not going to
     // be used in any computations.
     RegionHDFSBlockLocationFinder finder = null;
-    if (
-      (this.localityCost != null) || (this.rackLocalityCost != null)
-    ) {
+    if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
     }
 

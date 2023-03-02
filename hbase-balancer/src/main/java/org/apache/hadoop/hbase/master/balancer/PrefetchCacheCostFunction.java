@@ -38,11 +38,10 @@ public class PrefetchCacheCostFunction extends CostFunction {
   /**
    * Enables or disables the prefetch cache cost function depending on the parameter
    * PREFETCH_PERSISTENCE_PATH_KEY. If set, this parameter enables the prefetched file list
-   * persistence.
-   * If this parameter is not set this means that the cache persistence is disabled which means
-   * that the prefetch ratios of regions on region servers cannot be calculated and hence the
-   * regions should be moved based on how much they have been prefetched on a region server.
-   * The prefetch cache cost function is disabled if the multiplier is set to 0.
+   * persistence. If this parameter is not set this means that the cache persistence is disabled
+   * which means that the prefetch ratios of regions on region servers cannot be calculated and
+   * hence the regions should be moved based on how much they have been prefetched on a region
+   * server. The prefetch cache cost function is disabled if the multiplier is set to 0.
    * @param conf Cluster configuration
    */
   PrefetchCacheCostFunction(Configuration conf) {

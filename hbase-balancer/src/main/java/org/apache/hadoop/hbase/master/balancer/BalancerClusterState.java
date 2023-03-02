@@ -581,10 +581,9 @@ class BalancerClusterState {
   }
 
   /**
-   * Returns prefetch ratio of a region on a region server.
-   * This method also finds out the historical prefetch ratio of this region if it was ever hosted
-   * on this region server.
-   * @param region Region ID
+   * Returns prefetch ratio of a region on a region server. This method also finds out the
+   * historical prefetch ratio of this region if it was ever hosted on this region server.
+   * @param region            Region ID
    * @param regionServerIndex Region Server ID
    * @return Prefetch ratio of given region on the given region server
    */
