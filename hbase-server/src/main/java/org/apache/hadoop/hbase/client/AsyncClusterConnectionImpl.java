@@ -59,7 +59,7 @@ class AsyncClusterConnectionImpl extends AsyncConnectionImpl implements AsyncClu
 
   public AsyncClusterConnectionImpl(Configuration conf, ConnectionRegistry registry,
     String clusterId, SocketAddress localAddress, User user) {
-    super(conf, registry, clusterId, localAddress, user);
+    super(conf, registry, clusterId, localAddress, user, null);
   }
 
   @Override
