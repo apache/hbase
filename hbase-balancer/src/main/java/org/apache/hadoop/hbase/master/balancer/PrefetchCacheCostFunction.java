@@ -36,12 +36,12 @@ public class PrefetchCacheCostFunction extends CostFunction {
   private float bestPrefetchRatio;
 
   /**
-   * Enables or disables the prefetch cache cost function depending on the parameter
-   * PREFETCH_PERSISTENCE_PATH_KEY. If set, this parameter enables the prefetched file list
-   * persistence. If this parameter is not set this means that the cache persistence is disabled
-   * which means that the prefetch ratios of regions on region servers cannot be calculated and
-   * hence the regions should be moved based on how much they have been prefetched on a region
-   * server. The prefetch cache cost function is disabled if the multiplier is set to 0.
+   * The prefetch cache cost function is enabled only when the prefetch file list persistence is
+   * enabled by setting the parameter PREFETCH_PERSISTENCE_PATH_KEY. The prefetch file list
+   * persistence is disabled by default. The prefetch cache cost function is also disabled if the
+   * multiplier is set to 0. The prefetch cache ratio function would be most relevant for non-hdfs
+   * deployments, which then makes locality irrelevant. In those cases, prefetch and region skewness
+   * would be competing to prevail over the final balancer decision.
    * @param conf Cluster configuration
    */
   PrefetchCacheCostFunction(Configuration conf) {
