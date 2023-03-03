@@ -154,7 +154,7 @@ public final class PrefetchExecutor {
       throw new IOException("Error persisting prefetched HFiles set!");
     }
     if (!prefetchCompleted.isEmpty()) {
-      try (FileOutputStream fos = new FileOutputStream(prefetchedFileListPath, true)) {
+      try (FileOutputStream fos = new FileOutputStream(prefetchedFileListPath, false)) {
         PrefetchProtoUtils.toPB(prefetchCompleted).writeDelimitedTo(fos);
       }
     }
