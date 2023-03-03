@@ -1002,7 +1002,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = connectionConfig.getPauseMillis();
-      takeUserRegionLock();
+      takeUserRegionLock(tries);
       try {
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
@@ -1112,6 +1112,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             ConnectionUtils.getPauseTime(pauseBase, tries), TimeUnit.MILLISECONDS);
         }
       } finally {
+        // update duration of the lock being held
+        if (metrics != null) {
+          metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - heldStartTime);
+        }
         userRegionLock.unlock();
       }
       try {
@@ -1123,12 +1127,25 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  void takeUserRegionLock() throws IOException {
+  private long heldStartTime;
+  void takeUserRegionLock(int tries) throws IOException {
     try {
       long waitTime = connectionConfig.getMetaOperationTimeout();
+      long waitStartTime = 0;
+      if (metrics != null) {
+        metrics.updateUserRegionLockQueue(userRegionLock.getQueueLength());
+        waitStartTime = EnvironmentEdgeManager.currentTime();
+      }
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+        if (metrics != null) {
+          metrics.incrUserRegionLockFailed();
+        }
         throw new LockTimeoutException("Failed to get user region lock in" + waitTime + " ms. "
           + " for accessing meta region server.");
+      } else if (metrics != null) {
+        // successfully grabbed the lock, start timer of holding the lock
+        heldStartTime = EnvironmentEdgeManager.currentTime();
+        metrics.updateUserRegionLockWaiting(tries * waitTime + heldStartTime - waitStartTime);
       }
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);

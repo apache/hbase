@@ -359,6 +359,10 @@ public final class MetricsConnection implements StatisticTrackable {
   private final Counter nsLookups;
   private final Counter nsLookupsFailed;
   private final Timer overloadedBackoffTimer;
+  private final Counter userRegionLockFailedCount;
+  private final Timer userRegionLockWaitingTimer;
+  private final Timer userRegionLockHeldTimer;
+  private final Histogram userRegionLockQueueHist;
 
   // dynamic metrics
 
@@ -442,6 +446,15 @@ public final class MetricsConnection implements StatisticTrackable {
       registry.histogram(name(MetricsConnection.class, "numActionsPerServer", scope));
     this.nsLookups = registry.counter(name(this.getClass(), NS_LOOKUPS, scope));
     this.nsLookupsFailed = registry.counter(name(this.getClass(), NS_LOOKUPS_FAILED, scope));
+
+    this.userRegionLockFailedCount =
+      registry.counter(name(this.getClass(), "userRegionLockFailedCount", scope));
+    this.userRegionLockWaitingTimer =
+      registry.timer(name(this.getClass(), "userRegionLockWaitingTimer", scope));
+    this.userRegionLockHeldTimer =
+      registry.timer(name(this.getClass(), "userRegionLockHeldTimer", scope));
+    this.userRegionLockQueueHist =
+      registry.histogram(name(MetricsConnection.class, "userRegionLockQueueHist", scope));
 
     this.overloadedBackoffTimer =
       registry.timer(name(this.getClass(), "overloadedBackoffDurationMs", scope));
@@ -596,6 +609,24 @@ public final class MetricsConnection implements StatisticTrackable {
 
   public void incrementServerOverloadedBackoffTime(long time, TimeUnit timeUnit) {
     overloadedBackoffTimer.update(time, timeUnit);
+  }
+
+  /** incr */
+  public void incrUserRegionLockFailed() {
+    userRegionLockFailedCount.inc();
+  }
+
+  /** update */
+  public void updateUserRegionLockWaiting(long duration) {
+    userRegionLockWaitingTimer.update(duration, TimeUnit.MILLISECONDS);
+  }
+
+  public void updateUserRegionLockHeld(long duration) {
+    userRegionLockHeldTimer.update(duration, TimeUnit.MILLISECONDS);
+  }
+
+  public void updateUserRegionLockQueue(int count) {
+    userRegionLockQueueHist.update(count);
   }
 
   /** Return the connection count of the metrics within a scope */
