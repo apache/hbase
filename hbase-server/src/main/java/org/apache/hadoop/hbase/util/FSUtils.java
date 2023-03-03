@@ -197,14 +197,11 @@ public final class FSUtils {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
-        // Try to use the favoredNodes version via reflection to allow backwards-
-        // compatibility.
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
-        DistributedFileSystem dfs = (DistributedFileSystem) backingFs;
         DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-          dfs.createFile(path).recursive().permission(perm).create().overwrite(true)
-            .bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
+          ((DistributedFileSystem) backingFs).createFile(path).recursive().permission(perm).create()
+            .overwrite(true).bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
             .replication(
               replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
             .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path));
@@ -213,6 +210,7 @@ public final class FSUtils {
         }
         return builder.build();
       }
+
     }
     return CommonFSUtils.create(fs, path, perm, true);
   }
