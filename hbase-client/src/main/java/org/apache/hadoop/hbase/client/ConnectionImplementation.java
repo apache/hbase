@@ -1128,6 +1128,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   }
 
   private long heldStartTime;
+
   void takeUserRegionLock(int tries) throws IOException {
     try {
       long waitTime = connectionConfig.getMetaOperationTimeout();
@@ -1138,7 +1139,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         if (metrics != null) {
-          metrics.incrUserRegionLockFailed();
+          metrics.incrUserRegionLockTimeout();
         }
         throw new LockTimeoutException("Failed to get user region lock in" + waitTime + " ms. "
           + " for accessing meta region server.");

@@ -359,7 +359,7 @@ public final class MetricsConnection implements StatisticTrackable {
   private final Counter nsLookups;
   private final Counter nsLookupsFailed;
   private final Timer overloadedBackoffTimer;
-  private final Counter userRegionLockFailedCount;
+  private final Counter userRegionLockTimeoutCount;
   private final Timer userRegionLockWaitingTimer;
   private final Timer userRegionLockHeldTimer;
   private final Histogram userRegionLockQueueHist;
@@ -447,8 +447,8 @@ public final class MetricsConnection implements StatisticTrackable {
     this.nsLookups = registry.counter(name(this.getClass(), NS_LOOKUPS, scope));
     this.nsLookupsFailed = registry.counter(name(this.getClass(), NS_LOOKUPS_FAILED, scope));
 
-    this.userRegionLockFailedCount =
-      registry.counter(name(this.getClass(), "userRegionLockFailedCount", scope));
+    this.userRegionLockTimeoutCount =
+      registry.counter(name(this.getClass(), "userRegionLockTimeoutCount", scope));
     this.userRegionLockWaitingTimer =
       registry.timer(name(this.getClass(), "userRegionLockWaitingTimer", scope));
     this.userRegionLockHeldTimer =
@@ -612,8 +612,8 @@ public final class MetricsConnection implements StatisticTrackable {
   }
 
   /** incr */
-  public void incrUserRegionLockFailed() {
-    userRegionLockFailedCount.inc();
+  public void incrUserRegionLockTimeout() {
+    userRegionLockTimeoutCount.inc();
   }
 
   /** update */
