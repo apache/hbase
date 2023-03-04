@@ -81,7 +81,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -195,27 +194,20 @@ public final class FSUtils {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem) fs).getBackingFs();
       if (backingFs instanceof DistributedFileSystem) {
-        // Try to use the favoredNodes version via reflection to allow backwards-
-        // compatibility.
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
-        try {
-          return (FSDataOutputStream) (DistributedFileSystem.class
-            .getDeclaredMethod("create", Path.class, FsPermission.class, boolean.class, int.class,
-              short.class, long.class, Progressable.class, InetSocketAddress[].class)
-            .invoke(backingFs, path, perm, true, CommonFSUtils.getDefaultBufferSize(backingFs),
-              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path),
-              CommonFSUtils.getDefaultBlockSize(backingFs, path), null, favoredNodes));
-        } catch (InvocationTargetException ite) {
-          // Function was properly called, but threw it's own exception.
-          throw new IOException(ite.getCause());
-        } catch (NoSuchMethodException e) {
-          LOG.debug("DFS Client does not support most favored nodes create; using default create");
-          LOG.trace("Ignoring; use default create", e);
-        } catch (IllegalArgumentException | SecurityException | IllegalAccessException e) {
-          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+        DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+          ((DistributedFileSystem) backingFs).createFile(path).recursive().permission(perm)
+            .create();
+        if (favoredNodes != null) {
+          builder.favoredNodes(favoredNodes);
         }
+        if (replication > 0) {
+          builder.replication(replication);
+        }
+        return builder.build();
       }
+
     }
     return CommonFSUtils.create(fs, path, perm, true);
   }
