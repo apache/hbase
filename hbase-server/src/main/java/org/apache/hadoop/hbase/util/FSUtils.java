@@ -200,13 +200,13 @@ public final class FSUtils {
         short replication = Short.parseShort(conf.get(ColumnFamilyDescriptorBuilder.DFS_REPLICATION,
           String.valueOf(ColumnFamilyDescriptorBuilder.DEFAULT_DFS_REPLICATION)));
         DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-          ((DistributedFileSystem) backingFs).createFile(path).recursive().permission(perm).create()
-            .overwrite(true).bufferSize(CommonFSUtils.getDefaultBufferSize(backingFs))
-            .replication(
-              replication > 0 ? replication : CommonFSUtils.getDefaultReplication(backingFs, path))
-            .blockSize(CommonFSUtils.getDefaultBlockSize(backingFs, path));
+          ((DistributedFileSystem) backingFs).createFile(path).recursive().permission(perm)
+            .create();
         if (favoredNodes != null) {
           builder.favoredNodes(favoredNodes);
+        }
+        if (replication > 0) {
+          builder.replication(replication);
         }
         return builder.build();
       }
