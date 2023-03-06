@@ -44,9 +44,11 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   public static final String SNAPPY_BUFFER_SIZE_KEY = "hbase.io.compress.snappy.buffersize";
 
   private Configuration conf;
+  private int bufferSize;
 
   public SnappyCodec() {
     conf = new Configuration();
+    bufferSize = getBufferSize(conf);
   }
 
   @Override
@@ -57,16 +59,17 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.bufferSize = getBufferSize(conf);
   }
 
   @Override
   public Compressor createCompressor() {
-    return new SnappyCompressor(getBufferSize(conf));
+    return new SnappyCompressor(bufferSize);
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new SnappyDecompressor(getBufferSize(conf));
+    return new SnappyDecompressor(bufferSize);
   }
 
   @Override
@@ -77,7 +80,7 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -88,7 +91,6 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       Snappy.maxCompressedLength(bufferSize) - bufferSize); // overhead only
   }
