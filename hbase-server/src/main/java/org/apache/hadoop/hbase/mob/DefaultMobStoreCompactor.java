@@ -345,10 +345,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     long cellsSizeCompactedToMob = 0, cellsSizeCompactedFromMob = 0;
     boolean finished = false;
 
-    ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(compactionKVMax)
-      .setSizeLimit(ScannerContext.LimitScope.BETWEEN_CELLS, Long.MAX_VALUE, Long.MAX_VALUE,
-        compactScannerSizeLimit)
-      .build();
+    ScannerContext scannerContext =
+      ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
     throughputController.start(compactionName);
     KeyValueScanner kvs = (scanner instanceof KeyValueScanner) ? (KeyValueScanner) scanner : null;
     long shippedCallSizeLimit =

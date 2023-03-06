@@ -83,7 +83,6 @@ public abstract class Compactor<T extends CellSink> {
   protected final Configuration conf;
   protected final HStore store;
   protected final int compactionKVMax;
-  protected final long compactScannerSizeLimit;
   protected final Compression.Algorithm majorCompactionCompression;
   protected final Compression.Algorithm minorCompactionCompression;
 
@@ -110,8 +109,6 @@ public abstract class Compactor<T extends CellSink> {
     this.store = store;
     this.compactionKVMax =
       this.conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
-    this.compactScannerSizeLimit = this.conf.getLong(HConstants.COMPACTION_SCANNER_SIZE_MAX,
-      HConstants.COMPACTION_SCANNER_SIZE_MAX_DEFAULT);
     this.majorCompactionCompression = (store.getColumnFamilyDescriptor() == null)
       ? Compression.Algorithm.NONE
       : store.getColumnFamilyDescriptor().getMajorCompactionCompressionType();
@@ -432,10 +429,8 @@ public abstract class Compactor<T extends CellSink> {
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
     long now = 0;
     boolean hasMore;
-    ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(compactionKVMax)
-      .setSizeLimit(ScannerContext.LimitScope.BETWEEN_CELLS, Long.MAX_VALUE, Long.MAX_VALUE,
-        compactScannerSizeLimit)
-      .build();
+    ScannerContext scannerContext =
+      ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
 
     throughputController.start(compactionName);
     Shipper shipper = (scanner instanceof Shipper) ? (Shipper) scanner : null;
