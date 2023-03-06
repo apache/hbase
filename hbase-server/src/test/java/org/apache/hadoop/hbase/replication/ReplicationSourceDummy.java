@@ -94,6 +94,8 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public void terminate(String reason, Exception e, boolean clearMetrics) {
     if (clearMetrics) {
       this.metrics.clear();
+    } else {
+      this.metrics.terminate();
     }
   }
 
