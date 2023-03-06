@@ -121,6 +121,7 @@ public class TestCompaction {
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
+    conf.setLong(HConstants.COMPACTION_SCANNER_SIZE_MAX, 10L);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       NoLimitThroughputController.class.getName());
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
