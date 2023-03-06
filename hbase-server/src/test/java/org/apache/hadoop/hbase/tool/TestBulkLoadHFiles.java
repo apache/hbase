@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -568,6 +569,25 @@ public class TestBulkLoadHFiles {
   }
 
   @Test
+  public void testSplitStoreFileWithCreateTimeTS() throws IOException {
+    Path dir = util.getDataTestDirOnTestFS("testSplitStoreFileWithCreateTimeTS");
+    FileSystem fs = util.getTestFileSystem();
+    Path testIn = new Path(dir, "testhfile");
+    ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
+      Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    Path bottomOut = new Path(dir, "bottom.out");
+    Path topOut = new Path(dir, "top.out");
+
+    BulkLoadHFilesTool.splitStoreFile(util.getConfiguration(), testIn, familyDesc,
+      Bytes.toBytes("ggg"), bottomOut, topOut);
+
+    verifyHFileCreateTimeTS(bottomOut);
+    verifyHFileCreateTimeTS(topOut);
+  }
+
+  @Test
   public void testSplitStoreFileWithNoneToNone() throws IOException {
     testSplitStoreFileWithDifferentEncoding(DataBlockEncoding.NONE, DataBlockEncoding.NONE);
   }
@@ -621,6 +641,17 @@ public class TestBulkLoadHFiles {
     assertTrue(count > 0);
     reader.close();
     return count;
+  }
+
+  private void verifyHFileCreateTimeTS(Path p) throws IOException {
+    Configuration conf = util.getConfiguration();
+    HFile.Reader reader =
+      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
+    final HFileInfo hFileInfo = reader.getHFileInfo();
+    final long fileCreateTime = hFileInfo.getHFileContext().getFileCreateTime();
+    reader.close();
+    assertTrue(fileCreateTime != 0);
+
   }
 
   private void addStartEndKeysForTest(TreeMap<byte[], Integer> map, byte[] first, byte[] last) {
