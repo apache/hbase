@@ -273,6 +273,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private ChoreService choreService;
 
+  private long userRegionLockHeldStartTime;
+
   /**
    * constructor
    * @param conf Configuration object
@@ -1002,7 +1004,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = connectionConfig.getPauseMillis();
-      takeUserRegionLock(tries);
+      takeUserRegionLock();
       try {
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
@@ -1114,7 +1116,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       } finally {
         // update duration of the lock being held
         if (metrics != null) {
-          metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - heldStartTime);
+          metrics.updateUserRegionLockHeld(
+            EnvironmentEdgeManager.currentTime() - userRegionLockHeldStartTime);
         }
         userRegionLock.unlock();
       }
@@ -1127,9 +1130,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  private long heldStartTime;
-
-  void takeUserRegionLock(int tries) throws IOException {
+  void takeUserRegionLock() throws IOException {
     try {
       long waitTime = connectionConfig.getMetaOperationTimeout();
       long waitStartTime = 0;
@@ -1145,8 +1146,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
           + " for accessing meta region server.");
       } else if (metrics != null) {
         // successfully grabbed the lock, start timer of holding the lock
-        heldStartTime = EnvironmentEdgeManager.currentTime();
-        metrics.updateUserRegionLockWaiting(tries * waitTime + heldStartTime - waitStartTime);
+        userRegionLockHeldStartTime = EnvironmentEdgeManager.currentTime();
+        metrics.updateUserRegionLockWaiting(userRegionLockHeldStartTime - waitStartTime);
       }
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);

@@ -450,11 +450,11 @@ public final class MetricsConnection implements StatisticTrackable {
     this.userRegionLockTimeoutCount =
       registry.counter(name(this.getClass(), "userRegionLockTimeoutCount", scope));
     this.userRegionLockWaitingTimer =
-      registry.timer(name(this.getClass(), "userRegionLockWaitingTimer", scope));
+      registry.timer(name(this.getClass(), "userRegionLockWaitingDurationMs", scope));
     this.userRegionLockHeldTimer =
-      registry.timer(name(this.getClass(), "userRegionLockHeldTimer", scope));
+      registry.timer(name(this.getClass(), "userRegionLockHeldDurationMs", scope));
     this.userRegionLockQueueHist =
-      registry.histogram(name(MetricsConnection.class, "userRegionLockQueueHist", scope));
+      registry.histogram(name(MetricsConnection.class, "userRegionLockQueueLength", scope));
 
     this.overloadedBackoffTimer =
       registry.timer(name(this.getClass(), "overloadedBackoffDurationMs", scope));
