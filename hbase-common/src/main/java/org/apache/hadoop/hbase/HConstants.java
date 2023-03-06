@@ -360,11 +360,6 @@ public final class HConstants {
   public static final String COMPACTION_KV_MAX = "hbase.hstore.compaction.kv.max";
   public static final int COMPACTION_KV_MAX_DEFAULT = 10;
 
-  /** Parameter name for the scanner size limit to be used in compactions */
-  public static final String COMPACTION_SCANNER_SIZE_MAX =
-    "hbase.hstore.compaction.scanner.size.limit";
-  public static final long COMPACTION_SCANNER_SIZE_MAX_DEFAULT = 10 * 1024 * 1024L; // 10MB
-
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";
 
