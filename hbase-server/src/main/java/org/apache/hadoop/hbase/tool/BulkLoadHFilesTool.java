@@ -578,7 +578,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     return UUID.randomUUID().toString().replaceAll("-", "");
   }
 
-
   private List<LoadQueueItem> splitStoreFile(LoadQueueItem item, TableDescriptor tableDesc,
     byte[] splitKey) throws IOException {
     Path hfilePath = item.getFilePath();
