@@ -44,6 +44,12 @@ Examples:
                                                                    => get largelog responses only related to meta
                                                                       region
   hbase> get_largelog_responses '*', {'TABLE_NAME' => 't1'}         => get largelog responses only related to t1 table
+  hbase> get_largelog_responses '*', {'CLIENT_IP' => '192.162.1.40'}
+                                                                   => get largelog responses only related to the given
+                                                                      client IP address
+  hbase> get_largelog_responses '*', {'CLIENT_IP' => '192.162.1.40:60225'}
+                                                                   => get largelog responses only related to the given
+                                                                      client IP address and port
   hbase> get_largelog_responses '*', {'CLIENT_IP' => '192.162.1.40:60225', 'LIMIT' => 100}
                                                                    => get largelog responses with given client
                                                                       IP address and get 100 records limit
