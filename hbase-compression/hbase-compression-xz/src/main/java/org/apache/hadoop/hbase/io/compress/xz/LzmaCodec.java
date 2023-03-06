@@ -44,9 +44,13 @@ public class LzmaCodec implements Configurable, CompressionCodec {
   public static final int LZMA_BUFFERSIZE_DEFAULT = 256 * 1024;
 
   private Configuration conf;
+  private int bufferSize;
+  private int level;
 
   public LzmaCodec() {
     conf = new Configuration();
+    bufferSize = getBufferSize(conf);
+    level = getLevel(conf);
   }
 
   @Override
@@ -57,16 +61,18 @@ public class LzmaCodec implements Configurable, CompressionCodec {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.bufferSize = getBufferSize(conf);
+    this.level = getLevel(conf);
   }
 
   @Override
   public Compressor createCompressor() {
-    return new LzmaCompressor(getLevel(conf), getBufferSize(conf));
+    return new LzmaCompressor(level, bufferSize);
   }
 
   @Override
   public Decompressor createDecompressor() {
-    return new LzmaDecompressor(getBufferSize(conf));
+    return new LzmaDecompressor(bufferSize);
   }
 
   @Override
@@ -77,7 +83,7 @@ public class LzmaCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionInputStream createInputStream(InputStream in, Decompressor d)
     throws IOException {
-    return new BlockDecompressorStream(in, d, getBufferSize(conf));
+    return new BlockDecompressorStream(in, d, bufferSize);
   }
 
   @Override
@@ -88,7 +94,6 @@ public class LzmaCodec implements Configurable, CompressionCodec {
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out, Compressor c)
     throws IOException {
-    int bufferSize = getBufferSize(conf);
     return new BlockCompressorStream(out, c, bufferSize,
       CompressionUtil.compressionOverhead(bufferSize));
   }
