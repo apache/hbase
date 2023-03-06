@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -649,8 +651,12 @@ public class TestBulkLoadHFiles {
       HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
     final HFileInfo hFileInfo = reader.getHFileInfo();
     final long fileCreateTime = hFileInfo.getHFileContext().getFileCreateTime();
-    reader.close();
-    assertTrue(fileCreateTime != 0);
+    try {
+      reader.close();
+      MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
+    } catch (IOException e) {
+      fail("Failed due to exception");
+    }
 
   }
 
