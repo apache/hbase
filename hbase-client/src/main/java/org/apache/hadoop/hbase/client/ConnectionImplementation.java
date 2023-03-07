@@ -273,8 +273,6 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private ChoreService choreService;
 
-  private long userRegionLockHeldStartTime;
-
   /**
    * constructor
    * @param conf Configuration object
@@ -1004,7 +1002,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = connectionConfig.getPauseMillis();
-      takeUserRegionLock();
+      final long lockStartTime = takeUserRegionLock();
       try {
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
@@ -1114,12 +1112,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             ConnectionUtils.getPauseTime(pauseBase, tries), TimeUnit.MILLISECONDS);
         }
       } finally {
+        userRegionLock.unlock();
         // update duration of the lock being held
         if (metrics != null) {
-          metrics.updateUserRegionLockHeld(
-            EnvironmentEdgeManager.currentTime() - userRegionLockHeldStartTime);
+          metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTime);
         }
-        userRegionLock.unlock();
       }
       try {
         Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
@@ -1130,10 +1127,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  void takeUserRegionLock() throws IOException {
+  long takeUserRegionLock() throws IOException {
+    long heldStartTime = 0, waitStartTime = 0;
     try {
       long waitTime = connectionConfig.getMetaOperationTimeout();
-      long waitStartTime = 0;
       if (metrics != null) {
         metrics.updateUserRegionLockQueue(userRegionLock.getQueueLength());
         waitStartTime = EnvironmentEdgeManager.currentTime();
@@ -1146,13 +1143,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
           + " for accessing meta region server.");
       } else if (metrics != null) {
         // successfully grabbed the lock, start timer of holding the lock
-        userRegionLockHeldStartTime = EnvironmentEdgeManager.currentTime();
-        metrics.updateUserRegionLockWaiting(userRegionLockHeldStartTime - waitStartTime);
+        heldStartTime = EnvironmentEdgeManager.currentTime();
+        metrics.updateUserRegionLockWaiting(heldStartTime - waitStartTime);
       }
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);
       throw ExceptionUtil.asInterrupt(ie);
     }
+    return heldStartTime;
   }
 
   /**

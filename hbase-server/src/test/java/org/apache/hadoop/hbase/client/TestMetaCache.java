@@ -435,6 +435,7 @@ public class TestMetaCache {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     conf.setLong(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 2000);
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 2000);
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
     try (ConnectionImplementation conn =
       (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
@@ -459,6 +460,20 @@ public class TestMetaCache {
 
       assertTrue(client1.getException() instanceof LockTimeoutException
         ^ client2.getException() instanceof LockTimeoutException);
+
+      // obtain the client metrics
+      MetricsConnection metrics = conn.getConnectionMetrics();
+      long queueCount = metrics.getUserRegionLockQueue().getCount();
+      assertTrue(queueCount == 2);
+
+      long timeoutCount = metrics.getUserRegionLockTimeout().getCount();
+      assertTrue(timeoutCount == 1);
+
+      long waitingTimerCount = metrics.getUserRegionLockWaitingTimer().getCount();
+      assertTrue(waitingTimerCount == 1);
+
+      long heldTimerCount = metrics.getUserRegionLockHeldTimer().getCount();
+      assertTrue(heldTimerCount == 1);
     }
   }
 

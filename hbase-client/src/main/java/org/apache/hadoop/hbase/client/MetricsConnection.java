@@ -616,6 +616,23 @@ public final class MetricsConnection implements StatisticTrackable {
     userRegionLockTimeoutCount.inc();
   }
 
+  /** get */
+  public Counter getUserRegionLockTimeout() {
+    return userRegionLockTimeoutCount;
+  }
+
+  public Timer getUserRegionLockWaitingTimer() {
+    return userRegionLockWaitingTimer;
+  }
+
+  public Timer getUserRegionLockHeldTimer() {
+    return userRegionLockHeldTimer;
+  }
+
+  public Histogram getUserRegionLockQueue() {
+    return userRegionLockQueueHist;
+  }
+
   /** update */
   public void updateUserRegionLockWaiting(long duration) {
     userRegionLockWaitingTimer.update(duration, TimeUnit.MILLISECONDS);
