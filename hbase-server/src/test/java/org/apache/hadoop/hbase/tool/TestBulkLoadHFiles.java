@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -647,17 +646,12 @@ public class TestBulkLoadHFiles {
 
   private void verifyHFileCreateTimeTS(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
-    HFile.Reader reader =
-      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf);
-    final HFileInfo hFileInfo = reader.getHFileInfo();
-    final long fileCreateTime = hFileInfo.getHFileContext().getFileCreateTime();
-    try {
-      reader.close();
-      MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
-    } catch (IOException e) {
-      fail("Failed due to exception");
-    }
 
+    try (HFile.Reader reader =
+      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf)) {
+      long fileCreateTime = reader.getHFileInfo().getHFileContext().getFileCreateTime();
+      MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
+    }
   }
 
   private void addStartEndKeysForTest(TreeMap<byte[], Integer> map, byte[] first, byte[] last) {
