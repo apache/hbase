@@ -100,13 +100,9 @@ public class RpcRetryingCallerFactory {
     if (rpcCallerFactoryClazz.equals(clazzName)) {
       factory = new RpcRetryingCallerFactory(configuration, connectionConf, interceptor, metrics);
     } else {
-      try {
-        factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
-          new Class[] { Configuration.class }, new Object[] { configuration, connectionConf });
-      } catch (UnsupportedOperationException e) {
-        factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
-          new Class[] { Configuration.class }, new Object[] { configuration });
-      }
+      factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
+        new Class[] { Configuration.class, ConnectionConfiguration.class },
+        new Object[] { configuration, connectionConf });
     }
     return factory;
   }

@@ -99,7 +99,7 @@ public class TestSpaceQuotaOnBulkLoad {
 
     // The table is now in violation. Try to do a bulk load
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tableName, 1, 50);
-    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConfiguration();
+    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
     RpcRetryingCallerFactory factory =
       new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.<Void> newCaller();

@@ -89,6 +89,7 @@ public class TestClientScanner {
     conf = new Configuration();
     connectionConfig = new ConnectionConfiguration(conf);
     Mockito.when(clusterConn.getConfiguration()).thenReturn(conf);
+    Mockito.when(clusterConn.getConnectionConfiguration()).thenReturn(connectionConfig);
   }
 
   @After
