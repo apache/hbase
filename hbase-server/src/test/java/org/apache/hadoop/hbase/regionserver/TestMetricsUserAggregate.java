@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.security.PrivilegedAction;
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +28,7 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -65,23 +68,28 @@ public class TestMetricsUserAggregate {
   }
 
   private void doOperations() {
+    HRegion region = mock(HRegion.class);
+    MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
+    when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
+    when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 10; i++) {
-      rsm.updateGet(tableName, 10);
+      rsm.updateGet(region, 10);
     }
     for (int i = 0; i < 11; i++) {
-      rsm.updateScanTime(tableName, 11);
+      rsm.updateScanTime(region, 11);
     }
     for (int i = 0; i < 12; i++) {
-      rsm.updatePut(tableName, 12);
+      rsm.updatePut(region, 12);
     }
     for (int i = 0; i < 13; i++) {
-      rsm.updateDelete(tableName, 13);
+      rsm.updateDelete(region, 13);
     }
     for (int i = 0; i < 14; i++) {
-      rsm.updateIncrement(tableName, 14);
+      rsm.updateIncrement(region, 14);
     }
     for (int i = 0; i < 15; i++) {
-      rsm.updateAppend(tableName, 15);
+      rsm.updateAppend(region, 15);
     }
     for (int i = 0; i < 16; i++) {
       rsm.updateReplay(16);
@@ -150,7 +158,12 @@ public class TestMetricsUserAggregate {
         .doAs(new PrivilegedAction<Void>() {
           @Override
           public Void run() {
-            rsm.updateGet(tableName, 10);
+            HRegion region = mock(HRegion.class);
+            MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
+            when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
+            when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
+            when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
+            rsm.updateGet(region, 10);
             return null;
           }
         });

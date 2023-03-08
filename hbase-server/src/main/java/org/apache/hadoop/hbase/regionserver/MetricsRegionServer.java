@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.Meter;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -36,20 +35,13 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
 public class MetricsRegionServer {
-  public static final String RS_ENABLE_TABLE_METRICS_KEY =
-    "hbase.regionserver.enable.table.latencies";
-  public static final boolean RS_ENABLE_TABLE_METRICS_DEFAULT = true;
   public static final String RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY =
     "hbase.regionserver.enable.server.query.meter";
   public static final boolean RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT = true;
-  public static final String RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY =
-    "hbase.regionserver.enable.table.query.meter";
-  public static final boolean RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT = true;
 
   public static final String SLOW_METRIC_TIME = "hbase.ipc.slow.metric.time";
   private final MetricsRegionServerSource serverSource;
   private final MetricsRegionServerWrapper regionServerWrapper;
-  private RegionServerTableMetrics tableMetrics;
   private final MetricsTable metricsTable;
   private final MetricsUserAggregate userAggregate;
   private MetricsRegionServerQuotaSource quotaSource;
@@ -68,8 +60,7 @@ public class MetricsRegionServer {
     this(regionServerWrapper,
       CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
         .createServer(regionServerWrapper),
-      createTableMetrics(conf), metricsTable,
-      MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
+      metricsTable, MetricsUserAggregateFactory.getMetricsUserAggregate(conf));
 
     // Create hbase-metrics module based metrics. The registry should already be registered by the
     // MetricsRegionServerSource
@@ -90,24 +81,12 @@ public class MetricsRegionServer {
   }
 
   MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
-    MetricsRegionServerSource serverSource, RegionServerTableMetrics tableMetrics,
-    MetricsTable metricsTable, MetricsUserAggregate userAggregate) {
+    MetricsRegionServerSource serverSource, MetricsTable metricsTable,
+    MetricsUserAggregate userAggregate) {
     this.regionServerWrapper = regionServerWrapper;
     this.serverSource = serverSource;
-    this.tableMetrics = tableMetrics;
     this.metricsTable = metricsTable;
     this.userAggregate = userAggregate;
-  }
-
-  /**
-   * Creates an instance of {@link RegionServerTableMetrics} only if the feature is enabled.
-   */
-  static RegionServerTableMetrics createTableMetrics(Configuration conf) {
-    if (conf.getBoolean(RS_ENABLE_TABLE_METRICS_KEY, RS_ENABLE_TABLE_METRICS_DEFAULT)) {
-      return new RegionServerTableMetrics(conf.getBoolean(RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY,
-        RS_ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT));
-    }
-    return null;
   }
 
   public MetricsRegionServerSource getMetricsSource() {
@@ -122,16 +101,16 @@ public class MetricsRegionServer {
     return regionServerWrapper;
   }
 
-  public void updatePutBatch(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updatePutBatch(tn, t);
+  public void updatePutBatch(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updatePutBatch(t);
     }
     serverSource.updatePutBatch(t);
   }
 
-  public void updatePut(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updatePut(tn, t);
+  public void updatePut(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updatePut(t);
     }
     if (t > slowMetricTime) {
       serverSource.incrSlowPut();
@@ -140,9 +119,9 @@ public class MetricsRegionServer {
     userAggregate.updatePut(t);
   }
 
-  public void updateDelete(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateDelete(tn, t);
+  public void updateDelete(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateDelete(t);
     }
     if (t > slowMetricTime) {
       serverSource.incrSlowDelete();
@@ -151,37 +130,37 @@ public class MetricsRegionServer {
     userAggregate.updateDelete(t);
   }
 
-  public void updateDeleteBatch(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateDeleteBatch(tn, t);
+  public void updateDeleteBatch(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateDeleteBatch(t);
     }
     serverSource.updateDeleteBatch(t);
   }
 
-  public void updateCheckAndDelete(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateCheckAndDelete(tn, t);
+  public void updateCheckAndDelete(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateCheckAndDelete(t);
     }
     serverSource.updateCheckAndDelete(t);
   }
 
-  public void updateCheckAndPut(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateCheckAndPut(tn, t);
+  public void updateCheckAndPut(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateCheckAndPut(t);
     }
     serverSource.updateCheckAndPut(t);
   }
 
-  public void updateCheckAndMutate(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateCheckAndMutate(tn, t);
+  public void updateCheckAndMutate(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateCheckAndMutate(t);
     }
     serverSource.updateCheckAndMutate(t);
   }
 
-  public void updateGet(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateGet(tn, t);
+  public void updateGet(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateGet(t);
     }
     if (t > slowMetricTime) {
       serverSource.incrSlowGet();
@@ -190,9 +169,9 @@ public class MetricsRegionServer {
     userAggregate.updateGet(t);
   }
 
-  public void updateIncrement(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateIncrement(tn, t);
+  public void updateIncrement(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateIncrement(t);
     }
     if (t > slowMetricTime) {
       serverSource.incrSlowIncrement();
@@ -201,9 +180,9 @@ public class MetricsRegionServer {
     userAggregate.updateIncrement(t);
   }
 
-  public void updateAppend(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateAppend(tn, t);
+  public void updateAppend(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateAppend(t);
     }
     if (t > slowMetricTime) {
       serverSource.incrSlowAppend();
@@ -217,16 +196,16 @@ public class MetricsRegionServer {
     userAggregate.updateReplay(t);
   }
 
-  public void updateScanSize(TableName tn, long scanSize) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateScanSize(tn, scanSize);
+  public void updateScanSize(HRegion region, long scanSize) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateScanSize(scanSize);
     }
     serverSource.updateScanSize(scanSize);
   }
 
-  public void updateScanTime(TableName tn, long t) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateScanTime(tn, t);
+  public void updateScanTime(HRegion region, long t) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateScanTime(t);
     }
     serverSource.updateScanTime(t);
     userAggregate.updateScanTime(t);
@@ -278,27 +257,27 @@ public class MetricsRegionServer {
     this.bulkLoadTimer.updateMillis(millis);
   }
 
-  public void updateReadQueryMeter(TableName tn, long count) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateTableReadQueryMeter(tn, count);
+  public void updateReadQueryMeter(HRegion region, long count) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateTableReadQueryMeter(count);
     }
     if (serverReadQueryMeter != null) {
       serverReadQueryMeter.mark(count);
     }
   }
 
-  public void updateWriteQueryMeter(TableName tn, long count) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateTableWriteQueryMeter(tn, count);
+  public void updateWriteQueryMeter(HRegion region, long count) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateTableWriteQueryMeter(count);
     }
     if (serverWriteQueryMeter != null) {
       serverWriteQueryMeter.mark(count);
     }
   }
 
-  public void updateWriteQueryMeter(TableName tn) {
-    if (tableMetrics != null && tn != null) {
-      tableMetrics.updateTableWriteQueryMeter(tn);
+  public void updateWriteQueryMeter(HRegion region) {
+    if (region.getMetricsTableRequests() != null) {
+      region.getMetricsTableRequests().updateTableWriteQueryMeter();
     }
     if (serverWriteQueryMeter != null) {
       serverWriteQueryMeter.mark();
