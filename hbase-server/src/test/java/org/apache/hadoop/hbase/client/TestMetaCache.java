@@ -475,7 +475,7 @@ public class TestMetaCache {
       long heldTimerCount = metrics.getUserRegionLockHeldTimer().getCount();
       assertEquals("userRegionLock should be held successfully once.", heldTimerCount, 1);
       double heldTime = metrics.getUserRegionLockHeldTimer().getSnapshot().getMax();
-      assertTrue("Max held time should be greater than 2 seconds.", heldTime >= 2E6);
+      assertTrue("Max held time should be greater than 2 seconds.", heldTime >= 2E9);
     }
   }
 
