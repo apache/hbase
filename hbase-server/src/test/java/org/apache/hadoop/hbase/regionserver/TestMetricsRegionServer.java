@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -146,35 +148,40 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testSlowCount() {
+    HRegion region = mock(HRegion.class);
+    MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
+    when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
+    when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 12; i++) {
-      rsm.updateAppend(null, 12);
-      rsm.updateAppend(null, 1002);
+      rsm.updateAppend(region, 12);
+      rsm.updateAppend(region, 1002);
     }
     for (int i = 0; i < 13; i++) {
-      rsm.updateDeleteBatch(null, 13);
-      rsm.updateDeleteBatch(null, 1003);
+      rsm.updateDeleteBatch(region, 13);
+      rsm.updateDeleteBatch(region, 1003);
     }
     for (int i = 0; i < 14; i++) {
-      rsm.updateGet(null, 14);
-      rsm.updateGet(null, 1004);
+      rsm.updateGet(region, 14);
+      rsm.updateGet(region, 1004);
     }
     for (int i = 0; i < 15; i++) {
-      rsm.updateIncrement(null, 15);
-      rsm.updateIncrement(null, 1005);
+      rsm.updateIncrement(region, 15);
+      rsm.updateIncrement(region, 1005);
     }
     for (int i = 0; i < 16; i++) {
-      rsm.updatePutBatch(null, 16);
-      rsm.updatePutBatch(null, 1006);
+      rsm.updatePutBatch(region, 16);
+      rsm.updatePutBatch(region, 1006);
     }
 
     for (int i = 0; i < 17; i++) {
-      rsm.updatePut(null, 17);
-      rsm.updateDelete(null, 17);
-      rsm.updatePut(null, 1006);
-      rsm.updateDelete(null, 1003);
-      rsm.updateCheckAndDelete(null, 17);
-      rsm.updateCheckAndPut(null, 17);
-      rsm.updateCheckAndMutate(null, 17);
+      rsm.updatePut(region, 17);
+      rsm.updateDelete(region, 17);
+      rsm.updatePut(region, 1006);
+      rsm.updateDelete(region, 1003);
+      rsm.updateCheckAndDelete(region, 17);
+      rsm.updateCheckAndPut(region, 17);
+      rsm.updateCheckAndMutate(region, 17);
     }
 
     HELPER.assertCounter("appendNumOps", 24, serverSource);
@@ -268,11 +275,15 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testTableQueryMeterSwitch() {
-    TableName tn1 = TableName.valueOf("table1");
+    HRegion region = mock(HRegion.class);
+    MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
+    when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
+    when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
     // has been set disable in setUp()
-    rsm.updateReadQueryMeter(tn1, 500L);
+    rsm.updateReadQueryMeter(region, 500L);
     assertFalse(HELPER.checkGaugeExists("ServerReadQueryPerSecond_count", serverSource));
-    rsm.updateWriteQueryMeter(tn1, 500L);
+    rsm.updateWriteQueryMeter(region, 500L);
     assertFalse(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
 
     // enable
@@ -280,11 +291,11 @@ public class TestMetricsRegionServer {
     conf.setBoolean(MetricsRegionServer.RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY, true);
     rsm = new MetricsRegionServer(wrapper, conf, null);
     serverSource = rsm.getMetricsSource();
-    rsm.updateReadQueryMeter(tn1, 500L);
+    rsm.updateReadQueryMeter(region, 500L);
     assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
     HELPER.assertGauge("ServerReadQueryPerSecond_count", 500L, serverSource);
     assertTrue(HELPER.checkGaugeExists("ServerWriteQueryPerSecond_count", serverSource));
-    rsm.updateWriteQueryMeter(tn1, 500L);
+    rsm.updateWriteQueryMeter(region, 500L);
     HELPER.assertGauge("ServerWriteQueryPerSecond_count", 500L, serverSource);
   }
 

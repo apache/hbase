@@ -151,6 +151,7 @@ import org.apache.hadoop.hbase.quotas.RegionServerSpaceQuotaManager;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
+import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
@@ -366,6 +367,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void setRestoredRegion(boolean restoredRegion) {
     isRestoredRegion = restoredRegion;
   }
+
+  public MetricsTableRequests getMetricsTableRequests() {
+    return metricsTableRequests;
+  }
+
+  // Handle table latency metrics
+  private MetricsTableRequests metricsTableRequests;
 
   // The internal wait duration to acquire a lock before read/update
   // from the region. It is not per row. The purpose of this wait time
@@ -956,6 +964,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
 
       }
+      if (metricsTableRequests != null) {
+        metricsTableRequests.removeRegistry();
+      }
       throw e;
     } finally {
       // nextSeqid will be -1 if the initialization fails.
@@ -1077,6 +1088,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
+
+    metricsTableRequests = new MetricsTableRequests(htableDescriptor.getTableName(), conf);
 
     status.markComplete("Region opened successfully");
     return nextSeqId;
@@ -1816,6 +1829,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
 
       this.closed.set(true);
+
+      // Decrease refCount of table latency metric registry.
+      // Do this after closed#set to make sure only -1.
+      if (metricsTableRequests != null) {
+        metricsTableRequests.removeRegistry();
+      }
+
       if (!canFlush) {
         decrMemStoreSize(this.memStoreSizing.getMemStoreSize());
       } else if (this.memStoreSizing.getDataSize() != 0) {
@@ -4446,8 +4466,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       if (rsServices != null && rsServices.getMetrics() != null) {
-        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.getTableName(),
-          batchOp.size());
+        rsServices.getMetrics().updateWriteQueryMeter(this, batchOp.size());
       }
       batchOp.closeRegionOperation();
     }
@@ -7404,7 +7423,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
     if (rsServices != null && this.rsServices.getMetrics() != null) {
-      rsServices.getMetrics().updateReadQueryMeter(getTableDescriptor().getTableName(), 1);
+      rsServices.getMetrics().updateReadQueryMeter(this, 1);
     }
   }
 
@@ -7631,8 +7650,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           releaseRowLocks(acquiredRowLocks);
 
           if (rsServices != null && rsServices.getMetrics() != null) {
-            rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.getTableName(),
-              mutations.size());
+            rsServices.getMetrics().updateWriteQueryMeter(this, mutations.size());
           }
         }
         success = true;

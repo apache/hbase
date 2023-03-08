@@ -713,8 +713,7 @@ public class RSRpcServices
     long nonce = mutation.hasNonce() ? mutation.getNonce() : HConstants.NO_NONCE;
     Result r = region.append(append, nonceGroup, nonce);
     if (regionServer.getMetrics() != null) {
-      regionServer.getMetrics().updateAppend(region.getTableDescriptor().getTableName(),
-        EnvironmentEdgeManager.currentTime() - before);
+      regionServer.getMetrics().updateAppend(region, EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
   }
@@ -734,8 +733,7 @@ public class RSRpcServices
     Result r = region.increment(increment, nonceGroup, nonce);
     final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
-      metricsRegionServer.updateIncrement(region.getTableDescriptor().getTableName(),
-        EnvironmentEdgeManager.currentTime() - before);
+      metricsRegionServer.updateIncrement(region, EnvironmentEdgeManager.currentTime() - before);
     }
     return r == null ? Result.EMPTY_RESULT : r;
   }
@@ -827,8 +825,7 @@ public class RSRpcServices
           } finally {
             final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
             if (metricsRegionServer != null) {
-              metricsRegionServer.updateGet(region.getTableDescriptor().getTableName(),
-                EnvironmentEdgeManager.currentTime() - before);
+              metricsRegionServer.updateGet(region, EnvironmentEdgeManager.currentTime() - before);
             }
           }
         } else if (action.hasServiceCall()) {
@@ -1117,12 +1114,10 @@ public class RSRpcServices
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
       if (batchContainsPuts) {
-        metricsRegionServer.updatePutBatch(region.getTableDescriptor().getTableName(),
-          after - starttime);
+        metricsRegionServer.updatePutBatch(region, after - starttime);
       }
       if (batchContainsDelete) {
-        metricsRegionServer.updateDeleteBatch(region.getTableDescriptor().getTableName(),
-          after - starttime);
+        metricsRegionServer.updateDeleteBatch(region, after - starttime);
       }
     }
   }
@@ -2587,8 +2582,7 @@ public class RSRpcServices
       if (metricsRegionServer != null) {
         TableDescriptor td = region != null ? region.getTableDescriptor() : null;
         if (td != null) {
-          metricsRegionServer.updateGet(td.getTableName(),
-            EnvironmentEdgeManager.currentTime() - before);
+          metricsRegionServer.updateGet(region, EnvironmentEdgeManager.currentTime() - before);
         }
       }
       if (quota != null) {
@@ -3014,7 +3008,7 @@ public class RSRpcServices
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
-      metricsRegionServer.updatePut(region.getRegionInfo().getTable(), after - before);
+      metricsRegionServer.updatePut(region, after - before);
     }
   }
 
@@ -3030,7 +3024,7 @@ public class RSRpcServices
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
-      metricsRegionServer.updateDelete(region.getRegionInfo().getTable(), after - before);
+      metricsRegionServer.updateDelete(region, after - before);
     }
   }
 
@@ -3057,16 +3051,15 @@ public class RSRpcServices
     MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
     if (metricsRegionServer != null) {
       long after = EnvironmentEdgeManager.currentTime();
-      metricsRegionServer.updateCheckAndMutate(region.getRegionInfo().getTable(), after - before);
+      metricsRegionServer.updateCheckAndMutate(region, after - before);
 
       MutationType type = mutation.getMutateType();
       switch (type) {
         case PUT:
-          metricsRegionServer.updateCheckAndPut(region.getRegionInfo().getTable(), after - before);
+          metricsRegionServer.updateCheckAndPut(region, after - before);
           break;
         case DELETE:
-          metricsRegionServer.updateCheckAndDelete(region.getRegionInfo().getTable(),
-            after - before);
+          metricsRegionServer.updateCheckAndDelete(region, after - before);
           break;
         default:
           break;
@@ -3486,12 +3479,9 @@ public class RSRpcServices
       region.getMetrics().updateScanTime(end - before);
       final MetricsRegionServer metricsRegionServer = regionServer.getMetrics();
       if (metricsRegionServer != null) {
-        metricsRegionServer.updateScanSize(region.getTableDescriptor().getTableName(),
-          responseCellSize);
-        metricsRegionServer.updateScanTime(region.getTableDescriptor().getTableName(),
-          end - before);
-        metricsRegionServer.updateReadQueryMeter(region.getRegionInfo().getTable(),
-          numOfNextRawCalls);
+        metricsRegionServer.updateScanSize(region, responseCellSize);
+        metricsRegionServer.updateScanTime(region, end - before);
+        metricsRegionServer.updateReadQueryMeter(region, numOfNextRawCalls);
       }
     }
     // coprocessor postNext hook
