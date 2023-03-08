@@ -1130,12 +1130,11 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   void takeUserRegionLock() throws IOException {
     try {
-      long waitStartTime = 0;
       long waitTime = connectionConfig.getMetaOperationTimeout();
       if (metrics != null) {
         metrics.updateUserRegionLockQueue(userRegionLock.getQueueLength());
-        waitStartTime = EnvironmentEdgeManager.currentTime();
       }
+      final long waitStartTime = EnvironmentEdgeManager.currentTime();
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
         if (metrics != null) {
           metrics.incrUserRegionLockTimeout();
