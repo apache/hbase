@@ -127,8 +127,8 @@ public class TestLogsCleaner {
     TableDescriptor td = ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName);
     TEST_UTIL.getAdmin().createTable(td);
     TEST_UTIL.waitTableAvailable(tableName);
-    queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(TEST_UTIL.getConnection(), tableName);
+    queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(TEST_UTIL.getConnection(),
+      conf, tableName);
 
     masterServices = mock(MasterServices.class);
     when(masterServices.getConnection()).thenReturn(TEST_UTIL.getConnection());

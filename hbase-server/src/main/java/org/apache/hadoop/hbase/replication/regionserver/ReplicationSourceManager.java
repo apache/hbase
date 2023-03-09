@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -125,6 +124,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 @InterfaceAudience.Private
 public class ReplicationSourceManager {
+
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceManager.class);
   // all the sources that read this RS's logs and every peer only has one replication source
   private final ConcurrentMap<String, ReplicationSourceInterface> sources;
@@ -146,13 +146,15 @@ public class ReplicationSourceManager {
 
   // All logs we are currently tracking
   // Index structure of the map is: queue_id->logPrefix/logGroup->logs
-  // For normal replication source, the peer id is same with the queue id
   private final ConcurrentMap<ReplicationQueueId, Map<String, NavigableSet<String>>> walsById;
   // Logs for recovered sources we are currently tracking
   // the map is: queue_id->logPrefix/logGroup->logs
-  // For recovered source, the queue id's format is peer_id-servername-*
+  // for recovered source, the WAL files should already been moved to oldLogDir, and we have
+  // different layout of old WAL files, for example, with server name sub directories or not, so
+  // here we record the full path instead of just the name, so when refreshing we can enqueue the
+  // WAL file again, without trying to guess the real path of the WAL files.
   private final ConcurrentMap<ReplicationQueueId,
-    Map<String, NavigableSet<String>>> walsByIdRecoveredQueues;
+    Map<String, NavigableSet<Path>>> walsByIdRecoveredQueues;
 
   private final SyncReplicationPeerMappingManager syncReplicationPeerMappingManager;
 
@@ -514,9 +516,9 @@ public class ReplicationSourceManager {
         ReplicationSourceInterface recoveredReplicationSource =
           createRefreshedSource(oldSourceQueueId, peer);
         this.oldsources.add(recoveredReplicationSource);
-        for (SortedSet<String> walsByGroup : walsByIdRecoveredQueues.get(oldSourceQueueId)
+        for (NavigableSet<Path> walsByGroup : walsByIdRecoveredQueues.get(oldSourceQueueId)
           .values()) {
-          walsByGroup.forEach(wal -> recoveredReplicationSource.enqueueLog(new Path(wal)));
+          walsByGroup.forEach(wal -> recoveredReplicationSource.enqueueLog(wal));
         }
         toStartup.add(recoveredReplicationSource);
       }
@@ -656,9 +658,11 @@ public class ReplicationSourceManager {
   void cleanOldLogs(String log, boolean inclusive, ReplicationSourceInterface source) {
     String logPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(log);
     if (source.isRecovered()) {
-      NavigableSet<String> wals = walsByIdRecoveredQueues.get(source.getQueueId()).get(logPrefix);
+      NavigableSet<Path> wals = walsByIdRecoveredQueues.get(source.getQueueId()).get(logPrefix);
       if (wals != null) {
-        NavigableSet<String> walsToRemove = wals.headSet(log, inclusive);
+        // here we just want to compare the timestamp, so it is OK to just create a fake WAL path
+        NavigableSet<String> walsToRemove = wals.headSet(new Path(oldLogDir, log), inclusive)
+          .stream().map(Path::getName).collect(Collectors.toCollection(TreeSet::new));
         if (walsToRemove.isEmpty()) {
           return;
         }
@@ -814,6 +818,93 @@ public class ReplicationSourceManager {
   }
 
   void claimQueue(ReplicationQueueId queueId) {
+    claimQueue(queueId, false);
+  }
+
+  // sorted from oldest to newest
+  private PriorityQueue<Path> getWALFilesToReplicate(ServerName sourceRS, boolean syncUp,
+    Map<String, ReplicationGroupOffset> offsets) throws IOException {
+    List<Path> walFiles = AbstractFSWALProvider.getArchivedWALFiles(conf, sourceRS,
+      URLEncoder.encode(sourceRS.toString(), StandardCharsets.UTF_8.name()));
+    if (syncUp) {
+      // we also need to list WALs directory for ReplicationSyncUp
+      walFiles.addAll(AbstractFSWALProvider.getWALFiles(conf, sourceRS));
+    }
+    PriorityQueue<Path> walFilesPQ =
+      new PriorityQueue<>(AbstractFSWALProvider.TIMESTAMP_COMPARATOR);
+    // sort the wal files and also filter out replicated files
+    for (Path file : walFiles) {
+      String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(file.getName());
+      ReplicationGroupOffset groupOffset = offsets.get(walGroupId);
+      if (shouldReplicate(groupOffset, file.getName())) {
+        walFilesPQ.add(file);
+      } else {
+        LOG.debug("Skip enqueuing log {} because it is before the start offset {}", file.getName(),
+          groupOffset);
+      }
+    }
+    return walFilesPQ;
+  }
+
+  private void addRecoveredSource(ReplicationSourceInterface src, ReplicationPeerImpl oldPeer,
+    ReplicationQueueId claimedQueueId, PriorityQueue<Path> walFiles) {
+    ReplicationPeerImpl peer = replicationPeers.getPeer(src.getPeerId());
+    if (peer == null || peer != oldPeer) {
+      src.terminate("Recovered queue doesn't belong to any current peer");
+      deleteQueue(claimedQueueId);
+      return;
+    }
+    // Do not setup recovered queue if a sync replication peer is in STANDBY state, or is
+    // transiting to STANDBY state. The only exception is we are in STANDBY state and
+    // transiting to DA, under this state we will replay the remote WAL and they need to be
+    // replicated back.
+    if (peer.getPeerConfig().isSyncReplication()) {
+      Pair<SyncReplicationState, SyncReplicationState> stateAndNewState =
+        peer.getSyncReplicationStateAndNewState();
+      if (
+        (stateAndNewState.getFirst().equals(SyncReplicationState.STANDBY)
+          && stateAndNewState.getSecond().equals(SyncReplicationState.NONE))
+          || stateAndNewState.getSecond().equals(SyncReplicationState.STANDBY)
+      ) {
+        src.terminate("Sync replication peer is in STANDBY state");
+        deleteQueue(claimedQueueId);
+        return;
+      }
+    }
+    // track sources in walsByIdRecoveredQueues
+    Map<String, NavigableSet<Path>> walsByGroup = new HashMap<>();
+    walsByIdRecoveredQueues.put(claimedQueueId, walsByGroup);
+    for (Path wal : walFiles) {
+      String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
+      NavigableSet<Path> wals = walsByGroup.get(walPrefix);
+      if (wals == null) {
+        wals = new TreeSet<>(AbstractFSWALProvider.TIMESTAMP_COMPARATOR);
+        walsByGroup.put(walPrefix, wals);
+      }
+      wals.add(wal);
+    }
+    oldsources.add(src);
+    LOG.info("Added source for recovered queue {}, number of wals to replicate: {}", claimedQueueId,
+      walFiles.size());
+    for (Path wal : walFiles) {
+      LOG.debug("Enqueueing log {} from recovered queue for source: {}", wal, claimedQueueId);
+      src.enqueueLog(wal);
+    }
+    src.startup();
+  }
+
+  /**
+   * Claim a replication queue.
+   * <p/>
+   * We add a flag to indicate whether we are called by ReplicationSyncUp. For normal claiming queue
+   * operation, we are the last step of a SCP, so we can assume that all the WAL files are under
+   * oldWALs directory. But for ReplicationSyncUp, we may want to claim the replication queue for a
+   * region server which has not been processed by SCP yet, so we still need to look at its WALs
+   * directory.
+   * @param queueId the replication queue id we want to claim
+   * @param syncUp  whether we are called by ReplicationSyncUp
+   */
+  void claimQueue(ReplicationQueueId queueId, boolean syncUp) {
     // Wait a bit before transferring the queues, we may be shutting down.
     // This sleep may not be enough in some cases.
     try {
@@ -872,76 +963,17 @@ public class ReplicationSourceManager {
       server.abort("Failed to create replication source after claiming queue.", e);
       return;
     }
-    List<Path> walFiles;
+    PriorityQueue<Path> walFiles;
     try {
-      walFiles = AbstractFSWALProvider.getArchivedWALFiles(conf, sourceRS,
-        URLEncoder.encode(sourceRS.toString(), StandardCharsets.UTF_8.name()));
+      walFiles = getWALFilesToReplicate(sourceRS, syncUp, offsets);
     } catch (IOException e) {
-      LOG.error("Can not list all wal files for peer {} and queue {}", peerId, queueId, e);
-      server.abort("Can not list all wal files after claiming queue.", e);
+      LOG.error("Can not list wal files for peer {} and queue {}", peerId, queueId, e);
+      server.abort("Can not list wal files after claiming queue.", e);
       return;
     }
-    PriorityQueue<Path> walFilesPQ = new PriorityQueue<>(
-      Comparator.<Path, Long> comparing(p -> AbstractFSWALProvider.getTimestamp(p.getName()))
-        .thenComparing(Path::getName));
-    // sort the wal files and also filter out replicated files
-    for (Path file : walFiles) {
-      String walGroupId = AbstractFSWALProvider.getWALPrefixFromWALName(file.getName());
-      ReplicationGroupOffset groupOffset = offsets.get(walGroupId);
-      if (shouldReplicate(groupOffset, file.getName())) {
-        walFilesPQ.add(file);
-      } else {
-        LOG.debug("Skip enqueuing log {} because it is before the start offset {}", file.getName(),
-          groupOffset);
-      }
-    }
-    // the method is a bit long, so assign it to null here to avoid later we reuse it again by
-    // mistake, we should use the sorted walFilesPQ instead
-    walFiles = null;
     // synchronized on oldsources to avoid adding recovered source for the to-be-removed peer
     synchronized (oldsources) {
-      peer = replicationPeers.getPeer(src.getPeerId());
-      if (peer == null || peer != oldPeer) {
-        src.terminate("Recovered queue doesn't belong to any current peer");
-        deleteQueue(claimedQueueId);
-        return;
-      }
-      // Do not setup recovered queue if a sync replication peer is in STANDBY state, or is
-      // transiting to STANDBY state. The only exception is we are in STANDBY state and
-      // transiting to DA, under this state we will replay the remote WAL and they need to be
-      // replicated back.
-      if (peer.getPeerConfig().isSyncReplication()) {
-        Pair<SyncReplicationState, SyncReplicationState> stateAndNewState =
-          peer.getSyncReplicationStateAndNewState();
-        if (
-          (stateAndNewState.getFirst().equals(SyncReplicationState.STANDBY)
-            && stateAndNewState.getSecond().equals(SyncReplicationState.NONE))
-            || stateAndNewState.getSecond().equals(SyncReplicationState.STANDBY)
-        ) {
-          src.terminate("Sync replication peer is in STANDBY state");
-          deleteQueue(claimedQueueId);
-          return;
-        }
-      }
-      // track sources in walsByIdRecoveredQueues
-      Map<String, NavigableSet<String>> walsByGroup = new HashMap<>();
-      walsByIdRecoveredQueues.put(claimedQueueId, walsByGroup);
-      for (Path wal : walFilesPQ) {
-        String walPrefix = AbstractFSWALProvider.getWALPrefixFromWALName(wal.getName());
-        NavigableSet<String> wals = walsByGroup.get(walPrefix);
-        if (wals == null) {
-          wals = new TreeSet<>();
-          walsByGroup.put(walPrefix, wals);
-        }
-        wals.add(wal.getName());
-      }
-      oldsources.add(src);
-      LOG.info("Added source for recovered queue {}", claimedQueueId);
-      for (Path wal : walFilesPQ) {
-        LOG.debug("Enqueueing log {} from recovered queue for source: {}", wal, claimedQueueId);
-        src.enqueueLog(new Path(oldLogDir, wal));
-      }
-      src.startup();
+      addRecoveredSource(src, oldPeer, claimedQueueId, walFiles);
     }
   }
 
@@ -968,16 +1000,6 @@ public class ReplicationSourceManager {
       allowedOnPath = ".*/src/test/.*")
   public Map<ReplicationQueueId, Map<String, NavigableSet<String>>> getWALs() {
     return Collections.unmodifiableMap(walsById);
-  }
-
-  /**
-   * Get a copy of the wals of the recovered sources on this rs
-   * @return a sorted set of wal names
-   */
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  Map<ReplicationQueueId, Map<String, NavigableSet<String>>> getWalsByIdRecoveredQueues() {
-    return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
 
   /**
@@ -1099,8 +1121,6 @@ public class ReplicationSourceManager {
     return this.globalMetrics;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   ReplicationQueueStorage getQueueStorage() {
     return queueStorage;
   }

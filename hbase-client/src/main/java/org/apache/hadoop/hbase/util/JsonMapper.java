@@ -40,4 +40,8 @@ public final class JsonMapper {
   public static String writeObjectAsString(Object object) throws IOException {
     return GSON.toJson(object);
   }
+
+  public static <T> T fromJson(String json, Class<T> clazz) {
+    return GSON.fromJson(json, clazz);
+  }
 }

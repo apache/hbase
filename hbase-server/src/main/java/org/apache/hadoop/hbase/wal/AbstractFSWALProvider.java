@@ -311,6 +311,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return matcher.matches() ? Long.parseLong(matcher.group(2)) : NO_TIMESTAMP;
   }
 
+  public static final Comparator<Path> TIMESTAMP_COMPARATOR =
+    Comparator.<Path, Long> comparing(p -> AbstractFSWALProvider.getTimestamp(p.getName()))
+      .thenComparing(Path::getName);
+
   /**
    * Construct the directory name for all WALs on a given server. Dir names currently look like this
    * for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
