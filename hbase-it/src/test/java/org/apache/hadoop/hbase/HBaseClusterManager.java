@@ -217,7 +217,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
 
     public String signalCommand(ServiceType service, String signal) {
-      return String.format("%s | xargs sudo kill -s %s", findPidCommand(service), signal);
+      return String.format("%s | xargs kill -s %s", findPidCommand(service), signal);
     }
   }
 
