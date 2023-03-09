@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * production code you usually you should not do this, as it may cause data loss if you always
  * ignore the EOFException.
  */
-public class NoEOFWALStreamReader implements WALStreamReader {
+public final class NoEOFWALStreamReader implements WALStreamReader {
 
   private static final Logger LOG = LoggerFactory.getLogger(NoEOFWALStreamReader.class);
 

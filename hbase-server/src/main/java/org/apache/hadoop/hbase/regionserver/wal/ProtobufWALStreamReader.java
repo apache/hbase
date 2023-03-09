@@ -50,7 +50,9 @@ public class ProtobufWALStreamReader extends AbstractProtobufWALReader
     }
     WALProtos.WALKey walKey;
     try {
-      // for one way stream reader, we do not need to control
+      // for one way stream reader, we do not care about what is the exact position where we hit the
+      // EOF or IOE, so just use the helper method to parse WALKey, in tailing reader, we will try
+      // to read the varint size by ourselves
       walKey = ProtobufUtil.parseDelimitedFrom(inputStream, WALProtos.WALKey.parser());
     } catch (InvalidProtocolBufferException e) {
       if (ProtobufUtil.isEOF(e) || isWALTrailer(originalPosition)) {
