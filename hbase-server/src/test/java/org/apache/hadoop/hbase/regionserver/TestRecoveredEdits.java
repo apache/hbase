@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -179,7 +180,7 @@ public class TestRecoveredEdits {
     int count = 0;
     // Read all cells from recover edits
     List<Cell> walCells = new ArrayList<>();
-    try (WAL.Reader reader = WALFactory.createReader(fs, edits, conf)) {
+    try (WALStreamReader reader = WALFactory.createStreamReader(fs, edits, conf)) {
       WAL.Entry entry;
       while ((entry = reader.next()) != null) {
         WALKey key = entry.getKey();

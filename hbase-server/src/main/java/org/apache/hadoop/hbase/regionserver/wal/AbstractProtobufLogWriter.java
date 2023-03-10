@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.DEFAULT_WAL_TRAILER_WARN_SIZE;
-import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRAILER_WARN_SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.DEFAULT_WAL_TRAILER_WARN_SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.PB_WAL_COMPLETE_MAGIC;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.PB_WAL_MAGIC;
+import static org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader.WAL_TRAILER_WARN_SIZE;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -185,8 +187,7 @@ public abstract class AbstractProtobufLogWriter {
         headerBuilder.setValueCompressionAlgorithm(
           CompressionContext.getValueCompressionAlgorithm(conf).ordinal());
       }
-      length.set(writeMagicAndWALHeader(ProtobufLogReader.PB_WAL_MAGIC,
-        buildWALHeader(conf, headerBuilder)));
+      length.set(writeMagicAndWALHeader(PB_WAL_MAGIC, buildWALHeader(conf, headerBuilder)));
 
       initAfterHeader(doCompress);
 
@@ -257,7 +258,7 @@ public abstract class AbstractProtobufLogWriter {
         LOG.warn("Please investigate WALTrailer usage. Trailer size > maximum size : " + trailerSize
           + " > " + this.trailerWarnSize);
       }
-      length.set(writeWALTrailerAndMagic(trailer, ProtobufLogReader.PB_WAL_COMPLETE_MAGIC));
+      length.set(writeWALTrailerAndMagic(trailer, PB_WAL_COMPLETE_MAGIC));
       this.trailerWritten = true;
     } catch (IOException ioe) {
       LOG.warn("Failed to write trailer, non-fatal, continuing...", ioe);

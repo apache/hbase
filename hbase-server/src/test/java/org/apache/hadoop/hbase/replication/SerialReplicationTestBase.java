@@ -36,10 +36,11 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -196,12 +197,9 @@ public class SerialReplicationTestBase {
 
       @Override
       public boolean evaluate() throws Exception {
-        try (WAL.Reader reader = WALFactory.createReader(FS, logPath, UTIL.getConfiguration())) {
-          int count = 0;
-          while (reader.next() != null) {
-            count++;
-          }
-          return count >= expectedEntries;
+        try {
+          return NoEOFWALStreamReader.count(FS, logPath, UTIL.getConfiguration())
+              >= expectedEntries;
         } catch (IOException e) {
           return false;
         }
@@ -228,8 +226,8 @@ public class SerialReplicationTestBase {
   }
 
   protected final void checkOrder(int expectedEntries) throws IOException {
-    try (WAL.Reader reader =
-      WALFactory.createReader(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
+    try (WALStreamReader reader =
+      NoEOFWALStreamReader.create(UTIL.getTestFileSystem(), logPath, UTIL.getConfiguration())) {
       long seqId = -1L;
       int count = 0;
       for (Entry entry;;) {

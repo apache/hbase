@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -69,21 +70,22 @@ public class Compressor {
     FileSystem inFS = input.getFileSystem(conf);
     FileSystem outFS = output.getFileSystem(conf);
 
-    WAL.Reader in = WALFactory.createReaderIgnoreCustomClass(inFS, input, conf);
+    WALStreamReader in = WALFactory.createStreamReader(inFS, input, conf);
     WALProvider.Writer out = null;
 
     try {
-      if (!(in instanceof ReaderBase)) {
+      if (!(in instanceof AbstractProtobufWALReader)) {
         System.err.println("Cannot proceed, invalid reader type: " + in.getClass().getName());
         return;
       }
-      boolean compress = ((ReaderBase) in).hasCompression();
+      boolean compress = ((AbstractProtobufWALReader) in).hasCompression;
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
       out = WALFactory.createWALWriter(outFS, output, conf);
 
       WAL.Entry e = null;
-      while ((e = in.next()) != null)
+      while ((e = in.next()) != null) {
         out.append(e);
+      }
     } finally {
       in.close();
       if (out != null) {

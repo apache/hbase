@@ -183,6 +183,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -262,6 +263,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public static final String SPECIAL_RECOVERED_EDITS_DIR =
     "hbase.hregion.special.recovered.edits.dir";
+
+  /**
+   * Mainly used for master local region, where we will replay the WAL file directly without
+   * splitting, so it is possible to have WAL files which are not closed cleanly, in this way,
+   * hitting EOF is expected so should not consider it as a critical problem.
+   */
+  public static final String RECOVERED_EDITS_IGNORE_EOF =
+    "hbase.hregion.recovered.edits.ignore.eof";
 
   /**
    * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
@@ -5286,9 +5295,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
     status.setStatus("Opening recovered edits");
-    WAL.Reader reader = null;
-    try {
-      reader = WALFactory.createReader(fs, edits, conf);
+    try (WALStreamReader reader = WALFactory.createStreamReader(fs, edits, conf)) {
       long currentEditSeqId = -1;
       long currentReplaySeqId = -1;
       long firstSeqIdInLog = -1;
@@ -5442,12 +5449,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           coprocessorHost.postReplayWALs(this.getRegionInfo(), edits);
         }
       } catch (EOFException eof) {
-        Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
-        msg = "EnLongAddered EOF. Most likely due to Master failure during "
-          + "wal splitting, so we have this data in another edit. Continuing, but renaming " + edits
-          + " as " + p + " for region " + this;
-        LOG.warn(msg, eof);
-        status.abort(msg);
+        if (!conf.getBoolean(RECOVERED_EDITS_IGNORE_EOF, false)) {
+          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          msg = "EnLongAddered EOF. Most likely due to Master failure during "
+            + "wal splitting, so we have this data in another edit. Continuing, but renaming "
+            + edits + " as " + p + " for region " + this;
+          LOG.warn(msg, eof);
+          status.abort(msg);
+        } else {
+          LOG.warn("EOF while replaying recover edits and config '{}' is true so "
+            + "we will ignore it and continue", RECOVERED_EDITS_IGNORE_EOF, eof);
+        }
       } catch (IOException ioe) {
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
@@ -5474,9 +5486,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return currentEditSeqId;
     } finally {
       status.cleanup();
-      if (reader != null) {
-        reader.close();
-      }
     }
   }
 

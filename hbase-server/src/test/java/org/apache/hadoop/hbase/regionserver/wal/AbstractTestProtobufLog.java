@@ -53,6 +53,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
 /**
@@ -139,13 +141,12 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
     Path path = new Path(dir, "tempwal");
     // delete the log if already exists, for test only
     fs.delete(path, true);
+    HRegionInfo hri =
+      new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    fs.mkdirs(dir);
     W writer = null;
-    ProtobufLogReader reader = null;
     try {
-      HRegionInfo hri =
-        new HRegionInfo(tableName, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      HTableDescriptor htd = new HTableDescriptor(tableName);
-      fs.mkdirs(dir);
       // Write log in pb format.
       writer = createWriter(path);
       for (int i = 0; i < recordCount; ++i) {
@@ -162,39 +163,41 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
         append(writer, new WAL.Entry(key, edit));
       }
       sync(writer);
-      if (withTrailer) writer.close();
-
-      // Now read the log using standard means.
-      reader = (ProtobufLogReader) wals.createReader(fs, path);
       if (withTrailer) {
-        assertNotNull(reader.trailer);
-      } else {
-        assertNull(reader.trailer);
+        writer.close();
+        writer = null;
       }
-      for (int i = 0; i < recordCount; ++i) {
-        WAL.Entry entry = reader.next();
-        assertNotNull(entry);
-        assertEquals(columnCount, entry.getEdit().size());
-        assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
-        assertEquals(tableName, entry.getKey().getTableName());
-        int idx = 0;
-        for (Cell val : entry.getEdit().getCells()) {
-          assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
-            val.getRowLength()));
-          String value = i + "" + idx;
-          assertArrayEquals(Bytes.toBytes(value), CellUtil.cloneValue(val));
-          idx++;
+      // Now read the log using standard means.
+      try (ProtobufWALStreamReader reader =
+        (ProtobufWALStreamReader) wals.createStreamReader(fs, path)) {
+        if (withTrailer) {
+          assertNotNull(reader.trailer);
+        } else {
+          assertNull(reader.trailer);
+        }
+        for (int i = 0; i < recordCount; ++i) {
+          WAL.Entry entry = reader.next();
+          assertNotNull(entry);
+          assertEquals(columnCount, entry.getEdit().size());
+          assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
+          assertEquals(tableName, entry.getKey().getTableName());
+          int idx = 0;
+          for (Cell val : entry.getEdit().getCells()) {
+            assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
+              val.getRowLength()));
+            String value = i + "" + idx;
+            assertArrayEquals(Bytes.toBytes(value), CellUtil.cloneValue(val));
+            idx++;
+          }
+        }
+        if (withTrailer) {
+          assertNotNull(reader.trailer);
+        } else {
+          assertNull(reader.trailer);
         }
       }
-      WAL.Entry entry = reader.next();
-      assertNull(entry);
     } finally {
-      if (writer != null) {
-        writer.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
+      Closeables.close(writer, true);
     }
   }
 

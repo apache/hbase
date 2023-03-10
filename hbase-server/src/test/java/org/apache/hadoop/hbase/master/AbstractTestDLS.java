@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -59,7 +57,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.After;
@@ -400,19 +397,6 @@ public abstract class AbstractTestDLS {
       LOG.info("region " + hris.get(i).getRegionNameAsString() + " has " + counts[i] + " edits");
     }
     return;
-  }
-
-  private int countWAL(Path log, FileSystem fs, Configuration conf) throws IOException {
-    int count = 0;
-    try (WAL.Reader in = WALFactory.createReader(fs, log, conf)) {
-      WAL.Entry e;
-      while ((e = in.next()) != null) {
-        if (!WALEdit.isMetaEditFamily(e.getEdit().getCells().get(0))) {
-          count++;
-        }
-      }
-    }
-    return count;
   }
 
   private void blockUntilNoRIT() throws Exception {

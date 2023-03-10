@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.GsonUtil;
@@ -266,10 +266,10 @@ public class WALPrettyPrinter {
       throw new IOException(p + " is not a file");
     }
 
-    WAL.Reader log = WALFactory.createReader(fs, p, conf);
+    WALStreamReader log = WALFactory.createStreamReader(fs, p, conf, position > 0 ? position : -1);
 
-    if (log instanceof ProtobufLogReader) {
-      List<String> writerClsNames = ((ProtobufLogReader) log).getWriterClsNames();
+    if (log instanceof AbstractProtobufWALReader) {
+      List<String> writerClsNames = ((AbstractProtobufWALReader) log).getWriterClsNames();
       if (writerClsNames != null && writerClsNames.size() > 0) {
         out.print("Writer Classes: ");
         for (int i = 0; i < writerClsNames.size(); i++) {
@@ -281,7 +281,7 @@ public class WALPrettyPrinter {
         out.println();
       }
 
-      String cellCodecClsName = ((ProtobufLogReader) log).getCodecClsName();
+      String cellCodecClsName = ((AbstractProtobufWALReader) log).getCodecClsName();
       if (cellCodecClsName != null) {
         out.println("Cell Codec Class: " + cellCodecClsName);
       }
@@ -290,10 +290,6 @@ public class WALPrettyPrinter {
     if (outputJSON && !persistentOutput) {
       out.print("[");
       firstTxn = true;
-    }
-
-    if (position > 0) {
-      log.seek(position);
     }
 
     try {
