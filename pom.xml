@@ -648,6 +648,10 @@
     <xz.version>1.9</xz.version>
     <zstd-jni.version>1.5.0-4</zstd-jni.version>
     <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
+    <!-- Coverage properties -->
+    <jacoco.version>0.8.8</jacoco.version>
+    <jacocoArgLine/>
+    <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -705,8 +709,7 @@
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
-    <argLine>${hbase-surefire.argLine}</argLine>
-    <jacoco.version>0.7.5.201505241946</jacoco.version>
+    <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
     <enforcer.version>3.0.0</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
@@ -2905,7 +2908,8 @@
           --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
-          ${hbase-surefire.argLine}</argLine>
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
         <!--
           Value to use for surefire when running jdk11.
           TODO: replicate logic for windows
@@ -3013,6 +3017,12 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <sonar.exclusions>**/generated/**/*</sonar.exclusions>
+        <sonar.coverage.exclusions>**/generated/**/*,hbase-it/**,**/hbase-logging/**/*,**/hbase-testing-util/**/*,
+          **/hbase-protocol-shaded/**/*,**/hbase-external-blockcache/**/*,**/hbase-examples/**/*,
+          **/hbase-archetypes/**/*</sonar.coverage.exclusions>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -3020,11 +3030,8 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
             <configuration>
-              <systemPropertyVariables>
-                <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
-              </systemPropertyVariables>
               <excludes>
-                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/generated/**/*</exclude>
               </excludes>
             </configuration>
             <executions>
@@ -3033,6 +3040,11 @@
                 <goals>
                   <goal>prepare-agent</goal>
                 </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <propertyName>jacocoArgLine</propertyName>
+                  <append>true</append>
+                </configuration>
               </execution>
               <execution>
                 <id>report</id>
@@ -3042,6 +3054,11 @@
                 <phase>prepare-package</phase>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${sonar-maven-plugin.version}</version>
           </plugin>
         </plugins>
       </build>
@@ -3078,7 +3095,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine}</argLine>
+        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
