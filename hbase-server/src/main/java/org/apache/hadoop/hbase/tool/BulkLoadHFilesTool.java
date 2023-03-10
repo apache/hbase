@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -767,7 +768,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         .withChecksumType(StoreUtils.getChecksumType(conf))
         .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
         .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
-        .build();
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
       halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
         .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
       HFileScanner scanner = halfReader.getScanner(false, false, false);
