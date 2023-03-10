@@ -83,24 +83,24 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
   }
 
   private void incrementClientReadMetrics(MetricsUserSource userSource) {
-    String client = getClient();
-    if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementReadRequest();
-    }
+//    String client = getClient();
+//    if (client != null && userSource != null) {
+//      userSource.getOrCreateMetricsClient(client).incrementReadRequest();
+//    }
   }
 
   private void incrementFilteredReadRequests(MetricsUserSource userSource) {
-    String client = getClient();
-    if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementFilteredReadRequests();
-    }
+//    String client = getClient();
+//    if (client != null && userSource != null) {
+//      userSource.getOrCreateMetricsClient(client).incrementFilteredReadRequests();
+//    }
   }
 
   private void incrementClientWriteMetrics(MetricsUserSource userSource) {
-    String client = getClient();
-    if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementWriteRequest();
-    }
+//    String client = getClient();
+//    if (client != null && userSource != null) {
+//      userSource.getOrCreateMetricsClient(client).incrementWriteRequest();
+//    }
   }
 
   @Override
@@ -172,20 +172,20 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
 
   @Override
   public void updateFilteredReadRequests() {
-    String user = getActiveUser();
-    if (user != null) {
-      MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      incrementFilteredReadRequests(userSource);
-    }
+//    String user = getActiveUser();
+//    if (user != null) {
+//      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+//      incrementFilteredReadRequests(userSource);
+//    }
   }
 
   @Override
   public void updateReadRequestCount() {
-    String user = getActiveUser();
-    if (user != null) {
-      MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      incrementClientReadMetrics(userSource);
-    }
+//    String user = getActiveUser();
+//    if (user != null) {
+//      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+//      incrementClientReadMetrics(userSource);
+//    }
   }
 
   private MetricsUserSource getOrCreateMetricsUser(String user) {
