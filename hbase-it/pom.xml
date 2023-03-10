@@ -304,7 +304,7 @@
           <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
           <argLine>-enableassertions -Xmx${failsafe.Xmx}
                 -Djava.security.egd=file:/dev/./urandom -XX:+CMSClassUnloadingEnabled
-                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal</argLine>
+                -verbose:gc -XX:+PrintCommandLineFlags  -XX:+PrintFlagsFinal @{jacocoArgLine}</argLine>
         </configuration>
       </plugin>
       <plugin>
