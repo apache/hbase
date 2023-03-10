@@ -66,9 +66,9 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.AbstractProtobufWALReader;
+import org.apache.hadoop.hbase.regionserver.wal.FaultyProtobufWALStreamReader;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -79,7 +79,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitter.CorruptedLogFileException;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -606,10 +605,11 @@ public class TestWALSplit {
   @Test
   public void testCorruptedFileGetsArchivedIfSkipErrors() throws IOException {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, true);
-    List<FaultyProtobufLogReader.FailureType> failureTypes =
-      Arrays.asList(FaultyProtobufLogReader.FailureType.values()).stream()
-        .filter(x -> x != FaultyProtobufLogReader.FailureType.NONE).collect(Collectors.toList());
-    for (FaultyProtobufLogReader.FailureType failureType : failureTypes) {
+    List<FaultyProtobufWALStreamReader.FailureType> failureTypes =
+      Arrays.asList(FaultyProtobufWALStreamReader.FailureType.values()).stream()
+        .filter(x -> x != FaultyProtobufWALStreamReader.FailureType.NONE)
+        .collect(Collectors.toList());
+    for (FaultyProtobufWALStreamReader.FailureType failureType : failureTypes) {
       final Set<String> walDirContents = splitCorruptWALs(failureType);
       final Set<String> archivedLogs = new HashSet<>();
       final StringBuilder archived = new StringBuilder("Archived logs in CORRUPTDIR:");
@@ -627,14 +627,14 @@ public class TestWALSplit {
    * @return set of wal names present prior to split attempt.
    * @throws IOException if the split process fails
    */
-  private Set<String> splitCorruptWALs(final FaultyProtobufLogReader.FailureType failureType)
+  private Set<String> splitCorruptWALs(final FaultyProtobufWALStreamReader.FailureType failureType)
     throws IOException {
-    Class<?> backupClass = conf.getClass("hbase.regionserver.hlog.reader.impl", Reader.class);
+    String backupClass = conf.get(WALFactory.WAL_STREAM_READER_CLASS_IMPL);
     InstrumentedLogWriter.activateFailure = false;
 
     try {
-      conf.setClass("hbase.regionserver.hlog.reader.impl", FaultyProtobufLogReader.class,
-        Reader.class);
+      conf.setClass(WALFactory.WAL_STREAM_READER_CLASS_IMPL, FaultyProtobufWALStreamReader.class,
+        WALStreamReader.class);
       conf.set("faultyprotobuflogreader.failuretype", failureType.name());
       // Clean up from previous tests or previous loop
       try {
@@ -663,21 +663,25 @@ public class TestWALSplit {
       WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
       return walDirContents;
     } finally {
-      conf.setClass("hbase.regionserver.hlog.reader.impl", backupClass, Reader.class);
+      if (backupClass != null) {
+        conf.set(WALFactory.WAL_STREAM_READER_CLASS_IMPL, backupClass);
+      } else {
+        conf.unset(WALFactory.WAL_STREAM_READER_CLASS_IMPL);
+      }
     }
   }
 
   @Test(expected = IOException.class)
   public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows() throws IOException {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, false);
-    splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING);
+    splitCorruptWALs(FaultyProtobufWALStreamReader.FailureType.BEGINNING);
   }
 
   @Test
   public void testCorruptedLogFilesSkipErrorsFalseDoesNotTouchLogs() throws IOException {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, false);
     try {
-      splitCorruptWALs(FaultyProtobufLogReader.FailureType.BEGINNING);
+      splitCorruptWALs(FaultyProtobufWALStreamReader.FailureType.BEGINNING);
     } catch (IOException e) {
       LOG.debug("split with 'skip errors' set to 'false' correctly threw");
     }
@@ -704,13 +708,12 @@ public class TestWALSplit {
     assertEquals(1, splitLog.length);
 
     int actualCount = 0;
-    Reader in = wals.createReader(fs, splitLog[0]);
-    @SuppressWarnings("unused")
-    Entry entry;
-    while ((entry = in.next()) != null)
-      ++actualCount;
+    try (WALStreamReader in = wals.createStreamReader(fs, splitLog[0])) {
+      while (in.next() != null) {
+        ++actualCount;
+      }
+    }
     assertEquals(expectedCount, actualCount);
-    in.close();
 
     // should not have stored the EOF files as corrupt
     FileStatus[] archivedLogs =
@@ -1047,15 +1050,17 @@ public class TestWALSplit {
 
       /* Produce a mock reader that generates fake entries */
       @Override
-      protected Reader getReader(FileStatus file, boolean skipErrors,
+      protected WALStreamReader getReader(FileStatus file, boolean skipErrors,
         CancelableProgressable reporter) throws IOException, CorruptedLogFileException {
-        Reader mockReader = Mockito.mock(Reader.class);
+        WALStreamReader mockReader = Mockito.mock(WALStreamReader.class);
         Mockito.doAnswer(new Answer<Entry>() {
           int index = 0;
 
           @Override
           public Entry answer(InvocationOnMock invocation) throws Throwable {
-            if (index >= numFakeEdits) return null;
+            if (index >= numFakeEdits) {
+              return null;
+            }
 
             // Generate r0 through r4 in round robin fashion
             int regionIdx = index % regions.size();
@@ -1354,8 +1359,8 @@ public class TestWALSplit {
       case TRUNCATE:
         fs.delete(path, false);
         out = fs.create(path);
-        out.write(corrupted_bytes, 0,
-          fileSize - (32 + ProtobufLogReader.PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT));
+        out.write(corrupted_bytes, 0, fileSize
+          - (32 + AbstractProtobufWALReader.PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT));
         closeOrFlush(close, out);
         break;
 
@@ -1394,11 +1399,11 @@ public class TestWALSplit {
 
   private int countWAL(Path log) throws IOException {
     int count = 0;
-    Reader in = wals.createReader(fs, log);
-    while (in.next() != null) {
-      count++;
+    try (WALStreamReader in = wals.createStreamReader(fs, log)) {
+      while (in.next() != null) {
+        count++;
+      }
     }
-    in.close();
     return count;
   }
 
@@ -1475,7 +1480,8 @@ public class TestWALSplit {
   }
 
   private boolean logsAreEqual(Path p1, Path p2) throws IOException {
-    try (Reader in1 = wals.createReader(fs, p1); Reader in2 = wals.createReader(fs, p2)) {
+    try (WALStreamReader in1 = wals.createStreamReader(fs, p1);
+      WALStreamReader in2 = wals.createStreamReader(fs, p2)) {
       Entry entry1;
       Entry entry2;
       while ((entry1 = in1.next()) != null) {

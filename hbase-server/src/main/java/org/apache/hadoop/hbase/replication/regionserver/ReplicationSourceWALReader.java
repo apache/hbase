@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +33,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
@@ -75,7 +72,6 @@ class ReplicationSourceWALReader extends Thread {
   private long currentPosition;
   private final long sleepForRetries;
   private final int maxRetriesMultiplier;
-  private final boolean eofAutoRecovery;
 
   // Indicates whether this particular worker is running
   private boolean isReaderRunning = true;
@@ -115,7 +111,6 @@ class ReplicationSourceWALReader extends Thread {
     this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
-    this.eofAutoRecovery = conf.getBoolean("replication.source.eof.autorecovery", false);
     this.entryBatchQueue = new LinkedBlockingQueue<>(batchCount);
     this.walGroupId = walGroupId;
     LOG.info("peerClusterZnode=" + source.getQueueId() + ", ReplicationSourceWALReaderThread : "
@@ -124,14 +119,30 @@ class ReplicationSourceWALReader extends Thread {
       + ", replicationBatchQueueCapacity=" + batchCount);
   }
 
+  private void replicationDone() throws InterruptedException {
+    // we're done with current queue, either this is a recovered queue, or it is the special
+    // group for a sync replication peer and the peer has been transited to DA or S state.
+    LOG.debug("Stopping the replication source wal reader");
+    setReaderRunning(false);
+    // shuts down shipper thread immediately
+    entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);
+  }
+
+  protected final int sleep(int sleepMultiplier) {
+    if (sleepMultiplier < maxRetriesMultiplier) {
+      sleepMultiplier++;
+    }
+    Threads.sleep(sleepForRetries * sleepMultiplier);
+    return sleepMultiplier;
+  }
+
   @Override
   public void run() {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
       WALEntryBatch batch = null;
-      try (WALEntryStream entryStream =
-        new WALEntryStream(logQueue, conf, currentPosition, source.getWALFileLengthProvider(),
-          source.getServerWALsBelongTo(), source.getSourceMetrics(), walGroupId)) {
+      try (WALEntryStream entryStream = new WALEntryStream(logQueue, fs, conf, currentPosition,
+        source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
           if (!source.isPeerEnabled()) {
@@ -141,34 +152,47 @@ class ReplicationSourceWALReader extends Thread {
           if (!checkQuota()) {
             continue;
           }
-          batch = tryAdvanceStreamAndCreateWALBatch(entryStream);
-          if (batch == null) {
-            // got no entries and didn't advance position in WAL
-            handleEmptyWALEntryBatch();
-            entryStream.reset(); // reuse stream
+          Path currentPath = entryStream.getCurrentPath();
+          WALEntryStream.HasNext hasNext = entryStream.hasNext();
+          if (hasNext == WALEntryStream.HasNext.NO) {
+            replicationDone();
+            return;
+          }
+          // first, check if we have switched a file, if so, we need to manually add an EOF entry
+          // batch to the queue
+          if (currentPath != null && switched(entryStream, currentPath)) {
+            entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
             continue;
           }
-          // if we have already switched a file, skip reading and put it directly to the ship queue
-          if (!batch.isEndOfFile()) {
-            readWALEntries(entryStream, batch);
-            currentPosition = entryStream.getPosition();
+          if (hasNext == WALEntryStream.HasNext.RETRY) {
+            // sleep and retry
+            sleepMultiplier = sleep(sleepMultiplier);
+            continue;
           }
+          if (hasNext == WALEntryStream.HasNext.RETRY_IMMEDIATELY) {
+            // retry immediately, this usually means we have switched a file
+            continue;
+          }
+          // below are all for hasNext == YES
+          batch = createBatch(entryStream);
+          readWALEntries(entryStream, batch);
+          currentPosition = entryStream.getPosition();
           // need to propagate the batch even it has no entries since it may carry the last
           // sequence id information for serial replication.
           LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
           entryBatchQueue.put(batch);
           sleepMultiplier = 1;
         }
-      } catch (WALEntryFilterRetryableException | IOException e) { // stream related
-        if (!handleEofException(e, batch)) {
-          LOG.warn("Failed to read stream of replication entries", e);
-          if (sleepMultiplier < maxRetriesMultiplier) {
-            sleepMultiplier++;
-          }
-          Threads.sleep(sleepForRetries * sleepMultiplier);
-        }
+      } catch (WALEntryFilterRetryableException e) {
+        // here we have to recreate the WALEntryStream, as when filtering, we have already called
+        // next to get the WAL entry and advanced the WALEntryStream, at WALEntryStream layer, it
+        // just considers everything is fine,that's why the catch block is not in the inner block
+        LOG.warn("Failed to filter WAL entries and the filter let us retry later", e);
+        sleepMultiplier = sleep(sleepMultiplier);
       } catch (InterruptedException e) {
-        LOG.trace("Interrupted while sleeping between WAL reads or adding WAL batch to ship queue");
+        // this usually means we want to quit
+        LOG.warn("Interrupted while sleeping between WAL reads or adding WAL batch to ship queue",
+          e);
         Thread.currentThread().interrupt();
       }
     }
@@ -204,7 +228,7 @@ class ReplicationSourceWALReader extends Thread {
   // This is required in case there is any exception in while reading entries
   // we do not want to loss the existing entries in the batch
   protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
-    throws IOException, InterruptedException {
+    throws InterruptedException {
     Path currentPath = entryStream.getCurrentPath();
     for (;;) {
       Entry entry = entryStream.next();
@@ -215,109 +239,20 @@ class ReplicationSourceWALReader extends Thread {
           break;
         }
       }
-      boolean hasNext = entryStream.hasNext();
+      WALEntryStream.HasNext hasNext = entryStream.hasNext();
       // always return if we have switched to a new file
       if (switched(entryStream, currentPath)) {
         batch.setEndOfFile(true);
         break;
       }
-      if (!hasNext) {
+      if (hasNext != WALEntryStream.HasNext.YES) {
+        // For hasNext other than YES, it is OK to just retry.
+        // As for RETRY and RETRY_IMMEDIATELY, the correct action is to retry, and for NO, it will
+        // return NO again when you call the method next time, so it is OK to just return here and
+        // let the loop in the upper layer to call hasNext again.
         break;
       }
     }
-  }
-
-  private void handleEmptyWALEntryBatch() throws InterruptedException {
-    LOG.trace("Didn't read any new entries from WAL");
-    if (logQueue.getQueue(walGroupId).isEmpty()) {
-      // we're done with current queue, either this is a recovered queue, or it is the special group
-      // for a sync replication peer and the peer has been transited to DA or S state.
-      LOG.debug("Stopping the replication source wal reader");
-      setReaderRunning(false);
-      // shuts down shipper thread immediately
-      entryBatchQueue.put(WALEntryBatch.NO_MORE_DATA);
-    } else {
-      Thread.sleep(sleepForRetries);
-    }
-  }
-
-  private WALEntryBatch tryAdvanceStreamAndCreateWALBatch(WALEntryStream entryStream)
-    throws IOException {
-    Path currentPath = entryStream.getCurrentPath();
-    if (!entryStream.hasNext()) {
-      // check whether we have switched a file
-      if (currentPath != null && switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
-      } else {
-        return null;
-      }
-    }
-    if (currentPath != null) {
-      if (switched(entryStream, currentPath)) {
-        return WALEntryBatch.endOfFile(currentPath);
-      }
-    }
-    return createBatch(entryStream);
-  }
-
-  /**
-   * This is to handle the EOFException from the WAL entry stream. EOFException should be handled
-   * carefully because there are chances of data loss because of never replicating the data. Thus we
-   * should always try to ship existing batch of entries here. If there was only one log in the
-   * queue before EOF, we ship the empty batch here and since reader is still active, in the next
-   * iteration of reader we will stop the reader.
-   * <p/>
-   * If there was more than one log in the queue before EOF, we ship the existing batch and reset
-   * the wal patch and position to the log with EOF, so shipper can remove logs from replication
-   * queue
-   * @return true only the IOE can be handled
-   */
-  private boolean handleEofException(Exception e, WALEntryBatch batch) {
-    PriorityBlockingQueue<Path> queue = logQueue.getQueue(walGroupId);
-    // Dump the log even if logQueue size is 1 if the source is from recovered Source
-    // since we don't add current log to recovered source queue so it is safe to remove.
-    if (
-      (e instanceof EOFException || e.getCause() instanceof EOFException)
-        && (source.isRecovered() || queue.size() > 1) && this.eofAutoRecovery
-    ) {
-      Path path = queue.peek();
-      try {
-        if (!fs.exists(path)) {
-          // There is a chance that wal has moved to oldWALs directory, so look there also.
-          path = AbstractFSWALProvider.findArchivedLog(path, conf);
-          // path can be null if unable to locate in archiveDir.
-        }
-        if (path != null && fs.getFileStatus(path).getLen() == 0) {
-          LOG.warn("Forcing removal of 0 length log in queue: {}", path);
-          logQueue.remove(walGroupId);
-          currentPosition = 0;
-          if (batch != null) {
-            // After we removed the WAL from the queue, we should try shipping the existing batch of
-            // entries
-            addBatchToShippingQueue(batch);
-          }
-          return true;
-        }
-      } catch (IOException ioe) {
-        LOG.warn("Couldn't get file length information about log " + path, ioe);
-      } catch (InterruptedException ie) {
-        LOG.trace("Interrupted while adding WAL batch to ship queue");
-        Thread.currentThread().interrupt();
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Update the batch try to ship and return true if shipped
-   * @param batch Batch of entries to ship
-   * @throws InterruptedException throws interrupted exception
-   */
-  private void addBatchToShippingQueue(WALEntryBatch batch) throws InterruptedException {
-    // need to propagate the batch even it has no entries since it may carry the last
-    // sequence id information for serial replication.
-    LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
-    entryBatchQueue.put(batch);
   }
 
   public Path getCurrentPath() {

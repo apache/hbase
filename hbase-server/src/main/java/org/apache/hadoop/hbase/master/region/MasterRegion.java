@@ -271,6 +271,9 @@ public final class MasterRegion {
     WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
     conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
       replayEditsDir.makeQualified(walFs.getUri(), walFs.getWorkingDirectory()).toString());
+    // we do not do WAL splitting here so it is possible to have uncleanly closed WAL files, so we
+    // need to ignore EOFException.
+    conf.setBoolean(HRegion.RECOVERED_EDITS_IGNORE_EOF, true);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
   }
 

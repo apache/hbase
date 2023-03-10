@@ -32,12 +32,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -135,7 +137,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
    * HLogInputFormat.
    */
   static abstract class WALRecordReader<K extends WALKey> extends RecordReader<K, WALEdit> {
-    private Reader reader = null;
+    private WALStreamReader reader = null;
     // visible until we can remove the deprecated HLogInputFormat
     Entry currentEntry = new Entry();
     private long startTime;
@@ -143,6 +145,47 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     private Configuration conf;
     private Path logFile;
     private long currentPos;
+
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
+        justification = "HDFS-4380")
+    private WALStreamReader openReader(Path path, long startPosition) throws IOException {
+      long retryInterval = 2000; // 2 sec
+      int maxAttempts = 30;
+      int attempt = 0;
+      Exception ee = null;
+      WALStreamReader reader = null;
+      while (reader == null && attempt++ < maxAttempts) {
+        try {
+          // Detect if this is a new file, if so get a new reader else
+          // reset the current reader so that we see the new data
+          reader =
+            WALFactory.createStreamReader(path.getFileSystem(conf), path, conf, startPosition);
+          return reader;
+        } catch (LeaseNotRecoveredException lnre) {
+          // HBASE-15019 the WAL was not closed due to some hiccup.
+          LOG.warn("Try to recover the WAL lease " + path, lnre);
+          AbstractFSWALProvider.recoverLease(conf, path);
+          reader = null;
+          ee = lnre;
+        } catch (NullPointerException npe) {
+          // Workaround for race condition in HDFS-4380
+          // which throws a NPE if we open a file before any data node has the most recent block
+          // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
+          LOG.warn("Got NPE opening reader, will retry.");
+          reader = null;
+          ee = npe;
+        }
+        if (reader == null) {
+          // sleep before next attempt
+          try {
+            Thread.sleep(retryInterval);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+      }
+      throw new IOException("Could not open reader", ee);
+    }
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context)
@@ -158,8 +201,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
     private void openReader(Path path) throws IOException {
       closeReader();
-      reader = AbstractFSWALProvider.openReader(path, conf);
-      seek();
+      reader = openReader(path, currentPos > 0 ? currentPos : -1);
       setCurrentPath(path);
     }
 
@@ -171,12 +213,6 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       if (reader != null) {
         reader.close();
         reader = null;
-      }
-    }
-
-    private void seek() throws IOException {
-      if (currentPos != 0) {
-        reader.seek(currentPos);
       }
     }
 

@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -226,7 +227,8 @@ public class TestReplicationSource {
     }
     writer.close();
 
-    WAL.Reader reader = WALFactory.createReader(FS, logPath, TEST_UTIL.getConfiguration());
+    WALStreamReader reader =
+      WALFactory.createStreamReader(FS, logPath, TEST_UTIL.getConfiguration());
     WAL.Entry entry = reader.next();
     assertNotNull(entry);
 

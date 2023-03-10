@@ -110,8 +110,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * <code>F</code> when all of the edits in <code>F</code> have a log-sequence-id that's older
  * (smaller) than the most-recent flush.
  * <p>
- * To read an WAL, call
- * {@link WALFactory#createReader(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.fs.Path)}. *
+ * To read an WAL, call {@link WALFactory#createStreamReader(FileSystem, Path)} for one way read,
+ * call {@link WALFactory#createTailingReader(FileSystem, Path, Configuration, long)} for
+ * replication where we may want to tail the active WAL file.
  * <h2>Failure Semantic</h2> If an exception on append or sync, roll the WAL because the current WAL
  * is now a lame duck; any more appends or syncs will fail also with the same original exception. If
  * we have made successful appends to the WAL and we then are unable to sync them, our current

@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -289,7 +288,7 @@ public class WALSplitter {
     int editsSkipped = 0;
     MonitoredTask status = TaskMonitor.get()
       .createStatus("Splitting " + wal + " to temporary staging area.", false, true);
-    Reader walReader = null;
+    WALStreamReader walReader = null;
     this.fileBeingSplit = walStatus;
     long startTS = EnvironmentEdgeManager.currentTime();
     long length = walStatus.getLen();
@@ -406,12 +405,8 @@ public class WALSplitter {
       final String log = "Finishing writing output for " + wal + " so closing down";
       LOG.debug(log);
       status.setStatus(log);
-      try {
-        if (null != walReader) {
-          walReader.close();
-        }
-      } catch (IOException exception) {
-        LOG.warn("Could not close {} reader", wal, exception);
+      if (null != walReader) {
+        walReader.close();
       }
       try {
         if (outputSinkStarted) {
@@ -442,14 +437,14 @@ public class WALSplitter {
   }
 
   /**
-   * Create a new {@link Reader} for reading logs to split.
+   * Create a new {@link WALStreamReader} for reading logs to split.
    * @return Returns null if file has length zero or file can't be found.
    */
-  protected Reader getReader(FileStatus walStatus, boolean skipErrors,
+  protected WALStreamReader getReader(FileStatus walStatus, boolean skipErrors,
     CancelableProgressable cancel) throws IOException, CorruptedLogFileException {
     Path path = walStatus.getPath();
     long length = walStatus.getLen();
-    Reader in;
+    WALStreamReader in;
 
     // Check for possibly empty file. With appends, currently Hadoop reports a
     // zero length even if the file has been sync'd. Revisit if HDFS-376 or
@@ -489,7 +484,7 @@ public class WALSplitter {
     return in;
   }
 
-  private Entry getNextLogLine(Reader in, Path path, boolean skipErrors)
+  private Entry getNextLogLine(WALStreamReader in, Path path, boolean skipErrors)
     throws CorruptedLogFileException, IOException {
     try {
       return in.next();
@@ -524,11 +519,12 @@ public class WALSplitter {
   }
 
   /**
-   * Create a new {@link Reader} for reading logs to split.
+   * Create a new {@link WALStreamReader} for reading logs to split.
    * @return new Reader instance, caller should close
    */
-  private Reader getReader(Path curLogFile, CancelableProgressable reporter) throws IOException {
-    return walFactory.createReader(walFS, curLogFile, reporter);
+  private WALStreamReader getReader(Path curLogFile, CancelableProgressable reporter)
+    throws IOException {
+    return walFactory.createStreamReader(walFS, curLogFile, reporter);
   }
 
   /**

@@ -173,6 +173,7 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1074,8 +1075,8 @@ public class TestHRegion {
 
       // now verify that the flush markers are written
       wal.shutdown();
-      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
-        TEST_UTIL.getConfiguration());
+      WALStreamReader reader = WALFactory.createStreamReader(fs,
+        AbstractFSWALProvider.getCurrentFileName(wal), TEST_UTIL.getConfiguration());
       try {
         List<WAL.Entry> flushDescriptors = new ArrayList<>();
         long lastFlushSeqId = -1;
@@ -1126,14 +1127,7 @@ public class TestHRegion {
         }
         writer.close();
       } finally {
-        if (null != reader) {
-          try {
-            reader.close();
-          } catch (IOException exception) {
-            LOG.warn("Problem closing wal: " + exception.getMessage());
-            LOG.debug("exception details", exception);
-          }
-        }
+        reader.close();
       }
 
       // close the region now, and reopen again
