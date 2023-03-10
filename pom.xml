@@ -633,6 +633,10 @@
     <spotless.version>2.27.2</spotless.version>
     <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
     <maven-site.version>3.12.0</maven-site.version>
+    <!-- Coverage properties -->
+    <jacoco.version>0.8.8</jacoco.version>
+    <jacocoArgLine/>
+    <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -689,10 +693,10 @@
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced</hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
-    <argLine>${hbase-surefire.argLine}</argLine>
+    <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <jacoco.version>0.7.5.201505241946</jacoco.version>
-    <extra.enforcer.version>1.3</extra.enforcer.version>
-    <enforcer.version>3.0.0-M3</enforcer.version>
+    <extra.enforcer.version>1.5.1</extra.enforcer.version>
+    <enforcer.version>3.0.0</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
     <!-- Location of test resources -->
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
@@ -2694,7 +2698,8 @@
           --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
-          ${hbase-surefire.argLine}</argLine>
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
         <hadoop-three.version>3.2.0</hadoop-three.version>
         <!--
@@ -2804,6 +2809,12 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <sonar.exclusions>**/generated/**/*</sonar.exclusions>
+        <sonar.coverage.exclusions>**/generated/**/*,hbase-it/**,**/hbase-logging/**/*,**/hbase-testing-util/**/*,
+          **/hbase-protocol-shaded/**/*,**/hbase-external-blockcache/**/*,**/hbase-examples/**/*,
+          **/hbase-archetypes/**/*</sonar.coverage.exclusions>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -2811,11 +2822,8 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
             <configuration>
-              <systemPropertyVariables>
-                <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
-              </systemPropertyVariables>
               <excludes>
-                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/generated/**/*</exclude>
               </excludes>
             </configuration>
             <executions>
@@ -2824,6 +2832,11 @@
                 <goals>
                   <goal>prepare-agent</goal>
                 </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <propertyName>jacocoArgLine</propertyName>
+                  <append>true</append>
+                </configuration>
               </execution>
               <execution>
                 <id>report</id>
@@ -2833,6 +2846,11 @@
                 <phase>prepare-package</phase>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${sonar-maven-plugin.version}</version>
           </plugin>
         </plugins>
       </build>
@@ -2869,7 +2887,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine}</argLine>
+        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
