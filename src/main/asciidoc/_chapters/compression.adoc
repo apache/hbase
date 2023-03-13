@@ -352,10 +352,10 @@ The available codec implementation options are:
 |SNAPPY|org.apache.hadoop.hbase.io.compress.xerial.SnappyCodec|
   Implemented with https://github.com/xerial/snappy-java[snappy-java]
 |ZSTD|org.apache.hadoop.io.compress.ZStandardCodec|Hadoop native codec
-|ZSTD|org.apache.hadoop.hbase.io.compress.aircompressor.ZStdCodec|
+|ZSTD|org.apache.hadoop.hbase.io.compress.aircompressor.ZstdCodec|
   Pure Java implementation, limited to a fixed compression level,
   not data compatible with the Hadoop zstd codec
-|ZSTD|org.apache.hadoop.hbase.io.compress.zstd.ZStdCodec|
+|ZSTD|org.apache.hadoop.hbase.io.compress.zstd.ZstdCodec|
   Implemented with https://github.com/luben/zstd-jni[zstd-jni],
   supports all compression levels, supports custom dictionaries
 |===
