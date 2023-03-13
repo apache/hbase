@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.tool;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -566,6 +568,39 @@ public class TestLoadIncrementalHFiles {
     int rowCount = verifyHFile(bottomOut);
     rowCount += verifyHFile(topOut);
     assertEquals(1000, rowCount);
+  }
+
+  /**
+   * This method tests that the create_time property of the HFile produced by the splitstorefile
+   * method is greater than 0 HBASE-27688
+   */
+  @Test
+  public void testSplitStoreFileWithCreateTimeTS() throws IOException {
+    Path dir = util.getDataTestDirOnTestFS("testSplitStoreFileWithCreateTimeTS");
+    FileSystem fs = util.getTestFileSystem();
+    Path testIn = new Path(dir, "testhfile");
+    ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
+      Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    Path bottomOut = new Path(dir, "bottom.out");
+    Path topOut = new Path(dir, "top.out");
+
+    BulkLoadHFilesTool.splitStoreFile(util.getConfiguration(), testIn, familyDesc,
+      Bytes.toBytes("ggg"), bottomOut, topOut);
+
+    verifyHFileCreateTimeTS(bottomOut);
+    verifyHFileCreateTimeTS(topOut);
+  }
+
+  private void verifyHFileCreateTimeTS(Path p) throws IOException {
+    Configuration conf = util.getConfiguration();
+
+    try (HFile.Reader reader =
+      HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf)) {
+      long fileCreateTime = reader.getHFileInfo().getHFileContext().getFileCreateTime();
+      MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
+    }
   }
 
   @Test
