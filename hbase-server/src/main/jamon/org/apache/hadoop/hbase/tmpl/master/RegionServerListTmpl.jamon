@@ -29,9 +29,12 @@ HMaster master;
         org.apache.hadoop.hbase.procedure2.util.StringUtils;
         org.apache.hadoop.hbase.replication.ReplicationLoadSource;
         org.apache.hadoop.hbase.RegionMetrics;
+        org.apache.hadoop.hbase.RSGroupTableAccessor;
         org.apache.hadoop.hbase.ServerMetrics;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.Size;
+        org.apache.hadoop.hbase.net.Address;
+        org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
         org.apache.hadoop.hbase.util.VersionInfo;
         org.apache.hadoop.hbase.util.Pair;
         org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
@@ -91,6 +94,12 @@ Arrays.sort(serverNames);
     <th>Version</th>
     <th>Requests Per Second</th>
     <th>Num. Regions</th>
+    <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
+      <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null &&
+        master.getServerManager().getOnlineServersList().size() > 0 %>
+        <th>RSGroup</th>
+      </%if>
+    </%if>
 </tr>
 </thead>
 <tbody>
@@ -101,6 +110,19 @@ Arrays.sort(serverNames);
     String state = "Normal";
     String masterVersion = VersionInfo.getVersion();
     Set<ServerName> decommissionedServers = new HashSet<>(master.listDecommissionedRegionServers());
+
+    String rsGroupName = "default";
+        List<RSGroupInfo> groups;
+        Map<Address, RSGroupInfo> server2GroupMap = new HashMap<>();
+        if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+          && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
+          && master.getServerManager().getOnlineServersList().size() > 0) {
+            groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
+            groups.forEach(group -> {
+              group.getServers().forEach(address -> server2GroupMap.put(address, group));
+            });
+        }
+
     for (ServerName serverName: serverNames) {
     if (decommissionedServers.contains(serverName)) {
         state = "Decommissioned";
@@ -123,6 +145,12 @@ Arrays.sort(serverNames);
         lastContact = (System.currentTimeMillis() - sl.getReportTimestamp())/1000;
     }
     long startcode = serverName.getStartcode();
+
+    if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+      && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
+      && master.getServerManager().getOnlineServersList().size() > 0) {
+        rsGroupName = server2GroupMap.get(serverName.getAddress()).getName();
+    }
 </%java>
 <tr>
     <td><& serverNameLink; serverName=serverName; &></td>
@@ -132,6 +160,12 @@ Arrays.sort(serverNames);
     <td><% version %></td>
     <td><% String.format("%,.0f", requestsPerSecond) %></td>
     <td><% String.format("%,d", numRegionsOnline) %></td>
+    <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
+      <%if master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null &&
+        master.getServerManager().getOnlineServersList().size() > 0 %>
+        <td><% rsGroupName %></td>
+      </%if>
+    </%if>
 </tr>
 <%java>
 }
