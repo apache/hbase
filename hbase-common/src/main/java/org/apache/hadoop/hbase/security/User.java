@@ -55,6 +55,11 @@ public abstract class User {
 
   protected UserGroupInformation ugi;
 
+  /**
+   * Lazily-populated cache value of this instance's {@link #toString()} value.
+   */
+  private String toString = null;
+
   public UserGroupInformation getUGI() {
     return ugi;
   }
@@ -152,7 +157,10 @@ public abstract class User {
 
   @Override
   public String toString() {
-    return ugi.toString();
+    if (toString == null) {
+      toString = ugi.toString();
+    }
+    return toString;
   }
 
   /** Returns the {@code User} instance within current execution context. */
