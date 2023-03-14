@@ -415,4 +415,103 @@ public class TestByteBuffAllocator {
     alloc1.allocate(1024);
     Assert.assertEquals(getHeapAllocationRatio(HEAP, HEAP, alloc1), 1024f / (1024f + 2048f), 1e-6);
   }
+
+  /**
+   * Tests that we only call the logic in checkRefCount for ByteBuff's that have a non-NONE
+   * recycler.
+   */
+  @Test
+  public void testCheckRefCountOnlyWithRecycler() {
+    TrackingSingleByteBuff singleBuff = new TrackingSingleByteBuff(ByteBuffer.allocate(1));
+    singleBuff.get();
+    assertEquals(1, singleBuff.getCheckRefCountCalls());
+    assertEquals(0, singleBuff.getRefCntCalls());
+    singleBuff = new TrackingSingleByteBuff(() -> {
+      // do nothing, just so we dont use NONE recycler
+    }, ByteBuffer.allocate(1));
+    singleBuff.get();
+    assertEquals(1, singleBuff.getCheckRefCountCalls());
+    assertEquals(1, singleBuff.getRefCntCalls());
+
+    TrackingMultiByteBuff multiBuff = new TrackingMultiByteBuff(ByteBuffer.allocate(1));
+
+    multiBuff.get();
+    assertEquals(1, multiBuff.getCheckRefCountCalls());
+    assertEquals(0, multiBuff.getRefCntCalls());
+    multiBuff = new TrackingMultiByteBuff(() -> {
+      // do nothing, just so we dont use NONE recycler
+    }, ByteBuffer.allocate(1));
+    multiBuff.get();
+    assertEquals(1, multiBuff.getCheckRefCountCalls());
+    assertEquals(1, multiBuff.getRefCntCalls());
+  }
+
+  private static class TrackingSingleByteBuff extends SingleByteBuff {
+
+    int refCntCalls = 0;
+    int checkRefCountCalls = 0;
+
+    public TrackingSingleByteBuff(ByteBuffer buf) {
+      super(buf);
+    }
+
+    public TrackingSingleByteBuff(ByteBuffAllocator.Recycler recycler, ByteBuffer buf) {
+      super(recycler, buf);
+    }
+
+    public int getRefCntCalls() {
+      return refCntCalls;
+    }
+
+    public int getCheckRefCountCalls() {
+      return checkRefCountCalls;
+    }
+
+    @Override
+    protected void checkRefCount() {
+      checkRefCountCalls++;
+      super.checkRefCount();
+    }
+
+    @Override
+    public int refCnt() {
+      refCntCalls++;
+      return super.refCnt();
+    }
+  }
+
+  private static class TrackingMultiByteBuff extends MultiByteBuff {
+
+    int refCntCalls = 0;
+    int checkRefCountCalls = 0;
+
+    public TrackingMultiByteBuff(ByteBuffer... items) {
+      super(items);
+    }
+
+    public TrackingMultiByteBuff(ByteBuffAllocator.Recycler recycler, ByteBuffer... items) {
+      super(recycler, items);
+    }
+
+    public int getRefCntCalls() {
+      return refCntCalls;
+    }
+
+    public int getCheckRefCountCalls() {
+      return checkRefCountCalls;
+    }
+
+    @Override
+    protected void checkRefCount() {
+      checkRefCountCalls++;
+      super.checkRefCount();
+    }
+
+    @Override
+    public int refCnt() {
+      refCntCalls++;
+      return super.refCnt();
+    }
+  }
+
 }
