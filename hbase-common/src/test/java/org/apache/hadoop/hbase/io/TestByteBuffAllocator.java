@@ -221,8 +221,10 @@ public class TestByteBuffAllocator {
     assertEquals(0, buf2.refCnt());
     assertEquals(0, dup2.refCnt());
     assertEquals(0, alloc.getFreeBufferCount());
-    assertException(dup2::position);
-    assertException(buf2::position);
+    // these should not throw an exception because they are heap buffers.
+    // off-heap buffers would throw an exception if trying to call a method once released.
+    dup2.position();
+    buf2.position();
 
     // duplicate the buf1, if the dup1 released, buf1 will also be released (MultipleByteBuffer)
     ByteBuff dup1 = buf1.duplicate();
