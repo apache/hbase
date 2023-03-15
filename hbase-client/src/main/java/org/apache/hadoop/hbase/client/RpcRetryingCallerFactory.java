@@ -71,7 +71,7 @@ public class RpcRetryingCallerFactory {
   }
 
   @RestrictedApi(explanation = "Should only be called on process initialization", link = "",
-      allowedOnPath = ".*/hbase-server/src/main/java/.*/(HRegionServer|LoadIncrementalHFiles|SecureBulkLoadClient)\\.java")
+      allowedOnPath = ".*/(HRegionServer|LoadIncrementalHFiles|SecureBulkLoadClient)\\.java")
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
     MetricsConnection metrics) {
     return instantiate(configuration, new ConnectionConfiguration(configuration), metrics);
