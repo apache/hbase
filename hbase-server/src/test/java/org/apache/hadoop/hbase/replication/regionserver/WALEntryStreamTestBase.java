@@ -130,7 +130,6 @@ public abstract class WALEntryStreamTestBase {
   protected final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
   protected static void startCluster() throws Exception {
-    TEST_UTIL = new HBaseTestingUtility();
     CONF = TEST_UTIL.getConfiguration();
     CONF.setLong("replication.source.sleepforretries", 10);
     TEST_UTIL.startMiniDFSCluster(3);
