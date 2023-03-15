@@ -504,7 +504,8 @@ public class TestReplicaWithCluster {
         return null;
       }
     };
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(HTU.getConfiguration());
+    RpcRetryingCallerFactory factory =
+      new RpcRetryingCallerFactory(HTU.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.newCaller();
     caller.callWithRetries(callable, 10000);
 

@@ -55,7 +55,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private static final Logger LOG = LoggerFactory.getLogger(ScannerCallableWithReplicas.class);
   volatile ScannerCallable currentScannerCallable;
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
-  final ClusterConnection cConnection;
+  private final ClusterConnection cConnection;
   protected final ExecutorService pool;
   protected final int timeBeforeReplicas;
   private final Scan scan;
@@ -175,12 +175,15 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       }
       regionReplication = rl.size();
     }
-    // allocate a boundedcompletion pool of some multiple of number of replicas.
-    // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
+    // allocate a bounded-completion pool of some multiple of number of replicas.
+    // We want to accommodate some RPCs for redundant replica scans (but are still in progress)
+    final ConnectionConfiguration connectionConfig = cConnection != null
+      ? cConnection.getConnectionConfiguration()
+      : new ConnectionConfiguration(ScannerCallableWithReplicas.this.conf);
     ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
       new ResultBoundedCompletionService<>(
         RpcRetryingCallerFactory.instantiate(ScannerCallableWithReplicas.this.conf,
-          cConnection == null ? null : cConnection.getConnectionMetrics()),
+          connectionConfig, cConnection == null ? null : cConnection.getConnectionMetrics()),
         pool, regionReplication * 5);
 
     AtomicBoolean done = new AtomicBoolean(false);
@@ -382,9 +385,12 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       // and we can't invoke it multiple times at the same time)
       this.caller = ScannerCallableWithReplicas.this.caller;
       if (scan.getConsistency() == Consistency.TIMELINE) {
+        final ConnectionConfiguration connectionConfig = cConnection != null
+          ? cConnection.getConnectionConfiguration()
+          : new ConnectionConfiguration(ScannerCallableWithReplicas.this.conf);
         this.caller =
           RpcRetryingCallerFactory
-            .instantiate(ScannerCallableWithReplicas.this.conf,
+            .instantiate(ScannerCallableWithReplicas.this.conf, connectionConfig,
               cConnection == null ? null : cConnection.getConnectionMetrics())
             .<Result[]> newCaller();
       }

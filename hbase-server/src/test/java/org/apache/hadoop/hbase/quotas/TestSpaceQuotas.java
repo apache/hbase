@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
@@ -242,7 +243,9 @@ public class TestSpaceQuotas {
 
     // The table is now in violation. Try to do a bulk load
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tableName, 1, 50);
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
+    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    RpcRetryingCallerFactory factory =
+      new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.newCaller();
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
@@ -301,7 +304,9 @@ public class TestSpaceQuotas {
       LOG.debug(file.getPath() + " -> " + file.getLen() + "B");
     }
 
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
+    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    RpcRetryingCallerFactory factory =
+      new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.newCaller();
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);

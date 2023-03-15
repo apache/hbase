@@ -68,6 +68,8 @@ public class TestAsyncProcessWithRegionException {
   private static final Result EMPTY_RESULT = Result.create(null, true);
   private static final IOException IOE = new IOException("YOU CAN'T PASS");
   private static final Configuration CONF = new Configuration();
+  private static final ConnectionConfiguration CONNECTION_CONFIG =
+    new ConnectionConfiguration(CONF);
   private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] GOOD_ROW = Bytes.toBytes("GOOD_ROW");
   private static final byte[] BAD_ROW = Bytes.toBytes("BAD_ROW");
@@ -175,7 +177,7 @@ public class TestAsyncProcessWithRegionException {
     Mockito.when(ng.getNonceGroup()).thenReturn(HConstants.NO_NONCE);
     Mockito.when(hc.getNonceGenerator()).thenReturn(ng);
     Mockito.when(hc.getConfiguration()).thenReturn(CONF);
-    Mockito.when(hc.getConnectionConfiguration()).thenReturn(new ConnectionConfiguration(CONF));
+    Mockito.when(hc.getConnectionConfiguration()).thenReturn(CONNECTION_CONFIG);
     setMockLocation(hc, GOOD_ROW, new RegionLocations(REGION_LOCATION));
     setMockLocation(hc, BAD_ROW, new RegionLocations(REGION_LOCATION));
     Mockito
@@ -196,7 +198,8 @@ public class TestAsyncProcessWithRegionException {
     private final ExecutorService service = Executors.newFixedThreadPool(5);
 
     MyAsyncProcess(ClusterConnection hc, Configuration conf) {
-      super(hc, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
+      super(hc, conf, new RpcRetryingCallerFactory(conf, hc.getConnectionConfiguration()),
+        new RpcControllerFactory(conf));
     }
 
     public AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows)
