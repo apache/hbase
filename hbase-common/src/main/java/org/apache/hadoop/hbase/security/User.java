@@ -56,7 +56,8 @@ public abstract class User {
   protected UserGroupInformation ugi;
 
   /**
-   * Lazily-populated cache value of this instance's {@link #toString()} value.
+   * Lazily-populated cache value of this instance's {@link #toString()} value. Computing this
+   * value is expensive. See HBASE-27708.
    */
   private String toString = null;
 
