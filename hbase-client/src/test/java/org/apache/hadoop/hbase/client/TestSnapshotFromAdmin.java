@@ -87,13 +87,14 @@ public class TestSnapshotFromAdmin {
     // setup the conf to match the expected properties
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
     conf.setLong("hbase.client.pause", pauseTime);
+    ConnectionConfiguration connectionConfig = new ConnectionConfiguration(conf);
 
     // mock the master admin to our mock
     MasterKeepAliveConnection mockMaster = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     Mockito.when(mockConnection.getMaster()).thenReturn(mockMaster);
     // we need a real retrying caller
-    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf, connectionConfig);
     RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(controllerFactory.newController())
       .thenReturn(Mockito.mock(HBaseRpcController.class));
@@ -134,9 +135,10 @@ public class TestSnapshotFromAdmin {
   public void testValidateSnapshotName() throws Exception {
     ConnectionImplementation mockConnection = Mockito.mock(ConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
+    ConnectionConfiguration connectionConfig = new ConnectionConfiguration(conf);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     // we need a real retrying caller
-    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf, connectionConfig);
     RpcControllerFactory controllerFactory = Mockito.mock(RpcControllerFactory.class);
     Mockito.when(controllerFactory.newController())
       .thenReturn(Mockito.mock(HBaseRpcController.class));

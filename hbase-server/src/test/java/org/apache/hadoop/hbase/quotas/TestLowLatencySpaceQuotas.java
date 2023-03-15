@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
@@ -236,7 +237,9 @@ public class TestLowLatencySpaceQuotas {
       totalSize += file.getLen();
     }
 
-    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration());
+    final ClusterConnection clusterConn = (ClusterConnection) conn;
+    RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(),
+      clusterConn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
     caller.callWithRetries(callable, Integer.MAX_VALUE);
 

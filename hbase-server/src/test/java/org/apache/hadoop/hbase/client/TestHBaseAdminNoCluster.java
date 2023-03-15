@@ -295,6 +295,8 @@ public class TestHBaseAdminNoCluster {
 
     ClusterConnection connection = mock(ClusterConnection.class);
     when(connection.getConfiguration()).thenReturn(configuration);
+    ConnectionConfiguration connectionConfig = new ConnectionConfiguration(configuration);
+    when(connection.getConnectionConfiguration()).thenReturn(connectionConfig);
     MasterKeepAliveConnection masterAdmin =
       Mockito.mock(MasterKeepAliveConnection.class, new Answer() {
         @Override
@@ -312,7 +314,8 @@ public class TestHBaseAdminNoCluster {
       .thenReturn(Mockito.mock(HBaseRpcController.class));
 
     // we need a real retrying caller
-    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(configuration);
+    RpcRetryingCallerFactory callerFactory =
+      new RpcRetryingCallerFactory(configuration, connectionConfig);
     Mockito.when(connection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
 
     Admin admin = null;

@@ -230,7 +230,8 @@ public class TestHRegionServerBulkLoad {
           return null;
         }
       };
-      RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
+      RpcRetryingCallerFactory factory =
+        new RpcRetryingCallerFactory(conf, conn.getConnectionConfiguration());
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
       caller.callWithRetries(callable, Integer.MAX_VALUE);
 

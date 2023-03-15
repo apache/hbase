@@ -62,12 +62,14 @@ public class HConnectionTestingUtility {
    */
   public static ClusterConnection getMockedConnection(final Configuration conf)
     throws ZooKeeperConnectionException {
+    ConnectionConfiguration connectionConfig = new ConnectionConfiguration(conf);
     ConnectionImplementation connection = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(connection.getConfiguration()).thenReturn(conf);
+    Mockito.when(connection.getConnectionConfiguration()).thenReturn(connectionConfig);
     Mockito.when(connection.getRpcControllerFactory())
       .thenReturn(Mockito.mock(RpcControllerFactory.class));
     // we need a real retrying caller
-    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf);
+    RpcRetryingCallerFactory callerFactory = new RpcRetryingCallerFactory(conf, connectionConfig);
     Mockito.when(connection.getRpcRetryingCallerFactory()).thenReturn(callerFactory);
     return connection;
   }
@@ -123,11 +125,12 @@ public class HConnectionTestingUtility {
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     AsyncProcess asyncProcess = new AsyncProcess(c, conf,
-      RpcRetryingCallerFactory.instantiate(conf, c.getConnectionMetrics()),
+      RpcRetryingCallerFactory.instantiate(conf, connectionConfiguration, c.getConnectionMetrics()),
       RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
-    Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(RpcRetryingCallerFactory
-      .instantiate(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, null));
+    Mockito.when(c.getNewRpcRetryingCallerFactory(conf))
+      .thenReturn(RpcRetryingCallerFactory.instantiate(conf, connectionConfiguration,
+        RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, null));
     Mockito.when(c.getRpcControllerFactory()).thenReturn(Mockito.mock(RpcControllerFactory.class));
     Table t = Mockito.mock(Table.class);
     Mockito.when(c.getTable((TableName) Mockito.any())).thenReturn(t);

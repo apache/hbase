@@ -70,6 +70,7 @@ public class TestClientScanner {
   Scan scan;
   ExecutorService pool;
   Configuration conf;
+  ConnectionConfiguration connectionConfig;
 
   ClusterConnection clusterConn;
   RpcRetryingCallerFactory rpcFactory;
@@ -86,7 +87,9 @@ public class TestClientScanner {
     pool = Executors.newSingleThreadExecutor();
     scan = new Scan();
     conf = new Configuration();
+    connectionConfig = new ConnectionConfiguration(conf);
     Mockito.when(clusterConn.getConfiguration()).thenReturn(conf);
+    Mockito.when(clusterConn.getConnectionConfiguration()).thenReturn(connectionConfig);
   }
 
   @After
@@ -473,7 +476,7 @@ public class TestClientScanner {
 
     // Mock a caller which calls the callable for ScannerCallableWithReplicas,
     // but throws an exception for the actual scanner calls via callWithRetries.
-    rpcFactory = new MockRpcRetryingCallerFactory(conf);
+    rpcFactory = new MockRpcRetryingCallerFactory(conf, connectionConfig);
     conf.set(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY,
       MockRpcRetryingCallerFactory.class.getName());
 
@@ -496,8 +499,9 @@ public class TestClientScanner {
 
   public static class MockRpcRetryingCallerFactory extends RpcRetryingCallerFactory {
 
-    public MockRpcRetryingCallerFactory(Configuration conf) {
-      super(conf);
+    public MockRpcRetryingCallerFactory(Configuration conf,
+      ConnectionConfiguration connectionConf) {
+      super(conf, connectionConf);
     }
 
     @Override

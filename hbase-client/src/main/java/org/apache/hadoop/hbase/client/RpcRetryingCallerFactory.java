@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -29,20 +30,18 @@ public class RpcRetryingCallerFactory {
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */
   public static final String CUSTOM_CALLER_CONF_KEY = "hbase.rpc.callerfactory.class";
-  protected final Configuration conf;
   private final ConnectionConfiguration connectionConf;
   private final RetryingCallerInterceptor interceptor;
   private final int startLogErrorsCnt;
   private final MetricsConnection metrics;
 
-  public RpcRetryingCallerFactory(Configuration conf) {
-    this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null);
+  public RpcRetryingCallerFactory(Configuration conf, ConnectionConfiguration connectionConf) {
+    this(conf, connectionConf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null);
   }
 
-  public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor,
-    MetricsConnection metrics) {
-    this.conf = conf;
-    this.connectionConf = new ConnectionConfiguration(conf);
+  public RpcRetryingCallerFactory(Configuration conf, ConnectionConfiguration connectionConf,
+    RetryingCallerInterceptor interceptor, MetricsConnection metrics) {
+    this.connectionConf = connectionConf;
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
       AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
     this.interceptor = interceptor;
@@ -71,30 +70,39 @@ public class RpcRetryingCallerFactory {
       interceptor, startLogErrorsCnt, connectionConf.getRpcTimeout(), metrics);
   }
 
+  @RestrictedApi(explanation = "Should only be called on process initialization", link = "",
+      allowedOnPath = ".*/(HRegionServer|LoadIncrementalHFiles|SecureBulkLoadClient)\\.java")
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
     MetricsConnection metrics) {
-    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null,
-      metrics);
+    return instantiate(configuration, new ConnectionConfiguration(configuration), metrics);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+    ConnectionConfiguration connectionConf, MetricsConnection metrics) {
+    return instantiate(configuration, connectionConf,
+      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null, metrics);
+  }
+
+  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+    ConnectionConfiguration connectionConf, ServerStatisticTracker stats,
+    MetricsConnection metrics) {
+    return instantiate(configuration, connectionConf,
+      RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats, metrics);
+  }
+
+  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+    ConnectionConfiguration connectionConf, RetryingCallerInterceptor interceptor,
     ServerStatisticTracker stats, MetricsConnection metrics) {
-    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, stats,
-      metrics);
-  }
-
-  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-    RetryingCallerInterceptor interceptor, ServerStatisticTracker stats,
-    MetricsConnection metrics) {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
       configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
     RpcRetryingCallerFactory factory;
     if (rpcCallerFactoryClazz.equals(clazzName)) {
-      factory = new RpcRetryingCallerFactory(configuration, interceptor, metrics);
+      factory = new RpcRetryingCallerFactory(configuration, connectionConf, interceptor, metrics);
     } else {
       factory = ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
-        new Class[] { Configuration.class }, new Object[] { configuration });
+        new Class[] { Configuration.class, ConnectionConfiguration.class },
+        new Object[] { configuration, connectionConf });
     }
     return factory;
   }
