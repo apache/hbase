@@ -638,7 +638,7 @@
     <maven-site.version>3.12.0</maven-site.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
-    <jacocoArgLine/>
+    <jacocoArgLine />
     <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
