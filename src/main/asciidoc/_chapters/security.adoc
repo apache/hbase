@@ -2027,6 +2027,8 @@ You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster
 </property>
 ----
 
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
+
 . (Optional) Configure encryption key hash algorithm.
 +
 Since link:https://issues.apache.org/jira/browse/HBASE-25181[HBASE-25181] it is possible to use
@@ -2257,6 +2259,8 @@ All options have been discussed separately in the sections above.
 </property>
 ----
 ====
+
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
 
 .Example Group Mapper in Hadoop _core-site.xml_
 ====

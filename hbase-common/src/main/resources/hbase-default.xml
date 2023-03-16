@@ -279,16 +279,6 @@ possible configurations would overwhelm and obscure the important.
     to ride over transient HDFS errors.</description>
   </property>
   <property>
-    <name>hbase.regionserver.hlog.reader.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader</value>
-    <description>The WAL file reader implementation.</description>
-  </property>
-  <property>
-    <name>hbase.regionserver.hlog.writer.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter</value>
-    <description>The WAL file writer implementation.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
