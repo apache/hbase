@@ -28,6 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class SnapshotTTLExpiredException extends HBaseSnapshotException {
   /**
+   * Failure when the ttl for snapshot has already expired.
    * @param message the full description of the failure
    */
   public SnapshotTTLExpiredException(String message) {
@@ -35,7 +36,8 @@ public class SnapshotTTLExpiredException extends HBaseSnapshotException {
   }
 
   /**
-   * @param snapshotDescription expected snapshot to find
+   * Failure when the ttl for snapshot has already expired.
+   * @param snapshotDescription snapshot that was attempted
    */
   public SnapshotTTLExpiredException(SnapshotDescription snapshotDescription) {
     super("TTL for snapshot '" + snapshotDescription.getName() + "' has already expired.",

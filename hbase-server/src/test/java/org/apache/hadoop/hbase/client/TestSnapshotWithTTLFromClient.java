@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -115,7 +117,7 @@ public class TestSnapshotWithTTLFromClient {
     String snapshotName = "nonExpiredTTLRestoreSnapshotTest";
 
     // table should exist
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
     createSnapshotWithTTL(TABLE_NAME, snapshotName, CHORE_INTERVAL_SECS * 2);
@@ -124,13 +126,13 @@ public class TestSnapshotWithTTLFromClient {
     // Disable and drop table
     admin.disableTable(TABLE_NAME);
     admin.deleteTable(TABLE_NAME);
-    assertEquals(false, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // restore snapshot
     admin.restoreSnapshot(snapshotName);
 
     // table should be created
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
   }
 
   @Test
@@ -138,7 +140,7 @@ public class TestSnapshotWithTTLFromClient {
     String snapshotName = "expiredTTLRestoreSnapshotTest";
 
     // table should exist
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
     createSnapshotWithTTL(TABLE_NAME, snapshotName, 1);
@@ -147,7 +149,7 @@ public class TestSnapshotWithTTLFromClient {
     // Disable and drop table
     admin.disableTable(TABLE_NAME);
     admin.deleteTable(TABLE_NAME);
-    assertEquals(false, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // Sleep so that TTL may expire
     Threads.sleep(2000);
@@ -161,7 +163,7 @@ public class TestSnapshotWithTTLFromClient {
     }
 
     // table should not be created
-    assertEquals(false, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
   }
 
   @Test
@@ -169,7 +171,7 @@ public class TestSnapshotWithTTLFromClient {
     String snapshotName = "nonExpiredTTLCloneSnapshotTest";
 
     // table should exist
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
     createSnapshotWithTTL(TABLE_NAME, snapshotName, CHORE_INTERVAL_SECS * 2);
@@ -179,7 +181,7 @@ public class TestSnapshotWithTTLFromClient {
     admin.cloneSnapshot(snapshotName, CLONED_TABLE_NAME);
 
     // table should be created
-    assertEquals(true, UTIL.getAdmin().tableExists(CLONED_TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(CLONED_TABLE_NAME));
   }
 
   @Test
@@ -187,13 +189,13 @@ public class TestSnapshotWithTTLFromClient {
     String snapshotName = "expiredTTLCloneSnapshotTest";
 
     // table should exist
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // create snapshot fo given table with specified ttl
     createSnapshotWithTTL(TABLE_NAME, snapshotName, 1);
     Admin admin = UTIL.getAdmin();
 
-    assertEquals(true, UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
 
     // Sleep so that TTL may expire
     Threads.sleep(2000);
@@ -207,7 +209,7 @@ public class TestSnapshotWithTTLFromClient {
     }
 
     // table should not be created
-    assertEquals(false, UTIL.getAdmin().tableExists(CLONED_TABLE_NAME));
+    assertFalse(UTIL.getAdmin().tableExists(CLONED_TABLE_NAME));
   }
 
   private void createSnapshotWithTTL(TableName tableName, final String snapshotName,
