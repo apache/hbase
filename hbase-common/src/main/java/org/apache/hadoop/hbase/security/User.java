@@ -270,20 +270,28 @@ public abstract class User {
   public static final class SecureHadoopUser extends User {
     private String shortName;
     private LoadingCache<String, String[]> cache;
+    /**
+     * Cache value of this instance's {@link #toString()} value. Computing this value is expensive.
+     * Assumes the UGI is never updated. See HBASE-27708.
+     */
+    private final String toString;
 
     public SecureHadoopUser() throws IOException {
       ugi = UserGroupInformation.getCurrentUser();
       this.cache = null;
+      this.toString = ugi.toString();
     }
 
     public SecureHadoopUser(UserGroupInformation ugi) {
       this.ugi = ugi;
       this.cache = null;
+      this.toString = ugi.toString();
     }
 
     public SecureHadoopUser(UserGroupInformation ugi, LoadingCache<String, String[]> cache) {
       this.ugi = ugi;
       this.cache = cache;
+      this.toString = ugi.toString();
     }
 
     @Override
@@ -318,6 +326,11 @@ public abstract class User {
     public <T> T runAs(PrivilegedExceptionAction<T> action)
       throws IOException, InterruptedException {
       return ugi.doAs(action);
+    }
+
+    @Override
+    public String toString() {
+      return toString;
     }
 
     /**
