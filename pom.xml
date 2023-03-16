@@ -509,6 +509,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>tianhang</id>
+      <name>Tianhang Tang</name>
+      <email>tianhang@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>tianjy</id>
       <email>tianjy@apache.org</email>
       <timezone>+8</timezone>
