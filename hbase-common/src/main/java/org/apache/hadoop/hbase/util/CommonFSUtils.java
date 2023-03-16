@@ -794,6 +794,14 @@ public final class CommonFSUtils {
    */
   public static FSDataOutputStream createForWal(FileSystem fs, Path path, boolean overwrite,
     int bufferSize, short replication, long blockSize, boolean isRecursive) throws IOException {
+    // temporary for use while we work on upgrading clients to hadoop3
+    if (fs.getConf().getBoolean("use.legacy.hdfs.create.methods", false)) {
+      if (isRecursive) {
+        return fs.create(path, overwrite, bufferSize, replication, blockSize);
+      } else {
+        return fs.createNonRecursive(path, overwrite, bufferSize, replication, blockSize, null);
+      }
+    }
     FSDataOutputStreamBuilder<?, ?> builder = fs.createFile(path).overwrite(overwrite)
       .bufferSize(bufferSize).replication(replication).blockSize(blockSize);
     if (isRecursive) {
