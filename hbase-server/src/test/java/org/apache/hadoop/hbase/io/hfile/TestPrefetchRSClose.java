@@ -82,7 +82,8 @@ public class TestPrefetchRSClose {
   }
 
   @Test
-  public void testRegionClosePrefetchPersistence() throws Exception {
+  public void testPrefetchPersistence() throws Exception {
+
     // Write to table and flush
     TableName tableName = TableName.valueOf("table1");
     byte[] row0 = Bytes.toBytes("row1");
@@ -106,8 +107,14 @@ public class TestPrefetchRSClose {
       table.put(put1);
       TEST_UTIL.flush(tableName);
     } finally {
-      Thread.sleep(1000);
+      Thread.sleep(1500);
     }
+
+    // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
+    // should exist.
+    assertTrue(new File(testDir + "/bucket.persistence").exists());
+    assertTrue(new File(testDir + "/prefetch.persistence").exists());
+
     // Stop the RS
     cluster.stopRegionServer(0);
     LOG.info("Stopped Region Server 0.");
@@ -117,20 +124,6 @@ public class TestPrefetchRSClose {
 
     // Start the RS and validate
     cluster.startRegionServer();
-    Thread.sleep(1000);
-    assertFalse(new File(testDir + "/prefetch.persistence").exists());
-    assertFalse(new File(testDir + "/bucket.persistence").exists());
-  }
-
-  @Test
-  public void testPrefetchPersistenceNegative() throws Exception {
-    cluster.stopRegionServer(0);
-    LOG.info("Stopped Region Server 0.");
-    Thread.sleep(1000);
-    assertFalse(new File(testDir + "/prefetch.persistence").exists());
-    assertTrue(new File(testDir + "/bucket.persistence").exists());
-    cluster.startRegionServer();
-    Thread.sleep(1000);
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
   }
@@ -138,6 +131,7 @@ public class TestPrefetchRSClose {
   @After
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.cleanupDataTestDirOnTestFS(String.valueOf(testDir));
     if (zkCluster != null) {
       zkCluster.shutdown();
     }
