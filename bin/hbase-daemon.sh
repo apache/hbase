@@ -89,6 +89,7 @@ function sighup_handler
 function sigterm_handler
 {
   if [ -f "${HBASE_PID}" ]; then
+    kill -s TERM "$(cat "${HBASE_PID}")"
     waitForProcessEnd "$(cat "${HBASE_PID}")" "${command}"
   fi
   cleanAfterRun
