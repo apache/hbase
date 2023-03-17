@@ -481,4 +481,18 @@ public final class SnapshotDescriptionUtils {
     return snapshot.toBuilder()
       .setUsersAndPermissions(ShadedAccessControlUtil.toUserTablePermissions(perms)).build();
   }
+
+  /**
+   * Method to check whether TTL has expired for specified snapshot creation time and snapshot ttl.
+   * NOTE: For backward compatibility (after the patch deployment on HMaster), any snapshot with ttl
+   * 0 is to be considered as snapshot to keep FOREVER. Default ttl value specified by
+   * {@link HConstants#DEFAULT_SNAPSHOT_TTL}
+   * @return true if ttl has expired, or, false, otherwise
+   */
+  public static boolean isExpiredSnapshot(long snapshotTtl, long snapshotCreatedTime,
+    long currentTime) {
+    return snapshotCreatedTime > 0 && snapshotTtl > HConstants.DEFAULT_SNAPSHOT_TTL
+      && snapshotTtl < TimeUnit.MILLISECONDS.toSeconds(Long.MAX_VALUE)
+      && (snapshotCreatedTime + TimeUnit.SECONDS.toMillis(snapshotTtl)) < currentTime;
+  }
 }
