@@ -654,7 +654,7 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       };
     }
     return Pair.newPair(ReplicationStorageFactory.getReplicationQueueStorage(
-      services.getConnection(), replicationQueueTableName), initializer);
+      services.getConnection(), conf, replicationQueueTableName), initializer);
   }
 
   public static ReplicationPeerManager create(MasterServices services, String clusterId)

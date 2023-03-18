@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -419,5 +420,55 @@ public class TestTableReplicationQueueStorage {
     storage.removePeerFromHFileRefs(peerId2);
     assertEquals(0, storage.getAllPeersFromHFileRefsQueue().size());
     assertTrue(storage.getReplicableHFiles(peerId2).isEmpty());
+  }
+
+  private void addLastSequenceIdsAndHFileRefs(String peerId1, String peerId2)
+    throws ReplicationException {
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      storage.setLastSequenceIds(peerId1, ImmutableMap.of(encodedRegionName, (long) i));
+    }
+
+    List<Pair<Path, Path>> files1 = new ArrayList<>(3);
+    files1.add(new Pair<>(null, new Path("file_1")));
+    files1.add(new Pair<>(null, new Path("file_2")));
+    files1.add(new Pair<>(null, new Path("file_3")));
+    storage.addHFileRefs(peerId2, files1);
+  }
+
+  @Test
+  public void testRemoveLastSequenceIdsAndHFileRefsBefore()
+    throws ReplicationException, InterruptedException {
+    String peerId1 = "1";
+    String peerId2 = "2";
+    addLastSequenceIdsAndHFileRefs(peerId1, peerId2);
+    // make sure we have write these out
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      assertEquals(i, storage.getLastSequenceId(encodedRegionName, peerId1));
+    }
+    assertEquals(1, storage.getAllPeersFromHFileRefsQueue().size());
+    assertEquals(3, storage.getReplicableHFiles(peerId2).size());
+
+    // should have nothing after removal
+    long ts = EnvironmentEdgeManager.currentTime();
+    storage.removeLastSequenceIdsAndHFileRefsBefore(ts);
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      assertEquals(HConstants.NO_SEQNUM, storage.getLastSequenceId(encodedRegionName, peerId1));
+    }
+    assertEquals(0, storage.getAllPeersFromHFileRefsQueue().size());
+
+    Thread.sleep(100);
+    // add again and remove with the old timestamp
+    addLastSequenceIdsAndHFileRefs(peerId1, peerId2);
+    storage.removeLastSequenceIdsAndHFileRefsBefore(ts);
+    // make sure we do not delete the data which are written after the give timestamp
+    for (int i = 0; i < 100; i++) {
+      String encodedRegionName = MD5Hash.getMD5AsHex(Bytes.toBytes(i));
+      assertEquals(i, storage.getLastSequenceId(encodedRegionName, peerId1));
+    }
+    assertEquals(1, storage.getAllPeersFromHFileRefsQueue().size());
+    assertEquals(3, storage.getReplicableHFiles(peerId2).size());
   }
 }
