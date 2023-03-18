@@ -594,4 +594,24 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
       throw new ReplicationException("failed to batch update hfile references", e);
     }
   }
+
+  @Override
+  public void removeLastSequenceIdsAndHFileRefsBefore(long ts) throws ReplicationException {
+    try (Table table = conn.getTable(tableName);
+      ResultScanner scanner = table.getScanner(new Scan().addFamily(LAST_SEQUENCE_ID_FAMILY)
+        .addFamily(HFILE_REF_FAMILY).setFilter(new KeyOnlyFilter()))) {
+      for (;;) {
+        Result r = scanner.next();
+        if (r == null) {
+          break;
+        }
+        Delete delete = new Delete(r.getRow()).addFamily(LAST_SEQUENCE_ID_FAMILY, ts)
+          .addFamily(HFILE_REF_FAMILY, ts);
+        table.delete(delete);
+      }
+    } catch (IOException e) {
+      throw new ReplicationException(
+        "failed to remove last sequence ids and hfile references before timestamp " + ts, e);
+    }
+  }
 }

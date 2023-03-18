@@ -45,11 +45,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
 import org.apache.hadoop.hbase.replication.DummyReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -125,8 +122,6 @@ public class TestReplicationSourceManager {
 
   private static final TableName TABLE_NAME = TableName.valueOf("test");
 
-  private static TableDescriptor TD;
-
   private static RegionInfo RI;
 
   private static NavigableMap<byte[], Integer> SCOPES;
@@ -152,10 +147,6 @@ public class TestReplicationSourceManager {
     FS = UTIL.getTestFileSystem();
     CONF = new Configuration(UTIL.getConfiguration());
     CONF.setLong("replication.sleep.before.failover", 0);
-    TD = TableDescriptorBuilder.newBuilder(TABLE_NAME)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(F1)
-        .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(F2)).build();
 
     RI = RegionInfoBuilder.newBuilder(TABLE_NAME).build();
     SCOPES = new TreeMap<>(Bytes.BYTES_COMPARATOR);
@@ -176,7 +167,8 @@ public class TestReplicationSourceManager {
     when(server.getConfiguration()).thenReturn(CONF);
     when(server.getZooKeeper()).thenReturn(UTIL.getZooKeeperWatcher());
     when(server.getConnection()).thenReturn(UTIL.getConnection());
-    when(server.getServerName()).thenReturn(ServerName.valueOf("hostname.example.org", 1234, 1));
+    ServerName sn = ServerName.valueOf("hostname.example.org", 1234, 1);
+    when(server.getServerName()).thenReturn(sn);
     oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     FS.mkdirs(oldLogDir);
     logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
@@ -189,7 +181,7 @@ public class TestReplicationSourceManager {
     CONF.set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME, tableName.getNameAsString());
 
     replication = new Replication();
-    replication.initialize(server, FS, logDir, oldLogDir,
+    replication.initialize(server, FS, new Path(logDir, sn.toString()), oldLogDir,
       new WALFactory(CONF, server.getServerName(), null, false));
     manager = replication.getReplicationManager();
   }
