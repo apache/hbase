@@ -19,16 +19,22 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.util.Optional;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.ServerOperation;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ServerRemoteProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.regionserver.ClaimReplicationQueueCallable;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +58,32 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   public ClaimReplicationQueueRemoteProcedure(ReplicationQueueId queueId, ServerName targetServer) {
     this.queueId = queueId;
     this.targetServer = targetServer;
+  }
+
+  // check whether ReplicationSyncUp has already done the work for us, if so, we should skip
+  // claiming the replication queues and deleting them instead.
+  private boolean shouldSkip(MasterProcedureEnv env) throws IOException {
+    MasterFileSystem mfs = env.getMasterFileSystem();
+    Path syncUpDir = new Path(mfs.getRootDir(), ReplicationSyncUp.INFO_DIR);
+    return mfs.getFileSystem().exists(new Path(syncUpDir, getServerName().getServerName()));
+  }
+
+  @Override
+  protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    try {
+      if (shouldSkip(env)) {
+        LOG.info("Skip claiming {} because replication sync up has already done it for us",
+          getServerName());
+        return null;
+      }
+    } catch (IOException e) {
+      LOG.warn("failed to check whether we should skip claiming {} due to replication sync up",
+        getServerName(), e);
+      // just finish the procedure here, as the AssignReplicationQueuesProcedure will reschedule
+      return null;
+    }
+    return super.execute(env);
   }
 
   @Override

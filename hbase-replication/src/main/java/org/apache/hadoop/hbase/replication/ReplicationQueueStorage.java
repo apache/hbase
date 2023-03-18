@@ -203,4 +203,25 @@ public interface ReplicationQueueStorage {
    * Add the given hfile refs to the given peer.
    */
   void batchUpdateHFileRefs(String peerId, List<String> hfileRefs) throws ReplicationException;
+
+  // the below method is for clean up stale data after running ReplicatoinSyncUp
+  /**
+   * Remove all the last sequence ids and hfile references data which are written before the given
+   * timestamp.
+   * <p/>
+   * The data of these two types are not used by replication directly.
+   * <p/>
+   * For last sequence ids, we will check it in serial replication, to make sure that we will
+   * replicate all edits in order, so if there are stale data, the worst case is that we will stop
+   * replicating as we think we still need to finish previous ranges first, although actually we
+   * have already replicated them out.
+   * <p/>
+   * For hfile references, it is just used by hfile cleaner to not remove these hfiles before we
+   * replicate them out, so if there are stale data, the worst case is that we can not remove these
+   * hfiles, although actually they have already been replicated out.
+   * <p/>
+   * So it is OK for us to just bring up the cluster first, and then use this method to delete the
+   * stale data, i.e, the data which are written before a specific timestamp.
+   */
+  void removeLastSequenceIdsAndHFileRefsBefore(long ts) throws ReplicationException;
 }
