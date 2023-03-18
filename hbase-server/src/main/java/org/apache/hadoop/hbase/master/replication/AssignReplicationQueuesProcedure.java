@@ -24,7 +24,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.replication.ReplicationGroupOffset;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -102,7 +105,7 @@ public class AssignReplicationQueuesProcedure
     }
   }
 
-  private Flow claimQueues(MasterProcedureEnv env) throws ReplicationException {
+  private Flow claimQueues(MasterProcedureEnv env) throws ReplicationException, IOException {
     Set<String> existingPeerIds = env.getReplicationPeerManager().listPeers(null).stream()
       .map(ReplicationPeerDescription::getPeerId).collect(Collectors.toSet());
     ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
@@ -130,18 +133,51 @@ public class AssignReplicationQueuesProcedure
     return Flow.HAS_MORE_STATE;
   }
 
+  // check whether ReplicationSyncUp has already done the work for us, if so, we should skip
+  // claiming the replication queues and deleting them instead.
+  private boolean shouldSkip(MasterProcedureEnv env) throws IOException {
+    MasterFileSystem mfs = env.getMasterFileSystem();
+    Path syncUpDir = new Path(mfs.getRootDir(), ReplicationSyncUp.INFO_DIR);
+    return mfs.getFileSystem().exists(new Path(syncUpDir, crashedServer.getServerName()));
+  }
+
+  private void removeQueues(MasterProcedureEnv env) throws ReplicationException, IOException {
+    ReplicationQueueStorage storage = env.getReplicationPeerManager().getQueueStorage();
+    for (ReplicationQueueId queueId : storage.listAllQueueIds(crashedServer)) {
+      storage.removeQueue(queueId);
+    }
+    MasterFileSystem mfs = env.getMasterFileSystem();
+    Path syncUpDir = new Path(mfs.getRootDir(), ReplicationSyncUp.INFO_DIR);
+    // remove the region server record file
+    mfs.getFileSystem().delete(new Path(syncUpDir, crashedServer.getServerName()), false);
+  }
+
   @Override
   protected Flow executeFromState(MasterProcedureEnv env, AssignReplicationQueuesState state)
     throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     try {
       switch (state) {
         case ASSIGN_REPLICATION_QUEUES_ADD_MISSING_QUEUES:
-          addMissingQueues(env);
-          retryCounter = null;
-          setNextState(AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_CLAIM);
-          return Flow.HAS_MORE_STATE;
+          if (shouldSkip(env)) {
+            setNextState(AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_REMOVE_QUEUES);
+            return Flow.HAS_MORE_STATE;
+          } else {
+            addMissingQueues(env);
+            retryCounter = null;
+            setNextState(AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_CLAIM);
+            return Flow.HAS_MORE_STATE;
+          }
         case ASSIGN_REPLICATION_QUEUES_CLAIM:
-          return claimQueues(env);
+          if (shouldSkip(env)) {
+            retryCounter = null;
+            setNextState(AssignReplicationQueuesState.ASSIGN_REPLICATION_QUEUES_REMOVE_QUEUES);
+            return Flow.HAS_MORE_STATE;
+          } else {
+            return claimQueues(env);
+          }
+        case ASSIGN_REPLICATION_QUEUES_REMOVE_QUEUES:
+          removeQueues(env);
+          return Flow.NO_MORE_STATE;
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
