@@ -99,8 +99,8 @@ public class TestSerialReplicationChecker {
     TableName repTable = TableName.valueOf("test_serial_rep");
     UTIL.getAdmin()
       .createTable(ReplicationStorageFactory.createReplicationQueueTableDescriptor(repTable));
-    QUEUE_STORAGE =
-      ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getConnection(), repTable);
+    QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getConnection(),
+      UTIL.getConfiguration(), repTable);
   }
 
   @AfterClass
