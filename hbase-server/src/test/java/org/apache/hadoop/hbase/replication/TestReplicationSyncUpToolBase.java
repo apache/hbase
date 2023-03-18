@@ -136,7 +136,8 @@ public abstract class TestReplicationSyncUpToolBase {
   }
 
   final void syncUp(HBaseTestingUtil util) throws Exception {
-    ToolRunner.run(util.getConfiguration(), new ReplicationSyncUp(), new String[0]);
+    ToolRunner.run(new Configuration(util.getConfiguration()), new ReplicationSyncUp(),
+      new String[0]);
   }
 
   // Utilities that manager shutdown / restart of source / sink clusters. They take care of

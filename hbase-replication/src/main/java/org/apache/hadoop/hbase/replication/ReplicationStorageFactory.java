@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -27,8 +28,11 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.CoprocessorDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Used to create replication storage(peer, queue) classes.
@@ -36,10 +40,14 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public final class ReplicationStorageFactory {
 
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationStorageFactory.class);
+
   public static final String REPLICATION_QUEUE_TABLE_NAME = "hbase.replication.queue.table.name";
 
   public static final TableName REPLICATION_QUEUE_TABLE_NAME_DEFAULT =
     TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "replication");
+
+  public static final String REPLICATION_QUEUE_IMPL = "hbase.replication.queue.storage.impl";
 
   public static TableDescriptor createReplicationQueueTableDescriptor(TableName tableName)
     throws IOException {
@@ -72,15 +80,26 @@ public final class ReplicationStorageFactory {
    */
   public static ReplicationQueueStorage getReplicationQueueStorage(Connection conn,
     Configuration conf) {
-    return getReplicationQueueStorage(conn, TableName.valueOf(conf.get(REPLICATION_QUEUE_TABLE_NAME,
-      REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString())));
+    return getReplicationQueueStorage(conn, conf, TableName.valueOf(conf
+      .get(REPLICATION_QUEUE_TABLE_NAME, REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString())));
   }
 
   /**
    * Create a new {@link ReplicationQueueStorage}.
    */
   public static ReplicationQueueStorage getReplicationQueueStorage(Connection conn,
-    TableName tableName) {
-    return new TableReplicationQueueStorage(conn, tableName);
+    Configuration conf, TableName tableName) {
+    Class<? extends ReplicationQueueStorage> clazz = conf.getClass(REPLICATION_QUEUE_IMPL,
+      TableReplicationQueueStorage.class, ReplicationQueueStorage.class);
+    try {
+      Constructor<? extends ReplicationQueueStorage> c =
+        clazz.getConstructor(Connection.class, TableName.class);
+      return c.newInstance(conn, tableName);
+    } catch (Exception e) {
+      LOG.debug(
+        "failed to create ReplicationQueueStorage with Connection, try creating with Configuration",
+        e);
+      return ReflectionUtils.newInstance(clazz, conf, tableName);
+    }
   }
 }
