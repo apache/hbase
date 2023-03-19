@@ -1087,8 +1087,6 @@ public class AssignmentManager {
     regionStateStore.deleteRegions(regions);
     for (int i = 0; i < regions.size(); ++i) {
       final RegionInfo regionInfo = regions.get(i);
-      // we expect the region to be offline
-      regionStates.removeFromOfflineRegions(regionInfo);
       regionStates.deleteRegion(regionInfo);
     }
   }
