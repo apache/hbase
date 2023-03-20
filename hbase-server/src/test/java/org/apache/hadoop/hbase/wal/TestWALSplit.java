@@ -155,7 +155,8 @@ public class TestWALSplit {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    conf.setClass("hbase.regionserver.hlog.writer.impl", InstrumentedLogWriter.class, Writer.class);
+    conf.set(WALFactory.WAL_PROVIDER, "filesystem");
+    conf.setClass(FSHLogProvider.WRITER_IMPL, InstrumentedLogWriter.class, Writer.class);
     // This is how you turn off shortcircuit read currently. TODO: Fix. Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.

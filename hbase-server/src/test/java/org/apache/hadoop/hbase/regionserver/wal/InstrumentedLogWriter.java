@@ -27,11 +27,6 @@ public class InstrumentedLogWriter extends ProtobufLogWriter {
     super();
   }
 
-  @Override
-  protected String getWriterClassName() {
-    return ProtobufLogWriter.class.getSimpleName();
-  }
-
   public static boolean activateFailure = false;
 
   @Override
