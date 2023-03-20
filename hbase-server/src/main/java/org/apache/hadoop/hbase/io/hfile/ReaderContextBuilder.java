@@ -43,6 +43,18 @@ public class ReaderContextBuilder {
   public ReaderContextBuilder() {
   }
 
+  public static ReaderContextBuilder newBuilder(ReaderContext readerContext) {
+    return new ReaderContextBuilder(readerContext);
+  }
+
+  private ReaderContextBuilder(ReaderContext readerContext) {
+    this.filePath = readerContext.getFilePath();
+    this.fsdis = readerContext.getInputStreamWrapper();
+    this.fileSize = readerContext.getFileSize();
+    this.hfs = readerContext.getFileSystem();
+    this.type = readerContext.getReaderType();
+  }
+
   public ReaderContextBuilder withFilePath(Path filePath) {
     this.filePath = filePath;
     return this;
