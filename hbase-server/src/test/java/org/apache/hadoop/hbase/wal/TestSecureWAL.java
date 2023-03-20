@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,10 +84,6 @@ public class TestSecureWAL {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-      WALProvider.Writer.class);
-    conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
-      WALProvider.AsyncWriter.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
     TEST_UTIL.startMiniDFSCluster(3);

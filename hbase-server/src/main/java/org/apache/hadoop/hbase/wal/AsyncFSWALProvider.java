@@ -52,7 +52,7 @@ public class AsyncFSWALProvider extends AbstractFSWALProvider<AsyncFSWAL> {
 
   private static final Logger LOG = LoggerFactory.getLogger(AsyncFSWALProvider.class);
 
-  public static final String WRITER_IMPL = "hbase.regionserver.hlog.async.writer.impl";
+  public static final String WRITER_IMPL = "hbase.regionserver.wal.async.writer.impl";
 
   // Only public so classes back in regionserver.wal can access
   public interface AsyncWriter extends WALProvider.AsyncWriter {

@@ -82,10 +82,9 @@ public abstract class AbstractProtobufWALReader
   static final String WAL_TRAILER_WARN_SIZE = "hbase.regionserver.waltrailer.warn.size";
   static final int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024 * 1024; // 1MB
 
-  private static final List<String> WRITER_CLS_NAMES =
-    ImmutableList.of(ProtobufLogWriter.class.getSimpleName(),
-      AsyncProtobufLogWriter.class.getSimpleName(), SecureProtobufLogWriter.class.getSimpleName(),
-      SecureAsyncProtobufLogWriter.class.getSimpleName());
+  private static final List<String> WRITER_CLS_NAMES = ImmutableList.of(
+    ProtobufLogWriter.class.getSimpleName(), AsyncProtobufLogWriter.class.getSimpleName(),
+    "SecureProtobufLogWriter", "SecureAsyncProtobufLogWriter");
 
   protected Configuration conf;
 
