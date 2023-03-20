@@ -452,13 +452,6 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Wrap a LocalFileSystem within a HFileSystem.
-   */
-  static public FileSystem getLocalFs(Configuration conf) throws IOException {
-    return new HFileSystem(FileSystem.getLocal(conf));
-  }
-
-  /**
    * The org.apache.hadoop.fs.FilterFileSystem does not yet support createNonRecursive. This is a
    * hadoop bug and when it is fixed in Hadoop, this definition will go away.
    */
