@@ -38,6 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,17 +47,27 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -226,6 +237,60 @@ public class TestPrefetch {
 
   }
 
+  @Test
+  public void testPrefetchDoesntSkipHFileLink() throws Exception {
+    testPrefetchWhenHFileLink(c -> {
+      boolean isCached = c != null;
+      assertTrue(isCached);
+    });
+  }
+
+  private void testPrefetchWhenHFileLink(Consumer<Cacheable> test) throws Exception {
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Path testDir = TEST_UTIL.getDataTestDir("testPrefetchWhenHFileLink");
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
+    Configuration testConf = new Configuration(this.conf);
+    CommonFSUtils.setRootDir(testConf, testDir);
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, hri.getTable()), hri);
+
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(context).build();
+    TestHStoreFile.writeStoreFile(writer, Bytes.toBytes("testPrefetchWhenHFileLink"),
+      Bytes.toBytes("testPrefetchWhenHFileLink"));
+
+    Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
+    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
+    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath =
+      new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // Try to open store file from link
+    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
+    assertTrue(storeFileInfo.isLink());
+
+    hsf.initReader();
+    HFile.Reader reader = hsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      if (block.getBlockType() == BlockType.DATA) {
+        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
+      }
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
   private Path writeStoreFile(String fname) throws IOException {
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     return writeStoreFile(fname, meta);
@@ -263,5 +328,4 @@ public class TestPrefetch {
       return keyType;
     }
   }
-
 }
