@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,15 @@ public class HFilePreadReader extends HFileReaderImpl {
         public void run() {
           long offset = 0;
           long end = 0;
+          HFile.Reader prefetchStreamReader = null;
           try {
+            ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
+              .withReaderType(ReaderContext.ReaderType.STREAM)
+              .withInputStreamWrapper(new FSDataInputStreamWrapper(context.getFileSystem(),
+                context.getInputStreamWrapper().getReaderPath()))
+              .build();
+            prefetchStreamReader =
+              new HFileStreamReader(streamReaderContext, fileInfo, cacheConf, conf);
             end = getTrailer().getLoadOnOpenDataOffset();
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
@@ -56,8 +65,8 @@ public class HFilePreadReader extends HFileReaderImpl {
               // the internal-to-hfileblock thread local which holds the overread that gets the
               // next header, will not have happened...so, pass in the onDiskSize gotten from the
               // cached block. This 'optimization' triggers extremely rarely I'd say.
-              HFileBlock block = readBlock(offset, onDiskSizeOfNextBlock, /* cacheBlock= */true,
-                /* pread= */true, false, false, null, null, true);
+              HFileBlock block = prefetchStreamReader.readBlock(offset, onDiskSizeOfNextBlock,
+                /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
               try {
                 onDiskSizeOfNextBlock = block.getNextBlockOnDiskSize();
                 offset += block.getOnDiskSizeWithHeader();
@@ -77,6 +86,13 @@ public class HFilePreadReader extends HFileReaderImpl {
             // Other exceptions are interesting
             LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
           } finally {
+            if (prefetchStreamReader != null) {
+              try {
+                prefetchStreamReader.close(false);
+              } catch (IOException e) {
+                LOG.warn("Close prefetch stream reader failed, path: " + path, e);
+              }
+            }
             PrefetchExecutor.complete(path);
           }
         }
