@@ -93,7 +93,6 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -633,49 +632,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     return lqis;
   }
 
-  private List<LoadQueueItem> splitStoreFile(LoadQueueItem item, TableDescriptor tableDesc,
-    byte[] splitKey) throws IOException {
-    Path hfilePath = item.getFilePath();
-    byte[] family = item.getFamily();
-    Path tmpDir = hfilePath.getParent();
-    if (!tmpDir.getName().equals(TMP_DIR)) {
-      tmpDir = new Path(tmpDir, TMP_DIR);
-    }
-
-    LOG.info("HFile at " + hfilePath + " no longer fits inside a single " + "region. Splitting...");
-
-    String uniqueName = getUniqueName();
-    ColumnFamilyDescriptor familyDesc = tableDesc.getColumnFamily(family);
-
-    Path botOut = new Path(tmpDir, uniqueName + ".bottom");
-    Path topOut = new Path(tmpDir, uniqueName + ".top");
-    splitStoreFile(getConf(), hfilePath, familyDesc, splitKey, botOut, topOut);
-
-    FileSystem fs = tmpDir.getFileSystem(getConf());
-    fs.setPermission(tmpDir, FsPermission.valueOf("-rwxrwxrwx"));
-    fs.setPermission(botOut, FsPermission.valueOf("-rwxrwxrwx"));
-    fs.setPermission(topOut, FsPermission.valueOf("-rwxrwxrwx"));
-
-    // Add these back at the *front* of the queue, so there's a lower
-    // chance that the region will just split again before we get there.
-    List<LoadQueueItem> lqis = new ArrayList<>(2);
-    lqis.add(new LoadQueueItem(family, botOut));
-    lqis.add(new LoadQueueItem(family, topOut));
-
-    // If the current item is already the result of previous splits,
-    // we don't need it anymore. Clean up to save space.
-    // It is not part of the original input files.
-    try {
-      if (tmpDir.getName().equals(TMP_DIR)) {
-        fs.delete(hfilePath, false);
-      }
-    } catch (IOException e) {
-      LOG.warn("Unable to delete temporary split file " + hfilePath);
-    }
-    LOG.info("Successfully split into new HFiles " + botOut + " and " + topOut);
-    return lqis;
-  }
-
   /**
    * @param startEndKeys the start/end keys of regions belong to this table, the list in ascending
    *                     order by start key
@@ -785,21 +741,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
-   * Split a storefile into a top and bottom half, maintaining the metadata, recreating bloom
-   * filters, etc
-   */
-  @InterfaceAudience.Private
-  static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
-    byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
-    // Open reader with no block cache, and not in-memory
-    Reference topReference = Reference.createTopReference(splitKey);
-    Reference bottomReference = Reference.createBottomReference(splitKey);
-
-    copyHFileHalf(conf, inFile, topOut, topReference, familyDesc);
-    copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc);
-  }
-
-  /**
    * Split a storefile into a top and bottom half with favored nodes, maintaining the metadata,
    * recreating bloom filters, etc.
    */
@@ -813,59 +754,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
     copyHFileHalf(conf, inFile, topOut, topReference, familyDesc, loc);
     copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc, loc);
-  }
-
-  /**
-   * Copy half of an HFile into a new HFile.
-   */
-  private static void copyHFileHalf(Configuration conf, Path inFile, Path outFile,
-    Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
-    FileSystem fs = inFile.getFileSystem(conf);
-    CacheConfig cacheConf = CacheConfig.DISABLED;
-    HalfStoreFileReader halfReader = null;
-    StoreFileWriter halfWriter = null;
-    try {
-      ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
-      StoreFileInfo storeFileInfo =
-        new StoreFileInfo(conf, fs, fs.getFileStatus(inFile), reference);
-      storeFileInfo.initHFileInfo(context);
-      halfReader = (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
-      storeFileInfo.getHFileInfo().initMetaAndIndex(halfReader.getHFileReader());
-      Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
-
-      int blocksize = familyDescriptor.getBlocksize();
-      Algorithm compression = familyDescriptor.getCompressionType();
-      BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
-      HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-        .withChecksumType(StoreUtils.getChecksumType(conf))
-        .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
-        .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
-        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
-      halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-        .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
-      HFileScanner scanner = halfReader.getScanner(false, false, false);
-      scanner.seekTo();
-      do {
-        halfWriter.append(scanner.getCell());
-      } while (scanner.next());
-
-      for (Map.Entry<byte[], byte[]> entry : fileInfo.entrySet()) {
-        if (shouldCopyHFileMetaKey(entry.getKey())) {
-          halfWriter.appendFileInfo(entry.getKey(), entry.getValue());
-        }
-      }
-    } finally {
-      if (halfReader != null) {
-        try {
-          halfReader.close(cacheConf.shouldEvictOnClose());
-        } catch (IOException e) {
-          LOG.warn("failed to close hfile reader for " + inFile, e);
-        }
-      }
-      if (halfWriter != null) {
-        halfWriter.close();
-      }
-    }
   }
 
   /**

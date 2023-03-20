@@ -563,14 +563,17 @@ public class TestBulkLoadHFiles {
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    String tableName = tn.getMethodName();
+    util.createTable(TableName.valueOf(tableName), familyDesc.getNameAsString());
     HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
       Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
     Path topOut = new Path(dir, "top.out");
 
-    BulkLoadHFilesTool.splitStoreFile(util.getConfiguration(), testIn, familyDesc,
-      Bytes.toBytes("ggg"), bottomOut, topOut);
+    BulkLoadHFilesTool.splitStoreFile(
+      util.getAsyncConnection().getRegionLocator(TableName.valueOf(tableName)),
+      util.getConfiguration(), testIn, familyDesc, Bytes.toBytes("ggg"), bottomOut, topOut);
 
     int rowCount = verifyHFile(bottomOut);
     rowCount += verifyHFile(topOut);
@@ -586,7 +589,6 @@ public class TestBulkLoadHFiles {
     Path dir = new Path(util.getDefaultRootDirPath(), "testhfile");
     FileSystem fs = util.getDFSCluster().getFileSystem();
 
-    // FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testSplitStoreFileWithFavoriteNodes");
     ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
     String tableName = tn.getMethodName();
@@ -614,14 +616,17 @@ public class TestBulkLoadHFiles {
     FileSystem fs = util.getTestFileSystem();
     Path testIn = new Path(dir, "testhfile");
     ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    String tableName = tn.getMethodName();
+    util.createTable(TableName.valueOf(tableName), familyDesc.getNameAsString());
     HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
       Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
     Path topOut = new Path(dir, "top.out");
 
-    BulkLoadHFilesTool.splitStoreFile(util.getConfiguration(), testIn, familyDesc,
-      Bytes.toBytes("ggg"), bottomOut, topOut);
+    BulkLoadHFilesTool.splitStoreFile(
+      util.getAsyncConnection().getRegionLocator(TableName.valueOf(tableName)),
+      util.getConfiguration(), testIn, familyDesc, Bytes.toBytes("ggg"), bottomOut, topOut);
 
     verifyHFileCreateTimeTS(bottomOut);
     verifyHFileCreateTimeTS(topOut);
@@ -654,14 +659,17 @@ public class TestBulkLoadHFiles {
     Path testIn = new Path(dir, "testhfile");
     ColumnFamilyDescriptor familyDesc =
       ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setDataBlockEncoding(cfEncoding).build();
+    String tableName = tn.getMethodName();
+    util.createTable(TableName.valueOf(tableName), familyDesc.getNameAsString());
     HFileTestUtil.createHFileWithDataBlockEncoding(util.getConfiguration(), fs, testIn,
       bulkloadEncoding, FAMILY, QUALIFIER, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
 
     Path bottomOut = new Path(dir, "bottom.out");
     Path topOut = new Path(dir, "top.out");
 
-    BulkLoadHFilesTool.splitStoreFile(util.getConfiguration(), testIn, familyDesc,
-      Bytes.toBytes("ggg"), bottomOut, topOut);
+    BulkLoadHFilesTool.splitStoreFile(
+      util.getAsyncConnection().getRegionLocator(TableName.valueOf(tableName)),
+      util.getConfiguration(), testIn, familyDesc, Bytes.toBytes("ggg"), bottomOut, topOut);
 
     int rowCount = verifyHFile(bottomOut);
     rowCount += verifyHFile(topOut);
