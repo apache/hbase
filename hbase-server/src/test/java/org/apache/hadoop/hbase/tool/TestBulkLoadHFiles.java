@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,10 +44,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncTableRegionLocator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
@@ -63,7 +66,12 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -569,6 +577,37 @@ public class TestBulkLoadHFiles {
     assertEquals(1000, rowCount);
   }
 
+  /**
+   * Test hfile splits with the favored nodes
+   */
+  @Test
+  public void testSplitStoreFileWithFavoriteNodes() throws IOException {
+
+    Path dir = new Path(util.getDefaultRootDirPath(), "testhfile");
+    FileSystem fs = util.getDFSCluster().getFileSystem();
+
+    // FileSystem fs = util.getTestFileSystem();
+    Path testIn = new Path(dir, "testSplitStoreFileWithFavoriteNodes");
+    ColumnFamilyDescriptor familyDesc = ColumnFamilyDescriptorBuilder.of(FAMILY);
+    String tableName = tn.getMethodName();
+    Table table = util.createTable(TableName.valueOf(tableName), familyDesc.getNameAsString());
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, testIn, FAMILY, QUALIFIER,
+      Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 1000);
+
+    Path bottomOut = new Path(dir, "bottom.out");
+    Path topOut = new Path(dir, "top.out");
+
+    final AsyncTableRegionLocator regionLocator =
+      util.getAsyncConnection().getRegionLocator(TableName.valueOf(tableName));
+    BulkLoadHFilesTool.splitStoreFile(regionLocator, util.getConfiguration(), testIn, familyDesc,
+      Bytes.toBytes("ggg"), bottomOut, topOut);
+    verifyHFileFavoriteNode(topOut, regionLocator, fs);
+    verifyHFileFavoriteNode(bottomOut, regionLocator, fs);
+    int rowCount = verifyHFile(bottomOut);
+    rowCount += verifyHFile(topOut);
+    assertEquals(1000, rowCount);
+  }
+
   @Test
   public void testSplitStoreFileWithCreateTimeTS() throws IOException {
     Path dir = util.getDataTestDirOnTestFS("testSplitStoreFileWithCreateTimeTS");
@@ -651,6 +690,61 @@ public class TestBulkLoadHFiles {
       HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf)) {
       long fileCreateTime = reader.getHFileInfo().getHFileContext().getFileCreateTime();
       MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
+    }
+  }
+
+  /**
+   * test split storefile with favorite node information
+   */
+  private void verifyHFileFavoriteNode(Path p, AsyncTableRegionLocator regionLocator, FileSystem fs)
+    throws IOException {
+    Configuration conf = util.getConfiguration();
+
+    try (HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), true, conf);) {
+
+      final byte[] firstRowkey = reader.getFirstRowKey().get();
+      final HRegionLocation hRegionLocation =
+        FutureUtils.get(regionLocator.getRegionLocation(firstRowkey));
+
+      final String targetHostName = hRegionLocation.getHostname();
+
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        String pathStr = p.toUri().getPath();
+        LocatedBlocks blocks = dfs.getClient().getLocatedBlocks(pathStr, 0L);
+
+        boolean isFavoriteNode = false;
+        List<LocatedBlock> locatedBlocks = blocks.getLocatedBlocks();
+        int index = 0;
+        do {
+          if (index > 0) {
+            assertTrue("failed use favored nodes", isFavoriteNode);
+          }
+          isFavoriteNode = false;
+          final LocatedBlock block = locatedBlocks.get(index);
+
+          final DatanodeInfo[] locations = block.getLocations();
+          for (DatanodeInfo location : locations) {
+
+            final String hostName = location.getHostName();
+            if (
+              targetHostName.equals(hostName.equals("127.0.0.1")
+                ? InetAddress.getLocalHost().getHostAddress()
+                : "127.0.0.1")
+            ) {
+              isFavoriteNode = true;
+              break;
+            }
+          }
+
+          index++;
+        } while (index < locatedBlocks.size());
+        if (index > 0) {
+          assertTrue("failed use favored nodes", isFavoriteNode);
+        }
+
+      }
+
     }
   }
 
