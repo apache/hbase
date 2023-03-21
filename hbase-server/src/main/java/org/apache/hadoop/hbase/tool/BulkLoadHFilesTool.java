@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -782,7 +783,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         .withChecksumType(StoreUtils.getChecksumType(conf))
         .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
         .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
-        .build();
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
@@ -798,26 +799,25 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
             HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
             InetSocketAddress[] favoredNodes = null;
             if (null == hRegionLocation) {
-              LOG.trace("Failed get of location, use default writer {}", Bytes.toString(rowKey));
+              LOG.warn("Failed get of location, use default writer {}", Bytes.toString(rowKey));
+              halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
             } else {
               LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
               InetSocketAddress initialIsa =
                 new InetSocketAddress(hRegionLocation.getHostname(), hRegionLocation.getPort());
               if (initialIsa.isUnresolved()) {
-                LOG.trace("Failed resolve address {}, use default writer",
+                LOG.warn("Failed resolve address {}, use default writer",
                   hRegionLocation.getHostnamePort());
+                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                  .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
               } else {
                 LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
                 favoredNodes = new InetSocketAddress[] { initialIsa };
+                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                  .withBloomType(bloomFilterType).withFileContext(hFileContext)
+                  .withFavoredNodes(favoredNodes).build();
               }
-            }
-            if (null == favoredNodes) {
-              halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-                .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
-            } else {
-              halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-                .withBloomType(bloomFilterType).withFileContext(hFileContext)
-                .withFavoredNodes(favoredNodes).build();
             }
           } else {
             halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
