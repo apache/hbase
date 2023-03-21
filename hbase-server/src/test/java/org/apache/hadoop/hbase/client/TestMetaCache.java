@@ -563,6 +563,7 @@ public class TestMetaCache {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     conf.setLong(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, 2000);
     conf.setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 2000);
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
     try (ConnectionImplementation conn =
       (ConnectionImplementation) ConnectionFactory.createConnection(conf)) {
@@ -587,6 +588,28 @@ public class TestMetaCache {
 
       assertTrue(client1.getException() instanceof LockTimeoutException
         ^ client2.getException() instanceof LockTimeoutException);
+
+      // obtain the client metrics
+      MetricsConnection metrics = conn.getConnectionMetrics();
+      long queueCount = metrics.getUserRegionLockQueue().getCount();
+      assertEquals("Queue of userRegionLock should be updated twice. queueCount: " + queueCount,
+        queueCount, 2);
+
+      long timeoutCount = metrics.getUserRegionLockTimeout().getCount();
+      assertEquals("Timeout of userRegionLock should happen once. timeoutCount: " + timeoutCount,
+        timeoutCount, 1);
+
+      long waitingTimerCount = metrics.getUserRegionLockWaitingTimer().getCount();
+      assertEquals("userRegionLock should be grabbed successfully once. waitingTimerCount: "
+        + waitingTimerCount, waitingTimerCount, 1);
+
+      long heldTimerCount = metrics.getUserRegionLockHeldTimer().getCount();
+      assertEquals(
+        "userRegionLock should be held successfully once. heldTimerCount: " + heldTimerCount,
+        heldTimerCount, 1);
+      double heldTime = metrics.getUserRegionLockHeldTimer().getSnapshot().getMax();
+      assertTrue("Max held time should be greater than 2 seconds. heldTime: " + heldTime,
+        heldTime >= 2E9);
     }
   }
 

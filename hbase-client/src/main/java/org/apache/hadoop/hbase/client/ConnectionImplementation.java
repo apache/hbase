@@ -1003,6 +1003,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       // Query the meta region
       long pauseBase = connectionConfig.getPauseMillis();
       takeUserRegionLock();
+      final long lockStartTime = EnvironmentEdgeManager.currentTime();
       try {
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
@@ -1113,6 +1114,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         }
       } finally {
         userRegionLock.unlock();
+        // update duration of the lock being held
+        if (metrics != null) {
+          metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTime);
+        }
       }
       try {
         Thread.sleep(ConnectionUtils.getPauseTime(pauseBase, tries));
@@ -1126,9 +1131,19 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
   void takeUserRegionLock() throws IOException {
     try {
       long waitTime = connectionConfig.getMetaOperationTimeout();
+      if (metrics != null) {
+        metrics.updateUserRegionLockQueue(userRegionLock.getQueueLength());
+      }
+      final long waitStartTime = EnvironmentEdgeManager.currentTime();
       if (!userRegionLock.tryLock(waitTime, TimeUnit.MILLISECONDS)) {
+        if (metrics != null) {
+          metrics.incrUserRegionLockTimeout();
+        }
         throw new LockTimeoutException("Failed to get user region lock in" + waitTime + " ms. "
           + " for accessing meta region server.");
+      } else if (metrics != null) {
+        // successfully grabbed the lock, start timer of holding the lock
+        metrics.updateUserRegionLockWaiting(EnvironmentEdgeManager.currentTime() - waitStartTime);
       }
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);
