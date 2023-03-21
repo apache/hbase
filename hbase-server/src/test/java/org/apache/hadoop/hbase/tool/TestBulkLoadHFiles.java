@@ -717,9 +717,9 @@ public class TestBulkLoadHFiles {
       final String targetHostName = hRegionLocation.getHostname();
 
       if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem) fs;
         String pathStr = p.toUri().getPath();
-        LocatedBlocks blocks = dfs.getClient().getLocatedBlocks(pathStr, 0L);
+        LocatedBlocks blocks =
+          ((DistributedFileSystem) fs).getClient().getLocatedBlocks(pathStr, 0L);
 
         boolean isFavoriteNode = false;
         List<LocatedBlock> locatedBlocks = blocks.getLocatedBlocks();
