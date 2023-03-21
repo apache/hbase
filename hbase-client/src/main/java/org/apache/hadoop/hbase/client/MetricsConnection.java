@@ -289,6 +289,10 @@ public class MetricsConnection implements StatisticTrackable {
   protected final Counter hedgedReadWin;
   protected final Histogram concurrentCallsPerServerHist;
   protected final Histogram numActionsPerServerHist;
+  protected final Counter userRegionLockTimeoutCount;
+  protected final Timer userRegionLockWaitingTimer;
+  protected final Timer userRegionLockHeldTimer;
+  protected final Histogram userRegionLockQueueHist;
 
   // dynamic metrics
 
@@ -348,6 +352,14 @@ public class MetricsConnection implements StatisticTrackable {
       registry.histogram(name(MetricsConnection.class, "concurrentCallsPerServer", scope));
     this.numActionsPerServerHist =
       registry.histogram(name(MetricsConnection.class, "numActionsPerServer", scope));
+    this.userRegionLockTimeoutCount =
+      registry.counter(name(this.getClass(), "userRegionLockTimeoutCount", scope));
+    this.userRegionLockWaitingTimer =
+      registry.timer(name(this.getClass(), "userRegionLockWaitingDuration", scope));
+    this.userRegionLockHeldTimer =
+      registry.timer(name(this.getClass(), "userRegionLockHeldDuration", scope));
+    this.userRegionLockQueueHist =
+      registry.histogram(name(MetricsConnection.class, "userRegionLockQueueLength", scope));
 
     this.reporter = JmxReporter.forRegistry(this.registry).build();
     this.reporter.start();
@@ -423,6 +435,24 @@ public class MetricsConnection implements StatisticTrackable {
   public void incrDelayRunnersAndUpdateDelayInterval(long interval) {
     this.runnerStats.incrDelayRunners();
     this.runnerStats.updateDelayInterval(interval);
+  }
+
+  /** incr */
+  public void incrUserRegionLockTimeout() {
+    userRegionLockTimeoutCount.inc();
+  }
+
+  /** update */
+  public void updateUserRegionLockWaiting(long duration) {
+    userRegionLockWaitingTimer.update(duration, TimeUnit.MILLISECONDS);
+  }
+
+  public void updateUserRegionLockHeld(long duration) {
+    userRegionLockHeldTimer.update(duration, TimeUnit.MILLISECONDS);
+  }
+
+  public void updateUserRegionLockQueue(int count) {
+    userRegionLockQueueHist.update(count);
   }
 
   /**
