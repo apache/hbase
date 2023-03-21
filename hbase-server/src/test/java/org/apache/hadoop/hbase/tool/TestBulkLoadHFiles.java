@@ -735,11 +735,10 @@ public class TestBulkLoadHFiles {
           for (DatanodeInfo location : locations) {
 
             final String hostName = location.getHostName();
-            fail(" failed to use favored nodes, location.getHostName():" + location.getHostName());
             if (
               targetHostName.equals(hostName.equals("127.0.0.1")
-                ? InetAddress.getLocalHost().getHostAddress()
-                : "127.0.0.1")
+                ? InetAddress.getLocalHost().getHostName()
+                : "127.0.0.1") || targetHostName.equals(hostName)
             ) {
               isFavoriteNode = true;
               break;
