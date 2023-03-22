@@ -79,11 +79,13 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     int readQueues = calcNumReaders(this.numCallQueues, callqReadShare);
     int readHandlers = Math.max(readQueues, calcNumReaders(handlerCount, callqReadShare));
 
-    int scanQueues = Math.max(0, (int) Math.floor(readQueues * callqScanShare));
     int scanHandlers = Math.max(0, (int) Math.floor(readHandlers * callqScanShare));
+    int scanQueues =
+      scanHandlers > 0 ? Math.max(1, (int) Math.floor(readQueues * callqScanShare)) : 0;
 
-    if ((readQueues - scanQueues) > 0) {
-      readQueues -= scanQueues;
+    if (scanQueues > 0) {
+      // if scanQueues > 0, the handler count of read should > 0, then we make readQueues >= 1
+      readQueues = Math.max(1, readQueues - scanQueues);
       readHandlers -= scanHandlers;
     } else {
       scanQueues = 0;
