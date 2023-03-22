@@ -114,5 +114,22 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <!--
+        Old protobuf-2.5 doesn't know about Apple Silicon. Fall back to the x86 binary and hope
+        that rosetta continues to work.
+        https://cwiki.apache.org/confluence/display/HADOOP/Develop+on+Apple+Silicon+%28M1%29+macOS
+      -->
+      <id>apple-silicon-workaround</id>
+      <activation>
+        <os>
+          <family>mac</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <os.detected.classifier>osx-x86_64</os.detected.classifier>
+      </properties>
+    </profile>
   </profiles>
 </project>
