@@ -68,6 +68,18 @@ public class TestRpcSchedulerFactory {
   }
 
   @Test
+  public void testRWQWithoutReadShare() {
+    // Set some configs just to see how it changes the scheduler. Can't assert the settings had
+    // an effect. Just eyeball the log.
+    this.conf.setDouble(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+    this.conf.setDouble(RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0.5);
+    this.conf.setDouble(RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
+    RpcSchedulerFactory factory = new SimpleRpcSchedulerFactory();
+    RpcScheduler rpcScheduler = factory.create(this.conf, null, null);
+    assertTrue(rpcScheduler.getClass().equals(SimpleRpcScheduler.class));
+  }
+
+  @Test
   public void testFifo() {
     RpcSchedulerFactory factory = new FifoRpcSchedulerFactory();
     RpcScheduler rpcScheduler = factory.create(this.conf, null, null);
