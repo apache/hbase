@@ -108,7 +108,7 @@ public class TestPrefetchRSClose {
       table.put(put1);
       TEST_UTIL.flush(tableName);
     } finally {
-      Thread.sleep(1500);
+      Thread.sleep(2000);
     }
 
     // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
