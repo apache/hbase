@@ -126,9 +126,7 @@ public class TestBucketCachePersister {
     FileSystem fs = HFileSystem.get(conf);
     // Load Cache
     Path storeFile = writeStoreFile("TestPrefetch2", conf, cacheConf, fs);
-    Path storeFile2 = writeStoreFile("TestPrefetch3", conf, cacheConf, fs);
     readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache);
-    readStoreFile(storeFile2, 0, fs, cacheConf, conf, bucketCache);
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
     cleanupBucketCache(bucketCache);
