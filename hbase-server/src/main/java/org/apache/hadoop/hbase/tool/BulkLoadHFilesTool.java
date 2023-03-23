@@ -799,7 +799,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
             HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
             InetSocketAddress[] favoredNodes = null;
             if (null == hRegionLocation) {
-              LOG.warn("Failed get of location, use default writer {}", Bytes.toString(rowKey));
+              LOG.warn("Failed get location for region {} , Using writer without favoured nodes.",
+                hRegionLocation);
               halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
                 .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
             } else {
@@ -807,8 +808,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
               InetSocketAddress initialIsa =
                 new InetSocketAddress(hRegionLocation.getHostname(), hRegionLocation.getPort());
               if (initialIsa.isUnresolved()) {
-                LOG.warn("Failed resolve address {}, use default writer",
-                  hRegionLocation.getHostnamePort());
+                LOG.warn("Failed get location for region {} , Using writer without favoured nodes.",
+                  hRegionLocation);
                 halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
                   .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
               } else {
