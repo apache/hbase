@@ -39,11 +39,11 @@ execute() {
 
   echo "Running unit and integration tests with runAllTests profile"
 
-  mvn -B -e -f "${MAIN_POM}" clean test -PrunAllTests -Pjacoco -Pbuild-with-jdk11 -fn
+  mvn -B -e -f "${MAIN_POM}" clean test -PrunAllTests -Pjacoco -Pbuild-with-jdk11 -Dhadoop.profile=3.0 -fn
 
   echo "Starting verifying phase"
 
-  mvn -B -e -f "${MAIN_POM}" verify -DskipTests -DskipITs -Pjacoco -Pbuild-with-jdk11 -fn
+  mvn -B -e -f "${MAIN_POM}" verify -DskipTests -DskipITs -Pjacoco -Pbuild-with-jdk11 -Dhadoop.profile=3.0 -fn
 
   echo "Starting sonar scanner analysis"
 

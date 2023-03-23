@@ -697,7 +697,6 @@
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced</hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
     <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
-    <jacoco.version>0.7.5.201505241946</jacoco.version>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
     <enforcer.version>3.0.0</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
