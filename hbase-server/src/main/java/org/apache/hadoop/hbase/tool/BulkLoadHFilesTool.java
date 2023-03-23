@@ -799,7 +799,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
             HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
             InetSocketAddress[] favoredNodes = null;
             if (null == hRegionLocation) {
-              LOG.warn("Failed get region location for  rowkey {} , Using writer without favoured nodes.",
+              LOG.warn(
+                "Failed get region location for  rowkey {} , Using writer without favoured nodes.",
                 Bytes.toString(rowKey));
               halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
                 .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
