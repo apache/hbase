@@ -390,6 +390,26 @@ mvn clean install
 mvn clean install -DskipTests
 ----
 
+[[maven.build.commands.silicon]]
+=====  Building HBase 2.x on Apple Silicon
+
+Building a non-master branch requires protoc 2.5.0 binary which is not available for Apple Silicon.
+HBASE-27741 added a workaround to the build to fall back to osx-x86_64 version of protoc automatically by `apple-silicon-workaround` Maven profile.
+The intention is that this change will permit the build to proceed with the x86 version of `protoc`, making use of the Rosetta instruction translation service built into the OS.
+If you'd like to provide and make use of your own aarch_64 `protoc`, you can disable this profile on the command line by adding `-P'!apple-silicon-workaround'`, or through configuration in your `settings.xml`.
+
+You can use the following commands to build protoc on your Apple Silicon machine.
+[source,bourne]
+----
+curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz | tar zx -
+cd protobuf-2.5.0
+curl -L -O https://gist.githubusercontent.com/liusheng/64aee1b27de037f8b9ccf1873b82c413/raw/118c2fce733a9a62a03281753572a45b6efb8639/protobuf-2.5.0-arm64.patch
+patch -p1 < protobuf-2.5.0-arm64.patch
+./configure --disable-shared
+make
+mvn install:install-file -DgroupId=com.google.protobuf -DartifactId=protoc -Dversion=2.5.0 -Dclassifier=osx-aarch_64 -Dpackaging=exe -Dfile=src/protoc
+----
+
 [[maven.build.commands.unitall]]
 ==== Running all or individual Unit Tests
 
