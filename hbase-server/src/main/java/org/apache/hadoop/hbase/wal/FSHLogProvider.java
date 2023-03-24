@@ -41,6 +41,8 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
 
   private static final Logger LOG = LoggerFactory.getLogger(FSHLogProvider.class);
 
+  public static final String WRITER_IMPL = "hbase.regionserver.wal.writer.impl";
+
   // Only public so classes back in regionserver.wal can access
   public interface Writer extends WALProvider.Writer {
     /**
@@ -71,7 +73,7 @@ public class FSHLogProvider extends AbstractFSWALProvider<FSHLog> {
     final boolean overwritable, long blocksize) throws IOException {
     // Configuration already does caching for the Class lookup.
     Class<? extends Writer> logWriterClass =
-      conf.getClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class, Writer.class);
+      conf.getClass(WRITER_IMPL, ProtobufLogWriter.class, Writer.class);
     Writer writer = null;
     try {
       writer = logWriterClass.getDeclaredConstructor().newInstance();

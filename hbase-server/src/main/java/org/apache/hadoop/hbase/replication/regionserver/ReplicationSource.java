@@ -706,10 +706,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
         }
       }
     }
-    if (clearMetrics) {
-      // Can be null in test context.
-      if (this.metrics != null) {
+
+    // Can be null in test context.
+    if (this.metrics != null) {
+      if (clearMetrics) {
         this.metrics.clear();
+      } else {
+        this.metrics.terminate();
       }
     }
   }

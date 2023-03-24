@@ -26,10 +26,13 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * TestBasicWALEntryStream with {@link AsyncFSWALProvider} as the WAL provider.
  */
+@RunWith(Parameterized.class)
 @Category({ ReplicationTests.class, MediumTests.class })
 public class TestBasicWALEntryStreamAsyncFSWAL extends TestBasicWALEntryStream {
 

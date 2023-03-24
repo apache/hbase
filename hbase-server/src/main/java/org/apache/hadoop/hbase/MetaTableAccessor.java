@@ -192,7 +192,8 @@ public final class MetaTableAccessor {
     RegionLocations locations = CatalogFamilyFormat.getRegionLocations(r);
     return locations == null
       ? null
-      : locations.getRegionLocation(parsedInfo == null ? 0 : parsedInfo.getReplicaId());
+      : locations.getRegionLocation(
+        parsedInfo == null ? RegionInfo.DEFAULT_REPLICA_ID : parsedInfo.getReplicaId());
   }
 
   /**
@@ -220,12 +221,12 @@ public final class MetaTableAccessor {
   /**
    * Gets the result in hbase:meta for the specified region.
    * @param connection connection we're using
-   * @param regionName region we're looking for
+   * @param regionInfo region we're looking for
    * @return result of the specified region
    */
-  public static Result getRegionResult(Connection connection, byte[] regionName)
+  public static Result getRegionResult(Connection connection, RegionInfo regionInfo)
     throws IOException {
-    Get get = new Get(regionName);
+    Get get = new Get(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo));
     get.addFamily(HConstants.CATALOG_FAMILY);
     try (Table t = getMetaHTable(connection)) {
       return t.get(get);
@@ -621,11 +622,22 @@ public final class MetaTableAccessor {
   ////////////////////////
   // Editing operations //
   ////////////////////////
+
   /**
-   * Generates and returns a Put containing the region into for the catalog table
+   * Generates and returns a {@link Put} containing the {@link RegionInfo} for the catalog table.
+   * @throws IllegalArgumentException when the provided RegionInfo is not the default replica.
+   */
+  public static Put makePutFromRegionInfo(RegionInfo regionInfo) throws IOException {
+    return makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
+  }
+
+  /**
+   * Generates and returns a {@link Put} containing the {@link RegionInfo} for the catalog table.
+   * @throws IllegalArgumentException when the provided RegionInfo is not the default replica.
    */
   public static Put makePutFromRegionInfo(RegionInfo regionInfo, long ts) throws IOException {
-    return addRegionInfo(new Put(regionInfo.getRegionName(), ts), regionInfo);
+    return addRegionInfo(new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), ts),
+      regionInfo);
   }
 
   /**
@@ -635,7 +647,11 @@ public final class MetaTableAccessor {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
-    Delete delete = new Delete(regionInfo.getRegionName());
+    if (regionInfo.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+      throw new IllegalArgumentException(
+        "Can't make delete for a replica region. Operate on the primary");
+    }
+    Delete delete = new Delete(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo));
     delete.addFamily(HConstants.CATALOG_FAMILY, ts);
     return delete;
   }
@@ -726,9 +742,15 @@ public final class MetaTableAccessor {
     }
   }
 
-  public static Put addRegionStateToPut(Put put, RegionState.State state) throws IOException {
+  /**
+   * Set the column value corresponding to this {@code replicaId}'s {@link RegionState} to the
+   * provided {@code state}. Mutates the provided {@link Put}.
+   */
+  public static Put addRegionStateToPut(Put put, int replicaId, RegionState.State state)
+    throws IOException {
     put.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(put.getRow())
-      .setFamily(HConstants.CATALOG_FAMILY).setQualifier(HConstants.STATE_QUALIFIER)
+      .setFamily(HConstants.CATALOG_FAMILY)
+      .setQualifier(CatalogFamilyFormat.getRegionStateColumn(replicaId))
       .setTimestamp(put.getTimestamp()).setType(Cell.Type.Put).setValue(Bytes.toBytes(state.name()))
       .build());
     return put;
@@ -739,8 +761,9 @@ public final class MetaTableAccessor {
    */
   public static void updateRegionState(Connection connection, RegionInfo ri,
     RegionState.State state) throws IOException {
-    Put put = new Put(RegionReplicaUtil.getRegionInfoForDefaultReplica(ri).getRegionName());
-    putsToMetaTable(connection, Collections.singletonList(addRegionStateToPut(put, state)));
+    final Put put = makePutFromRegionInfo(ri);
+    addRegionStateToPut(put, ri.getReplicaId(), state);
+    putsToMetaTable(connection, Collections.singletonList(put));
   }
 
   /**
@@ -759,7 +782,7 @@ public final class MetaTableAccessor {
   public static void addSplitsToParent(Connection connection, RegionInfo regionInfo,
     RegionInfo splitA, RegionInfo splitB) throws IOException {
     try (Table meta = getMetaHTable(connection)) {
-      Put put = makePutFromRegionInfo(regionInfo, EnvironmentEdgeManager.currentTime());
+      Put put = makePutFromRegionInfo(regionInfo);
       addDaughtersToPut(put, splitA, splitB);
       meta.put(put);
       debugLogMutation(put);
@@ -797,7 +820,7 @@ public final class MetaTableAccessor {
       }
       Put put = makePutFromRegionInfo(regionInfo, ts);
       // New regions are added with initial state of CLOSED.
-      addRegionStateToPut(put, RegionState.State.CLOSED);
+      addRegionStateToPut(put, regionInfo.getReplicaId(), RegionState.State.CLOSED);
       // Add empty locations for region replicas so that number of replicas can be cached
       // whenever the primary region is looked up from meta
       for (int i = 1; i < regionReplication; i++) {

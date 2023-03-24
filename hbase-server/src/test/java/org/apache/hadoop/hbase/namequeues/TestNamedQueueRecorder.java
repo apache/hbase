@@ -529,13 +529,14 @@ public class TestNamedQueueRecorder {
 
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className) {
     RpcCall rpcCall = getRpcCall(userName);
-    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, true, true);
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
+      true);
   }
 
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
     boolean isSlowLog, boolean isLargeLog) {
     RpcCall rpcCall = getRpcCall(userName);
-    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, className, isSlowLog,
+    return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, isSlowLog,
       isLargeLog);
   }
 

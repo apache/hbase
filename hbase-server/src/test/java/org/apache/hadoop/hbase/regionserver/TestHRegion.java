@@ -32,7 +32,9 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -171,6 +173,7 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -182,7 +185,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -415,9 +417,8 @@ public class TestHRegion {
     long onePutSize = region.getMemStoreDataSize();
     assertTrue(onePutSize > 0);
 
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
-    doThrow(new IOException()).when(mockedCPHost)
-      .postBatchMutate(Mockito.<MiniBatchOperationInProgress<Mutation>> any());
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
+    doThrow(new IOException()).when(mockedCPHost).postBatchMutate(any());
     region.setCoprocessorHost(mockedCPHost);
 
     put = new Put(value);
@@ -1074,8 +1075,8 @@ public class TestHRegion {
 
       // now verify that the flush markers are written
       wal.shutdown();
-      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
-        TEST_UTIL.getConfiguration());
+      WALStreamReader reader = WALFactory.createStreamReader(fs,
+        AbstractFSWALProvider.getCurrentFileName(wal), TEST_UTIL.getConfiguration());
       try {
         List<WAL.Entry> flushDescriptors = new ArrayList<>();
         long lastFlushSeqId = -1;
@@ -1126,14 +1127,7 @@ public class TestHRegion {
         }
         writer.close();
       } finally {
-        if (null != reader) {
-          try {
-            reader.close();
-          } catch (IOException exception) {
-            LOG.warn("Problem closing wal: " + exception.getMessage());
-            LOG.debug("exception details", exception);
-          }
-        }
+        reader.close();
       }
 
       // close the region now, and reopen again
@@ -3387,25 +3381,24 @@ public class TestHRegion {
     final long initSize = region.getDataInMemoryWithoutWAL();
     // save normalCPHost and replaced by mockedCPHost
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
     // Because the preBatchMutate returns void, we can't do usual Mockito when...then form. Must
     // do below format (from Mockito doc).
-    Mockito.doAnswer(new Answer<Void>() {
+    doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         MiniBatchOperationInProgress<Mutation> mb = invocation.getArgument(0);
         mb.addOperationsFromCP(0, new Mutation[] { addPut });
         return null;
       }
-    }).when(mockedCPHost).preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class));
+    }).when(mockedCPHost).preBatchMutate(isA(MiniBatchOperationInProgress.class));
     ColumnFamilyDescriptorBuilder builder =
       ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY_BYTES);
     ScanInfo info = new ScanInfo(CONF, builder.build(), Long.MAX_VALUE, Long.MAX_VALUE,
       region.getCellComparator());
-    Mockito.when(mockedCPHost.preFlushScannerOpen(Mockito.any(HStore.class), Mockito.any()))
-      .thenReturn(info);
-    Mockito
-      .when(mockedCPHost.preFlush(Mockito.any(), Mockito.any(StoreScanner.class), Mockito.any()))
+    when(mockedCPHost.preFlushScannerOpen(any(HStore.class), any())).thenReturn(info);
+
+    when(mockedCPHost.preFlush(any(), any(StoreScanner.class), any()))
       .thenAnswer(i -> i.getArgument(1));
     region.setCoprocessorHost(mockedCPHost);
 
@@ -5106,8 +5099,8 @@ public class TestHRegion {
   public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
     RegionInfo info;
     try {
-      FileSystem fs = Mockito.mock(FileSystem.class);
-      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+      FileSystem fs = mock(FileSystem.class);
+      when(fs.exists(any())).thenThrow(new IOException());
       TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
       ColumnFamilyDescriptor columnFamilyDescriptor =
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
@@ -6918,6 +6911,75 @@ public class TestHRegion {
     // Original value written at T+20 should be gone now via family TTL
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
+  }
+
+  @Test
+  public void testTTLsUsingSmallHeartBeatCells() throws IOException {
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    final byte[] row = Bytes.toBytes("testRow");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final byte[] q5 = Bytes.toBytes("q5");
+    final byte[] q6 = Bytes.toBytes("q6");
+    final byte[] q7 = Bytes.toBytes("q7");
+    final byte[] q8 = Bytes.toBytes("q8");
+
+    // 10 seconds
+    int ttlSecs = 10;
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(fam1).setTimeToLive(ttlSecs).build()).build();
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+    // using small heart beat cells
+    conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 2);
+
+    region = HBaseTestingUtil.createRegionAndWAL(
+      RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build(),
+      TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
+    assertNotNull(region);
+    long now = EnvironmentEdgeManager.currentTime();
+    // Add a cell that will expire in 5 seconds via cell TTL
+    region.put(new Put(row).addColumn(fam1, q1, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q3, now, HConstants.EMPTY_BYTE_ARRAY));
+    // Add a cell that will expire after 10 seconds via family setting
+    region
+      .put(new Put(row).addColumn(fam1, q4, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+    region
+      .put(new Put(row).addColumn(fam1, q5, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+
+    region.put(new Put(row).addColumn(fam1, q6, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q7, now, HConstants.EMPTY_BYTE_ARRAY));
+    region
+      .put(new Put(row).addColumn(fam1, q8, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+
+    // Flush so we are sure store scanning gets this right
+    region.flush(true);
+
+    // A query at time T+0 should return all cells
+    checkScan(8);
+    region.delete(new Delete(row).addColumn(fam1, q8));
+
+    // Increment time to T+ttlSecs seconds
+    edge.incrementTime(ttlSecs * 1000);
+    checkScan(2);
+  }
+
+  private void checkScan(int expectCellSize) throws IOException {
+    Scan s = new Scan().withStartRow(row);
+    ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
+    ScannerContext scannerContext = contextBuilder.build();
+    RegionScanner scanner = region.getScanner(s);
+    List<Cell> kvs = new ArrayList<>();
+    scanner.next(kvs, scannerContext);
+    assertEquals(expectCellSize, kvs.size());
+    scanner.close();
   }
 
   @Test

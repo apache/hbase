@@ -44,6 +44,8 @@ message SlowLogPayload {
   optional int32 multi_service_calls = 14 [default = 0];
   required Type type = 15;
 
+  optional int64 block_bytes_scanned = 16;
+
   // SLOW_LOG is RPC call slow in nature whereas LARGE_LOG is RPC call quite large.
   // Majority of times, slow logs are also large logs and hence, ALL is combination of
   // both

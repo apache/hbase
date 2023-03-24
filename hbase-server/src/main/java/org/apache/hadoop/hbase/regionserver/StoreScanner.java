@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.Cell;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
@@ -569,9 +572,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
-    if (!scannerContext.getKeepProgress()) {
+    if (!scannerContext.getKeepProgress() && !scannerContext.getSkippingRow()) {
       scannerContext.clearProgress();
     }
+
+    Optional<RpcCall> rpcCall =
+      matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
 
     int count = 0;
     long totalBytesRead = 0;
@@ -612,6 +618,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // here, we still need to scan all the qualifiers before returning...
           scannerContext.returnImmediately();
         }
+
+        heap.recordBlockSize(blockSize -> {
+          if (rpcCall.isPresent()) {
+            rpcCall.get().incrementResponseBlockSize(blockSize);
+          }
+          scannerContext.incrementBlockProgress(blockSize);
+        });
+
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
@@ -749,6 +763,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           default:
             throw new RuntimeException("UNEXPECTED");
+        }
+
+        // One last chance to break due to size limit. The INCLUDE* cases above already check
+        // limit and continue. For the various filtered cases, we need to check because block
+        // size limit may have been exceeded even if we don't add cells to result list.
+        if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_CELLS)) {
+          return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
       } while ((cell = this.heap.peek()) != null);
 

@@ -26,12 +26,16 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * WAL reader for a serial replication peer.
  */
 @InterfaceAudience.Private
 public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader {
+
+  private static final Logger LOG = LoggerFactory.getLogger(SerialReplicationSourceWALReader.class);
 
   // used to store the first cell in an entry before filtering. This is because that if serial
   // replication is enabled, we may find out that an entry can not be pushed after filtering. And
@@ -51,7 +55,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
 
   @Override
   protected void readWALEntries(WALEntryStream entryStream, WALEntryBatch batch)
-    throws IOException, InterruptedException {
+    throws InterruptedException {
     Path currentPath = entryStream.getCurrentPath();
     long positionBefore = entryStream.getPosition();
     for (;;) {
@@ -75,13 +79,23 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
         entry = filterEntry(entry);
       }
       if (entry != null) {
-        if (!checker.canPush(entry, firstCellInEntryBeforeFiltering)) {
+        int sleepMultiplier = 1;
+        try {
+          if (!checker.canPush(entry, firstCellInEntryBeforeFiltering)) {
+            if (batch.getLastWalPosition() > positionBefore) {
+              // we have something that can push, break
+              break;
+            } else {
+              checker.waitUntilCanPush(entry, firstCellInEntryBeforeFiltering);
+            }
+          }
+        } catch (IOException e) {
+          LOG.warn("failed to check whether we can push the WAL entries", e);
           if (batch.getLastWalPosition() > positionBefore) {
             // we have something that can push, break
             break;
-          } else {
-            checker.waitUntilCanPush(entry, firstCellInEntryBeforeFiltering);
           }
+          sleepMultiplier = sleep(sleepMultiplier);
         }
         // arrive here means we can push the entry, record the last sequence id
         batch.setLastSeqId(Bytes.toString(entry.getKey().getEncodedRegionName()),
@@ -95,20 +109,23 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
         // actually remove the entry.
         removeEntryFromStream(entryStream, batch);
       }
-      boolean hasNext = entryStream.hasNext();
+      WALEntryStream.HasNext hasNext = entryStream.hasNext();
       // always return if we have switched to a new file.
       if (switched(entryStream, currentPath)) {
         batch.setEndOfFile(true);
         break;
       }
-      if (!hasNext) {
+      if (hasNext != WALEntryStream.HasNext.YES) {
+        // For hasNext other than YES, it is OK to just retry.
+        // As for RETRY and RETRY_IMMEDIATELY, the correct action is to retry, and for NO, it will
+        // return NO again when you call the method next time, so it is OK to just return here and
+        // let the loop in the upper layer to call hasNext again.
         break;
       }
     }
   }
 
-  private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch)
-    throws IOException {
+  private void removeEntryFromStream(WALEntryStream entryStream, WALEntryBatch batch) {
     entryStream.next();
     firstCellInEntryBeforeFiltering = null;
     batch.setLastWalPosition(entryStream.getPosition());

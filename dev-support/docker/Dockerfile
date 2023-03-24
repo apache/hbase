@@ -21,7 +21,7 @@
 # tweaking unrelated aspects of the image.
 
 # start with a minimal image into which we can download remote tarballs
-FROM ubuntu:22.04 AS BASE_IMAGE
+FROM ubuntu:22.04 AS base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
@@ -72,7 +72,7 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # download sundry dependencies
 #
 
-FROM BASE_IMAGE AS SPOTBUGS_DOWNLOAD_IMAGE
+FROM base_image AS spotbugs_download_image
 ENV SPOTBUGS_VERSION '4.7.3'
 ENV SPOTBUGS_URL "https://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz"
 ENV SPOTBUGS_SHA512 '09a9fe0e5a6ec8e9d6d116c361b5c34c9d0560c0271241f02fadee911952adfcd69dc184f6de1cc4d4a8fe2c84c162689ea9a691dcae0779935eedf390fcc4ad'
@@ -80,7 +80,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/spotbugs.tgz "${SPOTBUGS_URL}" && \
   echo "${SPOTBUGS_SHA512} */tmp/spotbugs.tgz" | sha512sum -c -
 
-FROM BASE_IMAGE AS HADOLINT_DOWNLOAD_IMAGE
+FROM base_image AS hadolint_download_image
 ENV HADOLINT_VERSION '2.10.0'
 ENV HADOLINT_URL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
 ENV HADOLINT_SHA512 '4816c95243bedf15476d2225f487fc17465495fb2031e1a4797d82a26db83a1edb63e4fed084b80cef17d5eb67eb45508caadaf7cd0252fb061187113991a338'
@@ -88,7 +88,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/hadolint "${HADOLINT_URL}" && \
   echo "${HADOLINT_SHA512} */tmp/hadolint" | sha512sum -c -
 
-FROM BASE_IMAGE AS MAVEN_DOWNLOAD_IMAGE
+FROM base_image AS maven_download_image
 ENV MAVEN_VERSION='3.8.6'
 ENV MAVEN_URL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz"
 ENV MAVEN_SHA512 'f790857f3b1f90ae8d16281f902c689e4f136ebe584aba45e4b1fa66c80cba826d3e0e52fdd04ed44b4c66f6d3fe3584a057c26dfcac544a60b301e6d0f91c26'
@@ -96,14 +96,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
-FROM BASE_IMAGE AS OPENJDK8_DOWNLOAD_IMAGE
+FROM base_image AS openjdk8_download_image
 ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u352-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u352b08.tar.gz'
 ENV OPENJDK8_SHA256 '1633bd7590cb1cd72f5a1378ae8294451028b274d798e2a4ac672059a2f00fee'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
   echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
 
-FROM BASE_IMAGE AS OPENJDK11_DOWNLOAD_IMAGE
+FROM base_image AS openjdk11_download_image
 ENV OPENJDK11_URL 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz'
 ENV OPENJDK11_SHA256 'b8d46ed08ef4859476fe6421a7690d899ed83dce63f13fd894f994043177ef3c'
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -114,22 +114,22 @@ RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk11.ta
 # build the final image
 #
 
-FROM BASE_IMAGE
+FROM base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # hadolint ignore=DL3010
-COPY --from=SPOTBUGS_DOWNLOAD_IMAGE /tmp/spotbugs.tgz /tmp/spotbugs.tgz
+COPY --from=spotbugs_download_image /tmp/spotbugs.tgz /tmp/spotbugs.tgz
 RUN tar xzf /tmp/spotbugs.tgz -C /opt && \
   ln -s "/opt/$(tar -tf /tmp/spotbugs.tgz | head -n1 | cut -d/ -f1)" /opt/spotbugs && \
   chmod -R a+x /opt/spotbugs/bin/* && \
   rm /tmp/spotbugs.tgz
 
-COPY --from=HADOLINT_DOWNLOAD_IMAGE /tmp/hadolint /tmp/hadolint
+COPY --from=hadolint_download_image /tmp/hadolint /tmp/hadolint
 RUN mv /tmp/hadolint /usr/local/bin && \
   chmod a+x /usr/local/bin/hadolint
 
 # hadolint ignore=DL3010
-COPY --from=MAVEN_DOWNLOAD_IMAGE /tmp/maven.tar.gz /tmp/maven.tar.gz
+COPY --from=maven_download_image /tmp/maven.tar.gz /tmp/maven.tar.gz
 RUN tar xzf /tmp/maven.tar.gz -C /opt && \
   ln -s "/opt/$(dirname "$(tar -tf /tmp/maven.tar.gz | head -n1)")" /opt/maven && \
   rm /tmp/maven.tar.gz
@@ -143,7 +143,7 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
 #
 
 # hadolint ignore=DL3010
-COPY --from=OPENJDK8_DOWNLOAD_IMAGE /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz
+COPY --from=openjdk8_download_image /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz
 RUN mkdir -p /usr/lib/jvm && \
   tar xzf /tmp/adoptopenjdk8.tar.gz -C /usr/lib/jvm && \
   ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk8.tar.gz | head -n1)")" /usr/lib/jvm/java-8-adoptopenjdk && \
@@ -151,7 +151,7 @@ RUN mkdir -p /usr/lib/jvm && \
   rm /tmp/adoptopenjdk8.tar.gz
 
 # hadolint ignore=DL3010
-COPY --from=OPENJDK11_DOWNLOAD_IMAGE /tmp/adoptopenjdk11.tar.gz /tmp/adoptopenjdk11.tar.gz
+COPY --from=openjdk11_download_image /tmp/adoptopenjdk11.tar.gz /tmp/adoptopenjdk11.tar.gz
 RUN mkdir -p /usr/lib/jvm && \
   tar xzf /tmp/adoptopenjdk11.tar.gz -C /usr/lib/jvm && \
   ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk11.tar.gz | head -n1)")" /usr/lib/jvm/java-11-adoptopenjdk && \

@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.master.assignment;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.master.LoadBalancer.BOGUS_SERVER_NAME;
+import static org.apache.hadoop.hbase.master.assignment.AssignmentManager.FORCE_REGION_RETAINMENT;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.AbstractStateMachineRegionProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
@@ -95,6 +98,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * Notice that, although we allow specify a target server, it just acts as a candidate, we do not
  * guarantee that the region will finally be on the target server. If this is important for you, you
  * should check whether the region is on the target server after the procedure is finished.
+ * </p>
+ * Altenatively, for trying retaining assignments, the
+ * <b>hbase.master.scp.retain.assignment.force</b> option can be used together with
+ * <b>hbase.master.scp.retain.assignment</b>.
  * <p/>
  * When you want to schedule a TRSP, please check whether there is still one for this region, and
  * the check should be under the RegionStateNode lock. We will remove the TRSP from a
@@ -125,6 +132,10 @@ public class TransitRegionStateProcedure
   private boolean evictCache;
 
   private boolean isSplit;
+
+  private RetryCounter forceRetainmentRetryCounter;
+
+  private long forceRetainmentTotalWait;
 
   public TransitRegionStateProcedure() {
   }
@@ -163,6 +174,16 @@ public class TransitRegionStateProcedure
     }
     evictCache =
       env.getMasterConfiguration().getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
+    initForceRetainmentRetryCounter(env);
+  }
+
+  private void initForceRetainmentRetryCounter(MasterProcedureEnv env) {
+    if (env.getAssignmentManager().isForceRegionRetainment()) {
+      forceRetainmentRetryCounter =
+        new RetryCounter(env.getAssignmentManager().getForceRegionRetainmentRetries(),
+          env.getAssignmentManager().getForceRegionRetainmentWaitInterval(), TimeUnit.MILLISECONDS);
+      forceRetainmentTotalWait = 0;
+    }
   }
 
   protected TransitRegionStateProcedure(MasterProcedureEnv env, RegionInfo hri,
@@ -188,6 +209,31 @@ public class TransitRegionStateProcedure
     return am.waitMetaLoaded(this) || am.waitMetaAssigned(this, getRegion());
   }
 
+  private void checkAndWaitForOriginalServer(MasterProcedureEnv env, ServerName lastHost)
+    throws ProcedureSuspendedException {
+    ServerManager serverManager = env.getMasterServices().getServerManager();
+    ServerName newNameForServer = serverManager.findServerWithSameHostnamePortWithLock(lastHost);
+    boolean isOnline = serverManager.createDestinationServersList().contains(newNameForServer);
+
+    if (!isOnline && forceRetainmentRetryCounter.shouldRetry()) {
+      int backoff =
+        Math.toIntExact(forceRetainmentRetryCounter.getBackoffTimeAndIncrementAttempts());
+      forceRetainmentTotalWait += backoff;
+      LOG.info(
+        "Suspending the TRSP PID={} for {}ms because {} is true and previous host {} "
+          + "for region is not yet online.",
+        this.getProcId(), backoff, FORCE_REGION_RETAINMENT, lastHost);
+      setTimeout(backoff);
+      setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);
+      throw new ProcedureSuspendedException();
+    }
+    LOG.info(
+      "{} is true. TRSP PID={} waited {}ms for host {} to come back online. "
+        + "Did host come back online? {}",
+      FORCE_REGION_RETAINMENT, this.getProcId(), forceRetainmentTotalWait, lastHost, isOnline);
+    initForceRetainmentRetryCounter(env);
+  }
+
   private void queueAssign(MasterProcedureEnv env, RegionStateNode regionNode)
     throws ProcedureSuspendedException {
     boolean retain = false;
@@ -200,8 +246,17 @@ public class TransitRegionStateProcedure
         regionNode.setRegionLocation(assignCandidate);
       } else if (regionNode.getLastHost() != null) {
         retain = true;
-        LOG.info("Setting lastHost as the region location {}", regionNode.getLastHost());
+        LOG.info("Setting lastHost {} as the location for region {}", regionNode.getLastHost(),
+          regionNode.getRegionInfo().getEncodedName());
         regionNode.setRegionLocation(regionNode.getLastHost());
+      }
+      if (
+        regionNode.getRegionLocation() != null
+          && env.getAssignmentManager().isForceRegionRetainment()
+      ) {
+        LOG.warn("{} is set to true. This may delay regions re-assignment "
+          + "upon RegionServers crashes or restarts.", FORCE_REGION_RETAINMENT);
+        checkAndWaitForOriginalServer(env, regionNode.getRegionLocation());
       }
     }
     LOG.info("Starting {}; {}; forceNewPlan={}, retain={}", this, regionNode.toShortString(),

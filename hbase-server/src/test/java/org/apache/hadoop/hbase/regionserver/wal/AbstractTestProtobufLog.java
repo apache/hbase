@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +36,8 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALTrailer;
 
 /**
  * WAL tests that can be reused across providers.
@@ -89,6 +93,9 @@ public abstract class AbstractTestProtobufLog {
    */
   @Test
   public void testWALTrailer() throws IOException {
+    // make sure that the size for WALTrailer is 0, we need this assumption when reading partial
+    // WALTrailer
+    assertEquals(0, WALTrailer.newBuilder().build().getSerializedSize());
     // read With trailer.
     doRead(true);
     // read without trailer
@@ -116,7 +123,8 @@ public abstract class AbstractTestProtobufLog {
     try (WALProvider.Writer writer = createWriter(path)) {
       ProtobufLogTestHelper.doWrite(writer, withTrailer, tableName, columnCount, recordCount, row,
         timestamp);
-      try (ProtobufLogReader reader = (ProtobufLogReader) wals.createReader(fs, path)) {
+      try (ProtobufWALStreamReader reader =
+        (ProtobufWALStreamReader) wals.createStreamReader(fs, path)) {
         ProtobufLogTestHelper.doRead(reader, withTrailer, tableName, columnCount, recordCount, row,
           timestamp);
       }

@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
 import java.util.Queue;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-public class FaultyProtobufLogReader extends ProtobufLogReader {
+public class FaultyProtobufWALStreamReader extends ProtobufWALStreamReader {
 
   // public until class relocates to o.a.h.h.wal
   public enum FailureType {
@@ -32,7 +32,7 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
     NONE
   }
 
-  Queue<Entry> nextQueue = new LinkedList<>();
+  Queue<Entry> nextQueue = new ArrayDeque<>();
   int numberOfFileEntries = 0;
 
   FailureType getFailureType() {
@@ -42,13 +42,15 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
   @Override
   public Entry next(Entry reuse) throws IOException {
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
-      boolean b;
-      do {
+      for (;;) {
         Entry e = new Entry();
-        b = readNext(e);
+        e = super.next(e);
+        if (e == null) {
+          break;
+        }
         nextQueue.offer(e);
         numberOfFileEntries++;
-      } while (b);
+      }
     }
 
     if (nextQueue.size() == this.numberOfFileEntries && getFailureType() == FailureType.BEGINNING) {
@@ -59,10 +61,6 @@ public class FaultyProtobufLogReader extends ProtobufLogReader {
       throw new IOException("fake Exception");
     } else if (nextQueue.size() == 1 && getFailureType() == FailureType.END) {
       throw new IOException("fake Exception");
-    }
-
-    if (nextQueue.peek() != null) {
-      edit++;
     }
 
     Entry e = nextQueue.poll();

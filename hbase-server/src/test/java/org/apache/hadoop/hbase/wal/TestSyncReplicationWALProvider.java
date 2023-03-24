@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogTestHelper;
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufWALStreamReader;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.regionserver.SyncReplicationPeerInfoProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -115,13 +115,13 @@ public class TestSyncReplicationWALProvider {
       mvcc);
     Path localFile = wal.getCurrentFileName();
     Path remoteFile = new Path(REMOTE_WAL_DIR + "/" + PEER_ID, localFile.getName());
-    try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
+    try (ProtobufWALStreamReader reader =
+      (ProtobufWALStreamReader) FACTORY.createStreamReader(UTIL.getTestFileSystem(), localFile)) {
       ProtobufLogTestHelper.doRead(reader, false, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
-    try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
+    try (ProtobufWALStreamReader reader =
+      (ProtobufWALStreamReader) FACTORY.createStreamReader(UTIL.getTestFileSystem(), remoteFile)) {
       ProtobufLogTestHelper.doRead(reader, false, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
@@ -146,13 +146,13 @@ public class TestSyncReplicationWALProvider {
         return sb.toString();
       }
     });
-    try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), localFile)) {
+    try (ProtobufWALStreamReader reader =
+      (ProtobufWALStreamReader) FACTORY.createStreamReader(UTIL.getTestFileSystem(), localFile)) {
       ProtobufLogTestHelper.doRead(reader, true, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }
-    try (ProtobufLogReader reader =
-      (ProtobufLogReader) FACTORY.createReader(UTIL.getTestFileSystem(), remoteFile)) {
+    try (ProtobufWALStreamReader reader =
+      (ProtobufWALStreamReader) FACTORY.createStreamReader(UTIL.getTestFileSystem(), remoteFile)) {
       ProtobufLogTestHelper.doRead(reader, true, REGION, TABLE, columnCount, recordCount, row,
         timestamp);
     }

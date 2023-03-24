@@ -17,32 +17,28 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import java.io.EOFException;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+/**
+ * A special EOFException to indicate that the EOF happens when we read the header of a WAL file.
+ * <p/>
+ * This usually means the WAL file just contains nothing and we are safe to skip over it.
+ */
+@InterfaceAudience.Private
+public class WALHeaderEOFException extends EOFException {
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class SecureProtobufLogWriter extends ProtobufLogWriter {
+  private static final long serialVersionUID = -4544368452826740759L;
 
-  private Encryptor encryptor = null;
-
-  @Override
-  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
-    throws IOException {
-    return super.buildSecureWALHeader(conf, builder);
+  public WALHeaderEOFException() {
   }
 
-  @Override
-  protected void setEncryptor(Encryptor encryptor) {
-    this.encryptor = encryptor;
+  public WALHeaderEOFException(String s) {
+    super(s);
   }
 
-  @Override
-  protected void initAfterHeader(boolean doCompress) throws IOException {
-    super.secureInitAfterHeader(doCompress, encryptor);
+  public WALHeaderEOFException(String s, Throwable cause) {
+    super(s);
+    initCause(cause);
   }
 }

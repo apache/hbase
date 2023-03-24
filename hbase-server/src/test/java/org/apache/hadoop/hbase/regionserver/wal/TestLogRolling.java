@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.BeforeClass;
@@ -515,9 +516,8 @@ public class TestLogRolling extends AbstractTestLogRolling {
           TEST_UTIL.getConfiguration(), null);
 
         LOG.debug("Reading WAL " + CommonFSUtils.getPath(p));
-        WAL.Reader reader = null;
-        try {
-          reader = WALFactory.createReader(fs, p, TEST_UTIL.getConfiguration());
+        try (WALStreamReader reader =
+          WALFactory.createStreamReader(fs, p, TEST_UTIL.getConfiguration())) {
           WAL.Entry entry;
           while ((entry = reader.next()) != null) {
             LOG.debug("#" + entry.getKey().getSequenceId() + ": " + entry.getEdit().getCells());
@@ -528,8 +528,6 @@ public class TestLogRolling extends AbstractTestLogRolling {
           }
         } catch (EOFException e) {
           LOG.debug("EOF reading file " + CommonFSUtils.getPath(p));
-        } finally {
-          if (reader != null) reader.close();
         }
       }
 

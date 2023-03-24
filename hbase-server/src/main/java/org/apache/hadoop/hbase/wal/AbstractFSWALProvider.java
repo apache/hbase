@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +28,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -40,7 +38,6 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -69,15 +66,15 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   public static final String SEPARATE_OLDLOGDIR = "hbase.separate.oldlogdir.by.regionserver";
   public static final boolean DEFAULT_SEPARATE_OLDLOGDIR = false;
 
-  // Only public so classes back in regionserver.wal can access
-  public interface Reader extends WAL.Reader {
+  public interface Initializer {
     /**
-     * @param fs   File system.
-     * @param path Path.
-     * @param c    Configuration.
-     * @param s    Input stream that may have been pre-opened by the caller; may be null.
+     * A method to initialize a WAL reader.
+     * @param startPosition the start position you want to read from, -1 means start reading from
+     *                      the first WAL entry. Notice that, the first entry is not started at
+     *                      position as we have several headers, so typically you should not pass 0
+     *                      here.
      */
-    void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
+    void init(FileSystem fs, Path path, Configuration c, long startPosition) throws IOException;
   }
 
   protected volatile T wal;
@@ -418,10 +415,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       serverName = ServerName.parseServerName(logDirName);
     } catch (IllegalArgumentException | IllegalStateException ex) {
       serverName = null;
-      LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
+      LOG.warn("Cannot parse a server name from path={}", logFile, ex);
     }
-    if (serverName != null && serverName.getStartcode() < 0) {
-      LOG.warn("Invalid log file path=" + logFile);
+    if (serverName != null && serverName.getStartCode() < 0) {
+      LOG.warn("Invalid log file path={}, start code {} is less than 0", logFile,
+        serverName.getStartCode());
       serverName = null;
     }
     return serverName;
@@ -486,6 +484,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
+    if (serverName == null) {
+      LOG.warn("Can not extract server name from path {}, "
+        + "give up searching the separated old log dir", path);
+      return null;
+    }
     // Try finding the log in separate old log dir
     oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
       .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
@@ -498,62 +501,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return null;
   }
 
-  /**
-   * Opens WAL reader with retries and additional exception handling
-   * @param path path to WAL file
-   * @param conf configuration
-   * @return WAL Reader instance
-   */
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "DCN_NULLPOINTER_EXCEPTION",
-      justification = "HDFS-4380")
-  public static WAL.Reader openReader(Path path, Configuration conf) throws IOException {
-    long retryInterval = 2000; // 2 sec
-    int maxAttempts = 30;
-    int attempt = 0;
-    Exception ee = null;
-    org.apache.hadoop.hbase.wal.WAL.Reader reader = null;
-    while (reader == null && attempt++ < maxAttempts) {
-      try {
-        // Detect if this is a new file, if so get a new reader else
-        // reset the current reader so that we see the new data
-        reader = WALFactory.createReader(path.getFileSystem(conf), path, conf);
-        return reader;
-      } catch (FileNotFoundException fnfe) {
-        // If the log was archived, continue reading from there
-        Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
-        // archivedLog can be null if unable to locate in archiveDir.
-        if (archivedLog != null) {
-          return openReader(archivedLog, conf);
-        } else {
-          throw fnfe;
-        }
-      } catch (LeaseNotRecoveredException lnre) {
-        // HBASE-15019 the WAL was not closed due to some hiccup.
-        LOG.warn("Try to recover the WAL lease " + path, lnre);
-        recoverLease(conf, path);
-        reader = null;
-        ee = lnre;
-      } catch (NullPointerException npe) {
-        // Workaround for race condition in HDFS-4380
-        // which throws a NPE if we open a file before any data node has the most recent block
-        // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
-        LOG.warn("Got NPE opening reader, will retry.");
-        reader = null;
-        ee = npe;
-      }
-      if (reader == null) {
-        // sleep before next attempt
-        try {
-          Thread.sleep(retryInterval);
-        } catch (InterruptedException e) {
-        }
-      }
-    }
-    throw new IOException("Could not open reader", ee);
-  }
-
   // For HBASE-15019
-  private static void recoverLease(final Configuration conf, final Path path) {
+  public static void recoverLease(Configuration conf, Path path) {
     try {
       final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
       RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {

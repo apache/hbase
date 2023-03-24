@@ -509,6 +509,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>tianhang</id>
+      <name>Tianhang Tang</name>
+      <email>tianhang@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>tianjy</id>
       <email>tianjy@apache.org</email>
       <timezone>+8</timezone>
@@ -802,8 +808,8 @@
     <javadoc.audience-annotations.version>0.13.0</javadoc.audience-annotations.version>
     <avro.version>1.11.0</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
-    <commons-codec.version>1.13</commons-codec.version>
-    <commons-validator.version>1.6</commons-validator.version>
+    <commons-codec.version>1.15</commons-codec.version>
+    <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
@@ -811,20 +817,20 @@
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
-    <jackson.version>2.14.0</jackson.version>
-    <jackson.databind.version>2.14.0</jackson.databind.version>
+    <jackson.version>2.14.1</jackson.version>
+    <jackson.databind.version>2.14.1</jackson.databind.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>3.1.0</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <glassfish.jsp.version>2.3.2</glassfish.jsp.version>
     <glassfish.el.version>3.0.1-b08</glassfish.el.version>
-    <jruby.version>9.3.4.0</jruby.version>
+    <jruby.version>9.3.9.0</jruby.version>
     <junit.version>4.13.2</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.15.0</opentelemetry.version>
     <opentelemetry-javaagent.version>1.15.0</opentelemetry-javaagent.version>
     <log4j2.version>2.17.2</log4j2.version>
-    <mockito-core.version>2.28.2</mockito-core.version>
+    <mockito.version>4.11.0</mockito.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
     <thrift.version>0.14.1</thrift.version>
@@ -835,8 +841,8 @@
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.2</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.1.42</joni.version>
-    <jcodings.version>1.0.56</jcodings.version>
+    <joni.version>2.1.43</joni.version>
+    <jcodings.version>1.0.57</jcodings.version>
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.70</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
@@ -874,13 +880,17 @@
     <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.21</aircompressor.version>
-    <brotli4j.version>1.8.0</brotli4j.version>
+    <aircompressor.version>0.24</aircompressor.version>
+    <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
-    <snappy.version>1.1.8.4</snappy.version>
+    <snappy.version>1.1.9.1</snappy.version>
     <xz.version>1.9</xz.version>
-    <zstd-jni.version>1.5.0-4</zstd-jni.version>
-    <hbase-thirdparty.version>4.1.3</hbase-thirdparty.version>
+    <zstd-jni.version>1.5.4-2</zstd-jni.version>
+    <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
+    <!-- Coverage properties -->
+    <jacoco.version>0.8.8</jacoco.version>
+    <jacocoArgLine/>
+    <sonar-maven-plugin.version>3.9.1.2184</sonar-maven-plugin.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
@@ -937,8 +947,7 @@
       -Dorg.apache.hbase.thirdparty.io.netty.leakDetection.level=advanced
       -Dio.opentelemetry.context.enableStrictContext=true</hbase-surefire.cygwin-argLine>
     <!-- Surefire argLine defaults to Linux, cygwin argLine is used in the os.windows profile -->
-    <argLine>${hbase-surefire.argLine}</argLine>
-    <jacoco.version>0.7.5.201505241946</jacoco.version>
+    <argLine>${hbase-surefire.argLine} @{jacocoArgLine}</argLine>
     <extra.enforcer.version>1.5.1</extra.enforcer.version>
     <enforcer.version>3.0.0</enforcer.version>
     <restrict-imports.enforcer.version>0.14.0</restrict-imports.enforcer.version>
@@ -1545,9 +1554,10 @@
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <version>${mockito-core.version}</version>
-        <scope>test</scope>
+        <artifactId>mockito-bom</artifactId>
+        <version>${mockito.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>io.opentelemetry</groupId>
@@ -2866,6 +2876,19 @@
           </formats>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>2.7.3</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>makeBom</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
     <extensions>
       <extension>
@@ -2953,7 +2976,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3003,7 +3026,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3061,7 +3084,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3118,7 +3141,7 @@
                 <additionalDependency>
                   <groupId>org.mockito</groupId>
                   <artifactId>mockito-core</artifactId>
-                  <version>${mockito-core.version}</version>
+                  <version>${mockito.version}</version>
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
@@ -3201,9 +3224,13 @@
           --add-opens java.base/java.lang=ALL-UNNAMED
           --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
           --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-opens java.base/java.util=ALL-UNNAMED
+          --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+          --add-opens java.base/jdk.internal.util.random=ALL-UNNAMED
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
-          ${hbase-surefire.argLine}</argLine>
+          ${hbase-surefire.argLine}
+          @{jacocoArgLine}</argLine>
         <!--
           Value to use for surefire when running jdk11.
           TODO: replicate logic for windows
@@ -3282,6 +3309,12 @@
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
+      <properties>
+        <sonar.exclusions>**/generated/**/*</sonar.exclusions>
+        <sonar.coverage.exclusions>**/generated/**/*,hbase-it/**,**/hbase-logging/**/*,**/hbase-testing-util/**/*,
+          **/hbase-protocol-shaded/**/*,**/hbase-external-blockcache/**/*,**/hbase-examples/**/*,
+          **/hbase-archetypes/**/*</sonar.coverage.exclusions>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -3289,11 +3322,8 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
             <configuration>
-              <systemPropertyVariables>
-                <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
-              </systemPropertyVariables>
               <excludes>
-                <exclude>**/generated/**/*.class</exclude>
+                <exclude>**/generated/**/*</exclude>
               </excludes>
             </configuration>
             <executions>
@@ -3302,6 +3332,11 @@
                 <goals>
                   <goal>prepare-agent</goal>
                 </goals>
+                <phase>initialize</phase>
+                <configuration>
+                  <propertyName>jacocoArgLine</propertyName>
+                  <append>true</append>
+                </configuration>
               </execution>
               <execution>
                 <id>report</id>
@@ -3311,6 +3346,11 @@
                 <phase>prepare-package</phase>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+            <version>${sonar-maven-plugin.version}</version>
           </plugin>
         </plugins>
       </build>
@@ -3347,7 +3387,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine}</argLine>
+        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
@@ -3744,36 +3784,6 @@
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-hdfs</artifactId>
-            <version>${hadoop-three.version}</version>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
-            <scope>test</scope>
-            <exclusions>
-              <exclusion>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-core</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>ch.qos.reload4j</groupId>
-                <artifactId>reload4j</artifactId>
-              </exclusion>
-              <exclusion>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-reload4j</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-auth</artifactId>
             <version>${hadoop-three.version}</version>
             <exclusions>
@@ -3898,7 +3908,6 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <version>${hadoop-three.version}</version>
-            <classifier>tests</classifier>
             <type>test-jar</type>
             <exclusions>
               <exclusion>

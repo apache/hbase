@@ -375,16 +375,15 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private void onCallFinished(Call call, HBaseRpcController hrc, Address addr,
     RpcCallback<Message> callback) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
-    final boolean failed = (call.error != null) ? true : false;
     if (metrics != null) {
-      metrics.updateRpc(call.md, call.param, call.callStats, failed);
+      metrics.updateRpc(call.md, call.param, call.callStats, call.error);
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("CallId: {}, call: {}, startTime: {}ms, callTime: {}ms, status: {}", call.id,
         call.md.getName(), call.getStartTime(), call.callStats.getCallTimeMs(),
-        failed ? "failed" : "successful");
+        call.error != null ? "failed" : "successful");
     }
-    if (failed) {
+    if (call.error != null) {
       if (call.error instanceof RemoteException) {
         call.error.fillInStackTrace();
         hrc.setFailed(call.error);
