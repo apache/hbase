@@ -394,10 +394,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       serverName = ServerName.parseServerName(logDirName);
     } catch (IllegalArgumentException | IllegalStateException ex) {
       serverName = null;
-      LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
+      LOG.warn("Cannot parse a server name from path={}", logFile, ex);
     }
     if (serverName != null && serverName.getStartCode() < 0) {
-      LOG.warn("Invalid log file path=" + logFile);
+      LOG.warn("Invalid log file path={}, start code {} is less than 0", logFile,
+        serverName.getStartCode());
       serverName = null;
     }
     return serverName;
@@ -462,6 +463,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
+    if (serverName == null) {
+      LOG.warn("Can not extract server name from path {}, "
+        + "give up searching the separated old log dir", path);
+      return null;
+    }
     // Try finding the log in separate old log dir
     oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
       .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
