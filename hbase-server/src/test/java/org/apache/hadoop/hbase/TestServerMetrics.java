@@ -28,6 +28,7 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
@@ -58,6 +59,8 @@ public class TestServerMetrics {
       metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getReadRequestCount()).sum());
     assertEquals(100,
       metrics.getRegionMetrics().values().stream().mapToLong(v -> v.getCpRequestCount()).sum());
+    assertEquals(1.0, metrics.getRegionMetrics().values().stream()
+      .mapToDouble(v -> v.getPrefetchCacheRatio()).sum(), 0);
     assertEquals(300, metrics.getRegionMetrics().values().stream()
       .mapToLong(v -> v.getFilteredReadRequestCount()).sum());
   }
@@ -95,16 +98,18 @@ public class TestServerMetrics {
       .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
       .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
 
-    ClusterStatusProtos.RegionLoad rlOne =
-      ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
-        .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
-        .setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
-        .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE).build();
+    ClusterStatusProtos.RegionLoad rlOne = ClusterStatusProtos.RegionLoad.newBuilder()
+      .setRegionSpecifier(rSpecOne).setStores(10).setStorefiles(101).setStoreUncompressedSizeMB(106)
+      .setStorefileSizeMB(520).setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42)
+      .setRootIndexSizeKB(201).setReadRequestsCount(Integer.MAX_VALUE)
+      .setWriteRequestsCount(Integer.MAX_VALUE).setPrefetchCacheRatio(0.0f)
+      .setServerName(ProtobufUtil.toServerName(new ServerName("localhost1", 1, 1))).build();
     ClusterStatusProtos.RegionLoad rlTwo = ClusterStatusProtos.RegionLoad.newBuilder()
       .setRegionSpecifier(rSpecTwo).setStores(3).setStorefiles(13).setStoreUncompressedSizeMB(23)
       .setStorefileSizeMB(300).setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40)
       .setRootIndexSizeKB(303).setReadRequestsCount(Integer.MAX_VALUE)
-      .setWriteRequestsCount(Integer.MAX_VALUE).setCpRequestsCount(100).build();
+      .setWriteRequestsCount(Integer.MAX_VALUE).setCpRequestsCount(100).setPrefetchCacheRatio(1.0f)
+      .setServerName(ProtobufUtil.toServerName(new ServerName("localhost2", 1, 1))).build();
 
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
       .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();

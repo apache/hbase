@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class PrefetchCacheCostFunction extends CostFunction {
-  private static final Logger LOG = LoggerFactory.getLogger(PrefetchCacheCostFunction.class);
   private static final String PREFETCH_CACHE_COST_KEY =
     "hbase.master.balancer.stochastic.prefetchCacheCost";
   private static final float DEFAULT_PREFETCH_COST = 500;
@@ -83,10 +82,6 @@ public class PrefetchCacheCostFunction extends CostFunction {
     double prefetchDelta = newServerPrefetch - oldServerPrefetch;
     double normalizeDelta = bestPrefetchRatio == 0.0 ? 0.0 : prefetchDelta / bestPrefetchRatio;
     prefetchRatio += normalizeDelta;
-    LOG.debug(
-      "Region {} moved from {} to {} with oldServerPrefetch {},"
-        + " newServerPrefetch {} and bestPrefetchRatio {}",
-      region, oldServer, newServer, oldServerPrefetch, newServerPrefetch, bestPrefetchRatio);
   }
 
   @Override

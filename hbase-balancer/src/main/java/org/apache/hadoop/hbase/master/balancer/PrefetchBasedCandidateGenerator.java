@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 class PrefetchBasedCandidateGenerator extends CandidateGenerator {
