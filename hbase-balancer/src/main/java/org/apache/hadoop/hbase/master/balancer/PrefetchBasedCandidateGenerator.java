@@ -24,8 +24,6 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 class PrefetchBasedCandidateGenerator extends CandidateGenerator {
-  private static final Logger LOG = LoggerFactory.getLogger(PrefetchBasedCandidateGenerator.class);
-
   private static float PREFETCH_RATIO_DIFF_FACTOR = 1.25f;
 
   @Override

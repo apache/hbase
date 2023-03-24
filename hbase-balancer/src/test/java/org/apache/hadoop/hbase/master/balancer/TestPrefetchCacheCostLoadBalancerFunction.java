@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.apache.hadoop.hbase.master.balancer.StochasticBalancerTestBase.loadBalancer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -41,17 +40,15 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestPrefetchCacheCostLoadBalancerFunction.class);
 
-  private static final String REGION_KEY = "testRegion";
-
   // Mapping of prefetch test -> expected prefetch
-  private float[] expectedPrefetch = { 0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.572f, 0.0f, 0.075f };
+  private final float[] expectedPrefetch = { 0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.572f, 0.0f, 0.075f };
 
   /**
    * Data set to testPrefetchCost: [test][0][0] = mapping of server to number of regions it hosts
    * [test][region + 1][0] = server that region is hosted on [test][region + 1][server + 1] =
    * prefetch of that region on server
    */
-  private int[][][] clusterRegionPrefetchMocks = new int[][][] {
+  private final int[][][] clusterRegionPrefetchMocks = new int[][][] {
     // Test 1: each region is entirely on server that hosts it
     // Cost of moving the regions in this case should be high as the regions are fully prefetched
     // on the server they are currently hosted on
