@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -1556,7 +1557,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       Collection<HStoreFile> filesInStore = store.getStorefiles();
       if (!filesInStore.isEmpty()) {
         for (HStoreFile hStoreFile : filesInStore) {
-          if (PrefetchExecutor.isFilePrefetched(hStoreFile.getPath().getName())) {
+          String tempFileName = hStoreFile.getPath().getName();
+          // PrefetchExecutor adds the encoded HFile name if the file has been prefetched. Every
+          // store file in this region is then checked if it has been prefetched. If the storefile
+          // is a link, then it's format is <table=region-hfile>. The comparison here would fail if
+          // this format is used. In order for this comparison to success in such case, the HFile
+          // name needs to be extracted from the HFileLink
+          if (HFileLink.isHFileLink(tempFileName)) {
+            tempFileName = HFileLink.getReferencedHFileName(tempFileName);
+          }
+          if (PrefetchExecutor.isFilePrefetched(tempFileName)) {
             filesAlreadyPrefetched++;
           }
         }
@@ -1608,7 +1618,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
       .setLastMajorCompactionTs(r.getOldestHfileTs(true))
-      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached).setServerName(serverName.getServerName());
+      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached)
+      .setServerName(ProtobufUtil.toServerName(serverName));
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }

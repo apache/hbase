@@ -121,7 +121,7 @@ class BalancerClusterState {
   // Maps region -> serverIndex with best prefect ratio
   private int[] regionServerIndexWithBestPrefetchRatio;
   // Historical region server prefetch ratio
-  Map<String, Map<String, Float>> historicalRegionServerPrefetchRatio;
+  Map<String, Map<Address, Float>> historicalRegionServerPrefetchRatio;
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -138,7 +138,7 @@ class BalancerClusterState {
 
   BalancerClusterState(Map<ServerName, List<RegionInfo>> clusterState,
     Map<String, Deque<BalancerRegionLoad>> loads, RegionHDFSBlockLocationFinder regionFinder,
-    RackManager rackManager, Map<String, Map<String, Float>> oldRegionServerPrefetchRatio) {
+    RackManager rackManager, Map<String, Map<Address, Float>> oldRegionServerPrefetchRatio) {
     this(null, clusterState, loads, regionFinder, rackManager, oldRegionServerPrefetchRatio);
   }
 
@@ -146,7 +146,7 @@ class BalancerClusterState {
   BalancerClusterState(Collection<RegionInfo> unassignedRegions,
     Map<ServerName, List<RegionInfo>> clusterState, Map<String, Deque<BalancerRegionLoad>> loads,
     RegionHDFSBlockLocationFinder regionFinder, RackManager rackManager,
-    Map<String, Map<String, Float>> oldRegionServerPrefetchRatio) {
+    Map<String, Map<Address, Float>> oldRegionServerPrefetchRatio) {
     if (unassignedRegions == null) {
       unassignedRegions = Collections.emptyList();
     }
@@ -611,15 +611,15 @@ class BalancerClusterState {
     // Seartch using the index name and server name and not the index id and server id as these ids
     // may change when a server is marked as dead or a new server is added.
     String regionNameAsString = regions[region].getRegionNameAsString();
-    String serverNameAsString = servers[regionServerIndex].getServerName();
+    Address serverAddress = servers[regionServerIndex].getAddress();
     if (
       historicalRegionServerPrefetchRatio != null
         && historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)
     ) {
-      Map<String, Float> serverPrefetchRatio =
+      Map<Address, Float> serverPrefetchRatio =
         historicalRegionServerPrefetchRatio.get(regionNameAsString);
-      if (serverPrefetchRatio.containsKey(serverNameAsString)) {
-        prefetchRatio = serverPrefetchRatio.get(serverNameAsString);
+      if (serverPrefetchRatio.containsKey(serverAddress)) {
+        prefetchRatio = serverPrefetchRatio.get(serverAddress);
 
         // The old prefetch cache ratio has been accounted for and hence, clear up this information
         historicalRegionServerPrefetchRatio.remove(regionNameAsString, serverPrefetchRatio);

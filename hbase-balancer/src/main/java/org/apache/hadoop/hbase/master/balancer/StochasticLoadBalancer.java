@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -132,8 +133,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
   // Map of old prefetch ratio (region name ---> old server name ---> old prefetch ratio)
-  Map<String, Map<String, Float>> historicRegionServerPrefetchRatio =
-    new HashMap<String, Map<String, Float>>();
+  Map<String, Map<Address, Float>> historicRegionServerPrefetchRatio =
+    new HashMap<String, Map<Address, Float>>();
 
   // values are defaults
   private int maxSteps = DEFAULT_MAX_STEPS;
@@ -734,7 +735,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
         String regionNameAsString = RegionInfo.getRegionNameAsString(regionName);
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(regionNameAsString);
-        String oldServerName = null;
+        ServerName oldServerName = null;
         float oldPrefetchRatio = 0.0f;
         if (rLoads == null) {
           rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
@@ -746,10 +747,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
             rLoads.remove();
           }
         }
-        if (oldServerName != null && !oldServerName.equals(rm.getServerName())) {
+        if (oldServerName != null && !ServerName.isSameAddress(oldServerName, rm.getServerName())) {
           // Record the old region server prefetch ratio
-          Map<String, Float> serverPrefetchRatio = new HashMap<>();
-          serverPrefetchRatio.put(oldServerName, oldPrefetchRatio);
+          Map<Address, Float> serverPrefetchRatio = new HashMap<>();
+          serverPrefetchRatio.put(oldServerName.getAddress(), oldPrefetchRatio);
           historicRegionServerPrefetchRatio.put(regionNameAsString, serverPrefetchRatio);
         }
         rLoads.add(new BalancerRegionLoad(rm));

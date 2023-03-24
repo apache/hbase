@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.balancer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compute the cost of a potential cluster configuration based on the number of HFile's already
@@ -27,13 +29,14 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class PrefetchCacheCostFunction extends CostFunction {
+  private static final Logger LOG = LoggerFactory.getLogger(PrefetchCacheCostFunction.class);
   private static final String PREFETCH_CACHE_COST_KEY =
     "hbase.master.balancer.stochastic.prefetchCacheCost";
   private static final float DEFAULT_PREFETCH_COST = 500;
 
   private String prefetchedFileListPath;
   private double prefetchRatio;
-  private float bestPrefetchRatio;
+  private double bestPrefetchRatio;
 
   /**
    * The prefetch cache cost function is enabled only when the prefetch file list persistence is
@@ -49,15 +52,15 @@ public class PrefetchCacheCostFunction extends CostFunction {
     this.setMultiplier(prefetchedFileListPath == null
       ? 0.0f
       : conf.getFloat(PREFETCH_CACHE_COST_KEY, DEFAULT_PREFETCH_COST));
-    prefetchRatio = 0.0f;
-    bestPrefetchRatio = 0.0f;
+    prefetchRatio = 0.0;
+    bestPrefetchRatio = 0.0;
   }
 
   @Override
   void prepare(BalancerClusterState cluster) {
     super.prepare(cluster);
-    prefetchRatio = 0.0f;
-    bestPrefetchRatio = 0.0f;
+    prefetchRatio = 0.0;
+    bestPrefetchRatio = 0.0;
 
     for (int region = 0; region < cluster.numRegions; region++) {
       prefetchRatio +=
@@ -65,7 +68,7 @@ public class PrefetchCacheCostFunction extends CostFunction {
       bestPrefetchRatio += cluster.getOrComputeWeightedPrefetchRatio(region,
         cluster.getOrComputeServerWithBestPrefetchRatio()[region]);
     }
-    prefetchRatio = bestPrefetchRatio == 0.0f ? 1.0f : prefetchRatio / bestPrefetchRatio;
+    prefetchRatio = bestPrefetchRatio == 0.0 ? 1.0 : prefetchRatio / bestPrefetchRatio;
   }
 
   @Override
@@ -75,11 +78,15 @@ public class PrefetchCacheCostFunction extends CostFunction {
 
   @Override
   protected void regionMoved(int region, int oldServer, int newServer) {
-    float oldServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, oldServer);
-    float newServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, newServer);
-    float prefetchDelta = newServerPrefetch - oldServerPrefetch;
-    float normalizeDelta = bestPrefetchRatio == 0.0f ? 0.0f : prefetchDelta / bestPrefetchRatio;
+    double oldServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, oldServer);
+    double newServerPrefetch = cluster.getOrComputeWeightedPrefetchRatio(region, newServer);
+    double prefetchDelta = newServerPrefetch - oldServerPrefetch;
+    double normalizeDelta = bestPrefetchRatio == 0.0 ? 0.0 : prefetchDelta / bestPrefetchRatio;
     prefetchRatio += normalizeDelta;
+    LOG.debug(
+      "Region {} moved from {} to {} with oldServerPrefetch {},"
+        + " newServerPrefetch {} and bestPrefetchRatio {}",
+      region, oldServer, newServer, oldServerPrefetch, newServerPrefetch, bestPrefetchRatio);
   }
 
   @Override

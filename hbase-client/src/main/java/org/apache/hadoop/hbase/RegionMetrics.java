@@ -143,5 +143,5 @@ public interface RegionMetrics {
   float getPrefetchCacheRatio();
 
   /** Returns the name of the server hosting this region */
-  String getServerName();
+  ServerName getServerName();
 }

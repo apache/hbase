@@ -81,7 +81,7 @@ public final class RegionMetricsBuilder {
       .setUncompressedStoreFileSize(
         new Size(regionLoadPB.getStoreUncompressedSizeMB(), Size.Unit.MEGABYTE))
       .setPrefetchCacheRatio(regionLoadPB.getPrefetchCacheRatio())
-      .setServerName(regionLoadPB.getServerName()).build();
+      .setServerName(ProtobufUtil.toServerName(regionLoadPB.getServerName())).build();
   }
 
   private static List<ClusterStatusProtos.StoreSequenceId>
@@ -122,7 +122,7 @@ public final class RegionMetricsBuilder {
       .setStoreUncompressedSizeMB(
         (int) regionMetrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE))
       .setPrefetchCacheRatio(regionMetrics.getPrefetchCacheRatio())
-      .setServerName(regionMetrics.getServerName()).build();
+      .setServerName(ProtobufUtil.toServerName(regionMetrics.getServerName())).build();
   }
 
   public static RegionMetricsBuilder newBuilder(byte[] name) {
@@ -157,7 +157,7 @@ public final class RegionMetricsBuilder {
   private long blocksTotalWeight;
   private CompactionState compactionState;
   private float prefetchCacheRatio;
-  private String serverName;
+  private ServerName serverName;
 
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
@@ -298,7 +298,7 @@ public final class RegionMetricsBuilder {
     return this;
   }
 
-  public RegionMetricsBuilder setServerName(String serverName) {
+  public RegionMetricsBuilder setServerName(ServerName serverName) {
     this.serverName = serverName;
     return this;
   }
@@ -342,7 +342,7 @@ public final class RegionMetricsBuilder {
     private final long blocksTotalWeight;
     private final CompactionState compactionState;
     private final float prefetchCacheRatio;
-    private final String serverName;
+    private final ServerName serverName;
 
     RegionMetricsImpl(byte[] name, int storeCount, int storeFileCount, int storeRefCount,
       int maxCompactedStoreFileRefCount, final long compactingCellCount, long compactedCellCount,
@@ -352,7 +352,7 @@ public final class RegionMetricsBuilder {
       long filteredReadRequestCount, long completedSequenceId, Map<byte[], Long> storeSequenceIds,
       float dataLocality, long lastMajorCompactionTimestamp, float dataLocalityForSsd,
       long blocksLocalWeight, long blocksLocalWithSsdWeight, long blocksTotalWeight,
-      CompactionState compactionState, float prefetchCacheRatio, String serverName) {
+      CompactionState compactionState, float prefetchCacheRatio, ServerName serverName) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -525,7 +525,7 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
-    public String getServerName() {
+    public ServerName getServerName() {
       return serverName;
     }
 

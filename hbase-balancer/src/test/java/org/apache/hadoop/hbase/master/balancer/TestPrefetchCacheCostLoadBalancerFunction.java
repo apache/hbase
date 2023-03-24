@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -219,8 +220,8 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
       // regions[0] is an array where index = serverIndex and value = number of regions
       super(mockClusterServers(regionsArray[0], 1), null, null, null, null);
       regionServerPrefetch = new int[regionsArray.length - 1][];
-      Map<String, Map<String, Float>> historicalPrefetchRatio =
-        new HashMap<String, Map<String, Float>>();
+      Map<String, Map<Address, Float>> historicalPrefetchRatio =
+        new HashMap<String, Map<Address, Float>>();
       for (int i = 1; i < regionsArray.length; i++) {
         int regionIndex = i - 1;
         regionServerPrefetch[regionIndex] = new int[regionsArray[i].length - 1];
@@ -230,9 +231,8 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
           regionServerPrefetch[regionIndex][serverIndex] = regionsArray[i][j];
           if (regionsArray[i][j] > 0 && serverIndex != regionsArray[i][0]) {
             // This is the historical prefetch value
-            Map<String, Float> historicalPrefetch = new HashMap<>();
-            historicalPrefetch.put(servers[serverIndex].getServerName(),
-              (float) regionsArray[i][j]);
+            Map<Address, Float> historicalPrefetch = new HashMap<>();
+            historicalPrefetch.put(servers[serverIndex].getAddress(), (float) regionsArray[i][j]);
             historicalPrefetchRatio.put(regions[regionIndex].getRegionNameAsString(),
               historicalPrefetch);
           }
@@ -260,15 +260,15 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
       // Search using the index name and server name and not the index id and server id as these
       // ids may change when a server is marked as dead or a new server is added.
       String regionNameAsString = regions[region].getRegionNameAsString();
-      String serverNameAsString = servers[regionServerIndex].getServerName();
+      Address serverAddress = servers[regionServerIndex].getAddress();
       if (
         historicalRegionServerPrefetchRatio != null
           && historicalRegionServerPrefetchRatio.containsKey(regionNameAsString)
       ) {
-        Map<String, Float> serverPrefetchRatio =
+        Map<Address, Float> serverPrefetchRatio =
           historicalRegionServerPrefetchRatio.get(regionNameAsString);
-        if (serverPrefetchRatio.containsKey(serverNameAsString)) {
-          prefetchRatio = serverPrefetchRatio.get(serverNameAsString);
+        if (serverPrefetchRatio.containsKey(serverAddress)) {
+          prefetchRatio = serverPrefetchRatio.get(serverAddress);
           // The old prefetch cache ratio has been accounted for and hence, clear up this
           // information
           // as it is not needed anymore

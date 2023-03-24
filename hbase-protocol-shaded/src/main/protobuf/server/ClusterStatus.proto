@@ -182,7 +182,7 @@ message RegionLoad {
   optional float prefetch_cache_ratio = 28;
 
   /** The server hosting this region */
-  optional string server_name = 29;
+  optional ServerName server_name = 29;
 }
 
 message UserLoad {
