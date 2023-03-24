@@ -152,9 +152,11 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
       r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName()).join();
-    int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
-    LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
-    assertTrue(("actual count: " + count), count <= 2);
+    TEST_UTIL.waitFor(5000, () -> {
+      int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
+      LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
+      return count <= 2;
+    });
   }
 
   private void setUpforLogRolling() {
