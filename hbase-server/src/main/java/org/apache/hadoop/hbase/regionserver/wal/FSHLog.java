@@ -36,8 +36,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -169,8 +167,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   private final AtomicInteger closeErrorCount = new AtomicInteger();
 
   private final int waitOnShutdownInSeconds;
-  private final ExecutorService closeExecutor = Executors.newCachedThreadPool(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
 
   /**
    * Exception handler to pass the disruptor ringbuffer. Same as native implementation only it logs
@@ -376,28 +372,44 @@ public class FSHLog extends AbstractFSWAL<Writer> {
         LOG.warn(
           "Failed sync-before-close but no outstanding appends; closing WAL" + e.getMessage());
       }
-      long oldFileLen = 0L;
       // It is at the safe point. Swap out writer from under the blocked writer thread.
+      // we will call rollWriter in init method, where we want to create the first writer and
+      // obviously the previous writer is null, so here we need this null check. And why we must
+      // call logRollAndSetupWalProps before closeWriter is that, we will call markClosedAndClean
+      // after closing the writer asynchronously, we need to make sure the WALProps is put into
+      // walFile2Props before we call markClosedAndClean
       if (this.writer != null) {
-        oldFileLen = this.writer.getLength();
+        long oldFileLen = this.writer.getLength();
+        logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
         // In case of having unflushed entries or we already reached the
         // closeErrorsTolerated count, call the closeWriter inline rather than in async
         // way so that in case of an IOE we will throw it back and abort RS.
         inflightWALClosures.put(oldPath.getName(), writer);
         if (isUnflushedEntries() || closeErrorCount.get() >= this.closeErrorsTolerated) {
-          closeWriter(this.writer, oldPath, true);
+          try {
+            closeWriter(this.writer, oldPath, true);
+          } finally {
+            inflightWALClosures.remove(oldPath.getName());
+          }
         } else {
           Writer localWriter = this.writer;
           closeExecutor.execute(() -> {
             try {
               closeWriter(localWriter, oldPath, false);
             } catch (IOException e) {
-              // We will never reach here.
+              LOG.warn("close old writer failed", e);
+            } finally {
+              // call this even if the above close fails, as there is no other chance we can set
+              // closed to true, it will not cause big problems.
+              markClosedAndClean(oldPath);
+              inflightWALClosures.remove(oldPath.getName());
             }
           });
         }
+      } else {
+        logRollAndSetupWalProps(oldPath, newPath, 0);
       }
-      logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
+
       this.writer = nextWriter;
       if (nextWriter != null && nextWriter instanceof ProtobufLogWriter) {
         this.hdfs_out = ((ProtobufLogWriter) nextWriter).getStream();
@@ -452,8 +464,6 @@ public class FSHLog extends AbstractFSWAL<Writer> {
       }
       LOG.warn("Riding over failed WAL close of " + path
         + "; THIS FILE WAS NOT CLOSED BUT ALL EDITS SYNCED SO SHOULD BE OK", ioe);
-    } finally {
-      inflightWALClosures.remove(path.getName());
     }
   }
 

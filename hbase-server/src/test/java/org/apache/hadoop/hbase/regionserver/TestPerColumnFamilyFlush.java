@@ -488,9 +488,8 @@ public class TestPerColumnFamilyFlush {
         // Roll the WAL. The log file count is less than maxLogs so no flush is triggered.
         int currentNumRolledLogFiles = getNumRolledLogFiles(desiredRegion);
         assertNull(getWAL(desiredRegion).rollWriter());
-        while (getNumRolledLogFiles(desiredRegion) <= currentNumRolledLogFiles) {
-          Thread.sleep(100);
-        }
+        TEST_UTIL.waitFor(60000,
+          () -> getNumRolledLogFiles(desiredRegion) > currentNumRolledLogFiles);
       }
       assertEquals(maxLogs, getNumRolledLogFiles(desiredRegion));
       assertTrue(
@@ -529,7 +528,7 @@ public class TestPerColumnFamilyFlush {
         desiredRegion.getStore(FAMILY3).getMemStoreSize().getHeapSize());
       // let WAL cleanOldLogs
       assertNull(getWAL(desiredRegion).rollWriter(true));
-      assertTrue(getNumRolledLogFiles(desiredRegion) < maxLogs);
+      TEST_UTIL.waitFor(60000, () -> getNumRolledLogFiles(desiredRegion) < maxLogs);
     } finally {
       TEST_UTIL.shutdownMiniCluster();
     }

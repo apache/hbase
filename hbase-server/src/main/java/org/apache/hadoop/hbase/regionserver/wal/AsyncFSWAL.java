@@ -35,7 +35,6 @@ import java.util.Queue;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -178,9 +177,6 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
   private final AtomicBoolean consumerScheduled = new AtomicBoolean(false);
 
   private final long batchSize;
-
-  private final ExecutorService closeExecutor = Executors.newCachedThreadPool(
-    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
 
   private volatile AsyncFSOutput fsOut;
 
@@ -718,23 +714,20 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     }
   }
 
-  protected final long closeWriter(AsyncWriter writer, Path path) {
-    if (writer != null) {
-      inflightWALClosures.put(path.getName(), writer);
-      long fileLength = writer.getLength();
-      closeExecutor.execute(() -> {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          LOG.warn("close old writer failed", e);
-        } finally {
-          inflightWALClosures.remove(path.getName());
-        }
-      });
-      return fileLength;
-    } else {
-      return 0L;
-    }
+  private void closeWriter(AsyncWriter writer, Path path) {
+    inflightWALClosures.put(path.getName(), writer);
+    closeExecutor.execute(() -> {
+      try {
+        writer.close();
+      } catch (IOException e) {
+        LOG.warn("close old writer failed", e);
+      } finally {
+        // call this even if the above close fails, as there is no other chance we can set closed to
+        // true, it will not cause big problems.
+        markClosedAndClean(path);
+        inflightWALClosures.remove(path.getName());
+      }
+    });
   }
 
   @Override
@@ -742,8 +735,19 @@ public class AsyncFSWAL extends AbstractFSWAL<AsyncWriter> {
     throws IOException {
     Preconditions.checkNotNull(nextWriter);
     waitForSafePoint();
-    long oldFileLen = closeWriter(this.writer, oldPath);
-    logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
+    // we will call rollWriter in init method, where we want to create the first writer and
+    // obviously the previous writer is null, so here we need this null check. And why we must call
+    // logRollAndSetupWalProps before closeWriter is that, we will call markClosedAndClean after
+    // closing the writer asynchronously, we need to make sure the WALProps is put into
+    // walFile2Props before we call markClosedAndClean
+    if (writer != null) {
+      long oldFileLen = writer.getLength();
+      logRollAndSetupWalProps(oldPath, newPath, oldFileLen);
+      closeWriter(writer, oldPath);
+    } else {
+      logRollAndSetupWalProps(oldPath, newPath, 0);
+    }
+
     this.writer = nextWriter;
     if (nextWriter instanceof AsyncProtobufLogWriter) {
       this.fsOut = ((AsyncProtobufLogWriter) nextWriter).getOutput();
