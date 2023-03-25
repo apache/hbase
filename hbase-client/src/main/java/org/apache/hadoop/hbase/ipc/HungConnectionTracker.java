@@ -102,8 +102,9 @@ public class HungConnectionTracker {
     trackedThreads.put(thread, new ConnectionData(System.nanoTime(), call, address, socket));
   }
 
-  public void complete(Thread thread) {
-    trackedThreads.remove(thread);
+  public boolean complete(Thread thread) {
+    ConnectionData val = trackedThreads.remove(thread);
+    return val == null || val.isInterrupted();
   }
 
   private void processTrackedThreads() {
@@ -141,8 +142,10 @@ public class HungConnectionTracker {
                 connectionData.getSocket().close();
               }
 
+              LOG.debug("Interrupting thread {}", hungThread.getName());
               INTERRUPTED.increment();
               hungThread.interrupt();
+              connectionData.setInterrupted(true);
             } finally {
               complete(hungThread);
             }
@@ -160,6 +163,7 @@ public class HungConnectionTracker {
     private final long remainingTimeNanos;
     private final Address address;
     private final Socket socket;
+    private volatile boolean interrupted;
 
     private ConnectionData(long startTimeNanos, Call call, Address address, Socket socket) {
       this.startTimeNanos = startTimeNanos;
@@ -188,6 +192,14 @@ public class HungConnectionTracker {
 
     public Socket getSocket() {
       return socket;
+    }
+
+    public void setInterrupted(boolean interrupted) {
+      this.interrupted = interrupted;
+    }
+
+    public boolean isInterrupted() {
+      return interrupted;
     }
   }
 }

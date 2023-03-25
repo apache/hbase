@@ -48,13 +48,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.RegionActi
 @InterfaceAudience.Private
 class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse> {
   private MultiAction multiAction;
+  private final int numAttempt;
   private boolean cellBlock;
 
   MultiServerCallable(final ClusterConnection connection, final TableName tableName,
     final ServerName location, final MultiAction multi, RpcController rpcController, int rpcTimeout,
-    RetryingTimeTracker tracker, int priority) {
+    RetryingTimeTracker tracker, int priority, int numAttempt) {
     super(connection, tableName, null, rpcController, rpcTimeout, tracker, priority);
     this.multiAction = multi;
+    this.numAttempt = numAttempt;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so
     // we will store the server here, and throw if someone tries to obtain location/regioninfo.
@@ -150,5 +152,9 @@ class MultiServerCallable extends CancellableRegionServerCallable<MultiResponse>
 
   ServerName getServerName() {
     return location.getServerName();
+  }
+
+  public int getNumAttempt() {
+    return numAttempt;
   }
 }

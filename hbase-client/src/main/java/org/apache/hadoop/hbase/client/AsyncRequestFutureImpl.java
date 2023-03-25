@@ -23,6 +23,7 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
@@ -194,7 +197,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
       try {
         // setup the callable based on the actions, if we don't have one already from the request
         if (callable == null) {
-          callable = createCallable(server, tableName, multiAction);
+          callable = createCallable(server, tableName, multiAction, numAttempt);
         }
         RpcRetryingCaller<AbstractResponse> caller =
           asyncProcess.createCaller(callable, rpcTimeout);
@@ -385,10 +388,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     } else {
       this.replicaGetIndices = null;
     }
-    this.callsInProgress = !hasAnyReplicaGets
-      ? null
-      : Collections
-        .newSetFromMap(new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
+    this.callsInProgress =
+      Collections.newSetFromMap(new ConcurrentHashMap<CancellableRegionServerCallable, Boolean>());
     this.asyncProcess = asyncProcess;
     this.errorsByServer = createServerErrorTracker();
     this.errors = new BatchErrors();
@@ -533,7 +534,13 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
 
   private void manageLocationError(Action action, Exception ex) {
     String msg =
-      "Cannot get replica " + action.getReplicaId() + " location for " + action.getAction();
+      "Cannot get replica " + action.getReplicaId() + " location for " + action.getAction() + ": ";
+    if (ex instanceof OperationTimeoutExceededException) {
+      msg += "Operation timeout exceeded.";
+    } else {
+      msg += ex == null ? "null cause" : ex.toString();
+    }
+
     LOG.error(msg);
     if (ex == null) {
       ex = new IOException(msg);
@@ -1232,7 +1239,29 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
         // stuck here forever
         long cutoff = (EnvironmentEdgeManager.currentTime() + this.operationTimeout) * 1000L;
         if (!waitUntilDone(cutoff)) {
-          throw new SocketTimeoutException("time out before the actionsInProgress changed to zero");
+          String msg = "time out before the actionsInProgress changed to zero, with "
+            + actionsInProgress.get() + " remaining";
+          if (callsInProgress != null) {
+            Map<ServerName, Integer> serversInProgress = new HashMap<>(callsInProgress.size());
+            for (CancellableRegionServerCallable callable : callsInProgress) {
+              if (callable instanceof MultiServerCallable) {
+                MultiServerCallable multiServerCallable = (MultiServerCallable) callable;
+                int numAttempt = multiServerCallable.getNumAttempt();
+                serversInProgress.compute(multiServerCallable.getServerName(),
+                  (k, v) -> v == null ? numAttempt : Math.max(v, numAttempt));
+              }
+            }
+
+            if (serversInProgress.size() > 0) {
+              msg += " on servers: " + serversInProgress.entrySet().stream()
+                .sorted(
+                  Comparator.<Map.Entry<ServerName, Integer>> comparingInt(Map.Entry::getValue)
+                    .reversed())
+                .map(entry -> entry.getKey() + "(" + entry.getValue() + " attempts)")
+                .collect(Collectors.joining(", "));
+            }
+          }
+          throw new SocketTimeoutException(msg);
         }
       } else {
         waitUntilDone(Long.MAX_VALUE);
@@ -1314,9 +1343,10 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
    * Create a callable. Isolated to be easily overridden in the tests.
    */
   private MultiServerCallable createCallable(final ServerName server, TableName tableName,
-    final MultiAction multi) {
+    final MultiAction multi, int numAttempt) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server, multi,
-      asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority());
+      asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority(),
+      numAttempt);
   }
 
   private void updateResult(int index, Object result) {

@@ -43,6 +43,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
@@ -98,6 +99,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       justification = "We are always under lock actually")
   private Thread thread;
 
+  private Thread oldThread = null;
+
   // connected socket. protected for writing UT.
   protected Socket socket = null;
   private DataInputStream in;
@@ -117,6 +120,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private byte[] connectionHeaderWithLength;
 
   private boolean waitingConnectionHeaderResponse = false;
+
+  private AtomicInteger numReconnects = new AtomicInteger();
 
   /**
    * If the client wants to interrupt its calls easily (i.e. call Thread#interrupt), it gets into a
@@ -321,9 +326,20 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     // beware of the concurrent access to the calls list: we can add calls, but as well
     // remove them.
     long waitUntil = EnvironmentEdgeManager.currentTime() + this.rpcClient.minIdleTimeBeforeClose;
+    boolean interrupted = false;
     for (;;) {
       if (thread == null) {
         return false;
+      }
+      if (LOG.isDebugEnabled()) {
+        if (interrupted) {
+          LOG.debug("waitForWork interrupted but thread != null; numCalls={}, isInterrupted={}",
+            calls.size(), Thread.currentThread().isInterrupted());
+        } else if (Thread.currentThread() == oldThread) {
+          LOG.debug(
+            "waitForWork still running despite being an old thread; numCalls={}, isInterrupted={}",
+            calls.size(), Thread.currentThread().isInterrupted());
+        }
       }
       if (!calls.isEmpty()) {
         return true;
@@ -338,6 +354,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       } catch (InterruptedException e) {
         // Restore interrupt status
         Thread.currentThread().interrupt();
+        interrupted = true;
       }
     }
   }
@@ -523,8 +540,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       throw e;
     }
 
+    if (oldThread != null && oldThread.isAlive()) {
+      LOG.debug("{}: Creating new thread while old is still alive and interrupted={}", threadName,
+        oldThread.isInterrupted());
+    }
+
     // start the receiver thread after the socket connection has been set up
-    thread = new Thread(this, threadName);
+    thread = new Thread(this, threadName + "-" + numReconnects.incrementAndGet());
     thread.setDaemon(true);
     thread.start();
   }
@@ -627,19 +649,23 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       calls.put(call.id, call); // We put first as we don't want the connection to become idle.
       // from here, we do not throw any exception to upper layer as the call has been tracked in
       // the pending calls map.
+      boolean success = false;
       try {
         HUNG_CONNECTION_TRACKER.track(Thread.currentThread(), call, remoteId.getAddress(), socket);
         DataOutputStream stream = MockOutputStreamWithTimeout.maybeMock(this.out);
         call.callStats.setRequestSizeBytes(write(stream, requestHeader, call.param, cellBlock));
+        success = true;
       } catch (Throwable t) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Error while writing {}", call.toShortString());
+          LOG.trace("Error while writing {}", call.toShortString(), t);
         }
         IOException e = IPCUtil.toIOE(t);
         closeConn(e);
         return;
       } finally {
-        HUNG_CONNECTION_TRACKER.complete(Thread.currentThread());
+        if (HUNG_CONNECTION_TRACKER.complete(Thread.currentThread())) {
+          LOG.debug("Write for callId {} was interrupted with success={}", call.id, success);
+        }
       }
     } finally {
       if (cellBlock != null) {
@@ -722,10 +748,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // since we expect certain responses to not make it by the specified
         // {@link ConnectionId#rpcTimeout}.
         if (LOG.isTraceEnabled()) {
-          LOG.trace("ignored", e);
+          LOG.trace("ignored ex for call {}", call, e);
         }
       } else {
         synchronized (this) {
+          LOG.trace("closing connection due to exception for call {}", call, e);
           closeConn(e);
         }
       }
@@ -753,6 +780,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     if (thread == null) {
       return;
     }
+    oldThread = thread;
     thread.interrupt();
     thread = null;
     closeSocket();
