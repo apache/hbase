@@ -28,6 +28,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  * Provides server side metrics related to scan operations.
  */
 @InterfaceAudience.Public
+@SuppressWarnings("checkstyle:VisibilityModifier") // See HBASE-27757
 public class ServerSideScanMetrics {
   /**
    * Hash to hold the String -&gt; Atomic Long mappings for each metric
