@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should implement the
@@ -96,6 +97,10 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
   public void run() {
     Span span = TraceUtil.getGlobalTracer().spanBuilder(getClass().getSimpleName())
       .setParent(Context.current().with(parent)).startSpan();
+    // assume that this is the top of an execution on a new or reused thread, that we're safe to
+    // blast any existing MDC state.
+    MDC.clear();
+    MDC.put("event_type", eventType.toString());
     try (Scope scope = span.makeCurrent()) {
       process();
     } catch (Throwable t) {
