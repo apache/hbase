@@ -63,6 +63,7 @@ public class TestMetricsUserAggregate {
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
     Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF, true);
     rsm = new MetricsRegionServer(wrapper, conf, null);
     userAgg = (MetricsUserAggregate) rsm.getMetricsUserAggregate();
   }
@@ -74,10 +75,10 @@ public class TestMetricsUserAggregate {
     when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
     when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 10; i++) {
-      rsm.updateGet(region, 10);
+      rsm.updateGet(region, 10, 10);
     }
     for (int i = 0; i < 11; i++) {
-      rsm.updateScanTime(region, 11);
+      rsm.updateScan(region, 11, 111, 1111);
     }
     for (int i = 0; i < 12; i++) {
       rsm.updatePut(region, 12);
@@ -86,10 +87,10 @@ public class TestMetricsUserAggregate {
       rsm.updateDelete(region, 13);
     }
     for (int i = 0; i < 14; i++) {
-      rsm.updateIncrement(region, 14);
+      rsm.updateIncrement(region, 14, 140);
     }
     for (int i = 0; i < 15; i++) {
-      rsm.updateAppend(region, 15);
+      rsm.updateAppend(region, 15, 150);
     }
     for (int i = 0; i < 16; i++) {
       rsm.updateReplay(16);
@@ -99,13 +100,6 @@ public class TestMetricsUserAggregate {
   @Test
   public void testPerUserOperations() {
     Configuration conf = HBaseConfiguration.create();
-    // If metrics for users is not enabled, this test doesn't make sense.
-    if (
-      !conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
-        MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)
-    ) {
-      return;
-    }
     User userFoo = User.createUserForTesting(conf, "FOO", new String[0]);
     User userBar = User.createUserForTesting(conf, "BAR", new String[0]);
 
@@ -132,6 +126,7 @@ public class TestMetricsUserAggregate {
     HELPER.assertCounter("userfoometricincrementnumops", 14, userAgg.getSource());
     HELPER.assertCounter("userfoometricappendnumops", 15, userAgg.getSource());
     HELPER.assertCounter("userfoometricreplaynumops", 16, userAgg.getSource());
+    HELPER.assertCounter("userfoometricblockbytesscannedcount", 16531, userAgg.getSource());
 
     HELPER.assertCounter("userbarmetricgetnumops", 10, userAgg.getSource());
     HELPER.assertCounter("userbarmetricscantimenumops", 11, userAgg.getSource());
@@ -140,18 +135,12 @@ public class TestMetricsUserAggregate {
     HELPER.assertCounter("userbarmetricincrementnumops", 14, userAgg.getSource());
     HELPER.assertCounter("userbarmetricappendnumops", 15, userAgg.getSource());
     HELPER.assertCounter("userbarmetricreplaynumops", 16, userAgg.getSource());
+    HELPER.assertCounter("userbarmetricblockbytesscannedcount", 16531, userAgg.getSource());
   }
 
   @Test
   public void testLossyCountingOfUserMetrics() {
     Configuration conf = HBaseConfiguration.create();
-    // If metrics for users is not enabled, this test doesn't make sense.
-    if (
-      !conf.getBoolean(MetricsUserAggregateFactory.METRIC_USER_ENABLED_CONF,
-        MetricsUserAggregateFactory.DEFAULT_METRIC_USER_ENABLED_CONF)
-    ) {
-      return;
-    }
     int noOfUsers = 10000;
     for (int i = 1; i <= noOfUsers; i++) {
       User.createUserForTesting(conf, "FOO" + i, new String[0]).getUGI()
@@ -163,7 +152,7 @@ public class TestMetricsUserAggregate {
             when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
             when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
             when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
-            rsm.updateGet(region, 10);
+            rsm.updateGet(region, 10, 100);
             return null;
           }
         });
@@ -173,7 +162,11 @@ public class TestMetricsUserAggregate {
     for (int i = 1; i <= noOfUsers / 10; i++) {
       assertFalse(
         HELPER.checkCounterExists("userfoo" + i + "metricgetnumops", userAgg.getSource()));
+      assertFalse(HELPER.checkCounterExists("userfoo" + i + "metricblockbytesscannedcount",
+        userAgg.getSource()));
     }
     HELPER.assertCounter("userfoo" + noOfUsers + "metricgetnumops", 1, userAgg.getSource());
+    HELPER.assertCounter("userfoo" + noOfUsers + "metricblockbytesscannedcount", 100,
+      userAgg.getSource());
   }
 }

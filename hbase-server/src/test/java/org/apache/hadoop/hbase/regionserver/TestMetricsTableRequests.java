@@ -64,20 +64,26 @@ public class TestMetricsTableRequests {
     Optional<MetricRegistry> registry2 = MetricRegistries.global().get(info2);
     assertTrue(registry2.isPresent());
 
-    requests1.updateGet(500L);
+    requests1.updateGet(500L, 5000L);
     Snapshot latencies1SnapshotGet =
       ((HistogramImpl) registry1.get().get("getTime").get()).snapshot();
     assertEquals(500, latencies1SnapshotGet.get999thPercentile());
+    Snapshot blockBytesScanned1SnapshotGet =
+      ((HistogramImpl) registry1.get().get("getBlockBytesScanned").get()).snapshot();
+    assertEquals(5000, blockBytesScanned1SnapshotGet.get999thPercentile());
 
     requests1.updatePut(50L);
     Snapshot latencies1SnapshotPut =
       ((HistogramImpl) registry1.get().get("putTime").get()).snapshot();
     assertEquals(50, latencies1SnapshotPut.get99thPercentile());
 
-    requests2.updateGet(300L);
+    requests2.updateGet(300L, 3000L);
     Snapshot latencies2SnapshotGet =
       ((HistogramImpl) registry2.get().get("getTime").get()).snapshot();
     assertEquals(300, latencies2SnapshotGet.get999thPercentile());
+    Snapshot blockBytesScanned2SnapshotGet =
+      ((HistogramImpl) registry2.get().get("getBlockBytesScanned").get()).snapshot();
+    assertEquals(3000, blockBytesScanned2SnapshotGet.get999thPercentile());
 
     requests2.updatePut(75L);
     Snapshot latencies2SnapshotPut =
