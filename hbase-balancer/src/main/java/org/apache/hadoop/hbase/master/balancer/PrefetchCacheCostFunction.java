@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Compute the cost of a potential cluster configuration based on the number of HFile's already
