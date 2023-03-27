@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   private final String userIncrementKey;
   private final String userAppendKey;
   private final String userReplayKey;
+  private final String userBlockBytesScannedKey;
 
   private MetricHistogram getHisto;
   private MetricHistogram scanTimeHisto;
@@ -53,6 +55,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   private MetricHistogram incrementHisto;
   private MetricHistogram appendHisto;
   private MetricHistogram replayHisto;
+  private MutableFastCounter blockBytesScannedCount;
 
   private final int hashCode;
 
@@ -116,7 +119,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     this.user = user;
     this.registry = agg.getMetricsRegistry();
 
-    this.userNamePrefix = "user_" + user + "_metric_";
+    this.userNamePrefix = "User_" + user + "_metric_";
 
     hashCode = userNamePrefix.hashCode();
 
@@ -127,6 +130,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
     userIncrementKey = userNamePrefix + MetricsRegionServerSource.INCREMENT_KEY;
     userAppendKey = userNamePrefix + MetricsRegionServerSource.APPEND_KEY;
     userReplayKey = userNamePrefix + MetricsRegionServerSource.REPLAY_KEY;
+    userBlockBytesScannedKey = userNamePrefix + MetricsRegionServerSource.BLOCK_BYTES_SCANNED_KEY;
     clientMetricsMap = new ConcurrentHashMap<>();
     agg.register(this);
   }
@@ -141,6 +145,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
       incrementHisto = registry.newTimeHistogram(userIncrementKey);
       appendHisto = registry.newTimeHistogram(userAppendKey);
       replayHisto = registry.newTimeHistogram(userReplayKey);
+      blockBytesScannedCount = registry.newCounter(userBlockBytesScannedKey, "", 0);
     }
   }
 
@@ -165,6 +170,7 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
       registry.removeMetric(userIncrementKey);
       registry.removeMetric(userAppendKey);
       registry.removeMetric(userReplayKey);
+      registry.removeMetric(userBlockBytesScannedKey);
     }
   }
 
@@ -231,18 +237,21 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   }
 
   @Override
-  public void updateGet(long t) {
-    getHisto.add(t);
+  public void updateGet(long time, long blockBytesScanned) {
+    getHisto.add(time);
+    blockBytesScannedCount.incr(blockBytesScanned);
   }
 
   @Override
-  public void updateIncrement(long t) {
-    incrementHisto.add(t);
+  public void updateIncrement(long time, long blockBytesScanned) {
+    incrementHisto.add(time);
+    blockBytesScannedCount.incr(blockBytesScanned);
   }
 
   @Override
-  public void updateAppend(long t) {
-    appendHisto.add(t);
+  public void updateAppend(long time, long blockBytesScanned) {
+    appendHisto.add(time);
+    blockBytesScannedCount.incr(blockBytesScanned);
   }
 
   @Override
@@ -251,8 +260,14 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
   }
 
   @Override
-  public void updateScanTime(long t) {
-    scanTimeHisto.add(t);
+  public void updateScan(long time, long blockBytesScanned) {
+    scanTimeHisto.add(time);
+    blockBytesScannedCount.incr(blockBytesScanned);
+  }
+
+  @Override
+  public void updateCheckAndMutate(long blockBytesScanned) {
+    blockBytesScannedCount.incr(blockBytesScanned);
   }
 
   @Override

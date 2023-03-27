@@ -154,20 +154,20 @@ public class TestMetricsRegionServer {
     when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
     when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 12; i++) {
-      rsm.updateAppend(region, 12);
-      rsm.updateAppend(region, 1002);
+      rsm.updateAppend(region, 12, 120);
+      rsm.updateAppend(region, 1002, 10020);
     }
     for (int i = 0; i < 13; i++) {
       rsm.updateDeleteBatch(region, 13);
       rsm.updateDeleteBatch(region, 1003);
     }
     for (int i = 0; i < 14; i++) {
-      rsm.updateGet(region, 14);
-      rsm.updateGet(region, 1004);
+      rsm.updateGet(region, 14, 140);
+      rsm.updateGet(region, 1004, 10040);
     }
     for (int i = 0; i < 15; i++) {
-      rsm.updateIncrement(region, 15);
-      rsm.updateIncrement(region, 1005);
+      rsm.updateIncrement(region, 15, 150);
+      rsm.updateIncrement(region, 1005, 10050);
     }
     for (int i = 0; i < 16; i++) {
       rsm.updatePutBatch(region, 16);
@@ -181,19 +181,24 @@ public class TestMetricsRegionServer {
       rsm.updateDelete(region, 1003);
       rsm.updateCheckAndDelete(region, 17);
       rsm.updateCheckAndPut(region, 17);
-      rsm.updateCheckAndMutate(region, 17);
+      rsm.updateCheckAndMutate(region, 17, 170);
     }
 
+    HELPER.assertCounter("blockBytesScannedCount", 420090, serverSource);
     HELPER.assertCounter("appendNumOps", 24, serverSource);
+    HELPER.assertCounter("appendBlockBytesScannedNumOps", 24, serverSource);
     HELPER.assertCounter("deleteBatchNumOps", 26, serverSource);
     HELPER.assertCounter("getNumOps", 28, serverSource);
+    HELPER.assertCounter("getBlockBytesScannedNumOps", 28, serverSource);
     HELPER.assertCounter("incrementNumOps", 30, serverSource);
+    HELPER.assertCounter("incrementBlockBytesScannedNumOps", 30, serverSource);
     HELPER.assertCounter("putBatchNumOps", 32, serverSource);
     HELPER.assertCounter("putNumOps", 34, serverSource);
     HELPER.assertCounter("deleteNumOps", 34, serverSource);
     HELPER.assertCounter("checkAndDeleteNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndPutNumOps", 17, serverSource);
     HELPER.assertCounter("checkAndMutateNumOps", 17, serverSource);
+    HELPER.assertCounter("checkAndMutateBlockBytesScannedNumOps", 17, serverSource);
 
     HELPER.assertCounter("slowAppendCount", 12, serverSource);
     HELPER.assertCounter("slowDeleteCount", 17, serverSource);

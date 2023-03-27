@@ -114,30 +114,30 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
   }
 
   @Override
-  public void updateGet(long t) {
+  public void updateGet(long time, long blockBytesScanned) {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      userSource.updateGet(t);
+      userSource.updateGet(time, blockBytesScanned);
     }
   }
 
   @Override
-  public void updateIncrement(long t) {
+  public void updateIncrement(long time, long blockBytesScanned) {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      userSource.updateIncrement(t);
+      userSource.updateIncrement(time, blockBytesScanned);
       incrementClientWriteMetrics(userSource);
     }
   }
 
   @Override
-  public void updateAppend(long t) {
+  public void updateAppend(long time, long blockBytesScanned) {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      userSource.updateAppend(t);
+      userSource.updateAppend(time, blockBytesScanned);
       incrementClientWriteMetrics(userSource);
     }
   }
@@ -153,11 +153,20 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
   }
 
   @Override
-  public void updateScanTime(long t) {
+  public void updateScan(long time, long blockBytesScanned) {
     String user = getActiveUser();
     if (user != null) {
       MetricsUserSource userSource = getOrCreateMetricsUser(user);
-      userSource.updateScanTime(t);
+      userSource.updateScan(time, blockBytesScanned);
+    }
+  }
+
+  @Override
+  public void updateCheckAndMutate(long blockBytesScanned) {
+    String user = getActiveUser();
+    if (user != null) {
+      MetricsUserSource userSource = getOrCreateMetricsUser(user);
+      userSource.updateCheckAndMutate(blockBytesScanned);
     }
   }
 

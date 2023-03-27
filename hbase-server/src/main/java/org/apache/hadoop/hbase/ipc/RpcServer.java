@@ -428,7 +428,7 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       // Use the raw request call size for now.
       long requestSize = call.getSize();
       long responseSize = result.getSerializedSize();
-      long responseBlockSize = call.getResponseBlockSize();
+      long responseBlockSize = call.getBlockBytesScanned();
       if (call.isClientCellBlockSupported()) {
         // Include the payload size in HBaseRpcController
         responseSize += call.getResponseCellSize();

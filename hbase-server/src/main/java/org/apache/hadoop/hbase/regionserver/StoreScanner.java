@@ -620,7 +620,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         heap.recordBlockSize(blockSize -> {
           if (rpcCall.isPresent()) {
-            rpcCall.get().incrementResponseBlockSize(blockSize);
+            rpcCall.get().incrementBlockBytesScanned(blockSize);
           }
           scannerContext.incrementBlockProgress(blockSize);
         });
