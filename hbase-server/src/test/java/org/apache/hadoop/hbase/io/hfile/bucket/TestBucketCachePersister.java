@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -119,7 +120,7 @@ public class TestBucketCachePersister {
 
   @Test
   public void testPrefetchPersistenceCrashNegative() throws Exception {
-    long bucketCachePersistInterval = 3000;
+    long bucketCachePersistInterval = Long.MAX_VALUE;
     Configuration conf = setupBucketCacheConfig(bucketCachePersistInterval);
     BucketCache bucketCache = setupBucketCache(conf);
     CacheConfig cacheConf = new CacheConfig(conf, bucketCache);
@@ -130,6 +131,23 @@ public class TestBucketCachePersister {
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
     cleanupBucketCache(bucketCache);
+  }
+
+  @Test
+  public void testPrefetchListUponBlockEviction() throws Exception {
+    Configuration conf = setupBucketCacheConfig(200);
+    BucketCache bucketCache1 = setupBucketCache(conf);
+    CacheConfig cacheConf = new CacheConfig(conf, bucketCache1);
+    FileSystem fs = HFileSystem.get(conf);
+    // Load Blocks in cache
+    Path storeFile = writeStoreFile("TestPrefetch3", conf, cacheConf, fs);
+    readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache1);
+    Thread.sleep(500);
+    // Evict Blocks from cache
+    BlockCacheKey bucketCacheKey = bucketCache1.backingMap.entrySet().iterator().next().getKey();
+    assertTrue(PrefetchExecutor.isFilePrefetched(storeFile.getName()));
+    bucketCache1.evictBlock(bucketCacheKey);
+    assertFalse(PrefetchExecutor.isFilePrefetched(storeFile.getName()));
   }
 
   public void readStoreFile(Path storeFilePath, long offset, FileSystem fs, CacheConfig cacheConf,

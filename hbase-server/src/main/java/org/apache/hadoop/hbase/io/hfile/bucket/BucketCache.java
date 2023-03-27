@@ -368,6 +368,7 @@ public class BucketCache implements BlockCache, HeapSize {
   void startBucketCachePersisterThread() {
     BucketCachePersister cachePersister =
       new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister.setDaemon(true);
     cachePersister.start();
   }
 
@@ -600,6 +601,9 @@ public class BucketCache implements BlockCache, HeapSize {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
     if (ioEngine.isPersistent()) {
+      if (prefetchedFileListPath != null) {
+        PrefetchExecutor.removePrefetchedFileWhileEvict(cacheKey.getHfileName());
+      }
       setCacheInconsistent(true);
     }
   }
