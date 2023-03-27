@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -118,7 +119,12 @@ public class StoreHotnessProtector {
   }
 
   public void update(Configuration conf) {
-    init(conf);
+    // Add table descriptor configuration
+    CompoundConfiguration newconf = new CompoundConfiguration().add(conf);
+    if (this.region != null) {
+      newconf.addBytesMap(this.region.getTableDescriptor().getValues());
+    }
+    init(newconf);
     preparePutToStoreMap.clear();
     LOG.debug("update config: {}", this);
   }
@@ -201,7 +207,9 @@ public class StoreHotnessProtector {
   }
 
   public String toString() {
-    return "StoreHotnessProtector, parallelPutToStoreThreadLimit="
+    return "Table: "
+      + ((this.region != null) ? this.region.getTableDescriptor().getTableName() : "UNKUNOWN")
+      + "; StoreHotnessProtector, parallelPutToStoreThreadLimit="
       + this.parallelPutToStoreThreadLimit + " ; minColumnNum="
       + this.parallelPutToStoreThreadLimitCheckMinColumnCount + " ; preparePutThreadLimit="
       + this.parallelPreparePutToStoreThreadLimit + " ; hotProtect now "
@@ -215,6 +223,18 @@ public class StoreHotnessProtector {
 
   Map<byte[], AtomicInteger> getPreparePutToStoreMap() {
     return preparePutToStoreMap;
+  }
+
+  int getParallelPutToStoreThreadLimit() {
+    return parallelPutToStoreThreadLimit;
+  }
+
+  int getParallelPreparePutToStoreThreadLimit() {
+    return parallelPreparePutToStoreThreadLimit;
+  }
+
+  int getParallelPutToStoreThreadLimitCheckMinColumnCount() {
+    return parallelPutToStoreThreadLimitCheckMinColumnCount;
   }
 
   public static final long FIXED_SIZE =

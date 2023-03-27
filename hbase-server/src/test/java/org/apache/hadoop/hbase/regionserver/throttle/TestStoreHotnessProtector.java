@@ -35,7 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -129,4 +131,36 @@ public class TestStoreHotnessProtector {
       threadCount);
   }
 
+  @Test
+  public void testUpdateConfig() {
+    Configuration conf = new Configuration();
+    conf.setInt(PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT, 0);
+    conf.setInt(PARALLEL_PUT_STORE_THREADS_LIMIT, 10);
+    conf.setInt(PARALLEL_PREPARE_PUT_STORE_MULTIPLIER, 3);
+    Region mockRegion = mock(Region.class);
+    StoreHotnessProtector storeHotnessProtector = new StoreHotnessProtector(mockRegion, conf);
+
+    Store mockStore1 = mock(Store.class);
+    RegionInfo mockRegionInfo = mock(RegionInfo.class);
+    byte[] family = "testF1".getBytes();
+
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("TestTable"));
+    builder.setValue(PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT, "1");
+    builder.setValue(PARALLEL_PUT_STORE_THREADS_LIMIT, "20");
+    builder.setValue(PARALLEL_PREPARE_PUT_STORE_MULTIPLIER, "30");
+
+    when(mockRegion.getStore(family)).thenReturn(mockStore1);
+    when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
+    when(mockRegion.getTableDescriptor()).thenReturn(builder.build());
+
+    // update config
+    storeHotnessProtector.update(conf);
+
+    // table config available
+    Assert.assertEquals(storeHotnessProtector.getParallelPreparePutToStoreThreadLimit(), 600);
+    Assert.assertEquals(storeHotnessProtector.getParallelPutToStoreThreadLimit(), 20);
+    Assert.assertEquals(storeHotnessProtector.getParallelPutToStoreThreadLimitCheckMinColumnCount(),
+      1);
+  }
 }
