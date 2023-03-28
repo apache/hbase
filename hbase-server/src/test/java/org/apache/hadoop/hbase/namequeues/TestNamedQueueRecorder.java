@@ -669,12 +669,12 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
-      public long getResponseBlockSize() {
+      public long getBlockBytesScanned() {
         return 0;
       }
 
       @Override
-      public void incrementResponseBlockSize(long blockSize) {
+      public void incrementBlockBytesScanned(long blockSize) {
       }
 
       @Override
