@@ -118,6 +118,8 @@ module IRB
           rescue Interrupt => exc
           rescue SystemExit, SignalException
             raise
+          rescue SyntaxError => exc
+            raise exc unless @interactive
           rescue NameError => exc
             raise exc unless @interactive
             # HBASE-26880: Ignore NameError to prevent exiting Shell on mistyped commands.
