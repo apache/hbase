@@ -137,16 +137,14 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
 
   @Override
   public void register() {
-    synchronized (this) {
-      getHisto = registry.newTimeHistogram(userGetKey);
-      scanTimeHisto = registry.newTimeHistogram(userScanTimeKey);
-      putHisto = registry.newTimeHistogram(userPutKey);
-      deleteHisto = registry.newTimeHistogram(userDeleteKey);
-      incrementHisto = registry.newTimeHistogram(userIncrementKey);
-      appendHisto = registry.newTimeHistogram(userAppendKey);
-      replayHisto = registry.newTimeHistogram(userReplayKey);
-      blockBytesScannedCount = registry.newCounter(userBlockBytesScannedKey, "", 0);
-    }
+    getHisto = registry.newTimeHistogram(userGetKey);
+    scanTimeHisto = registry.newTimeHistogram(userScanTimeKey);
+    putHisto = registry.newTimeHistogram(userPutKey);
+    deleteHisto = registry.newTimeHistogram(userDeleteKey);
+    incrementHisto = registry.newTimeHistogram(userIncrementKey);
+    appendHisto = registry.newTimeHistogram(userAppendKey);
+    replayHisto = registry.newTimeHistogram(userReplayKey);
+    blockBytesScannedCount = registry.newCounter(userBlockBytesScannedKey, "", 0);
   }
 
   @Override
@@ -162,16 +160,14 @@ public class MetricsUserSourceImpl implements MetricsUserSource {
       LOG.debug("Removing user Metrics for user: " + user);
     }
 
-    synchronized (this) {
-      registry.removeMetric(userGetKey);
-      registry.removeMetric(userScanTimeKey);
-      registry.removeMetric(userPutKey);
-      registry.removeMetric(userDeleteKey);
-      registry.removeMetric(userIncrementKey);
-      registry.removeMetric(userAppendKey);
-      registry.removeMetric(userReplayKey);
-      registry.removeMetric(userBlockBytesScannedKey);
-    }
+    registry.removeMetric(userGetKey);
+    registry.removeMetric(userScanTimeKey);
+    registry.removeMetric(userPutKey);
+    registry.removeMetric(userDeleteKey);
+    registry.removeMetric(userIncrementKey);
+    registry.removeMetric(userAppendKey);
+    registry.removeMetric(userReplayKey);
+    registry.removeMetric(userBlockBytesScannedKey);
   }
 
   @Override
