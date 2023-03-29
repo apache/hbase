@@ -809,8 +809,9 @@ public class HFileWriterImpl implements HFile.Writer {
     // Biggest cell.
     fileInfo.append(HFileInfo.KEY_OF_BIGGEST_CELL, keyOfBiggestCell, false);
     fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
-    LOG.debug("Len of the biggest cell in {} is {}, key is {}",this.getPath().toString(),
-      lenOfBiggestCell, CellUtil.toString(new KeyValue.KeyOnlyKeyValue(keyOfBiggestCell), false));
+    LOG.debug("Len of the biggest cell in {} is {}, key is {}",
+      this.getPath() == null ? "" : this.getPath().toString(), lenOfBiggestCell,
+      CellUtil.toString(new KeyValue.KeyOnlyKeyValue(keyOfBiggestCell), false));
     if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
