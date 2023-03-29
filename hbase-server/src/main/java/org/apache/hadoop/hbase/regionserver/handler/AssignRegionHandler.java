@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.slf4j.MDC;
 
 /**
  * Handles opening of a region on a region server.
@@ -90,6 +91,7 @@ public class AssignRegionHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
+    MDC.put("pid", Long.toString(openProcId));
     HRegionServer rs = getServer();
     String encodedName = regionInfo.getEncodedName();
     byte[] encodedNameBytes = regionInfo.getEncodedNameAsBytes();
