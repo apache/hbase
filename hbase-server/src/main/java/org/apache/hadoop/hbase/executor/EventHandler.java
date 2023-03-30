@@ -99,14 +99,14 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
       .setParent(Context.current().with(parent)).startSpan();
     // assume that this is the top of an execution on a new or reused thread, that we're safe to
     // blast any existing MDC state.
-    MDC.clear();
-    MDC.put("event_type", eventType.toString());
     try (Scope scope = span.makeCurrent()) {
+      MDC.put("event_type", eventType.toString());
       process();
     } catch (Throwable t) {
       handleException(t);
     } finally {
       span.end();
+      MDC.clear();
     }
   }
 
