@@ -345,7 +345,7 @@ public class RSRpcServices
   final InetSocketAddress isa;
 
   protected final HRegionServer regionServer;
-  private final long maxScannerResultSize;
+  private volatile long maxScannerResultSize;
 
   // The reference to the priority extraction function
   private final PriorityFunction priority;
@@ -374,12 +374,12 @@ public class RSRpcServices
   /**
    * Row size threshold for multi requests above which a warning is logged
    */
-  private final int rowSizeWarnThreshold;
+  private volatile int rowSizeWarnThreshold;
   /*
    * Whether we should reject requests with very high no of rows i.e. beyond threshold defined by
    * rowSizeWarnThreshold
    */
-  private final boolean rejectRowsWithSizeOverThreshold;
+  private volatile boolean rejectRowsWithSizeOverThreshold;
 
   final AtomicBoolean clearCompactionQueues = new AtomicBoolean(false);
 
@@ -1212,11 +1212,6 @@ public class RSRpcServices
   public RSRpcServices(final HRegionServer rs) throws IOException {
     final Configuration conf = rs.getConfiguration();
     regionServer = rs;
-    rowSizeWarnThreshold =
-      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
-    rejectRowsWithSizeOverThreshold =
-      conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
-
     final RpcSchedulerFactory rpcSchedulerFactory;
     try {
       rpcSchedulerFactory = getRpcSchedulerFactoryClass().asSubclass(RpcSchedulerFactory.class)
@@ -1257,10 +1252,9 @@ public class RSRpcServices
     if (!(rs instanceof HMaster)) {
       rpcServer.setNamedQueueRecorder(rs.getNamedQueueRecorder());
     }
+    setReloadableGuardrails(conf);
     scannerLeaseTimeoutPeriod = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
-    maxScannerResultSize = conf.getLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
-      HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
     rpcTimeout =
       conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     minimumScanTimeLimitDelta = conf.getLong(REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
@@ -1307,6 +1301,7 @@ public class RSRpcServices
   public void onConfigurationChange(Configuration newConf) {
     if (rpcServer instanceof ConfigurationObserver) {
       ((ConfigurationObserver) rpcServer).onConfigurationChange(newConf);
+      setReloadableGuardrails(newConf);
     }
   }
 
@@ -4097,5 +4092,14 @@ public class RSRpcServices
     sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
       .forEach(builder::addServerName);
     return builder.build();
+  }
+
+  private void setReloadableGuardrails(Configuration conf) {
+    rowSizeWarnThreshold =
+      conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
+    rejectRowsWithSizeOverThreshold =
+      conf.getBoolean(REJECT_BATCH_ROWS_OVER_THRESHOLD, DEFAULT_REJECT_BATCH_ROWS_OVER_THRESHOLD);
+    maxScannerResultSize = conf.getLong(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
+      HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
   }
 }
