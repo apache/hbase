@@ -46,7 +46,23 @@ public class FixedIntervalRateLimiter extends RateLimiter {
     }
     final long now = EnvironmentEdgeManager.currentTime();
     final long refillTime = nextRefillTime;
-    return refillTime - now;
+    long diff = amount - available;
+    // We will add limit at next interval. If diff is less than that limit, the wait interval
+    // is just time between now and then.
+    long nextRefillInterval = refillTime - now;
+    if (diff <= limit) {
+      return nextRefillInterval;
+    }
+
+    // Otherwise, we need to figure out how many refills are needed.
+    // There will be one at nextRefillInterval, and then some number of extra refills.
+    // Division will round down if not even, so we can just add that to our next interval
+    long extraRefillsNecessary = diff / limit;
+    // If it's even, subtract one since that will be covered by nextRefillInterval
+    if (diff % limit == 0) {
+      extraRefillsNecessary--;
+    }
+    return nextRefillInterval + (extraRefillsNecessary * super.getTimeUnitInMillis());
   }
 
   // This method is for strictly testing purpose only

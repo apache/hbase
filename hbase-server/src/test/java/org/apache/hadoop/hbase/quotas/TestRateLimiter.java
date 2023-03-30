@@ -109,17 +109,17 @@ public class TestRateLimiter {
     // Verify that we have to wait at least 1.1sec to have 1 resource available
     assertTrue(limiter.canExecute());
     limiter.consume(20);
-    // To consume 1 resource wait for 100ms
-    assertEquals(100, limiter.waitInterval(1));
-    // To consume 10 resource wait for 1000ms
-    assertEquals(1000, limiter.waitInterval(10));
+    // We consumed twice the quota. Need to wait 1s to get back to 0, then another 100ms for the 1
+    assertEquals(1100, limiter.waitInterval(1));
+    // We consumed twice the quota. Need to wait 1s to get back to 0, then another 1s to get to 10
+    assertEquals(2000, limiter.waitInterval(10));
 
-    limiter.setNextRefillTime(limiter.getNextRefillTime() - 900);
-    // Verify that after 1sec the 1 resource is available
-    assertTrue(limiter.canExecute(1));
+    // Verify that after 1sec we need to wait for another 0.1sec to get a resource available
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
+    assertFalse(limiter.canExecute(1));
     limiter.setNextRefillTime(limiter.getNextRefillTime() - 100);
-    // Verify that after 1sec the 10 resource is available
-    assertTrue(limiter.canExecute());
+    // We've waited the full 1.1sec, should now have 1 available
+    assertTrue(limiter.canExecute(1));
     assertEquals(0, limiter.waitInterval());
   }
 
@@ -138,22 +138,20 @@ public class TestRateLimiter {
       }
     };
     EnvironmentEdgeManager.injectEdge(edge);
-    // 10 resources are available, but we need to consume 20 resources
-    // Verify that we have to wait at least 1.1sec to have 1 resource available
     assertTrue(limiter.canExecute());
+    // 10 resources are available, but we need to consume 20 resources
     limiter.consume(20);
-    // To consume 1 resource also wait for 1000ms
-    assertEquals(1000, limiter.waitInterval(1));
-    // To consume 10 resource wait for 100ms
-    assertEquals(1000, limiter.waitInterval(10));
+    // We over-consumed by 10. Since this is a fixed interval refill, where
+    // each interval we refill the full limit amount, we need to wait 2 intervals -- first
+    // interval gets us from -10 to 0, second gets us from 0 to 10, though we just want the 1.
+    assertEquals(2000, limiter.waitInterval(1));
     EnvironmentEdgeManager.reset();
 
-    limiter.setNextRefillTime(limiter.getNextRefillTime() - 900);
     // Verify that after 1sec also no resource should be available
-    assertFalse(limiter.canExecute(1));
-    limiter.setNextRefillTime(limiter.getNextRefillTime() - 100);
-
-    // Verify that after 1sec the 10 resource is available
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
+    assertFalse(limiter.canExecute());
+    // Verify that after total 2sec the 10 resource is available
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
     assertTrue(limiter.canExecute());
     assertEquals(0, limiter.waitInterval());
   }
