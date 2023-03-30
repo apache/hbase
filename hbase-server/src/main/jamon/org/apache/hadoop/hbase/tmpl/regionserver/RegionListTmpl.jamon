@@ -211,18 +211,21 @@
                                               * TraditionalBinaryPrefix.KILO.value, "B", 1);
               }
            }
-           Region region = regionServer.getRegion(r.getEncodedName());
            Long lenOfBiggestCellInRegion = -1l;
-           List<? extends Store> stores = region.getStores();
-           for (Store store : stores) {
-             Collection<? extends StoreFile> storeFiles = store.getStorefiles();
-             for (StoreFile sf : storeFiles) {
-             	Long lenOfBiggestCell = ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell();
-             	if (lenOfBiggestCellInRegion < lenOfBiggestCell) {
-                 lenOfBiggestCellInRegion = lenOfBiggestCell;
-             	}
+           Region region = regionServer.getRegion(r.getEncodedName());
+           if (region != null) {
+             List<? extends Store> stores = region.getStores();
+             for (Store store : stores) {
+               Collection<? extends StoreFile> storeFiles = store.getStorefiles();
+               for (StoreFile sf : storeFiles) {
+                 Long lenOfBiggestCell = ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell();
+                 if (lenOfBiggestCellInRegion < lenOfBiggestCell) {
+                   lenOfBiggestCellInRegion = lenOfBiggestCell;
+                 }
+               }
              }
            }
+
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
