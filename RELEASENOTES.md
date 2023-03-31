@@ -16,6 +16,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.4.17 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-27651](https://issues.apache.org/jira/browse/HBASE-27651) | *Minor* | **hbase-daemon.sh foreground\_start should propagate SIGHUP and SIGTERM**
+
+<!-- markdown -->
+Introduce separate `trap`s for SIGHUP vs. the rest. Treat `SIGINT`, `SIGKILL`, and `EXIT` identically, as before. Use the signal name without `SIG` prefix for increased portability, as per the POSIX man page for `trap`.
+
+`SIGTERM` handler will now honor `HBASE_STOP_TIMEOUT` as described in the file header.
+
+
+---
+
+* [HBASE-27741](https://issues.apache.org/jira/browse/HBASE-27741) | *Minor* | **Fall back to protoc osx-x86\_64 on Apple Silicon**
+
+<!-- markdown -->
+This change introduces and automatically applies a new profile for osx-aarch_64 hosts named `apple-silicon-workaround`. This profile overrides the property `os.detected.classifier` with the value `osx-x86_64`. The intention is that this change will permit the build to proceed with the x86 version of `protoc`, making use of the Rosetta instruction translation service built into the OS. If you'd like to provide and make use of your own aarch_64 `protoc`, you can disable this profile on the command line by adding `-P'!apple-silicon-workaround'`, or through configuration in your `settings.xml`.
+
+
+---
+
+* [HBASE-27748](https://issues.apache.org/jira/browse/HBASE-27748) | *Major* | **Bump jettison from 1.5.2 to 1.5.4**
+
+Bump jettison from 1.5.2 to 1.5.4 for CVE-2023-1436.
+
+
+
 # HBASE  2.4.16 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
