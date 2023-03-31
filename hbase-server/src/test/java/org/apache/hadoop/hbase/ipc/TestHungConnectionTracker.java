@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -53,54 +54,133 @@ public class TestHungConnectionTracker {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass
-  public static void tearDown() throws Exception {
+  public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Before
+  public void beforeEach() throws Exception {
+    HungConnectionMocking.reset();
+    HungConnectionTracker.INTERRUPTED.reset();
+  }
+
+  /**
+   * This tests the race condition where a new reader thread is spun up while the original is still
+   * in readResponse. In this case, by the time the original thread finishes readResponse (and thus
+   * goes into waitForWork()), "thread" wont be null. Previously this would result in extra threads
+   * hanging around forever. Now, we check also that "thread" is the current thread and if not, end.
+   * This tests that we properly do that.
+   */
   @Test
-  public void testBlocking() throws IOException, InterruptedException {
-    TEST_UTIL.createTable(TableName.valueOf("foo"), "0");
+  public void testBlockingWithCompetingReadThread() throws Exception {
+    testBlocking(true);
+    assertEquals(1, HungConnectionMocking.getThreadReplacedCount());
+    assertEquals(0, HungConnectionMocking.getThreadEndedCount());
+  }
+
+  /**
+   * This tests the problem where we previously would not handle InterruptedException properly in
+   * the waitForWork method. We'd reset interrupt state and just restart the loop, which creates a
+   * tight look and opens the opportunity for another race condition. Now we handle the exception
+   * and exit the reader thread.
+   */
+  @Test
+  public void testBlockingWithInterruptedReaderThread() throws Exception {
+    testBlocking(false);
+    assertEquals(0, HungConnectionMocking.getThreadReplacedCount());
+    assertEquals(1, HungConnectionMocking.getThreadEndedCount());
+  }
+
+  private void testBlocking(boolean shouldCompeteForThreadCheck) throws Exception {
+    TableName tableName = TableName.valueOf("foo-" + shouldCompeteForThreadCheck);
+    TEST_UTIL.createTable(tableName, "0");
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, BlockingRpcClient.class.getName());
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 5_000);
     conf.setInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY, 5_000);
 
     Connection conn = ConnectionFactory.createConnection(conf);
-    Table table = conn.getTable(TableName.valueOf("foo"));
+    Table table = conn.getTable(tableName);
+
+    long initialInterrupts = HungConnectionTracker.INTERRUPTED.sum();
 
     // warm meta
     table.getRegionLocator().getAllRegionLocations();
 
-    MockOutputStreamWithTimeout.enable();
+    CompletableFuture<Void> pausedReadFuture;
+    if (shouldCompeteForThreadCheck) {
+      HungConnectionMocking.pauseReads();
+      pausedReadFuture = new CompletableFuture<>();
+      Thread pausedReadThread = new Thread(() -> {
+        try {
+          LOG.info("Executing get which should get paused in read");
+          table.get(new Get(Bytes.toBytes("foo")));
+          LOG.info("Done paused read get");
+          pausedReadFuture.complete(null);
+        } catch (Throwable e) {
+          pausedReadFuture.completeExceptionally(e);
+          LOG.info("Paused read get failed", e);
+        }
+      });
 
-    CompletableFuture<Void> future = new CompletableFuture<>();
-    Thread blockedThread = new Thread(() -> {
+      pausedReadThread.start();
+
+      HungConnectionMocking.awaitPausedReadState();
+    } else {
+      pausedReadFuture = new CompletableFuture<>();
+      pausedReadFuture.complete(null);
+    }
+
+    HungConnectionMocking.enableMockedWrite();
+
+    CompletableFuture<Void> hungWriteFuture = new CompletableFuture<>();
+    Thread hungWriteThread = new Thread(() -> {
       try {
         LOG.info("Executing hanging get");
         table.get(new Get(Bytes.toBytes("foo")));
         LOG.info("Done hanging get");
-        future.complete(null);
+        hungWriteFuture.complete(null);
       } catch (Throwable e) {
-        future.completeExceptionally(e);
+        hungWriteFuture.completeExceptionally(e);
         LOG.info("Hanging get failed", e);
       }
     });
-    blockedThread.start();
+    hungWriteThread.start();
 
-    MockOutputStreamWithTimeout.awaitSleepingState();
-    MockOutputStreamWithTimeout.disable();
+    HungConnectionMocking.awaitSleepingState();
+    HungConnectionMocking.disableMockedWrite();
 
-    LOG.info("Executing test get");
-    table.get(new Get(Bytes.toBytes("foo")));
-    LOG.info("Test get done");
+    CompletableFuture<Void> finalTestGetFuture = new CompletableFuture<>();
+    Thread finalTestGet = new Thread(() -> {
+      LOG.info("Executing test get");
+      try {
+        table.get(new Get(Bytes.toBytes("foo")));
+        finalTestGetFuture.complete(null);
+      } catch (IOException e) {
+        finalTestGetFuture.completeExceptionally(e);
+      }
+      LOG.info("Test get done");
+    });
+    finalTestGet.start();
+
+    while (HungConnectionTracker.INTERRUPTED.sum() <= initialInterrupts) {
+      Thread.sleep(100);
+    }
+    LOG.info("Hung connection interrupted");
+
+    if (shouldCompeteForThreadCheck) {
+      HungConnectionMocking.unpauseReads();
+    }
 
     // actually expect no error here because the hung connection will have been retried
-    future.join();
+    hungWriteFuture.join();
+    pausedReadFuture.join();
+    finalTestGetFuture.join();
 
     assertEquals(1, HungConnectionTracker.INTERRUPTED.sum());
   }

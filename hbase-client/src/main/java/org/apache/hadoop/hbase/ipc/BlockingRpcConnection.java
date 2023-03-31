@@ -43,7 +43,9 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
@@ -99,7 +101,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       justification = "We are always under lock actually")
   private Thread thread;
 
-  private Thread oldThread = null;
+  // Used for ensuring two reader threads don't run over each other. Should only be used
+  // in reader thread run() method, to avoid deadlocks with synchronization on BlockingRpcConnection
+  private final ReentrantLock readerThreadLock = new ReentrantLock();
+
+  // Used to suffix the threadName in a way that we can differentiate them in logs/thread dumps.
+  private final AtomicInteger attempts = new AtomicInteger();
 
   // connected socket. protected for writing UT.
   protected Socket socket = null;
@@ -120,8 +127,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private byte[] connectionHeaderWithLength;
 
   private boolean waitingConnectionHeaderResponse = false;
-
-  private AtomicInteger numReconnects = new AtomicInteger();
 
   /**
    * If the client wants to interrupt its calls easily (i.e. call Thread#interrupt), it gets into a
@@ -326,21 +331,22 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     // beware of the concurrent access to the calls list: we can add calls, but as well
     // remove them.
     long waitUntil = EnvironmentEdgeManager.currentTime() + this.rpcClient.minIdleTimeBeforeClose;
-    boolean interrupted = false;
     for (;;) {
       if (thread == null) {
         return false;
       }
-      if (LOG.isDebugEnabled()) {
-        if (interrupted) {
-          LOG.debug("waitForWork interrupted but thread != null; numCalls={}, isInterrupted={}",
-            calls.size(), Thread.currentThread().isInterrupted());
-        } else if (Thread.currentThread() == oldThread) {
-          LOG.debug(
-            "waitForWork still running despite being an old thread; numCalls={}, isInterrupted={}",
-            calls.size(), Thread.currentThread().isInterrupted());
-        }
+
+      // If closeConn is called while we are in the readResponse method, it's possible that a new
+      // call to setupIOStreams comes in and creates a new value for "thread" before readResponse
+      // finishes. Once readResponse finishes, it will come in here and thread will be non-null
+      // above, but pointing at a new thread. In that case, we should end to avoid a situation
+      // where two threads are forever competing for the same socket.
+      if (!isCurrentThreadExpected()) {
+        HungConnectionMocking.incrThreadReplacedCount();
+        LOG.debug("Thread replaced by new connection thread. Stopping waitForWork loop.");
+        return false;
       }
+
       if (!calls.isEmpty()) {
         return true;
       }
@@ -354,7 +360,24 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       } catch (InterruptedException e) {
         // Restore interrupt status
         Thread.currentThread().interrupt();
-        interrupted = true;
+
+        String msg = "Interrupted while waiting for work";
+
+        // If we were interrupted by closeConn, it would have set thread to null.
+        // We are synchronized here and if we somehow got interrupted without setting thread to
+        // null, we want to make sure the connection is closed since the read thread would be dead.
+        // Rather than do a null check here, we check if the current thread is the expected thread.
+        // This guards against the case where a call to setupIOStreams got the synchronized lock
+        // first after closeConn, thus changing the thread to a new thread.
+        if (isCurrentThreadExpected()) {
+          LOG.debug(msg + ", closing connection");
+          closeConn(new InterruptedIOException(msg));
+        } else {
+          LOG.debug(msg);
+        }
+
+        HungConnectionMocking.incrThreadEndedCount();
+        return false;
       }
     }
   }
@@ -362,13 +385,55 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   @Override
   public void run() {
     if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": starting");
+      LOG.trace("starting");
     }
-    while (waitForWork()) {
-      readResponse();
+
+    // We have a synchronization here because it's possible in error scenarios for a new
+    // thread to be started while readResponse is still reading on the socket. We don't want
+    // two threads to be reading from the same socket/inputstream.
+
+    // This is only a best effort lock. Unless the old holder is totally hung, it will eventually
+    // release the lock once it is replaced by a new thread. In most cases it should happen quickly
+    // because a read can be interrupted and timed out. ultWe have a lock here to protect the
+    // handoff period where both threads might try to read the same socket. We limit this by
+    // socket read timeout to avoid a case where a totally hung old thread forever blocks
+    // new threads from taking over. I don't know if this will actually happen, but I wanted to be
+    // cautious.
+    boolean locked;
+    try {
+      locked = readerThreadLock.tryLock(rpcClient.readTO, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      String msg = "Interrupted while waiting for the readResponse lock";
+      synchronized (this) {
+        if (isCurrentThreadExpected()) {
+          LOG.debug(msg + ". Closing connection and stopping.");
+          closeConn(new InterruptedIOException(msg));
+        } else {
+          LOG.debug(msg + ". Stopping.");
+        }
+      }
+      return;
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(threadName + ": stopped");
+
+    if (!locked) {
+      LOG.warn("Socket read timeout ({}ms) expired while waiting on old "
+        + "thread to release lock. Starting anyway.", rpcClient.readTO);
+    }
+
+    try {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("started");
+      }
+      while (waitForWork()) {
+        readResponse();
+      }
+    } finally {
+      if (locked) {
+        readerThreadLock.unlock();
+      }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("stopped");
+      }
     }
   }
 
@@ -540,13 +605,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       throw e;
     }
 
-    if (oldThread != null && oldThread.isAlive()) {
-      LOG.debug("{}: Creating new thread while old is still alive and interrupted={}", threadName,
-        oldThread.isInterrupted());
-    }
-
     // start the receiver thread after the socket connection has been set up
-    thread = new Thread(this, threadName + "-" + numReconnects.incrementAndGet());
+    thread = new Thread(this, threadName + " (attempt: " + attempts.incrementAndGet() + ")");
     thread.setDaemon(true);
     thread.start();
   }
@@ -649,12 +709,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       calls.put(call.id, call); // We put first as we don't want the connection to become idle.
       // from here, we do not throw any exception to upper layer as the call has been tracked in
       // the pending calls map.
-      boolean success = false;
       try {
         HUNG_CONNECTION_TRACKER.track(Thread.currentThread(), call, remoteId.getAddress(), socket);
-        DataOutputStream stream = MockOutputStreamWithTimeout.maybeMock(this.out);
+        DataOutputStream stream = HungConnectionMocking.maybeMockStream(this.out);
         call.callStats.setRequestSizeBytes(write(stream, requestHeader, call.param, cellBlock));
-        success = true;
       } catch (Throwable t) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Error while writing {}", call.toShortString(), t);
@@ -663,9 +721,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         closeConn(e);
         return;
       } finally {
-        if (HUNG_CONNECTION_TRACKER.complete(Thread.currentThread())) {
-          LOG.debug("Write for callId {} was interrupted with success={}", call.id, success);
-        }
+        HUNG_CONNECTION_TRACKER.complete(Thread.currentThread());
       }
     } finally {
       if (cellBlock != null) {
@@ -679,6 +735,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
    * Receive a response. Because only one receiver, so no synchronization on in.
    */
   private void readResponse() {
+    HungConnectionMocking.maybePauseRead();
     Call call = null;
     boolean expectedCall = false;
     try {
@@ -752,11 +809,27 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         }
       } else {
         synchronized (this) {
-          LOG.trace("closing connection due to exception for call {}", call, e);
-          closeConn(e);
+          // The exception we received may have been caused by another thread closing
+          // this connection. It's possible that before getting to this point, a new connection was
+          // created. In that case, it doesn't help and can actually hurt to close again here.
+          if (isCurrentThreadExpected()) {
+            LOG.debug("Closing connection after error in call {}", call, e);
+            closeConn(e);
+          }
         }
       }
     }
+  }
+
+  /**
+   * For use in the reader thread, tests if the current reader thread is the one expected to be
+   * running. When closeConn is called, the reader thread is expected to end. setupIOStreams then
+   * creates a new thread and updates the thread pointer. At that point, the new thread should be
+   * the only one running. We use this method to guard against cases where the old thread may be
+   * erroneously running or closing the connection in error states.
+   */
+  private boolean isCurrentThreadExpected() {
+    return thread == Thread.currentThread();
   }
 
   @Override
@@ -780,7 +853,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     if (thread == null) {
       return;
     }
-    oldThread = thread;
     thread.interrupt();
     thread = null;
     closeSocket();
