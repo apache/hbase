@@ -22,9 +22,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,11 +42,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -66,7 +65,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
 
   private static final int REGION_SERVERS = 3;
 
-  private static final int REGION_NUM = REGION_SERVERS * 3;
+  private static final int REGION_NUM = REGION_SERVERS * 50;
 
   private Admin admin;
 
@@ -154,6 +153,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
 
     // Disable the prefetch cache cost function
     conf.setFloat("hbase.master.balancer.stochastic.prefetchCacheCost", 0.0f);
+    loadBalancer.loadConf(conf);
 
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
     TEST_UTIL.getDFSCluster().waitClusterUp();
@@ -168,7 +168,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     TEST_UTIL.waitTableAvailable(tableName);
     TEST_UTIL.loadTable(admin.getConnection().getTable(tableName), HConstants.CATALOG_FAMILY);
     admin.flush(tableName);
-    compactTable(tableName);
+    TEST_UTIL.compact(true);
 
     // Validate that all the other cost functions are enabled
     Arrays.stream(FunctionCostKeys.values())
@@ -189,7 +189,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     assertEquals(REGION_SERVERS, ssmap.size());
 
     // Get the name of the region server to shutdown and restart
-    ServerName serverName = cluster.getRegionServer(REGION_SERVERS - 1).getServerName();
+    ServerName serverName = cluster.getClusterMetrics().getServersName().get(REGION_SERVERS - 1);
     ServerMetrics sm = ssmap.get(serverName);
     // Verify that some regions are assigned to this region server
     assertTrue(0.0f != sm.getRegionMetrics().size());
@@ -199,10 +199,10 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     cluster.stopRegionServer(serverName);
     cluster.waitForRegionServerToStop(serverName, 1000);
     // Compact the table so that all the regions are reassigned to the running region servers
-    compactTable(tableName);
+    TEST_UTIL.compact(true);
     TEST_UTIL.waitUntilNoRegionsInTransition(12000);
 
-    ssmap = admin.getClusterMetrics().getLiveServerMetrics();
+    ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS - 1, ssmap.size());
     sm = ssmap.get(serverName);
     // Validate that no server metrics is found for the non-active server
@@ -215,11 +215,13 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     cluster.waitForRegionServerToStart(serverName.getHostname(), serverName.getPort(), 1000);
     admin.balance();
     TEST_UTIL.waitUntilNoRegionsInTransition(12000);
-    ssmap = admin.getClusterMetrics().getLiveServerMetrics();
+    ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS, ssmap.size());
 
-    serverName = cluster.getRegionServer(REGION_SERVERS - 1).getServerName();
-    sm = ssmap.get(serverName);
+    ServerName newServerName = cluster.getClusterMetrics().getServersName().get(REGION_SERVERS - 1);
+    // Verify that the same region server has been started
+    assertTrue(ServerName.isSameAddress(serverName, newServerName));
+    sm = ssmap.get(newServerName);
 
     assertNotNull(sm);
     assertTrue(sm.getRegionMetrics().size() > 0);
@@ -243,6 +245,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
 
     Arrays.stream(FunctionCostKeys.values())
       .forEach(functionCostKey -> conf.setFloat(functionCostKey.getValue(), 0.0f));
+    loadBalancer.loadConf(conf);
 
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
     TEST_UTIL.getDFSCluster().waitClusterUp();
@@ -256,7 +259,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     TEST_UTIL.waitTableAvailable(tableName);
     TEST_UTIL.loadTable(admin.getConnection().getTable(tableName), HConstants.CATALOG_FAMILY);
     admin.flush(tableName);
-    compactTable(tableName);
+    TEST_UTIL.compact(true);
 
     // Validate that all the other cost functions are disabled
     Arrays.stream(FunctionCostKeys.values())
@@ -274,6 +277,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     TEST_UTIL.waitUntilNoRegionsInTransition(120000);
 
     Map<ServerName, ServerMetrics> ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
+
     assertEquals(REGION_SERVERS, ssmap.size());
 
     // Shutdown the last server. This is because the server id for an inactive server is reassigned
@@ -281,15 +285,15 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     // available
     // server id. In our case, we want to track the same server and hence, it's safe to restart the
     // last server in the list
-    ServerName serverName = cluster.getRegionServer(REGION_SERVERS - 1).getServerName();
+    ServerName serverName = cluster.getClusterMetrics().getServersName().get(REGION_SERVERS - 1);
     ServerMetrics sm = ssmap.get(serverName);
     assertTrue(0 != sm.getRegionMetrics().size());
 
     cluster.stopRegionServer(serverName);
     cluster.waitForRegionServerToStop(serverName, 1000);
-    compactTable(tableName);
+    TEST_UTIL.compact(true);
     TEST_UTIL.waitUntilNoRegionsInTransition(12000);
-    ssmap = admin.getClusterMetrics().getLiveServerMetrics();
+    ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS - 1, ssmap.size());
     sm = ssmap.get(serverName);
     assertNull(sm);
@@ -299,21 +303,91 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     cluster.waitForRegionServerToStart(serverName.getHostname(), serverName.getPort(), 1000);
     admin.balance();
     TEST_UTIL.waitUntilNoRegionsInTransition(120000);
-    ssmap = admin.getClusterMetrics().getLiveServerMetrics();
+    ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS, ssmap.size());
 
-    serverName = cluster.getRegionServer(REGION_SERVERS - 1).getServerName();
-    sm = ssmap.get(serverName);
+    ServerName newServerName = cluster.getClusterMetrics().getServersName().get(REGION_SERVERS - 1);
+    // Verify that the same region server has been started
+    assertTrue(ServerName.isSameAddress(serverName, newServerName));
+    sm = ssmap.get(newServerName);
 
     assertNotNull(sm);
     assertEquals(0, sm.getRegionMetrics().size());
   }
 
-  private void compactTable(TableName tableName) throws IOException {
-    for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-      for (HRegion region : t.getRegionServer().getRegions(tableName)) {
-        region.compact(true);
-        region.flush(true);
+  @Test
+  public void testStressTestWithOnlyPrefetchCacheCostFunctionEnabled() throws Exception {
+    // Test the prefetch cache cost returned by the cost function when random servers are
+    // restarted and only the PrefetchCacheCostFunction is enabled. Ensure that the prefetch cost
+    // returned by the cost function is always between 0 and 1.
+
+    // Disable all other cost functions
+    Arrays.stream(FunctionCostKeys.values())
+      .forEach(functionCostKey -> conf.setFloat(functionCostKey.getValue(), 0.0f));
+    loadBalancer.loadConf(conf);
+
+    TEST_UTIL.startMiniCluster(REGION_SERVERS);
+    TEST_UTIL.getDFSCluster().waitClusterUp();
+    cluster = TEST_UTIL.getHBaseCluster();
+    admin = TEST_UTIL.getAdmin();
+    admin.balancerSwitch(false, true);
+    TableName tableName = TableName.valueOf("testTableOnlyPrefetchCacheCostFunctionEnabled");
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
+    admin.createTable(tableDescriptor, Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), REGION_NUM);
+    TEST_UTIL.waitTableAvailable(tableName);
+    TEST_UTIL.loadTable(admin.getConnection().getTable(tableName), HConstants.CATALOG_FAMILY);
+    admin.flush(tableName);
+    TEST_UTIL.compact(true);
+
+    // Verify that all the other cost functions except the PrefetchCacheCostFunction are disabled
+    Arrays.stream(FunctionCostKeys.values())
+      .forEach(functionCostKey -> verifyCostFunctionState(admin.getConfiguration(),
+        functionCostKey.getValue(), false));
+
+    verifyCostFunctionState(admin.getConfiguration(),
+      "hbase.master.balancer.stochastic.prefetchCacheCost", true);
+
+    admin.balancerSwitch(true, true);
+    admin.balance();
+    TEST_UTIL.waitUntilNoRegionsInTransition(120000);
+
+    Random rand = new Random();
+    for (int i = 0; i < 5; i++) {
+      int randomServerID = rand.nextInt(REGION_SERVERS);
+      ServerName sn = cluster.getClusterMetrics().getServersName().get(randomServerID);
+      cluster.stopRegionServer(sn);
+      cluster.waitForRegionServerToStop(sn, 1000);
+      TEST_UTIL.compact(true);
+      TEST_UTIL.waitUntilNoRegionsInTransition(12000);
+      cluster.startRegionServer(sn.getHostname(), sn.getPort());
+      cluster.waitForRegionServerToStart(sn.getHostname(), sn.getPort(), 1000);
+      admin.balance();
+      // Verify that the same server was restarted
+      verifyServerActive(sn);
+      assertEquals(REGION_SERVERS, cluster.getClusterMetrics().getLiveServerMetrics().size());
+      validatePrefetchCacheCost(loadBalancer.getCostFunctions());
+    }
+  }
+
+  private void verifyServerActive(ServerName serverName) throws Exception {
+    // The server id of the region server may change post restart. The only way to ensure that the
+    // same server has been restarted is by searching for the server address (host:port) in the
+    // active server list
+    boolean found = false;
+    for (ServerName sname : cluster.getClusterMetrics().getServersName()) {
+      if (ServerName.isSameAddress(sname, serverName)) {
+        found = true;
+        break;
+      }
+    }
+    assertTrue(found);
+  }
+
+  private void validatePrefetchCacheCost(List<CostFunction> cf) {
+    for (CostFunction c : cf) {
+      if (c.getMultiplier() > 0.0f) {
+        assertTrue(c.cost() >= 0.0 && c.cost() <= 1.0);
       }
     }
   }

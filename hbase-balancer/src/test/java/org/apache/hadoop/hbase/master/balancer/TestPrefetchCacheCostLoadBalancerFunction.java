@@ -24,11 +24,14 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -177,6 +180,19 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
                                  // No historical prefetch
     }, };
 
+  private static Configuration storedConfiguration;
+
+  @BeforeClass
+  public static void saveInitialConfiguration() {
+    storedConfiguration = new Configuration(conf);
+  }
+
+  @Before
+  public void beforeEachTest() {
+    conf = new Configuration(storedConfiguration);
+    loadBalancer.onConfigurationChange(conf);
+  }
+
   @Test
   public void testVerifyPrefetchCostFunctionEnabled() {
     conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch.persistence");
@@ -189,13 +205,22 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
   }
 
   @Test
-  public void testVerifyPrefetchCostFunctionDisabled() {
+  public void testVerifyPrefetchCostFunctionDisabledByNoPersistencePathKey() {
     assertFalse(Arrays.asList(loadBalancer.getCostFunctionNames())
       .contains(PrefetchCacheCostFunction.class.getSimpleName()));
   }
 
   @Test
-  public void testPrefetchCost() throws Exception {
+  public void testVerifyPrefetchCostFunctionDisabledByNoMultiplier() {
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch.persistence");
+    conf.setFloat("hbase.master.balancer.stochastic.prefetchCacheCost", 0.0f);
+
+    assertFalse(Arrays.asList(loadBalancer.getCostFunctionNames())
+      .contains(PrefetchCacheCostFunction.class.getSimpleName()));
+  }
+
+  @Test
+  public void testPrefetchCost() {
     conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch.persistence");
     CostFunction costFunction = new PrefetchCacheCostFunction(conf);
 
@@ -211,14 +236,13 @@ public class TestPrefetchCacheCostLoadBalancerFunction extends StochasticBalance
   }
 
   private class MockClusterForPrefetch extends BalancerClusterState {
-    private int[][] regionServerPrefetch = null; // [region][server] = prefetch percent
+    private final int[][] regionServerPrefetch; // [region][server] = prefetch percent
 
     public MockClusterForPrefetch(int[][] regionsArray) {
       // regions[0] is an array where index = serverIndex and value = number of regions
       super(mockClusterServers(regionsArray[0], 1), null, null, null, null);
       regionServerPrefetch = new int[regionsArray.length - 1][];
-      Map<String, Map<Address, Float>> historicalPrefetchRatio =
-        new HashMap<String, Map<Address, Float>>();
+      Map<String, Map<Address, Float>> historicalPrefetchRatio = new HashMap<>();
       for (int i = 1; i < regionsArray.length; i++) {
         int regionIndex = i - 1;
         regionServerPrefetch[regionIndex] = new int[regionsArray[i].length - 1];

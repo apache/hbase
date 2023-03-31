@@ -770,6 +770,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  List<CostFunction> getCostFunctions() {
+    return costFunctions;
+  }
+
   /**
    * Update both the costs of costfunctions and the weights of candidate generators
    */
