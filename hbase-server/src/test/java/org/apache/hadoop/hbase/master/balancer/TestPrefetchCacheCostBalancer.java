@@ -185,7 +185,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     admin.balance();
     TEST_UTIL.waitUntilNoRegionsInTransition(120000);
 
-    Map<ServerName, ServerMetrics> ssmap = admin.getClusterMetrics().getLiveServerMetrics();
+    Map<ServerName, ServerMetrics> ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS, ssmap.size());
 
     // Get the name of the region server to shutdown and restart
@@ -273,8 +273,7 @@ public class TestPrefetchCacheCostBalancer extends StochasticBalancerTestBase {
     admin.balance();
     TEST_UTIL.waitUntilNoRegionsInTransition(120000);
 
-    Map<ServerName, ServerMetrics> ssmap = admin.getClusterMetrics().getLiveServerMetrics();
-
+    Map<ServerName, ServerMetrics> ssmap = cluster.getClusterMetrics().getLiveServerMetrics();
     assertEquals(REGION_SERVERS, ssmap.size());
 
     // Shutdown the last server. This is because the server id for an inactive server is reassigned

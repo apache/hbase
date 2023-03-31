@@ -70,7 +70,7 @@ public class PrefetchCacheCostFunction extends CostFunction {
 
   @Override
   protected double cost() {
-    return 1 - prefetchRatio;
+    return scale(0, 1, (1 - prefetchRatio));
   }
 
   @Override
