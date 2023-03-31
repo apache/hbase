@@ -17,15 +17,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.Optional;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
+import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 
 /**
@@ -35,6 +40,8 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 final public class OnlineLogRecord extends LogEntry {
+
+  private static final Logger LOG = LoggerFactory.getLogger(OnlineLogRecord.class.getName());
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
@@ -51,6 +58,15 @@ final public class OnlineLogRecord extends LogEntry {
         }
         if (slowLogPayload.getMultiServiceCalls() == 0) {
           jsonObj.remove("multiServiceCalls");
+        }
+        if (slowLogPayload.getScan().isPresent()) {
+          try {
+            jsonObj.add("scan", JsonParser.parseString(slowLogPayload.getScan().get().toJSON()));
+          } catch (IOException e) {
+            LOG.warn("Failed to serialize scan {}", slowLogPayload.getScan().get(), e);
+          }
+        } else {
+          jsonObj.remove("scan");
         }
         return jsonObj;
       }).create();
@@ -72,6 +88,7 @@ final public class OnlineLogRecord extends LogEntry {
   private final int multiGetsCount;
   private final int multiMutationsCount;
   private final int multiServiceCalls;
+  private final Optional<Scan> scan;
 
   public long getStartTime() {
     return startTime;
@@ -136,11 +153,20 @@ final public class OnlineLogRecord extends LogEntry {
     return multiServiceCalls;
   }
 
-  private OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
+  /**
+   * If {@value org.apache.hadoop.hbase.HConstants#SLOW_LOG_SCAN_PAYLOAD_ENABLED} is enabled then
+   * this value may be present and should represent the Scan that produced the given
+   * {@link OnlineLogRecord}
+   */
+  public Optional<Scan> getScan() {
+    return scan;
+  }
+
+  protected OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
     final long responseSize, final long blockBytesScanned, final String clientAddress,
     final String serverClass, final String methodName, final String callDetails, final String param,
     final String regionName, final String userName, final int multiGetsCount,
-    final int multiMutationsCount, final int multiServiceCalls) {
+    final int multiMutationsCount, final int multiServiceCalls, final Optional<Scan> scan) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
@@ -156,6 +182,7 @@ final public class OnlineLogRecord extends LogEntry {
     this.multiGetsCount = multiGetsCount;
     this.multiMutationsCount = multiMutationsCount;
     this.multiServiceCalls = multiServiceCalls;
+    this.scan = scan;
   }
 
   public static class OnlineLogRecordBuilder {
@@ -174,6 +201,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int multiGetsCount;
     private int multiMutationsCount;
     private int multiServiceCalls;
+    private Optional<Scan> scan = Optional.empty();
 
     public OnlineLogRecordBuilder setStartTime(long startTime) {
       this.startTime = startTime;
@@ -253,10 +281,15 @@ final public class OnlineLogRecord extends LogEntry {
       return this;
     }
 
+    public OnlineLogRecordBuilder setScan(Scan scan) {
+      this.scan = Optional.of(scan);
+      return this;
+    }
+
     public OnlineLogRecord build() {
       return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
         blockBytesScanned, clientAddress, serverClass, methodName, callDetails, param, regionName,
-        userName, multiGetsCount, multiMutationsCount, multiServiceCalls);
+        userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan);
     }
   }
 
@@ -280,7 +313,8 @@ final public class OnlineLogRecord extends LogEntry {
       .append(multiServiceCalls, that.multiServiceCalls).append(clientAddress, that.clientAddress)
       .append(serverClass, that.serverClass).append(methodName, that.methodName)
       .append(callDetails, that.callDetails).append(param, that.param)
-      .append(regionName, that.regionName).append(userName, that.userName).isEquals();
+      .append(regionName, that.regionName).append(userName, that.userName).append(scan, that.scan)
+      .isEquals();
   }
 
   @Override
@@ -288,7 +322,8 @@ final public class OnlineLogRecord extends LogEntry {
     return new HashCodeBuilder(17, 37).append(startTime).append(processingTime).append(queueTime)
       .append(responseSize).append(blockBytesScanned).append(clientAddress).append(serverClass)
       .append(methodName).append(callDetails).append(param).append(regionName).append(userName)
-      .append(multiGetsCount).append(multiMutationsCount).append(multiServiceCalls).toHashCode();
+      .append(multiGetsCount).append(multiMutationsCount).append(multiServiceCalls).append(scan)
+      .toHashCode();
   }
 
   @Override
@@ -305,7 +340,7 @@ final public class OnlineLogRecord extends LogEntry {
       .append("methodName", methodName).append("callDetails", callDetails).append("param", param)
       .append("regionName", regionName).append("userName", userName)
       .append("multiGetsCount", multiGetsCount).append("multiMutationsCount", multiMutationsCount)
-      .append("multiServiceCalls", multiServiceCalls).toString();
+      .append("multiServiceCalls", multiServiceCalls).append("scan", scan).toString();
   }
 
 }

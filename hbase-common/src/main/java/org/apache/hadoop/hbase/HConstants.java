@@ -1569,6 +1569,9 @@ public final class HConstants {
   // Default 10 mins.
   public static final int DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION = 10 * 60 * 1000;
 
+  public static final String SLOW_LOG_SCAN_PAYLOAD_ENABLED = "hbase.slowlog.scan.payload.enabled";
+  public static final boolean SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT = false;
+
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";
 
