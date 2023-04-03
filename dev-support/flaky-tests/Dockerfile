@@ -22,7 +22,7 @@
 # dev-support/flaky-tests/flaky-reporting.Jenkinsfile
 FROM ubuntu:22.04
 
-COPY . /hbase/dev-support
+COPY dev-support/flaky-tests/python-requirements.txt /hbase/dev-support/flaky-tests/
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
@@ -30,4 +30,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
       python3-pip='22.0.2+dfsg-*' \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir -r /hbase/dev-support/python-requirements.txt
+    && pip3 install --no-cache-dir -r /hbase/dev-support/flaky-tests/python-requirements.txt
