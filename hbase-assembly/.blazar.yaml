@@ -30,5 +30,6 @@ after:
         - ls -lah $RPMS_OUTPUT_DIR
 
     - description: "Publish RPM"
+      container: host
       commands:
         - ./rpm-build/upload-rpm.sh
