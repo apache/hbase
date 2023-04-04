@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.wal;
 import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
@@ -28,10 +29,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufWALStreamReader;
 import org.apache.hadoop.hbase.regionserver.wal.ProtobufWALTailingReader;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
@@ -99,7 +102,11 @@ public class WALFactory {
 
   public static final String META_WAL_PROVIDER = "hbase.wal.meta_provider";
 
+  public static final String REPLICATION_WAL_PROVIDER = "hbase.wal.replication_provider";
+
   public static final String WAL_ENABLED = "hbase.regionserver.hlog.enabled";
+
+  static final String REPLICATION_WAL_PROVIDER_ID = "rep";
 
   final String factoryId;
   final Abortable abortable;
@@ -107,7 +114,10 @@ public class WALFactory {
   // The meta updates are written to a different wal. If this
   // regionserver holds meta regions, then this ref will be non-null.
   // lazily intialized; most RegionServers don't deal with META
-  private final AtomicReference<WALProvider> metaProvider = new AtomicReference<>();
+  private final LazyInitializedWALProvider metaProvider;
+  // This is for avoid hbase:replication itself keeps trigger unnecessary updates to WAL file and
+  // generate a lot useless data, see HBASE-27775 for more details.
+  private final LazyInitializedWALProvider replicationProvider;
 
   /**
    * Configuration-specified WAL Reader used when a custom reader is requested
@@ -144,13 +154,15 @@ public class WALFactory {
     factoryId = SINGLETON_ID;
     this.abortable = null;
     this.excludeDatanodeManager = new ExcludeDatanodeManager(conf);
+    this.metaProvider = null;
+    this.replicationProvider = null;
   }
 
   Providers getDefaultProvider() {
     return Providers.defaultProvider;
   }
 
-  public Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
+  Class<? extends WALProvider> getProviderClass(String key, String defaultValue) {
     try {
       Providers provider = Providers.valueOf(conf.get(key, defaultValue));
 
@@ -246,6 +258,10 @@ public class WALFactory {
     this.factoryId = factoryId;
     this.excludeDatanodeManager = new ExcludeDatanodeManager(conf);
     this.abortable = abortable;
+    this.metaProvider = new LazyInitializedWALProvider(this,
+      AbstractFSWALProvider.META_WAL_PROVIDER_ID, META_WAL_PROVIDER, this.abortable);
+    this.replicationProvider = new LazyInitializedWALProvider(this, REPLICATION_WAL_PROVIDER_ID,
+      REPLICATION_WAL_PROVIDER, this.abortable);
     // end required early initialization
     if (conf.getBoolean(WAL_ENABLED, true)) {
       WALProvider provider = createProvider(getProviderClass(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
@@ -263,19 +279,45 @@ public class WALFactory {
     }
   }
 
+  public Configuration getConf() {
+    return conf;
+  }
+
   /**
    * Shutdown all WALs and clean up any underlying storage. Use only when you will not need to
    * replay and edits that have gone to any wals from this factory.
    */
   public void close() throws IOException {
-    final WALProvider metaProvider = this.metaProvider.get();
-    if (null != metaProvider) {
-      metaProvider.close();
+    List<IOException> ioes = new ArrayList<>();
+    // these fields could be null if the WALFactory is created only for being used in the
+    // getInstance method.
+    if (metaProvider != null) {
+      try {
+        metaProvider.close();
+      } catch (IOException e) {
+        ioes.add(e);
+      }
     }
-    // close is called on a WALFactory with null provider in the case of contention handling
-    // within the getInstance method.
-    if (null != provider) {
-      provider.close();
+    if (replicationProvider != null) {
+      try {
+        replicationProvider.close();
+      } catch (IOException e) {
+        ioes.add(e);
+      }
+    }
+    if (provider != null) {
+      try {
+        provider.close();
+      } catch (IOException e) {
+        ioes.add(e);
+      }
+    }
+    if (!ioes.isEmpty()) {
+      IOException ioe = new IOException("Failed to close WALFactory");
+      for (IOException e : ioes) {
+        ioe.addSuppressed(e);
+      }
+      throw ioe;
     }
   }
 
@@ -285,18 +327,36 @@ public class WALFactory {
    * if you can as it will try to leave things as tidy as possible.
    */
   public void shutdown() throws IOException {
-    IOException exception = null;
-    final WALProvider metaProvider = this.metaProvider.get();
-    if (null != metaProvider) {
+    List<IOException> ioes = new ArrayList<>();
+    // these fields could be null if the WALFactory is created only for being used in the
+    // getInstance method.
+    if (metaProvider != null) {
       try {
         metaProvider.shutdown();
-      } catch (IOException ioe) {
-        exception = ioe;
+      } catch (IOException e) {
+        ioes.add(e);
       }
     }
-    provider.shutdown();
-    if (null != exception) {
-      throw exception;
+    if (replicationProvider != null) {
+      try {
+        replicationProvider.shutdown();
+      } catch (IOException e) {
+        ioes.add(e);
+      }
+    }
+    if (provider != null) {
+      try {
+        provider.shutdown();
+      } catch (IOException e) {
+        ioes.add(e);
+      }
+    }
+    if (!ioes.isEmpty()) {
+      IOException ioe = new IOException("Failed to shutdown WALFactory");
+      for (IOException e : ioes) {
+        ioe.addSuppressed(e);
+      }
+      throw ioe;
     }
   }
 
@@ -304,38 +364,10 @@ public class WALFactory {
     return provider.getWALs();
   }
 
-  /**
-   * Called when we lazily create a hbase:meta WAL OR from ReplicationSourceManager ahead of
-   * creating the first hbase:meta WAL so we can register a listener.
-   * @see #getMetaWALProvider()
-   */
-  public WALProvider getMetaProvider() throws IOException {
-    for (;;) {
-      WALProvider provider = this.metaProvider.get();
-      if (provider != null) {
-        return provider;
-      }
-      Class<? extends WALProvider> clz = null;
-      if (conf.get(META_WAL_PROVIDER) == null) {
-        try {
-          clz = conf.getClass(WAL_PROVIDER, Providers.defaultProvider.clazz, WALProvider.class);
-        } catch (Throwable t) {
-          // the WAL provider should be an enum. Proceed
-        }
-      }
-      if (clz == null) {
-        clz = getProviderClass(META_WAL_PROVIDER, conf.get(WAL_PROVIDER, DEFAULT_WAL_PROVIDER));
-      }
-      provider = createProvider(clz);
-      provider.init(this, conf, AbstractFSWALProvider.META_WAL_PROVIDER_ID, this.abortable);
-      provider.addWALActionsListener(new MetricsWAL());
-      if (metaProvider.compareAndSet(null, provider)) {
-        return provider;
-      } else {
-        // someone is ahead of us, close and try again.
-        provider.close();
-      }
-    }
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  WALProvider getMetaProvider() throws IOException {
+    return metaProvider.getProvider();
   }
 
   /**
@@ -343,14 +375,14 @@ public class WALFactory {
    */
   public WAL getWAL(RegionInfo region) throws IOException {
     // Use different WAL for hbase:meta. Instantiates the meta WALProvider if not already up.
-    if (
-      region != null && region.isMetaRegion()
-        && region.getReplicaId() == RegionInfo.DEFAULT_REPLICA_ID
-    ) {
-      return getMetaProvider().getWAL(region);
-    } else {
-      return provider.getWAL(region);
+    if (region != null && RegionReplicaUtil.isDefaultReplica(region)) {
+      if (region.isMetaRegion()) {
+        return metaProvider.getProvider().getWAL(region);
+      } else if (ReplicationStorageFactory.isReplicationQueueTable(conf, region.getTable())) {
+        return replicationProvider.getProvider().getWAL(region);
+      }
     }
+    return provider.getWAL(region);
   }
 
   public WALStreamReader createStreamReader(FileSystem fs, Path path) throws IOException {
@@ -527,16 +559,28 @@ public class WALFactory {
     return FSHLogProvider.createWriter(configuration, fs, path, false);
   }
 
-  public final WALProvider getWALProvider() {
+  public WALProvider getWALProvider() {
     return this.provider;
   }
 
   /**
-   * @return Current metaProvider... may be null if not yet initialized.
-   * @see #getMetaProvider()
+   * Returns all the wal providers, for example, the default one, the one for hbase:meta and the one
+   * for hbase:replication.
    */
-  public final WALProvider getMetaWALProvider() {
-    return this.metaProvider.get();
+  public List<WALProvider> getAllWALProviders() {
+    List<WALProvider> providers = new ArrayList<>();
+    if (provider != null) {
+      providers.add(provider);
+    }
+    WALProvider meta = metaProvider.getProviderNoCreate();
+    if (meta != null) {
+      providers.add(meta);
+    }
+    WALProvider replication = replicationProvider.getProviderNoCreate();
+    if (replication != null) {
+      providers.add(replication);
+    }
+    return providers;
   }
 
   public ExcludeDatanodeManager getExcludeDatanodeManager() {
