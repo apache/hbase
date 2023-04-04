@@ -308,6 +308,14 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     when(source.isRecovered()).thenReturn(recovered);
     MetricsReplicationGlobalSourceSource globalMetrics =
       Mockito.mock(MetricsReplicationGlobalSourceSource.class);
+    final AtomicLong bufferUsedCounter = new AtomicLong(0);
+    Mockito.doAnswer((invocationOnMock) -> {
+      bufferUsedCounter.set(invocationOnMock.getArgument(0, Long.class));
+      return null;
+    }).when(globalMetrics).setWALReaderEditsBufferBytes(Mockito.anyLong());
+    when(globalMetrics.getWALReaderEditsBufferBytes())
+      .then(invocationOnMock -> bufferUsedCounter.get());
+
     when(mockSourceManager.getGlobalMetrics()).thenReturn(globalMetrics);
     return source;
   }
@@ -791,4 +799,82 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     Waiter.waitFor(localConf, 10000,
       (Waiter.Predicate<Exception>) () -> logQueue.getQueueSize(fakeWalGroupId) == 1);
   }
+
+  /**
+   * This test is for HBASE-27778, when {@link WALEntryFilter#filter} throws exception for some
+   * entries in {@link WALEntryBatch},{@link ReplicationSourceWALReader#totalBufferUsed} should be
+   * decreased because {@link WALEntryBatch} is not put to
+   * {@link ReplicationSourceWALReader#entryBatchQueue}.
+   */
+  @Test
+  public void testReplicationSourceWALReaderWithPartialWALEntryFailingFilter() throws Exception {
+    appendEntriesToLogAndSync(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, fs, CONF, 0, log, new MetricsSource("1"), fakeWalGroupId)) {
+      for (int i = 0; i < 3; i++) {
+        assertNotNull(next(entryStream));
+      }
+      position = entryStream.getPosition();
+    }
+
+    Path walPath = getQueue().peek();
+    int maxThrowExceptionCount = 3;
+
+    ReplicationSource source = mockReplicationSource(false, CONF);
+    when(source.isPeerEnabled()).thenReturn(true);
+    PartialWALEntryFailingWALEntryFilter walEntryFilter =
+      new PartialWALEntryFailingWALEntryFilter(maxThrowExceptionCount, 3);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, CONF, logQueue, 0, walEntryFilter, source, fakeWalGroupId);
+    reader.start();
+    WALEntryBatch entryBatch = reader.take();
+
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    final long[] sum = new long[1];
+    entryBatch.getWalEntries().stream().forEach(entry -> {
+      sum[0] += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
+    });
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
+    assertEquals(sum[0], source.getSourceManager().getTotalBufferUsed().get());
+    assertEquals(sum[0],
+      source.getSourceManager().getGlobalMetrics().getWALReaderEditsBufferBytes());
+    assertEquals(maxThrowExceptionCount, walEntryFilter.getThrowExceptionCount());
+  }
+
+  private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
+    private int filteredWALEntryCount = -1;
+    private int walEntryCount = 0;
+    private int throwExceptionCount = -1;
+    private int maxThrowExceptionCount;
+
+    public PartialWALEntryFailingWALEntryFilter(int throwExceptionLimit, int walEntryCount) {
+      this.maxThrowExceptionCount = throwExceptionLimit;
+      this.walEntryCount = walEntryCount;
+    }
+
+    @Override
+    public Entry filter(Entry entry) {
+      filteredWALEntryCount++;
+      if (filteredWALEntryCount < walEntryCount - 1) {
+        return entry;
+      }
+
+      filteredWALEntryCount = -1;
+      throwExceptionCount++;
+      if (throwExceptionCount <= maxThrowExceptionCount - 1) {
+        throw new WALEntryFilterRetryableException("failing filter");
+      }
+      return entry;
+    }
+
+    public int getThrowExceptionCount() {
+      return throwExceptionCount;
+    }
+  }
+
 }

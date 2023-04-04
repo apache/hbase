@@ -145,43 +145,54 @@ class ReplicationSourceWALReader extends Thread {
         source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
-          if (!source.isPeerEnabled()) {
-            Threads.sleep(sleepForRetries);
-            continue;
+          boolean successAddToQueue = false;
+          try {
+            if (!source.isPeerEnabled()) {
+              Threads.sleep(sleepForRetries);
+              continue;
+            }
+            if (!checkQuota()) {
+              continue;
+            }
+            Path currentPath = entryStream.getCurrentPath();
+            WALEntryStream.HasNext hasNext = entryStream.hasNext();
+            if (hasNext == WALEntryStream.HasNext.NO) {
+              replicationDone();
+              return;
+            }
+            // first, check if we have switched a file, if so, we need to manually add an EOF entry
+            // batch to the queue
+            if (currentPath != null && switched(entryStream, currentPath)) {
+              entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
+              continue;
+            }
+            if (hasNext == WALEntryStream.HasNext.RETRY) {
+              // sleep and retry
+              sleepMultiplier = sleep(sleepMultiplier);
+              continue;
+            }
+            if (hasNext == WALEntryStream.HasNext.RETRY_IMMEDIATELY) {
+              // retry immediately, this usually means we have switched a file
+              continue;
+            }
+            // below are all for hasNext == YES
+            batch = createBatch(entryStream);
+            readWALEntries(entryStream, batch);
+            currentPosition = entryStream.getPosition();
+            // need to propagate the batch even it has no entries since it may carry the last
+            // sequence id information for serial replication.
+            LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
+            entryBatchQueue.put(batch);
+            successAddToQueue = true;
+            sleepMultiplier = 1;
+          } finally {
+            if (batch != null && !successAddToQueue) {
+              // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
+              // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
+              // acquired in ReplicationSourceWALReader.acquireBufferQuota.
+              this.releaseBufferQuota(batch);
+            }
           }
-          if (!checkQuota()) {
-            continue;
-          }
-          Path currentPath = entryStream.getCurrentPath();
-          WALEntryStream.HasNext hasNext = entryStream.hasNext();
-          if (hasNext == WALEntryStream.HasNext.NO) {
-            replicationDone();
-            return;
-          }
-          // first, check if we have switched a file, if so, we need to manually add an EOF entry
-          // batch to the queue
-          if (currentPath != null && switched(entryStream, currentPath)) {
-            entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
-            continue;
-          }
-          if (hasNext == WALEntryStream.HasNext.RETRY) {
-            // sleep and retry
-            sleepMultiplier = sleep(sleepMultiplier);
-            continue;
-          }
-          if (hasNext == WALEntryStream.HasNext.RETRY_IMMEDIATELY) {
-            // retry immediately, this usually means we have switched a file
-            continue;
-          }
-          // below are all for hasNext == YES
-          batch = createBatch(entryStream);
-          readWALEntries(entryStream, batch);
-          currentPosition = entryStream.getPosition();
-          // need to propagate the batch even it has no entries since it may carry the last
-          // sequence id information for serial replication.
-          LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
-          entryBatchQueue.put(batch);
-          sleepMultiplier = 1;
         }
       } catch (WALEntryFilterRetryableException e) {
         // here we have to recreate the WALEntryStream, as when filtering, we have already called
@@ -212,7 +223,7 @@ class ReplicationSourceWALReader extends Thread {
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
     updateBatchStats(batch, entry, entrySize);
-    boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
+    boolean totalBufferTooLarge = acquireBufferQuota(batch, entrySizeExcludeBulkLoad);
 
     // Stop if too many entries or too big
     return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -430,11 +441,24 @@ class ReplicationSourceWALReader extends Thread {
    * @param size delta size for grown buffer
    * @return true if we should clear buffer and push all
    */
-  private boolean acquireBufferQuota(long size) {
+  private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
     long newBufferUsed = totalBufferUsed.addAndGet(size);
     // Record the new buffer usage
     this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    walEntryBatch.incrementUsedBufferSize(size);
     return newBufferUsed >= totalBufferQuota;
+  }
+
+  /**
+   * To release the buffer quota of {@link WALEntryBatch} which acquired by
+   * {@link ReplicationSourceWALReader#acquireBufferQuota}
+   */
+  private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
+    long usedBufferSize = walEntryBatch.getUsedBufferSize();
+    if (usedBufferSize > 0) {
+      long newBufferUsed = totalBufferUsed.addAndGet(-usedBufferSize);
+      this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    }
   }
 
   /** Returns whether the reader thread is running */
