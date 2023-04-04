@@ -211,7 +211,7 @@
                                               * TraditionalBinaryPrefix.KILO.value, "B", 1);
               }
            }
-           Long lenOfBiggestCellInRegion = -1l;
+           long lenOfBiggestCellInRegion = -1L;
            Region region = regionServer.getRegion(r.getEncodedName());
            if (region != null) {
              List<? extends Store> stores = region.getStores();
