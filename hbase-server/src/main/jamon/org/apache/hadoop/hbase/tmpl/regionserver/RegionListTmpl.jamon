@@ -218,7 +218,7 @@
              for (Store store : stores) {
                Collection<? extends StoreFile> storeFiles = store.getStorefiles();
                for (StoreFile sf : storeFiles) {
-                 Long lenOfBiggestCell = ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell();
+                 long lenOfBiggestCell = ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell();
                  if (lenOfBiggestCellInRegion < lenOfBiggestCell) {
                    lenOfBiggestCellInRegion = lenOfBiggestCell;
                  }
