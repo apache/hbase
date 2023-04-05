@@ -833,17 +833,15 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
     assertNotNull(entryBatch);
     assertEquals(3, entryBatch.getWalEntries().size());
-    final long[] sum = new long[1];
-    entryBatch.getWalEntries().stream().forEach(entry -> {
-      sum[0] += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
-    });
+    long sum = entryBatch.getWalEntries().stream()
+      .mapToLong(ReplicationSourceWALReader::getEntrySizeExcludeBulkLoad).sum();
     assertEquals(position, entryBatch.getLastWalPosition());
     assertEquals(walPath, entryBatch.getLastWalPath());
     assertEquals(3, entryBatch.getNbRowKeys());
-    assertEquals(sum[0], source.getSourceManager().getTotalBufferUsed().get());
-    assertEquals(sum[0],
-      source.getSourceManager().getGlobalMetrics().getWALReaderEditsBufferBytes());
+    assertEquals(sum, source.getSourceManager().getTotalBufferUsed().get());
+    assertEquals(sum, source.getSourceManager().getGlobalMetrics().getWALReaderEditsBufferBytes());
     assertEquals(maxThrowExceptionCount, walEntryFilter.getThrowExceptionCount());
+    assertNull(reader.poll(10));
   }
 
   private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
