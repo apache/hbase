@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
@@ -182,7 +184,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
     }
   }
 
-  private void writeInfoFile(FileSystem fs) throws IOException {
+  private void writeInfoFile(FileSystem fs, boolean isForce) throws IOException {
     // Record the info of this run. Currently only record the time we run the job. We will use this
     // timestamp to clean up the data for last sequence ids and hfile refs in replication queue
     // storage. See ReplicationQueueStorage.removeLastSequenceIdsAndHFileRefsBefore.
@@ -190,9 +192,46 @@ public class ReplicationSyncUp extends Configured implements Tool {
       new ReplicationSyncUpToolInfo(EnvironmentEdgeManager.currentTime());
     String json = JsonMapper.writeObjectAsString(info);
     Path infoDir = new Path(CommonFSUtils.getRootDir(getConf()), INFO_DIR);
-    try (FSDataOutputStream out = fs.create(new Path(infoDir, INFO_FILE), false)) {
+    try (FSDataOutputStream out = fs.create(new Path(infoDir, INFO_FILE), isForce)) {
       out.write(Bytes.toBytes(json));
     }
+  }
+
+  private static boolean parseOpts(String args[]) {
+    LinkedList<String> argv = new LinkedList<>();
+    argv.addAll(Arrays.asList(args));
+    String cmd = null;
+    while ((cmd = argv.poll()) != null) {
+      if (cmd.equals("-h") || cmd.equals("--h") || cmd.equals("--help")) {
+        printUsageAndExit(null, 0);
+      }
+      if (cmd.equals("-f")) {
+        return true;
+      }
+      if (!argv.isEmpty()) {
+        printUsageAndExit("ERROR: Unrecognized option/command: " + cmd, -1);
+      }
+    }
+    return false;
+  }
+
+  private static void printUsageAndExit(final String message, final int exitCode) {
+    printUsage(message);
+    System.exit(exitCode);
+  }
+
+  private static void printUsage(final String message) {
+    if (message != null && message.length() > 0) {
+      System.err.println(message);
+    }
+    System.err.println("Usage: hbase " + ReplicationSyncUp.class.getName() + " \\");
+    System.err.println("  <OPTIONS> [-D<property=value>]*");
+    System.err.println();
+    System.err.println("General Options:");
+    System.err.println(" -h|--h|--help  Show this help and exit.");
+    System.err
+      .println(" -f Start a new ReplicationSyncUp after the previous ReplicationSyncUp failed. "
+        + "See HBASE-27623 for details.");
   }
 
   @Override
@@ -217,6 +256,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
         return abort;
       }
     };
+    boolean isForce = parseOpts(args);
     Configuration conf = getConf();
     try (ZKWatcher zkw = new ZKWatcher(conf,
       "syncupReplication" + EnvironmentEdgeManager.currentTime(), abortable, true)) {
@@ -226,7 +266,7 @@ public class ReplicationSyncUp extends Configured implements Tool {
       Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
 
       System.out.println("Start Replication Server");
-      writeInfoFile(fs);
+      writeInfoFile(fs, isForce);
       Replication replication = new Replication();
       // use offline table replication queue storage
       getConf().setClass(ReplicationStorageFactory.REPLICATION_QUEUE_IMPL,
