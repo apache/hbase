@@ -27,6 +27,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -299,5 +301,39 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
       rowCountHt1TargetAtPeer1);
     assertEquals("@Peer1 t2_syncup should be sync up and have 200 rows", 200,
       rowCountHt2TargetAtPeer1);
+  }
+
+  /**
+   * test "start a new ReplicationSyncUp after the previous failed". See HBASE-27623 for details.
+   */
+  @Test
+  public void testStartANewSyncUpToolAfterFailed() throws Exception {
+    // Start syncUpTool for the first time with non-force mode,
+    // let's assume that this will fail in sync data,
+    // this does not affect our test results
+    syncUp(UTIL1);
+    Path rootDir = CommonFSUtils.getRootDir(UTIL1.getConfiguration());
+    Path syncUpInfoDir = new Path(rootDir, ReplicationSyncUp.INFO_DIR);
+    Path replicationInfoPath = new Path(syncUpInfoDir, ReplicationSyncUp.INFO_FILE);
+    FileSystem fs = UTIL1.getTestFileSystem();
+    assertTrue(fs.exists(replicationInfoPath));
+    FileStatus fileStatus1 = fs.getFileStatus(replicationInfoPath);
+
+    // Start syncUpTool for the second time with non-force mode,
+    // startup will fail because replication info file already exists
+    try {
+      syncUp(UTIL1);
+    } catch (Exception e) {
+      assertTrue("e should be a FileAlreadyExistsException",
+        (e instanceof FileAlreadyExistsException));
+    }
+    FileStatus fileStatus2 = fs.getFileStatus(replicationInfoPath);
+    assertEquals(fileStatus1.getModificationTime(), fileStatus2.getModificationTime());
+
+    // Start syncUpTool for the third time with force mode,
+    // startup will success and create a new replication info file
+    syncUp(UTIL1, new String[] { "-f" });
+    FileStatus fileStatus3 = fs.getFileStatus(replicationInfoPath);
+    assertTrue(fileStatus3.getModificationTime() > fileStatus2.getModificationTime());
   }
 }
