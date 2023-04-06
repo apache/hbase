@@ -18,6 +18,97 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.4 - 2023-04-14
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27758](https://issues.apache.org/jira/browse/HBASE-27758) | Inconsistent synchronization in MetricsUserSourceImpl |  Major | . |
+| [HBASE-26526](https://issues.apache.org/jira/browse/HBASE-26526) | Introduce a timeout to shutdown of WAL |  Major | wal |
+| [HBASE-27744](https://issues.apache.org/jira/browse/HBASE-27744) | Update compression dependencies |  Minor | io |
+| [HBASE-27676](https://issues.apache.org/jira/browse/HBASE-27676) | Scan handlers in the RPC executor should match at least one scan queues |  Major | . |
+| [HBASE-27646](https://issues.apache.org/jira/browse/HBASE-27646) | Should not use pread when prefetching in HFilePreadReader |  Minor | Performance |
+| [HBASE-27710](https://issues.apache.org/jira/browse/HBASE-27710) | ByteBuff ref counting is too expensive for on-heap buffers |  Major | . |
+| [HBASE-27672](https://issues.apache.org/jira/browse/HBASE-27672) | Read RPC threads may BLOCKED at the Configuration.get when using java compression |  Minor | . |
+| [HBASE-27670](https://issues.apache.org/jira/browse/HBASE-27670) | Improve FSUtils to directly obtain FSDataOutputStream |  Major | Filesystem Integration |
+| [HBASE-23983](https://issues.apache.org/jira/browse/HBASE-23983) | Spotbugs warning complain on master build |  Major | . |
+| [HBASE-27458](https://issues.apache.org/jira/browse/HBASE-27458) | Use ReadWriteLock for region scanner readpoint map |  Minor | Scanners |
+| [HBASE-23102](https://issues.apache.org/jira/browse/HBASE-23102) | Improper Usage of Map putIfAbsent |  Minor | . |
+| [HBASE-27666](https://issues.apache.org/jira/browse/HBASE-27666) | Allow preCompact hooks to return scanners whose cells can be shipped |  Major | . |
+| [HBASE-27655](https://issues.apache.org/jira/browse/HBASE-27655) | Remove the empty path annotation from ClusterMetricsResource |  Trivial | . |
+| [HBASE-15242](https://issues.apache.org/jira/browse/HBASE-15242) | Client metrics for retries and timeouts |  Major | metrics |
+| [HBASE-21521](https://issues.apache.org/jira/browse/HBASE-21521) | Expose master startup status via web UI |  Major | master, UI |
+| [HBASE-27590](https://issues.apache.org/jira/browse/HBASE-27590) | Change Iterable to List in SnapshotFileCache |  Minor | . |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27704](https://issues.apache.org/jira/browse/HBASE-27704) | Quotas can drastically overflow configured limit |  Major | . |
+| [HBASE-27726](https://issues.apache.org/jira/browse/HBASE-27726) | ruby shell not handled SyntaxError exceptions properly |  Minor | shell |
+| [HBASE-27732](https://issues.apache.org/jira/browse/HBASE-27732) | NPE in TestBasicWALEntryStreamFSHLog.testEOFExceptionInOldWALsDirectory |  Major | Replication |
+| [HBASE-26866](https://issues.apache.org/jira/browse/HBASE-26866) | Shutdown WAL may abort region server |  Major | wal |
+| [HBASE-27684](https://issues.apache.org/jira/browse/HBASE-27684) | Client metrics for user region lock related behaviors. |  Major | Client |
+| [HBASE-27671](https://issues.apache.org/jira/browse/HBASE-27671) | Client should not be able to restore/clone a snapshot after it's TTL has expired |  Minor | . |
+| [HBASE-27651](https://issues.apache.org/jira/browse/HBASE-27651) | hbase-daemon.sh foreground\_start should propagate SIGHUP and SIGTERM |  Minor | scripts |
+| [HBASE-27718](https://issues.apache.org/jira/browse/HBASE-27718) | The regionStateNode only need remove once in regionOffline |  Minor | amv2 |
+| [HBASE-27729](https://issues.apache.org/jira/browse/HBASE-27729) | Missed one parameter when logging exception in StoreFileListFile |  Major | logging |
+| [HBASE-27708](https://issues.apache.org/jira/browse/HBASE-27708) | CPU hot-spot resolving User subject |  Major | Client, tracing |
+| [HBASE-27652](https://issues.apache.org/jira/browse/HBASE-27652) | Client-side lock contention around Configuration when using read replica regions |  Major | Client, read replicas |
+| [HBASE-27714](https://issues.apache.org/jira/browse/HBASE-27714) | WALEntryStreamTestBase creates a new HBTU in startCluster method which causes all sub classes are testing default configurations |  Major | Replication, test |
+| [HBASE-27688](https://issues.apache.org/jira/browse/HBASE-27688) | HFile splitting occurs during bulkload, the CREATE\_TIME\_TS of hfileinfo is 0 |  Major | HFile |
+| [HBASE-27250](https://issues.apache.org/jira/browse/HBASE-27250) | MasterRpcService#setRegionStateInMeta does not support replica region encodedNames or region names |  Minor | . |
+| [HBASE-23561](https://issues.apache.org/jira/browse/HBASE-23561) | Look up of Region in Master by encoded region name is O(n) |  Trivial | . |
+| [HBASE-24781](https://issues.apache.org/jira/browse/HBASE-24781) | Clean up peer metrics when disabling peer |  Major | Replication |
+| [HBASE-27650](https://issues.apache.org/jira/browse/HBASE-27650) | Merging empty regions corrupts meta cache |  Major | . |
+| [HBASE-27668](https://issues.apache.org/jira/browse/HBASE-27668) | PB's parseDelimitedFrom can successfully return when there are not enough bytes |  Critical | Protobufs, wal |
+| [HBASE-27644](https://issues.apache.org/jira/browse/HBASE-27644) | Should not return false when WALKey has no following KVs while reading WAL file |  Critical | dataloss, wal |
+| [HBASE-27649](https://issues.apache.org/jira/browse/HBASE-27649) | WALPlayer does not properly dedupe overridden cell versions |  Major | . |
+| [HBASE-27661](https://issues.apache.org/jira/browse/HBASE-27661) | Set size of systable queue in UT |  Major | . |
+| [HBASE-27654](https://issues.apache.org/jira/browse/HBASE-27654) | IndexBlockEncoding is missing in HFileContextBuilder copy constructor |  Major | . |
+| [HBASE-27636](https://issues.apache.org/jira/browse/HBASE-27636) | The "CREATE\_TIME\_TS" value of the hfile generated by the HFileOutputFormat2 class is 0 |  Major | HFile, mapreduce |
+| [HBASE-27648](https://issues.apache.org/jira/browse/HBASE-27648) | CopyOnWriteArrayMap does not honor contract of ConcurrentMap.putIfAbsent |  Major | . |
+| [HBASE-27637](https://issues.apache.org/jira/browse/HBASE-27637) | Zero length value would cause value compressor read nothing and not advance the position of the InputStream |  Critical | dataloss, wal |
+| [HBASE-27602](https://issues.apache.org/jira/browse/HBASE-27602) | Remove the impact of operating env on testHFileCleaning |  Major | test |
+| [HBASE-27621](https://issues.apache.org/jira/browse/HBASE-27621) | Also clear the Dictionary when resetting when reading compressed WAL file |  Critical | Replication, wal |
+| [HBASE-27628](https://issues.apache.org/jira/browse/HBASE-27628) | Spotless fix in RELEASENOTES.md |  Trivial | . |
+| [HBASE-27619](https://issues.apache.org/jira/browse/HBASE-27619) | Bulkload fails when trying to bulkload files with invalid names after HBASE-26707 |  Major | . |
+| [HBASE-27580](https://issues.apache.org/jira/browse/HBASE-27580) | Reverse scan over rows with tags throw exceptions when using DataBlockEncoding |  Major | . |
+| [HBASE-27608](https://issues.apache.org/jira/browse/HBASE-27608) | Use lowercase image reference name in our docker file |  Major | scripts |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27595](https://issues.apache.org/jira/browse/HBASE-27595) | ThreadGroup is removed since Hadoop 3.2.4 |  Minor | . |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27669](https://issues.apache.org/jira/browse/HBASE-27669) | chaos-daemon.sh should make use hbase script start/stop chaosagent and chaos monkey runner. |  Major | . |
+| [HBASE-27643](https://issues.apache.org/jira/browse/HBASE-27643) | [JDK17] Add-opens java.util.concurrent |  Major | java, test |
+| [HBASE-27645](https://issues.apache.org/jira/browse/HBASE-27645) | [JDK17] Use ReflectionUtils#getModifiersField in UT |  Major | java, test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-27736](https://issues.apache.org/jira/browse/HBASE-27736) | HFileSystem.getLocalFs is not used |  Major | HFile |
+| [HBASE-27748](https://issues.apache.org/jira/browse/HBASE-27748) | Bump jettison from 1.5.2 to 1.5.4 |  Major | dependabot, dependencies, security |
+| [HBASE-27741](https://issues.apache.org/jira/browse/HBASE-27741) | Fall back to protoc osx-x86\_64 on Apple Silicon |  Minor | build |
+| [HBASE-27737](https://issues.apache.org/jira/browse/HBASE-27737) | Add supplemental model for com.aayushatharva.brotli4j:native-osx-aarch64 |  Minor | build, community |
+| [HBASE-27685](https://issues.apache.org/jira/browse/HBASE-27685) | Enable code coverage reporting to SonarQube in HBase |  Minor | . |
+| [HBASE-27626](https://issues.apache.org/jira/browse/HBASE-27626) | Suppress noisy logging in client.ConnectionImplementation |  Minor | logging |
+
+
 ## Release 2.5.3 - Unreleased (as of 2023-02-01)
 
 
