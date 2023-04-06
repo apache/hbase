@@ -140,9 +140,11 @@ class ReplicationSourceWALReader extends Thread {
   public void run() {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
+      WALEntryBatch batch = null;
       try (WALEntryStream entryStream = new WALEntryStream(logQueue, fs, conf, currentPosition,
         source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
+          batch = null;
           if (!source.isPeerEnabled()) {
             Threads.sleep(sleepForRetries);
             continue;
@@ -172,25 +174,14 @@ class ReplicationSourceWALReader extends Thread {
             continue;
           }
           // below are all for hasNext == YES
-          WALEntryBatch batch = createBatch(entryStream);
-          boolean successAddToQueue = false;
-          try {
-            readWALEntries(entryStream, batch);
-            currentPosition = entryStream.getPosition();
-            // need to propagate the batch even it has no entries since it may carry the last
-            // sequence id information for serial replication.
-            LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
-            entryBatchQueue.put(batch);
-            successAddToQueue = true;
-            sleepMultiplier = 1;
-          } finally {
-            if (!successAddToQueue) {
-              // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
-              // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
-              // acquired in ReplicationSourceWALReader.acquireBufferQuota.
-              this.releaseBufferQuota(batch);
-            }
-          }
+          batch = createBatch(entryStream);
+          readWALEntries(entryStream, batch);
+          currentPosition = entryStream.getPosition();
+          // need to propagate the batch even it has no entries since it may carry the last
+          // sequence id information for serial replication.
+          LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
+          entryBatchQueue.put(batch);
+          sleepMultiplier = 1;
         }
       } catch (WALEntryFilterRetryableException e) {
         // here we have to recreate the WALEntryStream, as when filtering, we have already called
@@ -221,7 +212,7 @@ class ReplicationSourceWALReader extends Thread {
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
     updateBatchStats(batch, entry, entrySize);
-    boolean totalBufferTooLarge = acquireBufferQuota(batch, entrySizeExcludeBulkLoad);
+    boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
 
     // Stop if too many entries or too big
     return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -439,24 +430,11 @@ class ReplicationSourceWALReader extends Thread {
    * @param size delta size for grown buffer
    * @return true if we should clear buffer and push all
    */
-  private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
+  private boolean acquireBufferQuota(long size) {
     long newBufferUsed = totalBufferUsed.addAndGet(size);
     // Record the new buffer usage
     this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    walEntryBatch.incrementUsedBufferSize(size);
     return newBufferUsed >= totalBufferQuota;
-  }
-
-  /**
-   * To release the buffer quota of {@link WALEntryBatch} which acquired by
-   * {@link ReplicationSourceWALReader#acquireBufferQuota}
-   */
-  private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
-    long usedBufferSize = walEntryBatch.getUsedBufferSize();
-    if (usedBufferSize > 0) {
-      long newBufferUsed = totalBufferUsed.addAndGet(-usedBufferSize);
-      this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    }
   }
 
   /** Returns whether the reader thread is running */
