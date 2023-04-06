@@ -162,11 +162,11 @@ final public class OnlineLogRecord extends LogEntry {
     return scan;
   }
 
-  protected OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
+  OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
     final long responseSize, final long blockBytesScanned, final String clientAddress,
     final String serverClass, final String methodName, final String callDetails, final String param,
     final String regionName, final String userName, final int multiGetsCount,
-    final int multiMutationsCount, final int multiServiceCalls, final Optional<Scan> scan) {
+    final int multiMutationsCount, final int multiServiceCalls, final Scan scan) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
@@ -182,7 +182,7 @@ final public class OnlineLogRecord extends LogEntry {
     this.multiGetsCount = multiGetsCount;
     this.multiMutationsCount = multiMutationsCount;
     this.multiServiceCalls = multiServiceCalls;
-    this.scan = scan;
+    this.scan = Optional.ofNullable(scan);
   }
 
   public static class OnlineLogRecordBuilder {
@@ -201,7 +201,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int multiGetsCount;
     private int multiMutationsCount;
     private int multiServiceCalls;
-    private Optional<Scan> scan = Optional.empty();
+    private Scan scan = null;
 
     public OnlineLogRecordBuilder setStartTime(long startTime) {
       this.startTime = startTime;
@@ -282,7 +282,7 @@ final public class OnlineLogRecord extends LogEntry {
     }
 
     public OnlineLogRecordBuilder setScan(Scan scan) {
-      this.scan = Optional.of(scan);
+      this.scan = scan;
       return this;
     }
 
