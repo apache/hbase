@@ -540,7 +540,7 @@ public class TestNamedQueueRecorder {
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
-    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1", 0); // ScanRequest
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
@@ -564,7 +564,7 @@ public class TestNamedQueueRecorder {
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
-    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1", 0); // ScanRequest
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
@@ -588,7 +588,7 @@ public class TestNamedQueueRecorder {
 
     Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
-    RpcLogDetails rpcLogDetails = getRpcLogDetails("userName_1", "client_1", "class_1", 0); // ScanRequest
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
     Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
@@ -610,6 +610,11 @@ public class TestNamedQueueRecorder {
     RpcCall rpcCall = getRpcCall(userName);
     return new RpcLogDetails(rpcCall, rpcCall.getParam(), clientAddress, 0, 0, className, true,
       true);
+  }
+
+  private static RpcLogDetails getRpcLogDetailsOfScan() {
+    // forcedParamIndex of 0 results in a ScanRequest
+    return getRpcLogDetails("userName_1", "client_1", "class_1", 0);
   }
 
   private RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,

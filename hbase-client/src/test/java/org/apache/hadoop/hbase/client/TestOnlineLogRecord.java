@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Optional;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -48,8 +47,8 @@ public class TestOnlineLogRecord {
       + "    \"maxResultSize\": \"-1\",\n" + "    \"families\": {},\n" + "    \"caching\": -1,\n"
       + "    \"maxVersions\": 1,\n" + "    \"timeRange\": [\n" + "      \"0\",\n"
       + "      \"9223372036854775807\"\n" + "    ]\n" + "  }\n" + "}";
-    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
-      6, 7, 0, Optional.of(scan));
+    OnlineLogRecord o =
+      new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null, 6, 7, 0, scan);
     String actualOutput = o.toJsonPrettyPrint();
     Assert.assertEquals(actualOutput, expectedOutput);
   }
