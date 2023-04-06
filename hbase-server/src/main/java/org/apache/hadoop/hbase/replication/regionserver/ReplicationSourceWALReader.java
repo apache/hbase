@@ -140,43 +140,41 @@ class ReplicationSourceWALReader extends Thread {
   public void run() {
     int sleepMultiplier = 1;
     while (isReaderRunning()) { // we only loop back here if something fatal happened to our stream
-      WALEntryBatch batch = null;
       try (WALEntryStream entryStream = new WALEntryStream(logQueue, fs, conf, currentPosition,
         source.getWALFileLengthProvider(), source.getSourceMetrics(), walGroupId)) {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
-          batch = null;
+          if (!source.isPeerEnabled()) {
+            Threads.sleep(sleepForRetries);
+            continue;
+          }
+          if (!checkQuota()) {
+            continue;
+          }
+          Path currentPath = entryStream.getCurrentPath();
+          WALEntryStream.HasNext hasNext = entryStream.hasNext();
+          if (hasNext == WALEntryStream.HasNext.NO) {
+            replicationDone();
+            return;
+          }
+          // first, check if we have switched a file, if so, we need to manually add an EOF entry
+          // batch to the queue
+          if (currentPath != null && switched(entryStream, currentPath)) {
+            entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
+            continue;
+          }
+          if (hasNext == WALEntryStream.HasNext.RETRY) {
+            // sleep and retry
+            sleepMultiplier = sleep(sleepMultiplier);
+            continue;
+          }
+          if (hasNext == WALEntryStream.HasNext.RETRY_IMMEDIATELY) {
+            // retry immediately, this usually means we have switched a file
+            continue;
+          }
+          // below are all for hasNext == YES
+          WALEntryBatch batch = createBatch(entryStream);
           boolean successAddToQueue = false;
           try {
-            if (!source.isPeerEnabled()) {
-              Threads.sleep(sleepForRetries);
-              continue;
-            }
-            if (!checkQuota()) {
-              continue;
-            }
-            Path currentPath = entryStream.getCurrentPath();
-            WALEntryStream.HasNext hasNext = entryStream.hasNext();
-            if (hasNext == WALEntryStream.HasNext.NO) {
-              replicationDone();
-              return;
-            }
-            // first, check if we have switched a file, if so, we need to manually add an EOF entry
-            // batch to the queue
-            if (currentPath != null && switched(entryStream, currentPath)) {
-              entryBatchQueue.put(WALEntryBatch.endOfFile(currentPath));
-              continue;
-            }
-            if (hasNext == WALEntryStream.HasNext.RETRY) {
-              // sleep and retry
-              sleepMultiplier = sleep(sleepMultiplier);
-              continue;
-            }
-            if (hasNext == WALEntryStream.HasNext.RETRY_IMMEDIATELY) {
-              // retry immediately, this usually means we have switched a file
-              continue;
-            }
-            // below are all for hasNext == YES
-            batch = createBatch(entryStream);
             readWALEntries(entryStream, batch);
             currentPosition = entryStream.getPosition();
             // need to propagate the batch even it has no entries since it may carry the last
@@ -186,7 +184,7 @@ class ReplicationSourceWALReader extends Thread {
             successAddToQueue = true;
             sleepMultiplier = 1;
           } finally {
-            if (batch != null && !successAddToQueue) {
+            if (!successAddToQueue) {
               // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
               // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
               // acquired in ReplicationSourceWALReader.acquireBufferQuota.
