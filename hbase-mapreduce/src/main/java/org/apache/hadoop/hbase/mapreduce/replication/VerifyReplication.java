@@ -347,7 +347,7 @@ public class VerifyReplication extends Configured implements Tool {
         }
       });
       ReplicationPeerStorage storage =
-        ReplicationStorageFactory.getReplicationPeerStorage(localZKW, conf);
+        ReplicationStorageFactory.getReplicationPeerStorage(FileSystem.get(conf), localZKW, conf);
       ReplicationPeerConfig peerConfig = storage.getPeerConfig(peerId);
       return Pair.newPair(peerConfig,
         ReplicationUtils.getPeerClusterConfiguration(peerConfig, conf));

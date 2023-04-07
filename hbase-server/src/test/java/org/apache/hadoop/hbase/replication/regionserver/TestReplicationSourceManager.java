@@ -388,8 +388,8 @@ public abstract class TestReplicationSourceManager {
       rq.addWAL(server.getServerName(), "1", file);
     }
     Server s1 = new DummyServer("dummyserver1.example.org");
-    ReplicationPeers rp1 =
-      ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration());
+    ReplicationPeers rp1 = ReplicationFactory.getReplicationPeers(s1.getFileSystem(),
+      s1.getZooKeeper(), s1.getConfiguration());
     rp1.init();
     manager.claimQueue(server.getServerName(), "1");
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
@@ -855,6 +855,11 @@ public abstract class TestReplicationSourceManager {
     @Override
     public ZKWatcher getZooKeeper() {
       return zkw;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      return fs;
     }
 
     @Override

@@ -17,26 +17,60 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.lang.reflect.Constructor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Used to create replication storage(peer, queue) classes.
- * <p>
- * For now we only have zk based implementation.
  */
 @InterfaceAudience.Private
 public final class ReplicationStorageFactory {
 
+  public static final String REPLICATION_PEER_STORAGE_IMPL = "hbase.replication.peer.storage.impl";
+
+  // must use zookeeper here, otherwise when user upgrading from an old version without changing the
+  // config file, they will loss all the replication peer data.
+  public static final ReplicationPeerStorageType DEFAULT_REPLICATION_PEER_STORAGE_IMPL =
+    ReplicationPeerStorageType.ZOOKEEPER;
+
   private ReplicationStorageFactory() {
+  }
+
+  private static Class<? extends ReplicationPeerStorage>
+    getReplicationPeerStorageClass(Configuration conf) {
+    try {
+      ReplicationPeerStorageType type = ReplicationPeerStorageType.valueOf(
+        conf.get(REPLICATION_PEER_STORAGE_IMPL, DEFAULT_REPLICATION_PEER_STORAGE_IMPL.name())
+          .toUpperCase());
+      return type.getClazz();
+    } catch (IllegalArgumentException e) {
+      return conf.getClass(REPLICATION_PEER_STORAGE_IMPL,
+        DEFAULT_REPLICATION_PEER_STORAGE_IMPL.getClazz(), ReplicationPeerStorage.class);
+    }
   }
 
   /**
    * Create a new {@link ReplicationPeerStorage}.
    */
-  public static ReplicationPeerStorage getReplicationPeerStorage(ZKWatcher zk, Configuration conf) {
-    return new ZKReplicationPeerStorage(zk, conf);
+  public static ReplicationPeerStorage getReplicationPeerStorage(FileSystem fs, ZKWatcher zk,
+    Configuration conf) {
+    Class<? extends ReplicationPeerStorage> clazz = getReplicationPeerStorageClass(conf);
+    for (Constructor<?> c : clazz.getConstructors()) {
+      if (c.getParameterCount() != 2) {
+        continue;
+      }
+      if (c.getParameterTypes()[0].isAssignableFrom(FileSystem.class)) {
+        return ReflectionUtils.newInstance(clazz, fs, conf);
+      } else if (c.getParameterTypes()[0].isAssignableFrom(ZKWatcher.class)) {
+        return ReflectionUtils.newInstance(clazz, zk, conf);
+      }
+    }
+    throw new IllegalArgumentException(
+      "Can not create replication peer storage with type " + clazz);
   }
 
   /**
