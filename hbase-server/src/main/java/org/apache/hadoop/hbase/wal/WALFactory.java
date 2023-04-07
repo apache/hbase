@@ -370,6 +370,12 @@ public class WALFactory {
     return metaProvider.getProvider();
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  WALProvider getReplicationProvider() throws IOException {
+    return replicationProvider.getProvider();
+  }
+
   /**
    * @param region the region which we want to get a WAL for. Could be null.
    */
