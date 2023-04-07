@@ -52,6 +52,9 @@ class WALEntryBatch {
   private Map<String, Long> lastSeqIds = new HashMap<>();
   // indicate that this is the end of the current file
   private boolean endOfFile;
+  // indicate the buffer size used, which is added to
+  // ReplicationSourceWALReader.totalBufferUsed
+  private long usedBufferSize = 0;
 
   /**
    * @param lastWalPath Path of the WAL the last entry in this batch was read from
@@ -153,11 +156,19 @@ class WALEntryBatch {
     lastSeqIds.put(region, sequenceId);
   }
 
+  public void incrementUsedBufferSize(long increment) {
+    usedBufferSize += increment;
+  }
+
+  public long getUsedBufferSize() {
+    return this.usedBufferSize;
+  }
+
   @Override
   public String toString() {
     return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath
       + ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles="
       + nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile="
-      + endOfFile + "]";
+      + endOfFile + ",usedBufferSize=" + usedBufferSize + "]";
   }
 }

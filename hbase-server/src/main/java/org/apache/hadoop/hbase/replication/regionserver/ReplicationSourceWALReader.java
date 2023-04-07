@@ -143,16 +143,28 @@ class ReplicationSourceWALReader extends Thread {
             entryStream.reset(); // reuse stream
             continue;
           }
-          // if we have already switched a file, skip reading and put it directly to the ship queue
-          if (!batch.isEndOfFile()) {
-            readWALEntries(entryStream, batch);
-            currentPosition = entryStream.getPosition();
+          boolean successAddToQueue = false;
+          try {
+            // if we have already switched a file, skip reading and put it directly to the ship
+            // queue
+            if (!batch.isEndOfFile()) {
+              readWALEntries(entryStream, batch);
+              currentPosition = entryStream.getPosition();
+            }
+            // need to propagate the batch even it has no entries since it may carry the last
+            // sequence id information for serial replication.
+            LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
+            entryBatchQueue.put(batch);
+            successAddToQueue = true;
+            sleepMultiplier = 1;
+          } finally {
+            if (!successAddToQueue) {
+              // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
+              // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
+              // acquired in ReplicationSourceWALReader.acquireBufferQuota.
+              this.releaseBufferQuota(batch);
+            }
           }
-          // need to propagate the batch even it has no entries since it may carry the last
-          // sequence id information for serial replication.
-          LOG.debug("Read {} WAL entries eligible for replication", batch.getNbEntries());
-          entryBatchQueue.put(batch);
-          sleepMultiplier = 1;
         }
       } catch (WALEntryFilterRetryableException | IOException e) { // stream related
         if (!handleEofException(e, batch)) {
@@ -182,7 +194,7 @@ class ReplicationSourceWALReader extends Thread {
     long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
     updateBatchStats(batch, entry, entrySize);
-    boolean totalBufferTooLarge = acquireBufferQuota(entrySizeExcludeBulkLoad);
+    boolean totalBufferTooLarge = acquireBufferQuota(batch, entrySizeExcludeBulkLoad);
 
     // Stop if too many entries or too big
     return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -455,11 +467,24 @@ class ReplicationSourceWALReader extends Thread {
    * @param size delta size for grown buffer
    * @return true if we should clear buffer and push all
    */
-  private boolean acquireBufferQuota(long size) {
+  private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
     long newBufferUsed = totalBufferUsed.addAndGet(size);
     // Record the new buffer usage
     this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    walEntryBatch.incrementUsedBufferSize(size);
     return newBufferUsed >= totalBufferQuota;
+  }
+
+  /**
+   * To release the buffer quota of {@link WALEntryBatch} which acquired by
+   * {@link ReplicationSourceWALReader#acquireBufferQuota}
+   */
+  private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
+    long usedBufferSize = walEntryBatch.getUsedBufferSize();
+    if (usedBufferSize > 0) {
+      long newBufferUsed = totalBufferUsed.addAndGet(-usedBufferSize);
+      this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    }
   }
 
   /** Returns whether the reader thread is running */
