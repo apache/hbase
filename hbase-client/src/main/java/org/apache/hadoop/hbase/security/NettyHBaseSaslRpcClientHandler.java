@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.ipc.FallbackDisallowedException;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 
@@ -44,6 +46,8 @@ import org.apache.hbase.thirdparty.io.netty.util.concurrent.Promise;
 public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
   private static final Logger LOG = LoggerFactory.getLogger(NettyHBaseSaslRpcClientHandler.class);
+
+  public static final String HANDLER_NAME = "SaslRpcClientHandler";
 
   private final Promise<Boolean> saslPromise;
 
@@ -74,7 +78,7 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   private void writeResponse(ChannelHandlerContext ctx, byte[] response) {
     LOG.trace("Sending token size={} from initSASLContext.", response.length);
-    ctx.writeAndFlush(
+    NettyFutureUtils.safeWriteAndFlush(ctx,
       ctx.alloc().buffer(4 + response.length).writeInt(response.length).writeBytes(response));
   }
 
@@ -83,7 +87,11 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       return;
     }
 
-    saslRpcClient.setupSaslHandler(ctx.pipeline());
+    ChannelPipeline p = ctx.pipeline();
+    saslRpcClient.setupSaslHandler(p, HANDLER_NAME);
+    p.remove(SaslChallengeDecoder.class);
+    p.remove(this);
+
     setCryptoAESOption();
 
     saslPromise.setSuccess(true);
@@ -102,6 +110,9 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   @Override
   public void handlerAdded(ChannelHandlerContext ctx) {
+    // dispose the saslRpcClient when the channel is closed, since saslRpcClient is final, it is
+    // safe to reference it in lambda expr.
+    NettyFutureUtils.addListener(ctx.channel().closeFuture(), f -> saslRpcClient.dispose());
     try {
       byte[] initialResponse = ugi.doAs(new PrivilegedExceptionAction<byte[]>() {
 
@@ -151,14 +162,12 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-    saslRpcClient.dispose();
     saslPromise.tryFailure(new ConnectionClosedException("Connection closed"));
     ctx.fireChannelInactive();
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-    saslRpcClient.dispose();
     saslPromise.tryFailure(cause);
   }
 }

@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -34,7 +36,11 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
+import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
+import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.io.BytesWritable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -63,6 +69,11 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   // If initial preamble with version and magic has been read or not.
   private boolean connectionPreambleRead = false;
+  private boolean saslContextEstablished;
+  private ByteBuffer unwrappedData;
+  // When is this set? FindBugs wants to know! Says NP
+  private ByteBuffer unwrappedDataLengthBuffer = ByteBuffer.allocate(4);
+  boolean useWrap = false;
 
   final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
   final Lock responseWriteLock = new ReentrantLock();
@@ -139,6 +150,110 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       return this.rpcServer.channelRead(channel, this.dataLengthBuffer);
     } else {
       return 0;
+    }
+  }
+
+  private void processUnwrappedData(byte[] inBuf) throws IOException, InterruptedException {
+    ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(inBuf));
+    // Read all RPCs contained in the inBuf, even partial ones
+    while (true) {
+      int count;
+      if (unwrappedDataLengthBuffer.remaining() > 0) {
+        count = this.rpcServer.channelRead(ch, unwrappedDataLengthBuffer);
+        if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0) {
+          return;
+        }
+      }
+
+      if (unwrappedData == null) {
+        unwrappedDataLengthBuffer.flip();
+        int unwrappedDataLength = unwrappedDataLengthBuffer.getInt();
+
+        if (unwrappedDataLength == RpcClient.PING_CALL_ID) {
+          if (RpcServer.LOG.isDebugEnabled()) RpcServer.LOG.debug("Received ping message");
+          unwrappedDataLengthBuffer.clear();
+          continue; // ping message
+        }
+        unwrappedData = ByteBuffer.allocate(unwrappedDataLength);
+      }
+
+      count = this.rpcServer.channelRead(ch, unwrappedData);
+      if (count <= 0 || unwrappedData.remaining() > 0) {
+        return;
+      }
+
+      if (unwrappedData.remaining() == 0) {
+        unwrappedDataLengthBuffer.clear();
+        unwrappedData.flip();
+        processOneRpc(new SingleByteBuff(unwrappedData));
+        unwrappedData = null;
+      }
+    }
+  }
+
+  private void saslReadAndProcess(ByteBuff saslToken) throws IOException, InterruptedException {
+    if (saslContextEstablished) {
+      RpcServer.LOG.trace("Read input token of size={} for processing by saslServer.unwrap()",
+        saslToken.limit());
+      if (!useWrap) {
+        processOneRpc(saslToken);
+      } else {
+        byte[] b = saslToken.hasArray() ? saslToken.array() : saslToken.toBytes();
+        byte[] plaintextData = saslServer.unwrap(b, 0, b.length);
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
+        processUnwrappedData(plaintextData);
+      }
+    } else {
+      byte[] replyToken;
+      try {
+        try {
+          getOrCreateSaslServer();
+        } catch (Exception e) {
+          RpcServer.LOG.error("Error when trying to create instance of HBaseSaslRpcServer "
+            + "with sasl provider: " + provider, e);
+          throw e;
+        }
+        RpcServer.LOG.debug("Created SASL server with mechanism={}",
+          provider.getSaslAuthMethod().getAuthMethod());
+        RpcServer.LOG.debug(
+          "Read input token of size={} for processing by saslServer." + "evaluateResponse()",
+          saslToken.limit());
+        replyToken = saslServer
+          .evaluateResponse(saslToken.hasArray() ? saslToken.array() : saslToken.toBytes());
+      } catch (IOException e) {
+        RpcServer.LOG.debug("Failed to execute SASL handshake", e);
+        Throwable sendToClient = HBaseSaslRpcServer.unwrap(e);
+        doRawSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(),
+          sendToClient.getLocalizedMessage());
+        this.rpcServer.metrics.authenticationFailure();
+        String clientIP = this.toString();
+        // attempting user could be null
+        RpcServer.AUDITLOG.warn("{}{}: {}", RpcServer.AUTH_FAILED_FOR, clientIP,
+          saslServer.getAttemptingUser());
+        throw e;
+      } finally {
+        // release the request buffer as we have already unwrapped all its content
+        callCleanupIfNeeded();
+      }
+      if (replyToken != null) {
+        if (RpcServer.LOG.isDebugEnabled()) {
+          RpcServer.LOG.debug("Will send token of size " + replyToken.length + " from saslServer.");
+        }
+        doRawSaslReply(SaslStatus.SUCCESS, new BytesWritable(replyToken), null, null);
+      }
+      if (saslServer.isComplete()) {
+        String qop = saslServer.getNegotiatedQop();
+        useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
+        ugi =
+          provider.getAuthorizedUgi(saslServer.getAuthorizationID(), this.rpcServer.secretManager);
+        RpcServer.LOG.debug(
+          "SASL server context established. Authenticated client: {}. Negotiated QoP is {}", ugi,
+          qop);
+        this.rpcServer.metrics.authenticationSuccess();
+        RpcServer.AUDITLOG.info(RpcServer.AUTH_SUCCESSFUL_FOR + ugi);
+        saslContextEstablished = true;
+      }
     }
   }
 

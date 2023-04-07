@@ -230,7 +230,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    * Encapsulate the ugly casting and RuntimeException conversion in private method.
    * @return Codec to use on this client.
    */
-  Codec getCodec() {
+  protected Codec getCodec() {
     // For NO CODEC, "hbase.client.rpc.codec" must be configured with empty string AND
     // "hbase.client.default.rpc.codec" also -- because default is to do cell block encoding.
     String className = conf.get(HConstants.RPC_CODEC_CONF_KEY, getDefaultCodec(this.conf));
@@ -251,7 +251,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   }
 
   // for writing tests that want to throw exception when connecting.
-  boolean isTcpNoDelay() {
+  protected boolean isTcpNoDelay() {
     return tcpNoDelay;
   }
 

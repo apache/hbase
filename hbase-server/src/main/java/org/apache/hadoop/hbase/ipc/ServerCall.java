@@ -399,37 +399,6 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     return pbBuf;
   }
 
-  protected BufferChain wrapWithSasl(BufferChain bc) throws IOException {
-    if (!this.connection.useSasl) {
-      return bc;
-    }
-    // Looks like no way around this; saslserver wants a byte array. I have to make it one.
-    // THIS IS A BIG UGLY COPY.
-    byte[] responseBytes = bc.getBytes();
-    byte[] token;
-    // synchronization may be needed since there can be multiple Handler
-    // threads using saslServer or Crypto AES to wrap responses.
-    if (connection.useCryptoAesWrap) {
-      // wrap with Crypto AES
-      synchronized (connection.cryptoAES) {
-        token = connection.cryptoAES.wrap(responseBytes, 0, responseBytes.length);
-      }
-    } else {
-      synchronized (connection.saslServer) {
-        token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
-      }
-    }
-    if (RpcServer.LOG.isTraceEnabled()) {
-      RpcServer.LOG
-        .trace("Adding saslServer wrapped token of size " + token.length + " as call response.");
-    }
-
-    ByteBuffer[] responseBufs = new ByteBuffer[2];
-    responseBufs[0] = ByteBuffer.wrap(Bytes.toBytes(token.length));
-    responseBufs[1] = ByteBuffer.wrap(token);
-    return new BufferChain(responseBufs);
-  }
-
   @Override
   public long disconnectSince() {
     if (!this.connection.isConnectionOpen()) {
@@ -556,21 +525,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
 
   @Override
   public synchronized BufferChain getResponse() {
-    if (connection.useWrap) {
-      /*
-       * wrapping result with SASL as the last step just before sending it out, so every message
-       * must have the right increasing sequence number
-       */
-      try {
-        return wrapWithSasl(response);
-      } catch (IOException e) {
-        /* it is exactly the same what setResponse() does */
-        RpcServer.LOG.warn("Exception while creating response " + e);
-        return null;
-      }
-    } else {
-      return response;
-    }
+    return response;
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",

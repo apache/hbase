@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
+import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -31,6 +35,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
@@ -45,6 +50,9 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   final Class<? extends Channel> channelClass;
 
   private final boolean shutdownGroupWhenClose;
+  private final AtomicReference<SslContext> sslContextForClient = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
     MetricsConnection metrics) {
@@ -67,7 +75,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
   }
 
   /** Used in test only. */
-  NettyRpcClient(Configuration configuration) {
+  public NettyRpcClient(Configuration configuration) {
     this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null);
   }
 
@@ -81,5 +89,31 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
     if (shutdownGroupWhenClose) {
       NettyFutureUtils.consume(group.shutdownGracefully());
     }
+    FileChangeWatcher ks = keyStoreWatcher.getAndSet(null);
+    if (ks != null) {
+      ks.stop();
+    }
+    FileChangeWatcher ts = trustStoreWatcher.getAndSet(null);
+    if (ts != null) {
+      ts.stop();
+    }
+  }
+
+  SslContext getSslContext() throws X509Exception, IOException {
+    SslContext result = sslContextForClient.get();
+    if (result == null) {
+      result = X509Util.createSslContextForClient(conf);
+      if (!sslContextForClient.compareAndSet(null, result)) {
+        // lost the race, another thread already set the value
+        result = sslContextForClient.get();
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
+        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+          () -> sslContextForClient.set(null));
+      }
+    }
+    return result;
   }
 }

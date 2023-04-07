@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslException;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
@@ -30,17 +30,21 @@ import org.apache.hbase.thirdparty.io.netty.handler.codec.MessageToByteEncoder;
 @InterfaceAudience.Private
 public class SaslWrapHandler extends MessageToByteEncoder<ByteBuf> {
 
-  private final SaslClient saslClient;
+  public interface Wrapper {
+    byte[] wrap(byte[] outgoing, int offset, int len) throws SaslException;
+  }
 
-  public SaslWrapHandler(SaslClient saslClient) {
-    this.saslClient = saslClient;
+  private final Wrapper wrapper;
+
+  public SaslWrapHandler(Wrapper wrapper) {
+    this.wrapper = wrapper;
   }
 
   @Override
   protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
     byte[] bytes = new byte[msg.readableBytes()];
     msg.readBytes(bytes);
-    byte[] wrapperBytes = saslClient.wrap(bytes, 0, bytes.length);
+    byte[] wrapperBytes = wrapper.wrap(bytes, 0, bytes.length);
     out.ensureWritable(4 + wrapperBytes.length);
     out.writeInt(wrapperBytes.length);
     out.writeBytes(wrapperBytes);

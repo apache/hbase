@@ -107,6 +107,7 @@ show_usage() {
   echo "  cellcounter      Run CellCounter tool"
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
+  echo "  credential       Run the Hadoop Credential Shell"
   echo "  CLASSNAME        Run the class named CLASSNAME"
 }
 
@@ -759,6 +760,8 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
   fi
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
+elif [ "$COMMAND" = "credential" ] ; then
+  CLASS='org.apache.hadoop.security.alias.CredentialShell'
 else
   CLASS=$COMMAND
 if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
