@@ -357,7 +357,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         Thread.currentThread().interrupt();
 
         String msg = "Interrupted while waiting for work";
-        LOG.debug(msg);
+
         // If we were interrupted by closeConn, it would have set thread to null.
         // We are synchronized here and if we somehow got interrupted without setting thread to
         // null, we want to make sure the connection is closed since the read thread would be dead.
@@ -365,7 +365,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // This guards against the case where a call to setupIOStreams got the synchronized lock
         // first after closeConn, thus changing the thread to a new thread.
         if (isCurrentThreadExpected()) {
+          LOG.debug(msg + ", closing connection");
           closeConn(new InterruptedIOException(msg));
+        } else {
+          LOG.debug(msg);
         }
 
         return false;
