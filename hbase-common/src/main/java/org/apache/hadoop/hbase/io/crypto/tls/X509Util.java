@@ -74,11 +74,11 @@ public final class X509Util {
   static final String CONFIG_PREFIX = "hbase.rpc.tls.";
   public static final String TLS_CONFIG_PROTOCOL = CONFIG_PREFIX + "protocol";
   public static final String TLS_CONFIG_KEYSTORE_LOCATION = CONFIG_PREFIX + "keystore.location";
-  static final String TLS_CONFIG_KEYSTORE_TYPE = CONFIG_PREFIX + "keystore.type";
-  static final String TLS_CONFIG_KEYSTORE_PASSWORD = CONFIG_PREFIX + "keystore.password";
-  static final String TLS_CONFIG_TRUSTSTORE_LOCATION = CONFIG_PREFIX + "truststore.location";
-  static final String TLS_CONFIG_TRUSTSTORE_TYPE = CONFIG_PREFIX + "truststore.type";
-  static final String TLS_CONFIG_TRUSTSTORE_PASSWORD = CONFIG_PREFIX + "truststore.password";
+  public static final String TLS_CONFIG_KEYSTORE_TYPE = CONFIG_PREFIX + "keystore.type";
+  public static final String TLS_CONFIG_KEYSTORE_PASSWORD = CONFIG_PREFIX + "keystore.password";
+  public static final String TLS_CONFIG_TRUSTSTORE_LOCATION = CONFIG_PREFIX + "truststore.location";
+  public static final String TLS_CONFIG_TRUSTSTORE_TYPE = CONFIG_PREFIX + "truststore.type";
+  public static final String TLS_CONFIG_TRUSTSTORE_PASSWORD = CONFIG_PREFIX + "truststore.password";
   public static final String TLS_CONFIG_CLR = CONFIG_PREFIX + "clr";
   public static final String TLS_CONFIG_OCSP = CONFIG_PREFIX + "ocsp";
   public static final String TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED =
@@ -417,7 +417,11 @@ public final class X509Util {
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     keystoreWatcher.set(newFileChangeWatcher(keyStoreLocation, resetContext));
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+    // we are using the same callback for both. there's no reason to kick off two
+    // threads if keystore/truststore are both at the same location
+    if (!keyStoreLocation.equals(trustStoreLocation)) {
+      trustStoreWatcher.set(newFileChangeWatcher(trustStoreLocation, resetContext));
+    }
   }
 
   private static FileChangeWatcher newFileChangeWatcher(String fileLocation, Runnable resetContext)
@@ -430,9 +434,10 @@ public final class X509Util {
     if (parentPath == null) {
       throw new IOException("Key/trust store path does not have a parent: " + filePath);
     }
-    FileChangeWatcher fileChangeWatcher = new FileChangeWatcher(parentPath, watchEvent -> {
-      handleWatchEvent(filePath, watchEvent, resetContext);
-    });
+    FileChangeWatcher fileChangeWatcher =
+      new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
+        handleWatchEvent(filePath, watchEvent, resetContext);
+      });
     fileChangeWatcher.start();
     return fileChangeWatcher;
   }
