@@ -435,7 +435,7 @@ public final class X509Util {
       throw new IOException("Key/trust store path does not have a parent: " + filePath);
     }
     FileChangeWatcher fileChangeWatcher =
-      new FileChangeWatcher(parentPath, filePath.getFileName().toString(), watchEvent -> {
+      new FileChangeWatcher(parentPath, Objects.toString(filePath.getFileName()), watchEvent -> {
         handleWatchEvent(filePath, watchEvent, resetContext);
       });
     fileChangeWatcher.start();

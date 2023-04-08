@@ -62,9 +62,6 @@ public final class FileChangeWatcher {
   private final WatcherThread watcherThread;
   private State state; // protected by synchronized(this)
 
-  private final Thread.UncaughtExceptionHandler uncaughtExceptionalHandler =
-    (t, e) -> handleException(t.getName(), e);
-
   /**
    * Creates a watcher that watches <code>dirPath</code> and invokes <code>callback</code> on
    * changes.
@@ -179,8 +176,8 @@ public final class FileChangeWatcher {
     return watcherThread.getName();
   }
 
-  private void handleException(String thName, Throwable e) {
-    LOG.warn("Exception occurred from thread {}", thName, e);
+  private static void handleException(Thread thread, Throwable e) {
+    LOG.warn("Exception occurred from thread {}", thread.getName(), e);
   }
 
   /**
@@ -198,7 +195,7 @@ public final class FileChangeWatcher {
       super(THREAD_NAME_PREFIX + threadNameSuffix);
       this.watchService = watchService;
       this.callback = callback;
-      setUncaughtExceptionHandler(uncaughtExceptionalHandler);
+      setUncaughtExceptionHandler(FileChangeWatcher::handleException);
     }
 
     @Override
