@@ -44,12 +44,13 @@ public class TestOnlineLogRecord {
       + "    \"startRow\": \"\\\\x00\\\\x00\\\\x00{\",\n"
       + "    \"stopRow\": \"\\\\x00\\\\x00\\\\x01\\\\xC8\",\n" + "    \"batch\": -1,\n"
       + "    \"cacheBlocks\": true,\n" + "    \"totalColumns\": 0,\n"
-      + "    \"maxResultSize\": \"-1\",\n" + "    \"families\": {},\n" + "    \"caching\": -1,\n"
-      + "    \"maxVersions\": 1,\n" + "    \"timeRange\": [\n" + "      \"0\",\n"
-      + "      \"9223372036854775807\"\n" + "    ]\n" + "  }\n" + "}";
+      + "    \"maxResultSize\": -1,\n" + "    \"families\": {},\n" + "    \"caching\": -1,\n"
+      + "    \"maxVersions\": 1,\n" + "    \"timeRange\": [\n" + "      0,\n"
+      + "      9223372036854775807\n" + "    ]\n" + "  }\n" + "}";
     OnlineLogRecord o =
       new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null, 6, 7, 0, scan);
     String actualOutput = o.toJsonPrettyPrint();
+    System.out.println(actualOutput);
     Assert.assertEquals(actualOutput, expectedOutput);
   }
 }

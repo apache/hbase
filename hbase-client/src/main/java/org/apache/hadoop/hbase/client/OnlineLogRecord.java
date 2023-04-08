@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -30,7 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
-import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 
 /**
@@ -60,11 +58,7 @@ final public class OnlineLogRecord extends LogEntry {
           jsonObj.remove("multiServiceCalls");
         }
         if (slowLogPayload.getScan().isPresent()) {
-          try {
-            jsonObj.add("scan", JsonParser.parseString(slowLogPayload.getScan().get().toJSON()));
-          } catch (IOException e) {
-            LOG.warn("Failed to serialize scan {}", slowLogPayload.getScan().get(), e);
-          }
+          jsonObj.add("scan", gson.toJsonTree(slowLogPayload.getScan().get().toMap()));
         } else {
           jsonObj.remove("scan");
         }
