@@ -136,4 +136,10 @@ public final class ReplicationStorageFactory {
       return ReflectionUtils.newInstance(clazz, conf, tableName);
     }
   }
+
+  public static boolean isReplicationQueueTable(Configuration conf, TableName tableName) {
+    TableName replicationQueueTableName = TableName.valueOf(conf.get(REPLICATION_QUEUE_TABLE_NAME,
+      REPLICATION_QUEUE_TABLE_NAME_DEFAULT.getNameAsString()));
+    return replicationQueueTableName.equals(tableName);
+  }
 }
