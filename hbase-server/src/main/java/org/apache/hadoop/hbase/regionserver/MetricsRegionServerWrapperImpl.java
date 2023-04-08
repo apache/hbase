@@ -982,12 +982,12 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
         lastRan = currentTime;
 
-        final WALProvider provider = regionServer.getWalFactory().getWALProvider();
-        final WALProvider metaProvider = regionServer.getWalFactory().getMetaWALProvider();
-        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles())
-          + (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
-        walFileSize = (provider == null ? 0 : provider.getLogFileSize())
-          + (metaProvider == null ? 0 : metaProvider.getLogFileSize());
+        List<WALProvider> providers = regionServer.getWalFactory().getAllWALProviders();
+        for (WALProvider provider : providers) {
+          numWALFiles += provider.getNumLogFiles();
+          walFileSize += provider.getLogFileSize();
+        }
+
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
