@@ -984,8 +984,8 @@ public class ReplicationSourceManager {
     }
   }
 
-  public AtomicLong getTotalBufferUsed() {
-    return totalBufferUsed;
+  public long getTotalBufferUsed() {
+    return totalBufferUsed.get();
   }
 
   /**
@@ -1035,7 +1035,7 @@ public class ReplicationSourceManager {
     StringBuilder stats = new StringBuilder();
     // Print stats that apply across all Replication Sources
     stats.append("Global stats: ");
-    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed().get()).append("B, Limit=")
+    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed()).append("B, Limit=")
       .append(getTotalBufferLimit()).append("B\n");
     for (ReplicationSourceInterface source : this.sources.values()) {
       stats.append("Normal source for cluster " + source.getPeerId() + ": ");
@@ -1069,5 +1069,22 @@ public class ReplicationSourceManager {
 
   ReplicationQueueStorage getQueueStorage() {
     return queueStorage;
+  }
+
+  boolean addTotalBufferUsed(long size) {
+    long newBufferUsed = totalBufferUsed.addAndGet(size);
+    // Record the new buffer usage
+    this.globalMetrics.setWALReaderEditsBufferBytes(newBufferUsed);
+    return newBufferUsed >= totalBufferLimit;
+  }
+
+  boolean checkBufferQuota(String peerId) {
+    // try not to go over total quota
+    if (totalBufferUsed.get() > totalBufferLimit) {
+      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
+        peerId, totalBufferUsed.get(), totalBufferLimit);
+      return false;
+    }
+    return true;
   }
 }

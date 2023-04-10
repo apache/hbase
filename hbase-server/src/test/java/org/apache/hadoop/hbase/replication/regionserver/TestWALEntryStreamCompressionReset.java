@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.OptionalLong;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -155,11 +154,8 @@ public class TestWALEntryStreamCompressionReset {
     when(SOURCE.getServerWALsBelongTo())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
     when(SOURCE.getSourceMetrics()).thenReturn(METRICS_SOURCE);
-    ReplicationSourceManager rsm = mock(ReplicationSourceManager.class);
-    when(rsm.getTotalBufferUsed()).thenReturn(new AtomicLong());
-    when(rsm.getTotalBufferLimit())
-      .thenReturn((long) HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
-    when(rsm.getGlobalMetrics()).thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
+    ReplicationSourceManager rsm = new ReplicationSourceManager(null, null, conf, null, null, null,
+      null, null, null, null, mock(MetricsReplicationGlobalSourceSource.class));
     when(SOURCE.getSourceManager()).thenReturn(rsm);
 
     LOG_QUEUE = new ReplicationSourceLogQueue(conf, METRICS_SOURCE, SOURCE);

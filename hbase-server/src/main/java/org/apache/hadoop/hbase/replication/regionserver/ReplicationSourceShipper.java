@@ -173,7 +173,6 @@ public class ReplicationSourceShipper extends Thread {
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
-    int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
     source.getSourceMetrics()
       .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
     while (isActive()) {
@@ -217,7 +216,7 @@ public class ReplicationSourceShipper extends Thread {
         // this sizeExcludeBulkLoad has to use same calculation that when calling
         // acquireBufferQuota() in ReplicationSourceWALReader because they maintain
         // same variable: totalBufferUsed
-        source.postShipEdits(entries, sizeExcludeBulkLoad);
+        source.postShipEdits(entries, entryBatch.getUsedBufferSize());
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
           entryBatch.getNbHFiles());
@@ -378,8 +377,6 @@ public class ReplicationSourceShipper extends Thread {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
         totalToDecrement.longValue());
     }
-    long newBufferUsed =
-      source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
-    source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    source.getSourceManager().addTotalBufferUsed(-totalToDecrement.longValue());
   }
 }
