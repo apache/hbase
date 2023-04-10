@@ -27,7 +27,7 @@ option java_outer_classname = "TooSlowLog";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "client/Client.proto";
+import "Client.proto";
 
 message SlowLogPayload {
   required int64 start_time = 1;
