@@ -24,8 +24,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.util.GsonUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
@@ -38,8 +36,6 @@ import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 final public class OnlineLogRecord extends LogEntry {
-
-  private static final Logger LOG = LoggerFactory.getLogger(OnlineLogRecord.class.getName());
 
   // used to convert object to pretty printed format
   // used by toJsonPrettyPrint()
