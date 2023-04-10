@@ -271,7 +271,7 @@ class ReplicationSourceWALReader extends Thread {
   // returns false if we've already exceeded the global quota
   private boolean checkBufferQuota() {
     // try not to go over total quota
-    if (!this.source.getSourceManager().checkBufferQuota(this.source.getPeerId())) {
+    if (!this.getSourceManager().checkBufferQuota(this.source.getPeerId())) {
       Threads.sleep(sleepForRetries);
       return false;
     }
@@ -433,7 +433,7 @@ class ReplicationSourceWALReader extends Thread {
    */
   private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
     walEntryBatch.incrementUsedBufferSize(size);
-    return this.source.getSourceManager().addTotalBufferUsed(size);
+    return this.getSourceManager().addTotalBufferUsed(size);
 
   }
 
@@ -444,7 +444,7 @@ class ReplicationSourceWALReader extends Thread {
   private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
     long usedBufferSize = walEntryBatch.getUsedBufferSize();
     if (usedBufferSize > 0) {
-      this.source.getSourceManager().addTotalBufferUsed(-usedBufferSize);
+      this.getSourceManager().addTotalBufferUsed(-usedBufferSize);
     }
   }
 
@@ -458,5 +458,9 @@ class ReplicationSourceWALReader extends Thread {
    */
   public void setReaderRunning(boolean readerRunning) {
     this.isReaderRunning = readerRunning;
+  }
+
+  private ReplicationSourceManager getSourceManager() {
+    return this.source.getSourceManager();
   }
 }
