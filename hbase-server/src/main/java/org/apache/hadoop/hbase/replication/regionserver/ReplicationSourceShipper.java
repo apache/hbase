@@ -151,18 +151,6 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * get batchEntry size excludes bulk load file sizes. Uses ReplicationSourceWALReader's static
-   * method.
-   */
-  private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
-    int totalSize = 0;
-    for (Entry entry : entryBatch.getWalEntries()) {
-      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
-    }
-    return totalSize;
-  }
-
-  /**
    * Do the shipping logic
    */
   private void shipEdits(WALEntryBatch entryBatch) {
