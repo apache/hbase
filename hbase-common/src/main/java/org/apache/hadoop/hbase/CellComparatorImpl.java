@@ -100,7 +100,7 @@ public class CellComparatorImpl implements CellComparator {
     return ignoreSequenceid ? diff : Long.compare(r.getSequenceId(), l.getSequenceId());
   }
 
-  private static int compareKeyValues(final KeyValue left, final KeyValue right) {
+  private int compareKeyValues(final KeyValue left, final KeyValue right) {
     int diff;
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
@@ -153,8 +153,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyOffset(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyOffset(rightFamilyLengthPosition);
-    diff = Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
-      right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
+    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
+      rightFamilyPosition);
     if (diff != 0) {
       return diff;
     }
@@ -183,7 +183,7 @@ public class CellComparatorImpl implements CellComparator {
     return (0xff & rightType) - (0xff & leftType);
   }
 
-  private static int compareBBKV(final ByteBufferKeyValue left, final ByteBufferKeyValue right) {
+  private int compareBBKV(final ByteBufferKeyValue left, final ByteBufferKeyValue right) {
     int diff;
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
@@ -236,8 +236,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
-    diff = ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
-      leftFamilyLength, right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
+    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
+      rightFamilyPosition);
     if (diff != 0) {
       return diff;
     }
@@ -265,7 +265,7 @@ public class CellComparatorImpl implements CellComparator {
     return (0xff & rightType) - (0xff & leftType);
   }
 
-  private static int compareKVVsBBKV(final KeyValue left, final ByteBufferKeyValue right) {
+  private int compareKVVsBBKV(final KeyValue left, final ByteBufferKeyValue right) {
     int diff;
     // Compare Rows. Cache row length.
     int leftRowLength = left.getRowLength();
@@ -318,8 +318,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyOffset(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
-    diff = ByteBufferUtils.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
-      right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
+    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
+      rightFamilyPosition);
     if (diff != 0) {
       return diff;
     }
@@ -368,7 +368,7 @@ public class CellComparatorImpl implements CellComparator {
     return compareQualifiers(left, leftQualLen, right, rightQualLen);
   }
 
-  private int compareFamilies(Cell left, int leftFamLen, Cell right, int rightFamLen) {
+  protected int compareFamilies(Cell left, int leftFamLen, Cell right, int rightFamLen) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
         ((ByteBufferExtendedCell) left).getFamilyPosition(), leftFamLen,
@@ -446,6 +446,24 @@ public class CellComparatorImpl implements CellComparator {
     }
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
       right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+  }
+
+  protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength, int rightFamilyLength,
+    int leftFamilyPosition, int rightFamilyPosition) {
+    return Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
+      right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
+  }
+
+  protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
+    int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+    return ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
+      leftFamilyLength, right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
+  }
+
+  protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
+    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+    return ByteBufferUtils.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
+      right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
   }
 
   static int compareQualifiers(KeyValue left, KeyValue right) {

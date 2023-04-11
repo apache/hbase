@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -165,7 +167,11 @@ public final class StoreContext implements HeapSize {
     }
 
     public Builder withCellComparator(CellComparator comparator) {
-      this.comparator = comparator;
+      if (comparator == MetaCellComparator.META_COMPARATOR) {
+        this.comparator = comparator;
+      } else {
+        this.comparator = InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+      }
       return this;
     }
 
