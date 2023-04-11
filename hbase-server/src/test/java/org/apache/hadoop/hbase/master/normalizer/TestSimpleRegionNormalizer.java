@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.M
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_AGE_DAYS_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_COUNT_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_SIZE_MB_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_EMPTY_PRESPLIT_REGIONS;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MIN_REGION_COUNT_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.SPLIT_ENABLED_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -192,6 +193,37 @@ public class TestSimpleRegionNormalizer {
         .addTarget(regionInfos.get(2), 5).build()));
   }
 
+  @Test
+  public void testNoNormalizationEmptyPresplitRegions() {
+    testMergeEmptyPresplitRegions(false);
+  }
+
+  @Test
+  public void testMergeEmptyPresplitRegions() {
+    testMergeEmptyPresplitRegions(true);
+  }
+
+  private void testMergeEmptyPresplitRegions(boolean mergePresplitRegions) {
+    final TableName tableName = name.getTableName();
+    final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 0, 0, 0, 5);
+    final Map<byte[], Integer> storeFilesCount = createRegionSizesMap(regionInfos, 0, 0, 0, 0, 1);
+    conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
+    conf.setBoolean(MERGE_EMPTY_PRESPLIT_REGIONS, mergePresplitRegions);
+    conf.setBoolean(SPLIT_ENABLED_KEY, false);
+    setupMocksForNormalizer(regionSizes, regionInfos, storeFilesCount);
+    List<NormalizationPlan> normalizationPlans = normalizer.computePlansForTable(tableDescriptor);
+    if(!mergePresplitRegions) {
+      assertTrue(normalizationPlans.isEmpty());
+    } else {
+      MergeNormalizationPlan.Builder builder = new MergeNormalizationPlan.Builder();
+      for(int i = 0; i < 4; i++) {
+        builder.addTarget(regionInfos.get(i), 0);
+      }
+      assertThat(normalizationPlans,
+        contains(builder.build()));
+    }
+  }
   // Test for situation illustrated in HBASE-14867
   @Test
   public void testMergeOfSecondSmallestRegions() {
@@ -630,9 +662,14 @@ public class TestSimpleRegionNormalizer {
     verify(normalizer, times(1)).shuffleNormalizationPlans(anyList());
   }
 
-  @SuppressWarnings("MockitoCast")
   private void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
     List<RegionInfo> regionInfoList) {
+    setupMocksForNormalizer(regionSizes, regionInfoList, null);
+  }
+
+  @SuppressWarnings("MockitoCast")
+  private void setupMocksForNormalizer(Map<byte[], Integer> regionSizes,
+    List<RegionInfo> regionInfoList, Map<byte[], Integer> storeFileCounts) {
     masterServices = Mockito.mock(MasterServices.class, RETURNS_DEEP_STUBS);
     tableDescriptor = Mockito.mock(TableDescriptor.class, RETURNS_DEEP_STUBS);
 
@@ -651,6 +688,9 @@ public class TestSimpleRegionNormalizer {
       when(regionLoad.getRegionName()).thenReturn(region.getKey());
       when(regionLoad.getStoreFileSize())
         .thenReturn(new Size(region.getValue(), Size.Unit.MEGABYTE));
+      if(storeFileCounts != null && storeFileCounts.containsKey(region.getKey())) {
+        when(regionLoad.getStoreFileCount()).thenReturn(storeFileCounts.get(region.getKey()));
+      }
 
       // this is possibly broken with jdk9, unclear if false positive or not
       // suppress it for now, fix it when we get to running tests on 9

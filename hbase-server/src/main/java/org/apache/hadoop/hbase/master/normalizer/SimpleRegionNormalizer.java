@@ -82,6 +82,11 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
 
+  static final String MERGE_EMPTY_PRESPLIT_REGIONS = "hbase.normalizer.merge.empty.presplit.regions";
+
+  static final boolean DEFAULT_MERGE_EMPTY_PRESPLIT_REGIONS = false;
+
+
   private MasterServices masterServices;
   private NormalizerConfiguration normalizerConfiguration;
 
@@ -246,23 +251,35 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
   /** Returns size of region in MB and if region is not found than -1 */
   private long getRegionSizeMB(RegionInfo hri) {
+    RegionMetrics regionLoad = getRegionMetrics(hri);
+    if (regionLoad == null) return -1;
+    return (long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE);
+  }
+
+  private RegionMetrics getRegionMetrics(RegionInfo hri) {
     ServerName sn =
       masterServices.getAssignmentManager().getRegionStates().getRegionServerOfRegion(hri);
     if (sn == null) {
       LOG.debug("{} region was not found on any Server", hri.getRegionNameAsString());
-      return -1;
+      return null;
     }
     ServerMetrics serverMetrics = masterServices.getServerManager().getLoad(sn);
     if (serverMetrics == null) {
       LOG.debug("server {} was not found in ServerManager", sn.getServerName());
-      return -1;
+      return null;
     }
     RegionMetrics regionLoad = serverMetrics.getRegionMetrics().get(hri.getRegionName());
     if (regionLoad == null) {
       LOG.debug("{} was not found in RegionsLoad", hri.getRegionNameAsString());
-      return -1;
+      return null;
     }
-    return (long) regionLoad.getStoreFileSize().get(Size.Unit.MEGABYTE);
+    return regionLoad;
+  }
+
+  private long getStoreFileCount(RegionInfo hri) {
+    RegionMetrics regionLoad = getRegionMetrics(hri);
+    if (regionLoad == null) return 0;
+    return (long) regionLoad.getStoreFileCount();
   }
 
   private boolean isMasterSwitchEnabled(final MasterSwitchType masterSwitchType) {
@@ -335,7 +352,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       || logTraceReason(() -> !isOldEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
         "skipping merge of region {} because it is not old enough.", name)
       || logTraceReason(() -> !isLargeEnoughForMerge(normalizerConfiguration, ctx, regionInfo),
-        "skipping merge region {} because it is not large enough.", name);
+        "skipping merge region {} because it is not large enough.", name)
+      || logTraceReason(() -> isPresplitEmptyRegion(normalizerConfiguration, ctx, regionInfo),
+        "skipping merge region {} because it is empty pre-split region and"
+        + " merge of pre-split regions disabled.", name);
   }
 
   /**
@@ -474,6 +494,11 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
   }
 
+  private boolean isPresplitEmptyRegion(final NormalizerConfiguration normalizerConfiguration,
+    final NormalizeContext ctx, final RegionInfo regionInfo) {
+    return getStoreFileCount(regionInfo) == 0 &&
+      !normalizerConfiguration.isPresplitRegionsMergeAllowed();
+  }
   /**
    * This very simple method exists so we can verify it was called in a unit test. Visible for
    * testing.
@@ -503,6 +528,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
     private final long cumulativePlansSizeLimitMb;
+    private final boolean mergeEmptyPresplitRegions;
 
     private NormalizerConfiguration() {
       conf = null;
@@ -512,6 +538,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
       cumulativePlansSizeLimitMb = DEFAULT_CUMULATIVE_SIZE_LIMIT_MB;
+      mergeEmptyPresplitRegions = DEFAULT_MERGE_EMPTY_PRESPLIT_REGIONS;
     }
 
     private NormalizerConfiguration(final Configuration conf,
@@ -524,6 +551,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
       cumulativePlansSizeLimitMb =
         conf.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB);
+      mergeEmptyPresplitRegions =
+        conf.getBoolean(MERGE_EMPTY_PRESPLIT_REGIONS, DEFAULT_MERGE_EMPTY_PRESPLIT_REGIONS);
       logConfigurationUpdated(SPLIT_ENABLED_KEY, currentConfiguration.isSplitEnabled(),
         splitEnabled);
       logConfigurationUpdated(MERGE_ENABLED_KEY, currentConfiguration.isMergeEnabled(),
@@ -534,6 +563,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         currentConfiguration.getMergeMinRegionAge(), mergeMinRegionAge);
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
         currentConfiguration.getMergeMinRegionSizeMb(), mergeMinRegionSizeMb);
+      logConfigurationUpdated(MERGE_EMPTY_PRESPLIT_REGIONS,
+        currentConfiguration.isPresplitRegionsMergeAllowed(), mergeEmptyPresplitRegions);
     }
 
     public Configuration getConf() {
@@ -599,6 +630,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
     private long getCumulativePlansSizeLimitMb() {
       return cumulativePlansSizeLimitMb;
+    }
+
+    public boolean isPresplitRegionsMergeAllowed() {
+      return mergeEmptyPresplitRegions;
     }
   }
 
