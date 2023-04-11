@@ -448,8 +448,8 @@ public class CellComparatorImpl implements CellComparator {
       right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
   }
 
-  protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength, int rightFamilyLength,
-    int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
+    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     return Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
       right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
   }

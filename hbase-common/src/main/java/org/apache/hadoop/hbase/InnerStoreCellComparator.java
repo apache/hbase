@@ -29,9 +29,10 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
 
   private static final long serialVersionUID = 8186411895799094989L;
 
-  public static final InnerStoreCellComparator
-    INNER_STORE_COMPARATOR = new InnerStoreCellComparator();
+  public static final InnerStoreCellComparator INNER_STORE_COMPARATOR =
+    new InnerStoreCellComparator();
 
+  @Override
   protected int compareFamilies(Cell left, int leftFamilyLength, Cell right,
     int rightFamilyLength) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {
@@ -40,6 +41,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
     return 0;
   }
 
+  @Override
   protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {
@@ -49,6 +51,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
     return 0;
   }
 
+  @Override
   protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
     int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {
@@ -58,6 +61,7 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
     return 0;
   }
 
+  @Override
   protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {

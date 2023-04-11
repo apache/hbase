@@ -575,8 +575,10 @@ public class FixedFileTrailer {
    */
   @Deprecated
   private String getHBase1CompatibleName(final String comparator) {
-    if (comparator.equals(CellComparatorImpl.class.getName()) || comparator.equals(
-      InnerStoreCellComparator.class.getName())) {
+    if (
+      comparator.equals(CellComparatorImpl.class.getName())
+        || comparator.equals(InnerStoreCellComparator.class.getName())
+    ) {
       return KeyValue.COMPARATOR.getClass().getName();
     }
     if (comparator.equals(MetaCellComparator.class.getName())) {
@@ -624,7 +626,10 @@ public class FixedFileTrailer {
   }
 
   static CellComparator createComparator(String comparatorClassName) throws IOException {
-    if (comparatorClassName.equals(InnerStoreCellComparator.INNER_STORE_COMPARATOR.getClass().getName())) {
+    if (
+      comparatorClassName
+        .equals(InnerStoreCellComparator.INNER_STORE_COMPARATOR.getClass().getName())
+    ) {
       return InnerStoreCellComparator.INNER_STORE_COMPARATOR;
     } else
       if (comparatorClassName.equals(MetaCellComparator.META_COMPARATOR.getClass().getName())) {
