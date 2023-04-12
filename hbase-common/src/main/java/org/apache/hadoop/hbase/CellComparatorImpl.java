@@ -368,6 +368,9 @@ public class CellComparatorImpl implements CellComparator {
     return compareQualifiers(left, leftQualLen, right, rightQualLen);
   }
 
+  /**
+   * This method will be overridden when we compare cells inner store to bypass family comparing.
+   */
   protected int compareFamilies(Cell left, int leftFamLen, Cell right, int rightFamLen) {
     if (left instanceof ByteBufferExtendedCell && right instanceof ByteBufferExtendedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferExtendedCell) left).getFamilyByteBuffer(),
@@ -448,18 +451,27 @@ public class CellComparatorImpl implements CellComparator {
       right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
   }
 
+  /**
+   * This method will be overridden when we compare cells inner store to bypass family comparing.
+   */
   protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     return Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
       right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
   }
 
+  /**
+   * This method will be overridden when we compare cells inner store to bypass family comparing.
+   */
   protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
     int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     return ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
       leftFamilyLength, right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
   }
 
+  /**
+   * This method will be overridden when we compare cells inner store to bypass family comparing.
+   */
   protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
     return ByteBufferUtils.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,

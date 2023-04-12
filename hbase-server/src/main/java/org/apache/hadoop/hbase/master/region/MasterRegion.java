@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -370,7 +371,7 @@ public final class MasterRegion {
       conf.setBoolean(HRegion.WAL_HSYNC_CONF_KEY, params.useHsync());
     }
     if (params.useMetaCellComparator() != null) {
-      conf.setBoolean(HRegion.USE_META_CELL_COMPARATOR, params.useMetaCellComparator());
+      conf.setBoolean(HConstants.USE_META_CELL_COMPARATOR, params.useMetaCellComparator());
     }
     conf.setInt(AbstractFSWAL.RING_BUFFER_SLOT_COUNT,
       IntMath.ceilingPowerOfTwo(params.ringBufferSlotCount()));

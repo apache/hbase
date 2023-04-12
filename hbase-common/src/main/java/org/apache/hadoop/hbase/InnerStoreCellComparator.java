@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
 /**
- * Compare two HBase cells inner store, skip compare family for better performance.
+ * Compare two HBase cells inner store, skip compare family for better performance. Important!!! we
+ * should not make fake cell with fake family which length greater than zero inner store, otherwise
+ * this optimization cannot be used.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -35,39 +39,70 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
   @Override
   protected int compareFamilies(Cell left, int leftFamilyLength, Cell right,
     int rightFamilyLength) {
-    if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      return super.compareFamilies(left, leftFamilyLength, right, rightFamilyLength);
-    }
-    return 0;
+    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
   }
 
   @Override
   protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
-    if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      return super.compareFamilies(left, right, leftFamilyLength, rightFamilyLength,
-        leftFamilyPosition, rightFamilyPosition);
-    }
-    return 0;
+    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
   }
 
   @Override
   protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
     int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
-    if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      return super.compareFamilies(left, right, leftFamilyLength, rightFamilyLength,
-        leftFamilyPosition, rightFamilyPosition);
-    }
-    return 0;
+    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
   }
 
   @Override
   protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
+  }
+
+  private int innerStoreCompareFamilies(int leftFamilyLength, int rightFamilyLength) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      return super.compareFamilies(left, right, leftFamilyLength, rightFamilyLength,
-        leftFamilyPosition, rightFamilyPosition);
+      if (leftFamilyLength == 0 && rightFamilyLength == 0) {
+        return 0;
+      }
+      if (leftFamilyLength == 0 && rightFamilyLength > 0) {
+        return -1;
+      }
+      if (leftFamilyLength > 0 && rightFamilyLength == 0) {
+        return 1;
+      }
     }
     return 0;
+  }
+
+  /**
+   * Utility method that makes a guess at comparator to use based off passed tableName. Use in
+   * extreme when no comparator specified.
+   * @return CellComparator to use going off the {@code tableName} passed.
+   */
+  public static CellComparator getInnerStoreCellComparator(Configuration conf,
+    TableName tableName) {
+    return getInnerStoreCellComparator(conf, tableName.toBytes());
+  }
+
+  /**
+   * Utility method that makes a guess at comparator to use based off passed tableName. Use in
+   * extreme when no comparator specified.
+   * @return CellComparator to use going off the {@code tableName} passed.
+   */
+  public static CellComparator getInnerStoreCellComparator(byte[] tableName) {
+    return getInnerStoreCellComparator(null, tableName);
+  }
+
+  public static CellComparator getInnerStoreCellComparator(Configuration conf, byte[] tableName) {
+    if (
+      conf != null && conf.getBoolean(HConstants.USE_META_CELL_COMPARATOR,
+        HConstants.DEFAULT_USE_META_CELL_COMPARATOR)
+    ) {
+      return MetaCellComparator.META_COMPARATOR;
+    }
+    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+      ? MetaCellComparator.META_COMPARATOR
+      : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
   }
 }

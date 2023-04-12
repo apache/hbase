@@ -277,14 +277,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final String RECOVERED_EDITS_IGNORE_EOF =
     "hbase.hregion.recovered.edits.ignore.eof";
 
-  /**
-   * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
-   * master local region.
-   */
-  public static final String USE_META_CELL_COMPARATOR = "hbase.region.use.meta.cell.comparator";
-
-  public static final boolean DEFAULT_USE_META_CELL_COMPARATOR = false;
-
   final AtomicBoolean closed = new AtomicBoolean(false);
 
   /*
@@ -792,8 +784,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration().add(confParam).addBytesMap(htd.getValues());
-    this.cellComparator = htd.isMetaTable()
-      || conf.getBoolean(USE_META_CELL_COMPARATOR, DEFAULT_USE_META_CELL_COMPARATOR)
+    this.cellComparator = htd.isMetaTable() || conf.getBoolean(HConstants.USE_META_CELL_COMPARATOR,
+      HConstants.DEFAULT_USE_META_CELL_COMPARATOR)
         ? MetaCellComparator.META_COMPARATOR
         : CellComparatorImpl.COMPARATOR;
     this.lock = new ReentrantReadWriteLock(

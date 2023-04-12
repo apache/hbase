@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
@@ -330,8 +331,9 @@ public class HStore
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
-      .withCellComparator(region.getCellComparator()).withColumnFamilyDescriptor(family)
-      .withCompactedFilesSupplier(this::getCompactedFiles)
+      .withCellComparator(InnerStoreCellComparator.getInnerStoreCellComparator(conf,
+        region.getTableDescriptor().getTableName()))
+      .withColumnFamilyDescriptor(family).withCompactedFilesSupplier(this::getCompactedFiles)
       .withRegionFileSystem(region.getRegionFileSystem())
       .withFavoredNodesSupplier(this::getFavoredNodes)
       .withFamilyStoreDirectoryPath(
