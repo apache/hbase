@@ -1759,7 +1759,7 @@ following example runs ChaosMonkey with the default configuration:
 
 [source,bash]
 ----
-$ bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
 
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
 12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
@@ -1800,6 +1800,64 @@ $ bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
 
 The output indicates that ChaosMonkey started the default `PeriodicRandomActionPolicy`
 policy, which is configured with all the available actions. It chose to run `RestartActiveMaster` and `RestartRandomRs` actions.
+
+==== ChaosMonkey without SSH
+
+Chaos monkey can be run without SSH using the Chaos service and ZNode cluster manager. HBase ships
+with many cluster managers, available in the `hbase-it/src/test/java/org/apache/hadoop/hbase/` directory.
+
+Set the following property in hbase configuration to switch to `ZNodeClusterManager`:
+`hbase.it.clustermanager.class=org.apache.hadoop.hbase.ZNodeClusterManager`
+
+Start chaos agent on all hosts where you want to test chaos scenarios.
+
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
+
+Start chaos monkey runner from any one host, preferrably an edgenode.
+An example log while running chaos monkey with default policy PeriodicRandomActionPolicy is shown below.
+Command Options:
+ -c <arg>             Name of extra configurations file to find on CLASSPATH
+ -m,--monkey <arg>    Which chaos monkey to run
+ -monkeyProps <arg>   The properties file for specifying chaos monkey properties.
+ -tableName <arg>     Table name in the test to run chaos monkey against
+ -familyName <arg>    Family name in the test to run chaos monkey against
+
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
+
+INFO  [main] hbase.HBaseCommonTestingUtility: Instantiating org.apache.hadoop.hbase.ZNodeClusterManager
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ZooKeeper: Initiating client connection, connectString=host1.example.com:2181,host2.example.com:2181,host3.example.com:2181 sessionTimeout=90000 watcher=org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient$$Lambda$19/2106254492@1a39cf8
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxnSocket: jute.maxbuffer value is 4194304 Bytes
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe] zookeeper.ClientCnxn: zookeeper.request.timeout value is 0. feature enabled=
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Opening socket connection to server host2.example.com/10.20.30.40:2181. Will not attempt to authenticate using SASL (unknown error)
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Socket connection established, initiating session, client: /10.20.30.40:35164, server: host2.example.com/10.20.30.40:2181
+INFO  [ReadOnlyZKClient-host1.example.com:2181,host2.example.com:2181,host3.example.com:2181@0x003d43fe-SendThread(host2.example.com:2181)] zookeeper.ClientCnxn: Session establishment complete on server host2.example.com/10.20.30.40:2181, sessionid = 0x101de9204670877, negotiated timeout = 60000
+INFO  [main] policies.Policy: Using ChaosMonkey Policy class org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy, period=60000 ms
+ [ChaosMonkey-2] policies.Policy: Sleeping for 93741 ms to add jitter
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 9752 ms to add jitter
+INFO  [ChaosMonkey-1] policies.Policy: Sleeping for 65562 ms to add jitter
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 38777 ms to add jitter
+INFO  [ChaosMonkey-0] actions.CompactRandomRegionOfTableAction: Performing action: Compact random region of table usertable, major=false
+INFO  [ChaosMonkey-0] policies.Policy: Sleeping for 59532 ms
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master connection state from TTL Cache
+INFO  [ChaosMonkey-3] client.ConnectionImplementation: Getting master state using rpc call
+INFO  [ChaosMonkey-3] actions.DumpClusterStatusAction: Cluster status
+Master: host1.example.com,16000,1678339058222
+Number of backup masters: 0
+Number of live region servers: 3
+  host1.example.com,16020,1678794551244
+  host2.example.com,16020,1678341258970
+  host3.example.com,16020,1678347834336
+Number of dead region servers: 0
+Number of unknown region servers: 0
+Average load: 123.6666666666666
+Number of requests: 118645157
+Number of regions: 2654
+Number of regions in transition: 0
+INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 89614 ms
 
 ==== Available Policies
 HBase ships with several ChaosMonkey policies, available in the
