@@ -62,14 +62,14 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
 
   private int innerStoreCompareFamilies(int leftFamilyLength, int rightFamilyLength) {
     if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      if (leftFamilyLength == 0 && rightFamilyLength == 0) {
-        return 0;
-      }
       if (leftFamilyLength == 0 && rightFamilyLength > 0) {
         return -1;
       }
       if (leftFamilyLength > 0 && rightFamilyLength == 0) {
         return 1;
+      }
+      if (leftFamilyLength == 0 && rightFamilyLength == 0) {
+        return 0;
       }
     }
     return 0;
