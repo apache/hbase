@@ -113,6 +113,9 @@ fi
 
 tar -C $EXTRACT_DIR --strip-components=1 -xzf $MVN_TARGET_DIR/hbase-$version_part-bin.tar.gz
 
+# we do not need the shaded clients in our rpm. they bloat the size and cause classpath issues for hbck2.
+rm -rf $EXTRACT_DIR/lib/shaded-clients
+
 install -d -m 0755 $PREFIX/$LIB_DIR
 install -d -m 0755 $PREFIX/$LIB_DIR/lib
 install -d -m 0755 $PREFIX/$DOC_DIR
