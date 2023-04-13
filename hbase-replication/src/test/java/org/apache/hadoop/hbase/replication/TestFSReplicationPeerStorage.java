@@ -17,60 +17,71 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertNotEquals;
+import static org.hamcrest.Matchers.endsWith;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtil;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.RotateFile;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, MediumTests.class })
-public class TestZKReplicationPeerStorage extends ReplicationPeerStorageTestBase {
+public class TestFSReplicationPeerStorage extends ReplicationPeerStorageTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKReplicationPeerStorage.class);
+    HBaseClassTestRule.forClass(TestFSReplicationPeerStorage.class);
 
-  private static final HBaseZKTestingUtil UTIL = new HBaseZKTestingUtil();
+  private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
+
+  private static FileSystem FS;
+
+  private static Path DIR;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniZKCluster();
-    STORAGE = new ZKReplicationPeerStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
+    DIR = UTIL.getDataTestDir("test_fs_peer_storage");
+    CommonFSUtils.setRootDir(UTIL.getConfiguration(), DIR);
+    FS = FileSystem.get(UTIL.getConfiguration());
+    STORAGE = new FSReplicationPeerStorage(FS, UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void tearDown() throws IOException {
-    UTIL.shutdownMiniZKCluster();
+    UTIL.cleanupTestDir();
   }
 
   @Override
   protected void removePeerSyncRelicationState(String peerId) throws Exception {
-    ZKReplicationPeerStorage storage = (ZKReplicationPeerStorage) STORAGE;
-    ZKUtil.deleteNode(UTIL.getZooKeeperWatcher(), storage.getSyncReplicationStateNode(peerId));
-    ZKUtil.deleteNode(UTIL.getZooKeeperWatcher(), storage.getNewSyncReplicationStateNode(peerId));
+    FSReplicationPeerStorage storage = (FSReplicationPeerStorage) STORAGE;
+    Path peerDir = storage.getPeerDir(peerId);
+    RotateFile file =
+      new RotateFile(FS, peerDir, FSReplicationPeerStorage.SYNC_REPLICATION_STATE_FILE, 1024);
+    file.read();
+    file.delete();
   }
 
   @Override
   protected void assertPeerSyncReplicationStateCreate(String peerId) throws Exception {
-    ZKReplicationPeerStorage storage = (ZKReplicationPeerStorage) STORAGE;
-    assertNotEquals(-1,
-      ZKUtil.checkExists(UTIL.getZooKeeperWatcher(), storage.getSyncReplicationStateNode(peerId)));
-    assertNotEquals(-1, ZKUtil.checkExists(UTIL.getZooKeeperWatcher(),
-      storage.getNewSyncReplicationStateNode(peerId)));
+    FSReplicationPeerStorage storage = (FSReplicationPeerStorage) STORAGE;
+    Path peerDir = storage.getPeerDir(peerId);
+    RotateFile file =
+      new RotateFile(FS, peerDir, FSReplicationPeerStorage.SYNC_REPLICATION_STATE_FILE, 1024);
+    assertNotNull(file.read());
   }
 
   @Override
   protected void assertPeerNameControlException(ReplicationException e) {
-    assertThat(e.getCause(), instanceOf(KeeperException.NodeExistsException.class));
+    assertThat(e.getMessage(), endsWith("peer already exists"));
   }
 }

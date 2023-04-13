@@ -17,24 +17,24 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * A factory class for instantiating replication objects that deal with replication state.
+ * Specify the implementations for {@link ReplicationPeerStorage}.
  */
 @InterfaceAudience.Private
-public final class ReplicationFactory {
+public enum ReplicationPeerStorageType {
 
-  public static final String REPLICATION_TRACKER_IMPL = "hbase.replication.tracker.impl";
+  FILESYSTEM(FSReplicationPeerStorage.class),
+  ZOOKEEPER(ZKReplicationPeerStorage.class);
 
-  private ReplicationFactory() {
+  private final Class<? extends ReplicationPeerStorage> clazz;
+
+  private ReplicationPeerStorageType(Class<? extends ReplicationPeerStorage> clazz) {
+    this.clazz = clazz;
   }
 
-  public static ReplicationPeers getReplicationPeers(FileSystem fs, ZKWatcher zk,
-    Configuration conf) {
-    return new ReplicationPeers(fs, zk, conf);
+  public Class<? extends ReplicationPeerStorage> getClazz() {
+    return clazz;
   }
 }

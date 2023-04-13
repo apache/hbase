@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util.hbck;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
@@ -53,8 +55,10 @@ public class ReplicationChecker {
   private final ReplicationPeerStorage peerStorage;
   private final ReplicationQueueStorage queueStorage;
 
-  public ReplicationChecker(Configuration conf, ZKWatcher zkw, HbckErrorReporter errorReporter) {
-    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zkw, conf);
+  public ReplicationChecker(Configuration conf, ZKWatcher zkw, HbckErrorReporter errorReporter)
+    throws IOException {
+    this.peerStorage =
+      ReplicationStorageFactory.getReplicationPeerStorage(FileSystem.get(conf), zkw, conf);
     this.queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
     this.errorReporter = errorReporter;
   }
