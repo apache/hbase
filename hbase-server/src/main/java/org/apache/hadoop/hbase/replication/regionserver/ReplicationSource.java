@@ -405,7 +405,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return new ReplicationSourceShipper(conf, walGroupId, logQueue, this);
   }
 
-  private ReplicationSourceWALReader createNewWALReader(String walGroupId, long startPosition) {
+  protected ReplicationSourceWALReader createNewWALReader(String walGroupId, long startPosition) {
     return replicationPeer.getPeerConfig().isSerial()
       ? new SerialReplicationSourceWALReader(fs, conf, logQueue, startPosition, walEntryFilter,
         this, walGroupId)
@@ -421,7 +421,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return walEntryFilter;
   }
 
-  private void uncaughtException(Thread t, Throwable e, ReplicationSourceManager manager,
+  protected void uncaughtException(Thread t, Throwable e, ReplicationSourceManager manager,
     String peerId) {
     OOMEChecker.exitIfOOME(e, getClass().getSimpleName());
     LOG.error("Unexpected exception in {} currentPath={}", t.getName(), getCurrentPath(), e);
@@ -574,10 +574,14 @@ public class ReplicationSource implements ReplicationSourceInterface {
       this.replicationQueueInfo.getQueueId(), logQueue.getNumQueues(), clusterId, peerClusterId);
     initializeWALEntryFilter(peerClusterId);
     // Start workers
+    startShipperWorks();
+    this.startupOngoing.set(false);
+  }
+
+  protected void startShipperWorks() {
     for (String walGroupId : logQueue.getQueues().keySet()) {
       tryStartNewShipper(walGroupId);
     }
-    setSourceStartupStatus(false);
   }
 
   private synchronized void setSourceStartupStatus(boolean initializing) {

@@ -94,6 +94,14 @@ public class ReplicationSourceShipper extends Thread {
       HConstants.REPLICATION_SOURCE_SHIPEDITS_TIMEOUT_DFAULT);
   }
 
+  public ReplicationSourceWALReader getWALReader() {
+    return entryReader;
+  }
+
+  public String getWalGroupId(){
+    return walGroupId;
+  }
+
   @Override
   public final void run() {
     setWorkerState(WorkerState.RUNNING);

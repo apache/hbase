@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -161,5 +163,32 @@ public class RecoveredReplicationSource extends ReplicationSource {
   @Override
   public boolean isRecovered() {
     return true;
+  }
+
+  @Override
+  public void startShipperWorks() {
+    List<ReplicationSourceShipper> startWorkerThreads = new ArrayList<>();
+    // 1 create shippers and add them into workerThreads.
+    for (String walGroupId : logQueue.getQueues().keySet()) {
+      // maybe shipper related to walGroupId has run.
+      if (workerThreads.get(walGroupId) == null) {
+        ReplicationSourceShipper worker = createNewShipper(walGroupId);
+        ReplicationSourceWALReader walReader = createNewWALReader(walGroupId, worker.getStartPosition());
+        worker.setWALReader(walReader);
+        LOG.info("Recover queueId {} walGroup {}, create replication shipper and " +
+                   "add to workerThreads but not run.", queueId, walGroupId);
+        workerThreads.put(walGroupId, worker);
+        startWorkerThreads.add(worker);
+      }
+    }
+
+    // 2 run readers and shippers
+    for (ReplicationSourceShipper worker : startWorkerThreads) {
+      Threads.setDaemonThreadRunning(worker.getWALReader(),
+        Thread.currentThread().getName() + ".replicationSource.wal-reader."
+          + worker.getWalGroupId() + "," + queueId
+        , (t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+      worker.startup((t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
+    }
   }
 }
