@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.replication.ZKReplicationStorageBase.REPLI
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -60,10 +61,11 @@ public class ReplicationPeerConfigUpgrader {
   private final ZKWatcher zookeeper;
   private final ReplicationPeerStorage peerStorage;
 
-  public ReplicationPeerConfigUpgrader(ZKWatcher zookeeper, Configuration conf) {
+  public ReplicationPeerConfigUpgrader(ZKWatcher zookeeper, Configuration conf) throws IOException {
     this.zookeeper = zookeeper;
     this.conf = conf;
-    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zookeeper, conf);
+    this.peerStorage =
+      ReplicationStorageFactory.getReplicationPeerStorage(FileSystem.get(conf), zookeeper, conf);
   }
 
   public void upgrade() throws Exception {

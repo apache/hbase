@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,10 +41,10 @@ public class ReplicationPeers {
   private final ConcurrentMap<String, ReplicationPeerImpl> peerCache;
   private final ReplicationPeerStorage peerStorage;
 
-  ReplicationPeers(ZKWatcher zookeeper, Configuration conf) {
+  ReplicationPeers(FileSystem fs, ZKWatcher zookeeper, Configuration conf) {
     this.conf = conf;
     this.peerCache = new ConcurrentHashMap<>();
-    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(zookeeper, conf);
+    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(fs, zookeeper, conf);
   }
 
   public Configuration getConf() {

@@ -108,8 +108,8 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     try {
       this.queueStorage =
         ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
-      this.replicationPeers =
-        ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
+      this.replicationPeers = ReplicationFactory.getReplicationPeers(server.getFileSystem(),
+        server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);

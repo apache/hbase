@@ -17,42 +17,50 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 
 import java.io.IOException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseZKTestingUtility;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
 
 @Category({ ReplicationTests.class, MediumTests.class })
-public class TestZKReplicationPeerStorage extends ReplicationPeerStorageTestBase {
+public class TestFSReplicationPeerStorage extends ReplicationPeerStorageTestBase {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKReplicationPeerStorage.class);
+    HBaseClassTestRule.forClass(TestFSReplicationPeerStorage.class);
 
-  private static final HBaseZKTestingUtility UTIL = new HBaseZKTestingUtility();
+  private static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
+
+  private static FileSystem FS;
+
+  private static Path DIR;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL.startMiniZKCluster();
-    STORAGE = new ZKReplicationPeerStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
+    DIR = UTIL.getDataTestDir("test_fs_peer_storage");
+    CommonFSUtils.setRootDir(UTIL.getConfiguration(), DIR);
+    FS = FileSystem.get(UTIL.getConfiguration());
+    STORAGE = new FSReplicationPeerStorage(FS, UTIL.getConfiguration());
   }
 
   @AfterClass
   public static void tearDown() throws IOException {
-    UTIL.shutdownMiniZKCluster();
+    UTIL.cleanupTestDir();
   }
 
   @Override
   protected void assertPeerNameControlException(ReplicationException e) {
-    assertThat(e.getCause(), instanceOf(KeeperException.NodeExistsException.class));
+    assertThat(e.getMessage(), endsWith("peer already exists"));
   }
 }

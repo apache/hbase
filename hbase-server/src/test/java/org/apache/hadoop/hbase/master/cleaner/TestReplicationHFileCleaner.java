@@ -94,7 +94,8 @@ public class TestReplicationHFileCleaner {
     server = new DummyServer();
     conf.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     HMaster.decorateMasterConfiguration(conf);
-    rp = ReplicationFactory.getReplicationPeers(server.getZooKeeper(), conf);
+    rp =
+      ReplicationFactory.getReplicationPeers(server.getFileSystem(), server.getZooKeeper(), conf);
     rp.init();
     rq = ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
     fs = FileSystem.get(conf);
@@ -238,7 +239,17 @@ public class TestReplicationHFileCleaner {
       try {
         return new ZKWatcher(getConfiguration(), "dummy server", this);
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.error("Can not get ZKWatcher", e);
+      }
+      return null;
+    }
+
+    @Override
+    public FileSystem getFileSystem() {
+      try {
+        return TEST_UTIL.getTestFileSystem();
+      } catch (IOException e) {
+        LOG.error("Can not get FileSystem", e);
       }
       return null;
     }
@@ -283,12 +294,6 @@ public class TestReplicationHFileCleaner {
 
     @Override
     public ClusterConnection getClusterConnection() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public FileSystem getFileSystem() {
       return null;
     }
 

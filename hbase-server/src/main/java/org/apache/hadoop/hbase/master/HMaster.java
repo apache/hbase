@@ -762,7 +762,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.splitOrMergeStateStore = new SplitOrMergeStateStore(masterRegion, zooKeeper, conf);
 
-    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
+    this.replicationPeerManager =
+      ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();

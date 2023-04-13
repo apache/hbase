@@ -60,8 +60,8 @@ public class TestHBaseFsckReplication {
 
   @Test
   public void test() throws Exception {
-    ReplicationPeerStorage peerStorage = ReplicationStorageFactory
-      .getReplicationPeerStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
+    ReplicationPeerStorage peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(
+      UTIL.getTestFileSystem(), UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
     ReplicationQueueStorage queueStorage = ReplicationStorageFactory
       .getReplicationQueueStorage(UTIL.getZooKeeperWatcher(), UTIL.getConfiguration());
 

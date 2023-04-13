@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
@@ -69,7 +70,7 @@ public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
   @Rule
   public TestName name = new TestName();
 
-  public TestTableCFsUpdater() {
+  public TestTableCFsUpdater() throws IOException {
     super(zkw, TEST_UTIL.getConfiguration());
   }
 
