@@ -121,9 +121,9 @@ public class PerfTestCellComparator {
     }
 
     long costTime = System.currentTimeMillis() - startTime;
-    System.out.println(
-      compareMethod + "\t" + famPair.getFirst().length + "\t" + famPair.getSecond().length + "\t"
-        + comparator.getClass().getSimpleName() + "\t" + costTime);
+    System.out
+      .println(compareMethod + "\t" + famPair.getFirst().length + "\t" + famPair.getSecond().length
+        + "\t" + comparator.getClass().getSimpleName() + "\t" + costTime);
   }
 
 }
