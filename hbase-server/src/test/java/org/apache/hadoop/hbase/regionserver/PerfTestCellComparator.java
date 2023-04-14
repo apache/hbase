@@ -50,14 +50,19 @@ public class PerfTestCellComparator {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(PerfTestCellComparator.class);
 
+  private static String COMPARE_KV = "compareKV";
+  private static String COMPARE_BBKV = "compareBBKV";
+  private static String COMPARE_KV_VS_BBKV = "compareKVVsBBKV";
+
   private CellComparator comparator;
   private Pair<byte[], byte[]> famPair;
+  private String compareMethod;
 
   byte[] row1 = Bytes.toBytes("row1");
   byte[] qual1 = Bytes.toBytes("qual1");
   byte[] val = Bytes.toBytes("val");
 
-  int compareCnt = 100000000;
+  int compareCnt = 1000000000;
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
@@ -65,22 +70,27 @@ public class PerfTestCellComparator {
     CellComparator[] cellComparators = new CellComparator[] { CellComparator.getInstance(),
       InnerStoreCellComparator.INNER_STORE_COMPARATOR };
 
+    String[] compareMethods = new String[] { COMPARE_KV, COMPARE_BBKV, COMPARE_KV_VS_BBKV };
     byte[] fam0 = HConstants.EMPTY_BYTE_ARRAY;
     byte[] fam1 = Bytes.toBytes("fam1");
     Pair<byte[], byte[]>[] famPairs = new Pair[] { new Pair(fam0, fam0), new Pair(fam0, fam1),
       new Pair(fam1, fam0), new Pair(fam1, fam1) };
 
-    List<Object[]> params = new ArrayList<>(cellComparators.length * famPairs.length);
-    for (Pair<byte[], byte[]> famPair : famPairs) {
-      for (CellComparator cellComparator : cellComparators) {
-        params.add(new Object[] { cellComparator, famPair });
+    List<Object[]> params =
+      new ArrayList<>(compareMethods.length * cellComparators.length * famPairs.length);
+    for (String compareMethod : compareMethods) {
+      for (Pair<byte[], byte[]> famPair : famPairs) {
+        for (CellComparator cellComparator : cellComparators) {
+          params.add(new Object[] { compareMethod, cellComparator, famPair });
+        }
       }
     }
-
     return params;
   }
 
-  public PerfTestCellComparator(CellComparator cellComparator, Pair<byte[], byte[]> famPair) {
+  public PerfTestCellComparator(String compareMethod, CellComparator cellComparator,
+    Pair<byte[], byte[]> famPair) {
+    this.compareMethod = compareMethod;
     this.comparator = cellComparator;
     this.famPair = famPair;
   }
@@ -96,15 +106,24 @@ public class PerfTestCellComparator {
     Cell bbCell2 = new ByteBufferKeyValue(buffer, 0, buffer.remaining());
 
     long startTime = System.currentTimeMillis();
-    for (int i = 0; i < compareCnt; i++) {
-      comparator.compare(kv1, kv2);
-      comparator.compare(kv1, bbCell2);
-      comparator.compare(bbCell1, kv2);
-      comparator.compare(bbCell1, bbCell2);
+    if (this.compareMethod.equals(COMPARE_KV)) {
+      for (int i = 0; i < compareCnt; i++) {
+        comparator.compare(kv1, kv2);
+      }
+    } else if (this.compareMethod.equals(COMPARE_BBKV)) {
+      for (int i = 0; i < compareCnt; i++) {
+        comparator.compare(bbCell1, bbCell2);
+      }
+    } else if (this.compareMethod.equals(COMPARE_KV_VS_BBKV)) {
+      for (int i = 0; i < compareCnt; i++) {
+        comparator.compare(kv1, bbCell2);
+      }
     }
+
     long costTime = System.currentTimeMillis() - startTime;
-    System.out.println(famPair.getFirst().length + "\t" + famPair.getSecond().length + "\t"
-      + comparator.getClass().getSimpleName() + "\t" + costTime);
+    System.out.println(
+      compareMethod + "\t" + famPair.getFirst().length + "\t" + famPair.getSecond().length + "\t"
+        + comparator.getClass().getSimpleName() + "\t" + costTime);
   }
 
 }
