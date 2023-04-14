@@ -39,40 +39,25 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
   @Override
   protected int compareFamilies(Cell left, int leftFamilyLength, Cell right,
     int rightFamilyLength) {
-    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
+    return leftFamilyLength - rightFamilyLength;
   }
 
   @Override
   protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
-    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
+    return leftFamilyLength - rightFamilyLength;
   }
 
   @Override
   protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
     int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
-    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
+    return leftFamilyLength - rightFamilyLength;
   }
 
   @Override
   protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
     int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
-    return innerStoreCompareFamilies(leftFamilyLength, rightFamilyLength);
-  }
-
-  private int innerStoreCompareFamilies(int leftFamilyLength, int rightFamilyLength) {
-    if (leftFamilyLength == 0 || rightFamilyLength == 0) {
-      if (leftFamilyLength == 0 && rightFamilyLength > 0) {
-        return -1;
-      }
-      if (leftFamilyLength > 0 && rightFamilyLength == 0) {
-        return 1;
-      }
-      if (leftFamilyLength == 0 && rightFamilyLength == 0) {
-        return 0;
-      }
-    }
-    return 0;
+    return leftFamilyLength - rightFamilyLength;
   }
 
   /**
