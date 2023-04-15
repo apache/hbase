@@ -359,7 +359,6 @@ public class ReplicationSourceShipper extends Thread {
         break;
       }
       totalToDecrement += source.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
-
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",

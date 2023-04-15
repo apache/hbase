@@ -1101,13 +1101,13 @@ public class ReplicationSourceManager {
    * Add the size to {@link ReplicationSourceManager#totalBufferUsed} and check if it exceeds
    * {@link ReplicationSourceManager#totalBufferLimit}.
    * @return true if {@link ReplicationSourceManager#totalBufferUsed} exceeds
-   *         {@link ReplicationSourceManager#totalBufferLimit}.
+   *         {@link ReplicationSourceManager#totalBufferLimit},we should stop increase buffer and
+   *         ship all.
    */
   boolean acquireBufferQuota(long size) {
     if (size < 0) {
       throw new IllegalArgumentException("size should not less than 0");
     }
-
     long newBufferUsed = addTotalBufferUsed(size);
     return newBufferUsed >= totalBufferLimit;
   }
@@ -1123,11 +1123,6 @@ public class ReplicationSourceManager {
     addTotalBufferUsed(-size);
   }
 
-  /**
-   * Add the size to {@link ReplicationSourceManager#totalBufferUsed} and record the new usage in
-   * metrics.
-   * @return the new totalBufferUsed.
-   */
   private long addTotalBufferUsed(long size) {
     if (size == 0) {
       return totalBufferUsed.get();
