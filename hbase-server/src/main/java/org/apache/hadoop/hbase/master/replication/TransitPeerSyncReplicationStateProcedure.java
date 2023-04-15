@@ -236,6 +236,7 @@ public class TransitPeerSyncReplicationStateProcedure
     switch (state) {
       case PRE_PEER_SYNC_REPLICATION_STATE_TRANSITION:
         try {
+          checkPeerModificationEnabled(env);
           preTransit(env);
         } catch (IOException e) {
           LOG.warn("Failed to call pre CP hook or the pre check is failed for peer {} "

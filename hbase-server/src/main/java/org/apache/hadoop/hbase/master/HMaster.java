@@ -173,6 +173,7 @@ import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerModificationStateStore;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
@@ -467,6 +468,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   private TaskGroup startupTaskGroup;
+
+  /**
+   * Store whether we allow replication peer modification operations.
+   */
+  private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -785,6 +791,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.replicationPeerManager =
       ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
+    this.replicationPeerModificationStateStore =
+      new ReplicationPeerModificationStateStore(masterRegion);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -3787,6 +3795,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private long executePeerProcedure(AbstractPeerProcedure<?> procedure) throws IOException {
+    if (!isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
     long procId = procedureExecutor.submitProcedure(procedure);
     procedure.getLatch().await();
     return procId;
@@ -3864,6 +3875,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         + " transit current cluster state to {} in a synchronous replication peer id={}",
       state, peerId);
     return executePeerProcedure(new TransitPeerSyncReplicationStateProcedure(peerId, state));
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return replicationPeerModificationStateStore.set(on);
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return replicationPeerModificationStateStore.get();
   }
 
   /**
@@ -4290,5 +4311,4 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
-
 }

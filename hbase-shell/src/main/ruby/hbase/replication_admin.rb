@@ -479,5 +479,21 @@ module Hbase
 
       @admin.updateReplicationPeerConfig(id, builder.build)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable replication peer modification
+    # Returns previous switch setting.
+    def peer_modification_switch(enable_or_disable, drain_procs)
+      @admin.replicationPeerModificationSwitch(
+        java.lang.Boolean.valueOf(enable_or_disable), java.lang.Boolean.valueOf(drain_procs)
+      )
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query whether replication peer modification is enabled.
+    # Returns whether replication peer modification is enabled (true is enabled).
+    def peer_modification_enabled?
+      @admin.isReplicationPeerModificationEnabled
+    end
   end
 end

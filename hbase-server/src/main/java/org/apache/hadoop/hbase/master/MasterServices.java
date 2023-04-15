@@ -390,6 +390,10 @@ public interface MasterServices extends Server {
   long transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState clusterState)
     throws ReplicationException, IOException;
 
+  boolean replicationPeerModificationSwitch(boolean on) throws IOException;
+
+  boolean isReplicationPeerModificationEnabled();
+
   /** Returns {@link LockManager} to lock namespaces/tables/regions. */
   LockManager getLockManager();
 

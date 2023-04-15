@@ -892,6 +892,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    return get(admin.replicationPeerModificationSwitch(on, drainProcedures));
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    return get(admin.isReplicationPeerModificationEnabled());
+  }
+
+  @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
     throws IOException {
     get(admin.decommissionRegionServers(servers, offload));
