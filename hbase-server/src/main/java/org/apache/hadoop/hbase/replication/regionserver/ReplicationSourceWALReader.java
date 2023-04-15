@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -182,7 +181,7 @@ class ReplicationSourceWALReader extends Thread {
               // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
               // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
               // acquired in ReplicationSourceWALReader.acquireBufferQuota.
-              this.releaseBufferQuota(batch);
+              this.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
             }
           }
         }
@@ -212,10 +211,9 @@ class ReplicationSourceWALReader extends Thread {
       entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
     updateReplicationMarkerEdit(entry, batch.getLastWalPosition());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
-    long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
     updateBatchStats(batch, entry, entrySize);
-    boolean totalBufferTooLarge = acquireBufferQuota(batch, entrySizeExcludeBulkLoad);
+    boolean totalBufferTooLarge = this.getSourceManager().acquireWALEntryBufferQuota(batch, entry);
 
     // Stop if too many entries or too big
     return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -311,13 +309,7 @@ class ReplicationSourceWALReader extends Thread {
 
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
-    return getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
-  }
-
-  public static long getEntrySizeExcludeBulkLoad(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + key.estimatedSerializedSizeOf();
+    return WALEntryBatch.getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
   }
 
   private void updateBatchStats(WALEntryBatch batch, Entry entry, long entrySize) {
@@ -425,27 +417,6 @@ class ReplicationSourceWALReader extends Thread {
     newCells.add(kv);
     // Update edit with new cell.
     edit.setCells(newCells);
-  }
-
-  /**
-   * @param size delta size for grown buffer
-   * @return true if we should clear buffer and push all
-   */
-  private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
-    walEntryBatch.incrementUsedBufferSize(size);
-    return this.getSourceManager().addTotalBufferUsed(size);
-
-  }
-
-  /**
-   * To release the buffer quota of {@link WALEntryBatch} which acquired by
-   * {@link ReplicationSourceWALReader#acquireBufferQuota}
-   */
-  private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
-    long usedBufferSize = walEntryBatch.getUsedBufferSize();
-    if (usedBufferSize > 0) {
-      this.getSourceManager().addTotalBufferUsed(-usedBufferSize);
-    }
   }
 
   /** Returns whether the reader thread is running */

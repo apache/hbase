@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -353,18 +352,18 @@ public class ReplicationSourceShipper extends Thread {
         return;
       }
     }
-    LongAccumulator totalToDecrement = new LongAccumulator((a, b) -> a + b, 0);
-    entryReader.entryBatchQueue.forEach(w -> {
-      entryReader.entryBatchQueue.remove(w);
-      w.getWalEntries().forEach(e -> {
-        long entrySizeExcludeBulkLoad = ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(e);
-        totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
-      });
-    });
+    long totalToDecrement = 0;
+    while (true) {
+      WALEntryBatch batch = entryReader.entryBatchQueue.poll();
+      if (batch == null) {
+        break;
+      }
+      totalToDecrement += source.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
+
+    }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
-        totalToDecrement.longValue());
+        totalToDecrement);
     }
-    source.getSourceManager().addTotalBufferUsed(-totalToDecrement.longValue());
   }
 }

@@ -781,7 +781,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
       throttler.addPushSize(batchSize);
     }
     totalReplicatedEdits.addAndGet(entries.size());
-    this.manager.addTotalBufferUsed(-batchSize);
+    this.manager.releaseBufferQuota(batchSize);
   }
 
   @Override

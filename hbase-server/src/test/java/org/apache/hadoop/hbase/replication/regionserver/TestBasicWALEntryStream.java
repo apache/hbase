@@ -829,7 +829,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertNotNull(entryBatch);
     assertEquals(3, entryBatch.getWalEntries().size());
     long sum = entryBatch.getWalEntries().stream()
-      .mapToLong(ReplicationSourceWALReader::getEntrySizeExcludeBulkLoad).sum();
+      .mapToLong(WALEntryBatch::getEntrySizeExcludeBulkLoad).sum();
     assertEquals(position, entryBatch.getLastWalPosition());
     assertEquals(walPath, entryBatch.getLastWalPath());
     assertEquals(3, entryBatch.getNbRowKeys());
