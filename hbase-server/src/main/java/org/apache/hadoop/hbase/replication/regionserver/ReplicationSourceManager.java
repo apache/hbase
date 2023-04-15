@@ -1079,8 +1079,7 @@ public class ReplicationSourceManager {
    * @return true if we should clear buffer and push all
    */
   boolean acquireWALEntryBufferQuota(WALEntryBatch walEntryBatch, Entry entry) {
-    long entrySize = WALEntryBatch.getEntrySizeExcludeBulkLoad(entry);
-    walEntryBatch.incrementUsedBufferSize(entrySize);
+    long entrySize = walEntryBatch.incrementUsedBufferSize(entry);
     return this.acquireBufferQuota(entrySize);
   }
 

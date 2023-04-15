@@ -158,8 +158,10 @@ class WALEntryBatch {
     lastSeqIds.put(region, sequenceId);
   }
 
-  public void incrementUsedBufferSize(long increment) {
+  public long incrementUsedBufferSize(Entry entry) {
+    long increment = getEntrySizeExcludeBulkLoad(entry);
     usedBufferSize += increment;
+    return increment;
   }
 
   public long getUsedBufferSize() {
