@@ -17,19 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.getConfig;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -258,34 +253,6 @@ public class TestReplicationPeerConfig {
     assertTrue(peerConfig.needToReplicate(TABLE_A));
     assertTrue(peerConfig.needToReplicate(TABLE_A, FAMILY1));
     assertFalse(peerConfig.needToReplicate(TABLE_A, FAMILY2));
-  }
-
-  private static final Random RNG = new Random(); // Seed may be set with Random#setSeed
-
-  private Set<String> randNamespaces(Random rand) {
-    return Stream.generate(() -> Long.toHexString(rand.nextLong())).limit(rand.nextInt(5))
-      .collect(toSet());
-  }
-
-  private Map<TableName, List<String>> randTableCFs(Random rand) {
-    int size = rand.nextInt(5);
-    Map<TableName, List<String>> map = new HashMap<>();
-    for (int i = 0; i < size; i++) {
-      TableName tn = TableName.valueOf(Long.toHexString(rand.nextLong()));
-      List<String> cfs = Stream.generate(() -> Long.toHexString(rand.nextLong()))
-        .limit(rand.nextInt(5)).collect(toList());
-      map.put(tn, cfs);
-    }
-    return map;
-  }
-
-  private ReplicationPeerConfig getConfig(int seed) {
-    RNG.setSeed(seed);
-    return ReplicationPeerConfig.newBuilder().setClusterKey(Long.toHexString(RNG.nextLong()))
-      .setReplicationEndpointImpl(Long.toHexString(RNG.nextLong()))
-      .setNamespaces(randNamespaces(RNG)).setExcludeNamespaces(randNamespaces(RNG))
-      .setTableCFsMap(randTableCFs(RNG)).setExcludeTableCFsMap(randTableCFs(RNG))
-      .setReplicateAllUserTables(RNG.nextBoolean()).setBandwidth(RNG.nextInt(1000)).build();
   }
 
   @Test
