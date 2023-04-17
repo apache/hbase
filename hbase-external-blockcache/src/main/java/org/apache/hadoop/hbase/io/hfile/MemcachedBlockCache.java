@@ -56,6 +56,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * will likely slow down HBase greatly.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("FutureReturnValueIgnored")
 public class MemcachedBlockCache implements BlockCache {
   private static final Logger LOG = LoggerFactory.getLogger(MemcachedBlockCache.class.getName());
 
@@ -131,7 +132,6 @@ public class MemcachedBlockCache implements BlockCache {
     cacheBlock(cacheKey, buf);
   }
 
-  @SuppressWarnings("FutureReturnValueIgnored")
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
     if (buf instanceof HFileBlock) {
