@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils.HFileBlockPair;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,7 +42,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ IOTests.class, LargeTests.class })
+@Category({ IOTests.class, SmallTests.class })
 public class TestMemcachedBlockCache {
 
   @ClassRule

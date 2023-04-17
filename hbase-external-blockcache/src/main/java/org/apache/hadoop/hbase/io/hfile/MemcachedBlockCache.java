@@ -176,6 +176,7 @@ public class MemcachedBlockCache implements BlockCache {
           LOG.debug("Timeout getting key " + cacheKey.toString(), e);
         }
       } else {
+        cacheErrorCount.incrementAndGet();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Exception getting key " + cacheKey.toString(), e);
         }
