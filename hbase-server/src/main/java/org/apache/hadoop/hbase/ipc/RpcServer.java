@@ -176,6 +176,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   protected static final String WARN_RESPONSE_TIME = "hbase.ipc.warn.response.time";
   protected static final String WARN_RESPONSE_SIZE = "hbase.ipc.warn.response.size";
+  protected static final String WARN_RESPONSE_TIME_SCAN = "hbase.ipc.warn.response.time.scan";
+  protected static final String WARN_RESPONSE_SIZE_SCAN = "hbase.ipc.warn.response.size.scan";
 
   /**
    * Minimum allowable timeout (in milliseconds) in rpc request's header. This configuration exists
@@ -198,6 +200,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
   protected final int maxRequestSize;
   protected volatile int warnResponseTime;
   protected volatile int warnResponseSize;
+  protected volatile int warnResponseTimeScan;
+  protected volatile int warnResponseSizeScan;
 
   protected final int minClientRequestTimeout;
 
@@ -277,6 +281,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
     this.warnResponseTime = getWarnResponseTime(conf);
     this.warnResponseSize = getWarnResponseSize(conf);
+    this.warnResponseTimeScan = getWarnResponseTimeScan(conf);
+    this.warnResponseSizeScan = getWarnResponseSizeScan(conf);
     this.minClientRequestTimeout =
       conf.getInt(MIN_CLIENT_REQUEST_TIMEOUT, DEFAULT_MIN_CLIENT_REQUEST_TIMEOUT);
     this.maxRequestSize = conf.getInt(MAX_REQUEST_SIZE, DEFAULT_MAX_REQUEST_SIZE);
@@ -326,6 +332,14 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     if (warnResponseSize != newWarnResponseSize) {
       warnResponseSize = newWarnResponseSize;
     }
+    int newWarnResponseTimeScan = getWarnResponseTimeScan(newConf);
+    if (warnResponseTimeScan != newWarnResponseTimeScan) {
+      warnResponseTimeScan = newWarnResponseTimeScan;
+    }
+    int newWarnResponseSizeScan = getWarnResponseSizeScan(newConf);
+    if (warnResponseSizeScan != newWarnResponseSizeScan) {
+      warnResponseSizeScan = newWarnResponseSizeScan;
+    }
   }
 
   private static boolean getIsOnlineLogProviderEnabled(Configuration conf) {
@@ -339,6 +353,14 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
 
   private static int getWarnResponseSize(Configuration conf) {
     return conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
+  }
+
+  private static int getWarnResponseTimeScan(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_TIME_SCAN, getWarnResponseTime(conf));
+  }
+
+  private static int getWarnResponseSizeScan(Configuration conf) {
+    return conf.getInt(WARN_RESPONSE_SIZE_SCAN, getWarnResponseSize(conf));
   }
 
   protected void initReconfigurable(Configuration confToLoad) {
@@ -441,9 +463,8 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       metrics.sentResponse(responseSize);
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
-      boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
-      boolean tooLarge = (warnResponseSize > -1
-        && (responseSize > warnResponseSize || responseBlockSize > warnResponseSize));
+      boolean tooSlow = isTooSlow(call, processingTime);
+      boolean tooLarge = isTooLarge(call, responseSize, responseBlockSize);
       if (tooSlow || tooLarge) {
         final String userName = call.getRequestUserName().orElse(StringUtils.EMPTY);
         // when tagging, we let TooLarge trump TooSmall to keep output simple
@@ -558,6 +579,21 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
     final String tag =
       (tooLarge && tooSlow) ? "TooLarge & TooSlow" : (tooSlow ? "TooSlow" : "TooLarge");
     LOG.warn("(response" + tag + "): " + GSON.toJson(responseInfo));
+  }
+
+  private boolean isTooSlow(RpcCall call, int processingTime) {
+    long warnResponseTime = call.getParam() instanceof ClientProtos.ScanRequest
+      ? warnResponseTimeScan
+      : this.warnResponseTime;
+    return (processingTime > warnResponseTime && warnResponseTime > -1);
+  }
+
+  private boolean isTooLarge(RpcCall call, long responseSize, long responseBlockSize) {
+    long warnResponseSize = call.getParam() instanceof ClientProtos.ScanRequest
+      ? warnResponseSizeScan
+      : this.warnResponseSize;
+    return (warnResponseSize > -1
+      && (responseSize > warnResponseSize || responseBlockSize > warnResponseSize));
   }
 
   /**
