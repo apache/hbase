@@ -27,6 +27,7 @@ import org.apache.htrace.core.Tracer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should implement the
@@ -94,10 +95,15 @@ public abstract class EventHandler implements Runnable, Comparable<EventHandler>
 
   @Override
   public void run() {
+    // assume that this is the top of an execution on a new or reused thread, that we're safe to
+    // blast any existing MDC state.
     try (TraceScope scope = TraceUtil.createTrace(this.getClass().getSimpleName(), parent)) {
+      MDC.put("event_type", eventType.toString());
       process();
     } catch (Throwable t) {
       handleException(t);
+    } finally {
+      MDC.clear();
     }
   }
 
