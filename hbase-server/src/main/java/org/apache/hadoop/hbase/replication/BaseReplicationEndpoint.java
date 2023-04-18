@@ -92,7 +92,8 @@ public abstract class BaseReplicationEndpoint extends AbstractService
         }
       }
     }
-    return filters.isEmpty() ? null : new ChainWALEntryFilter(filters);
+    return filters.isEmpty() ? null :
+      new ChainWALEntryFilter(filters, ctx.getPeerConfig().getChainedFiltersOperator());
   }
 
   /**

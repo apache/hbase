@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -281,6 +282,49 @@ public class TestReplicationWALEntryFilters {
   }
 
   @Test
+  public void testChainWALEntryFilterOROperator() {
+    Entry userEntry = createEntry(null, a, b, c);
+    assertEquals(userEntry, testChainOperator(userEntry, "OR"));
+  }
+
+  @Test
+  public void testChainWALEntryFilterANDOperator() {
+    Entry userEntry = createEntry(null, a, b, c);
+    assertEquals(null, testChainOperator(userEntry, "AND"));
+  }
+
+  @Test
+  public void testChainWALEntryFilterNullOperator() {
+    Entry userEntry = createEntry(null, a, b, c);
+    assertEquals(null, testChainOperator(userEntry, null));
+  }
+
+  @Test
+  public void testChainWALEntryFilterEmptyOperator() {
+    Entry userEntry = createEntry(null, a, b, c);
+    assertEquals(null, testChainOperator(userEntry, ""));
+  }
+
+  @Test
+  public void testChainWALEntryFilterNoOperator() {
+    Entry userEntry = createEntry(null, a, b, c);
+    List<WALEntryFilter> filters = new ArrayList<>();
+    filters.add(passFilter);
+    filters.add(nullFilter);
+    ChainWALEntryFilter filter = new ChainWALEntryFilter(filters);
+    assertEquals(null, filter.filter(userEntry));
+  }
+
+
+  private WAL.Entry testChainOperator(Entry userEntry, String operatorName){
+    List<WALEntryFilter> filters = new ArrayList<>();
+    filters.add(passFilter);
+    filters.add(nullFilter);
+    ChainWALEntryFilter filter = new ChainWALEntryFilter(filters, operatorName);
+    return filter.filter(userEntry);
+  }
+
+  @Test
   public void testNamespaceTableCfWALEntryFilter() {
     ReplicationPeer peer = mock(ReplicationPeer.class);
     ReplicationPeerConfigBuilder peerConfigBuilder = ReplicationPeerConfig.newBuilder();
@@ -357,7 +401,7 @@ public class TestReplicationWALEntryFilters {
     assertEquals(null, filter.filter(userEntry));
 
     // 4. replicate_all flag is false, and config namespaces and table-cfs both
-    // Namespaces config should not confict with table-cfs config
+    // Namespaces config should not conflict with table-cfs config
     namespaces = new HashSet<>();
     tableCfs = new HashMap<>();
     namespaces.add("ns1");

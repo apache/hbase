@@ -159,6 +159,14 @@ public interface ReplicationPeerConfigBuilder {
   ReplicationPeerConfigBuilder setRemoteWALDir(String dir);
 
   /**
+   * Specifies the boolean operator for the chain of WALEntry filters. The "AND" value enforces all
+   * filters on a given entry. The "OR" value needs only one filter to be valid.
+   * @param chainedFiltersOperation the ChainWALEntryFilter operator name.
+   * @return {@code this}
+   */
+  ReplicationPeerConfigBuilder setChainedFiltersOperation(String chainedFiltersOperation);
+
+  /**
    * Builds the configuration object from the current state of {@code this}.
    * @return A {@link ReplicationPeerConfig} instance.
    */

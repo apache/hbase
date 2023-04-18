@@ -54,8 +54,9 @@ public class NamespaceTableCfWALEntryFilter implements WALEntryFilter, WALCellFi
     if (CellUtil.matchingColumn(cell, WALEdit.METAFAMILY, WALEdit.BULK_LOAD)) {
       // If the cell is about BULKLOAD event, unpack and filter it by BulkLoadCellFilter.
       return bulkLoadFilter.filterCell(cell, fam -> !peerConfig.needToReplicate(tableName, fam));
-    } else {
+    } else if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
       return peerConfig.needToReplicate(tableName, CellUtil.cloneFamily(cell)) ? cell : null;
     }
+    return null;
   }
 }

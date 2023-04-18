@@ -51,6 +51,7 @@ public class ReplicationPeerConfig {
   private final boolean serial;
   // Used by synchronous replication
   private String remoteWALDir;
+  private String chainedFiltersOperator;
 
   private ReplicationPeerConfig(ReplicationPeerConfigBuilderImpl builder) {
     this.clusterKey = builder.clusterKey;
@@ -71,6 +72,7 @@ public class ReplicationPeerConfig {
     this.bandwidth = builder.bandwidth;
     this.serial = builder.serial;
     this.remoteWALDir = builder.remoteWALDir;
+    this.chainedFiltersOperator = builder.chainedFilterOperatorName;
   }
 
   private Map<TableName, List<String>>
@@ -140,6 +142,10 @@ public class ReplicationPeerConfig {
     return serial;
   }
 
+  public String getChainedFiltersOperator() {
+    return chainedFiltersOperator;
+  }
+
   public static ReplicationPeerConfigBuilder newBuilder(ReplicationPeerConfig peerConfig) {
     ReplicationPeerConfigBuilderImpl builder = new ReplicationPeerConfigBuilderImpl();
     builder.setClusterKey(peerConfig.getClusterKey())
@@ -150,7 +156,8 @@ public class ReplicationPeerConfig {
       .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
       .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
       .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
-      .setRemoteWALDir(peerConfig.getRemoteWALDir());
+      .setRemoteWALDir(peerConfig.getRemoteWALDir())
+      .setChainedFiltersOperation(peerConfig.getChainedFiltersOperator());
     return builder;
   }
 
@@ -180,6 +187,8 @@ public class ReplicationPeerConfig {
     private boolean serial = false;
 
     private String remoteWALDir = null;
+
+    private String chainedFilterOperatorName;
 
     @Override
     public ReplicationPeerConfigBuilder setClusterKey(String clusterKey) {
@@ -257,6 +266,12 @@ public class ReplicationPeerConfig {
     @Override
     public ReplicationPeerConfigBuilder setRemoteWALDir(String dir) {
       this.remoteWALDir = dir;
+      return this;
+    }
+
+    @Override public ReplicationPeerConfigBuilder setChainedFiltersOperation(
+      String chainedFilterOperation) {
+      this.chainedFilterOperatorName = chainedFilterOperation;
       return this;
     }
 

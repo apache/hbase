@@ -791,6 +791,39 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
+    define_test "add_peer: 'OR' operator" do
+      cluster_key = "server1.cie.com:2181:/hbase"
+
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint, OPERATOR => "OR"}
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "add_peer: 'AND' operator" do
+      cluster_key = "server1.cie.com:2181:/hbase"
+
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint, OPERATOR => "AND"}
+      command(:add_peer, @peer_id, args)
+
+      assert_equal(1, command(:list_peers).length)
+
+      # cleanup for future tests
+      command(:remove_peer, @peer_id)
+    end
+
+    define_test "add_peer: should fail when invalid operator" do
+      cluster_key = "server1.cie.com:2181:/hbase"
+
+      args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint, OPERATOR => "NAND"}
+      assert_raise(ArgumentError) do
+        command(:add_peer, @peer_id, args)
+      end
+    end
+
     # assert_raise fails on native exceptions - https://jira.codehaus.org/browse/JRUBY-5279
     # Can't catch native Java exception with assert_raise in JRuby 1.6.8 as in the test below.
     # define_test "add_peer: adding a second peer with same id should error" do

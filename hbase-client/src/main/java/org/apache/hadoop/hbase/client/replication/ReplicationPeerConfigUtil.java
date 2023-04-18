@@ -297,12 +297,14 @@ public final class ReplicationPeerConfigUtil {
       peer.getTableCfsList().toArray(new ReplicationProtos.TableCF[peer.getTableCfsCount()]));
     if (tableCFsMap != null) {
       builder.setTableCFsMap(tableCFsMap);
+      builder.setChainedFiltersOperation(peer.getChainOperator());
     }
 
     List<ByteString> namespacesList = peer.getNamespacesList();
     if (namespacesList != null && namespacesList.size() != 0) {
       builder.setNamespaces(
         namespacesList.stream().map(ByteString::toStringUtf8).collect(Collectors.toSet()));
+      builder.setChainedFiltersOperation(peer.getChainOperator());
     }
 
     if (peer.hasBandwidth()) {
@@ -361,11 +363,18 @@ public final class ReplicationPeerConfigUtil {
       for (int i = 0; i < tableCFs.length; i++) {
         builder.addTableCfs(tableCFs[i]);
       }
+      if (peerConfig.getChainedFiltersOperator() != null) {
+        builder.setChainOperator(peerConfig.getChainedFiltersOperator());
+      }
+
     }
     Set<String> namespaces = peerConfig.getNamespaces();
     if (namespaces != null) {
       for (String namespace : namespaces) {
         builder.addNamespaces(ByteString.copyFromUtf8(namespace));
+      }
+      if (peerConfig.getChainedFiltersOperator() != null) {
+        builder.setChainOperator(peerConfig.getChainedFiltersOperator());
       }
     }
 

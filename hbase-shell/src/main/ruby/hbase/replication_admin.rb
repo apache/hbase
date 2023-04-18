@@ -67,6 +67,7 @@ module Hbase
         peer_state = args.fetch(STATE, nil)
         remote_wal_dir = args.fetch(REMOTE_WAL_DIR, nil)
         serial = args.fetch(SERIAL, nil)
+        chain_operator = args.fetch(OPERATOR, nil).upcase
 
         # Create and populate a ReplicationPeerConfig
         builder = ReplicationPeerConfig.newBuilder()
@@ -112,6 +113,14 @@ module Hbase
           end
           builder.setReplicateAllUserTables(false)
           builder.set_table_cfs_map(map)
+        end
+
+        unless chain_operator.nil?
+          if 'AND'.eql?(chain_operator) || 'OR'.eql?(chain_operator)
+            builder.setChainedFiltersOperation(chain_operator)
+          else
+            raise(ArgumentError, 'OPERATOR valid values: [AND|OR]')
+          end
         end
 
         enabled = true
