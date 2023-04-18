@@ -125,6 +125,8 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
@@ -222,6 +224,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  */
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufUtil.class.getName());
 
   private ProtobufUtil() {
   }
@@ -2094,7 +2098,7 @@ public final class ProtobufUtil {
    * @param message Message object {@link Message}
    * @return SlowLogParams with regionName(for filter queries) and params
    */
-  public static SlowLogParams getSlowLogParams(Message message) {
+  public static SlowLogParams getSlowLogParams(Message message, boolean slowLogScanPayloadEnabled) {
     if (message == null) {
       return null;
     }
@@ -2102,7 +2106,11 @@ public final class ProtobufUtil {
       ScanRequest scanRequest = (ScanRequest) message;
       String regionName = getStringForByteString(scanRequest.getRegion().getValue());
       String params = TextFormat.shortDebugString(message);
-      return new SlowLogParams(regionName, params);
+      if (slowLogScanPayloadEnabled) {
+        return new SlowLogParams(regionName, params, scanRequest.getScan());
+      } else {
+        return new SlowLogParams(regionName, params);
+      }
     } else if (message instanceof MutationProto) {
       MutationProto mutationProto = (MutationProto) message;
       String params = "type= " + mutationProto.getMutateType().toString();
@@ -3296,7 +3304,7 @@ public final class ProtobufUtil {
    * @return SlowLog Payload for client usecase
    */
   private static LogEntry getSlowLogRecord(final TooSlowLog.SlowLogPayload slowLogPayload) {
-    OnlineLogRecord onlineLogRecord =
+    OnlineLogRecord.OnlineLogRecordBuilder onlineLogRecord =
       new OnlineLogRecord.OnlineLogRecordBuilder().setCallDetails(slowLogPayload.getCallDetails())
         .setClientAddress(slowLogPayload.getClientAddress())
         .setMethodName(slowLogPayload.getMethodName())
@@ -3308,8 +3316,15 @@ public final class ProtobufUtil {
         .setResponseSize(slowLogPayload.getResponseSize())
         .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
-        .setUserName(slowLogPayload.getUserName()).build();
-    return onlineLogRecord;
+        .setUserName(slowLogPayload.getUserName());
+    if (slowLogPayload.hasScan()) {
+      try {
+        onlineLogRecord.setScan(ProtobufUtil.toScan(slowLogPayload.getScan()));
+      } catch (Exception e) {
+        LOG.warn("Failed to convert Scan proto {}", slowLogPayload.getScan(), e);
+      }
+    }
+    return onlineLogRecord.build();
   }
 
   /**

@@ -1634,6 +1634,9 @@ public final class HConstants {
     "hbase.regionserver.slowlog.systable.enabled";
   public static final boolean DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY = false;
 
+  public static final String SLOW_LOG_SCAN_PAYLOAD_ENABLED = "hbase.slowlog.scan.payload.enabled";
+  public static final boolean SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT = false;
+
   public static final String SHELL_TIMESTAMP_FORMAT_EPOCH_KEY =
     "hbase.shell.timestamp.format.epoch";
 
