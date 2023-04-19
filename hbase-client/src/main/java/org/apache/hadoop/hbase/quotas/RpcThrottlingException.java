@@ -130,8 +130,17 @@ public class RpcThrottlingException extends HBaseIOException {
 
   private static void throwThrottlingException(final Type type, final long waitInterval)
     throws RpcThrottlingException {
-    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + StringUtils.formatTime(waitInterval);
+    String msg = MSG_TYPE[type.ordinal()] + MSG_WAIT + stringFromMillis(waitInterval);
     throw new RpcThrottlingException(type, waitInterval, msg);
+  }
+
+  private static String stringFromMillis(long millis) {
+    if (millis >= 1000) {
+      return StringUtils.formatTime(millis);
+    } else {
+      // StringUtils#formatTime doesn't support millis
+      return millis + "ms";
+    }
   }
 
   private static long timeFromString(String timeDiff) {
