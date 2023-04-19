@@ -1,4 +1,4 @@
-#!/usr/bin/env hbase-jruby
+#
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements. See the NOTICE file distributed with this
@@ -17,12 +17,12 @@
 
 # frozen_string_literal: true
 
-# Prints whether peer modification operations are enabled 
 module Shell
   module Commands
+    # Prints whether peer modification operations are enabled
     class PeerModificationEnabled < Command
       def help
-<<-EOF
+        <<~EOF
 Query whether peer modification operations are enabled
 Examples:
 

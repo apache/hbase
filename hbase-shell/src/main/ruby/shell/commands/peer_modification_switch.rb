@@ -19,12 +19,12 @@
 
 # frozen_string_literal: true
 
-# Enable or disable peer modification operations
 module Shell
   module Commands
+    # Enable or disable peer modification operations
     class PeerModificationSwitch < Command
       def help
-<<-EOF
+        <<~EOF
 Enable/Disable peer modification. Returns previous state.
 Examples:
 
