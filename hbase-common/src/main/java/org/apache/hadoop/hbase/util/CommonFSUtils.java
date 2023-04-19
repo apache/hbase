@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_STORAGEPOLICY;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -41,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import static org.apache.hadoop.fs.CommonPathCapabilities.FS_STORAGEPOLICY;
 
 /**
  * Utility methods for interacting with the underlying file system.
