@@ -495,4 +495,14 @@ public class MockNoopMasterServices implements MasterServices {
     long nonceGroup, long nonce) throws IOException {
     return -1;
   }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return false;
+  }
 }

@@ -1481,4 +1481,17 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException(
       "modifyTableStoreFileTrackerAsync not supported in ThriftAdmin");
   }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    throw new NotImplementedException(
+      "replicationPeerModificationSwitch not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    throw new NotImplementedException(
+      "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
+  }
 }

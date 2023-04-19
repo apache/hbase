@@ -525,6 +525,8 @@ Shell.load_command_group(
     get_peer_config
     list_peer_configs
     update_peer_config
+    peer_modification_enabled
+    peer_modification_switch
   ]
 )
 

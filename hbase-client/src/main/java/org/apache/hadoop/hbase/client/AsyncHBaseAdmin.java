@@ -491,6 +491,17 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on,
+    boolean drainProcedures) {
+    return wrap(rawAdmin.replicationPeerModificationSwitch(on, drainProcedures));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerModificationEnabled() {
+    return wrap(rawAdmin.isReplicationPeerModificationEnabled());
+  }
+
+  @Override
   public CompletableFuture<Void> snapshot(SnapshotDescription snapshot) {
     return wrap(rawAdmin.snapshot(snapshot));
   }

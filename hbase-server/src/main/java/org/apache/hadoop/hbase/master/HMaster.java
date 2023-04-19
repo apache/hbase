@@ -172,6 +172,7 @@ import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ModifyPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerModificationStateStore;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
 import org.apache.hadoop.hbase.master.slowlog.SlowLogMasterService;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotCleanupStateStore;
@@ -449,6 +450,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   private TaskGroup startupTaskGroup;
+
+  /**
+   * Store whether we allow replication peer modification operations.
+   */
+  private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -764,6 +770,8 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     this.replicationPeerManager =
       ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
+    this.replicationPeerModificationStateStore =
+      new ReplicationPeerModificationStateStore(masterRegion);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -3785,6 +3793,9 @@ public class HMaster extends HRegionServer implements MasterServices {
   }
 
   private long executePeerProcedure(ModifyPeerProcedure procedure) throws IOException {
+    if (!isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
     long procId = procedureExecutor.submitProcedure(procedure);
     procedure.getLatch().await();
     return procId;
@@ -3852,6 +3863,16 @@ public class HMaster extends HRegionServer implements MasterServices {
       cpHost.postListReplicationPeers(regex);
     }
     return peers;
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return replicationPeerModificationStateStore.set(on);
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return replicationPeerModificationStateStore.get();
   }
 
   /**
@@ -4232,5 +4253,4 @@ public class HMaster extends HRegionServer implements MasterServices {
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
-
 }

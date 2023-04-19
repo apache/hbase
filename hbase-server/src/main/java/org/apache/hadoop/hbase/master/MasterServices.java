@@ -373,6 +373,10 @@ public interface MasterServices extends Server {
   List<ReplicationPeerDescription> listReplicationPeers(String regex)
     throws ReplicationException, IOException;
 
+  boolean replicationPeerModificationSwitch(boolean on) throws IOException;
+
+  boolean isReplicationPeerModificationEnabled();
+
   /** Returns {@link LockManager} to lock namespaces/tables/regions. */
   LockManager getLockManager();
 
