@@ -2187,6 +2187,34 @@ public interface Admin extends Abortable, Closeable {
   boolean isReplicationPeerEnabled(String peerId) throws IOException;
 
   /**
+   * Enable or disable replication peer modification.
+   * <p/>
+   * This is especially useful when you want to change the replication peer storage.
+   * @param on {@code true} means enable, otherwise disable
+   * @return the previous enable/disable state
+   */
+  default boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return replicationPeerModificationSwitch(on, false);
+  }
+
+  /**
+   * Enable or disable replication peer modification.
+   * <p/>
+   * This is especially useful when you want to change the replication peer storage.
+   * @param on              {@code true} means enable, otherwise disable
+   * @param drainProcedures if {@code true}, will wait until all the running replication peer
+   *                        modification procedures finish
+   * @return the previous enable/disable state
+   */
+  boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures) throws IOException;
+
+  /**
+   * Check whether replication peer modification is enabled.
+   * @return {@code true} if modification is enabled, otherwise {@code false}
+   */
+  boolean isReplicationPeerModificationEnabled() throws IOException;
+
+  /**
    * Mark region server(s) as decommissioned to prevent additional regions from getting assigned to
    * them. Optionally unload the regions on the servers. If there are multiple servers to be
    * decommissioned, decommissioning them at the same time can prevent wasteful region movements.
