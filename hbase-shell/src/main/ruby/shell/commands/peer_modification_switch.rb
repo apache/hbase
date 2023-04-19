@@ -36,7 +36,7 @@ finished, before the command returns.
 EOF
       end
 
-      def command(enable_or_disable, drain_procs : false)
+      def command(enable_or_disable, drain_procs = false)
         prev_state = !!replication_admin.peer_modification_switch(enable_or_disable, drain_procs)
         formatter.row(["Previous peer modification state : #{prev_state}"])
         prev_state
