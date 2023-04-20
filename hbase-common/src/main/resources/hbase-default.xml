@@ -755,8 +755,12 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hregion.memstore.mslab.chunksize</name>
-    <value>2097152</value>
-    <description>The maximum byte size of a chunk in the MemStoreLAB. Unit: bytes</description>
+    <value>2096128</value>
+    <description>
+      The maximum byte size of a chunk in the MemStoreLAB.
+      Use 2047k as the default because 2m may cause memory fragmentation in some cases.
+      Unit: bytes
+    </description>
   </property>
   <property>
     <name>hbase.regionserver.offheap.global.memstore.size</name>

@@ -213,7 +213,8 @@ of off-heap memory that should be used by MSLAB (e.g. `25` would result in 25MB 
 MaxDirectMemorySize property (see <<hbase.offheapsize>> for more on _HBASE_OFFHEAPSIZE_). The default value of
 `hbase.regionserver.offheap.global.memstore.size` is 0 which means MSLAB uses onheap, not offheap, chunks by default.
 
-`hbase.hregion.memstore.mslab.chunksize` controls the size of each off-heap chunk. Default is `2097152` (2MB).
+`hbase.hregion.memstore.mslab.chunksize` controls the size of each off-heap chunk. Default is `2096128` (that's 2047KB, why not 2MB?
+see link:https://issues.apache.org/jira/browse/HBASE-27805[HBASE-27805] for more detail).
 
 When a Cell is added to a MemStore, the bytes for that Cell are copied into these off-heap buffers (if `hbase.regionserver.offheap.global.memstore.size` is non-zero)
 and a Cell POJO will refer to this memory area. This can greatly reduce the on-heap occupancy of the MemStores and reduce the total heap utilization for RegionServers
