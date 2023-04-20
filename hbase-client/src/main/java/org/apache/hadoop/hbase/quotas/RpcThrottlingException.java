@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -135,12 +134,29 @@ public class RpcThrottlingException extends HBaseIOException {
   }
 
   private static String stringFromMillis(long millis) {
-    if (millis >= 1000) {
-      return StringUtils.formatTime(millis);
-    } else {
-      // StringUtils#formatTime doesn't support millis
-      return millis + "ms";
+    StringBuilder buf = new StringBuilder();
+    long hours = millis / (60 * 60 * 1000);
+    long rem = (millis % (60 * 60 * 1000));
+    long minutes = rem / (60 * 1000);
+    rem = rem % (60 * 1000);
+    long seconds = rem / 1000;
+    long milliseconds = rem % 1000;
+
+    if (hours != 0) {
+      buf.append(hours);
+      buf.append("hrs, ");
     }
+    if (minutes != 0) {
+      buf.append(minutes);
+      buf.append("mins, ");
+    }
+    if (seconds != 0) {
+      buf.append(seconds);
+      buf.append("sec, ");
+    }
+    buf.append(milliseconds);
+    buf.append("ms");
+    return buf.toString();
   }
 
   private static long timeFromString(String timeDiff) {

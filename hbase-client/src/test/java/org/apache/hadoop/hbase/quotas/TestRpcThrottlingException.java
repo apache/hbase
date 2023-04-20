@@ -33,16 +33,16 @@ public class TestRpcThrottlingException {
     HBaseClassTestRule.forClass(TestRpcThrottlingException.class);
 
   @Test
-  public void itHandles1sWaitIntervalMessage() {
+  public void itHandlesSecWaitIntervalMessage() {
     try {
-      RpcThrottlingException.throwNumReadRequestsExceeded(1000);
+      RpcThrottlingException.throwNumReadRequestsExceeded(1001);
     } catch (RpcThrottlingException e) {
-      assertTrue(e.getMessage().contains("wait 1sec"));
+      assertTrue(e.getMessage().contains("wait 1sec, 1ms"));
     }
   }
 
   @Test
-  public void itHandles50msWaitIntervalMessage() {
+  public void itHandlesMsWaitIntervalMessage() {
     try {
       RpcThrottlingException.throwNumReadRequestsExceeded(50);
     } catch (RpcThrottlingException e) {
@@ -51,11 +51,11 @@ public class TestRpcThrottlingException {
   }
 
   @Test
-  public void itHandles1min1sWaitIntervalMessage() {
+  public void itHandlesMinWaitIntervalMessage() {
     try {
-      RpcThrottlingException.throwNumReadRequestsExceeded(61_000);
+      RpcThrottlingException.throwNumReadRequestsExceeded(65_015);
     } catch (RpcThrottlingException e) {
-      assertTrue(e.getMessage().contains("wait 1mins, 1sec"));
+      assertTrue(e.getMessage().contains("wait 1mins, 5sec, 15ms"));
     }
   }
 
