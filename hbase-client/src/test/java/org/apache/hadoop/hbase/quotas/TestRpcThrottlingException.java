@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -36,6 +37,7 @@ public class TestRpcThrottlingException {
   public void itHandlesSecWaitIntervalMessage() {
     try {
       RpcThrottlingException.throwNumReadRequestsExceeded(1001);
+      fail();
     } catch (RpcThrottlingException e) {
       assertTrue(e.getMessage().contains("wait 1sec, 1ms"));
     }
@@ -45,6 +47,7 @@ public class TestRpcThrottlingException {
   public void itHandlesMsWaitIntervalMessage() {
     try {
       RpcThrottlingException.throwNumReadRequestsExceeded(50);
+      fail();
     } catch (RpcThrottlingException e) {
       assertTrue(e.getMessage().contains("wait 50ms"));
     }
@@ -54,6 +57,7 @@ public class TestRpcThrottlingException {
   public void itHandlesMinWaitIntervalMessage() {
     try {
       RpcThrottlingException.throwNumReadRequestsExceeded(65_015);
+      fail();
     } catch (RpcThrottlingException e) {
       assertTrue(e.getMessage().contains("wait 1mins, 5sec, 15ms"));
     }
