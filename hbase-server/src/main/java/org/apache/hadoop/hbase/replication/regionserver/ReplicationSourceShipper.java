@@ -352,17 +352,17 @@ public class ReplicationSourceShipper extends Thread {
         return;
       }
     }
-    long totalToDecrement = 0;
+    long totalReleasedBytes = 0;
     while (true) {
       WALEntryBatch batch = entryReader.entryBatchQueue.poll();
       if (batch == null) {
         break;
       }
-      totalToDecrement += source.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
+      totalReleasedBytes += source.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
-        totalToDecrement);
+        totalReleasedBytes);
     }
   }
 }
