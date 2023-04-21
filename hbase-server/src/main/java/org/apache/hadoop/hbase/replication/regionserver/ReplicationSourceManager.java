@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -783,8 +784,8 @@ public class ReplicationSourceManager {
     }
   }
 
-  public AtomicLong getTotalBufferUsed() {
-    return totalBufferUsed;
+  public long getTotalBufferUsed() {
+    return totalBufferUsed.get();
   }
 
   /**
@@ -834,7 +835,7 @@ public class ReplicationSourceManager {
     StringBuilder stats = new StringBuilder();
     // Print stats that apply across all Replication Sources
     stats.append("Global stats: ");
-    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed().get()).append("B, Limit=")
+    stats.append("WAL Edits Buffer Used=").append(getTotalBufferUsed()).append("B, Limit=")
       .append(getTotalBufferLimit()).append("B\n");
     for (ReplicationSourceInterface source : this.sources.values()) {
       stats.append("Normal source for cluster " + source.getPeerId() + ": ");
@@ -941,5 +942,81 @@ public class ReplicationSourceManager {
 
   ReplicationQueueStorage getQueueStorage() {
     return queueStorage;
+  }
+
+  /**
+   * Acquire the buffer quota for {@link Entry} which is added to {@link WALEntryBatch}.
+   * @param entry the wal entry which is added to {@link WALEntryBatch} and should acquire buffer
+   *              quota.
+   * @return true if we should clear buffer and push all
+   */
+  boolean acquireWALEntryBufferQuota(WALEntryBatch walEntryBatch, Entry entry) {
+    long entrySize = walEntryBatch.incrementUsedBufferSize(entry);
+    return this.acquireBufferQuota(entrySize);
+  }
+
+  /**
+   * To release the buffer quota of {@link WALEntryBatch} which acquired by
+   * {@link ReplicationSourceManager#acquireWALEntryBufferQuota}.
+   * @return the released buffer quota size.
+   */
+  long releaseWALEntryBatchBufferQuota(WALEntryBatch walEntryBatch) {
+    long usedBufferSize = walEntryBatch.getUsedBufferSize();
+    if (usedBufferSize > 0) {
+      this.releaseBufferQuota(usedBufferSize);
+    }
+    return usedBufferSize;
+  }
+
+  /**
+   * Add the size to {@link ReplicationSourceManager#totalBufferUsed} and check if it exceeds
+   * {@link ReplicationSourceManager#totalBufferLimit}.
+   * @return true if {@link ReplicationSourceManager#totalBufferUsed} exceeds
+   *         {@link ReplicationSourceManager#totalBufferLimit},we should stop increase buffer and
+   *         ship all.
+   */
+  boolean acquireBufferQuota(long size) {
+    if (size < 0) {
+      throw new IllegalArgumentException("size should not less than 0");
+    }
+    long newBufferUsed = addTotalBufferUsed(size);
+    return newBufferUsed >= totalBufferLimit;
+  }
+
+  /**
+   * To release the buffer quota which acquired by
+   * {@link ReplicationSourceManager#acquireBufferQuota}.
+   */
+  void releaseBufferQuota(long size) {
+    if (size < 0) {
+      throw new IllegalArgumentException("size should not less than 0");
+    }
+    addTotalBufferUsed(-size);
+  }
+
+  private long addTotalBufferUsed(long size) {
+    if (size == 0) {
+      return totalBufferUsed.get();
+    }
+    long newBufferUsed = totalBufferUsed.addAndGet(size);
+    // Record the new buffer usage
+    this.globalMetrics.setWALReaderEditsBufferBytes(newBufferUsed);
+    return newBufferUsed;
+  }
+
+  /**
+   * Check if {@link ReplicationSourceManager#totalBufferUsed} exceeds
+   * {@link ReplicationSourceManager#totalBufferLimit} for peer.
+   * @return true if {@link ReplicationSourceManager#totalBufferUsed} not more than
+   *         {@link ReplicationSourceManager#totalBufferLimit}.
+   */
+  boolean checkBufferQuota(String peerId) {
+    // try not to go over total quota
+    if (totalBufferUsed.get() > totalBufferLimit) {
+      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
+        peerId, totalBufferUsed.get(), totalBufferLimit);
+      return false;
+    }
+    return true;
   }
 }

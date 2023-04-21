@@ -139,8 +139,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
   protected final ConcurrentHashMap<String, ReplicationSourceShipper> workerThreads =
     new ConcurrentHashMap<>();
 
-  private AtomicLong totalBufferUsed;
-
   public static final String WAIT_ON_ENDPOINT_SECONDS =
     "hbase.replication.wait.on.endpoint.seconds";
   public static final int DEFAULT_WAIT_ON_ENDPOINT_SECONDS = 30;
@@ -224,7 +222,6 @@ public class ReplicationSource implements ReplicationSourceInterface {
     defaultBandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     currentBandwidth = getCurrentBandwidth();
     this.throttler = new ReplicationThrottler((double) currentBandwidth / 10.0);
-    this.totalBufferUsed = manager.getTotalBufferUsed();
     this.walFileLengthProvider = walFileLengthProvider;
 
     this.abortOnError = this.conf.getBoolean("replication.source.regionserver.abort", true);
@@ -797,14 +794,12 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
   @Override
   // offsets totalBufferUsed by deducting shipped batchSize.
-  public void postShipEdits(List<Entry> entries, int batchSize) {
+  public void postShipEdits(List<Entry> entries, long batchSize) {
     if (throttler.isEnabled()) {
       throttler.addPushSize(batchSize);
     }
     totalReplicatedEdits.addAndGet(entries.size());
-    long newBufferUsed = totalBufferUsed.addAndGet(-batchSize);
-    // Record the new buffer usage
-    this.manager.getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
+    this.manager.releaseBufferQuota(batchSize);
   }
 
   @Override
