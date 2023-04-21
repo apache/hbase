@@ -107,7 +107,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
@@ -791,6 +790,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     this.replicationPeerManager =
       ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
+    this.configurationManager.registerObserver(replicationPeerManager);
     this.replicationPeerModificationStateStore =
       new ReplicationPeerModificationStateStore(masterRegion);
 
@@ -4291,12 +4291,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       allowedOnPath = ".*/src/test/.*")
   static void setDisableBalancerChoreForTest(boolean disable) {
     disableBalancerChoreForTest = disable;
-  }
-
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public ConfigurationManager getConfigurationManager() {
-    return configurationManager;
   }
 
   private void setQuotasObserver(Configuration conf) {
