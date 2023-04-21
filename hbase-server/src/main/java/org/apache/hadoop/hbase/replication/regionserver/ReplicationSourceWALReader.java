@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -75,9 +73,6 @@ class ReplicationSourceWALReader extends Thread {
 
   // Indicates whether this particular worker is running
   private boolean isReaderRunning = true;
-
-  private AtomicLong totalBufferUsed;
-  private long totalBufferQuota;
   private final String walGroupId;
 
   /**
@@ -105,8 +100,6 @@ class ReplicationSourceWALReader extends Thread {
     // memory used will be batchSizeCapacity * (nb.batches + 1)
     // the +1 is for the current thread reading before placing onto the queue
     int batchCount = conf.getInt("replication.source.nb.batches", 1);
-    this.totalBufferUsed = source.getSourceManager().getTotalBufferUsed();
-    this.totalBufferQuota = source.getSourceManager().getTotalBufferLimit();
     // 1 second
     this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
@@ -147,7 +140,7 @@ class ReplicationSourceWALReader extends Thread {
             Threads.sleep(sleepForRetries);
             continue;
           }
-          if (!checkQuota()) {
+          if (!checkBufferQuota()) {
             continue;
           }
           Path currentPath = entryStream.getCurrentPath();
@@ -188,7 +181,7 @@ class ReplicationSourceWALReader extends Thread {
               // batch is not put to ReplicationSourceWALReader#entryBatchQueue,so we should
               // decrease ReplicationSourceWALReader.totalBufferUsed by the byte size which
               // acquired in ReplicationSourceWALReader.acquireBufferQuota.
-              this.releaseBufferQuota(batch);
+              this.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
             }
           }
         }
@@ -218,10 +211,9 @@ class ReplicationSourceWALReader extends Thread {
       entry.getKey().getWriteTime(), entry.getKey(), this.source.getQueueId());
     updateReplicationMarkerEdit(entry, batch.getLastWalPosition());
     long entrySize = getEntrySizeIncludeBulkLoad(entry);
-    long entrySizeExcludeBulkLoad = getEntrySizeExcludeBulkLoad(entry);
     batch.addEntry(entry, entrySize);
     updateBatchStats(batch, entry, entrySize);
-    boolean totalBufferTooLarge = acquireBufferQuota(batch, entrySizeExcludeBulkLoad);
+    boolean totalBufferTooLarge = this.getSourceManager().acquireWALEntryBufferQuota(batch, entry);
 
     // Stop if too many entries or too big
     return totalBufferTooLarge || batch.getHeapSize() >= replicationBatchSizeCapacity
@@ -275,11 +267,9 @@ class ReplicationSourceWALReader extends Thread {
   }
 
   // returns false if we've already exceeded the global quota
-  private boolean checkQuota() {
+  private boolean checkBufferQuota() {
     // try not to go over total quota
-    if (totalBufferUsed.get() > totalBufferQuota) {
-      LOG.warn("peer={}, can't read more edits from WAL as buffer usage {}B exceeds limit {}B",
-        this.source.getPeerId(), totalBufferUsed.get(), totalBufferQuota);
+    if (!this.getSourceManager().checkBufferQuota(this.source.getPeerId())) {
       Threads.sleep(sleepForRetries);
       return false;
     }
@@ -319,13 +309,7 @@ class ReplicationSourceWALReader extends Thread {
 
   private long getEntrySizeIncludeBulkLoad(Entry entry) {
     WALEdit edit = entry.getEdit();
-    return getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
-  }
-
-  public static long getEntrySizeExcludeBulkLoad(Entry entry) {
-    WALEdit edit = entry.getEdit();
-    WALKey key = entry.getKey();
-    return edit.heapSize() + key.estimatedSerializedSizeOf();
+    return WALEntryBatch.getEntrySizeExcludeBulkLoad(entry) + sizeOfStoreFilesIncludeBulkLoad(edit);
   }
 
   private void updateBatchStats(WALEntryBatch batch, Entry entry, long entrySize) {
@@ -435,30 +419,6 @@ class ReplicationSourceWALReader extends Thread {
     edit.setCells(newCells);
   }
 
-  /**
-   * @param size delta size for grown buffer
-   * @return true if we should clear buffer and push all
-   */
-  private boolean acquireBufferQuota(WALEntryBatch walEntryBatch, long size) {
-    long newBufferUsed = totalBufferUsed.addAndGet(size);
-    // Record the new buffer usage
-    this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    walEntryBatch.incrementUsedBufferSize(size);
-    return newBufferUsed >= totalBufferQuota;
-  }
-
-  /**
-   * To release the buffer quota of {@link WALEntryBatch} which acquired by
-   * {@link ReplicationSourceWALReader#acquireBufferQuota}
-   */
-  private void releaseBufferQuota(WALEntryBatch walEntryBatch) {
-    long usedBufferSize = walEntryBatch.getUsedBufferSize();
-    if (usedBufferSize > 0) {
-      long newBufferUsed = totalBufferUsed.addAndGet(-usedBufferSize);
-      this.source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
-    }
-  }
-
   /** Returns whether the reader thread is running */
   public boolean isReaderRunning() {
     return isReaderRunning && !isInterrupted();
@@ -469,5 +429,9 @@ class ReplicationSourceWALReader extends Thread {
    */
   public void setReaderRunning(boolean readerRunning) {
     this.isReaderRunning = readerRunning;
+  }
+
+  private ReplicationSourceManager getSourceManager() {
+    return this.source.getSourceManager();
   }
 }

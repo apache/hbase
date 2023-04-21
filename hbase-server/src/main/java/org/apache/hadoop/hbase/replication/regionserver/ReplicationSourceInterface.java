@@ -149,7 +149,7 @@ public interface ReplicationSourceInterface {
    * @param entries   pushed
    * @param batchSize entries size pushed
    */
-  void postShipEdits(List<Entry> entries, int batchSize);
+  void postShipEdits(List<Entry> entries, long batchSize);
 
   /**
    * The queue of WALs only belong to one region server. This will return the server name which all

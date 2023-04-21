@@ -149,7 +149,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void postShipEdits(List<Entry> entries, int batchSize) {
+  public void postShipEdits(List<Entry> entries, long batchSize) {
   }
 
   @Override
