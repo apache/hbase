@@ -90,4 +90,10 @@ public abstract class AbstractPeerProcedure<TState>
     super.deserializeStateData(serializer);
     peerId = serializer.deserialize(PeerProcedureStateData.class).getPeerId();
   }
+
+  protected final void checkPeerModificationEnabled(MasterProcedureEnv env) throws IOException {
+    if (!env.getMasterServices().isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
+  }
 }

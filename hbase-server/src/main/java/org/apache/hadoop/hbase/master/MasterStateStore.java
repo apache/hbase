@@ -86,6 +86,10 @@ public abstract class MasterStateStore {
   }
 
   private void tryMigrate(ZKWatcher watcher, String zkPath) throws IOException, KeeperException {
+    if (zkPath == null) {
+      // this means we do not store this state in zk, skip migrating
+      return;
+    }
     Result result = get();
     if (result.isEmpty()) {
       // migrate

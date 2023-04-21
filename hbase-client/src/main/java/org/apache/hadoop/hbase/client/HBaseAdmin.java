@@ -225,6 +225,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.StopMaster
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesResponse.RegionSizes;
@@ -235,9 +236,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.AddRe
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.DisableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
@@ -4467,6 +4471,59 @@ public class HBaseAdmin implements Admin {
         AdminProtos.ClearSlowLogResponses clearSlowLogResponses = admin
           .clearSlowLogsResponses(controller, RequestConverter.buildClearSlowLogResponseRequest());
         return ProtobufUtil.toClearSlowLogPayload(clearSlowLogResponses);
+      }
+    });
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    ReplicationPeerModificationSwitchRequest request =
+      ReplicationPeerModificationSwitchRequest.newBuilder().setOn(on).build();
+    boolean prevOn =
+      executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+        @Override
+        protected Boolean rpcCall() throws Exception {
+          return master.replicationPeerModificationSwitch(getRpcController(), request)
+            .getPreviousValue();
+        }
+      });
+    // if we do not need to wait all previous peer modification procedure done, or we are enabling
+    // peer modification, just return here.
+    if (!drainProcedures || on) {
+      return prevOn;
+    }
+    // otherwise we need to wait until all previous peer modification procedure done
+    for (int retry = 0;; retry++) {
+      List<ProcedureProtos.Procedure> procs =
+        executeCallable(new MasterCallable<List<ProcedureProtos.Procedure>>(getConnection(),
+          getRpcControllerFactory()) {
+          @Override
+          protected List<ProcedureProtos.Procedure> rpcCall() throws Exception {
+            return master
+              .getReplicationPeerModificationProcedures(getRpcController(),
+                GetReplicationPeerModificationProceduresRequest.getDefaultInstance())
+              .getProcedureList();
+          }
+        });
+      if (procs.isEmpty()) {
+        return prevOn;
+      }
+      try {
+        Thread.sleep(ConnectionUtils.getPauseTime(pause, retry));
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+    }
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection(), getRpcControllerFactory()) {
+      @Override
+      protected Boolean rpcCall() throws Exception {
+        return master.isReplicationPeerModificationEnabled(getRpcController(),
+          IsReplicationPeerModificationEnabledRequest.getDefaultInstance()).getEnabled();
       }
     });
   }

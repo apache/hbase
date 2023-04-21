@@ -195,12 +195,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigResponse;
 
@@ -775,5 +781,26 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public FlushMasterStoreResponse flushMasterStore(RpcController controller,
     FlushMasterStoreRequest request) throws ServiceException {
     return stub.flushMasterStore(controller, request);
+  }
+
+  @Override
+  public ReplicationPeerModificationSwitchResponse replicationPeerModificationSwitch(
+    RpcController controller, ReplicationPeerModificationSwitchRequest request)
+    throws ServiceException {
+    return stub.replicationPeerModificationSwitch(controller, request);
+  }
+
+  @Override
+  public GetReplicationPeerModificationProceduresResponse getReplicationPeerModificationProcedures(
+    RpcController controller, GetReplicationPeerModificationProceduresRequest request)
+    throws ServiceException {
+    return stub.getReplicationPeerModificationProcedures(controller, request);
+  }
+
+  @Override
+  public IsReplicationPeerModificationEnabledResponse isReplicationPeerModificationEnabled(
+    RpcController controller, IsReplicationPeerModificationEnabledRequest request)
+    throws ServiceException {
+    return stub.isReplicationPeerModificationEnabled(controller, request);
   }
 }

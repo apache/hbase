@@ -52,11 +52,14 @@ public abstract class BooleanStateStore extends MasterStateStore {
    * Set the flag on/off.
    * @param on true if the flag should be on, false otherwise
    * @throws IOException if the operation fails
+   * @return returns the previous state
    */
-  public synchronized void set(boolean on) throws IOException {
+  public synchronized boolean set(boolean on) throws IOException {
     byte[] state = toByteArray(on);
     setState(state);
+    boolean prevOn = this.on;
     this.on = on;
+    return prevOn;
   }
 
   protected abstract byte[] toByteArray(boolean on);

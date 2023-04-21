@@ -276,6 +276,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
     switch (state) {
       case PRE_PEER_MODIFICATION:
         try {
+          checkPeerModificationEnabled(env);
           prePeerModification(env);
         } catch (IOException e) {
           LOG.warn("{} failed to call pre CP hook or the pre check is failed for peer {}, "
