@@ -100,7 +100,7 @@ public class ReplicationThrottler {
    * Add current size to the current cycle's total push size
    * @param size is the current size added to the current cycle's total push size
    */
-  public void addPushSize(final int size) {
+  public void addPushSize(final long size) {
     if (this.enabled) {
       this.cyclePushSize += size;
     }
