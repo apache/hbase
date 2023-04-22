@@ -24,8 +24,9 @@ import java.lang.reflect.Method;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.LeaseRecoverable;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.fs.SafeMode;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -56,10 +57,17 @@ public final class RecoverLeaseFSUtils {
       fs = ((FilterFileSystem) fs).getRawFileSystem();
     }
     // lease recovery not needed for local file system case.
-    if (!(fs instanceof DistributedFileSystem)) {
+    if (!(fs instanceof LeaseRecoverable)) {
+      LOG.warn("{} is not an instance of {}, skip recovering from file lease",
+        fs, LeaseRecoverable.class);
       return;
     }
-    recoverDFSFileLease((DistributedFileSystem) fs, p, conf, reporter);
+    if (!(fs instanceof SafeMode)) {
+      LOG.warn("{} is not an instance of {}, skip recovering from file lease",
+        fs, SafeMode.class);
+      return;
+    }
+    recoverDFSFileLease(fs, p, conf, reporter);
   }
 
   /*
@@ -81,7 +89,7 @@ public final class RecoverLeaseFSUtils {
    * false, repeat starting at step 5. above. If HDFS-4525 is available, call it every second, and
    * we might be able to exit early.
    */
-  private static boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
+  private static boolean recoverDFSFileLease(final FileSystem fs, final Path p,
     final Configuration conf, final CancelableProgressable reporter) throws IOException {
     LOG.info("Recover lease on dfs file " + p);
     long startWaiting = EnvironmentEdgeManager.currentTime();
@@ -104,7 +112,7 @@ public final class RecoverLeaseFSUtils {
     boolean recovered = false;
     // We break the loop if we succeed the lease recovery, timeout, or we throw an exception.
     for (int nbAttempt = 0; !recovered; nbAttempt++) {
-      recovered = recoverLease(dfs, nbAttempt, p, startWaiting);
+      recovered = recoverLease((LeaseRecoverable) fs, nbAttempt, p, startWaiting);
       if (recovered) {
         break;
       }
@@ -127,15 +135,16 @@ public final class RecoverLeaseFSUtils {
             Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
             if (findIsFileClosedMeth) {
               try {
+                SafeMode fsWithSafeMode = (SafeMode) fs;
                 isFileClosedMeth =
-                  dfs.getClass().getMethod("isFileClosed", new Class[] { Path.class });
+                  fsWithSafeMode.getClass().getMethod("isFileClosed", new Class[] { Path.class });
               } catch (NoSuchMethodException nsme) {
                 LOG.debug("isFileClosed not available");
               } finally {
                 findIsFileClosedMeth = false;
               }
             }
-            if (isFileClosedMeth != null && isFileClosed(dfs, isFileClosedMeth, p)) {
+            if (isFileClosedMeth != null && isFileClosed((SafeMode) fs, isFileClosedMeth, p)) {
               recovered = true;
               break;
             }
@@ -167,7 +176,7 @@ public final class RecoverLeaseFSUtils {
    * Try to recover the lease.
    * @return True if dfs#recoverLease came by true.
    */
-  private static boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt,
+  private static boolean recoverLease(final LeaseRecoverable dfs, final int nbAttempt,
     final Path p, final long startWaiting) throws FileNotFoundException {
     boolean recovered = false;
     try {
@@ -197,7 +206,7 @@ public final class RecoverLeaseFSUtils {
    * Call HDFS-4525 isFileClosed if it is available.
    * @return True if file is closed.
    */
-  private static boolean isFileClosed(final DistributedFileSystem dfs, final Method m,
+  private static boolean isFileClosed(final SafeMode dfs, final Method m,
     final Path p) {
     try {
       return (Boolean) m.invoke(dfs, p);
