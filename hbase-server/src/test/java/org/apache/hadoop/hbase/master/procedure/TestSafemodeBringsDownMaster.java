@@ -21,6 +21,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.SafeMode;
+import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -32,9 +34,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -102,8 +102,8 @@ public class TestSafemodeBringsDownMaster {
     RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
       tableName, splitKeys, "f1", "f2");
     MiniDFSCluster dfsCluster = UTIL.getDFSCluster();
-    DistributedFileSystem dfs = (DistributedFileSystem) dfsCluster.getFileSystem();
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    SafeMode dfs = dfsCluster.getFileSystem();
+    dfs.setSafeMode(SafeModeAction.ENTER);
     final long timeOut = 180000;
     long startTime = EnvironmentEdgeManager.currentTime();
     int index = -1;
@@ -123,6 +123,6 @@ public class TestSafemodeBringsDownMaster {
         return threads == null || threads.isEmpty();
       }
     });
-    dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    dfs.setSafeMode(SafeModeAction.LEAVE);
   }
 }
