@@ -1904,13 +1904,21 @@ It is also prepended with identifying tags `(responseTooSlow)`, `(responseTooLar
 
 ==== Configuration
 
-There are two configuration knobs that can be used to adjust the thresholds for when queries are logged.
+There are four configuration knobs that can be used to adjust the thresholds for when queries are logged. Two of these knobs
+control the size and time thresholds for all queries. Because Scans can often be larger and slower than other types of
+queries, there are two additional knobs which can control size and time thresholds for Scans specifically.
 
 * `hbase.ipc.warn.response.time` Maximum number of milliseconds that a query can be run without being logged.
   Defaults to 10000, or 10 seconds.
   Can be set to -1 to disable logging by time.
 * `hbase.ipc.warn.response.size` Maximum byte size of response that a query can return without being logged.
   Defaults to 100 megabytes.
+  Can be set to -1 to disable logging by size.
+* `hbase.ipc.warn.response.time.scan` Maximum number of milliseconds that a Scan can be run without being logged.
+  Defaults to the `hbase.ipc.warn.response.time` value.
+  Can be set to -1 to disable logging by time.
+* `hbase.ipc.warn.response.size.scan` Maximum byte size of response that a Scan can return without being logged.
+  Defaults to the `hbase.ipc.warn.response.size` value.
   Can be set to -1 to disable logging by size.
 
 ==== Metrics
