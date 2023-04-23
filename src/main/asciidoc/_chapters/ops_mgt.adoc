@@ -1296,6 +1296,15 @@ Options:
 
 ----
 
+[[ops.conf-tool]]
+=== HBase Conf Tool
+HBase Conf tool can be used to print out the current value of a configuration. It can be used by passing the configuration key on the command-line.
+
+[source, bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool <configuration_key>
+----
+
 [[ops.regionmgt]]
 == Region Management
 
