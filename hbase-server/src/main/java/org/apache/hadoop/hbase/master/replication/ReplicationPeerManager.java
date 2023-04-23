@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -59,11 +60,14 @@ import org.apache.zookeeper.KeeperException;
  * Manages and performs all replication admin operations.
  * <p>
  * Used to add/remove a replication peer.
+ * <p>
+ * Implement {@link ConfigurationObserver} mainly for recreating {@link ReplicationPeerStorage}, for
+ * supporting migrating across different replication peer storages without restarting master.
  */
 @InterfaceAudience.Private
-public class ReplicationPeerManager {
+public class ReplicationPeerManager implements ConfigurationObserver {
 
-  private final ReplicationPeerStorage peerStorage;
+  private volatile ReplicationPeerStorage peerStorage;
 
   private final ReplicationQueueStorage queueStorage;
 
@@ -71,10 +75,18 @@ public class ReplicationPeerManager {
 
   private final String clusterId;
 
-  private final Configuration conf;
+  private volatile Configuration conf;
 
-  ReplicationPeerManager(ReplicationPeerStorage peerStorage, ReplicationQueueStorage queueStorage,
-    ConcurrentMap<String, ReplicationPeerDescription> peers, Configuration conf, String clusterId) {
+  // for dynamic recreating ReplicationPeerStorage.
+  private final FileSystem fs;
+
+  private final ZKWatcher zk;
+
+  ReplicationPeerManager(FileSystem fs, ZKWatcher zk, ReplicationPeerStorage peerStorage,
+    ReplicationQueueStorage queueStorage, ConcurrentMap<String, ReplicationPeerDescription> peers,
+    Configuration conf, String clusterId) {
+    this.fs = fs;
+    this.zk = zk;
     this.peerStorage = peerStorage;
     this.queueStorage = queueStorage;
     this.peers = peers;
@@ -426,7 +438,7 @@ public class ReplicationPeerManager {
       boolean enabled = peerStorage.isPeerEnabled(peerId);
       peers.put(peerId, new ReplicationPeerDescription(peerId, enabled, peerConfig));
     }
-    return new ReplicationPeerManager(peerStorage,
+    return new ReplicationPeerManager(fs, zk, peerStorage,
       ReplicationStorageFactory.getReplicationQueueStorage(zk, conf), peers, conf, clusterId);
   }
 
@@ -439,5 +451,11 @@ public class ReplicationPeerManager {
       return StringUtils.isBlank(s2);
     }
     return s1.equals(s2);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+    this.peerStorage = ReplicationStorageFactory.getReplicationPeerStorage(fs, zk, conf);
   }
 }

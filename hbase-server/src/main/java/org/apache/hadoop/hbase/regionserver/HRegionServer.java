@@ -34,6 +34,7 @@ import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarker
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
@@ -2366,6 +2367,17 @@ public class HRegionServer extends Thread
   }
 
   private void registerConfigurationObservers() {
+    // Register Replication if possible, as now we support recreating replication peer storage, for
+    // migrating across different replication peer storages online
+    if (replicationSourceHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSourceHandler);
+    }
+    if (
+      replicationSourceHandler != replicationSinkHandler
+        && replicationSinkHandler instanceof ConfigurationObserver
+    ) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSinkHandler);
+    }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
     configurationManager.registerObserver(this.rpcServices);
@@ -3821,8 +3833,9 @@ public class HRegionServer extends Thread
   }
 
   /** Returns : Returns the ConfigurationManager object for testing purposes. */
-  @InterfaceAudience.Private
-  ConfigurationManager getConfigurationManager() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
 

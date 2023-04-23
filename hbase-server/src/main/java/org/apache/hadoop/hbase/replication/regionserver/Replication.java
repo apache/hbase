@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
@@ -56,15 +58,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
+ * <p>
+ * Implement {@link PropagatingConfigurationObserver} mainly for registering
+ * {@link ReplicationPeers}, so we can recreating the replication peer storage.
  */
 @InterfaceAudience.Private
-public class Replication implements ReplicationSourceService, ReplicationSinkService {
+public class Replication
+  implements ReplicationSourceService, ReplicationSinkService, PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
-  private Configuration conf;
+  private volatile Configuration conf;
   private ReplicationSink replicationSink;
   // Hosting server
   private Server server;
@@ -261,5 +267,20 @@ public class Replication implements ReplicationSourceService, ReplicationSinkSer
     // get sink
     MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
     this.replicationLoad.buildReplicationLoad(allSources, sinkMetrics);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    manager.registerObserver(replicationPeers);
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    manager.deregisterObserver(replicationPeers);
   }
 }
