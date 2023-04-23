@@ -99,7 +99,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -2065,6 +2065,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private void registerConfigurationObservers() {
+    // Register Replication if possible, as now we support recreating replication peer storage, for
+    // migrating across different replication peer storages online
+    if (replicationSourceHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSourceHandler);
+    }
+    if (!sameReplicationSourceAndSink && replicationSinkHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSinkHandler);
+    }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
     configurationManager.registerObserver(this.rpcServices);
@@ -3313,11 +3321,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public Optional<MobFileCache> getMobFileCache() {
     return Optional.ofNullable(this.mobFileCache);
-  }
-
-  /** Returns : Returns the ConfigurationManager object for testing purposes. */
-  ConfigurationManager getConfigurationManager() {
-    return configurationManager;
   }
 
   CacheEvictionStats clearRegionBlockCache(Region region) {
