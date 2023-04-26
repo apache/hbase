@@ -76,4 +76,16 @@ public class TestRpcThrottlingException {
     assertEquals(millis, 302000);
   }
 
+  @Test
+  public void itConvertsLegacyStringSecToMillis() {
+    long millis = RpcThrottlingException.timeFromString("5sec");
+    assertEquals(millis, 5000);
+  }
+
+  @Test
+  public void itConvertsLegacyStringHourMinSecToMillis2() {
+    long millis = RpcThrottlingException.timeFromString("1hrs, 3mins, 5sec");
+    assertEquals(millis, 3785000);
+  }
+
 }

@@ -162,6 +162,10 @@ public class RpcThrottlingException extends HBaseIOException {
 
   // Visible for TestRpcThrottlingException
   protected static long timeFromString(String timeDiff) {
+    if (!timeDiff.contains("ms")) {
+      // legacy timeDiff Strings do not contain ms
+      return legacyTimeFromString(timeDiff);
+    }
     Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+)ms"),
       Pattern.compile("^(\\d+)sec, (\\d+)ms"), Pattern.compile("^(\\d+)mins, (\\d+)sec, (\\d+)ms"),
       Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec, (\\d+)ms"), };
@@ -187,6 +191,34 @@ public class RpcThrottlingException extends HBaseIOException {
           time += Math.round(Float.parseFloat(m.group(2)) * 60 * 1000); // mins
           time += Math.round(Float.parseFloat(m.group(3)) * 1000); // sec
           time += Math.round(Float.parseFloat(m.group(4))); // ms
+        }
+        return time;
+      }
+    }
+
+    return -1;
+  }
+
+  private static long legacyTimeFromString(String timeDiff) {
+    Pattern[] patterns =
+      new Pattern[] { Pattern.compile("^(\\d+)sec"), Pattern.compile("^(\\d+)mins, (\\d+)sec"),
+        Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec"), };
+
+    for (int i = 0; i < patterns.length; ++i) {
+      Matcher m = patterns[i].matcher(timeDiff);
+      if (m.find()) {
+        if (i == 0) {
+          return Math.round(Float.parseFloat(m.group(1)) * 1000); // sec
+        }
+        long time = 0;
+        if (i == 1) {
+          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 1000); // mins
+          time += Math.round(Float.parseFloat(m.group(2)) * 1000); // sec
+        }
+        if (i == 2) {
+          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 60 * 1000); // hrs
+          time += Math.round(Float.parseFloat(m.group(2)) * 60 * 1000); // mins
+          time += Math.round(Float.parseFloat(m.group(3)) * 1000); // sec
         }
         return time;
       }
