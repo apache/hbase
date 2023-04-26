@@ -133,7 +133,8 @@ public class RpcThrottlingException extends HBaseIOException {
     throw new RpcThrottlingException(type, waitInterval, msg);
   }
 
-  private static String stringFromMillis(long millis) {
+  // Visible for TestRpcThrottlingException
+  protected static String stringFromMillis(long millis) {
     StringBuilder buf = new StringBuilder();
     long hours = millis / (60 * 60 * 1000);
     long rem = (millis % (60 * 60 * 1000));
@@ -159,20 +160,33 @@ public class RpcThrottlingException extends HBaseIOException {
     return buf.toString();
   }
 
-  private static long timeFromString(String timeDiff) {
-    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)mins, (\\d+\\.\\d\\d)sec"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+\\.\\d\\d)sec") };
+  // Visible for TestRpcThrottlingException
+  protected static long timeFromString(String timeDiff) {
+    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+)ms"),
+      Pattern.compile("^(\\d+)sec, (\\d+)ms"), Pattern.compile("^(\\d+)mins, (\\d+)sec, (\\d+)ms"),
+      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec, (\\d+)ms"), };
 
     for (int i = 0; i < patterns.length; ++i) {
       Matcher m = patterns[i].matcher(timeDiff);
       if (m.find()) {
-        long time = Math.round(Float.parseFloat(m.group(1 + i)) * 1000);
-        if (i > 0) {
-          time += Long.parseLong(m.group(i)) * (60 * 1000);
+        if (i == 0) {
+          return Math.round(Float.parseFloat(m.group(1))); // ms
         }
-        if (i > 1) {
-          time += Long.parseLong(m.group(i - 1)) * (60 * 60 * 1000);
+        long time = 0;
+        if (i == 1) {
+          time += Math.round(Float.parseFloat(m.group(1)) * 1000); // sec
+          time += Math.round(Float.parseFloat(m.group(2))); // ms
+        }
+        if (i == 2) {
+          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 1000); // mins
+          time += Math.round(Float.parseFloat(m.group(2)) * 1000); // sec
+          time += Math.round(Float.parseFloat(m.group(3))); // ms
+        }
+        if (i == 3) {
+          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 60 * 1000); // hrs
+          time += Math.round(Float.parseFloat(m.group(2)) * 60 * 1000); // mins
+          time += Math.round(Float.parseFloat(m.group(3)) * 1000); // sec
+          time += Math.round(Float.parseFloat(m.group(4))); // ms
         }
         return time;
       }

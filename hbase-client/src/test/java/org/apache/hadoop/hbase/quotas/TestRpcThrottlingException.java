@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -61,6 +62,18 @@ public class TestRpcThrottlingException {
     } catch (RpcThrottlingException e) {
       assertTrue(e.getMessage().contains("wait 1mins, 5sec, 15ms"));
     }
+  }
+
+  @Test
+  public void itConvertsMillisToString() {
+    String output = RpcThrottlingException.stringFromMillis(6500);
+    assertEquals("6sec, 500ms", output);
+  }
+
+  @Test
+  public void itConvertsStringToMillis() {
+    long millis = RpcThrottlingException.timeFromString("5mins, 2sec, 0ms");
+    assertEquals(millis, 302000);
   }
 
 }
