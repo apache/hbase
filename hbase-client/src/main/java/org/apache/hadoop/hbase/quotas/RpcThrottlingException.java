@@ -162,30 +162,26 @@ public class RpcThrottlingException extends HBaseIOException {
 
   // Visible for TestRpcThrottlingException
   protected static long timeFromString(String timeDiff) {
-    Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+)ms"),
-      Pattern.compile("^(\\d+)sec, (\\d+)ms"), Pattern.compile("^(\\d+)mins, (\\d+)sec, (\\d+)ms"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec, (\\d+)ms"),
-      // below are patterns to support the legacy format which did not include ms
-      // see HBASE-27799
-      Pattern.compile("^(\\d+)sec"), Pattern.compile("^(\\d+)mins, (\\d+)sec"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec"), };
-
+    Pattern pattern;
+    if (timeDiff.contains("ms")) {
+      pattern = Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec, )?(?:(\\d+)ms)?");
+    } else {
+      // legacy pattern. see HBASE-27799 which added millis to this String
+      pattern = Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec)?");
+    }
     long[] factors = new long[] { 60 * 60 * 1000, 60 * 1000, 1000, 1 };
-    int factorIndexOffset = 0;
-    for (int i = 0; i < patterns.length; ++i) {
-      if (i == 4) {
-        factorIndexOffset = 3;
-      }
-      Matcher m = patterns[i].matcher(timeDiff);
-      if (m.find()) {
-        int numGroups = m.groupCount();
-        long time = 0;
-        int startingFactorIndex = factors.length - i + factorIndexOffset;
-        for (int j = 1; j <= numGroups; j++) {
-          time += Math.round(Float.parseFloat(m.group(j)) * factors[startingFactorIndex + j - 2]);
+    Matcher m = pattern.matcher(timeDiff);
+    if (m.find()) {
+      int numGroups = m.groupCount();
+      long time = 0;
+      for (int j = 1; j <= numGroups; j++) {
+        String group = m.group(j);
+        if (group == null) {
+          continue;
         }
-        return time;
+        time += Math.round(Float.parseFloat(group) * factors[j - 1]);
       }
+      return time;
     }
     return -1;
   }
