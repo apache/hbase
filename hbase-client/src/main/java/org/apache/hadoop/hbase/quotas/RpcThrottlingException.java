@@ -162,68 +162,31 @@ public class RpcThrottlingException extends HBaseIOException {
 
   // Visible for TestRpcThrottlingException
   protected static long timeFromString(String timeDiff) {
-    if (!timeDiff.contains("ms")) {
-      // legacy timeDiff Strings do not contain ms
-      return legacyTimeFromString(timeDiff);
-    }
     Pattern[] patterns = new Pattern[] { Pattern.compile("^(\\d+)ms"),
       Pattern.compile("^(\\d+)sec, (\\d+)ms"), Pattern.compile("^(\\d+)mins, (\\d+)sec, (\\d+)ms"),
-      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec, (\\d+)ms"), };
+      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec, (\\d+)ms"),
+      // below are patterns to support the legacy format which did not include ms
+      // see HBASE-27799
+      Pattern.compile("^(\\d+)sec"), Pattern.compile("^(\\d+)mins, (\\d+)sec"),
+      Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec"), };
 
+    long[] factors = new long[] { 60 * 60 * 1000, 60 * 1000, 1000, 1 };
+    int factorIndexOffset = 0;
     for (int i = 0; i < patterns.length; ++i) {
+      if (i == 4) {
+        factorIndexOffset = 3;
+      }
       Matcher m = patterns[i].matcher(timeDiff);
       if (m.find()) {
-        if (i == 0) {
-          return Math.round(Float.parseFloat(m.group(1))); // ms
-        }
+        int numGroups = m.groupCount();
         long time = 0;
-        if (i == 1) {
-          time += Math.round(Float.parseFloat(m.group(1)) * 1000); // sec
-          time += Math.round(Float.parseFloat(m.group(2))); // ms
-        }
-        if (i == 2) {
-          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 1000); // mins
-          time += Math.round(Float.parseFloat(m.group(2)) * 1000); // sec
-          time += Math.round(Float.parseFloat(m.group(3))); // ms
-        }
-        if (i == 3) {
-          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 60 * 1000); // hrs
-          time += Math.round(Float.parseFloat(m.group(2)) * 60 * 1000); // mins
-          time += Math.round(Float.parseFloat(m.group(3)) * 1000); // sec
-          time += Math.round(Float.parseFloat(m.group(4))); // ms
+        int startingFactorIndex = factors.length - i + factorIndexOffset;
+        for (int j = 1; j <= numGroups; j++) {
+          time += Math.round(Float.parseFloat(m.group(j)) * factors[startingFactorIndex + j - 2]);
         }
         return time;
       }
     }
-
-    return -1;
-  }
-
-  private static long legacyTimeFromString(String timeDiff) {
-    Pattern[] patterns =
-      new Pattern[] { Pattern.compile("^(\\d+)sec"), Pattern.compile("^(\\d+)mins, (\\d+)sec"),
-        Pattern.compile("^(\\d+)hrs, (\\d+)mins, (\\d+)sec"), };
-
-    for (int i = 0; i < patterns.length; ++i) {
-      Matcher m = patterns[i].matcher(timeDiff);
-      if (m.find()) {
-        if (i == 0) {
-          return Math.round(Float.parseFloat(m.group(1)) * 1000); // sec
-        }
-        long time = 0;
-        if (i == 1) {
-          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 1000); // mins
-          time += Math.round(Float.parseFloat(m.group(2)) * 1000); // sec
-        }
-        if (i == 2) {
-          time += Math.round(Float.parseFloat(m.group(1)) * 60 * 60 * 1000); // hrs
-          time += Math.round(Float.parseFloat(m.group(2)) * 60 * 1000); // mins
-          time += Math.round(Float.parseFloat(m.group(3)) * 1000); // sec
-        }
-        return time;
-      }
-    }
-
     return -1;
   }
 }
