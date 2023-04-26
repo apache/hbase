@@ -162,13 +162,8 @@ public class RpcThrottlingException extends HBaseIOException {
 
   // Visible for TestRpcThrottlingException
   protected static long timeFromString(String timeDiff) {
-    Pattern pattern;
-    if (timeDiff.contains("ms")) {
-      pattern = Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec, )?(?:(\\d+)ms)?");
-    } else {
-      // legacy pattern. see HBASE-27799 which added millis to this String
-      pattern = Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec)?");
-    }
+    Pattern pattern =
+      Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec.{0,2})?(?:(\\d+)ms)?");
     long[] factors = new long[] { 60 * 60 * 1000, 60 * 1000, 1000, 1 };
     Matcher m = pattern.matcher(timeDiff);
     if (m.find()) {
