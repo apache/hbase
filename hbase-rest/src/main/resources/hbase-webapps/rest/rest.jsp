@@ -18,70 +18,29 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.rest.model.VersionModel"
-  import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="java.util.Date"%>
+         import="org.apache.hadoop.conf.Configuration"
+         import="org.apache.hadoop.hbase.rest.RESTServer"
+         import="org.apache.hadoop.hbase.rest.model.VersionModel"
+         import="org.apache.hadoop.hbase.util.VersionInfo"
+         import="java.util.Date"%>
+
 <%
-Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
-long startcode = conf.getLong("startcode", System.currentTimeMillis());
-String listenPort = conf.get("hbase.rest.port", "8080");
+  Configuration conf = (Configuration) getServletContext().getAttribute("hbase.conf");
+  long startcode = conf.getLong("startcode", System.currentTimeMillis());
+
+  final RESTServer restServer = (RESTServer) getServletContext().getAttribute(RESTServer.REST_SERVER);
+  final String hostName = restServer.getServerName().getHostname();
+  pageContext.setAttribute("pageTitle", "HBase REST Server" + hostName);
 %>
-<!DOCTYPE html>
-<?xml version="1.0" encoding="UTF-8" ?>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>HBase REST Server: <%= listenPort %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
-  </head>
-
-  <body>
-  <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container-fluid">
-          <div class="navbar-header">
-              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-                  <span class="icon-bar"></span>
-              </button>
-              <a class="navbar-brand" href="/rest.jsp"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-          </div>
-          <div class="collapse navbar-collapse">
-              <ul class="nav navbar-nav">
-                  <li class="active"><a href="/rest.jsp">Home</a></li>
-                  <li><a href="/logs/">Local logs</a></li>
-                  <li><a href="/logLevel">Log Level</a></li>
-                  <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Metrics <span class="caret"></span>
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                      <li><a target="_blank" href="/jmx">JMX</a></li>
-                      <li><a target="_blank" href="/jmx?description=true">JMX with description</a></li>
-                      <li><a target="_blank" href="/prometheus">Prometheus</a></li>
-                      <li><a target="_blank" href="/prometheus?description=true">Prometheus with description</a></li>
-                    </ul>
-                  </li>
-                  <li><a href="/prof">Profiler</a></li>
-                  <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                  <li><a href="/conf">HBase Configuration</a></li>
-                  <% } %>
-              </ul>
-          </div><!--/.nav-collapse -->
-      </div>
-  </div>
+<jsp:include page="header.jsp">
+  <jsp:param name="pageTitle" value="${pageTitle}"/>
+</jsp:include>
 
 <div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
-            <h1>RESTServer <small><%= listenPort %></small></h1>
+            <h1>RESTServer <small><%= hostName %></small></h1>
         </div>
     </div>
     <div class="row">
@@ -124,9 +83,6 @@ String listenPort = conf.get("hbase.rest.port", "8080");
     </section>
     </div>
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-<script src="/static/js/tab.js" type="text/javascript"></script>
-</body>
-</html>
+
+<jsp:include page="footer.jsp" />
 
