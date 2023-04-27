@@ -43,20 +43,21 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
   }
 
   @Override
-  protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
-    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
+    KeyValue right, int rightFamilyPosition, int rightFamilyLength) {
     return leftFamilyLength - rightFamilyLength;
   }
 
   @Override
-  protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
-    int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(ByteBufferKeyValue left, int leftFamilyPosition,
+    int leftFamilyLength, ByteBufferKeyValue right, int rightFamilyPosition,
+    int rightFamilyLength) {
     return leftFamilyLength - rightFamilyLength;
   }
 
   @Override
-  protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
-    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
+    ByteBufferKeyValue right, int rightFamilyPosition, int rightFamilyLength) {
     return leftFamilyLength - rightFamilyLength;
   }
 

@@ -153,8 +153,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyOffset(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyOffset(rightFamilyLengthPosition);
-    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
-      rightFamilyPosition);
+    diff = compareFamilies(left, leftFamilyPosition, leftFamilyLength, right, rightFamilyPosition,
+      rightFamilyLength);
     if (diff != 0) {
       return diff;
     }
@@ -236,8 +236,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyPosition(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
-    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
-      rightFamilyPosition);
+    diff = compareFamilies(left, leftFamilyPosition, leftFamilyLength, right, rightFamilyPosition,
+      rightFamilyLength);
     if (diff != 0) {
       return diff;
     }
@@ -318,8 +318,8 @@ public class CellComparatorImpl implements CellComparator {
     // Compare families.
     int leftFamilyPosition = left.getFamilyOffset(leftFamilyLengthPosition);
     int rightFamilyPosition = right.getFamilyPosition(rightFamilyLengthPosition);
-    diff = compareFamilies(left, right, leftFamilyLength, rightFamilyLength, leftFamilyPosition,
-      rightFamilyPosition);
+    diff = compareFamilies(left, leftFamilyPosition, leftFamilyLength, right, rightFamilyPosition,
+      rightFamilyLength);
     if (diff != 0) {
       return diff;
     }
@@ -454,8 +454,8 @@ public class CellComparatorImpl implements CellComparator {
   /**
    * This method will be overridden when we compare cells inner store to bypass family comparing.
    */
-  protected int compareFamilies(KeyValue left, KeyValue right, int leftFamilyLength,
-    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
+    KeyValue right, int rightFamilyPosition, int rightFamilyLength) {
     return Bytes.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
       right.getFamilyArray(), rightFamilyPosition, rightFamilyLength);
   }
@@ -463,8 +463,9 @@ public class CellComparatorImpl implements CellComparator {
   /**
    * This method will be overridden when we compare cells inner store to bypass family comparing.
    */
-  protected int compareFamilies(ByteBufferKeyValue left, ByteBufferKeyValue right,
-    int leftFamilyLength, int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(ByteBufferKeyValue left, int leftFamilyPosition,
+    int leftFamilyLength, ByteBufferKeyValue right, int rightFamilyPosition,
+    int rightFamilyLength) {
     return ByteBufferUtils.compareTo(left.getFamilyByteBuffer(), leftFamilyPosition,
       leftFamilyLength, right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
   }
@@ -472,8 +473,8 @@ public class CellComparatorImpl implements CellComparator {
   /**
    * This method will be overridden when we compare cells inner store to bypass family comparing.
    */
-  protected int compareFamilies(KeyValue left, ByteBufferKeyValue right, int leftFamilyLength,
-    int rightFamilyLength, int leftFamilyPosition, int rightFamilyPosition) {
+  protected int compareFamilies(KeyValue left, int leftFamilyPosition, int leftFamilyLength,
+    ByteBufferKeyValue right, int rightFamilyPosition, int rightFamilyLength) {
     return ByteBufferUtils.compareTo(left.getFamilyArray(), leftFamilyPosition, leftFamilyLength,
       right.getFamilyByteBuffer(), rightFamilyPosition, rightFamilyLength);
   }
