@@ -71,6 +71,19 @@ See Nick Dimiduk's contribution on this link:http://stackoverflow.com/questions/
 If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
 ====
 
+[[hbase.ui.cache]]
+=== Disable cache in HBase UI
+
+Set the following configuration in hbase-site to set max age to zero and disable cache for the web UI:
+
+[source,xml]
+----
+<property>
+  <name>hbase.http.filter.no-store.enable</name>
+  <value>true</value>
+</property>
+---
+
 [[hbase.secure.spnego.ui]]
 === Using SPNEGO for Kerberos authentication with Web UIs
 
