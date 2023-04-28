@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -31,11 +32,15 @@ public class TestEditsStuckBehindDroppedTable extends ReplicationDroppedTablesTe
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestEditsStuckBehindDroppedTable.class);
 
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setupClusters(false);
+  }
+
   @Test
   public void testEditsStuckBehindDroppedTable() throws Exception {
     // Sanity check Make sure by default edits for dropped tables stall the replication queue, even
     // when the table(s) in question have been deleted on both ends.
-    testEditsBehindDroppedTable(false, "test_dropped");
+    testEditsBehindDroppedTable("test_dropped");
   }
-
 }
