@@ -599,7 +599,9 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
   public void process(WatchedEvent event) {
     LOG.debug(prefix("Received ZooKeeper Event, " + "type=" + event.getType() + ", " + "state="
       + event.getState() + ", " + "path=" + event.getPath()));
-    zkEventProcessor.submit(() -> processEvent(event));
+    if (!zkEventProcessor.isShutdown()) {
+      zkEventProcessor.submit(() -> processEvent(event));
+    }
   }
 
   // Connection management
