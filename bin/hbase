@@ -304,9 +304,13 @@ if [ -n "${shaded_jar}" ] && [ -f "${shaded_jar}" ]; then
 # is too hard to be worth it.
 #
 else
-  for f in $HBASE_HOME/lib/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
+  # Multiple jars in HBase_CP_EXCLUDE_LIST can be added using "\|" separator
+  # Ex: HBASE_CP_EXCLUDE_LIST="javax.ws.rs-api\|jersey-multiport"
+  HBASE_CP_EXCLUDE_LIST="javax.ws.rs-api-"
+  CLASSPATH=`find "${HBASE_HOME}"/lib -maxdepth 1 -name "*.jar" | grep -v "${HBASE_CP_EXCLUDE_LIST}" | (while read f; do
+    CLASSPATH="${CLASSPATH}:${f}"
   done
+  echo "$CLASSPATH")`
   # make it easier to check for shaded/not later on.
   shaded_jar=""
 fi
