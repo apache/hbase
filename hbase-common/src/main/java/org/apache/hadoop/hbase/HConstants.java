@@ -1603,14 +1603,6 @@ public final class HConstants {
    */
   public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
 
-  /**
-   * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
-   * master local region.
-   */
-  public static final String USE_META_CELL_COMPARATOR = "hbase.region.use.meta.cell.comparator";
-
-  public static final boolean DEFAULT_USE_META_CELL_COMPARATOR = false;
-
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

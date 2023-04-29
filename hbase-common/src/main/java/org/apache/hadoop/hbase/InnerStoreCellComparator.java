@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -66,9 +65,8 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
    * extreme when no comparator specified.
    * @return CellComparator to use going off the {@code tableName} passed.
    */
-  public static CellComparator getInnerStoreCellComparator(Configuration conf,
-    TableName tableName) {
-    return getInnerStoreCellComparator(conf, tableName.toBytes());
+  public static CellComparator getInnerStoreCellComparator(TableName tableName) {
+    return getInnerStoreCellComparator(tableName.toBytes());
   }
 
   /**
@@ -77,16 +75,6 @@ public class InnerStoreCellComparator extends CellComparatorImpl {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getInnerStoreCellComparator(byte[] tableName) {
-    return getInnerStoreCellComparator(null, tableName);
-  }
-
-  public static CellComparator getInnerStoreCellComparator(Configuration conf, byte[] tableName) {
-    if (
-      conf != null && conf.getBoolean(HConstants.USE_META_CELL_COMPARATOR,
-        HConstants.DEFAULT_USE_META_CELL_COMPARATOR)
-    ) {
-      return MetaCellComparator.META_COMPARATOR;
-    }
     return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
       ? MetaCellComparator.META_COMPARATOR
       : InnerStoreCellComparator.INNER_STORE_COMPARATOR;

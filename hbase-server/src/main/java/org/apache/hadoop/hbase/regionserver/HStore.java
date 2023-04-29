@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -331,8 +332,10 @@ public class HStore
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
-      .withCellComparator(InnerStoreCellComparator.getInnerStoreCellComparator(conf,
-        region.getTableDescriptor().getTableName()))
+      .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
+        .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)
+          ? MetaCellComparator.META_COMPARATOR
+          : InnerStoreCellComparator.INNER_STORE_COMPARATOR)
       .withColumnFamilyDescriptor(family).withCompactedFilesSupplier(this::getCompactedFiles)
       .withRegionFileSystem(region.getRegionFileSystem())
       .withFavoredNodesSupplier(this::getFavoredNodes)
