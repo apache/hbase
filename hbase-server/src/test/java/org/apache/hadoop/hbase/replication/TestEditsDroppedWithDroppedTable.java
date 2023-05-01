@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -31,11 +32,16 @@ public class TestEditsDroppedWithDroppedTable extends ReplicationDroppedTablesTe
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestEditsDroppedWithDroppedTable.class);
 
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setupClusters(true);
+  }
+
   @Test
   public void testEditsDroppedWithDroppedTable() throws Exception {
     // Make sure by default edits for dropped tables are themselves dropped when the
     // table(s) in question have been deleted on both ends.
-    testEditsBehindDroppedTable(true, "test_dropped");
+    testEditsBehindDroppedTable("test_dropped");
   }
 
 }

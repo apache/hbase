@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint.REPLICATION_DROP_ON_DELETED_TABLE_KEY;
-
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,6 +31,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,14 +43,9 @@ public class TestEditsBehindDroppedTableTiming extends ReplicationDroppedTablesT
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestEditsBehindDroppedTableTiming.class);
 
-  @Override
-  public void setUpBase() throws Exception {
-    CONF1.setBoolean(REPLICATION_DROP_ON_DELETED_TABLE_KEY, true);
-    CONF1.setInt(HConstants.REPLICATION_SOURCE_MAXTHREADS_KEY, 1);
-    super.setUpBase();
-    // make sure we have a single region server only, so that all
-    // edits for all tables go there
-    restartSourceCluster(1);
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setupClusters(true);
   }
 
   @Test
@@ -85,13 +79,13 @@ public class TestEditsBehindDroppedTableTiming extends ReplicationDroppedTablesT
     try (Table droppedTable = connection1.getTable(tablename)) {
       byte[] rowKey = Bytes.toBytes(0 + " put on table to be dropped");
       Put put = new Put(rowKey);
-      put.addColumn(familyName, row, row);
+      put.addColumn(familyName, row, VALUE);
       droppedTable.put(put);
     }
 
     try (Table table1 = connection1.getTable(tableName)) {
       for (int i = 0; i < ROWS_COUNT; i++) {
-        Put put = new Put(generateRowKey(i)).addColumn(famName, row, row);
+        Put put = new Put(generateRowKey(i)).addColumn(famName, row, VALUE);
         table1.put(put);
       }
     }
