@@ -21,7 +21,7 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -33,17 +33,16 @@ public class TestEditsDroppedWithDroppedTableNS extends ReplicationDroppedTables
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestEditsDroppedWithDroppedTableNS.class);
 
-  @Before
-  @Override
-  public void setUpBase() throws Exception {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setupClusters(true);
     // also try with a namespace
     UTIL1.getAdmin().createNamespace(NamespaceDescriptor.create("NS").build());
     UTIL2.getAdmin().createNamespace(NamespaceDescriptor.create("NS").build());
-    super.setUpBase();
   }
 
   @Test
   public void testEditsDroppedWithDroppedTableNS() throws Exception {
-    testEditsBehindDroppedTable(true, "NS:test_dropped");
+    testEditsBehindDroppedTable("NS:test_dropped");
   }
 }
