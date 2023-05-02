@@ -145,11 +145,11 @@ public class RpcThrottlingException extends HBaseIOException {
 
     if (hours != 0) {
       buf.append(hours);
-      buf.append("hrs, ");
+      buf.append(hours > 1 ? "hrs, " : "hr, ");
     }
     if (minutes != 0) {
       buf.append(minutes);
-      buf.append("mins, ");
+      buf.append(minutes > 1 ? "mins, " : "min, ");
     }
     if (seconds != 0) {
       buf.append(seconds);
@@ -163,7 +163,7 @@ public class RpcThrottlingException extends HBaseIOException {
   // Visible for TestRpcThrottlingException
   protected static long timeFromString(String timeDiff) {
     Pattern pattern =
-      Pattern.compile("^(?:(\\d+)hrs, )?(?:(\\d+)mins, )?(?:(\\d+)sec.{0,2})?(?:(\\d+)ms)?");
+      Pattern.compile("^(?:(\\d+)hrs?, )?(?:(\\d+)mins?, )?(?:(\\d+)sec[, ]{0,2})?(?:(\\d+)ms)?");
     long[] factors = new long[] { 60 * 60 * 1000, 60 * 1000, 1000, 1 };
     Matcher m = pattern.matcher(timeDiff);
     if (m.find()) {

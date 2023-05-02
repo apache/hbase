@@ -18,14 +18,15 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
+import java.util.Map;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ SmallTests.class })
 public class TestRpcThrottlingException {
@@ -34,58 +35,37 @@ public class TestRpcThrottlingException {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRpcThrottlingException.class);
 
+  private static final Map<String,
+    Long> STR_TO_MS_NEW_FORMAT = ImmutableMap.<String, Long> builder().put("0ms", 0L)
+      .put("50ms", 50L).put("1sec, 1ms", 1001L).put("1min, 5sec, 15ms", 65_015L)
+      .put("5mins, 2sec, 0ms", 302000L).put("1hr, 3mins, 5sec, 1ms", 3785001L).build();
+  private static final Map<String,
+    Long> STR_TO_MS_LEGACY_FORMAT = ImmutableMap.<String, Long> builder().put("0sec", 0L)
+      .put("1sec", 1000L).put("2sec", 2000L).put("1mins, 5sec", 65_000L).put("5mins, 2sec", 302000L)
+      .put("1hrs, 3mins, 5sec", 3785000L).build();
+
   @Test
-  public void itHandlesSecWaitIntervalMessage() {
-    try {
-      RpcThrottlingException.throwNumReadRequestsExceeded(1001);
-      fail();
-    } catch (RpcThrottlingException e) {
-      assertTrue(e.getMessage().contains("wait 1sec, 1ms"));
+  public void itConvertsMillisToNewString() {
+    for (Map.Entry<String, Long> strAndMs : STR_TO_MS_NEW_FORMAT.entrySet()) {
+      String output = RpcThrottlingException.stringFromMillis(strAndMs.getValue());
+      assertEquals(strAndMs.getKey(), output);
     }
   }
 
   @Test
-  public void itHandlesMsWaitIntervalMessage() {
-    try {
-      RpcThrottlingException.throwNumReadRequestsExceeded(50);
-      fail();
-    } catch (RpcThrottlingException e) {
-      assertTrue(e.getMessage().contains("wait 50ms"));
+  public void itConvertsNewStringToMillis() {
+    for (Map.Entry<String, Long> strAndMs : STR_TO_MS_NEW_FORMAT.entrySet()) {
+      Long output = RpcThrottlingException.timeFromString(strAndMs.getKey());
+      assertEquals(strAndMs.getValue(), output);
     }
   }
 
   @Test
-  public void itHandlesMinWaitIntervalMessage() {
-    try {
-      RpcThrottlingException.throwNumReadRequestsExceeded(65_015);
-      fail();
-    } catch (RpcThrottlingException e) {
-      assertTrue(e.getMessage().contains("wait 1mins, 5sec, 15ms"));
+  public void itConvertsLegacyStringToMillis() {
+    for (Map.Entry<String, Long> strAndMs : STR_TO_MS_LEGACY_FORMAT.entrySet()) {
+      Long output = RpcThrottlingException.timeFromString(strAndMs.getKey());
+      assertEquals(strAndMs.getValue(), output);
     }
-  }
-
-  @Test
-  public void itConvertsMillisToString() {
-    String output = RpcThrottlingException.stringFromMillis(6500);
-    assertEquals("6sec, 500ms", output);
-  }
-
-  @Test
-  public void itConvertsStringToMillis() {
-    long millis = RpcThrottlingException.timeFromString("5mins, 2sec, 0ms");
-    assertEquals(millis, 302000);
-  }
-
-  @Test
-  public void itConvertsLegacyStringSecToMillis() {
-    long millis = RpcThrottlingException.timeFromString("5sec");
-    assertEquals(millis, 5000);
-  }
-
-  @Test
-  public void itConvertsLegacyStringHourMinSecToMillis2() {
-    long millis = RpcThrottlingException.timeFromString("1hrs, 3mins, 5sec");
-    assertEquals(millis, 3785000);
   }
 
 }
