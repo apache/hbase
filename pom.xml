@@ -874,7 +874,7 @@
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
-    <surefire.version>3.0.0-M6</surefire.version>
+    <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.27.2</spotless.version>
@@ -1830,6 +1830,7 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
             <!--
               The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
               careful when you want to change this value. See HBASE-26947 for more details.
@@ -1884,6 +1885,7 @@
                 -->
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
+                <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 <groups>${surefire.secondPartGroups}</groups>
                 <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
               </configuration>
