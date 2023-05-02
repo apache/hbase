@@ -725,6 +725,9 @@
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
     <javax.activation.version>1.2.0</javax.activation.version>
+    <!-- Required for testing LDAP integration -->
+    <apacheds.version>2.0.0.AM26</apacheds.version>
+    <ldap-api.version>2.0.0</ldap-api.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
