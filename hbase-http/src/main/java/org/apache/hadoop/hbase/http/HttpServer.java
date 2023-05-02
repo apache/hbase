@@ -154,7 +154,7 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
-  public static final String HTTP_UI_SHOW_STACKTRACE_KEY = "hbase.ui.showStackTraces";
+  public static final String HTTP_UI_SHOW_STACKTRACE_KEY = "hbase.ui.show-stack-traces";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
   public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };

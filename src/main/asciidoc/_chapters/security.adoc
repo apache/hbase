@@ -207,7 +207,7 @@ To disable showing stack traces in HBase UI for hiding sensitive information, se
 [source,xml]
 ----
 <property>
-  <name>hbase.ui.showStackTraces</name>
+  <name>hbase.ui.show-stack-traces</name>
   <value>false</value>
 </property>
 ----
