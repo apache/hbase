@@ -701,7 +701,7 @@ public class HRegionServer extends Thread
       initializeFileSystem();
 
       this.configurationManager = new ConfigurationManager();
-      setupWindows(getConfiguration(), getConfigurationManager());
+      setupWindows(conf, configurationManager);
 
       // Some unit tests don't need a cluster, so no zookeeper at all
       // Open connection to zookeeper and set primary watcher
