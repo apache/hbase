@@ -395,6 +395,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>nihaljain</id>
+      <name>Nihal Jain</name>
+      <email>nihaljain@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>niuyulin</id>
       <name>Yulin Niu</name>
       <email>niuyulin@apache.org</email>
