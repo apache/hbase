@@ -35,10 +35,11 @@ public class TestRpcThrottlingException {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestRpcThrottlingException.class);
 
-  private static final Map<String,
-    Long> STR_TO_MS_NEW_FORMAT = ImmutableMap.<String, Long> builder().put("0ms", 0L)
-      .put("50ms", 50L).put("1sec, 1ms", 1001L).put("1min, 5sec, 15ms", 65_015L)
-      .put("5mins, 2sec, 0ms", 302000L).put("1hr, 3mins, 5sec, 1ms", 3785001L).build();
+  private static final Map<String, Long> STR_TO_MS_NEW_FORMAT =
+    ImmutableMap.<String, Long> builder().put("0ms", 0L).put("50ms", 50L).put("1sec, 1ms", 1001L)
+      .put("1min, 5sec, 15ms", 65_015L).put("5mins, 2sec, 0ms", 302000L)
+      .put("1hr, 3mins, 5sec, 1ms", 3785001L).put("1hr, 5sec, 1ms", 3605001L)
+      .put("1hr, 0ms", 3600000L).put("1hr, 1min, 1ms", 3660001L).build();
   private static final Map<String,
     Long> STR_TO_MS_LEGACY_FORMAT = ImmutableMap.<String, Long> builder().put("0sec", 0L)
       .put("1sec", 1000L).put("2sec", 2000L).put("1mins, 5sec", 65_000L).put("5mins, 2sec", 302000L)
