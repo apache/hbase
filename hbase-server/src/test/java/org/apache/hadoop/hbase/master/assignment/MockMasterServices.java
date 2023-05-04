@@ -151,7 +151,7 @@ public class MockMasterServices extends MockNoopMasterServices {
     // ClusterConnection return the HRI. Have the HRI return a few mocked up responses
     // to make our test work.
     this.connection = HConnectionTestingUtility.getMockedConnectionAndDecorate(getConfiguration(),
-      Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri, MOCK_MASTER_SERVERNAME,
+      mock(AdminProtos.AdminService.BlockingInterface.class), ri, MOCK_MASTER_SERVERNAME,
       RegionInfoBuilder.FIRST_META_REGIONINFO);
     // Set hbase.rootdir into test dir.
     Path rootdir = CommonFSUtils.getRootDir(getConfiguration());
