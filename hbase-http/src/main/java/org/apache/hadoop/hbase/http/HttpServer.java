@@ -655,14 +655,12 @@ public class HttpServer implements FilterContainer {
       }
     }
     // Check if disable stack trace property is configured
-    if (null != conf.get(HTTP_UI_SHOW_STACKTRACE_KEY, null)) {
-      // Get the configured value
-      boolean showStackTraces = conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, false);
+    if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
       // Disable stack traces for server errors in UI
       webServer.setErrorHandler(new ErrorHandler());
-      webServer.getErrorHandler().setShowStacks(showStackTraces);
+      webServer.getErrorHandler().setShowStacks(false);
       // Disable stack traces for web app errors in UI
-      webAppContext.getErrorHandler().setShowStacks(showStackTraces);
+      webAppContext.getErrorHandler().setShowStacks(false);
     }
   }
 
