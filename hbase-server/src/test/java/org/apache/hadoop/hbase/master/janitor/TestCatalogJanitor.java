@@ -21,7 +21,7 @@ import static org.apache.hadoop.hbase.util.HFileArchiveTestingUtil.assertArchive
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -32,12 +32,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -71,7 +67,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -107,11 +102,9 @@ public class TestCatalogJanitor {
   }
 
   @Before
-  public void setup() throws IOException, KeeperException {
+  public void setup() throws Exception {
     setRootDirAndCleanIt(HTU, this.name.getMethodName());
-    NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers =
-      new ConcurrentSkipListMap<ServerName, SortedSet<byte[]>>();
-    this.masterServices = new MockMasterServices(HTU.getConfiguration(), regionsToRegionServers);
+    this.masterServices = new MockMasterServices(HTU.getConfiguration());
     this.masterServices.start(10, null);
     this.janitor = new CatalogJanitor(masterServices);
   }
