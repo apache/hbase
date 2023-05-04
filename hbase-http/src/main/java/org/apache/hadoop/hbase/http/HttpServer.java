@@ -143,6 +143,7 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
+  public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
@@ -693,7 +694,7 @@ public class HttpServer implements FilterContainer {
   }
 
   private static void addNoCacheFilter(ServletContextHandler ctxt, Configuration conf) {
-    if (conf != null) {
+    if (conf.getBoolean(HTTP_UI_NO_CACHE_ENABLE_KEY, false)) {
       Map<String, String> filterConfig =
         AuthenticationFilterInitializer.getFilterConfigMap(conf, "hbase.http.filter.");
       defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(), filterConfig,
