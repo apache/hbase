@@ -67,13 +67,9 @@ public class MockNoopMasterServices implements MasterServices {
   private final Configuration conf;
   private final MetricsMaster metricsMaster;
 
-  public MockNoopMasterServices() {
-    this(null);
-  }
-
   public MockNoopMasterServices(final Configuration conf) {
     this.conf = conf;
-    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(null));
+    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(mock(HMaster.class)));
   }
 
   @Override
