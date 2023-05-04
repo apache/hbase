@@ -233,7 +233,7 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     util = new HBaseTestingUtility();
     this.executor = Executors.newSingleThreadScheduledExecutor();
     setupConfiguration(util.getConfiguration());
-    master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
+    master = new MockMasterServices(util.getConfiguration());
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
     am = master.getAssignmentManager();
