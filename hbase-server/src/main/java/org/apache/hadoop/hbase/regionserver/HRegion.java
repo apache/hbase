@@ -135,7 +135,9 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -1597,13 +1599,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Close down this HRegion. Flush the cache unless abort parameter is true, Shut down each HStore,
-   * don't service any more calls. This method could take some time to execute, so don't call it
-   * from a time-sensitive thread.
+   * Close this HRegion.
    * @param abort        true if server is aborting (only during testing)
-   * @param ignoreStatus true if ignore the status (wont be showed on task list)
+   * @param ignoreStatus true if ignore the status (won't be showed on task list)
    * @return Vector of all the storage files that the HRegion's component HStores make use of. It's
-   *         a list of StoreFile objects. Can be null if we are not to close at this time or we are
+   *         a list of StoreFile objects. Can be null if we are not to close at this time, or we are
    *         already closed.
    * @throws IOException              e
    * @throws DroppedSnapshotException Thrown when replay of wal is required because a Snapshot was
@@ -1612,6 +1612,27 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public Map<byte[], List<HStoreFile>> close(boolean abort, boolean ignoreStatus)
     throws IOException {
+    return close(abort, ignoreStatus, false);
+  }
+
+  /**
+   * Close down this HRegion. Flush the cache unless abort parameter is true, Shut down each HStore,
+   * don't service any more calls. This method could take some time to execute, so don't call it
+   * from a time-sensitive thread.
+   * @param abort          true if server is aborting (only during testing)
+   * @param ignoreStatus   true if ignore the status (wont be showed on task list)
+   * @param isGracefulStop true if region is being closed during graceful stop and the blocks in the
+   *                       BucketCache should not be evicted.
+   * @return Vector of all the storage files that the HRegion's component HStores make use of. It's
+   *         a list of StoreFile objects. Can be null if we are not to close at this time or we are
+   *         already closed.
+   * @throws IOException              e
+   * @throws DroppedSnapshotException Thrown when replay of wal is required because a Snapshot was
+   *                                  not properly persisted. The region is put in closing mode, and
+   *                                  the caller MUST abort after this.
+   */
+  public Map<byte[], List<HStoreFile>> close(boolean abort, boolean ignoreStatus,
+    boolean isGracefulStop) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
@@ -1620,6 +1641,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
+        if (isGracefulStop && rsServices != null) {
+          rsServices.getBlockCache().ifPresent(blockCache -> {
+            if (blockCache instanceof CombinedBlockCache) {
+              BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
+              if (l2 instanceof BucketCache) {
+                if (((BucketCache) l2).isCachePersistenceEnabled()) {
+                  LOG.info(
+                    "Closing region {} during a graceful stop, and cache persistence is on, "
+                      + "so setting evict on close to false. ",
+                    this.getRegionInfo().getRegionNameAsString());
+                  this.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(false));
+                }
+              }
+            }
+          });
+        }
         return doClose(abort, status);
       }
     } finally {
