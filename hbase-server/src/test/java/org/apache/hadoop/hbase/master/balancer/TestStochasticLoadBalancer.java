@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.master.MockNoopMasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer.ServerLocalityCostFunction;
@@ -188,7 +187,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @Test
   public void testLocalityCost() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    MockNoopMasterServices master = new MockNoopMasterServices();
     StochasticLoadBalancer.CostFunction costFunction = new ServerLocalityCostFunction(conf);
 
     for (int test = 0; test < clusterRegionLocationMocks.length; test++) {
