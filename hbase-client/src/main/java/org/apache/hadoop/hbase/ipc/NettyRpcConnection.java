@@ -293,7 +293,7 @@ class NettyRpcConnection extends RpcConnection {
               conf.getInt(X509Util.HBASE_CLIENT_NETTY_TLS_HANDSHAKETIMEOUT,
                 X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS));
             ch.pipeline().addFirst(sslHandler);
-            LOG.info("SSL handler added with handshake timeout {} ms",
+            LOG.debug("SSL handler added with handshake timeout {} ms",
               sslHandler.getHandshakeTimeoutMillis());
           }
           ch.pipeline().addLast(BufferCallBeforeInitHandler.NAME,

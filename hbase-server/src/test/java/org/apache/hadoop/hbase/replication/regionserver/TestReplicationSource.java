@@ -34,7 +34,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -70,6 +69,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -132,7 +132,6 @@ public class TestReplicationSource {
       .thenReturn(DoNothingReplicationEndpoint.class.getName());
     Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
     Mockito.when(manager.getGlobalMetrics())
       .thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
     String queueId = "qid";
@@ -172,7 +171,6 @@ public class TestReplicationSource {
       .thenReturn(DoNothingReplicationEndpoint.class.getName());
     Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
     String queueId = "qid";
     RegionServerServices rss =
       TEST_UTIL.createMockRegionServerService(ServerName.parseServerName("a.b.c,1,1"));
@@ -226,7 +224,8 @@ public class TestReplicationSource {
     }
     writer.close();
 
-    WAL.Reader reader = WALFactory.createReader(FS, logPath, TEST_UTIL.getConfiguration());
+    WALStreamReader reader =
+      WALFactory.createStreamReader(FS, logPath, TEST_UTIL.getConfiguration());
     WAL.Entry entry = reader.next();
     assertNotNull(entry);
 
@@ -258,7 +257,6 @@ public class TestReplicationSource {
       Configuration testConf = HBaseConfiguration.create();
       testConf.setInt("replication.source.maxretriesmultiplier", 1);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-      Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
       source.init(testConf, null, manager, null, mockPeer, null, "testPeer", null,
         p -> OptionalLong.empty(), null);
       ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -273,12 +271,8 @@ public class TestReplicationSource {
   @Test
   public void testTerminateClearsBuffer() throws Exception {
     ReplicationSource source = new ReplicationSource();
-    ReplicationSourceManager mockManager = mock(ReplicationSourceManager.class);
-    MetricsReplicationGlobalSourceSource mockMetrics =
-      mock(MetricsReplicationGlobalSourceSource.class);
-    AtomicLong buffer = new AtomicLong();
-    Mockito.when(mockManager.getTotalBufferUsed()).thenReturn(buffer);
-    Mockito.when(mockManager.getGlobalMetrics()).thenReturn(mockMetrics);
+    ReplicationSourceManager mockManager = new ReplicationSourceManager(null, null, conf, null,
+      null, null, null, null, null, null, mock(MetricsReplicationGlobalSourceSource.class));
     ReplicationPeer mockPeer = mock(ReplicationPeer.class);
     Mockito.when(mockPeer.getPeerBandwidth()).thenReturn(0L);
     Configuration testConf = HBaseConfiguration.create();
@@ -307,7 +301,7 @@ public class TestReplicationSource {
     reader.addEntryToBatch(batch, mockEntry);
     reader.entryBatchQueue.put(batch);
     source.terminate("test");
-    assertEquals(0, source.getSourceManager().getTotalBufferUsed().get());
+    assertEquals(0, source.getSourceManager().getTotalBufferUsed());
   }
 
   /**
@@ -526,7 +520,6 @@ public class TestReplicationSource {
     Mockito.when(peerConfig.getReplicationEndpointImpl()).thenReturn(endpointName);
     Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
     ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-    Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
     Mockito.when(manager.getGlobalMetrics())
       .thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
     String queueId = "qid";
@@ -643,7 +636,6 @@ public class TestReplicationSource {
         .thenReturn(DoNothingReplicationEndpoint.class.getName());
       Mockito.when(mockPeer.getPeerConfig()).thenReturn(peerConfig);
       ReplicationSourceManager manager = Mockito.mock(ReplicationSourceManager.class);
-      Mockito.when(manager.getTotalBufferUsed()).thenReturn(new AtomicLong());
       Mockito.when(manager.getGlobalMetrics())
         .thenReturn(mock(MetricsReplicationGlobalSourceSource.class));
       RegionServerServices rss =

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY;
 
 import java.io.File;
@@ -178,6 +179,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private final BucketCacheStats cacheStats = new BucketCacheStats();
 
   private final String persistencePath;
+  static AtomicBoolean isCacheInconsistent = new AtomicBoolean(false);
   private final long cacheCapacity;
   /** Approximate block size */
   private final long blockSize;
@@ -237,6 +239,8 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private String prefetchedFileListPath;
 
+  private long bucketcachePersistInterval;
+
   private static final String FILE_VERIFY_ALGORITHM =
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
@@ -288,6 +292,7 @@ public class BucketCache implements BlockCache, HeapSize {
     this.queueAdditionWaitTime =
       conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
     this.prefetchedFileListPath = conf.get(PREFETCH_PERSISTENCE_PATH_KEY);
+    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
 
     sanityCheckConfigs();
 
@@ -314,6 +319,7 @@ public class BucketCache implements BlockCache, HeapSize {
     this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
     if (ioEngine.isPersistent() && persistencePath != null) {
+      startBucketCachePersisterThread();
       try {
         retrieveFromFile(bucketSizes);
       } catch (IOException ioex) {
@@ -368,6 +374,13 @@ public class BucketCache implements BlockCache, HeapSize {
     for (WriterThread thread : writerThreads) {
       thread.start();
     }
+  }
+
+  void startBucketCachePersisterThread() {
+    BucketCachePersister cachePersister =
+      new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister.setDaemon(true);
+    cachePersister.start();
   }
 
   boolean isCacheEnabled() {
@@ -597,6 +610,12 @@ public class BucketCache implements BlockCache, HeapSize {
     if (evictedByEvictionProcess) {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
+    if (ioEngine.isPersistent()) {
+      if (prefetchedFileListPath != null) {
+        PrefetchExecutor.removePrefetchedFileWhileEvict(cacheKey.getHfileName());
+      }
+      setCacheInconsistent(true);
+    }
   }
 
   /**
@@ -719,6 +738,14 @@ public class BucketCache implements BlockCache, HeapSize {
         this.heapSize.add(-1 * re.getData().heapSize());
       }
     });
+  }
+
+  public boolean isCacheInconsistent() {
+    return isCacheInconsistent.get();
+  }
+
+  public void setCacheInconsistent(boolean setCacheInconsistent) {
+    isCacheInconsistent.set(setCacheInconsistent);
   }
 
   /*
@@ -1167,6 +1194,9 @@ public class BucketCache implements BlockCache, HeapSize {
       // Only add if non-null entry.
       if (bucketEntries[i] != null) {
         putIntoBackingMap(key, bucketEntries[i]);
+        if (ioEngine.isPersistent()) {
+          setCacheInconsistent(true);
+        }
       }
       // Always remove from ramCache even if we failed adding it to the block cache above.
       boolean existed = ramCache.remove(key, re -> {
@@ -1216,8 +1246,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
-  private void persistToFile() throws IOException {
-    assert !cacheEnabled;
+  void persistToFile() throws IOException {
     if (!ioEngine.isPersistent()) {
       throw new IOException("Attempt to persist non-persistent cache mappings!");
     }

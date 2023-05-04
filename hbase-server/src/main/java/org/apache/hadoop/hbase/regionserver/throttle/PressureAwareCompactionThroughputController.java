@@ -99,7 +99,7 @@ public class PressureAwareCompactionThroughputController extends PressureAwareTh
         + (maxThroughputUpperBound - maxThroughputLowerBound) * compactionPressure;
     }
     if (LOG.isDebugEnabled()) {
-      if (Math.abs(maxThroughputToSet - getMaxThroughput()) < .0000001) {
+      if (Math.abs(maxThroughputToSet - getMaxThroughput()) >= .0000001) {
         LOG.debug("CompactionPressure is " + compactionPressure + ", tune throughput to "
           + throughputDesc(maxThroughputToSet));
       } else if (LOG.isTraceEnabled()) {

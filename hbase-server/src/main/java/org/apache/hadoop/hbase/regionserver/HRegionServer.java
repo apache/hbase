@@ -99,7 +99,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -1375,30 +1375,27 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           String hostnameFromMasterPOV = e.getValue();
           this.serverName = ServerName.valueOf(hostnameFromMasterPOV,
             rpcServices.getSocketAddress().getPort(), this.startcode);
-          if (
-            !StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(useThisHostnameInstead)
-          ) {
-            String msg = "Master passed us a different hostname to use; was="
-              + this.useThisHostnameInstead + ", but now=" + hostnameFromMasterPOV;
-            LOG.error(msg);
-            throw new IOException(msg);
-          }
+          String expectedHostName = rpcServices.getSocketAddress().getHostName();
           // if Master use-ip is enabled, RegionServer use-ip will be enabled by default even if it
           // is set to disable. so we will use the ip of the RegionServer to compare with the
           // hostname passed by the Master, see HBASE-27304 for details.
-          InetSocketAddress isa = rpcServices.getSocketAddress();
-          // here getActiveMaster() is definitely not null.
-          String isaHostName = InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
-            ? isa.getAddress().getHostAddress()
-            : isa.getHostName();
           if (
-            StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(isaHostName)
+            StringUtils.isBlank(useThisHostnameInstead) && getActiveMaster().isPresent()
+              && InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
           ) {
+            expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
+          }
+          boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
+            ? hostnameFromMasterPOV.equals(expectedHostName)
+            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+          if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
-              + rpcServices.getSocketAddress().getHostName() + ", but now=" + hostnameFromMasterPOV;
+              + (StringUtils.isBlank(useThisHostnameInstead)
+                ? rpcServices.getSocketAddress().getHostName()
+                : this.useThisHostnameInstead)
+              + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
+            throw new IOException(msg);
           }
           continue;
         }
@@ -2068,6 +2065,14 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private void registerConfigurationObservers() {
+    // Register Replication if possible, as now we support recreating replication peer storage, for
+    // migrating across different replication peer storages online
+    if (replicationSourceHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSourceHandler);
+    }
+    if (!sameReplicationSourceAndSink && replicationSinkHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSinkHandler);
+    }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
     configurationManager.registerObserver(this.rpcServices);
@@ -3316,11 +3321,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public Optional<MobFileCache> getMobFileCache() {
     return Optional.ofNullable(this.mobFileCache);
-  }
-
-  /** Returns : Returns the ConfigurationManager object for testing purposes. */
-  ConfigurationManager getConfigurationManager() {
-    return configurationManager;
   }
 
   CacheEvictionStats clearRegionBlockCache(Region region) {

@@ -148,6 +148,7 @@ import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl.Write
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.ForbidMajorCompactionChecker;
+import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationSink;
 import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
@@ -181,6 +182,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALSplitUtil.MutationReplay;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -266,6 +268,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   public static final String SPECIAL_RECOVERED_EDITS_DIR =
     "hbase.hregion.special.recovered.edits.dir";
+
+  /**
+   * Mainly used for master local region, where we will replay the WAL file directly without
+   * splitting, so it is possible to have WAL files which are not closed cleanly, in this way,
+   * hitting EOF is expected so should not consider it as a critical problem.
+   */
+  public static final String RECOVERED_EDITS_IGNORE_EOF =
+    "hbase.hregion.recovered.edits.ignore.eof";
 
   /**
    * Whether to use {@link MetaCellComparator} even if we are not meta region. Used when creating
@@ -372,6 +382,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public void setRestoredRegion(boolean restoredRegion) {
     isRestoredRegion = restoredRegion;
   }
+
+  public MetricsTableRequests getMetricsTableRequests() {
+    return metricsTableRequests;
+  }
+
+  // Handle table latency metrics
+  private MetricsTableRequests metricsTableRequests;
 
   // The internal wait duration to acquire a lock before read/update
   // from the region. It is not per row. The purpose of this wait time
@@ -962,6 +979,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
 
       }
+      if (metricsTableRequests != null) {
+        metricsTableRequests.removeRegistry();
+      }
       throw e;
     } finally {
       // nextSeqid will be -1 if the initialization fails.
@@ -1091,6 +1111,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
     }
+
+    metricsTableRequests = new MetricsTableRequests(htableDescriptor.getTableName(), conf);
+
     status.markComplete("Region opened successfully");
     return nextSeqId;
   }
@@ -1875,6 +1898,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         writeRegionCloseMarker(wal);
       }
       this.closed.set(true);
+
+      // Decrease refCount of table latency metric registry.
+      // Do this after closed#set to make sure only -1.
+      if (metricsTableRequests != null) {
+        metricsTableRequests.removeRegistry();
+      }
+
       if (!canFlush) {
         decrMemStoreSize(this.memStoreSizing.getMemStoreSize());
       } else if (this.memStoreSizing.getDataSize() != 0) {
@@ -4691,8 +4721,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     } finally {
       if (rsServices != null && rsServices.getMetrics() != null) {
-        rsServices.getMetrics().updateWriteQueryMeter(this.htableDescriptor.getTableName(),
-          batchOp.size());
+        rsServices.getMetrics().updateWriteQueryMeter(this, batchOp.size());
       }
       batchOp.closeRegionOperation();
     }
@@ -5513,9 +5542,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
     status.setStatus("Opening recovered edits");
-    WAL.Reader reader = null;
-    try {
-      reader = WALFactory.createReader(fs, edits, conf);
+    try (WALStreamReader reader = WALFactory.createStreamReader(fs, edits, conf)) {
       long currentEditSeqId = -1;
       long currentReplaySeqId = -1;
       long firstSeqIdInLog = -1;
@@ -5669,12 +5696,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           coprocessorHost.postReplayWALs(this.getRegionInfo(), edits);
         }
       } catch (EOFException eof) {
-        Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
-        msg = "EnLongAddered EOF. Most likely due to Master failure during "
-          + "wal splitting, so we have this data in another edit. Continuing, but renaming " + edits
-          + " as " + p + " for region " + this;
-        LOG.warn(msg, eof);
-        status.abort(msg);
+        if (!conf.getBoolean(RECOVERED_EDITS_IGNORE_EOF, false)) {
+          Path p = WALSplitUtil.moveAsideBadEditsFile(walFS, edits);
+          msg = "EnLongAddered EOF. Most likely due to Master failure during "
+            + "wal splitting, so we have this data in another edit. Continuing, but renaming "
+            + edits + " as " + p + " for region " + this;
+          LOG.warn(msg, eof);
+          status.abort(msg);
+        } else {
+          LOG.warn("EOF while replaying recover edits and config '{}' is true so "
+            + "we will ignore it and continue", RECOVERED_EDITS_IGNORE_EOF, eof);
+        }
       } catch (IOException ioe) {
         // If the IOE resulted from bad file format,
         // then this problem is idempotent and retrying won't help
@@ -5701,9 +5733,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return currentEditSeqId;
     } finally {
       status.cleanup();
-      if (reader != null) {
-        reader.close();
-      }
     }
   }
 
@@ -7885,7 +7914,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       this.metricsRegion.updateGet(EnvironmentEdgeManager.currentTime() - before);
     }
     if (this.rsServices != null && this.rsServices.getMetrics() != null) {
-      rsServices.getMetrics().updateReadQueryMeter(getRegionInfo().getTable(), 1);
+      rsServices.getMetrics().updateReadQueryMeter(this, 1);
     }
 
   }

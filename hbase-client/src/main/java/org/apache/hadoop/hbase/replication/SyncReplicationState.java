@@ -17,10 +17,16 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -73,5 +79,29 @@ public enum SyncReplicationState {
   public static SyncReplicationState parseFrom(byte[] bytes) throws InvalidProtocolBufferException {
     return ReplicationPeerConfigUtil.toSyncReplicationState(ReplicationProtos.SyncReplicationState
       .parseFrom(Arrays.copyOfRange(bytes, ProtobufUtil.lengthOfPBMagic(), bytes.length)));
+  }
+
+  public static byte[] toByteArray(SyncReplicationState state, SyncReplicationState newState) {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try {
+      out.write(ProtobufMagic.PB_MAGIC);
+      ReplicationPeerConfigUtil.toSyncReplicationState(state).writeDelimitedTo(out);
+      ReplicationPeerConfigUtil.toSyncReplicationState(newState).writeDelimitedTo(out);
+    } catch (IOException e) {
+      // should not happen, all in memory operations
+      throw new AssertionError(e);
+    }
+    return out.toByteArray();
+  }
+
+  public static Pair<SyncReplicationState, SyncReplicationState>
+    parseStateAndNewStateFrom(byte[] bytes) throws IOException {
+    ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+    ByteStreams.skipFully(in, ProtobufMagic.lengthOfPBMagic());
+    SyncReplicationState state = ReplicationPeerConfigUtil
+      .toSyncReplicationState(ReplicationProtos.SyncReplicationState.parseDelimitedFrom(in));
+    SyncReplicationState newState = ReplicationPeerConfigUtil
+      .toSyncReplicationState(ReplicationProtos.SyncReplicationState.parseDelimitedFrom(in));
+    return Pair.newPair(state, newState);
   }
 }

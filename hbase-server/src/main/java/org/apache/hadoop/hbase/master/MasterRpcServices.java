@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
+import org.apache.hadoop.hbase.master.replication.AbstractPeerNoLockProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails;
 import org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails;
@@ -421,12 +422,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationState;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
@@ -2168,6 +2175,56 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
     return GetReplicationPeerStateResponse.newBuilder().setIsEnabled(isEnabled).build();
+  }
+
+  @Override
+  public ReplicationPeerModificationSwitchResponse replicationPeerModificationSwitch(
+    RpcController controller, ReplicationPeerModificationSwitchRequest request)
+    throws ServiceException {
+    try {
+      server.checkInitialized();
+      boolean prevValue = server.replicationPeerModificationSwitch(request.getOn());
+      return ReplicationPeerModificationSwitchResponse.newBuilder().setPreviousValue(prevValue)
+        .build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public GetReplicationPeerModificationProceduresResponse getReplicationPeerModificationProcedures(
+    RpcController controller, GetReplicationPeerModificationProceduresRequest request)
+    throws ServiceException {
+    try {
+      server.checkInitialized();
+      GetReplicationPeerModificationProceduresResponse.Builder builder =
+        GetReplicationPeerModificationProceduresResponse.newBuilder();
+      for (Procedure<?> proc : server.getProcedures()) {
+        if (proc.isFinished()) {
+          continue;
+        }
+        if (!(proc instanceof AbstractPeerNoLockProcedure)) {
+          continue;
+        }
+        builder.addProcedure(ProcedureUtil.convertToProtoProcedure(proc));
+      }
+      return builder.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public IsReplicationPeerModificationEnabledResponse isReplicationPeerModificationEnabled(
+    RpcController controller, IsReplicationPeerModificationEnabledRequest request)
+    throws ServiceException {
+    try {
+      server.checkInitialized();
+      return IsReplicationPeerModificationEnabledResponse.newBuilder()
+        .setEnabled(server.isReplicationPeerModificationEnabled()).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
   @Override

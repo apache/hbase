@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,6 +82,18 @@ public class TestReplicationWALEntryFilters {
     Entry userEntry = new Entry(key3, null);
 
     assertEquals(userEntry, filter.filter(userEntry));
+
+    // hbase:acl should be allowed through the filter
+    WALKeyImpl key4 =
+      new WALKeyImpl(new byte[0], PermissionStorage.ACL_TABLE_NAME, System.currentTimeMillis());
+    Entry aclEntry = new Entry(key4, null);
+    assertEquals(aclEntry, filter.filter(aclEntry));
+
+    // hbase:labels should be allowed through the filter
+    WALKeyImpl key5 = new WALKeyImpl(new byte[0], VisibilityConstants.LABELS_TABLE_NAME,
+      System.currentTimeMillis());
+    Entry labelsEntry = new Entry(key5, null);
+    assertEquals(labelsEntry, filter.filter(labelsEntry));
   }
 
   @Test

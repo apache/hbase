@@ -109,6 +109,7 @@ show_usage() {
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
   echo "  credential       Run the Hadoop Credential Shell"
+  echo "  copyreppeers     Run CopyReplicationPeers tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
 }
 
@@ -742,6 +743,10 @@ elif [ "$COMMAND" = "pre-upgrade" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 elif [ "$COMMAND" = "completebulkload" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.BulkLoadHFilesTool'
+elif [ "$COMMAND" = "chaosagent" ] ; then
+  CLASS='org.apache.hadoop.hbase.chaos.ChaosService'
+elif [ "$COMMAND" = "chaosmonkeyrunner" ] ; then
+  CLASS='org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner'
 elif [ "$COMMAND" = "hbtop" ] ; then
   CLASS='org.apache.hadoop.hbase.hbtop.HBTop'
   if [ -n "${shaded_jar}" ] ; then
@@ -765,6 +770,8 @@ elif [ "$COMMAND" = "hbtop" ] ; then
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
 elif [ "$COMMAND" = "credential" ] ; then
   CLASS='org.apache.hadoop.security.alias.CredentialShell'
+elif [ "$COMMAND" = "copyreppeers" ] ; then
+  CLASS='org.apache.hadoop.hbase.replication.ReplicationPeerMigrationTool'
 else
   CLASS=$COMMAND
 if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then

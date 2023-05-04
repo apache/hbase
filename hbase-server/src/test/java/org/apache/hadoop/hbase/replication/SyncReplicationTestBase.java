@@ -232,8 +232,8 @@ public class SyncReplicationTestBase {
 
   protected final void verifyRemovedPeer(String peerId, Path remoteWALDir, HBaseTestingUtil utility)
     throws Exception {
-    ReplicationPeerStorage rps = ReplicationStorageFactory
-      .getReplicationPeerStorage(utility.getZooKeeperWatcher(), utility.getConfiguration());
+    ReplicationPeerStorage rps = ReplicationStorageFactory.getReplicationPeerStorage(
+      utility.getTestFileSystem(), utility.getZooKeeperWatcher(), utility.getConfiguration());
     try {
       rps.getPeerSyncReplicationState(peerId);
       fail("Should throw exception when get the sync replication state of a removed peer.");

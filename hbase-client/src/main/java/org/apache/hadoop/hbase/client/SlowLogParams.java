@@ -23,6 +23,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
 /**
  * SlowLog params object that contains detailed info as params and region name : to be used for
  * filter purpose
@@ -32,15 +34,24 @@ public class SlowLogParams {
 
   private final String regionName;
   private final String params;
+  private final ClientProtos.Scan scan;
+
+  public SlowLogParams(String regionName, String params, ClientProtos.Scan scan) {
+    this.regionName = regionName;
+    this.params = params;
+    this.scan = scan;
+  }
 
   public SlowLogParams(String regionName, String params) {
     this.regionName = regionName;
     this.params = params;
+    this.scan = null;
   }
 
   public SlowLogParams(String params) {
     this.regionName = StringUtils.EMPTY;
     this.params = params;
+    this.scan = null;
   }
 
   public String getRegionName() {
@@ -51,10 +62,14 @@ public class SlowLogParams {
     return params;
   }
 
+  public ClientProtos.Scan getScan() {
+    return scan;
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this).append("regionName", regionName).append("params", params)
-      .toString();
+      .append("scan", scan).toString();
   }
 
   @Override
@@ -67,11 +82,11 @@ public class SlowLogParams {
     }
     SlowLogParams that = (SlowLogParams) o;
     return new EqualsBuilder().append(regionName, that.regionName).append(params, that.params)
-      .isEquals();
+      .append("scan", scan).isEquals();
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder(17, 37).append(regionName).append(params).toHashCode();
+    return new HashCodeBuilder(17, 37).append(regionName).append(params).append(scan).toHashCode();
   }
 }

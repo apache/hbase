@@ -40,9 +40,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.regionserver.wal.SecureAsyncProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -87,12 +84,6 @@ public class TestSecureWAL {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-      WAL.Reader.class);
-    conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-      WALProvider.Writer.class);
-    conf.setClass("hbase.regionserver.hlog.async.writer.impl", SecureAsyncProtobufLogWriter.class,
-      WALProvider.AsyncWriter.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
     TEST_UTIL.startMiniDFSCluster(3);
@@ -146,23 +137,23 @@ public class TestSecureWAL {
     assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
 
     // Confirm the WAL can be read back
-    WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
     int count = 0;
-    WAL.Entry entry = new WAL.Entry();
-    while (reader.next(entry) != null) {
-      count++;
-      List<Cell> cells = entry.getEdit().getCells();
-      assertTrue("Should be one KV per WALEdit", cells.size() == 1);
-      for (Cell cell : cells) {
-        assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
-          cell.getRowLength(), row, 0, row.length));
-        assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
-          cell.getFamilyLength(), family, 0, family.length));
-        assertTrue("Incorrect value", Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
-          cell.getValueLength(), value, 0, value.length));
+    try (WALStreamReader reader = wals.createStreamReader(TEST_UTIL.getTestFileSystem(), walPath)) {
+      WAL.Entry entry = new WAL.Entry();
+      while (reader.next(entry) != null) {
+        count++;
+        List<Cell> cells = entry.getEdit().getCells();
+        assertTrue("Should be one KV per WALEdit", cells.size() == 1);
+        for (Cell cell : cells) {
+          assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
+            cell.getRowLength(), row, 0, row.length));
+          assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
+            cell.getFamilyLength(), family, 0, family.length));
+          assertTrue("Incorrect value", Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
+            cell.getValueLength(), value, 0, value.length));
+        }
       }
+      assertEquals("Should have read back as many KVs as written", total, count);
     }
-    assertEquals("Should have read back as many KVs as written", total, count);
-    reader.close();
   }
 }

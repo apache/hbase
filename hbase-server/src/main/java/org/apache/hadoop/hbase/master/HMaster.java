@@ -107,7 +107,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
@@ -173,6 +172,7 @@ import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerModificationStateStore;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
@@ -467,6 +467,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   private TaskGroup startupTaskGroup;
+
+  /**
+   * Store whether we allow replication peer modification operations.
+   */
+  private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -783,7 +788,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
-    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
+    this.replicationPeerManager =
+      ReplicationPeerManager.create(fileSystemManager.getFileSystem(), zooKeeper, conf, clusterId);
+    this.configurationManager.registerObserver(replicationPeerManager);
+    this.replicationPeerModificationStateStore =
+      new ReplicationPeerModificationStateStore(masterRegion);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -3786,6 +3795,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private long executePeerProcedure(AbstractPeerProcedure<?> procedure) throws IOException {
+    if (!isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
     long procId = procedureExecutor.submitProcedure(procedure);
     procedure.getLatch().await();
     return procId;
@@ -3863,6 +3875,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         + " transit current cluster state to {} in a synchronous replication peer id={}",
       state, peerId);
     return executePeerProcedure(new TransitPeerSyncReplicationStateProcedure(peerId, state));
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return replicationPeerModificationStateStore.set(on);
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return replicationPeerModificationStateStore.get();
   }
 
   /**
@@ -4271,12 +4293,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     disableBalancerChoreForTest = disable;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public ConfigurationManager getConfigurationManager() {
-    return configurationManager;
-  }
-
   private void setQuotasObserver(Configuration conf) {
     // Add the Observer to delete quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
@@ -4289,5 +4305,4 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
-
 }

@@ -288,6 +288,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
@@ -329,12 +330,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
@@ -3771,6 +3778,74 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
           (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
           resp -> resp.getIsEnabled()))
+      .call();
+  }
+
+  private void waitUntilAllReplicationPeerModificationProceduresDone(
+    CompletableFuture<Boolean> future, boolean prevOn, int retries) {
+    CompletableFuture<List<ProcedureProtos.Procedure>> callFuture =
+      this.<List<ProcedureProtos.Procedure>> newMasterCaller()
+        .action((controller, stub) -> this.<GetReplicationPeerModificationProceduresRequest,
+          GetReplicationPeerModificationProceduresResponse, List<ProcedureProtos.Procedure>> call(
+            controller, stub, GetReplicationPeerModificationProceduresRequest.getDefaultInstance(),
+            (s, c, req, done) -> s.getReplicationPeerModificationProcedures(c, req, done),
+            resp -> resp.getProcedureList()))
+        .call();
+    addListener(callFuture, (r, e) -> {
+      if (e != null) {
+        future.completeExceptionally(e);
+      } else if (r.isEmpty()) {
+        // we are done
+        future.complete(prevOn);
+      } else {
+        // retry later to see if the procedures are done
+        retryTimer.newTimeout(
+          t -> waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, retries + 1),
+          ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+      }
+    });
+  }
+
+  @Override
+  public CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on,
+    boolean drainProcedures) {
+    ReplicationPeerModificationSwitchRequest request =
+      ReplicationPeerModificationSwitchRequest.newBuilder().setOn(on).build();
+    CompletableFuture<Boolean> callFuture = this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<ReplicationPeerModificationSwitchRequest,
+        ReplicationPeerModificationSwitchResponse, Boolean> call(controller, stub, request,
+          (s, c, req, done) -> s.replicationPeerModificationSwitch(c, req, done),
+          resp -> resp.getPreviousValue()))
+      .call();
+    // if we do not need to wait all previous peer modification procedure done, or we are enabling
+    // peer modification, just return here.
+    if (!drainProcedures || on) {
+      return callFuture;
+    }
+    // otherwise we need to wait until all previous peer modification procedure done
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    addListener(callFuture, (prevOn, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      // even if the previous state is disabled, we still need to wait here, as there could be
+      // another client thread which called this method just before us and have already changed the
+      // state to off, but there are still peer modification procedures not finished, so we should
+      // also wait here.
+      waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, 0);
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerModificationEnabled() {
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<IsReplicationPeerModificationEnabledRequest,
+        IsReplicationPeerModificationEnabledResponse, Boolean> call(controller, stub,
+          IsReplicationPeerModificationEnabledRequest.getDefaultInstance(),
+          (s, c, req, done) -> s.isReplicationPeerModificationEnabled(c, req, done),
+          (resp) -> resp.getEnabled()))
       .call();
   }
 

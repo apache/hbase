@@ -1296,6 +1296,15 @@ Options:
 
 ----
 
+[[ops.conf-tool]]
+=== HBase Conf Tool
+HBase Conf tool can be used to print out the current value of a configuration. It can be used by passing the configuration key on the command-line.
+
+[source, bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool <configuration_key>
+----
+
 [[ops.regionmgt]]
 == Region Management
 
@@ -1904,13 +1913,21 @@ It is also prepended with identifying tags `(responseTooSlow)`, `(responseTooLar
 
 ==== Configuration
 
-There are two configuration knobs that can be used to adjust the thresholds for when queries are logged.
+There are four configuration knobs that can be used to adjust the thresholds for when queries are logged. Two of these knobs
+control the size and time thresholds for all queries. Because Scans can often be larger and slower than other types of
+queries, there are two additional knobs which can control size and time thresholds for Scans specifically.
 
 * `hbase.ipc.warn.response.time` Maximum number of milliseconds that a query can be run without being logged.
   Defaults to 10000, or 10 seconds.
   Can be set to -1 to disable logging by time.
 * `hbase.ipc.warn.response.size` Maximum byte size of response that a query can return without being logged.
   Defaults to 100 megabytes.
+  Can be set to -1 to disable logging by size.
+* `hbase.ipc.warn.response.time.scan` Maximum number of milliseconds that a Scan can be run without being logged.
+  Defaults to the `hbase.ipc.warn.response.time` value.
+  Can be set to -1 to disable logging by time.
+* `hbase.ipc.warn.response.size.scan` Maximum byte size of response that a Scan can return without being logged.
+  Defaults to the `hbase.ipc.warn.response.size` value.
   Can be set to -1 to disable logging by size.
 
 ==== Metrics
@@ -2275,6 +2292,33 @@ enable_table_replication <TABLE_NAME>::
   Enable the table replication switch for all its column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
   Disable the table replication switch for all its column families.
+peer_modification_switch <enable_or_disable>, <drain_procedures>::
+  Enabled/Disable peer modification operations, such as adding/removing replication peers.
+  The second parameter means whether you want to wait until all existing peer modification
+procedures to finish before returning when disabling peer modification.
+peer_modification_enabled::
+  Check whether peer modification is enabled.
+
+=== Migrate Across Different Replication Peer Storages
+Starting from 2.6.0, we introduce a file system based `ReplicationPeerStorage`, which stores
+the replication peer state with files on HFile file system, instead of znodes on ZooKeeper.
+And we have also implemented a tool to copy replication peer state across different replication
+peer storages.
+[source,shell]
+----
+./bin/hbase copyreppeers <SRC_REPLICATION_PEER_STORAGE> <DST_REPLICATION_PEER_STORAGE>
+----
+To support doing the migrate online, we introduce a shell command called `peer_modification_switch`.
+[source,ruby]
+----
+hbase> peer_modification_switch false, true
+----
+Use the above command can disable peer modification operations. The second `true` means you want to
+wait until all the existing replication peer modification procedures to finish before returning.
+After disabling the peer modification, it is safe for you to copy replication peer state with the
+above tool, and then update all the _hbase-site.xml_ files in the cluster to specify the new
+replication peer storage, and finally trigger an online configuration update to load the new
+replication peer storage.
 
 === Serial Replication
 
@@ -2384,10 +2428,18 @@ This option was introduced in link:https://issues.apache.org/jira/browse/HBASE-1
 
 ==== Replication Internals
 
+Replication State Storage::
+  In HBASE-15867, we abstract two interfaces for storing replication state,
+`ReplicationPeerStorage` and `ReplicationQueueStorage`. The former one is for storing the
+replication peer related states, and the latter one is for storing the replication queue related
+states.
+  HBASE-15867 is only half done, as although we have abstract these two interfaces, we still only
+have zookeeper based implementations.
+
 Replication State in ZooKeeper::
-  HBase replication maintains its state in ZooKeeper.
   By default, the state is contained in the base node _/hbase/replication_.
-  This node contains two child nodes, the `Peers` znode and the `RS`                znode.
+  Usually this nodes contains two child nodes, the `peers` znode is for storing replication peer
+state, and the `rs` znodes is for storing replication queue state.
 
 The `Peers` Znode::
   The `peers` znode is stored in _/hbase/replication/peers_ by default.
@@ -2401,6 +2453,15 @@ The `RS` Znode::
   The rs znode has one child znode for each region server in the cluster.
   The child znode name is the region server's hostname, client port, and start code.
   This list includes both live and dead region servers.
+
+Other implementations for `ReplicationPeerStorage`::
+  Starting from 2.6.0, we introduce a file system based `ReplicationPeerStorage`, which stores
+the replication peer state with files on HFile file system, instead of znodes on ZooKeeper.
+  The layout is almost the same with znodes on zookeeper, the main difference is that, the HFile
+file system may not support atomic rename, so we use two files to store the state and when reading
+we will read them both and compare the timestamp to find out the newer one. So typically, you will
+see two peer config files. And for enable/disable state, we just touch a disabled file if the peer
+is disabled, and remove the file when enabling the peer.
 
 ==== Choosing Region Servers to Replicate To
 
@@ -2624,6 +2685,15 @@ The following metrics are exposed at the global region server level and at the p
 | The number of region servers a given region server should attempt to
                   failover simultaneously.
 | 1
+
+| hbase.replication.peer.storage.impl
+| The replication peer storage implementation
+| zookeeper
+
+| hbase.replication.peers.directory
+| The directory for storing replication peer state, when filesystem replication
+                  peer storage is specified
+| peers
 |===
 
 === Monitoring Replication Status
