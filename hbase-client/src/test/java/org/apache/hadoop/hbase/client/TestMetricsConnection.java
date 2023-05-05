@@ -177,8 +177,8 @@ public class TestMetricsConnection {
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
-          .build(),
-        MetricsConnection.newCallStats(), null);
+          .build(), MetricsConnection.newCallStats(),
+        new CallTimeoutException("test with CallTimeoutException"));
     }
 
     final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
@@ -211,11 +211,16 @@ public class TestMetricsConnection {
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
 
-      metricKey = rpcFailureCountPrefix + method;
+      metricKey = rpcFailureCountPrefix + method + "(" + mutationType + ")";
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
-      // no failure
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+      if (mutationType.equals("Put")) {
+        // no failure
+        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+      } else {
+        // has failure
+        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+      }
     }
 
     // remote exception
@@ -228,13 +233,13 @@ public class TestMetricsConnection {
     metricKey = "rpcLocalExceptions_CallTimeoutException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
 
     // total exception
     metricKey = "rpcTotalExceptions";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
+    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 3);
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
