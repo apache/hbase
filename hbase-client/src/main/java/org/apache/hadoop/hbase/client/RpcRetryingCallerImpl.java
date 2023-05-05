@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -140,21 +141,30 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         if (tries >= maxAttempts - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
         }
-        // If the server is dead, we need to wait a little before retrying, to give
-        // a chance to the regions to be moved
-        // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
-        // special when encountering an exception indicating the server is overloaded.
-        // see #HBASE-17114 and HBASE-26807
-        long pauseBase =
-          HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
-        expectedSleep = callable.sleep(pauseBase, tries);
+        if (t instanceof RpcThrottlingException) {
+          RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) t;
+          expectedSleep = rpcThrottlingException.getWaitInterval();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Sleeping for {}ms after catching RpcThrottlingException", expectedSleep,
+              rpcThrottlingException);
+          }
+        } else {
+          // If the server is dead, we need to wait a little before retrying, to give
+          // a chance to the regions to be moved
+          // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
+          // special when encountering an exception indicating the server is overloaded.
+          // see #HBASE-17114 and HBASE-26807
+          long pauseBase =
+            HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
+          expectedSleep = callable.sleep(pauseBase, tries);
 
-        // If, after the planned sleep, there won't be enough time left, we stop now.
-        long duration = singleCallDuration(expectedSleep);
-        if (duration > callTimeout) {
-          String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration + ": "
-            + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
-          throw (SocketTimeoutException) new SocketTimeoutException(msg).initCause(t);
+          // If, after the planned sleep, there won't be enough time left, we stop now.
+          long duration = singleCallDuration(expectedSleep);
+          if (duration > callTimeout) {
+            String msg = "callTimeout=" + callTimeout + ", callDuration=" + duration + ": "
+              + t.getMessage() + " " + callable.getExceptionMessageAdditionalDetail();
+            throw (SocketTimeoutException) new SocketTimeoutException(msg).initCause(t);
+          }
         }
         if (metrics != null && HBaseServerException.isServerOverloaded(t)) {
           metrics.incrementServerOverloadedBackoffTime(expectedSleep, TimeUnit.MILLISECONDS);

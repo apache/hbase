@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExt
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -360,7 +361,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
     });
     if (!failedActions.isEmpty()) {
-      tryResubmit(failedActions.stream(), tries, retryImmediately.booleanValue(), false);
+      tryResubmit(failedActions.stream(), tries, retryImmediately.booleanValue(), null);
     }
   }
 
@@ -465,18 +466,29 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<Action> copiedActions = actionsByRegion.values().stream().flatMap(r -> r.actions.stream())
       .collect(Collectors.toList());
     addError(copiedActions, error, serverName);
-    tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException,
-      HBaseServerException.isServerOverloaded(error));
+    tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException, error);
   }
 
   private void tryResubmit(Stream<Action> actions, int tries, boolean immediately,
-    boolean isServerOverloaded) {
+    Throwable error) {
     if (immediately) {
       groupAndSend(actions, tries);
       return;
     }
     long delayNs;
-    long pauseNsToUse = isServerOverloaded ? pauseNsForServerOverloaded : pauseNs;
+    long pauseNsToUse;
+    boolean isServerOverloaded = false;
+    if (error instanceof RpcThrottlingException) {
+      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
+      pauseNsToUse = rpcThrottlingException.getWaitInterval() * 1000; // wait interval is in millis
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sleeping for {}ms after catching RpcThrottlingException",
+          rpcThrottlingException.getWaitInterval(), rpcThrottlingException);
+      }
+    } else {
+      isServerOverloaded = HBaseServerException.isServerOverloaded(error);
+      pauseNsToUse = isServerOverloaded ? pauseNsForServerOverloaded : pauseNs;
+    }
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
@@ -528,7 +540,7 @@ class AsyncBatchRpcRetryingCaller<T> {
           sendOrDelay(actionsByServer, tries);
         }
         if (!locateFailed.isEmpty()) {
-          tryResubmit(locateFailed.stream(), tries, false, false);
+          tryResubmit(locateFailed.stream(), tries, false, null);
         }
       });
   }
