@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -125,8 +126,18 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    long pauseNsToUse =
-      HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
+    long pauseNsToUse;
+    if (error instanceof RpcThrottlingException) {
+      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
+      pauseNsToUse = rpcThrottlingException.getWaitInterval() * 1000; // wait interval is in millis
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sleeping for {}ms after catching RpcThrottlingException",
+          rpcThrottlingException.getWaitInterval(), rpcThrottlingException);
+      }
+    } else {
+      pauseNsToUse =
+        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
+    }
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
