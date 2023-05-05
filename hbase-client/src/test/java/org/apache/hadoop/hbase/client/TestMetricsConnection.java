@@ -177,7 +177,8 @@ public class TestMetricsConnection {
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
-          .build(), MetricsConnection.newCallStats(),
+          .build(),
+        MetricsConnection.newCallStats(),
         new CallTimeoutException("test with CallTimeoutException"));
     }
 
