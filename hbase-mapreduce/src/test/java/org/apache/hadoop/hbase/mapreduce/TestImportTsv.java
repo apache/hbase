@@ -243,12 +243,13 @@ public class TestImportTsv implements Configurable {
   }
 
   @Test
-  public void testMROnNoMatchedColumnFamily() throws Exception {
+  public void testMRNoMatchedColumnFamily() throws Exception {
     util.createTable(tn, FAMILY);
 
-    String[] args = new String[] { tn.getNameAsString(), "/inputFile" };
-    Configuration conf = new Configuration(util.getConfiguration());
-    conf.set(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY, FAM_ERROR:A");
+    String[] args = new String[] {
+      "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM01_ERROR:A,FAM01_ERROR:B,FAM02_ERROR:C",
+      tn.getNameAsString(),
+      "/inputFile" };
     exception.expect(NoSuchColumnFamilyException.class);
     assertEquals("running test job configuration failed.", 0,
       ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
