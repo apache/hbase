@@ -41,16 +41,6 @@
   </properties>
 
   <dependencies>
-    <!--This one is upfront to get in front of
-         any dependency that pulls in jersey-core.
-         Jersey-core has implemented version 1
-         Interfaces of what is in this dependency
-         which does version 2.-->
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
