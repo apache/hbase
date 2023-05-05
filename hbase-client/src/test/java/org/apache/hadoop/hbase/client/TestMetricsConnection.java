@@ -188,21 +188,34 @@ public class TestMetricsConnection {
     long metricVal;
     Counter counter;
 
-    for (String method : new String[] { "Get", "Scan", "Multi", "Mutate" }) {
+    for (String method : new String[] { "Get", "Scan", "Multi" }) {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
 
       metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
-      if (method.equals("Get") || method.equals("Mutate")) {
+      if (method.equals("Get")) {
         // no failure
         assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
       } else {
         // has failure
         assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
       }
+    }
+
+    String method = "Mutate";
+    for (String mutationType : new String[] { "Append", "Delete", "Increment", "Put" }) {
+      metricKey = rpcCountPrefix + method + "(" + mutationType + ")";
+      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+
+      metricKey = rpcFailureCountPrefix + method;
+      counter = METRICS.getRpcCounters().get(metricKey);
+      metricVal = (counter != null) ? counter.getCount() : 0;
+      // no failure
+      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
     }
 
     // remote exception

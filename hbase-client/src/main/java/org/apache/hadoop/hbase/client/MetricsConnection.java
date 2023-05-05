@@ -652,7 +652,27 @@ public final class MetricsConnection implements StatisticTrackable {
       concurrentCallsPerServerHist.update(callsPerServer);
     }
     // Update the counter that tracks RPCs by type.
-    final String methodName = method.getService().getName() + "_" + method.getName();
+    String methodName = method.getService().getName() + "_" + method.getName();
+    // Distinguish mutate types.
+    if ("Mutate".equals(method.getName())) {
+      final MutationType type = ((MutateRequest) param).getMutation().getMutateType();
+      switch (type) {
+        case APPEND:
+          methodName += "(Append)";
+          break;
+        case DELETE:
+          methodName += "(Delete)";
+          break;
+        case INCREMENT:
+          methodName += "(Increment)";
+          break;
+        case PUT:
+          methodName += "(Put)";
+          break;
+        default:
+          throw new RuntimeException("Unrecognized mutation type " + type);
+      }
+    }
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
