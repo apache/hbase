@@ -646,7 +646,7 @@
     <lz4.version>1.8.0</lz4.version>
     <snappy.version>1.1.8.4</snappy.version>
     <xz.version>1.9</xz.version>
-    <zstd-jni.version>1.5.0-4</zstd-jni.version>
+    <zstd-jni.version>1.5.5-2</zstd-jni.version>
     <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
     <!-- Intraproject jar naming properties -->
     <!-- TODO this is pretty ugly, but works for the moment.
