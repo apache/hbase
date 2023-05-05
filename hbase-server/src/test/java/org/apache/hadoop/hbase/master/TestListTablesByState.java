@@ -21,12 +21,15 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -40,7 +43,12 @@ public class TestListTablesByState {
 
   private static HBaseTestingUtil UTIL;
   private static Admin ADMIN;
-  private final static int SLAVES = 1;
+  private static final int SLAVES = 1;
+  private static final byte[] COLUMN = Bytes.toBytes("cf");
+  private static final TableName TABLE = TableName.valueOf("test");
+  private static final TableDescriptor TABLE_DESC = TableDescriptorBuilder.newBuilder(TABLE)
+    .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(COLUMN).setMaxVersions(3).build())
+    .build();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -49,26 +57,33 @@ public class TestListTablesByState {
     ADMIN = UTIL.getAdmin();
   }
 
+  @Before
+  public void before() throws Exception {
+    if (ADMIN.tableExists(TABLE)) {
+      if (ADMIN.isTableEnabled(TABLE)) {
+        ADMIN.disableTable(TABLE);
+      }
+
+      ADMIN.deleteTable(TABLE);
+    }
+  }
+
   @Test
   public void testListTableNamesByState() throws Exception {
-    TableName testTableName = TableName.valueOf("test");
-    TableDescriptor testTableDesc = TableDescriptorBuilder.newBuilder(testTableName).build();
-    ADMIN.createTable(testTableDesc);
-    ADMIN.disableTable(testTableName);
-    Assert.assertEquals(ADMIN.listTableNamesByState(false).get(0), testTableName);
-    ADMIN.enableTable(testTableName);
-    Assert.assertEquals(ADMIN.listTableNamesByState(true).get(0), testTableName);
+    ADMIN.createTable(TABLE_DESC);
+    ADMIN.disableTable(TABLE);
+    Assert.assertEquals(ADMIN.listTableNamesByState(false).get(0), TABLE);
+    ADMIN.enableTable(TABLE);
+    Assert.assertEquals(ADMIN.listTableNamesByState(true).get(0), TABLE);
   }
 
   @Test
   public void testListTableDescriptorByState() throws Exception {
-    TableName testTableName = TableName.valueOf("test");
-    TableDescriptor testTableDesc = TableDescriptorBuilder.newBuilder(testTableName).build();
-    ADMIN.createTable(testTableDesc);
-    ADMIN.disableTable(testTableName);
-    Assert.assertEquals(ADMIN.listTableDescriptorsByState(false).get(0), testTableDesc);
-    ADMIN.enableTable(testTableName);
-    Assert.assertEquals(ADMIN.listTableDescriptorsByState(true).get(0), testTableDesc);
+    ADMIN.createTable(TABLE_DESC);
+    ADMIN.disableTable(TABLE);
+    Assert.assertEquals(ADMIN.listTableDescriptorsByState(false).get(0).getTableName(), TABLE);
+    ADMIN.enableTable(TABLE);
+    Assert.assertEquals(ADMIN.listTableDescriptorsByState(true).get(0).getTableName(), TABLE);
   }
 
   @AfterClass
