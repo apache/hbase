@@ -123,7 +123,7 @@ public final class PrefetchExecutor {
   public static void complete(Path path) {
     prefetchFutures.remove(path);
     prefetchCompleted.put(path.getName(), true);
-    LOG.debug("Prefetch completed for {}", path);
+    LOG.debug("Prefetch completed for {}", path.getName());
   }
 
   public static void cancel(Path path) {
@@ -134,7 +134,8 @@ public final class PrefetchExecutor {
       prefetchFutures.remove(path);
       LOG.debug("Prefetch cancelled for {}", path);
     }
-    prefetchCompleted.remove(path.getName());
+    LOG.debug("Removing filename from the prefetched persistence list: {}", path.getName());
+    removePrefetchedFileWhileEvict(path.getName());
   }
 
   public static boolean isCompleted(Path path) {
