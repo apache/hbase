@@ -135,7 +135,10 @@ public final class PrefetchExecutor {
         LOG.debug("Prefetch cancelled for " + path);
       }
     }
-    prefetchCompleted.remove(path.getName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing filename from the prefetched persistence list: {}", path.getName());
+    }
+    removePrefetchedFileWhileEvict(path.getName());
   }
 
   public static boolean isCompleted(Path path) {

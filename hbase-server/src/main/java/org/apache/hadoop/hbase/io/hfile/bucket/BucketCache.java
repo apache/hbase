@@ -416,6 +416,10 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  public boolean isCachePersistenceEnabled() {
+    return (prefetchedFileListPath != null) && (persistencePath != null);
+  }
+
   /**
    * Cache the block with the specified name and buffer.
    * @param cacheKey block's cache key
