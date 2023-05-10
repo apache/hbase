@@ -40,10 +40,13 @@ public class TestCellComparator {
     HBaseClassTestRule.forClass(TestCellComparator.class);
 
   private CellComparator comparator = CellComparator.getInstance();
+  private CellComparator innerStoreComparator = InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+
   byte[] row1 = Bytes.toBytes("row1");
   byte[] row2 = Bytes.toBytes("row2");
   byte[] row_1_0 = Bytes.toBytes("row10");
 
+  byte[] fam0 = HConstants.EMPTY_BYTE_ARRAY;
   byte[] fam1 = Bytes.toBytes("fam1");
   byte[] fam2 = Bytes.toBytes("fam2");
   byte[] fam_1_2 = Bytes.toBytes("fam12");
@@ -74,6 +77,29 @@ public class TestCellComparator {
     kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
     kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
     assertTrue(CellUtil.equals(kv1, kv2));
+  }
+
+  @Test
+  public void testCompareCellsWithEmptyFamily() {
+    KeyValue kv1 = new KeyValue(row1, fam0, qual1, val);
+    KeyValue kv2 = new KeyValue(row1, fam1, qual1, val);
+    assertTrue(comparator.compare(kv1, kv2) < 0);
+    assertTrue(innerStoreComparator.compare(kv1, kv2) < 0);
+
+    kv1 = new KeyValue(row1, fam0, qual2, val);
+    kv2 = new KeyValue(row1, fam0, qual1, val);
+    assertTrue(comparator.compare(kv1, kv2) > 0);
+    assertTrue(innerStoreComparator.compare(kv1, kv2) > 0);
+
+    kv1 = new KeyValue(row1, fam0, qual2, val);
+    kv2 = new KeyValue(row1, fam0, qual1, val);
+    assertTrue(comparator.compareFamilies(kv1, kv2) == 0);
+    assertTrue(innerStoreComparator.compareFamilies(kv1, kv2) == 0);
+
+    kv1 = new KeyValue(row1, fam1, qual2, val);
+    kv2 = new KeyValue(row1, fam1, qual1, val);
+    assertTrue(comparator.compareFamilies(kv1, kv2) == 0);
+    assertTrue(innerStoreComparator.compareFamilies(kv1, kv2) == 0);
   }
 
   @Test
