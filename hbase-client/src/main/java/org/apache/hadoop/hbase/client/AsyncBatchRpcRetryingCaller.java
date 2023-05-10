@@ -395,7 +395,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     HBaseRpcController controller = conn.rpcControllerFactory.newController();
     resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
-      calcPriority(serverReq.getPriority(), tableName));
+      calcPriority(serverReq.getPriority(), tableName), tableName);
     controller.setRequestAttributes(requestAttributes);
     if (!cells.isEmpty()) {
       controller.setCellScanner(createCellScanner(cells));
