@@ -401,7 +401,7 @@ public class StoreFileReader {
         // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
         if (keyIsAfterLast) {
           if (bloomFilterType == BloomType.ROWCOL) {
-            keyIsAfterLast = (CellComparator.getInstance().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
+            keyIsAfterLast = (getComparator().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
           } else {
             keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
           }
@@ -415,10 +415,7 @@ public class StoreFileReader {
           Cell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
-          if (
-            keyIsAfterLast
-              && (CellComparator.getInstance().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0
-          ) {
+          if (keyIsAfterLast && (getComparator().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
             exists = false;
           } else {
             exists = bloomFilter.contains(kvKey, bloom, BloomType.ROWCOL)
