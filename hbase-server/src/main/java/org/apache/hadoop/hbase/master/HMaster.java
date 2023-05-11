@@ -4155,18 +4155,25 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
-        if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
-          if (compactionState == CompactionState.MINOR) {
-            compactionState = CompactionState.MAJOR_AND_MINOR;
-          } else {
-            compactionState = CompactionState.MAJOR;
+        if (regionMetrics != null) {
+          if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
+            if (compactionState == CompactionState.MINOR) {
+              compactionState = CompactionState.MAJOR_AND_MINOR;
+            } else {
+              compactionState = CompactionState.MAJOR;
+            }
+          } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
+            if (compactionState == CompactionState.MAJOR) {
+              compactionState = CompactionState.MAJOR_AND_MINOR;
+            } else {
+              compactionState = CompactionState.MINOR;
+            }
           }
-        } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
-          if (compactionState == CompactionState.MAJOR) {
-            compactionState = CompactionState.MAJOR_AND_MINOR;
-          } else {
-            compactionState = CompactionState.MINOR;
-          }
+        } else {
+          String getCompactionDetailsErrorMsg = String.format("Can not get compaction details for region: %s, it may be disabled or in transition.",
+            regionInfo.getRegionNameAsString());
+          LOG.error(getCompactionDetailsErrorMsg);
+          throw new Exception(getCompactionDetailsErrorMsg);
         }
       }
     } catch (Exception e) {
