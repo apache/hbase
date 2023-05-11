@@ -198,4 +198,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
     map.put("info", 0L);
     return map;
   }
+
+  @Override
+  public Map<Integer, Long> getStoreFilesAccessedDaysAndSize() {
+    Map<Integer, Long> map = new HashMap<>();
+    map.put(7, 0L);
+    return map;
+  }
 }

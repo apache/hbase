@@ -154,4 +154,11 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
     map.put("table#info", 3L);
     return map;
   }
+
+  @Override
+  public Map<Integer, Long> getStoreFilesAccessedDaysAndSize(String table) {
+    Map<Integer, Long> map = new HashMap<>();
+    map.put(7, 3L);
+    return map;
+  }
 }

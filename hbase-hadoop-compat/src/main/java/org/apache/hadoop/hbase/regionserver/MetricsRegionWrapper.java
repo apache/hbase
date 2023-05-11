@@ -161,4 +161,7 @@ public interface MetricsRegionWrapper {
   /** Returns the number of row reads on memstore and file per store */
   Map<String, Long> getMixedRowReadsCount();
 
+  /** Returns the region's store files accessed days and size */
+  Map<Integer, Long> getStoreFilesAccessedDaysAndSize();
+
 }

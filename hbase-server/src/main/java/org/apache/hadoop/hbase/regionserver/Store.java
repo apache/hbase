@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -252,4 +254,7 @@ public interface Store {
    * loaded.
    */
   long getBloomFilterEligibleRequestsCount();
+
+  /** Returns Access time and size of store files in this store */
+  Map<String, Pair<Long, Long>> getStoreFilesAccessTimeAndSize();
 }
