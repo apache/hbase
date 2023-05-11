@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.OptionalLong;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
@@ -219,6 +220,11 @@ class WALEntryStream implements Closeable {
             // we will read from the beginning so we should always clear the compression context
             reader.resetTo(-1, true);
           }
+        } catch (FileNotFoundException e) {
+          // For now, this could happen only when reading meta wal for meta replicas.
+          // In this case, raising UncheckedIOException will let the endpoint deal with resetting
+          // the replication source. See HBASE-27871.
+          throw new UncheckedIOException(e);
         } catch (IOException e) {
           LOG.warn("Failed to reset reader {} to pos {}, reset compression={}", currentPath,
             currentPositionOfEntry, state.resetCompression(), e);

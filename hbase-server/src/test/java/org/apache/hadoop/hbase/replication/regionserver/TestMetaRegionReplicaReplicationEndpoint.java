@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
@@ -222,6 +225,62 @@ public class TestMetaRegionReplicaReplicationEndpoint {
     } finally {
       table.close();
       connection.close();
+    }
+  }
+
+  @Test
+  public void testCatalogReplicaReplicationWALRolledAndDeleted() throws Exception {
+    TableName tableName = TableName.valueOf("hbase:meta");
+    try (Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+      Table table = connection.getTable(tableName)) {
+      MiniHBaseCluster cluster = HTU.getHBaseCluster();
+      cluster.getMaster().balanceSwitch(false);
+      HRegionServer hrs = cluster.getRegionServer(cluster.getServerHoldingMeta());
+      ReplicationSource source = (ReplicationSource) hrs.getReplicationSourceService()
+        .getReplicationManager().catalogReplicationSource.get();
+      ((ReplicationPeerImpl) source.replicationPeer).setPeerState(false);
+      // there's small chance source reader has passed the peer state check but not yet read the
+      // wal, which could allow it to read some added entries before the wal gets deleted,
+      // so we are making sure here we only proceed once the reader loop has managed to
+      // detect the peer is disabled.
+      int retries = 0;
+      while (true) {
+        MutableObject<Boolean> readerWaiting = new MutableObject<>(true);
+        source.logQueue.getQueues().keySet()
+          .forEach(w -> readerWaiting.setValue(readerWaiting.getValue()
+            && source.workerThreads.get(w).entryReader.waitingPeerEnabled.get()));
+        if (readerWaiting.getValue()) {
+          break;
+        }
+        synchronized (this) {
+          wait(100);
+        }
+        retries++;
+        if (retries == 20) {
+          throw new Exception(
+            "We waited for two seconds for the reader to be paused, but it was still running.");
+        }
+      }
+      // load the data to the table
+      for (int i = 0; i < 5; i++) {
+        LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
+        HTU.loadNumericRows(table, HConstants.CATALOG_FAMILY, i * 1000, i * 1000 + 1000);
+        LOG.info("flushing table");
+        HTU.flush(tableName);
+        LOG.info("compacting table");
+        if (i < 4) {
+          HTU.compact(tableName, false);
+        }
+      }
+      HTU.getHBaseCluster().getMaster().getLogCleaner().triggerCleanerNow().get(1,
+        TimeUnit.SECONDS);
+      ((ReplicationPeerImpl) source.replicationPeer).setPeerState(true);
+      // now loads more data without flushing nor compacting
+      for (int i = 5; i < 10; i++) {
+        LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
+        HTU.loadNumericRows(table, HConstants.CATALOG_FAMILY, i * 1000, i * 1000 + 1000);
+      }
+      verifyReplication(tableName, numOfMetaReplica, 0, 10000, HConstants.CATALOG_FAMILY);
     }
   }
 
