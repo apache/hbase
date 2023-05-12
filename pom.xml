@@ -604,7 +604,7 @@
     <spy.version>2.12.2</spy.version>
     <bouncycastle.version>1.70</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
-    <kerby.version>1.1.1</kerby.version>
+    <kerby.version>2.0.3</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
     <curator.version>4.3.0.7.2.18.0-SNAPSHOT</curator.version>
     <netty-for-minihdfs.version>4.1.86.Final</netty-for-minihdfs.version>
@@ -1343,6 +1343,12 @@
         <groupId>org.apache.kerby</groupId>
         <artifactId>kerb-simplekdc</artifactId>
         <version>${kerby.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.jline</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>

@@ -138,6 +138,11 @@
       <artifactId>reload4j</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>jline</groupId>
+      <artifactId>jline</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
