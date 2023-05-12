@@ -178,6 +178,8 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private final BucketCacheStats cacheStats = new BucketCacheStats();
 
+  /** BucketCache persister thread */
+  private BucketCachePersister cachePersister;
   private final String persistencePath;
   static AtomicBoolean isCacheInconsistent = new AtomicBoolean(false);
   private final long cacheCapacity;
@@ -377,8 +379,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   void startBucketCachePersisterThread() {
-    BucketCachePersister cachePersister =
-      new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
     cachePersister.setDaemon(true);
     cachePersister.start();
   }
@@ -1416,6 +1417,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
       + persistencePath);
     if (ioEngine.isPersistent() && persistencePath != null) {
+      cachePersister.interrupt();
       try {
         join();
         persistToFile();
