@@ -4158,8 +4158,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
         if (regionMetrics == null) {
           String regionName = regionInfo.getRegionNameAsString();
-          LOG.error("Can not get compaction details for region: " + regionName +
-            ", it may be disabled or in transition.");
+          LOG.error("Can not get compaction details for the region: " + regionName +
+            " , it may be disabled or in transition.");
           notOnlineRegions.add(regionName);
           continue;
         }
