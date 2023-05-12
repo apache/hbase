@@ -44,8 +44,11 @@ public class BucketCachePersister extends Thread {
           cache.persistToFile();
           cache.setCacheInconsistent(false);
         }
-      } catch (IOException | InterruptedException e) {
-        LOG.warn("Exception in BucketCachePersister" + e.getMessage());
+      } catch (IOException e) {
+        LOG.warn("IOException in BucketCachePersister {} ", e.getMessage());
+      } catch (InterruptedException iex) {
+        LOG.warn("InterruptedException in BucketCachePersister {} ", iex.getMessage());
+        break;
       }
     }
   }
