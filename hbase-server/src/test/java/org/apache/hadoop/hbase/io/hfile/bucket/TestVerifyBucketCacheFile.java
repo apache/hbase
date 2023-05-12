@@ -29,10 +29,12 @@ import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.util.Arrays;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -141,6 +143,44 @@ public class TestVerifyBucketCacheFile {
     assertEquals(0, bucketCache.backingMap.size());
 
     TEST_UTIL.cleanupTestDir();
+  }
+
+  @Test
+  public void testRetrieveFromFileAfterDelete() throws Exception {
+
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 300);
+
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf);
+
+    long usedSize = bucketCache.getAllocator().getUsedSize();
+    assertEquals(0, usedSize);
+    CacheTestUtils.HFileBlockPair[] blocks =
+      CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
+    // Add blocks
+    for (CacheTestUtils.HFileBlockPair block : blocks) {
+      cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
+    }
+    usedSize = bucketCache.getAllocator().getUsedSize();
+    assertNotEquals(0, usedSize);
+    // Shutdown BucketCache
+    bucketCache.shutdown();
+    // Delete the persistence file
+    final java.nio.file.Path mapFile =
+      FileSystems.getDefault().getPath(testDir.toString(), "bucket.persistence");
+    assertTrue(Files.deleteIfExists(mapFile));
+    Thread.sleep(350);
+    // Create BucketCache
+    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf);
+    assertEquals(0, bucketCache.getAllocator().getUsedSize());
+    assertEquals(0, bucketCache.backingMap.size());
   }
 
   /**
