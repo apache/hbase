@@ -4142,6 +4142,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    */
   public CompactionState getCompactionState(final TableName tableName) {
     CompactionState compactionState = CompactionState.NONE;
+    List<String> notOnlineRegions = new ArrayList<>();
     try {
       List<RegionInfo> regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
       for (RegionInfo regionInfo : regions) {
@@ -4155,6 +4156,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        if (regionMetrics == null) {
+          String regionName = regionInfo.getRegionNameAsString();
+          LOG.error("Can not get compaction details for region: " + regionName +
+            ", it may be disabled or in transition.");
+          notOnlineRegions.add(regionName);
+          continue;
+        }
         if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
           if (compactionState == CompactionState.MINOR) {
             compactionState = CompactionState.MAJOR_AND_MINOR;
@@ -4168,6 +4176,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             compactionState = CompactionState.MINOR;
           }
         }
+      }
+      if (notOnlineRegions.size() > 0 && compactionState == CompactionState.NONE) {
+        compactionState = null;
       }
     } catch (Exception e) {
       compactionState = null;
