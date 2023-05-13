@@ -4155,25 +4155,23 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
-        if (regionMetrics != null) {
-          if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
-            if (compactionState == CompactionState.MINOR) {
-              compactionState = CompactionState.MAJOR_AND_MINOR;
-            } else {
-              compactionState = CompactionState.MAJOR;
-            }
-          } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
-            if (compactionState == CompactionState.MAJOR) {
-              compactionState = CompactionState.MAJOR_AND_MINOR;
-            } else {
-              compactionState = CompactionState.MINOR;
-            }
+        if (regionMetrics == null) {
+          LOG.error("Can not get compaction details for the region: " + regionInfo.getRegionNameAsString() +
+            " , it may be not online.");
+          continue;
+        }
+        if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
+          if (compactionState == CompactionState.MINOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = CompactionState.MAJOR;
           }
-        } else {
-          String getCompactionDetailsErrorMsg = String.format("Can not get compaction details for region: %s, it may be disabled or in transition.",
-            regionInfo.getRegionNameAsString());
-          LOG.error(getCompactionDetailsErrorMsg);
-          throw new Exception(getCompactionDetailsErrorMsg);
+        } else if (regionMetrics.getCompactionState() == CompactionState.MINOR) {
+          if (compactionState == CompactionState.MAJOR) {
+            compactionState = CompactionState.MAJOR_AND_MINOR;
+          } else {
+            compactionState = CompactionState.MINOR;
+          }
         }
       }
     } catch (Exception e) {
