@@ -130,6 +130,18 @@
                 <relocations>
                   <!-- top level com not including sun-->
                   <relocation>
+                    <pattern>com.sun.istack</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.istack</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.sun.jersey</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.jersey</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.sun.xml</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.xml</shadedPattern>
+                  </relocation>
+                  <relocation>
                     <pattern>com.cedarsoftware</pattern>
                     <shadedPattern>${shaded.prefix}.com.cedarsoftware</shadedPattern>
                   </relocation>
