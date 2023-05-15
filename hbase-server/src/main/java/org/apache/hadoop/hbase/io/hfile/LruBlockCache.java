@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
@@ -592,10 +593,27 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    LruCachedBlock previous = map.remove(block.getCacheKey());
-    if (previous == null) {
+    // We need something effectively final for the lambda.
+    final AtomicBoolean evicted = new AtomicBoolean(false);
+    map.computeIfPresent(block.getCacheKey(), (k, v) -> {
+      // Run the victim handler before we remove the mapping in the L1 map. It must complete
+      // quickly because other removal or insertion operations can be blocked in the meantime.
+      if (evictedByEvictionProcess && victimHandler != null) {
+        victimHandler.cacheBlock(k, v.getBuffer());
+      }
+      // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
+      // NOT move this up because if do that then the victimHandler may access the buffer with
+      // refCnt = 0 which is disallowed.
+      v.getBuffer().release();
+      evicted.set(true);
+      // By returning null from the lambda we remove the mapping from the L1 map.
+      return null;
+    });
+    // If we didn't find anything to evict, nothing more to do here.
+    if (!evicted.get()) {
       return 0;
     }
+    // We evicted the block so update L1 statistics.
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
@@ -614,14 +632,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
       // update the stats counter.
       stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
-      if (victimHandler != null) {
-        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
-      }
     }
-    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
-    // NOT move this up because if do that then the victimHandler may access the buffer with
-    // refCnt = 0 which is disallowed.
-    previous.getBuffer().release();
     return block.heapSize();
   }
 
