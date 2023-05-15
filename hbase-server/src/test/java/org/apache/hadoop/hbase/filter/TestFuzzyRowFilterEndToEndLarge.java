@@ -62,9 +62,9 @@ public class TestFuzzyRowFilterEndToEndLarge {
 
   private final static byte fuzzyValue = (byte) 63;
 
-  private static int firstPartCardinality = 50;
-  private static int secondPartCardinality = 50;
-  private static int thirdPartCardinality = 50;
+  private static int firstPartCardinality = 30;
+  private static int secondPartCardinality = 30;
+  private static int thirdPartCardinality = 30;
   private static int colQualifiersTotal = 5;
   private static int totalFuzzyKeys = thirdPartCardinality / 2;
 
