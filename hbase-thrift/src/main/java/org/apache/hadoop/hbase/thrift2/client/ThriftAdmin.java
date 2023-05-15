@@ -1356,6 +1356,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Map<String, Integer> uncacheStaleBlocks(ServerName serverName) throws IOException {
+    throw new NotImplementedException("uncacheStaleBlocks not supported in ThriftAdmin");
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     throw new NotImplementedException(

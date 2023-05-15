@@ -58,9 +58,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1657,6 +1660,43 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   public RegionLoad createRegionLoad(final String encodedRegionName) throws IOException {
     HRegion r = onlineRegions.get(encodedRegionName);
     return r != null ? createRegionLoad(r, null, null) : null;
+  }
+
+  public Map<String, Integer> uncacheStaleBlocks() {
+    Map<String, Pair<String, Long>> fullyCachedFiles =
+      this.getBlockCache().flatMap(BlockCache::getFullyCachedFiles).orElse(Collections.emptyMap());
+    Map<String, Integer> evictedFilesWithStaleBlocks = new ConcurrentHashMap<>();
+
+    ExecutorService executor = Executors.newFixedThreadPool(6);
+
+    List<Callable<Void>> tasks = new ArrayList<>();
+
+    fullyCachedFiles.forEach((fileName, value) -> {
+      Callable<Void> task = () -> {
+        HRegion regionOnServer = getRegion(value.getFirst());
+        int blocksEvicted = (regionOnServer == null || !regionOnServer.isAvailable())
+          ? this.getBlockCache().get().evictBlocksByHfileName(fileName)
+          : 0;
+        evictedFilesWithStaleBlocks.put(fileName, blocksEvicted);
+        LOG.info(
+          "Uncached {} blocks belonging to the file {} as the region {} "
+            + "is not served by the region server {} anymore.",
+          blocksEvicted, fileName, value.getFirst(), this.getServerName());
+        return null;
+      };
+      tasks.add(task);
+    });
+
+    try {
+      executor.invokeAll(tasks);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.error("Thread interrupted while processing tasks for uncaching stale blocks: {}",
+        e.getMessage());
+    } finally {
+      executor.shutdown();
+    }
+    return evictedFilesWithStaleBlocks;
   }
 
   /**

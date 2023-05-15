@@ -192,6 +192,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWrit
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UncacheStaleBlocksResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
@@ -3963,5 +3965,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  @Override
+  public UncacheStaleBlocksResponse uncacheStaleBlocks(RpcController controller,
+    UncacheStaleBlocksRequest request) throws ServiceException {
+    UncacheStaleBlocksResponse.Builder responseBuilder = UncacheStaleBlocksResponse.newBuilder();
+    Map<String, Integer> evictedFilesWithStaleBlocks = new HashMap<>(server.uncacheStaleBlocks());
+    responseBuilder.putAllUncachedFiles(evictedFilesWithStaleBlocks);
+    return responseBuilder.build();
   }
 }

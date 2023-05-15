@@ -1861,4 +1861,12 @@ public interface AsyncAdmin {
    * Get the list of cached files
    */
   CompletableFuture<List<String>> getCachedFilesList(ServerName serverName);
+
+  /**
+   * Clean Cache by evicting the blocks of files belonging to regions that are no longer served by
+   * the RegionServer.
+   * @param serverName ServerName
+   * @return A map of filename and number of blocks evicted.
+   */
+  CompletableFuture<Map<String, Integer>> uncacheStaleBlocks(ServerName serverName);
 }
