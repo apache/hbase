@@ -569,8 +569,17 @@ public class HFileArchiver {
           + " because it does not exist! Skipping and continuing on.", fnfe);
         success = true;
       } catch (IOException e) {
-        LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
         success = false;
+        LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
+        try {
+          fs.delete(archiveFile, false);
+        } catch (FileNotFoundException fnfe) {
+          // This case is fine.
+        } catch (IOException ee) {
+          // Complain about other IO exceptions
+          LOG.warn("Failed to clean up from failure to archive " + currentFile + " on try #" + i,
+            e);
+        }
       }
     }
 
