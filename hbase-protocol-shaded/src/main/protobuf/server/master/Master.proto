@@ -1133,6 +1133,15 @@ service MasterService {
   rpc IsReplicationPeerEnabled(GetReplicationPeerStateRequest)
     returns(GetReplicationPeerStateResponse);
 
+  rpc ReplicationPeerModificationSwitch(ReplicationPeerModificationSwitchRequest)
+    returns(ReplicationPeerModificationSwitchResponse);
+
+  rpc GetReplicationPeerModificationProcedures(GetReplicationPeerModificationProceduresRequest)
+    returns(GetReplicationPeerModificationProceduresResponse);
+
+  rpc IsReplicationPeerModificationEnabled(IsReplicationPeerModificationEnabledRequest)
+    returns(IsReplicationPeerModificationEnabledResponse);
+
   /** Returns a list of ServerNames marked as decommissioned. */
   rpc ListDecommissionedRegionServers(ListDecommissionedRegionServersRequest)
     returns(ListDecommissionedRegionServersResponse);

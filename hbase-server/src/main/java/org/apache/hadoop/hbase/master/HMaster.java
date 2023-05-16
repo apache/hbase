@@ -34,6 +34,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -59,6 +62,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
@@ -107,7 +111,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterStoppedException;
@@ -171,8 +174,10 @@ import org.apache.hadoop.hbase.master.replication.AbstractPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.AddPeerProcedure;
 import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
+import org.apache.hadoop.hbase.master.replication.MigrateReplicationQueueFromZkToTableProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
+import org.apache.hadoop.hbase.master.replication.ReplicationPeerModificationStateStore;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.master.replication.UpdatePeerConfigProcedure;
@@ -221,9 +226,12 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp.ReplicationSyncUpToolInfo;
 import org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint;
 import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
@@ -244,6 +252,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.JsonMapper;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -265,7 +274,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
+import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.gson.JsonParseException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
@@ -467,6 +478,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private static final boolean DEFAULT_WARMUP_BEFORE_MOVE = true;
 
   private TaskGroup startupTaskGroup;
+
+  /**
+   * Store whether we allow replication peer modification operations.
+   */
+  private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -783,7 +799,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
     this.rsGroupInfoManager = RSGroupInfoManager.create(this);
 
-    this.replicationPeerManager = ReplicationPeerManager.create(zooKeeper, conf, clusterId);
+    this.replicationPeerManager = ReplicationPeerManager.create(this, clusterId);
+    this.configurationManager.registerObserver(replicationPeerManager);
+    this.replicationPeerModificationStateStore =
+      new ReplicationPeerModificationStateStore(masterRegion);
 
     this.drainingServerTracker = new DrainingServerTracker(zooKeeper, this, this.serverManager);
     this.drainingServerTracker.start();
@@ -1050,6 +1069,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.balancer.initialize();
     this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
+    // try migrate replication data
+    ZKReplicationQueueStorageForMigration oldReplicationQueueStorage =
+      new ZKReplicationQueueStorageForMigration(zooKeeper, conf);
+    // check whether there are something to migrate and we haven't scheduled a migration procedure
+    // yet
+    if (
+      oldReplicationQueueStorage.hasData() && procedureExecutor.getProcedures().stream()
+        .allMatch(p -> !(p instanceof MigrateReplicationQueueFromZkToTableProcedure))
+    ) {
+      procedureExecutor.submitProcedure(new MigrateReplicationQueueFromZkToTableProcedure());
+    }
     // start up all service threads.
     startupTaskGroup.addTask("Initializing master service threads");
     startServiceThreads();
@@ -1265,6 +1295,38 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     status.setStatus("Initializing MOB Cleaner");
     initMobCleaner();
 
+    // delete the stale data for replication sync up tool if necessary
+    status.setStatus("Cleanup ReplicationSyncUp status if necessary");
+    Path replicationSyncUpInfoFile =
+      new Path(new Path(dataRootDir, ReplicationSyncUp.INFO_DIR), ReplicationSyncUp.INFO_FILE);
+    if (dataFs.exists(replicationSyncUpInfoFile)) {
+      // info file is available, load the timestamp and use it to clean up stale data in replication
+      // queue storage.
+      byte[] data;
+      try (FSDataInputStream in = dataFs.open(replicationSyncUpInfoFile)) {
+        data = ByteStreams.toByteArray(in);
+      }
+      ReplicationSyncUpToolInfo info = null;
+      try {
+        info = JsonMapper.fromJson(Bytes.toString(data), ReplicationSyncUpToolInfo.class);
+      } catch (JsonParseException e) {
+        // usually this should be a partial file, which means the ReplicationSyncUp tool did not
+        // finish properly, so not a problem. Here we do not clean up the status as we do not know
+        // the reason why the tool did not finish properly, so let users clean the status up
+        // manually
+        LOG.warn("failed to parse replication sync up info file, ignore and continue...", e);
+      }
+      if (info != null) {
+        LOG.info("Remove last sequence ids and hfile references which are written before {}({})",
+          info.getStartTimeMs(), DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.systemDefault())
+            .format(Instant.ofEpochMilli(info.getStartTimeMs())));
+        replicationPeerManager.getQueueStorage()
+          .removeLastSequenceIdsAndHFileRefsBefore(info.getStartTimeMs());
+        // delete the file after removing the stale data, so next time we do not need to do this
+        // again.
+        dataFs.delete(replicationSyncUpInfoFile, false);
+      }
+    }
     status.setStatus("Calling postStartMaster coprocessors");
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -3786,6 +3848,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   private long executePeerProcedure(AbstractPeerProcedure<?> procedure) throws IOException {
+    if (!isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
     long procId = procedureExecutor.submitProcedure(procedure);
     procedure.getLatch().await();
     return procId;
@@ -3863,6 +3928,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         + " transit current cluster state to {} in a synchronous replication peer id={}",
       state, peerId);
     return executePeerProcedure(new TransitPeerSyncReplicationStateProcedure(peerId, state));
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return replicationPeerModificationStateStore.set(on);
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return replicationPeerModificationStateStore.get();
   }
 
   /**
@@ -4271,12 +4346,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     disableBalancerChoreForTest = disable;
   }
 
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
-  public ConfigurationManager getConfigurationManager() {
-    return configurationManager;
-  }
-
   private void setQuotasObserver(Configuration conf) {
     // Add the Observer to delete quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
@@ -4289,5 +4358,4 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
   }
-
 }

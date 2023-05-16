@@ -76,12 +76,16 @@
            <th>Store File</th>
            <th>Size (MB)</th>
            <th>Modification time</th>
+           <th>Len Of Biggest Cell</th>
+           <th>Key Of Biggest Cell</th>
          </tr>
        <%   for(StoreFile sf : storeFiles) { %>
          <tr>
            <td><a href="storeFile.jsp?name=<%= sf.getEncodedPath() %>"><%= sf.getPath() %></a></td>
            <td><%= (int) (rs.getFileSystem().getLength(sf.getPath()) / 1024 / 1024) %></td>
            <td><%= new Date(sf.getModificationTimestamp()) %></td>
+           <td><%= String.format("%,1d", ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell()) %></td>
+           <td><%= ((HStoreFile)sf).getFileInfo().getHFileInfo().getKeyOfBiggestCell() %></td>
          </tr>
          <% } %>
 

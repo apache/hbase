@@ -294,11 +294,10 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     Assert.assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
   }
 
-  private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf) {
-    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
-    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
-    when(mockSourceManager.getTotalBufferLimit())
-      .thenReturn((long) HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_DFAULT);
+  private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf)
+    throws IOException {
+    ReplicationSourceManager mockSourceManager = new ReplicationSourceManager(null, null, conf,
+      null, null, null, null, null, null, null, createMockGlobalMetrics());
     Server mockServer = Mockito.mock(Server.class);
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
     when(source.getSourceManager()).thenReturn(mockSourceManager);
@@ -306,13 +305,24 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     when(source.getWALFileLengthProvider()).thenReturn(log);
     when(source.getServer()).thenReturn(mockServer);
     when(source.isRecovered()).thenReturn(recovered);
-    MetricsReplicationGlobalSourceSource globalMetrics =
-      Mockito.mock(MetricsReplicationGlobalSourceSource.class);
-    when(mockSourceManager.getGlobalMetrics()).thenReturn(globalMetrics);
     return source;
   }
 
-  private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf) {
+  private MetricsReplicationGlobalSourceSource createMockGlobalMetrics() {
+    MetricsReplicationGlobalSourceSource globalMetrics =
+      Mockito.mock(MetricsReplicationGlobalSourceSource.class);
+    final AtomicLong bufferUsedCounter = new AtomicLong(0);
+    Mockito.doAnswer((invocationOnMock) -> {
+      bufferUsedCounter.set(invocationOnMock.getArgument(0, Long.class));
+      return null;
+    }).when(globalMetrics).setWALReaderEditsBufferBytes(Mockito.anyLong());
+    when(globalMetrics.getWALReaderEditsBufferBytes())
+      .then(invocationOnMock -> bufferUsedCounter.get());
+    return globalMetrics;
+  }
+
+  private ReplicationSourceWALReader createReader(boolean recovered, Configuration conf)
+    throws IOException {
     ReplicationSource source = mockReplicationSource(recovered, conf);
     when(source.isPeerEnabled()).thenReturn(true);
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(fs, conf, logQueue, 0,
@@ -322,7 +332,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   }
 
   private ReplicationSourceWALReader createReaderWithBadReplicationFilter(int numFailures,
-    Configuration conf) {
+    Configuration conf) throws IOException {
     ReplicationSource source = mockReplicationSource(false, conf);
     when(source.isPeerEnabled()).thenReturn(true);
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(fs, conf, logQueue, 0,
@@ -659,12 +669,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     appendEntries(writer1, 3);
     localLogQueue.enqueueLog(log1, fakeWalGroupId);
 
-    ReplicationSourceManager mockSourceManager = mock(ReplicationSourceManager.class);
-    // Make it look like the source is from recovered source.
-    when(mockSourceManager.getOldSources())
-      .thenReturn(new ArrayList<>(Arrays.asList((ReplicationSourceInterface) source)));
     when(source.isPeerEnabled()).thenReturn(true);
-    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
     // Override the max retries multiplier to fail fast.
     conf.setInt("replication.source.maxretriesmultiplier", 1);
     conf.setBoolean("replication.source.eof.autorecovery", true);
@@ -776,10 +781,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     // make sure the size of the wal file is 0.
     assertEquals(0, fs.getFileStatus(archivePath).getLen());
 
-    ReplicationSourceManager mockSourceManager = Mockito.mock(ReplicationSourceManager.class);
     ReplicationSource source = Mockito.mock(ReplicationSource.class);
     when(source.isPeerEnabled()).thenReturn(true);
-    when(mockSourceManager.getTotalBufferUsed()).thenReturn(new AtomicLong(0));
 
     Configuration localConf = new Configuration(CONF);
     localConf.setInt("replication.source.maxretriesmultiplier", 1);
@@ -791,4 +794,80 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     Waiter.waitFor(localConf, 10000,
       (Waiter.Predicate<Exception>) () -> logQueue.getQueueSize(fakeWalGroupId) == 1);
   }
+
+  /**
+   * This test is for HBASE-27778, when {@link WALEntryFilter#filter} throws exception for some
+   * entries in {@link WALEntryBatch},{@link ReplicationSourceWALReader#totalBufferUsed} should be
+   * decreased because {@link WALEntryBatch} is not put to
+   * {@link ReplicationSourceWALReader#entryBatchQueue}.
+   */
+  @Test
+  public void testReplicationSourceWALReaderWithPartialWALEntryFailingFilter() throws Exception {
+    appendEntriesToLogAndSync(3);
+    // get ending position
+    long position;
+    try (WALEntryStream entryStream =
+      new WALEntryStream(logQueue, fs, CONF, 0, log, new MetricsSource("1"), fakeWalGroupId)) {
+      for (int i = 0; i < 3; i++) {
+        assertNotNull(next(entryStream));
+      }
+      position = entryStream.getPosition();
+    }
+
+    Path walPath = getQueue().peek();
+    int maxThrowExceptionCount = 3;
+
+    ReplicationSource source = mockReplicationSource(false, CONF);
+    when(source.isPeerEnabled()).thenReturn(true);
+    PartialWALEntryFailingWALEntryFilter walEntryFilter =
+      new PartialWALEntryFailingWALEntryFilter(maxThrowExceptionCount, 3);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, CONF, logQueue, 0, walEntryFilter, source, fakeWalGroupId);
+    reader.start();
+    WALEntryBatch entryBatch = reader.take();
+
+    assertNotNull(entryBatch);
+    assertEquals(3, entryBatch.getWalEntries().size());
+    long sum = entryBatch.getWalEntries().stream()
+      .mapToLong(WALEntryBatch::getEntrySizeExcludeBulkLoad).sum();
+    assertEquals(position, entryBatch.getLastWalPosition());
+    assertEquals(walPath, entryBatch.getLastWalPath());
+    assertEquals(3, entryBatch.getNbRowKeys());
+    assertEquals(sum, source.getSourceManager().getTotalBufferUsed());
+    assertEquals(sum, source.getSourceManager().getGlobalMetrics().getWALReaderEditsBufferBytes());
+    assertEquals(maxThrowExceptionCount, walEntryFilter.getThrowExceptionCount());
+    assertNull(reader.poll(10));
+  }
+
+  private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
+    private int filteredWALEntryCount = -1;
+    private int walEntryCount = 0;
+    private int throwExceptionCount = -1;
+    private int maxThrowExceptionCount;
+
+    public PartialWALEntryFailingWALEntryFilter(int throwExceptionLimit, int walEntryCount) {
+      this.maxThrowExceptionCount = throwExceptionLimit;
+      this.walEntryCount = walEntryCount;
+    }
+
+    @Override
+    public Entry filter(Entry entry) {
+      filteredWALEntryCount++;
+      if (filteredWALEntryCount < walEntryCount - 1) {
+        return entry;
+      }
+
+      filteredWALEntryCount = -1;
+      throwExceptionCount++;
+      if (throwExceptionCount <= maxThrowExceptionCount - 1) {
+        throw new WALEntryFilterRetryableException("failing filter");
+      }
+      return entry;
+    }
+
+    public int getThrowExceptionCount() {
+      return throwExceptionCount;
+    }
+  }
+
 }

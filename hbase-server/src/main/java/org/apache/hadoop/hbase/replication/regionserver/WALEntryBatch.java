@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -52,6 +54,9 @@ class WALEntryBatch {
   private Map<String, Long> lastSeqIds = new HashMap<>();
   // indicate that this is the end of the current file
   private boolean endOfFile;
+  // indicate the buffer size used, which is added to
+  // ReplicationSourceWALReader.totalBufferUsed
+  private long usedBufferSize;
 
   /**
    * @param lastWalPath Path of the WAL the last entry in this batch was read from
@@ -153,11 +158,27 @@ class WALEntryBatch {
     lastSeqIds.put(region, sequenceId);
   }
 
+  public long incrementUsedBufferSize(Entry entry) {
+    long increment = getEntrySizeExcludeBulkLoad(entry);
+    usedBufferSize += increment;
+    return increment;
+  }
+
+  public long getUsedBufferSize() {
+    return this.usedBufferSize;
+  }
+
   @Override
   public String toString() {
     return "WALEntryBatch [walEntries=" + walEntriesWithSize + ", lastWalPath=" + lastWalPath
       + ", lastWalPosition=" + lastWalPosition + ", nbRowKeys=" + nbRowKeys + ", nbHFiles="
       + nbHFiles + ", heapSize=" + heapSize + ", lastSeqIds=" + lastSeqIds + ", endOfFile="
-      + endOfFile + "]";
+      + endOfFile + ",usedBufferSize=" + usedBufferSize + "]";
+  }
+
+  static long getEntrySizeExcludeBulkLoad(Entry entry) {
+    WALEdit edit = entry.getEdit();
+    WALKey key = entry.getKey();
+    return edit.heapSize() + key.estimatedSerializedSizeOf();
   }
 }

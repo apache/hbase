@@ -61,7 +61,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -276,7 +278,8 @@ public class HStore
     long ttl = determineTTLFromFamily(family);
     // Why not just pass a HColumnDescriptor in here altogether? Even if have
     // to clone it?
-    scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, region.getCellComparator());
+    scanInfo =
+      new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.storeContext.getComparator());
     this.memstore = getMemstore();
 
     this.offPeakHours = OffPeakHours.getInstance(conf);
@@ -329,8 +332,11 @@ public class HStore
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
-      .withCellComparator(region.getCellComparator()).withColumnFamilyDescriptor(family)
-      .withCompactedFilesSupplier(this::getCompactedFiles)
+      .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
+        .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)
+          ? MetaCellComparator.META_COMPARATOR
+          : InnerStoreCellComparator.INNER_STORE_COMPARATOR)
+      .withColumnFamilyDescriptor(family).withCompactedFilesSupplier(this::getCompactedFiles)
       .withRegionFileSystem(region.getRegionFileSystem())
       .withFavoredNodesSupplier(this::getFavoredNodes)
       .withFamilyStoreDirectoryPath(

@@ -28,6 +28,9 @@
         org.apache.hadoop.hbase.client.RegionInfo;
         org.apache.hadoop.hbase.client.RegionInfoDisplay;
         org.apache.hadoop.hbase.regionserver.Region;
+        org.apache.hadoop.hbase.regionserver.HStoreFile;
+        org.apache.hadoop.hbase.regionserver.Store;
+        org.apache.hadoop.hbase.regionserver.StoreFile;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.HBaseConfiguration;
         org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -168,6 +171,7 @@
             <th>Index Size</th>
             <th>Bloom Size</th>
             <th>Data Locality</th>
+            <th>Len Of Biggest Cell</th>
         </tr>
     </thead>
 
@@ -207,6 +211,21 @@
                                               * TraditionalBinaryPrefix.KILO.value, "B", 1);
               }
            }
+           long lenOfBiggestCellInRegion = -1L;
+           Region region = regionServer.getRegion(r.getEncodedName());
+           if (region != null) {
+             List<? extends Store> stores = region.getStores();
+             for (Store store : stores) {
+               Collection<? extends StoreFile> storeFiles = store.getStorefiles();
+               for (StoreFile sf : storeFiles) {
+                 long lenOfBiggestCell = ((HStoreFile)sf).getFileInfo().getHFileInfo().getLenOfBiggestCell();
+                 if (lenOfBiggestCellInRegion < lenOfBiggestCell) {
+                   lenOfBiggestCellInRegion = lenOfBiggestCell;
+                 }
+               }
+             }
+           }
+
         </%java>
             <td><a href="region.jsp?name=<% r.getEncodedName() %>"><% displayName %></a></td>
             <%if load != null %>
@@ -217,6 +236,7 @@
             <td><% indexSizeStr %></td>
             <td><% bloomSizeStr %></td>
             <td><% load.getDataLocality() %></td>
+            <td><% String.format("%,1d", lenOfBiggestCellInRegion) %></td>
             </%if>
         </tr>
         </%for>

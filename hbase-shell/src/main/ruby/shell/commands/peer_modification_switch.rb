@@ -1,4 +1,5 @@
-##
+#
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,19 +16,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# This Dockerfile is to setup environment for dev-support scripts which require
-# dependencies outside of what Apache Jenkins machines may have.
-#
-# Specifically, it's used for the flaky test reporting job defined in
-# dev-support/flaky-tests/flaky-reporting.Jenkinsfile
-FROM ubuntu:22.04
 
-COPY . /hbase/dev-support
+# frozen_string_literal: true
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -qq -y install --no-install-recommends \
-      curl='7.81.0-*' \
-      python3-pip='22.0.2+dfsg-*' \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir -r /hbase/dev-support/python-requirements.txt
+module Shell
+  module Commands
+    # Enable or disable peer modification operations
+    class PeerModificationSwitch < Command
+      def help
+        <<~EOF
+Enable/Disable peer modification. Returns previous state.
+Examples:
+
+  hbase> peer_modification_switch true
+  hbase> peer_modification_switch false, true
+
+The second boolean parameter means whether you want to wait until all remaining peer modification
+finished, before the command returns.
+EOF
+      end
+
+      def command(enable_or_disable, drain_procs = false)
+        prev_state = !!replication_admin.peer_modification_switch(enable_or_disable, drain_procs)
+        formatter.row(["Previous peer modification state : #{prev_state}"])
+        prev_state
+      end
+    end
+  end
+end

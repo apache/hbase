@@ -833,9 +833,9 @@ public class ThriftServer extends Configured implements Tool {
     } else {
       setupServer();
     }
-    serviceUGI.doAs(new PrivilegedAction<Object>() {
+    return serviceUGI.doAs(new PrivilegedAction<Integer>() {
       @Override
-      public Object run() {
+      public Integer run() {
         try {
           startInfoServer();
           if (httpEnabled) {
@@ -844,15 +844,13 @@ public class ThriftServer extends Configured implements Tool {
           } else {
             tserver.serve();
           }
+          return 0;
         } catch (Exception e) {
           LOG.error(HBaseMarkers.FATAL, "Cannot run ThriftServer", e);
-
-          System.exit(-1);
+          return -1;
         }
-        return null;
       }
     });
-    return 0;
   }
 
   public static void main(String[] args) throws Exception {

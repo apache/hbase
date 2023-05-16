@@ -262,7 +262,8 @@ class StoreFileListFile {
     } catch (IOException e) {
       // we will create new file with overwrite = true, so not a big deal here, only for speed up
       // loading as we do not need to read this file when loading
-      LOG.debug("Failed to delete old track file {}, ignoring the exception", e);
+      LOG.debug("Failed to delete old track file {}, ignoring the exception",
+        trackFiles[nextTrackFile], e);
     }
   }
 }

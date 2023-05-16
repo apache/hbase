@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -108,7 +107,6 @@ public class TestMultiSlaveReplication {
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     utility1.setZkCluster(miniZK);
-    new ZKWatcher(conf1, "cluster1", null, true);
 
     conf2 = new Configuration(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
@@ -118,11 +116,9 @@ public class TestMultiSlaveReplication {
 
     utility2 = new HBaseTestingUtil(conf2);
     utility2.setZkCluster(miniZK);
-    new ZKWatcher(conf2, "cluster2", null, true);
 
     utility3 = new HBaseTestingUtil(conf3);
     utility3.setZkCluster(miniZK);
-    new ZKWatcher(conf3, "cluster3", null, true);
 
     table = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
@@ -133,7 +129,7 @@ public class TestMultiSlaveReplication {
   @Test
   public void testMultiSlaveReplication() throws Exception {
     LOG.info("testCyclicReplication");
-    SingleProcessHBaseCluster master = utility1.startMiniCluster();
+    utility1.startMiniCluster();
     utility2.startMiniCluster();
     utility3.startMiniCluster();
     try (Connection conn = ConnectionFactory.createConnection(conf1);

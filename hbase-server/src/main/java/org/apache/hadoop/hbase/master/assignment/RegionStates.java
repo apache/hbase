@@ -680,11 +680,6 @@ public class RegionStates {
     regionOffline.put(regionNode.getRegionInfo(), regionNode);
   }
 
-  // TODO: Unused.
-  public void removeFromOfflineRegions(final RegionInfo regionInfo) {
-    regionOffline.remove(regionInfo);
-  }
-
   // ==========================================================================
   // Region FAIL_OPEN helpers
   // ==========================================================================

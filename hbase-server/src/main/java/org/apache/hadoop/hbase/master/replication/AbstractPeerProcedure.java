@@ -164,4 +164,10 @@ public abstract class AbstractPeerProcedure<TState> extends AbstractPeerNoLockPr
         queueStorage);
     }
   }
+
+  protected final void checkPeerModificationEnabled(MasterProcedureEnv env) throws IOException {
+    if (!env.getMasterServices().isReplicationPeerModificationEnabled()) {
+      throw new IOException("Replication peer modification disabled");
+    }
+  }
 }

@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -327,6 +329,14 @@ public class RestoreSnapshotProcedure
     // Checks whether the table exists
     if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableNotFoundException(tableName);
+    }
+
+    // check whether ttl has expired for this snapshot
+    if (
+      SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(), snapshot.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())
+    ) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     // Check whether table is disabled.

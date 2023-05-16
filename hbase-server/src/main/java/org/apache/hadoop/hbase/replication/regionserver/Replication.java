@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
@@ -50,15 +52,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Gateway to Replication. Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
+ * <p>
+ * Implement {@link PropagatingConfigurationObserver} mainly for registering
+ * {@link ReplicationPeers}, so we can recreating the replication peer storage.
  */
 @InterfaceAudience.Private
-public class Replication implements ReplicationSourceService {
+public class Replication implements ReplicationSourceService, PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(Replication.class);
   private boolean isReplicationForBulkLoadDataEnabled;
   private ReplicationSourceManager replicationManager;
   private ReplicationQueueStorage queueStorage;
   private ReplicationPeers replicationPeers;
-  private Configuration conf;
+  private volatile Configuration conf;
   private SyncReplicationPeerInfoProvider syncReplicationPeerInfoProvider;
   // Hosting server
   private Server server;
@@ -95,9 +100,9 @@ public class Replication implements ReplicationSourceService {
 
     try {
       this.queueStorage =
-        ReplicationStorageFactory.getReplicationQueueStorage(server.getZooKeeper(), conf);
-      this.replicationPeers =
-        ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf);
+        ReplicationStorageFactory.getReplicationQueueStorage(server.getConnection(), conf);
+      this.replicationPeers = ReplicationFactory.getReplicationPeers(server.getFileSystem(),
+        server.getZooKeeper(), this.conf);
       this.replicationPeers.init();
     } catch (Exception e) {
       throw new IOException("Failed replication handler create", e);
@@ -228,5 +233,20 @@ public class Replication implements ReplicationSourceService {
   @Override
   public ReplicationPeers getReplicationPeers() {
     return replicationPeers;
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    manager.registerObserver(replicationPeers);
+  }
+
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    manager.deregisterObserver(replicationPeers);
   }
 }

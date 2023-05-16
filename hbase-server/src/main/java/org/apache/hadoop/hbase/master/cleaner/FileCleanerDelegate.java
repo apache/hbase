@@ -50,7 +50,7 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
   }
 
   /**
-   * Used to do some cleanup work
+   * Will be called after cleaner run.
    */
   default void postClean() {
   }

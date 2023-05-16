@@ -15,34 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.replication;
 
-import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
+@InterfaceAudience.Private
+public class ReplicationGroupOffset {
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
-public class SecureProtobufLogWriter extends ProtobufLogWriter {
+  public static final ReplicationGroupOffset BEGIN = new ReplicationGroupOffset("", 0L);
 
-  private Encryptor encryptor = null;
+  private final String wal;
 
-  @Override
-  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
-    throws IOException {
-    return super.buildSecureWALHeader(conf, builder);
+  private final long offset;
+
+  public ReplicationGroupOffset(String wal, long offset) {
+    this.wal = wal;
+    this.offset = offset;
+  }
+
+  public String getWal() {
+    return wal;
+  }
+
+  /**
+   * A negative value means this file has already been fully replicated out
+   */
+  public long getOffset() {
+    return offset;
   }
 
   @Override
-  protected void setEncryptor(Encryptor encryptor) {
-    this.encryptor = encryptor;
+  public String toString() {
+    return wal + ":" + offset;
   }
 
-  @Override
-  protected void initAfterHeader(boolean doCompress) throws IOException {
-    super.secureInitAfterHeader(doCompress, encryptor);
+  public static ReplicationGroupOffset parse(String str) {
+    int index = str.lastIndexOf(':');
+    return new ReplicationGroupOffset(str.substring(0, index),
+      Long.parseLong(str.substring(index + 1)));
   }
 }

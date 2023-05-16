@@ -17,16 +17,28 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Skips WAL edits for all System tables including hbase:meta.
+ * Skips WAL edits for all System tables including hbase:meta except hbase:acl. As of now, only 2
+ * tables can be allowed for replication - hbase:acl and hbase:labels. Other tables which not be
+ * replicated are 1. hbase:meta - not to be replicated 2. hbase:canary - for current cluster 3.
+ * hbase:namespace - Deprecated and moved to meta 4. hbase:quota - related to namespace, quota for
+ * the current cluster usage 5. hbase:rsgroup - contains hostnames
  */
 @InterfaceAudience.Private
 public class SystemTableWALEntryFilter implements WALEntryFilter {
   @Override
   public Entry filter(Entry entry) {
+    if (
+      entry.getKey().getTableName().equals(PermissionStorage.ACL_TABLE_NAME)
+        || entry.getKey().getTableName().equals(VisibilityConstants.LABELS_TABLE_NAME)
+    ) {
+      return entry;
+    }
     return entry.getKey().getTableName().isSystemTable() ? null : entry;
   }
 }

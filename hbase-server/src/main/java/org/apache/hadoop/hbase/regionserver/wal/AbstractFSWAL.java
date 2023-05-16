@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.management.MemoryType;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -298,27 +299,34 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   final Comparator<Path> LOG_NAME_COMPARATOR =
     (o1, o2) -> Long.compare(getFileNumFromFileName(o1), getFileNumFromFileName(o2));
 
-  private static final class WalProps {
+  private static final class WALProps {
 
     /**
      * Map the encoded region name to the highest sequence id.
      * <p/>
      * Contains all the regions it has an entry for.
      */
-    public final Map<byte[], Long> encodedName2HighestSequenceId;
+    private final Map<byte[], Long> encodedName2HighestSequenceId;
 
     /**
      * The log file size. Notice that the size may not be accurate if we do asynchronous close in
      * sub classes.
      */
-    public final long logSize;
+    private final long logSize;
 
     /**
      * The nanoTime of the log rolling, used to determine the time interval that has passed since.
      */
-    public final long rollTimeNs;
+    private final long rollTimeNs;
 
-    public WalProps(Map<byte[], Long> encodedName2HighestSequenceId, long logSize) {
+    /**
+     * If we do asynchronous close in sub classes, it is possible that when adding WALProps to the
+     * rolled map, the file is not closed yet, so in cleanOldLogs we should not archive this file,
+     * for safety.
+     */
+    private volatile boolean closed = false;
+
+    WALProps(Map<byte[], Long> encodedName2HighestSequenceId, long logSize) {
       this.encodedName2HighestSequenceId = encodedName2HighestSequenceId;
       this.logSize = logSize;
       this.rollTimeNs = System.nanoTime();
@@ -329,7 +337,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
    * Map of WAL log file to properties. The map is sorted by the log file creation timestamp
    * (contained in the log file name).
    */
-  protected ConcurrentNavigableMap<Path, WalProps> walFile2Props =
+  protected final ConcurrentNavigableMap<Path, WALProps> walFile2Props =
     new ConcurrentSkipListMap<>(LOG_NAME_COMPARATOR);
 
   /**
@@ -347,6 +355,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   protected final String implClassName;
 
   protected final AtomicBoolean rollRequested = new AtomicBoolean(false);
+
+  protected final ExecutorService closeExecutor = Executors.newCachedThreadPool(
+    new ThreadFactoryBuilder().setDaemon(true).setNameFormat("Close-WAL-Writer-%d").build());
 
   // Run in caller if we get reject execution exception, to avoid aborting region server when we get
   // reject execution exception. Usually this should not happen but let's make it more robust.
@@ -431,8 +442,9 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     }
 
     // If prefix is null||empty then just name it wal
-    this.walFilePrefix =
-      prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
+    this.walFilePrefix = prefix == null || prefix.isEmpty()
+      ? "wal"
+      : URLEncoder.encode(prefix, StandardCharsets.UTF_8.name());
     // we only correctly differentiate suffices when numeric ones start with '.'
     if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
       throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER
@@ -697,7 +709,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     Map<byte[], List<byte[]>> regions = null;
     int logCount = getNumRolledLogFiles();
     if (logCount > this.maxLogs && logCount > 0) {
-      Map.Entry<Path, WalProps> firstWALEntry = this.walFile2Props.firstEntry();
+      Map.Entry<Path, WALProps> firstWALEntry = this.walFile2Props.firstEntry();
       regions =
         this.sequenceIdAccounting.findLower(firstWALEntry.getValue().encodedName2HighestSequenceId);
     }
@@ -721,16 +733,37 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
   }
 
   /**
-   * Archive old logs. A WAL is eligible for archiving if all its WALEdits have been flushed.
+   * Mark this WAL file as closed and call cleanOldLogs to see if we can archive this file.
    */
-  private void cleanOldLogs() throws IOException {
+  protected final void markClosedAndClean(Path path) {
+    WALProps props = walFile2Props.get(path);
+    // typically this should not be null, but if there is no big issue if it is already null, so
+    // let's make the code more robust
+    if (props != null) {
+      props.closed = true;
+      cleanOldLogs();
+    }
+  }
+
+  /**
+   * Archive old logs. A WAL is eligible for archiving if all its WALEdits have been flushed.
+   * <p/>
+   * Use synchronized because we may call this method in different threads, normally when replacing
+   * writer, and since now close writer may be asynchronous, we will also call this method in the
+   * closeExecutor, right after we actually close a WAL writer.
+   */
+  private synchronized void cleanOldLogs() {
     List<Pair<Path, Long>> logsToArchive = null;
     long now = System.nanoTime();
     boolean mayLogTooOld = nextLogTooOldNs <= now;
     ArrayList<byte[]> regionsBlockingWal = null;
     // For each log file, look at its Map of regions to highest sequence id; if all sequence ids
     // are older than what is currently in memory, the WAL can be GC'd.
-    for (Map.Entry<Path, WalProps> e : this.walFile2Props.entrySet()) {
+    for (Map.Entry<Path, WALProps> e : this.walFile2Props.entrySet()) {
+      if (!e.getValue().closed) {
+        LOG.debug("{} is not closed yet, will try archiving it next time", e.getKey());
+        continue;
+      }
       Path log = e.getKey();
       ArrayList<byte[]> regionsBlockingThisWal = null;
       long ageNs = now - e.getValue().rollTimeNs;
@@ -834,7 +867,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     String newPathString = newPath != null ? CommonFSUtils.getPath(newPath) : null;
     if (oldPath != null) {
       this.walFile2Props.put(oldPath,
-        new WalProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
+        new WALProps(this.sequenceIdAccounting.resetHighest(), oldFileLen));
       this.totalLogSize.addAndGet(oldFileLen);
       LOG.info("Rolled WAL {} with entries={}, filesize={}; new WAL {}",
         CommonFSUtils.getPath(oldPath), oldNumEntries, StringUtils.byteDesc(oldFileLen),
@@ -1028,6 +1061,20 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
       // region server, if we shutdown this executor earlier we may get reject execution exception
       // and abort the region server
       logArchiveExecutor.shutdown();
+    }
+    // we also need to wait logArchive to finish if we want to a graceful shutdown as we may still
+    // have some pending archiving tasks not finished yet, and in close we may archive all the
+    // remaining WAL files, there could be race if we do not wait for the background archive task
+    // finish
+    try {
+      if (!logArchiveExecutor.awaitTermination(walShutdownTimeout, TimeUnit.MILLISECONDS)) {
+        throw new TimeoutIOException("We have waited " + walShutdownTimeout + "ms, but"
+          + " the shutdown of WAL doesn't complete! Please check the status of underlying "
+          + "filesystem or increase the wait time by the config \"" + WAL_SHUTDOWN_WAIT_TIMEOUT_MS
+          + "\"");
+      }
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for shutdown WAL");
     }
   }
 

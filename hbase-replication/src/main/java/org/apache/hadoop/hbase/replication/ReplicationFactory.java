@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -32,7 +33,8 @@ public final class ReplicationFactory {
   private ReplicationFactory() {
   }
 
-  public static ReplicationPeers getReplicationPeers(ZKWatcher zk, Configuration conf) {
-    return new ReplicationPeers(zk, conf);
+  public static ReplicationPeers getReplicationPeers(FileSystem fs, ZKWatcher zk,
+    Configuration conf) {
+    return new ReplicationPeers(fs, zk, conf);
   }
 }

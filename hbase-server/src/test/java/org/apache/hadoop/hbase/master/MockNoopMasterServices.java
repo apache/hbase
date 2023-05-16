@@ -67,13 +67,9 @@ public class MockNoopMasterServices implements MasterServices {
   private final Configuration conf;
   private final MetricsMaster metricsMaster;
 
-  public MockNoopMasterServices() {
-    this(null);
-  }
-
   public MockNoopMasterServices(final Configuration conf) {
     this.conf = conf;
-    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(null));
+    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(mock(HMaster.class)));
   }
 
   @Override
@@ -517,5 +513,15 @@ public class MockNoopMasterServices implements MasterServices {
   public long modifyColumnStoreFileTracker(TableName tableName, byte[] family, String dstSFT,
     long nonceGroup, long nonce) throws IOException {
     return -1;
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on) throws IOException {
+    return false;
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() {
+    return false;
   }
 }

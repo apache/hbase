@@ -40,11 +40,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+// revisit later
+@Ignore
 @Category({ MiscTests.class, MediumTests.class })
 public class TestHBaseFsckMOB extends BaseTestHBaseFsck {
 

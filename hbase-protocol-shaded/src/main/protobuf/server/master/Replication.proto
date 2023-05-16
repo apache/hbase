@@ -26,6 +26,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
+import "server/Procedure.proto";
 
 message TableCF {
   optional TableName table_name = 1;
@@ -165,6 +166,33 @@ message TransitReplicationPeerSyncReplicationStateResponse {
 message GetReplicationPeerStateRequest {
   required string peer_id = 1;
 }
+
 message GetReplicationPeerStateResponse {
   required bool is_enabled = 1;
+}
+
+message ReplicationPeerModificationSwitchRequest {
+  required bool on = 1;
+}
+
+message ReplicationPeerModificationSwitchResponse {
+  required bool previous_value = 1;
+}
+
+message ReplicationPeerModificationState {
+  required bool on = 1;
+}
+
+message GetReplicationPeerModificationProceduresRequest {
+}
+
+message GetReplicationPeerModificationProceduresResponse {
+  repeated Procedure procedure = 1;
+}
+
+message IsReplicationPeerModificationEnabledRequest {
+}
+
+message IsReplicationPeerModificationEnabledResponse {
+  required bool enabled = 1;
 }

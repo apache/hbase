@@ -395,6 +395,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>nihaljain</id>
+      <name>Nihal Jain</name>
+      <email>nihaljain@apache.org</email>
+      <timezone>+5</timezone>
+    </developer>
+    <developer>
       <id>niuyulin</id>
       <name>Yulin Niu</name>
       <email>niuyulin@apache.org</email>
@@ -507,6 +513,12 @@
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>tianhang</id>
+      <name>Tianhang Tang</name>
+      <email>tianhang@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>tianjy</id>
@@ -803,7 +815,7 @@
     <avro.version>1.11.0</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
-    <commons-validator.version>1.6</commons-validator.version>
+    <commons-validator.version>1.7</commons-validator.version>
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
@@ -833,7 +845,7 @@
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
     <jamon-runtime.version>2.4.1</jamon-runtime.version>
-    <jettison.version>1.5.2</jettison.version>
+    <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
     <joni.version>2.1.43</joni.version>
     <jcodings.version>1.0.57</jcodings.version>
@@ -868,18 +880,18 @@
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
-    <surefire.version>3.0.0-M6</surefire.version>
+    <surefire.version>3.1.0</surefire.version>
     <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.27.2</spotless.version>
     <maven-site.version>3.12.0</maven-site.version>
     <!-- compression -->
-    <aircompressor.version>0.21</aircompressor.version>
-    <brotli4j.version>1.8.0</brotli4j.version>
+    <aircompressor.version>0.24</aircompressor.version>
+    <brotli4j.version>1.11.0</brotli4j.version>
     <lz4.version>1.8.0</lz4.version>
-    <snappy.version>1.1.8.4</snappy.version>
+    <snappy.version>1.1.9.1</snappy.version>
     <xz.version>1.9</xz.version>
-    <zstd-jni.version>1.5.0-4</zstd-jni.version>
+    <zstd-jni.version>1.5.5-2</zstd-jni.version>
     <hbase-thirdparty.version>4.1.4</hbase-thirdparty.version>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
@@ -956,6 +968,9 @@
     <shell-executable>bash</shell-executable>
     <!-- Still need this to ignore some errors when building javadoc-->
     <doclint>none</doclint>
+    <!-- Required for testing LDAP integration -->
+    <apacheds.version>2.0.0.AM26</apacheds.version>
+    <ldap-api.version>2.0.0</ldap-api.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1031,12 +1046,17 @@
         <artifactId>hbase-hadoop-compat</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-replication</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-replication</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1821,6 +1841,7 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
             <!--
               The counter in HBaseTestAppender will be broken if we set reuseForks to true, be
               careful when you want to change this value. See HBASE-26947 for more details.
@@ -1875,6 +1896,7 @@
                 -->
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
+                <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 <groups>${surefire.secondPartGroups}</groups>
                 <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
               </configuration>
@@ -2134,6 +2156,7 @@
         <configuration>
           <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
           <updatePomFile>true</updatePomFile>
+          <flattenMode>oss</flattenMode>
         </configuration>
         <executions>
           <!-- enable flattening -->

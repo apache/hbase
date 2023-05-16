@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * A event handler for running procedure.
@@ -46,6 +47,7 @@ public class RSProcedureHandler extends EventHandler {
   public void process() {
     Throwable error = null;
     try {
+      MDC.put("pid", Long.toString(procId));
       callable.call();
     } catch (Throwable t) {
       LOG.error("pid=" + this.procId, t);

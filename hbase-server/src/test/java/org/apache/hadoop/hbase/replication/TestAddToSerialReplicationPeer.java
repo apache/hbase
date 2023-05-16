@@ -79,8 +79,9 @@ public class TestAddToSerialReplicationPeer extends SerialReplicationTestBase {
         ReplicationSourceManager manager =
           ((Replication) rs.getReplicationSourceService()).getReplicationManager();
         // Make sure replication moves to the new file.
-        return (manager.getWALs().get(PEER_ID).get(logPrefix).size() == 1)
-          && !oldWalName.equals(manager.getWALs().get(PEER_ID).get(logPrefix).first());
+        ReplicationQueueId queueId = new ReplicationQueueId(rs.getServerName(), PEER_ID);
+        return (manager.getWALs().get(queueId).get(logPrefix).size() == 1)
+          && !oldWalName.equals(manager.getWALs().get(queueId).get(logPrefix).first());
       }
 
       @Override

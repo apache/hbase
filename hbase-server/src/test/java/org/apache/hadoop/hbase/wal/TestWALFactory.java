@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -630,7 +632,7 @@ public class TestWALFactory {
     assertEquals(wrappedWALProvider.getClass(), walFactory.getMetaProvider().getClass());
 
     // if providers are not set and do not enable SyncReplicationWALProvider
-    walFactory = new WALFactory(conf, this.currentServername.toString(), null, false);
+    walFactory = new WALFactory(conf, this.currentServername, null, false);
     assertEquals(walFactory.getWALProvider().getClass(), walFactory.getMetaProvider().getClass());
   }
 
@@ -706,6 +708,32 @@ public class TestWALFactory {
     assertEquals(Providers.filesystem.clazz, walProvider);
     WALProvider metaWALProvider = walFactory.getMetaProvider();
     assertEquals(IOTestProvider.class, metaWALProvider.getClass());
+  }
+
+  @Test
+  public void testCustomReplicationProvider() throws IOException {
+    final Configuration config = new Configuration();
+    config.set(WALFactory.REPLICATION_WAL_PROVIDER, IOTestProvider.class.getName());
+    final WALFactory walFactory = new WALFactory(config, this.currentServername.toString());
+    Class<? extends WALProvider> walProvider =
+      walFactory.getProviderClass(WALFactory.WAL_PROVIDER, Providers.filesystem.name());
+    assertEquals(Providers.filesystem.clazz, walProvider);
+    WALProvider replicationWALProvider = walFactory.getReplicationProvider();
+    assertEquals(IOTestProvider.class, replicationWALProvider.getClass());
+  }
+
+  /**
+   * Confirm that we will use different WALs for hbase:meta and hbase:replication
+   */
+  @Test
+  public void testDifferentWALs() throws IOException {
+    WAL normalWAL = wals.getWAL(null);
+    WAL metaWAL = wals.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO);
+    WAL replicationWAL = wals.getWAL(RegionInfoBuilder
+      .newBuilder(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME_DEFAULT).build());
+    assertNotSame(normalWAL, metaWAL);
+    assertNotSame(normalWAL, replicationWAL);
+    assertNotSame(metaWAL, replicationWAL);
   }
 
   @Test

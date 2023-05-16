@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -29,11 +32,15 @@ import java.nio.file.WatchEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -77,11 +84,42 @@ public class TestFileChangeWatcher {
   }
 
   @Test
+  public void testEnableCertFileReloading() throws IOException {
+    Configuration myConf = new Configuration();
+    String sharedPath = "/tmp/foo.jks";
+    myConf.set(X509Util.TLS_CONFIG_KEYSTORE_LOCATION, sharedPath);
+    myConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION, sharedPath);
+    AtomicReference<FileChangeWatcher> keystoreWatcher = new AtomicReference<>();
+    AtomicReference<FileChangeWatcher> truststoreWatcher = new AtomicReference<>();
+    X509Util.enableCertFileReloading(myConf, keystoreWatcher, truststoreWatcher, () -> {
+    });
+    assertNotNull(keystoreWatcher.get());
+    assertThat(keystoreWatcher.get().getWatcherThreadName(), Matchers.endsWith("-foo.jks"));
+    assertNull(truststoreWatcher.get());
+
+    keystoreWatcher.getAndSet(null).stop();
+    truststoreWatcher.set(null);
+
+    String truststorePath = "/tmp/bar.jks";
+    myConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION, truststorePath);
+    X509Util.enableCertFileReloading(myConf, keystoreWatcher, truststoreWatcher, () -> {
+    });
+
+    assertNotNull(keystoreWatcher.get());
+    assertThat(keystoreWatcher.get().getWatcherThreadName(), Matchers.endsWith("-foo.jks"));
+    assertNotNull(truststoreWatcher.get());
+    assertThat(truststoreWatcher.get().getWatcherThreadName(), Matchers.endsWith("-bar.jks"));
+
+    keystoreWatcher.getAndSet(null).stop();
+    truststoreWatcher.getAndSet(null).stop();
+  }
+
+  @Test
   public void testCallbackWorksOnFileChanges() throws IOException, InterruptedException {
     FileChangeWatcher watcher = null;
     try {
       final List<WatchEvent<?>> events = new ArrayList<>();
-      watcher = new FileChangeWatcher(tempDir.toPath(), event -> {
+      watcher = new FileChangeWatcher(tempDir.toPath(), "test", event -> {
         LOG.info("Got an update: {} {}", event.kind(), event.context());
         // Filter out the extra ENTRY_CREATE events that are
         // sometimes seen at the start. Even though we create the watcher
@@ -124,7 +162,7 @@ public class TestFileChangeWatcher {
     FileChangeWatcher watcher = null;
     try {
       final List<WatchEvent<?>> events = new ArrayList<>();
-      watcher = new FileChangeWatcher(tempDir.toPath(), event -> {
+      watcher = new FileChangeWatcher(tempDir.toPath(), "test", event -> {
         LOG.info("Got an update: {} {}", event.kind(), event.context());
         // Filter out the extra ENTRY_CREATE events that are
         // sometimes seen at the start. Even though we create the watcher
@@ -164,7 +202,7 @@ public class TestFileChangeWatcher {
     FileChangeWatcher watcher = null;
     try {
       final List<WatchEvent<?>> events = new ArrayList<>();
-      watcher = new FileChangeWatcher(tempDir.toPath(), event -> {
+      watcher = new FileChangeWatcher(tempDir.toPath(), "test", event -> {
         LOG.info("Got an update: {} {}", event.kind(), event.context());
         synchronized (events) {
           events.add(event);
@@ -198,7 +236,7 @@ public class TestFileChangeWatcher {
     FileChangeWatcher watcher = null;
     try {
       final List<WatchEvent<?>> events = new ArrayList<>();
-      watcher = new FileChangeWatcher(tempDir.toPath(), event -> {
+      watcher = new FileChangeWatcher(tempDir.toPath(), "test", event -> {
         LOG.info("Got an update: {} {}", event.kind(), event.context());
         // Filter out the extra ENTRY_CREATE events that are
         // sometimes seen at the start. Even though we create the watcher
@@ -238,7 +276,7 @@ public class TestFileChangeWatcher {
     FileChangeWatcher watcher = null;
     try {
       final AtomicInteger callCount = new AtomicInteger(0);
-      watcher = new FileChangeWatcher(tempDir.toPath(), event -> {
+      watcher = new FileChangeWatcher(tempDir.toPath(), "test", event -> {
         LOG.info("Got an update: {} {}", event.kind(), event.context());
         int oldValue;
         synchronized (callCount) {

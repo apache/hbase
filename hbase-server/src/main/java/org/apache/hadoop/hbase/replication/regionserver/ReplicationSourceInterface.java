@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationQueueData;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -43,14 +45,22 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ReplicationSourceInterface {
   /**
    * Initializer for the source
-   * @param conf    the configuration to use
-   * @param fs      the file system to use
-   * @param manager the manager to use
-   * @param server  the server for this region server
+   * @param conf                  the configuration to use
+   * @param fs                    the file system to use
+   * @param manager               the manager to use
+   * @param queueStorage          the replication queue storage
+   * @param replicationPeer       the replication peer
+   * @param server                the server for this region server
+   * @param queueData             the existing replication queue data, contains the queue id and
+   *                              replication start offsets
+   * @param clusterId             the cluster id
+   * @param walFileLengthProvider for getting the length of the WAL file which is currently being
+   *                              written
+   * @param metrics               the replication metrics
    */
   void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
     ReplicationQueueStorage queueStorage, ReplicationPeer replicationPeer, Server server,
-    String queueId, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
+    ReplicationQueueData queueData, UUID clusterId, WALFileLengthProvider walFileLengthProvider,
     MetricsSource metrics) throws IOException;
 
   /**
@@ -106,14 +116,14 @@ public interface ReplicationSourceInterface {
    * Get the queue id that the source is replicating to
    * @return queue id
    */
-  String getQueueId();
+  ReplicationQueueId getQueueId();
 
   /**
    * Get the id that the source is replicating to.
    * @return peer id
    */
   default String getPeerId() {
-    return getPeer().getId();
+    return getQueueId().getPeerId();
   }
 
   /**
@@ -164,7 +174,7 @@ public interface ReplicationSourceInterface {
    * @param entries   pushed
    * @param batchSize entries size pushed
    */
-  void postShipEdits(List<Entry> entries, int batchSize);
+  void postShipEdits(List<Entry> entries, long batchSize);
 
   /**
    * The queue of WALs only belong to one region server. This will return the server name which all
@@ -183,7 +193,7 @@ public interface ReplicationSourceInterface {
 
   /** Returns whether this is a replication source for recovery. */
   default boolean isRecovered() {
-    return false;
+    return getQueueId().isRecovered();
   }
 
   /** Returns The instance of queueStorage used by this ReplicationSource. */
