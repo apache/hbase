@@ -565,7 +565,8 @@ public class ImportTsv extends Configured implements Tool {
               }
             }
             if (unmatchedFamilies.size() > 0) {
-              String noSuchColumnFamiliesMsg = format("Column families: %s do not exist.", unmatchedFamilies);
+              String noSuchColumnFamiliesMsg =
+                format("Column families: %s do not exist.", unmatchedFamilies);
               LOG.error(noSuchColumnFamiliesMsg);
               throw new NoSuchColumnFamilyException(noSuchColumnFamiliesMsg);
             }
