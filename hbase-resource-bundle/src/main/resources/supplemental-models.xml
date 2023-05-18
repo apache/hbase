@@ -2267,6 +2267,21 @@ Copyright (c) 2007-2017 The JRuby project
   </supplement>
   <supplement>
     <project>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>2.1.1</version>
+      <name>Java API for RESTful Web Services</name>
+      <licenses>
+        <license>
+          <name>Eclipse Public License 2.0</name>
+          <url>https://www.eclipse.org/legal/epl-v20.html</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>io.airlift</groupId>
       <artifactId>aircompressor</artifactId>
       <version>0.21</version>
