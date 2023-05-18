@@ -20,9 +20,12 @@ package org.apache.hadoop.hbase.io.compress.xerial;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SmallTests.class)
 public class TestSnappyCodec extends CompressionTestBase {
@@ -31,13 +34,29 @@ public class TestSnappyCodec extends CompressionTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestSnappyCodec.class);
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestSnappyCodec.class);
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    if (!SnappyCodec.isLoaded()) {
+      LOG.warn("Snappy codec cannot be loaded. Test will not execute.");
+      return;
+    }
+  }
+
   @Test
   public void testSnappyCodecSmall() throws Exception {
+    if (!SnappyCodec.isLoaded()) {
+      return;
+    }
     codecSmallTest(new SnappyCodec());
   }
 
   @Test
   public void testSnappyCodecLarge() throws Exception {
+    if (!SnappyCodec.isLoaded()) {
+      return;
+    }
     codecLargeTest(new SnappyCodec(), 1.1); // poor compressability
     codecLargeTest(new SnappyCodec(), 2);
     codecLargeTest(new SnappyCodec(), 10); // very high compressability
@@ -45,6 +64,9 @@ public class TestSnappyCodec extends CompressionTestBase {
 
   @Test
   public void testSnappyCodecVeryLarge() throws Exception {
+    if (!SnappyCodec.isLoaded()) {
+      return;
+    }
     codecVeryLargeTest(new SnappyCodec(), 3); // like text
   }
 
