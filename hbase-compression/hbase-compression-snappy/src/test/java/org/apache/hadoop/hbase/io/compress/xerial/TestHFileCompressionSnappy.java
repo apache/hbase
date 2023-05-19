@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
+import static org.junit.Assume.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -29,8 +31,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ IOTests.class, SmallTests.class })
 public class TestHFileCompressionSnappy extends HFileTestBase {
@@ -39,15 +39,11 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHFileCompressionSnappy.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHFileCompressionSnappy.class);
   private static Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    if (!SnappyCodec.isLoaded()) {
-      LOG.warn("Snappy codec cannot be loaded. Test will not execute.");
-      return;
-    }
+    assumeTrue(SnappyCodec.isLoaded());
     conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.SNAPPY_CODEC_CLASS_KEY, SnappyCodec.class.getCanonicalName());
     Compression.Algorithm.SNAPPY.reload(conf);
@@ -56,9 +52,6 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
 
   @Test
   public void test() throws Exception {
-    if (!SnappyCodec.isLoaded()) {
-      return;
-    }
     Path path =
       new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.SNAPPY);

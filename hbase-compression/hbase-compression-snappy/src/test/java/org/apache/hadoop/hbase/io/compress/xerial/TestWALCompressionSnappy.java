@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
+import static org.junit.Assume.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,13 +35,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestWALCompressionSnappy extends CompressedWALTestBase {
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestWALCompressionSnappy.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -50,10 +48,7 @@ public class TestWALCompressionSnappy extends CompressedWALTestBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    if (!SnappyCodec.isLoaded()) {
-      LOG.warn("Snappy codec cannot be loaded. Test will not execute.");
-      return;
-    }
+    assumeTrue(SnappyCodec.isLoaded());
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.SNAPPY_CODEC_CLASS_KEY, SnappyCodec.class.getCanonicalName());
     Compression.Algorithm.SNAPPY.reload(conf);
@@ -65,17 +60,11 @@ public class TestWALCompressionSnappy extends CompressedWALTestBase {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    if (!SnappyCodec.isLoaded()) {
-      return;
-    }
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void test() throws Exception {
-    if (!SnappyCodec.isLoaded()) {
-      return;
-    }
     TableName tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
     doTest(tableName);
   }
