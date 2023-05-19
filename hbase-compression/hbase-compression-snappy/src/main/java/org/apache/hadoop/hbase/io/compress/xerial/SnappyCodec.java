@@ -49,12 +49,14 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   private Configuration conf;
   private int bufferSize;
   private static boolean loaded = false;
+  private static Throwable loadError;
 
   static {
     try {
       Snappy.getNativeLibraryVersion();
       loaded = true;
     } catch (Throwable t) {
+      loadError = t;
       LOG.error("The Snappy native libraries could not be loaded", t);
     }
   }
@@ -65,6 +67,9 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   }
 
   public SnappyCodec() {
+    if (!isLoaded()) {
+      throw new RuntimeException("Snappy codec could not be loaded", loadError);
+    }
     conf = new Configuration();
     bufferSize = getBufferSize(conf);
   }
