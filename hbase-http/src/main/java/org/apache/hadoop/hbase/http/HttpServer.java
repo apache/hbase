@@ -81,6 +81,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -153,6 +154,7 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
+  public static final String HTTP_UI_SHOW_STACKTRACE_KEY = "hbase.ui.show-stack-traces";
 
   public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
   public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };
@@ -651,6 +653,14 @@ public class HttpServer implements FilterContainer {
         LOG.info("adding path spec: " + path);
         addFilterPathMapping(path, webAppContext);
       }
+    }
+    // Check if disable stack trace property is configured
+    if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
+      // Disable stack traces for server errors in UI
+      webServer.setErrorHandler(new ErrorHandler());
+      webServer.getErrorHandler().setShowStacks(false);
+      // Disable stack traces for web app errors in UI
+      webAppContext.getErrorHandler().setShowStacks(false);
     }
   }
 

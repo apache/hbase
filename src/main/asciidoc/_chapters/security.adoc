@@ -261,6 +261,15 @@ Users who wish to change this would set the following in their hbase-site.xml:
 </property>
 ----
 
+To disable showing stack traces in HBase UI for hiding sensitive information, set the following in hbase-site:
+[source,xml]
+----
+<property>
+  <name>hbase.ui.show-stack-traces</name>
+  <value>false</value>
+</property>
+----
+
 [[hbase.secure.configuration]]
 == Secure Client Access to Apache HBase
 
