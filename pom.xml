@@ -1522,7 +1522,7 @@
             <trimStackTrace>false</trimStackTrace>
             <skip>${surefire.skipFirstPart}</skip>
             <forkCount>${surefire.firstPartForkCount}</forkCount>
-            <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+            <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
             <reuseForks>false</reuseForks>
             <reportsDirectory>${surefire.reportsDirectory}</reportsDirectory>
             <tempDir>${surefire.tempDir}</tempDir>
@@ -1569,7 +1569,7 @@
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
-                <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                 <groups>${surefire.secondPartGroups}</groups>
                 <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
               </configuration>
