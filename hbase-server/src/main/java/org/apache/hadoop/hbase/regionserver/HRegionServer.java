@@ -2074,6 +2074,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
   }
