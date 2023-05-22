@@ -99,7 +99,7 @@ public class TestMetricsConnection {
   }
 
   @Test
-  public void testMetricsWithMutiConnections() throws IOException {
+  public void testMetricsWithMultiConnections() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, "unit-test");
@@ -192,17 +192,17 @@ public class TestMetricsConnection {
     for (String method : new String[] { "Get", "Scan", "Multi" }) {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
 
       metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
       if (method.equals("Get")) {
         // no failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
       } else {
         // has failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
       }
     }
 
@@ -210,17 +210,17 @@ public class TestMetricsConnection {
     for (String mutationType : new String[] { "Append", "Delete", "Increment", "Put" }) {
       metricKey = rpcCountPrefix + method + "(" + mutationType + ")";
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
 
       metricKey = rpcFailureCountPrefix + method + "(" + mutationType + ")";
       counter = METRICS.getRpcCounters().get(metricKey);
       metricVal = (counter != null) ? counter.getCount() : 0;
       if (mutationType.equals("Put")) {
-        // no failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
-      } else {
         // has failure
-        assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
+      } else {
+        // no failure
+        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
       }
     }
 
@@ -228,19 +228,19 @@ public class TestMetricsConnection {
     metricKey = "rpcRemoteExceptions_IOException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
 
     // local exception
     metricKey = "rpcLocalExceptions_CallTimeoutException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
+    assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop * 2);
 
     // total exception
     metricKey = "rpcTotalExceptions";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
-    assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 3);
+    assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop * 3);
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),

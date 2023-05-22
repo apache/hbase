@@ -652,25 +652,26 @@ public final class MetricsConnection implements StatisticTrackable {
       concurrentCallsPerServerHist.update(callsPerServer);
     }
     // Update the counter that tracks RPCs by type.
-    String methodName = method.getService().getName() + "_" + method.getName();
+    StringBuilder methodName = new StringBuilder();
+    methodName.append(method.getService().getName()).append("_").append(method.getName());
     // Distinguish mutate types.
     if ("Mutate".equals(method.getName())) {
       final MutationType type = ((MutateRequest) param).getMutation().getMutateType();
       switch (type) {
         case APPEND:
-          methodName += "(Append)";
+          methodName.append("(Append)");
           break;
         case DELETE:
-          methodName += "(Delete)";
+          methodName.append("(Delete)");
           break;
         case INCREMENT:
-          methodName += "(Increment)";
+          methodName.append("(Increment)");
           break;
         case PUT:
-          methodName += "(Put)";
+          methodName.append("(Put)");
           break;
         default:
-          throw new RuntimeException("Unrecognized mutation type " + type);
+          methodName.append("(Unknown)");
       }
     }
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
@@ -749,7 +750,7 @@ public final class MetricsConnection implements StatisticTrackable {
       }
     }
     // Fallback to dynamic registry lookup for DDL methods.
-    updateRpcGeneric(methodName, stats);
+    updateRpcGeneric(methodName.toString(), stats);
   }
 
   public void incrCacheDroppingExceptions(Object exception) {
