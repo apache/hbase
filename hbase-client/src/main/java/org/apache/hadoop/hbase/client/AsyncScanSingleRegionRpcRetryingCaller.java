@@ -430,9 +430,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     if (scanTimeoutNs > 0) {
-      long remainingTimeNs = remainingTimeNs();
-      long maxDelayNs = remainingTimeNs - SLEEP_DELTA_NS;
-      if (maxDelayNs <= 0 || maxDelayNs <= pauseNsToUse) {
+      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
+      if (maxDelayNs <= 0) {
         completeExceptionally(!scannerClosed);
         return;
       }
