@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -147,16 +148,32 @@ public class TestRaceBetweenSCPAndTRSP {
     Future<byte[]> moveFuture = am.moveAsync(new RegionPlan(region, sn, sn));
     arriveRegionOpening.await();
 
+    // Kill the region server and trigger a SCP
     UTIL.getMiniHBaseCluster().killRegionServer(sn);
+    // Wait until the SCP reaches the getRegionsOnServer call
     arriveGetRegionsOnServer.await();
-    RESUME_REGION_OPENING.countDown();
+    RSProcedureDispatcher remoteDispatcher = UTIL.getMiniHBaseCluster().getMaster()
+      .getMasterProcedureExecutor().getEnvironment().getRemoteDispatcher();
+    // this is necessary for making the UT stable, the problem here is that, in
+    // ServerManager.expireServer, we will submit the SCP and then the SCP will be executed in
+    // another thread(the PEWorker), so when we reach the above getRegionsOnServer call in SCP, it
+    // is still possible that the expireServer call has not been finished so the remote dispatcher
+    // still think it can dispatcher the TRSP, in this way we will be in dead lock as the TRSP will
+    // not schedule a new ORP since it relies on SCP to wake it up after everything is OK. This is
+    // not what we want to test in this UT so we need to wait here to prevent this from happening.
+    // See HBASE-27277 for more detailed analysis.
+    UTIL.waitFor(15000, () -> !remoteDispatcher.hasNode(sn));
 
+    // Resume the TRSP, it should be able to finish
+    RESUME_REGION_OPENING.countDown();
     moveFuture.get();
+
     ProcedureExecutor<?> procExec =
       UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor();
     long scpProcId =
       procExec.getProcedures().stream().filter(p -> p instanceof ServerCrashProcedure)
         .map(p -> (ServerCrashProcedure) p).findAny().get().getProcId();
+    // Resume the SCP and make sure it can finish too
     RESUME_GET_REGIONS_ON_SERVER.countDown();
     UTIL.waitFor(60000, () -> procExec.isFinished(scpProcId));
   }
