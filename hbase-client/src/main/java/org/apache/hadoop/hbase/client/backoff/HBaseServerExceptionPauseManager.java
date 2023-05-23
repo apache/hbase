@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client.backoff;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -33,12 +32,11 @@ public class HBaseServerExceptionPauseManager {
   public static long getPauseNanos(Throwable t, long pauseNsForServerOverloaded, long pauseNs) {
     long pauseMsForServerOverloaded = TimeUnit.NANOSECONDS.toMillis(pauseNsForServerOverloaded);
     long basePauseMs = TimeUnit.NANOSECONDS.toMillis(pauseNs);
-    long pauseMillis = getPauseMillis(t, null, pauseMsForServerOverloaded, basePauseMs);
+    long pauseMillis = getPauseMillis(t, pauseMsForServerOverloaded, basePauseMs);
     return TimeUnit.MILLISECONDS.toNanos(pauseMillis);
   }
 
-  public static long getPauseMillis(Throwable t, Function<Long, Long> retryFunction,
-    long pauseForServerOverloaded, long pause) {
+  public static long getPauseMillis(Throwable t, long pauseForServerOverloaded, long pause) {
     long expectedSleep;
     if (t instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) t;
@@ -48,13 +46,7 @@ public class HBaseServerExceptionPauseManager {
           rpcThrottlingException);
       }
     } else {
-      long pauseBase =
-        HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
-      if (retryFunction == null) {
-        expectedSleep = pauseBase;
-      } else {
-        expectedSleep = retryFunction.apply(pauseBase);
-      }
+      expectedSleep = HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
     }
     return expectedSleep;
   }

@@ -28,11 +28,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -143,15 +143,19 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
           throw new RetriesExhaustedException(tries, exceptions);
         }
 
-        int finalTries = tries;
-        // If the server is dead, we need to wait a little before retrying, to give
-        // a chance to the regions to be moved
-        // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
-        // special when encountering an exception indicating the server is overloaded.
-        // see #HBASE-17114 and HBASE-26807
-        Function<Long, Long> retryFunction = pauseBase -> callable.sleep(pauseBase, finalTries);
-        expectedSleep = HBaseServerExceptionPauseManager.getPauseMillis(t, retryFunction,
-          pauseForServerOverloaded, pause);
+        expectedSleep =
+          HBaseServerExceptionPauseManager.getPauseMillis(t, pauseForServerOverloaded, pause);
+        if (!(t instanceof RpcThrottlingException)) {
+          // only factor in retry adjustment for non-RpcThrottlingExceptions
+          // because RpcThrottlingExceptions tell you how long to wait
+
+          // If the server is dead, we need to wait a little before retrying, to give
+          // a chance to the regions to be moved
+          // get right pause time, start by RETRY_BACKOFF[0] * pauseBase, where pauseBase might be
+          // special when encountering an exception indicating the server is overloaded.
+          // see #HBASE-17114 and HBASE-26807
+          expectedSleep = callable.sleep(expectedSleep, tries);
+        }
 
         // If, after the planned sleep, there won't be enough time left, we stop now.
         long duration = singleCallDuration(expectedSleep);

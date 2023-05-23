@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client.backoff;
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
@@ -63,22 +62,14 @@ public class TestHBaseServerExceptionPauseManager {
   @Test
   public void itSupportsRpcThrottlingMillis() {
     long pauseMillis = HBaseServerExceptionPauseManager.getPauseMillis(RPC_THROTTLING_EXCEPTION,
-      r -> r, PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
+      PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
     assertEquals(pauseMillis, WAIT_INTERVAL_MILLIS);
-  }
-
-  @Test
-  public void itSupportsRetryFunction() {
-    Function<Long, Long> retryFunction = r -> 2 * r;
-    Long pauseMillis = HBaseServerExceptionPauseManager.getPauseMillis(OTHER_EXCEPTION,
-      retryFunction, PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
-    assertEquals(pauseMillis, retryFunction.apply(PAUSE_MILLIS));
   }
 
   @Test
   public void itSupportsServerOverloadedExceptionMillis() {
     long pauseMillis = HBaseServerExceptionPauseManager.getPauseMillis(SERVER_OVERLOADED_EXCEPTION,
-      r -> r, PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
+      PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
     assertEquals(pauseMillis, PAUSE_MILLIS_FOR_SERVER_OVERLOADED);
   }
 
@@ -87,6 +78,20 @@ public class TestHBaseServerExceptionPauseManager {
     long pauseNanos = HBaseServerExceptionPauseManager.getPauseNanos(SERVER_OVERLOADED_EXCEPTION,
       PAUSE_NANOS_FOR_SERVER_OVERLOADED, PAUSE_NANOS);
     assertEquals(pauseNanos, PAUSE_NANOS_FOR_SERVER_OVERLOADED);
+  }
+
+  @Test
+  public void itSupportsOtherExceptionMillis() {
+    long pauseMillis = HBaseServerExceptionPauseManager.getPauseMillis(OTHER_EXCEPTION,
+      PAUSE_MILLIS_FOR_SERVER_OVERLOADED, PAUSE_MILLIS);
+    assertEquals(pauseMillis, PAUSE_MILLIS);
+  }
+
+  @Test
+  public void itSupportsOtherExceptionNanos() {
+    long pauseNanos = HBaseServerExceptionPauseManager.getPauseNanos(OTHER_EXCEPTION,
+      PAUSE_NANOS_FOR_SERVER_OVERLOADED, PAUSE_NANOS);
+    assertEquals(pauseNanos, PAUSE_NANOS);
   }
 
 }
