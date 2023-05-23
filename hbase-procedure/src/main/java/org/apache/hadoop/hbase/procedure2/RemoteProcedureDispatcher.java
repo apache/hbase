@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.HashSet;
@@ -294,6 +295,12 @@ public abstract class RemoteProcedureDispatcher<TEnv, TRemote extends Comparable
   protected <T extends RemoteOperation> List<T> fetchType(
     final ArrayListMultimap<Class<?>, RemoteOperation> requestByType, final Class<T> type) {
     return (List<T>) requestByType.removeAll(type);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public boolean hasNode(TRemote key) {
+    return nodeMap.containsKey(key);
   }
 
   // ============================================================================================
