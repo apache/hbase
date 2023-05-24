@@ -552,6 +552,10 @@ public final class MetricsConnection implements StatisticTrackable {
     metaCacheHits.inc();
   }
 
+  public long getMetaCacheHits() {
+    return metaCacheHits.getCount();
+  }
+
   /** Increment the number of meta cache misses. */
   public void incrMetaCacheMiss() {
     metaCacheMisses.inc();
