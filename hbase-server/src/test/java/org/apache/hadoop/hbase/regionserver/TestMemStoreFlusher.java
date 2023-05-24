@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
-import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
@@ -55,11 +54,7 @@ public class TestMemStoreFlusher {
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hbase.hstore.flusher.count", "0");
-    HRegionServer rs = mock(HRegionServer.class);
-    doReturn(LoadBalancer.BOGUS_SERVER_NAME).when(rs).getServerName();
-    doReturn(new RegionServerAccounting(conf)).when(rs).getRegionServerAccounting();
-    msf = new MemStoreFlusher(conf, rs);
-    msf.start(Threads.LOGGING_EXCEPTION_HANDLER);
+    msf = new MemStoreFlusher(conf, null);
   }
 
   @Test
@@ -102,13 +97,22 @@ public class TestMemStoreFlusher {
 
   @Test
   public void testChangeFlusherCount() {
+    Configuration conf = new Configuration();
+    conf.set("hbase.hstore.flusher.count", "0");
+    HRegionServer rs = mock(HRegionServer.class);
+    doReturn(false).when(rs).isStopped();
+    doReturn(new RegionServerAccounting(conf)).when(rs).getRegionServerAccounting();
+
+    msf = new MemStoreFlusher(conf, rs);
+    msf.start(Threads.LOGGING_EXCEPTION_HANDLER);
+
     Configuration newConf = new Configuration();
 
     newConf.set("hbase.hstore.flusher.count", "3");
     msf.onConfigurationChange(newConf);
     assertEquals(3, msf.getFlusherCount());
 
-    newConf.set("hbase.hstore.flusher.count", "1");
+    newConf.set("hbase.hstore.flusher.count", "0");
     msf.onConfigurationChange(newConf);
     assertEquals(1, msf.getFlusherCount());
   }

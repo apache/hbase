@@ -22,6 +22,7 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -124,14 +125,17 @@ public class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     this.server = server;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime", 90000);
-    int handlerCount = getHandlerCount(conf);
-    LOG.info("globalMemStoreLimit="
-      + TraditionalBinaryPrefix
-        .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
-      + ", globalMemStoreLimitLowMark="
-      + TraditionalBinaryPrefix
-        .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
-      + ", Offheap=" + (this.server.getRegionServerAccounting().isOffheap()));
+    int handlerCount = 0;
+    if (server != null) {
+      handlerCount = getHandlerCount(conf);
+      LOG.info("globalMemStoreLimit="
+        + TraditionalBinaryPrefix
+          .long2String(this.server.getRegionServerAccounting().getGlobalMemStoreLimit(), "", 1)
+        + ", globalMemStoreLimitLowMark="
+        + TraditionalBinaryPrefix.long2String(
+          this.server.getRegionServerAccounting().getGlobalMemStoreLimitLowMark(), "", 1)
+        + ", Offheap=" + (this.server.getRegionServerAccounting().isOffheap()));
+    }
     this.flushHandlers = new FlushHandler[handlerCount];
   }
 
@@ -505,7 +509,7 @@ public class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
    * Only interrupt once it's done with a run through the work loop.
    */
   void interruptIfNecessary() {
-    lock.readLock().lock();
+    lock.writeLock().lock();
     try {
       for (FlushHandler flushHandler : flushHandlers) {
         if (flushHandler != null) {
@@ -513,14 +517,13 @@ public class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
         }
       }
     } finally {
-      lock.readLock().unlock();
+      lock.writeLock().unlock();
     }
   }
 
   synchronized void start(UncaughtExceptionHandler eh) {
-    this.flusherThreadFactory = new ThreadFactoryBuilder()
-      .setNameFormat(server.getServerName().toShortString() + "-MemStoreFlusher-pool-%d")
-      .setDaemon(true).setUncaughtExceptionHandler(eh).build();
+    this.flusherThreadFactory =
+      new ThreadFactoryBuilder().setDaemon(true).setUncaughtExceptionHandler(eh).build();
     lock.readLock().lock();
     try {
       startFlushHandlerThreads(flushHandlers, 0, flushHandlers.length);
@@ -543,7 +546,7 @@ public class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
     }
   }
 
-  void join() {
+  void shutdown() {
     lock.readLock().lock();
     try {
       for (FlushHandler flushHandler : flushHandlers) {
@@ -967,12 +970,10 @@ public class MemStoreFlusher implements FlushRequester, ConfigurationObserver {
         newHandlerCount);
       lock.writeLock().lock();
       try {
-        FlushHandler[] newFlushHandlers = new FlushHandler[newHandlerCount];
+        FlushHandler[] newFlushHandlers = Arrays.copyOf(flushHandlers, newHandlerCount);
         if (newHandlerCount > flushHandlers.length) {
-          System.arraycopy(flushHandlers, 0, newFlushHandlers, 0, flushHandlers.length);
           startFlushHandlerThreads(newFlushHandlers, flushHandlers.length, newFlushHandlers.length);
         } else {
-          System.arraycopy(flushHandlers, 0, newFlushHandlers, 0, newFlushHandlers.length);
           stopFlushHandlerThreads(flushHandlers, newHandlerCount, flushHandlers.length);
         }
         flusherIdGen.compareAndSet(flushHandlers.length, newFlushHandlers.length);
