@@ -2905,19 +2905,6 @@
           </formats>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.cyclonedx</groupId>
-        <artifactId>cyclonedx-maven-plugin</artifactId>
-        <version>2.7.6</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>makeBom</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
     <extensions>
       <extension>
@@ -3486,6 +3473,19 @@
                 <version>${extra.enforcer.version}</version>
               </dependency>
             </dependencies>
+          </plugin>
+          <plugin>
+            <groupId>org.cyclonedx</groupId>
+            <artifactId>cyclonedx-maven-plugin</artifactId>
+            <version>2.7.6</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>makeBom</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>
