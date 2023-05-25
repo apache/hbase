@@ -657,6 +657,8 @@ public class HBaseFsck extends Configured implements Closeable {
     loadDeployedRegions();
     // check whether hbase:meta is deployed and online
     recordMetaRegion();
+    // Report inconsistencies if there are any unknown servers.
+    reportUnknownServers();
     // Check if hbase:meta is found only once and in the right place
     if (!checkMetaRegion()) {
       String errorMsg = "hbase:meta table is not consistent. ";
@@ -707,6 +709,18 @@ public class HBaseFsck extends Configured implements Closeable {
     // Check integrity (does not fix)
     checkIntegrity();
     return errors.getErrorList().size();
+  }
+
+  private void reportUnknownServers() throws IOException {
+    List<ServerName> unknownServers = admin.listUnknownServers();
+    if (!unknownServers.isEmpty()) {
+      unknownServers.stream().forEach(serverName -> {
+        errors.reportError(ERROR_CODE.UNKNOWN_SERVER,
+          "Found unknown server,"
+            + "some of the regions held by this server may not get assigned. "
+            + String.format("Use HBCK2 scheduleRecoveries %s to recover.", serverName));
+      });
+    }
   }
 
   /**
