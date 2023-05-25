@@ -65,7 +65,8 @@ public interface HbckErrorReporter {
     UNDELETED_REPLICATION_QUEUE,
     DUPE_ENDKEYS,
     UNSUPPORTED_OPTION,
-    INVALID_TABLE
+    INVALID_TABLE,
+    UNKNOWN_SERVER
   }
 
   void clear();
