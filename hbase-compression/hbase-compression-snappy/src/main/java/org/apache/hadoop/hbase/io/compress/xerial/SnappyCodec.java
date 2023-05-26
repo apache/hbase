@@ -31,6 +31,8 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
 
 /**
@@ -43,10 +45,31 @@ public class SnappyCodec implements Configurable, CompressionCodec {
 
   public static final String SNAPPY_BUFFER_SIZE_KEY = "hbase.io.compress.snappy.buffersize";
 
+  private static final Logger LOG = LoggerFactory.getLogger(SnappyCodec.class);
   private Configuration conf;
   private int bufferSize;
+  private static boolean loaded = false;
+  private static Throwable loadError;
+
+  static {
+    try {
+      Snappy.getNativeLibraryVersion();
+      loaded = true;
+    } catch (Throwable t) {
+      loadError = t;
+      LOG.error("The Snappy native libraries could not be loaded", t);
+    }
+  }
+
+  /** Return true if the native shared libraries were loaded; false otherwise. */
+  public static boolean isLoaded() {
+    return loaded;
+  }
 
   public SnappyCodec() {
+    if (!isLoaded()) {
+      throw new RuntimeException("Snappy codec could not be loaded", loadError);
+    }
     conf = new Configuration();
     bufferSize = getBufferSize(conf);
   }
