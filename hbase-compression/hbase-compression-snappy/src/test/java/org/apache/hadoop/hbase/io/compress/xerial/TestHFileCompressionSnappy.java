@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
+import static org.junit.Assume.assumeTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -41,6 +43,7 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    assumeTrue(SnappyCodec.isLoaded());
     conf = TEST_UTIL.getConfiguration();
     conf.set(Compression.SNAPPY_CODEC_CLASS_KEY, SnappyCodec.class.getCanonicalName());
     Compression.Algorithm.SNAPPY.reload(conf);
