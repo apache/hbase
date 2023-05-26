@@ -2062,4 +2062,9 @@ possible configurations would overwhelm and obscure the important.
       hitting the namenode, if the DFSInputStream's block list is incomplete.
     </description>
   </property>
+  <property>
+    <name>hbase.fs.reader.warn.time</name>
+    <value>100</value>
+    <description>Record slow read block in warning log, in milliseconds.</description>
+  </property>
 </configuration>

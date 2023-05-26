@@ -1603,6 +1603,13 @@ public final class HConstants {
    */
   public final static boolean HBASE_SERVER_USEIP_ENABLED_DEFAULT = false;
 
+  /**
+   * If reading block cost time more than the threshold, a warning will be logged.
+   */
+  public static final String FS_READER_WARN_TIME = "hbase.fs.reader.warn.time";
+
+  public static final long DEFAULT_FS_READER_WARN_TIME = 100L;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

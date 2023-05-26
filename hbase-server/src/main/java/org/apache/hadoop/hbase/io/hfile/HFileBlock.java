@@ -1385,6 +1385,8 @@ public class HFileBlock implements Cacheable {
 
     private final boolean isPreadAllBytes;
 
+    private final long readWarnTime;
+
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext, ByteBuffAllocator allocator,
       Configuration conf) throws IOException {
       this.fileSize = readerContext.getFileSize();
@@ -1402,6 +1404,8 @@ public class HFileBlock implements Cacheable {
       defaultDecodingCtx = new HFileBlockDefaultDecodingContext(conf, fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
       isPreadAllBytes = readerContext.isPreadAllBytes();
+      readWarnTime =
+        conf.getLong(HConstants.FS_READER_WARN_TIME, HConstants.DEFAULT_FS_READER_WARN_TIME);
     }
 
     @Override
@@ -1758,7 +1762,10 @@ public class HFileBlock implements Cacheable {
         if (!fileContext.isCompressedOrEncrypted()) {
           hFileBlock.sanityCheckUncompressed();
         }
-        LOG.trace("Read {} in {} ms", hFileBlock, duration);
+        if (duration > this.readWarnTime) {
+          LOG.warn("Read Block Slow: read {} cost {} ms, threshold = {} ms", hFileBlock, duration,
+            this.readWarnTime);
+        }
         span.addEvent("Read block", attributesBuilder.build());
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
