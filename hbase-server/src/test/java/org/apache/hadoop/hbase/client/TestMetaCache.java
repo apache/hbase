@@ -241,6 +241,7 @@ public class TestMetaCache {
 
       Exception exp;
       boolean success;
+      long initialMetaCacheHits = metrics.getMetaCacheHits();
       for (int i = 0; i < 50; i++) {
         exp = null;
         success = false;
@@ -254,8 +255,10 @@ public class TestMetaCache {
           table.delete(delete);
           table.mutateRow(mutations);
           // The value of the metaCacheHits counter is incremented by 6 in each round of the loop,
-          // and the first request will not hit cache
-          assertEquals(6 * i + 5, metrics.getMetaCacheHits());
+          // for 0th iteration there will be 5 hits + 1 cache miss.
+          assertEquals(initialMetaCacheHits + 6 * i + 5, metrics.getMetaCacheHits());
+          // We will get a cache miss only on the first request, so the value will always be 1.
+          assertEquals(1, metrics.getMetaCacheMisses());
         } catch (IOException ex) {
           // Only keep track of the last exception that updated the meta cache
           if (ClientExceptionsUtil.isMetaClearingException(ex) || success) {
