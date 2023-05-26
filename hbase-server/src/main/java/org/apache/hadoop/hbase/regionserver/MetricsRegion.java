@@ -54,7 +54,7 @@ public class MetricsRegion {
     source.updateGet();
   }
 
-  public void updateScanCount() {
+  public void updateScan() {
     source.updateScan();
   }
 

@@ -3467,7 +3467,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
         responseCellSize = rpcCall.getResponseCellSize();
         blockBytesScanned = rpcCall.getBlockBytesScanned();
       }
-      region.getMetrics().updateScanCount();
+      region.getMetrics().updateScan();
       final MetricsRegionServer metricsRegionServer = server.getMetrics();
       if (metricsRegionServer != null) {
         metricsRegionServer.updateScan(region, end - before, responseCellSize, blockBytesScanned);
