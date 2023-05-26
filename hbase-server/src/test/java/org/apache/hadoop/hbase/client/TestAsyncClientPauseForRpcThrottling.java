@@ -1,0 +1,245 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.client;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
+import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+
+@Category({ MediumTests.class, ClientTests.class })
+public class TestAsyncClientPauseForRpcThrottling {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestAsyncClientPauseForRpcThrottling.class);
+
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  private static TableName TABLE_NAME = TableName.valueOf("RpcThrottling");
+
+  private static byte[] FAMILY = Bytes.toBytes("Family");
+
+  private static byte[] QUALIFIER = Bytes.toBytes("Qualifier");
+
+  private static AsyncConnection CONN;
+  private static final AtomicBoolean THROTTLE = new AtomicBoolean(false);
+  private static final long WAIT_INTERVAL_MILLIS = 100L;
+
+  public static final class ThrottlingRSRpcServicesForTest extends RSRpcServices {
+
+    public ThrottlingRSRpcServicesForTest(HRegionServer rs) throws IOException {
+      super(rs);
+    }
+
+    @Override
+    public ClientProtos.GetResponse get(RpcController controller, ClientProtos.GetRequest request)
+      throws ServiceException {
+      maybeThrottle();
+      return super.get(controller, request);
+    }
+
+    @Override
+    public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
+      throws ServiceException {
+      maybeThrottle();
+      return super.multi(rpcc, request);
+    }
+
+    @Override
+    public ClientProtos.ScanResponse scan(RpcController controller,
+      ClientProtos.ScanRequest request) throws ServiceException {
+      maybeThrottle();
+      return super.scan(controller, request);
+    }
+
+    private void maybeThrottle() throws ServiceException {
+      if (THROTTLE.get()) {
+        THROTTLE.set(false);
+        throw new ServiceException(new RpcThrottlingException(
+          "number of requests exceeded - wait " + WAIT_INTERVAL_MILLIS + "ms"));
+      }
+    }
+  }
+
+  public static final class ThrottlingRegionServerForTest extends HRegionServer {
+
+    public ThrottlingRegionServerForTest(Configuration conf) throws IOException {
+      super(conf);
+    }
+
+    @Override
+    protected RSRpcServices createRpcServices() throws IOException {
+      return new ThrottlingRSRpcServicesForTest(this);
+    }
+  }
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    UTIL.startMiniCluster(1);
+    UTIL.getMiniHBaseCluster().getConfiguration().setClass(HConstants.REGION_SERVER_IMPL,
+      ThrottlingRegionServerForTest.class, HRegionServer.class);
+    HRegionServer regionServer = UTIL.getMiniHBaseCluster().startRegionServer().getRegionServer();
+
+    try (Table table = UTIL.createTable(TABLE_NAME, FAMILY)) {
+      UTIL.waitTableAvailable(TABLE_NAME);
+      for (int i = 0; i < 100; i++) {
+        table.put(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i)));
+      }
+    }
+
+    UTIL.getAdmin().move(UTIL.getAdmin().getRegions(TABLE_NAME).get(0).getEncodedNameAsBytes(),
+      regionServer.getServerName());
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    CONN = ConnectionFactory.createAsyncConnection(conf).get();
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    UTIL.getAdmin().disableTable(TABLE_NAME);
+    UTIL.getAdmin().deleteTable(TABLE_NAME);
+    Closeables.close(CONN, true);
+    UTIL.shutdownMiniCluster();
+  }
+
+  private void assertTime(Callable<Void> callable, long time, boolean isGreater) throws Exception {
+    long startNs = System.nanoTime();
+    callable.call();
+    long costNs = System.nanoTime() - startNs;
+    if (isGreater) {
+      assertTrue(costNs > time);
+    } else {
+      assertTrue(costNs <= time);
+    }
+  }
+
+  @Test
+  public void itWaitsForThrottledGet() throws Exception {
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
+    assertTime(() -> {
+      table.get(new Get(Bytes.toBytes(0))).get();
+      return null;
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForUnthrottledGet() throws Exception {
+    boolean isThrottled = false;
+    THROTTLE.set(isThrottled);
+    AsyncTable<AdvancedScanResultConsumer> table = CONN.getTable(TABLE_NAME);
+    assertTime(() -> {
+      table.get(new Get(Bytes.toBytes(0))).get();
+      return null;
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+
+  @Test
+  public void itWaitsForThrottledBatch() throws Exception {
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      List<CompletableFuture<?>> futures = new ArrayList<>();
+      try (AsyncBufferedMutator mutator = CONN.getBufferedMutator(TABLE_NAME)) {
+        for (int i = 100; i < 110; i++) {
+          futures.add(mutator
+            .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
+        }
+      }
+      return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForUnthrottledBatch() throws Exception {
+    boolean isThrottled = false;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      List<CompletableFuture<?>> futures = new ArrayList<>();
+      try (AsyncBufferedMutator mutator = CONN.getBufferedMutator(TABLE_NAME)) {
+        for (int i = 100; i < 110; i++) {
+          futures.add(mutator
+            .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
+        }
+      }
+      return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+
+  @Test
+  public void itWaitsForThrottledScan() throws Exception {
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      try (
+        ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(80))) {
+        for (int i = 0; i < 100; i++) {
+          Result result = scanner.next();
+          assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUALIFIER));
+        }
+      }
+      return null;
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForUnthrottledScan() throws Exception {
+    boolean isThrottled = false;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      try (
+        ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(new Scan().setCaching(80))) {
+        for (int i = 0; i < 100; i++) {
+          Result result = scanner.next();
+          assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUALIFIER));
+        }
+      }
+      return null;
+    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+  }
+}
