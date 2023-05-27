@@ -716,8 +716,7 @@ public class HBaseFsck extends Configured implements Closeable {
     if (!unknownServers.isEmpty()) {
       unknownServers.stream().forEach(serverName -> {
         errors.reportError(ERROR_CODE.UNKNOWN_SERVER,
-          "Found unknown server,"
-            + "some of the regions held by this server may not get assigned. "
+          "Found unknown server, some of the regions held by this server may not get assigned. "
             + String.format("Use HBCK2 scheduleRecoveries %s to recover.", serverName));
       });
     }
