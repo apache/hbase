@@ -226,4 +226,9 @@ class ConnectionOverAsyncConnection implements Connection {
   public String toString() {
     return "connection-over-async-connection-0x" + Integer.toHexString(hashCode());
   }
+
+  @Override
+  public MetricsConnectionSnapshot getMetrics() {
+    return conn.getMetrics();
+  }
 }

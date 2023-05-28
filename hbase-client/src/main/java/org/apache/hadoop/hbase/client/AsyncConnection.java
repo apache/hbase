@@ -237,4 +237,9 @@ public interface AsyncConnection extends Closeable {
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.HBCK)
   Hbck getHbck(ServerName masterServer) throws IOException;
+
+  /** Returns a statistical sample of {@link MetricsConnection} */
+  default MetricsConnectionSnapshot getMetrics() {
+    return null;
+  }
 }

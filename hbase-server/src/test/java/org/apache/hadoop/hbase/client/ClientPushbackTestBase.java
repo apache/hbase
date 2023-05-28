@@ -153,7 +153,7 @@ public abstract class ClientPushbackTestBase {
 
     assertEquals(1, runnerStats.delayRunners.getCount());
     assertEquals(1, runnerStats.normalRunners.getCount());
-    assertEquals("", runnerStats.delayIntevalHist.getSnapshot().getMean(), (double) backoffTime,
+    assertEquals("", runnerStats.delayIntervalHist.getSnapshot().getMean(), (double) backoffTime,
       0.1);
 
     latch.await(backoffTime * 2, TimeUnit.MILLISECONDS);

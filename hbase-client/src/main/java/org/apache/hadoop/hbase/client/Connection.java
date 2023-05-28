@@ -216,4 +216,9 @@ public interface Connection extends Abortable, Closeable {
   default Hbck getHbck(ServerName masterServer) throws IOException {
     return toAsyncConnection().getHbck(masterServer);
   }
+
+  /** Returns a statistical sample of {@link MetricsConnection} */
+  default MetricsConnectionSnapshot getMetrics() {
+    return null;
+  }
 }

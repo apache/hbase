@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static com.codahale.metrics.MetricRegistry.name;
+import static org.apache.hadoop.hbase.client.MetricsConnectionSnapshot.snapshotMap;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
 
 import com.codahale.metrics.Counter;
@@ -36,6 +37,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.MetricsConnectionSnapshot.CallTrackerSnapshot;
+import org.apache.hadoop.hbase.client.MetricsConnectionSnapshot.RegionStatsSnapshot;
+import org.apache.hadoop.hbase.client.MetricsConnectionSnapshot.RunnerStatsSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -219,6 +223,10 @@ public final class MetricsConnection implements StatisticTrackable {
       this.respHist.update(stats.getResponseSizeBytes());
     }
 
+    String getName() {
+      return name;
+    }
+
     @Override
     public String toString() {
       return "CallTracker:" + name;
@@ -247,12 +255,12 @@ public final class MetricsConnection implements StatisticTrackable {
   protected static class RunnerStats {
     final Counter normalRunners;
     final Counter delayRunners;
-    final Histogram delayIntevalHist;
+    final Histogram delayIntervalHist;
 
     public RunnerStats(MetricRegistry registry) {
       this.normalRunners = registry.counter(name(MetricsConnection.class, "normalRunnersCount"));
       this.delayRunners = registry.counter(name(MetricsConnection.class, "delayRunnersCount"));
-      this.delayIntevalHist =
+      this.delayIntervalHist =
         registry.histogram(name(MetricsConnection.class, "delayIntervalHist"));
     }
 
@@ -265,11 +273,11 @@ public final class MetricsConnection implements StatisticTrackable {
     }
 
     public void updateDelayInterval(long interval) {
-      this.delayIntevalHist.update(interval);
+      this.delayIntervalHist.update(interval);
     }
   }
 
-  private ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats =
+  private final ConcurrentHashMap<ServerName, ConcurrentMap<byte[], RegionStats>> serverStats =
     new ConcurrentHashMap<>();
 
   public void updateServerStats(ServerName serverName, byte[] regionName, Object r) {
@@ -359,6 +367,8 @@ public final class MetricsConnection implements StatisticTrackable {
   private final Counter nsLookups;
   private final Counter nsLookupsFailed;
   private final Timer overloadedBackoffTimer;
+  private final RatioGauge executorPoolUsageRatio;
+  private final RatioGauge metaPoolUsageRatio;
 
   // dynamic metrics
 
@@ -379,46 +389,20 @@ public final class MetricsConnection implements StatisticTrackable {
     this.scope = scope;
     addThreadPools(batchPool, metaPool);
     this.registry = new MetricRegistry();
-    this.registry.register(getExecutorPoolName(), new RatioGauge() {
+    this.executorPoolUsageRatio = new RatioGauge() {
       @Override
       protected Ratio getRatio() {
-        int numerator = 0;
-        int denominator = 0;
-        for (Supplier<ThreadPoolExecutor> poolSupplier : batchPools) {
-          ThreadPoolExecutor pool = poolSupplier.get();
-          if (pool != null) {
-            int activeCount = pool.getActiveCount();
-            int maxPoolSize = pool.getMaximumPoolSize();
-            /* The max thread usage ratio among batch pools of all connections */
-            if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
-              numerator = activeCount;
-              denominator = maxPoolSize;
-            }
-          }
-        }
-        return Ratio.of(numerator, denominator);
+        return calculateThreadPoolUsageRatio(batchPools);
       }
-    });
-    this.registry.register(getMetaPoolName(), new RatioGauge() {
+    };
+    this.metaPoolUsageRatio = new RatioGauge() {
       @Override
       protected Ratio getRatio() {
-        int numerator = 0;
-        int denominator = 0;
-        for (Supplier<ThreadPoolExecutor> poolSupplier : metaPools) {
-          ThreadPoolExecutor pool = poolSupplier.get();
-          if (pool != null) {
-            int activeCount = pool.getActiveCount();
-            int maxPoolSize = pool.getMaximumPoolSize();
-            /* The max thread usage ratio among meta lookup pools of all connections */
-            if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
-              numerator = activeCount;
-              denominator = maxPoolSize;
-            }
-          }
-        }
-        return Ratio.of(numerator, denominator);
+        return calculateThreadPoolUsageRatio(metaPools);
       }
-    });
+    };
+    this.registry.register(getExecutorPoolName(), executorPoolUsageRatio);
+    this.registry.register(getMetaPoolName(), metaPoolUsageRatio);
     this.connectionCount = registry.counter(name(this.getClass(), "connectionCount", scope));
     this.metaCacheHits = registry.counter(name(this.getClass(), "metaCacheHits", scope));
     this.metaCacheMisses = registry.counter(name(this.getClass(), "metaCacheMisses", scope));
@@ -744,5 +728,52 @@ public final class MetricsConnection implements StatisticTrackable {
 
   public void incrNsLookupsFailed() {
     this.nsLookupsFailed.inc();
+  }
+
+  private RatioGauge.Ratio
+    calculateThreadPoolUsageRatio(Iterable<Supplier<ThreadPoolExecutor>> pools) {
+    int numerator = 0;
+    int denominator = 0;
+    for (Supplier<ThreadPoolExecutor> poolSupplier : pools) {
+      ThreadPoolExecutor pool = poolSupplier.get();
+      if (pool != null) {
+        int activeCount = pool.getActiveCount();
+        int maxPoolSize = pool.getMaximumPoolSize();
+        /* The max thread usage ratio among pools of all connections */
+        if (numerator == 0 || (numerator * maxPoolSize) < (activeCount * denominator)) {
+          numerator = activeCount;
+          denominator = maxPoolSize;
+        }
+      }
+    }
+    return RatioGauge.Ratio.of(numerator, denominator);
+  }
+
+  synchronized MetricsConnectionSnapshot snapshot() {
+    return MetricsConnectionSnapshot.newBuilder().connectionCount(connectionCount.getCount())
+      .metaCacheHits(metaCacheHits.getCount()).metaCacheMisses(metaCacheMisses.getCount())
+      .getTrackerSnap(CallTrackerSnapshot.snapshot(getTracker))
+      .scanTrackerSnap(CallTrackerSnapshot.snapshot(scanTracker))
+      .appendTrackerSnap(CallTrackerSnapshot.snapshot(appendTracker))
+      .deleteTrackerSnap(CallTrackerSnapshot.snapshot(deleteTracker))
+      .incrementTrackerSnap(CallTrackerSnapshot.snapshot(incrementTracker))
+      .putTrackerSnap(CallTrackerSnapshot.snapshot(putTracker))
+      .multiTrackerSnap(CallTrackerSnapshot.snapshot(multiTracker))
+      .runnerStatsSnap(RunnerStatsSnapshot.snapshot(runnerStats))
+      .metaCacheNumClearServer(metaCacheNumClearServer.getCount())
+      .metaCacheNumClearRegion(metaCacheNumClearRegion.getCount())
+      .hedgedReadOps(hedgedReadOps.getCount()).hedgedReadWin(hedgedReadWin.getCount())
+      .concurrentCallsPerServerHistSnap(concurrentCallsPerServerHist.getSnapshot())
+      .numActionsPerServerHistSnap(numActionsPerServerHist.getSnapshot())
+      .nsLookups(nsLookups.getCount()).nsLookupsFailed(nsLookupsFailed.getCount())
+      .overloadedBackoffTimerSnap(overloadedBackoffTimer.getSnapshot())
+      .executorPoolUsageRatio(executorPoolUsageRatio.getValue())
+      .metaPoolUsageRatio(metaPoolUsageRatio.getValue())
+      .rpcTimersSnap(snapshotMap(rpcTimers, Timer::getSnapshot))
+      .rpcHistSnap(snapshotMap(rpcHistograms, Histogram::getSnapshot))
+      .cacheDroppingExceptions(snapshotMap(cacheDroppingExceptions, Counter::getCount))
+      .rpcCounters(snapshotMap(rpcCounters, Counter::getCount)).serverStats(snapshotMap(serverStats,
+        regionStatsMap -> snapshotMap(regionStatsMap, RegionStatsSnapshot::snapshot)))
+      .build();
   }
 }
