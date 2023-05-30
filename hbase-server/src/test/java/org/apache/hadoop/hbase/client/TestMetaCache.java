@@ -592,21 +592,21 @@ public class TestMetaCache {
       // obtain the client metrics
       MetricsConnection metrics = conn.getConnectionMetrics();
       long queueCount = metrics.getUserRegionLockQueue().getCount();
-      assertEquals("Queue of userRegionLock should be updated twice. queueCount: " + queueCount,
-        queueCount, 2);
+      assertEquals("Queue of userRegionLock should be updated twice. queueCount: " + queueCount, 2,
+        queueCount);
 
       long timeoutCount = metrics.getUserRegionLockTimeout().getCount();
-      assertEquals("Timeout of userRegionLock should happen once. timeoutCount: " + timeoutCount,
-        timeoutCount, 1);
+      assertEquals("Timeout of userRegionLock should happen once. timeoutCount: " + timeoutCount, 1,
+        timeoutCount);
 
       long waitingTimerCount = metrics.getUserRegionLockWaitingTimer().getCount();
       assertEquals("userRegionLock should be grabbed successfully once. waitingTimerCount: "
-        + waitingTimerCount, waitingTimerCount, 1);
+        + waitingTimerCount, 1, waitingTimerCount);
 
       long heldTimerCount = metrics.getUserRegionLockHeldTimer().getCount();
       assertEquals(
-        "userRegionLock should be held successfully once. heldTimerCount: " + heldTimerCount,
-        heldTimerCount, 1);
+        "userRegionLock should be held successfully once. heldTimerCount: " + heldTimerCount, 1,
+        heldTimerCount);
       double heldTime = metrics.getUserRegionLockHeldTimer().getSnapshot().getMax();
       assertTrue("Max held time should be greater than 2 seconds. heldTime: " + heldTime,
         heldTime >= 2E9);
