@@ -49,6 +49,10 @@ public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
     this(11, 11, comparator);
   }
 
+  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity) {
+    this(initCapacity, stealFromQueueInitCapacity, null);
+  }
+
   public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity,
     Comparator<? super T> comparator) {
     super(initCapacity, comparator);

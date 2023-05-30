@@ -65,17 +65,17 @@ public class TestMultiParallel {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
 
-  private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
-  private static final String FAMILY = "family";
-  private static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
+  protected static final String FAMILY = "family";
+  protected static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte[][] KEYS = makeKeys();
 
-  private static final int slaves = 5; // also used for testing HTable pool size
-  private static Connection CONNECTION;
+  protected static final int slaves = 5; // also used for testing HTable pool size
+  protected static Connection CONNECTION;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -662,7 +662,7 @@ public class TestMultiParallel {
 
   public static class MyMasterObserver implements MasterObserver, MasterCoprocessor {
     private static final AtomicInteger postBalanceCount = new AtomicInteger(0);
-    private static final AtomicBoolean start = new AtomicBoolean(false);
+    protected static final AtomicBoolean start = new AtomicBoolean(false);
 
     @Override
     public void start(CoprocessorEnvironment env) throws IOException {

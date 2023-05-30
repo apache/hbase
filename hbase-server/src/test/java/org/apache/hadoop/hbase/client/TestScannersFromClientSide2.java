@@ -52,15 +52,15 @@ public class TestScannersFromClientSide2 {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestScannersFromClientSide2.class);
 
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private static TableName TABLE_NAME = TableName.valueOf("scan");
+  protected static TableName TABLE_NAME = TableName.valueOf("scan");
 
-  private static byte[] FAMILY = Bytes.toBytes("cf");
+  protected static byte[] FAMILY = Bytes.toBytes("cf");
 
-  private static byte[] CQ1 = Bytes.toBytes("cq1");
+  protected static byte[] CQ1 = Bytes.toBytes("cq1");
 
-  private static byte[] CQ2 = Bytes.toBytes("cq2");
+  protected static byte[] CQ2 = Bytes.toBytes("cq2");
 
   @Parameter(0)
   public boolean batch;

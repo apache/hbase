@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_TYPE_READ_STEAL_CONF_VALUE;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -86,9 +88,14 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     float callqReadShare = conf.getFloat(RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
 
     if (callqReadShare > 0) {
-      // at least 1 read handler and 1 write handler
-      callExecutor = new FastPathRWQueueRpcExecutor("default.FPRWQ", Math.max(2, handlerCount),
-        maxQueueLength, priority, conf, server);
+      if (callQueueType.equals(CALL_QUEUE_TYPE_READ_STEAL_CONF_VALUE)) {
+        callExecutor = new StealReadJobRWQueueRpcExecutor("default.SRRWQ",
+          Math.max(2, handlerCount), maxQueueLength, priority, conf, server);
+      } else {
+        // at least 1 read handler and 1 write handler
+        callExecutor = new FastPathRWQueueRpcExecutor("default.FPRWQ", Math.max(2, handlerCount),
+          maxQueueLength, priority, conf, server);
+      }
     } else {
       if (
         RpcExecutor.isFifoQueueType(callQueueType) || RpcExecutor.isCodelQueueType(callQueueType)
