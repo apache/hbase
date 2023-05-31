@@ -243,24 +243,13 @@ public class TestMetaRegionReplicaReplicationEndpoint {
       // wal, which could allow it to read some added entries before the wal gets deleted,
       // so we are making sure here we only proceed once the reader loop has managed to
       // detect the peer is disabled.
-      int retries = 0;
-      while (true) {
+      HTU.waitFor(2000, 100, true, () -> {
         MutableObject<Boolean> readerWaiting = new MutableObject<>(true);
         source.logQueue.getQueues().keySet()
           .forEach(w -> readerWaiting.setValue(readerWaiting.getValue()
             && source.workerThreads.get(w).entryReader.waitingPeerEnabled.get()));
-        if (readerWaiting.getValue()) {
-          break;
-        }
-        synchronized (this) {
-          wait(100);
-        }
-        retries++;
-        if (retries == 20) {
-          throw new Exception(
-            "We waited for two seconds for the reader to be paused, but it was still running.");
-        }
-      }
+        return readerWaiting.getValue();
+      });
       // load the data to the table
       for (int i = 0; i < 5; i++) {
         LOG.info("Writing data from " + i * 1000 + " to " + (i * 1000 + 1000));
