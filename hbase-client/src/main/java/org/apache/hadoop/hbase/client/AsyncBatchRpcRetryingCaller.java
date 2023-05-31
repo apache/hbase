@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -56,9 +57,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -478,22 +479,13 @@ class AsyncBatchRpcRetryingCaller<T> {
     long delayNs;
     boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
 
-    long pauseNsToUse;
-    if (error instanceof RpcThrottlingException) {
-      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
-      pauseNsToUse = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
-      if (pauseNsToUse > remainingTimeNs() - SLEEP_DELTA_NS) {
-        failAll(actions, tries);
-        return;
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleeping for {}ns after catching RpcThrottlingException", pauseNsToUse,
-          rpcThrottlingException);
-      }
-    } else {
-      pauseNsToUse =
-        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
+    OptionalLong maybePauseNsToUse = HBaseServerExceptionPauseManager.getPauseNsFromException(error,
+      pauseNs, pauseNsForServerOverloaded, remainingTimeNs() - SLEEP_DELTA_NS);
+    if (!maybePauseNsToUse.isPresent()) {
+      failAll(actions, tries);
+      return;
     }
+    long pauseNsToUse = maybePauseNsToUse.getAsLong();
 
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
