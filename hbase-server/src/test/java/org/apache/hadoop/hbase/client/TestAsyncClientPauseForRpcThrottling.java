@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +69,7 @@ public class TestAsyncClientPauseForRpcThrottling {
 
   private static AsyncConnection CONN;
   private static final AtomicBoolean THROTTLE = new AtomicBoolean(false);
-  private static final long WAIT_INTERVAL_MILLIS = 100L;
+  private static final long WAIT_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1);
 
   public static final class ThrottlingRSRpcServicesForTest extends RSRpcServices {
 
@@ -99,8 +101,8 @@ public class TestAsyncClientPauseForRpcThrottling {
     private void maybeThrottle() throws ServiceException {
       if (THROTTLE.get()) {
         THROTTLE.set(false);
-        throw new ServiceException(new RpcThrottlingException(
-          "number of requests exceeded - wait " + WAIT_INTERVAL_MILLIS + "ms"));
+        throw new ServiceException(new RpcThrottlingException("number of requests exceeded - wait "
+          + TimeUnit.NANOSECONDS.toMillis(WAIT_INTERVAL_NANOS) + "ms"));
       }
     }
   }
@@ -165,7 +167,7 @@ public class TestAsyncClientPauseForRpcThrottling {
     assertTime(() -> {
       table.get(new Get(Bytes.toBytes(0))).get();
       return null;
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
   }
 
   @Test
@@ -176,7 +178,19 @@ public class TestAsyncClientPauseForRpcThrottling {
     assertTime(() -> {
       table.get(new Get(Bytes.toBytes(0))).get();
       return null;
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForThrottledGetExceedingTimeout() throws Exception {
+    AsyncTable<AdvancedScanResultConsumer> table =
+      CONN.getTableBuilder(TABLE_NAME).setOperationTimeout(1, TimeUnit.MILLISECONDS).build();
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      assertThrows(ExecutionException.class, () -> table.get(new Get(Bytes.toBytes(0))).get());
+      return null;
+    }, WAIT_INTERVAL_NANOS, false);
   }
 
   @Test
@@ -192,7 +206,7 @@ public class TestAsyncClientPauseForRpcThrottling {
         }
       }
       return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
   }
 
   @Test
@@ -208,7 +222,26 @@ public class TestAsyncClientPauseForRpcThrottling {
         }
       }
       return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForThrottledBatchExceedingTimeout() throws Exception {
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      List<CompletableFuture<?>> futures = new ArrayList<>();
+      try (AsyncBufferedMutator mutator = CONN.getBufferedMutatorBuilder(TABLE_NAME)
+        .setOperationTimeout(1, TimeUnit.MILLISECONDS).build()) {
+        for (int i = 100; i < 110; i++) {
+          futures.add(mutator
+            .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
+        }
+      }
+      assertThrows(ExecutionException.class,
+        () -> CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get());
+      return null;
+    }, WAIT_INTERVAL_NANOS, false);
   }
 
   @Test
@@ -224,7 +257,7 @@ public class TestAsyncClientPauseForRpcThrottling {
         }
       }
       return null;
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
   }
 
   @Test
@@ -240,6 +273,22 @@ public class TestAsyncClientPauseForRpcThrottling {
         }
       }
       return null;
-    }, TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS), isThrottled);
+    }, WAIT_INTERVAL_NANOS, isThrottled);
+  }
+
+  @Test
+  public void itDoesNotWaitForThrottledScanExceedingTimeout() throws Exception {
+    AsyncTable<AdvancedScanResultConsumer> table =
+      CONN.getTableBuilder(TABLE_NAME).setScanTimeout(1, TimeUnit.MILLISECONDS).build();
+    boolean isThrottled = true;
+    THROTTLE.set(isThrottled);
+    assertTime(() -> {
+      try (ResultScanner scanner = table.getScanner(new Scan().setCaching(80))) {
+        for (int i = 0; i < 100; i++) {
+          assertThrows(RetriesExhaustedException.class, scanner::next);
+        }
+      }
+      return null;
+    }, WAIT_INTERVAL_NANOS, false);
   }
 }

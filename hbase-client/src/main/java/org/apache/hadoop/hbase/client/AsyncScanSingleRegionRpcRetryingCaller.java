@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer.ScanResumer;
-import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
@@ -421,14 +420,24 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     long delayNs;
-    long pauseNsToUse =
-      HBaseServerExceptionPauseManager.getPauseNanos(error, pauseNsForServerOverloaded, pauseNs);
-    if (
-      error instanceof RpcThrottlingException && pauseNsToUse > remainingTimeNs() - SLEEP_DELTA_NS
-    ) {
-      completeExceptionally(!scannerClosed);
-      return;
+
+    long pauseNsToUse;
+    if (error instanceof RpcThrottlingException) {
+      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
+      pauseNsToUse = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
+      if (pauseNsToUse > remainingTimeNs() - SLEEP_DELTA_NS) {
+        completeExceptionally(!scannerClosed);
+        return;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sleeping for {}ns after catching RpcThrottlingException", pauseNsToUse,
+          rpcThrottlingException);
+      }
+    } else {
+      pauseNsToUse =
+        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
     }
+
     if (scanTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {

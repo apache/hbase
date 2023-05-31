@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
-import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -143,9 +142,17 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
           throw new RetriesExhaustedException(tries, exceptions);
         }
 
-        expectedSleep =
-          HBaseServerExceptionPauseManager.getPauseMillis(t, pauseForServerOverloaded, pause);
-        if (!(t instanceof RpcThrottlingException)) {
+        if (t instanceof RpcThrottlingException) {
+          RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) t;
+          expectedSleep = rpcThrottlingException.getWaitInterval();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Sleeping for {}ms after catching RpcThrottlingException", expectedSleep,
+              rpcThrottlingException);
+          }
+        } else {
+          expectedSleep =
+            HBaseServerException.isServerOverloaded(t) ? pauseForServerOverloaded : pause;
+
           // only factor in retry adjustment for non-RpcThrottlingExceptions
           // because RpcThrottlingExceptions tell you how long to wait
 

@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
-import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
@@ -478,14 +477,24 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     long delayNs;
     boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
-    long pauseNsToUse =
-      HBaseServerExceptionPauseManager.getPauseNanos(error, pauseNsForServerOverloaded, pauseNs);
-    if (
-      error instanceof RpcThrottlingException && pauseNsToUse > remainingTimeNs() - SLEEP_DELTA_NS
-    ) {
-      failAll(actions, tries);
-      return;
+
+    long pauseNsToUse;
+    if (error instanceof RpcThrottlingException) {
+      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
+      pauseNsToUse = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
+      if (pauseNsToUse > remainingTimeNs() - SLEEP_DELTA_NS) {
+        failAll(actions, tries);
+        return;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sleeping for {}ns after catching RpcThrottlingException", pauseNsToUse,
+          rpcThrottlingException);
+      }
+    } else {
+      pauseNsToUse =
+        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
     }
+
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
