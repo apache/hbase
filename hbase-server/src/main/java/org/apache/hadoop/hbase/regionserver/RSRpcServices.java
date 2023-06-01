@@ -2518,11 +2518,10 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
 
     // This method is almost the same as HRegion#get.
     List<Cell> results = new ArrayList<>();
-    long before = EnvironmentEdgeManager.currentTime();
     // pre-get CP hook
     if (region.getCoprocessorHost() != null) {
       if (region.getCoprocessorHost().preGet(get, results)) {
-        region.metricsUpdateForGet(results, before);
+        region.metricsUpdateForGet();
         return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null,
           stale);
       }
@@ -2557,7 +2556,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     if (region.getCoprocessorHost() != null) {
       region.getCoprocessorHost().postGet(get, results);
     }
-    region.metricsUpdateForGet(results, before);
+    region.metricsUpdateForGet();
 
     return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
@@ -3461,13 +3460,14 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       region.closeRegionOperation();
       // Update serverside metrics, even on error.
       long end = EnvironmentEdgeManager.currentTime();
+
       long responseCellSize = 0;
       long blockBytesScanned = 0;
       if (rpcCall != null) {
         responseCellSize = rpcCall.getResponseCellSize();
         blockBytesScanned = rpcCall.getBlockBytesScanned();
       }
-      region.getMetrics().updateScanTime(end - before);
+      region.getMetrics().updateScan();
       final MetricsRegionServer metricsRegionServer = server.getMetrics();
       if (metricsRegionServer != null) {
         metricsRegionServer.updateScan(region, end - before, responseCellSize, blockBytesScanned);
