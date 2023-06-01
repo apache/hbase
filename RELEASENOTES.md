@@ -16,43 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# HBASE  2.5.5 Release Notes
-
-These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
-
-
----
-
-* [HBASE-27838](https://issues.apache.org/jira/browse/HBASE-27838) | *Minor* | **Update zstd-jni from version 1.5.4-2 -\> 1.5.5-2**
-
-Bump zstd-jni from 1.5.4-2 to 1.5.5-2, which fixed a critical issue on s390x.
-
-
----
-
-* [HBASE-27799](https://issues.apache.org/jira/browse/HBASE-27799) | *Major* | **RpcThrottlingException wait interval message is misleading between 0-1s**
-
-The RpcThrottleException now includes millis in the message
-
-
----
-
-* [HBASE-27762](https://issues.apache.org/jira/browse/HBASE-27762) | *Major* | **Include EventType and ProcedureV2 pid in logging via MDC**
-
-<!-- markdown -->
-Log the `o.a.h.hbase.executor.EventType` and ProcedureV2 pid in log messages via MDC. PatternLayouts on master and branch-2 have been updated to make use of the MDC variables. Note that due to LOG4J2-3660, log lines for which the MDC is empty will have extraneous characters. To opt-in on branch-2.5 or branch-2.4, make an appropriate change to `conf/log4j2.properties`.
-
-
----
-
-* [HBASE-27808](https://issues.apache.org/jira/browse/HBASE-27808) | *Major* | **Change flatten mode for oss in our pom file**
-
-Changed the flatten mode from default to oss. It will include these extra section in the published pom files:
-
-name, description, url, developers, scm, inceptionYear, organization, mailingLists, issueManagement, distributionManagement.
-
-
-
 # HBASE  2.5.4 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
