@@ -104,10 +104,6 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private final IdentityHashMap<Action, List<ThrowableWithExtraContext>> action2Errors;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private final int maxAttempts;
 
   private final long operationTimeoutNs;
@@ -117,6 +113,8 @@ class AsyncBatchRpcRetryingCaller<T> {
   private final int startLogErrorsCnt;
 
   private final long startNs;
+
+  private final HBaseServerExceptionPauseManager pauseManager;
 
   // we can not use HRegionLocation as the map key because the hashCode and equals method of
   // HRegionLocation only consider serverName.
@@ -157,8 +155,6 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -166,6 +162,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.actions = new ArrayList<>(actions.size());
     this.futures = new ArrayList<>(actions.size());
     this.action2Future = new IdentityHashMap<>(actions.size());
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
       Action action;
@@ -478,9 +475,8 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     long delayNs;
     boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
-
-    OptionalLong maybePauseNsToUse = HBaseServerExceptionPauseManager.getPauseNsFromException(error,
-      pauseNs, pauseNsForServerOverloaded, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
     if (!maybePauseNsToUse.isPresent()) {
       failAll(actions, tries);
       return;

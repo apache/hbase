@@ -29,10 +29,15 @@ import org.slf4j.LoggerFactory;
 public class HBaseServerExceptionPauseManager {
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerExceptionPauseManager.class);
 
-  private HBaseServerExceptionPauseManager() {}
+  private final long pauseNs;
+  private final long pauseNsForServerOverloaded;
 
-  public static OptionalLong getPauseNsFromException(Throwable error, long pauseNs,
-    long pauseNsForServerOverloaded, long remainingTimeNs) {
+  public HBaseServerExceptionPauseManager(long pauseNs, long pauseNsForServerOverloaded) {
+    this.pauseNs = pauseNs;
+    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
+  }
+
+  public OptionalLong getPauseNsFromException(Throwable error, long remainingTimeNs) {
     long expectedSleepNs;
     if (error instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;

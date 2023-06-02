@@ -58,10 +58,6 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   private final long startNs;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private int tries = 1;
 
   private final int maxAttempts;
@@ -80,14 +76,14 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   protected final HBaseRpcController controller;
 
+  private final HBaseServerExceptionPauseManager pauseManager;
+
   public AsyncRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
     long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
     long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.priority = priority;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -97,6 +93,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
   }
 
   private long elapsedMs() {
@@ -127,8 +124,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    OptionalLong maybePauseNsToUse = HBaseServerExceptionPauseManager.getPauseNsFromException(error,
-      pauseNs, pauseNsForServerOverloaded, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally();
       return;

@@ -101,10 +101,6 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final long scannerLeaseTimeoutPeriodNs;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private final int maxAttempts;
 
   private final long scanTimeoutNs;
@@ -132,6 +128,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private final List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions;
 
   private long nextCallSeq = -1L;
+
+  private final HBaseServerExceptionPauseManager pauseManager;
 
   private enum ScanControllerState {
     INITIALIZED,
@@ -332,8 +330,6 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.loc = loc;
     this.regionServerRemote = isRegionServerRemote;
     this.scannerLeaseTimeoutPeriodNs = scannerLeaseTimeoutPeriodNs;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -348,6 +344,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
   }
 
   private long elapsedMs() {
@@ -422,8 +419,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     long delayNs;
 
-    OptionalLong maybePauseNsToUse = HBaseServerExceptionPauseManager.getPauseNsFromException(error,
-      pauseNs, pauseNsForServerOverloaded, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally(!scannerClosed);
       return;

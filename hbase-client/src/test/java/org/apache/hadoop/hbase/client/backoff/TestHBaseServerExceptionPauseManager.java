@@ -47,38 +47,39 @@ public class TestHBaseServerExceptionPauseManager {
   private final Throwable OTHER_EXCEPTION = new RuntimeException("");
   private final HBaseServerException SERVER_OVERLOADED_EXCEPTION = new HBaseServerException(true);
 
+  private final HBaseServerExceptionPauseManager pauseManager =
+    new HBaseServerExceptionPauseManager(PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED);
+
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBaseServerExceptionPauseManager.class);
 
   @Test
   public void itSupportsRpcThrottlingNanos() {
-    OptionalLong pauseNanos = HBaseServerExceptionPauseManager.getPauseNsFromException(
-      RPC_THROTTLING_EXCEPTION, PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, Long.MAX_VALUE);
+    OptionalLong pauseNanos =
+      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, Long.MAX_VALUE);
     assertTrue(pauseNanos.isPresent());
     assertEquals(pauseNanos.getAsLong(), WAIT_INTERVAL_NANOS);
   }
 
   @Test
   public void itSupportsServerOverloadedExceptionNanos() {
-    OptionalLong pauseNanos = HBaseServerExceptionPauseManager.getPauseNsFromException(
-      SERVER_OVERLOADED_EXCEPTION, PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, Long.MAX_VALUE);
+    OptionalLong pauseNanos =
+      pauseManager.getPauseNsFromException(SERVER_OVERLOADED_EXCEPTION, Long.MAX_VALUE);
     assertTrue(pauseNanos.isPresent());
     assertEquals(pauseNanos.getAsLong(), PAUSE_NANOS_FOR_SERVER_OVERLOADED);
   }
 
   @Test
   public void itSupportsOtherExceptionNanos() {
-    OptionalLong pauseNanos = HBaseServerExceptionPauseManager.getPauseNsFromException(
-      OTHER_EXCEPTION, PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, Long.MAX_VALUE);
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, Long.MAX_VALUE);
     assertTrue(pauseNanos.isPresent());
     assertEquals(pauseNanos.getAsLong(), PAUSE_NANOS);
   }
 
   @Test
   public void itThrottledTimeoutFastFail() {
-    OptionalLong pauseNanos = HBaseServerExceptionPauseManager.getPauseNsFromException(
-      RPC_THROTTLING_EXCEPTION, PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 0L);
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, 0L);
     assertFalse(pauseNanos.isPresent());
   }
 
