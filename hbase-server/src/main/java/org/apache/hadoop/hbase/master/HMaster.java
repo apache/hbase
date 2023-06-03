@@ -157,6 +157,7 @@ import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.FlushTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -4380,5 +4381,35 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private void initializeCoprocessorHost(Configuration conf) {
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
+  }
+
+  @Override
+  public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
+    throws IOException {
+    checkInitialized();
+
+    if (
+      !getConfiguration().getBoolean(MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
+        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)
+    ) {
+      throw new DoNotRetryIOException("FlushProcedure is DISABLED");
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          getMaster().getMasterCoprocessorHost().preTableFlush(tableName);
+          LOG.info(getClientIdAuditPrefix() + " flush " + tableName);
+          submitProcedure(
+            new FlushTableProcedure(procedureExecutor.getEnvironment(), tableName, columnFamily));
+          getMaster().getMasterCoprocessorHost().postTableFlush(tableName);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "FlushTableProcedure";
+        }
+      });
   }
 }

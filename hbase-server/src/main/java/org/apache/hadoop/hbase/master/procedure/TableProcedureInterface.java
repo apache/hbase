@@ -42,6 +42,7 @@ public interface TableProcedureInterface {
     READ,
     SNAPSHOT,
     REGION_SNAPSHOT,
+    FLUSH,
     REGION_EDIT,
     REGION_SPLIT,
     REGION_MERGE,

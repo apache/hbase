@@ -58,6 +58,10 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
+  public static final String FLUSH_PROCEDURE_ENABLED = "hbase.flush.procedure.enabled";
+
+  public static final boolean FLUSH_PROCEDURE_ENABLED_DEFAULT = true;
+
   private static final String FLUSH_TIMEOUT_MILLIS_KEY = "hbase.flush.master.timeoutMillis";
   private static final int FLUSH_TIMEOUT_MILLIS_DEFAULT = 60000;
   private static final String FLUSH_WAKE_MILLIS_KEY = "hbase.flush.master.wakeMillis";
