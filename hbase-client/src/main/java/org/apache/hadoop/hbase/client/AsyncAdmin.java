@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1499,6 +1501,29 @@ public interface AsyncAdmin {
    */
   <S, R> CompletableFuture<R> coprocessorService(Function<RpcChannel, S> stubMaker,
     ServiceCaller<S, R> callable, ServerName serverName);
+
+  /**
+   * Execute the given coprocessor call on the given list of region servers.
+   * <p>
+   * The {@code stubMaker} is just a delegation to the {@code newStub} call. Usually it is only a
+   * one line lambda expression, like:
+   *
+   * <pre>
+   * channel -&gt; xxxService.newStub(channel)
+   * </pre>
+   *
+   * @param stubMaker  a delegation to the actual {@code newStub} call.
+   * @param callable   a delegation to the actual protobuf rpc call. See the comment of
+   *                   {@link ServiceCaller} for more details.
+   * @param serverNames the given list of region servers
+   * @param <S>        the type of the asynchronous stub
+   * @param <R>        the type of the return value
+   * @return a list of return values of the protobuf rpc call, wrapped by a {@link CompletableFuture}.
+   * @see ServiceCaller
+   */
+  <S, R> CompletableFuture<List<R>> coprocessorService(Function<RpcChannel, S> stubMaker,
+    ServiceCaller<S, R> callable, List<ServerName> serverNames) throws ExecutionException,
+    InterruptedException, TimeoutException;
 
   /**
    * List all the dead region servers.
