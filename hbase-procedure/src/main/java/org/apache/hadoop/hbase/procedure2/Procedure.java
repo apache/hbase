@@ -272,6 +272,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     return false;
   }
 
+  public boolean needLock() {
+    return true;
+  }
+
   /**
    * The user should override this method if they need a lock on an Entity. A lock can be anything,
    * and it is up to the implementor. The Procedure Framework will call this method just before it
@@ -974,6 +978,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
     if (waitInitialized(env)) {
       return LockState.LOCK_EVENT_WAIT;
     }
+    if (!needLock()) {
+      return LockState.LOCK_ACQUIRED;
+    }
     if (lockedWhenLoading) {
       // reset it so we will not consider it anymore
       lockedWhenLoading = false;
@@ -1000,6 +1007,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
    * Internal method called by the ProcedureExecutor that starts the user-level code releaseLock().
    */
   final void doReleaseLock(TEnvironment env, ProcedureStore store) {
+    if (!needLock()) {
+      return;
+    }
+
     locked = false;
     // persist that we have released the lock. This must be done before we actually release the
     // lock. Another procedure may take this lock immediately after we release the lock, and if we

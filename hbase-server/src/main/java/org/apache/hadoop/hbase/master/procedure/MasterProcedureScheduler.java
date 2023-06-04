@@ -149,19 +149,22 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     Procedure<?> proc, boolean addFront) {
     queue.add(proc, addFront);
     // For the following conditions, we will put the queue back into execution
-    // 1. The procedure has already held the lock, or the lock has been restored when restarting,
+    // 1. The procedure does not need any lock at all.
+    // 2. The procedure has already held the lock, or the lock has been restored when restarting,
     // which means it can be executed immediately.
-    // 2. The exclusive lock for this queue has not been held.
-    // 3. The given procedure has the exclusive lock permission for this queue.
+    // 3. The exclusive lock for this queue has not been held.
+    // 4. The given procedure has the exclusive lock permission for this queue.
     Supplier<String> reason = null;
-    if (proc.hasLock()) {
+    if (!proc.needLock()) {
+      reason = () -> proc + " does not need any lock";
+    } else if (proc.needLock() && proc.hasLock()) {
       reason = () -> proc + " has lock";
     } else if (proc.isLockedWhenLoading()) {
       reason = () -> proc + " restores lock when restarting";
     } else if (!queue.getLockStatus().hasExclusiveLock()) {
       reason = () -> "the exclusive lock is not held by anyone when adding " + proc;
     } else if (queue.getLockStatus().hasLockAccess(proc)) {
-      reason = () -> proc + " has the excusive lock access";
+      reason = () -> proc + " has the exclusive lock access";
     }
     if (reason != null) {
       addToRunQueue(fairq, queue, reason);
@@ -219,6 +222,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     // procedures, then we give up and remove the queue from run queue.
     for (int i = 0, n = rq.size(); i < n; i++) {
       Procedure<?> proc = rq.poll();
+      if (!proc.needLock()) {
+        return proc;
+      }
       if (isLockReady(proc, rq)) {
         // the queue is empty, remove from run queue
         if (rq.isEmpty()) {
@@ -368,12 +374,32 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static <T extends Comparable<T>> void removeFromRunQueue(FairQueue<T> fairq,
     Queue<T> queue, Supplier<String> reason) {
+    if (hasNoLockNeededProcedure(queue)) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("DO NOT remove {} from run queue because There are still procedures in the "
+          + "queue that do not need to acquire locks", queue);
+      }
+      return;
+    }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Remove {} from run queue because: {}", queue, reason.get());
     }
     if (AvlIterableList.isLinked(queue)) {
       fairq.remove(queue);
     }
+  }
+
+  private static <T extends Comparable<T>> boolean hasNoLockNeededProcedure(Queue<T> q) {
+    boolean ret = false;
+    // TODO: Iterate Queue in a more efficient way ?
+    for (int i = 0, n = q.size(); i < n; i++) {
+      Procedure<?> proc = q.poll();
+      if (!proc.needLock()) {
+        ret = true;
+      }
+      q.add(proc, false);
+    }
+    return ret;
   }
 
   // ============================================================================
