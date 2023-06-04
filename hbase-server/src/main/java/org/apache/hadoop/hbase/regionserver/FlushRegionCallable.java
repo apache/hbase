@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
@@ -49,7 +48,6 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
     LOG.debug("Starting region operation on {}", region);
     region.startRegionOperation();
     try {
-      long readPt = region.getReadPoint(IsolationLevel.READ_COMMITTED);
       HRegion.FlushResult res;
       if (columnFamily == null) {
         res = region.flush(true);
