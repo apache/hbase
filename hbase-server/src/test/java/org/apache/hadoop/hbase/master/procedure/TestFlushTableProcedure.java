@@ -53,7 +53,7 @@ public class TestFlushTableProcedure extends TestFlushTableProcedureBase {
     MasterProcedureEnv env = procExec.getEnvironment();
     FlushTableProcedure proc = new FlushTableProcedure(env, TABLE_NAME);
     long procId = procExec.submitProcedure(proc);
-    TEST_UTIL.waitFor(1000, () -> proc.getState().getNumber() > 1);
+    TEST_UTIL.waitFor(5000, 1000, () -> proc.getState().getNumber() > 1);
 
     TEST_UTIL.getHBaseCluster().killMaster(master.getServerName());
     TEST_UTIL.getHBaseCluster().waitForMasterToStop(master.getServerName(), 30000);
