@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MultiResponse.RegionResult;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException.ThrowableWithExtraContext;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,10 +104,6 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private final IdentityHashMap<Action, List<ThrowableWithExtraContext>> action2Errors;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private final int maxAttempts;
 
   private final long operationTimeoutNs;
@@ -115,6 +113,8 @@ class AsyncBatchRpcRetryingCaller<T> {
   private final int startLogErrorsCnt;
 
   private final long startNs;
+
+  private final HBaseServerExceptionPauseManager pauseManager;
 
   // we can not use HRegionLocation as the map key because the hashCode and equals method of
   // HRegionLocation only consider serverName.
@@ -155,8 +155,6 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -164,6 +162,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.actions = new ArrayList<>(actions.size());
     this.futures = new ArrayList<>(actions.size());
     this.action2Future = new IdentityHashMap<>(actions.size());
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
       Action action;
@@ -360,7 +359,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
     });
     if (!failedActions.isEmpty()) {
-      tryResubmit(failedActions.stream(), tries, retryImmediately.booleanValue(), false);
+      tryResubmit(failedActions.stream(), tries, retryImmediately.booleanValue(), null);
     }
   }
 
@@ -465,18 +464,25 @@ class AsyncBatchRpcRetryingCaller<T> {
     List<Action> copiedActions = actionsByRegion.values().stream().flatMap(r -> r.actions.stream())
       .collect(Collectors.toList());
     addError(copiedActions, error, serverName);
-    tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException,
-      HBaseServerException.isServerOverloaded(error));
+    tryResubmit(copiedActions.stream(), tries, error instanceof RetryImmediatelyException, error);
   }
 
   private void tryResubmit(Stream<Action> actions, int tries, boolean immediately,
-    boolean isServerOverloaded) {
+    Throwable error) {
     if (immediately) {
       groupAndSend(actions, tries);
       return;
     }
     long delayNs;
-    long pauseNsToUse = isServerOverloaded ? pauseNsForServerOverloaded : pauseNs;
+    boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
+    if (!maybePauseNsToUse.isPresent()) {
+      failAll(actions, tries);
+      return;
+    }
+    long pauseNsToUse = maybePauseNsToUse.getAsLong();
+
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
@@ -528,7 +534,7 @@ class AsyncBatchRpcRetryingCaller<T> {
           sendOrDelay(actionsByServer, tries);
         }
         if (!locateFailed.isEmpty()) {
-          tryResubmit(locateFailed.stream(), tries, false, false);
+          tryResubmit(locateFailed.stream(), tries, false, null);
         }
       });
   }
