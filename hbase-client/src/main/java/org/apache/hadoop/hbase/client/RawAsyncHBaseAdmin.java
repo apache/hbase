@@ -36,11 +36,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -99,8 +95,8 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
+import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -3511,40 +3507,27 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public <S, R> CompletableFuture<List<R>> coprocessorService(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, List<ServerName> serverNames)
-    throws ExecutionException, InterruptedException, TimeoutException {
-    List<S> stubs = new ArrayList<>(serverNames.size());
-    for(ServerName serverName : serverNames) {
-      RegionServerCoprocessorRpcChannelImpl channel = new RegionServerCoprocessorRpcChannelImpl(
-        this.<Message> newServerCaller().serverName(serverName));
-      S stub = stubMaker.apply(channel);
-      stubs.add(stub);
-    }
-
-    return CompletableFuture.supplyAsync(() -> {
-      ExecutorService executorService = Executors.newFixedThreadPool(serverNames.size(),
-        new ThreadFactoryBuilder().setNameFormat("coproc-service-%d").setDaemon(true).build());
-      List<CompletableFuture<R>> completableFutureList = new ArrayList<>();
-      for (S stub : stubs) {
-        CompletableFuture<R> future = new CompletableFuture<>();
-        completableFutureList.add(future);
-        ClientCoprocessorRpcController controller = new ClientCoprocessorRpcController();
-        executorService.execute(() -> callable.call(stub, controller, resp -> {
-          if (controller.failed()) {
-            future.completeExceptionally(controller.getFailed());
+  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable, List<ServerName> serverNames) {
+    CompletableFuture<Map<ServerName, Object>> future = new CompletableFuture<>();
+    Map<ServerName, Object> resultMap = new HashMap<>();
+    for (ServerName rs : serverNames) {
+      FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e) -> {
+        boolean done;
+        synchronized (resultMap) {
+          if (e != null) {
+            resultMap.put(rs, e);
           } else {
-            future.complete(resp);
+            resultMap.put(rs, r);
           }
-        }));
-      }
-      List<R> listValues = new ArrayList<>(serverNames.size());
-      for(CompletableFuture<R> completableFuture : completableFutureList) {
-        listValues.add(completableFuture.join());
-      }
-      executorService.shutdownNow();
-      return listValues;
-    });
+          done = resultMap.size() == serverNames.size();
+        }
+        if (done) {
+          future.complete(resultMap);
+        }
+      });
+    }
+    return future;
   }
 
   @Override

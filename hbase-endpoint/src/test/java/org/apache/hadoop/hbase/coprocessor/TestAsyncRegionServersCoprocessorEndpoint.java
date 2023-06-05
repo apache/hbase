@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -46,7 +47,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
 
-import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
@@ -76,54 +76,47 @@ public class TestAsyncRegionServersCoprocessorEndpoint extends TestAsyncAdminBas
   }
 
   @Test
-  public void testRegionServerCoprocessorServiceWithMultipleServers() throws Exception {
-    final List<JVMClusterUtil.RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster().getRegionServerThreads();
+  public void testRegionServersCoprocessorService()
+    throws ExecutionException, InterruptedException {
+    final List<JVMClusterUtil.RegionServerThread> regionServerThreads =
+      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     List<ServerName> serverNames = new ArrayList<>();
-    for (JVMClusterUtil.RegionServerThread t : regionServerThreads) {
-      serverNames.add(t.getRegionServer().getServerName());
-    }
-    DummyRegionServerEndpointProtos.DummyRequest request =
-      DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
-    List<DummyResponse> responses =
-      admin.<DummyRegionServerEndpointProtos.DummyService.Stub,
-          DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
-          DummyRegionServerEndpointProtos.DummyService::newStub,
-          (s, c, done) -> s.dummyCall(c, request, done), serverNames)
-        .get();
+    regionServerThreads.forEach(t -> serverNames.add(t.getRegionServer().getServerName()));
 
-    assertEquals(responses.size(), serverNames.size());
-    for (DummyResponse response : responses) {
-      assertEquals(DUMMY_VALUE, response.getValue());
-    }
+    DummyRequest request = DummyRequest.getDefaultInstance();
+    Map<ServerName, Object> resultMap =
+      admin.<DummyService.Stub, DummyResponse> coprocessorService(DummyService::newStub,
+        (s, c, done) -> s.dummyCall(c, request, done), serverNames).get();
+
+    resultMap.forEach((k, v) -> {
+      assertTrue(v instanceof DummyResponse);
+      DummyResponse resp = (DummyResponse) v;
+      assertEquals(DUMMY_VALUE, resp.getValue());
+    });
   }
 
   @Test
-  public void testRegionServerCoprocessorServiceErrorWithMultipleServers() throws Exception {
-    final List<JVMClusterUtil.RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster().getRegionServerThreads();
+  public void testRegionServerCoprocessorsServiceError()
+    throws ExecutionException, InterruptedException {
+    final List<JVMClusterUtil.RegionServerThread> regionServerThreads =
+      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
     List<ServerName> serverNames = new ArrayList<>();
-    for (JVMClusterUtil.RegionServerThread t : regionServerThreads) {
-      serverNames.add(t.getRegionServer().getServerName());
-    }
-    DummyRegionServerEndpointProtos.DummyRequest request =
-      DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
-    try {
-      admin.<DummyRegionServerEndpointProtos.DummyService.Stub,
-          DummyRegionServerEndpointProtos.DummyResponse> coprocessorService(
-          DummyRegionServerEndpointProtos.DummyService::newStub,
-          (s, c, done) -> s.dummyThrow(c, request, done), serverNames)
-        .get();
-      fail("Should have thrown an exception");
-    } catch (Exception e) {
-      assertTrue(e.getCause() instanceof RetriesExhaustedException);
-      assertTrue(e.getCause().getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
-    }
+    regionServerThreads.forEach(t -> serverNames.add(t.getRegionServer().getServerName()));
+
+    DummyRequest request = DummyRequest.getDefaultInstance();
+    Map<ServerName, Object> resultMap =
+      admin.<DummyService.Stub, DummyResponse> coprocessorService(DummyService::newStub,
+        (s, c, done) -> s.dummyThrow(c, request, done), serverNames).get();
+
+    resultMap.forEach((k, v) -> {
+      assertTrue(v instanceof RetriesExhaustedException);
+      Throwable e = (Throwable) v;
+      assertTrue(e.getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
+    });
   }
 
   public static class DummyRegionServerEndpoint extends DummyService
     implements RegionServerCoprocessor {
-    public DummyRegionServerEndpoint() {
-
-    }
     @Override
     public Iterable<Service> getServices() {
       return Collections.singleton(this);

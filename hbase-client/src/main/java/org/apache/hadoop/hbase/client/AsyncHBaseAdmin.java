@@ -23,9 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.CacheEvictionStats;
@@ -809,9 +807,8 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public <S, R> CompletableFuture<List<R>> coprocessorService(Function<RpcChannel, S> stubMaker,
-    ServiceCaller<S, R> callable, List<ServerName> serverNames)
-    throws ExecutionException, InterruptedException, TimeoutException {
+  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorService(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable, List<ServerName> serverNames) {
     return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverNames));
   }
 
