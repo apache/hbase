@@ -24,6 +24,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -79,6 +80,8 @@ class ReplicationSourceWALReader extends Thread {
   private long totalBufferQuota;
   private final String walGroupId;
 
+  AtomicBoolean waitingPeerEnabled = new AtomicBoolean(false);
+
   /**
    * Creates a reader worker for a given WAL queue. Reads WAL entries off a given queue, batches the
    * entries, and puts them on a batch queue.
@@ -130,8 +133,11 @@ class ReplicationSourceWALReader extends Thread {
         while (isReaderRunning()) { // loop here to keep reusing stream while we can
           batch = null;
           if (!source.isPeerEnabled()) {
+            waitingPeerEnabled.set(true);
             Threads.sleep(sleepForRetries);
             continue;
+          } else {
+            waitingPeerEnabled.set(false);
           }
           if (!checkQuota()) {
             continue;
