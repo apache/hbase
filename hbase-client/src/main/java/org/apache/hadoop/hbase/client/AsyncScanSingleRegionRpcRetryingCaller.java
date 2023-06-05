@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -43,11 +44,11 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.AdvancedScanResultConsumer.ScanResumer;
+import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -100,10 +101,6 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private final long scannerLeaseTimeoutPeriodNs;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private final int maxAttempts;
 
   private final long scanTimeoutNs;
@@ -131,6 +128,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private final List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions;
 
   private long nextCallSeq = -1L;
+
+  private final HBaseServerExceptionPauseManager pauseManager;
 
   private enum ScanControllerState {
     INITIALIZED,
@@ -331,8 +330,6 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.loc = loc;
     this.regionServerRemote = isRegionServerRemote;
     this.scannerLeaseTimeoutPeriodNs = scannerLeaseTimeoutPeriodNs;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.scanTimeoutNs = scanTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -347,6 +344,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
   }
 
   private long elapsedMs() {
@@ -420,18 +418,14 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
     long delayNs;
-    long pauseNsToUse;
-    if (error instanceof RpcThrottlingException) {
-      RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
-      pauseNsToUse = rpcThrottlingException.getWaitInterval() * 1000; // wait interval is in millis
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleeping for {}ms after catching RpcThrottlingException",
-          rpcThrottlingException.getWaitInterval(), rpcThrottlingException);
-      }
-    } else {
-      pauseNsToUse =
-        HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
+    if (!maybePauseNsToUse.isPresent()) {
+      completeExceptionally(!scannerClosed);
+      return;
     }
+    long pauseNsToUse = maybePauseNsToUse.getAsLong();
+
     if (scanTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
