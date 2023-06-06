@@ -2379,6 +2379,7 @@ public class HRegionServer extends Thread
     }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
   }
@@ -2865,7 +2866,7 @@ public class HRegionServer extends Thread
       bootstrapNodeManager.stop();
     }
     if (this.cacheFlusher != null) {
-      this.cacheFlusher.join();
+      this.cacheFlusher.shutdown();
     }
     if (this.walRoller != null) {
       this.walRoller.close();
