@@ -94,4 +94,26 @@ public class TestMemStoreFlusher {
     assertEquals(1, msf.getFlushQueueSize());
     assertTrue(msf.regionsInQueue.get(r).isDelay());
   }
+
+  @Test
+  public void testChangeFlusherCount() {
+    Configuration conf = new Configuration();
+    conf.set("hbase.hstore.flusher.count", "0");
+    HRegionServer rs = mock(HRegionServer.class);
+    doReturn(false).when(rs).isStopped();
+    doReturn(new RegionServerAccounting(conf)).when(rs).getRegionServerAccounting();
+
+    msf = new MemStoreFlusher(conf, rs);
+    msf.start(Threads.LOGGING_EXCEPTION_HANDLER);
+
+    Configuration newConf = new Configuration();
+
+    newConf.set("hbase.hstore.flusher.count", "3");
+    msf.onConfigurationChange(newConf);
+    assertEquals(3, msf.getFlusherCount());
+
+    newConf.set("hbase.hstore.flusher.count", "0");
+    msf.onConfigurationChange(newConf);
+    assertEquals(1, msf.getFlusherCount());
+  }
 }
