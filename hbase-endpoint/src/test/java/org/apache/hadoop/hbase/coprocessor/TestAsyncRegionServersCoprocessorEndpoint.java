@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegion
 public class TestAsyncRegionServersCoprocessorEndpoint extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncCoprocessorEndpoint.class);
+    HBaseClassTestRule.forClass(TestAsyncRegionServersCoprocessorEndpoint.class);
 
   private static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
   private static final String DUMMY_VALUE = "val";
