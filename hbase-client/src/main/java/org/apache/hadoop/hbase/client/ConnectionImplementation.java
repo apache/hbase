@@ -1008,9 +1008,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = connectionConfig.getPauseMillis();
-      takeUserRegionLock();
-      final long lockStartTime = EnvironmentEdgeManager.currentTime();
+      long lockStartTime = 0;
+      boolean lockedUserRegion = false;
       try {
+        takeUserRegionLock();
+        lockStartTime = EnvironmentEdgeManager.currentTime();
+        lockedUserRegion = true;
         // We don't need to check if useCache is enabled or not. Even if useCache is false
         // we already cleared the cache for this row before acquiring userRegion lock so if this
         // row is present in cache that means some other thread has populated it while we were
@@ -1119,10 +1122,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             ConnectionUtils.getPauseTime(pauseBase, tries), TimeUnit.MILLISECONDS);
         }
       } finally {
-        userRegionLock.unlock();
-        // update duration of the lock being held
-        if (metrics != null) {
-          metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTime);
+        if (lockedUserRegion) {
+          userRegionLock.unlock();
+          // update duration of the lock being held
+          if (metrics != null) {
+            metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTime);
+          }
         }
       }
       try {
