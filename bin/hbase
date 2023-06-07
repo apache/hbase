@@ -553,6 +553,8 @@ if [ "$COMMAND" = "shell" ] ; then
     # We want jruby to consume these things rather than our bootstrap script;
     # jruby will look for the env variable 'JRUBY_OPTS'.
     JRUBY_OPTS="${JRUBY_OPTS} -X+O"
+    # jruby outputs "warning: parentheses after method name is interpreted as an argument list" in shell
+    JRUBY_OPTS="${JRUBY_OPTS} -W0"
     export JRUBY_OPTS
     # hbase-shell.jar contains a 'jar-bootstrap.rb'
     # for more info see
