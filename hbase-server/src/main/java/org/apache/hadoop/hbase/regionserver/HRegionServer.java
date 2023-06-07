@@ -1638,7 +1638,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     @Override
     protected void chore() {
       for (Region r : this.instance.onlineRegions.values()) {
-        // Skip compaction if region is read only
+        // Skip compaction if region is read only or table disable compaction
         if (r == null || r.isReadOnly() || !r.getTableDescriptor().isCompactionEnabled()) {
           continue;
         }
