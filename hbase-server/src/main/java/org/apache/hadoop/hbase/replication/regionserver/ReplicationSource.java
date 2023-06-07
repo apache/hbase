@@ -789,7 +789,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
         sb.append("currently replicating from: ").append(currentPath).append(" at position: ")
           .append(position).append("\n");
       } else {
-        sb.append("no replication ongoing, waiting for new log");
+        sb.append("no replication ongoing, waiting for new log").append("\n");
       }
     }
     return sb.toString();
