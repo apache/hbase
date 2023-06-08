@@ -1,15 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.util.bulkdatagenerator;
 
-import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
-import org.apache.hbase.thirdparty.org.apache.commons.cli.Parser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -25,16 +38,21 @@ import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.GnuParser;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Parser;
 
 /**
- * A command line utility to generate pre-splitted HBase Tables with large amount (TBs) of random data, equally distributed among all regions.
+ * A command line utility to generate pre-splitted HBase Tables with large amount (TBs) of random
+ * data, equally distributed among all regions.
  */
 public class BulkDataGeneratorTool {
 
@@ -43,7 +61,7 @@ public class BulkDataGeneratorTool {
   /**
    * Prefix for the generated HFiles directory
    */
-  private static final String OUTPUT_DIRECTORY_PREFIX = "/bulk_data_generator/" ;
+  private static final String OUTPUT_DIRECTORY_PREFIX = "/bulk_data_generator/";
 
   /**
    * Number of mapper container to be launched for generating of HFiles
@@ -61,7 +79,8 @@ public class BulkDataGeneratorTool {
   private String table;
 
   /**
-   * Number of splits for the {@link #table}. Number of regions for the table will be ({@link #splitCount} + 1).
+   * Number of splits for the {@link #table}. Number of regions for the table will be
+   * ({@link #splitCount} + 1).
    */
   private int splitCount;
 
@@ -93,7 +112,7 @@ public class BulkDataGeneratorTool {
       return false;
     }
 
-    if(line.hasOption("-h")) {
+    if (line.hasOption("-h")) {
       printUsage();
       return true;
     }
@@ -101,12 +120,13 @@ public class BulkDataGeneratorTool {
     Path outputDirectory = generateOutputDirectory();
     logger.info("HFiles will be generated at " + outputDirectory.toString());
 
-    try(Connection connection = ConnectionFactory.createConnection(conf)) {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
       final Admin admin = connection.getAdmin();
       final TableName tableName = TableName.valueOf(table);
-      if(admin.tableExists(tableName)) {
-        if(deleteTableIfExist) {
-          logger.info("Deleting the table since it already exist and delete-if-exist flag is set to true");
+      if (admin.tableExists(tableName)) {
+        if (deleteTableIfExist) {
+          logger.info(
+            "Deleting the table since it already exist and delete-if-exist flag is set to true");
           Utility.deleteTable(admin, table);
         } else {
           logger.info("Table already exists, cannot generate HFiles for existing table.");
@@ -129,10 +149,11 @@ public class BulkDataGeneratorTool {
 
       boolean result = job.waitForCompletion(true);
 
-      if(result) {
+      if (result) {
         logger.info("HFiles generated successfully. Starting bulk load to " + table);
         LoadIncrementalHFiles loadIncrementalHFiles = new LoadIncrementalHFiles(conf);
-        int loadIncrementalResult = loadIncrementalHFiles.run(new String[] {outputDirectory.getFileSystem(conf).makeQualified(outputDirectory).toString(), table});
+        int loadIncrementalResult = loadIncrementalHFiles.run(new String[] {
+          outputDirectory.getFileSystem(conf).makeQualified(outputDirectory).toString(), table });
         return (loadIncrementalResult == 0);
       } else {
         logger.info("Failed to generate HFiles.");
@@ -146,8 +167,7 @@ public class BulkDataGeneratorTool {
     }
   }
 
-  protected Job createSubmittableJob(Configuration conf)
-      throws IOException {
+  protected Job createSubmittableJob(Configuration conf) throws IOException {
 
     conf.setInt(BulkDataGeneratorMapper.SPLIT_COUNT_KEY, splitCount);
     conf.setInt(BulkDataGeneratorInputFormat.MAPPER_TASK_COUNT_KEY, mapperCount);
@@ -167,30 +187,28 @@ public class BulkDataGeneratorTool {
     return job;
   }
 
-  /**
-   * Get the random output directory path where HFiles will be generated
-   * @return
-   */
+  /** Returns Random output directory path where HFiles will be generated */
   protected Path generateOutputDirectory() {
-    final String outputDirectory = OUTPUT_DIRECTORY_PREFIX + "/" + table + "-" + System.currentTimeMillis();
+    final String outputDirectory =
+      OUTPUT_DIRECTORY_PREFIX + "/" + table + "-" + System.currentTimeMillis();
     return new Path(outputDirectory);
   }
 
   /**
    * This method parses the command line parameters into instance variables
-   * @throws ParseException
    */
   protected void readCommandLineParameters(Configuration conf, CommandLine line)
-      throws ParseException, IOException {
+    throws ParseException, IOException {
     final List<String> genericParameters = new ArrayList<String>();
 
-    //Parse the generic options
+    // Parse the generic options
     for (Map.Entry<Object, Object> entry : line.getOptionProperties("D").entrySet()) {
       genericParameters.add("-D");
       genericParameters.add(entry.getKey() + "=" + entry.getValue());
     }
 
-    logger.info("Parsed generic parameters: " + Arrays.toString(genericParameters.toArray(new String[0])));
+    logger.info(
+      "Parsed generic parameters: " + Arrays.toString(genericParameters.toArray(new String[0])));
 
     new GenericOptionsParser(conf, genericParameters.toArray(new String[0]));
 
@@ -199,7 +217,8 @@ public class BulkDataGeneratorTool {
     mapperCount = Integer.parseInt(line.getOptionValue("mapper-count"));
     Preconditions.checkArgument(mapperCount > 0, "Mapper count must be greater than 0");
     splitCount = Integer.parseInt(line.getOptionValue("split-count"));
-    Preconditions.checkArgument((splitCount > 0) && (splitCount < Utility.MAX_SPLIT_COUNT), "Split count must be greater than 0 and less than " + Utility.MAX_SPLIT_COUNT);
+    Preconditions.checkArgument((splitCount > 0) && (splitCount < Utility.MAX_SPLIT_COUNT),
+      "Split count must be greater than 0 and less than " + Utility.MAX_SPLIT_COUNT);
     rowsPerMapper = Long.parseLong(line.getOptionValue("rows-per-mapper"));
     Preconditions.checkArgument(rowsPerMapper > 0, "Rows per mapper must be greater than 0");
     deleteTableIfExist = line.hasOption("delete-if-exist");
@@ -208,8 +227,8 @@ public class BulkDataGeneratorTool {
 
   private void parseTableOptions(final CommandLine line) {
     final String tableOptionsAsString = line.getOptionValue("table-options");
-    if(!StringUtils.isEmpty(tableOptionsAsString)) {
-      for(String tableOption : tableOptionsAsString.split(",")) {
+    if (!StringUtils.isEmpty(tableOptionsAsString)) {
+      for (String tableOption : tableOptionsAsString.split(",")) {
         final String[] keyValueSplit = tableOption.split("=");
         final String key = keyValueSplit[0];
         final String value = keyValueSplit[1];
@@ -218,37 +237,34 @@ public class BulkDataGeneratorTool {
     }
   }
 
-  /**
-   * @return the command line options required by the sor job.
-   */
+  /** Returns the command line option for {@link BulkDataGeneratorTool} */
   protected Options getOptions() {
     final Options options = new Options();
-    Option option = new Option("t", "table", true,
-        "The table name for which data need to be generated.");
+    Option option =
+      new Option("t", "table", true, "The table name for which data need to be generated.");
     options.addOption(option);
 
     option = new Option("d", "delete-if-exist", false,
-        "If it's set, the table will be deleted if already exist.");
+      "If it's set, the table will be deleted if already exist.");
     options.addOption(option);
 
-    option = new Option("mc", "mapper-count", true,
-        "The number of mapper containers to be launched.");
+    option =
+      new Option("mc", "mapper-count", true, "The number of mapper containers to be launched.");
     options.addOption(option);
 
     option = new Option("sc", "split-count", true,
-        "The number of regions/pre-splits to be created for the table.");
+      "The number of regions/pre-splits to be created for the table.");
     options.addOption(option);
 
-    option = new Option("r", "rows-per-mapper", true,
-        "The number of rows to be generated PER mapper.");
+    option =
+      new Option("r", "rows-per-mapper", true, "The number of rows to be generated PER mapper.");
     options.addOption(option);
 
-    option = new Option("o", "table-options", true,
-      "Table options to be set while creating the table.");
+    option =
+      new Option("o", "table-options", true, "Table options to be set while creating the table.");
     options.addOption(option);
 
-    option = new Option("h", "help", false,
-      "Show help message for the tool");
+    option = new Option("h", "help", false, "Show help message for the tool");
     options.addOption(option);
 
     return options;
@@ -259,10 +275,11 @@ public class BulkDataGeneratorTool {
     helpFormatter.setWidth(120);
     final String helpMessageCommand = "hbase " + BulkDataGeneratorTool.class.getName();
     final String commandSyntax = helpMessageCommand + " <OPTIONS> [-D<property=value>]*";
-    final String helpMessageSuffix = "Examples:\n"
-      + helpMessageCommand + " -t TEST_TABLE -mc 10 -r 100 -sc 10\n"
-      + helpMessageCommand + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -d -o \"DISABLE_BACKUP=true,NORMALIZATION_ENABLED=false\"\n"
-      + helpMessageCommand + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192 -Dmapreduce.map.java.opts=-Xmx7782m\n";
+    final String helpMessageSuffix = "Examples:\n" + helpMessageCommand
+      + " -t TEST_TABLE -mc 10 -r 100 -sc 10\n" + helpMessageCommand
+      + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -d -o \"DISABLE_BACKUP=true,NORMALIZATION_ENABLED=false\"\n"
+      + helpMessageCommand
+      + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192 -Dmapreduce.map.java.opts=-Xmx7782m\n";
     helpFormatter.printHelp(commandSyntax, "", getOptions(), helpMessageSuffix);
   }
 }
