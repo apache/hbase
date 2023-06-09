@@ -125,7 +125,9 @@ public class NettyRpcServer extends RpcServer {
             initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
           }
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
-            .addLast(createNettyRpcServerPreambleHandler());
+            .addLast(createNettyRpcServerPreambleHandler())
+            .addLast(NettyRpcServerResponseEncoder.HANDLER_NAME,
+              new NettyRpcServerResponseEncoder(metrics));
         }
       });
     try {

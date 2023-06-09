@@ -31,6 +31,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 @InterfaceAudience.Private
 class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
 
+  static final String HANDLER_NAME = "NettyRpcServerResponseEncoder";
+
   private final MetricsHBaseServer metrics;
 
   NettyRpcServerResponseEncoder(MetricsHBaseServer metrics) {
