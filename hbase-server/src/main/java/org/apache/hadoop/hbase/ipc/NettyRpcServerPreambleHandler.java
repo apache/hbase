@@ -58,9 +58,8 @@ class NettyRpcServerPreambleHandler extends SimpleChannelInboundHandler<ByteBuf>
       LengthFieldBasedFrameDecoder decoder =
         new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4);
       decoder.setSingleDecode(true);
-      p.addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME,
-        NettyHBaseSaslRpcServerHandler.DECODER_NAME, decoder)
-        .addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME, null,
+      p.addBefore(NettyRpcServerResponseEncoder.NAME, NettyHBaseSaslRpcServerHandler.DECODER_NAME,
+        decoder).addBefore(NettyRpcServerResponseEncoder.NAME, null,
           new NettyHBaseSaslRpcServerHandler(rpcServer, conn));
     } else {
       conn.setupHandler();

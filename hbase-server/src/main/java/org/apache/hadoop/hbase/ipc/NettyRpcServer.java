@@ -126,7 +126,9 @@ public class NettyRpcServer extends RpcServer {
           }
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
             .addLast(createNettyRpcServerPreambleHandler())
-            .addLast(NettyRpcServerResponseEncoder.HANDLER_NAME,
+            // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
+            // send RpcResponse to client.
+            .addLast(NettyRpcServerResponseEncoder.NAME,
               new NettyRpcServerResponseEncoder(metrics));
         }
       });

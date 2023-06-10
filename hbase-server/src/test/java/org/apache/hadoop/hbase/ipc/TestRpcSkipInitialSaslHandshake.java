@@ -102,7 +102,6 @@ public class TestRpcSkipInitialSaslHandshake {
     setSecuredConfiguration(clientConf);
     clientConf.setBoolean(RpcClient.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY, true);
     serverConf = new Configuration(TEST_UTIL.getConfiguration());
-    // setSecuredConfiguration(serverConf);
   }
 
   @BeforeClass

@@ -90,9 +90,9 @@ class NettyHBaseSaslRpcServerHandler extends SimpleChannelInboundHandler<ByteBuf
       ChannelPipeline p = ctx.pipeline();
       if (useWrap) {
         p.addBefore(DECODER_NAME, null, new SaslWrapHandler(saslServer::wrap))
-          .addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME, null,
+          .addBefore(NettyRpcServerResponseEncoder.NAME, null,
             new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4))
-          .addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME, null,
+          .addBefore(NettyRpcServerResponseEncoder.NAME, null,
             new SaslUnwrapHandler(saslServer::unwrap));
       }
       conn.setupHandler();

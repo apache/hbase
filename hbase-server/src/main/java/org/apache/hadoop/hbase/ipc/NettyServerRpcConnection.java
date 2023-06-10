@@ -71,9 +71,9 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   void setupHandler() {
     channel.pipeline()
-      .addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME, "frameDecoder",
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
         new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
-      .addBefore(NettyRpcServerResponseEncoder.HANDLER_NAME, "decoder",
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder",
         new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
   }
 
