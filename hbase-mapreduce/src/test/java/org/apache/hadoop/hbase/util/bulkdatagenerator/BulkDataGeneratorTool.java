@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util.bulkdatagenerator;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat2;
+import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -92,7 +94,7 @@ public class BulkDataGeneratorTool {
   /**
    * Additional HBase meta-data options to be set for the table
    */
-  Map<String, String> tableOptions = new HashMap<>();
+  private final Map<String, String> tableOptions = new HashMap<>();
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
@@ -109,6 +111,7 @@ public class BulkDataGeneratorTool {
       readCommandLineParameters(conf, line);
     } catch (ParseException | IOException exception) {
       logger.error("Error while parsing CLI arguments.", exception);
+      printUsage();
       return false;
     }
 
@@ -116,6 +119,12 @@ public class BulkDataGeneratorTool {
       printUsage();
       return true;
     }
+
+    Preconditions.checkArgument(!StringUtils.isEmpty(table), "Table name must not be empty");
+    Preconditions.checkArgument(mapperCount > 0, "Mapper count must be greater than 0");
+    Preconditions.checkArgument((splitCount > 0) && (splitCount < Utility.MAX_SPLIT_COUNT),
+      "Split count must be greater than 0 and less than " + Utility.MAX_SPLIT_COUNT);
+    Preconditions.checkArgument(rowsPerMapper > 0, "Rows per mapper must be greater than 0");
 
     Path outputDirectory = generateOutputDirectory();
     logger.info("HFiles will be generated at " + outputDirectory.toString());
@@ -152,9 +161,11 @@ public class BulkDataGeneratorTool {
       if (result) {
         logger.info("HFiles generated successfully. Starting bulk load to " + table);
         BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(conf);
-        int loadHFilesResult = bulkLoadHFilesTool.run(new String[] {
-          outputDirectory.getFileSystem(conf).makeQualified(outputDirectory).toString(), table });
-        return (loadHFilesResult == 0);
+        Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> bulkLoadedHFiles =
+          bulkLoadHFilesTool.bulkLoad(tableName, outputDirectory);
+        boolean status = !bulkLoadedHFiles.isEmpty();
+        logger.info("BulkLoadHFiles finished successfully with status " + status);
+        return status;
       } else {
         logger.info("Failed to generate HFiles.");
         return false;
@@ -213,15 +224,16 @@ public class BulkDataGeneratorTool {
     new GenericOptionsParser(conf, genericParameters.toArray(new String[0]));
 
     table = line.getOptionValue("table");
-    Preconditions.checkArgument(!StringUtils.isEmpty(table), "Table name must not be empty");
-    mapperCount = Integer.parseInt(line.getOptionValue("mapper-count"));
-    Preconditions.checkArgument(mapperCount > 0, "Mapper count must be greater than 0");
-    splitCount = Integer.parseInt(line.getOptionValue("split-count"));
-    Preconditions.checkArgument((splitCount > 0) && (splitCount < Utility.MAX_SPLIT_COUNT),
-      "Split count must be greater than 0 and less than " + Utility.MAX_SPLIT_COUNT);
-    rowsPerMapper = Long.parseLong(line.getOptionValue("rows-per-mapper"));
-    Preconditions.checkArgument(rowsPerMapper > 0, "Rows per mapper must be greater than 0");
+
+    if (line.hasOption("mapper-count"))
+      mapperCount = Integer.parseInt(line.getOptionValue("mapper-count"));
+    if (line.hasOption("split-count"))
+      splitCount = Integer.parseInt(line.getOptionValue("split-count"));
+    if (line.hasOption("rows-per-mapper"))
+      rowsPerMapper = Long.parseLong(line.getOptionValue("rows-per-mapper"));
+
     deleteTableIfExist = line.hasOption("delete-if-exist");
+
     parseTableOptions(line);
   }
 
