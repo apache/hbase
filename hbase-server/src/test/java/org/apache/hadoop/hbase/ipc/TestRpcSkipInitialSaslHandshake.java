@@ -131,7 +131,7 @@ public class TestRpcSkipInitialSaslHandshake {
       .thenReturn(HBaseKerberosUtils.KRB_PRINCIPAL);
     SecurityInfo.addInfo("TestProtobufRpcProto", securityInfoMock);
 
-    final AtomicBoolean useSasl = new AtomicBoolean(false);
+    final AtomicBoolean useSaslRef = new AtomicBoolean(false);
     NettyRpcServer rpcServer = new NettyRpcServer(null, getClass().getSimpleName(),
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
       new InetSocketAddress(HOST, 0), serverConf, new FifoRpcScheduler(serverConf, 1), true) {
@@ -144,7 +144,7 @@ public class TestRpcSkipInitialSaslHandshake {
           @Override
           protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
             super.channelRead0(ctx, msg);
-            useSasl.set(conn.useSasl);
+            useSaslRef.set(conn.useSasl);
 
           }
 
@@ -167,7 +167,7 @@ public class TestRpcSkipInitialSaslHandshake {
         stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage("test").build())
           .getMessage();
       assertTrue("test".equals(response));
-      assertFalse(useSasl.get());
+      assertFalse(useSaslRef.get());
 
     } finally {
       rpcServer.stop();
