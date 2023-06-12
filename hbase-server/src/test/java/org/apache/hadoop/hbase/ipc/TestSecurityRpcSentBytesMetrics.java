@@ -116,7 +116,7 @@ public class TestSecurityRpcSentBytesMetrics {
   }
 
   /**
-   * This test is for HBASE-27924,before this JIRA, bytes sent by
+   * This test is for HBASE-27924, before this JIRA, bytes sent by
    * {@link NettyHBaseSaslRpcServerHandler} is ignored by {@link MetricsHBaseServer#sentBytes}.
    */
   @Test
