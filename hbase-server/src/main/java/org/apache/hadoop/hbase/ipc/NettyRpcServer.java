@@ -125,7 +125,11 @@ public class NettyRpcServer extends RpcServer {
             initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
           }
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
-            .addLast(createNettyRpcServerPreambleHandler());
+            .addLast(createNettyRpcServerPreambleHandler())
+            // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
+            // send RpcResponse to client.
+            .addLast(NettyRpcServerResponseEncoder.NAME,
+              new NettyRpcServerResponseEncoder(metrics));
         }
       });
     try {
