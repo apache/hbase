@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -473,7 +474,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       groupAndSend(actions, tries);
       return;
     }
-    long delayNs;
+
     boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
     OptionalLong maybePauseNsToUse =
       pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
@@ -482,16 +483,22 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
     long pauseNsToUse = maybePauseNsToUse.getAsLong();
+    if (!(error instanceof RpcThrottlingException)) {
+      // RpcThrottlingException tells us exactly how long the client should wait for,
+      // so we should not factor in the retry count for said exception
+      pauseNsToUse = getPauseTime(pauseNsToUse, tries - 1);
+    }
 
+    long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
         failAll(actions, tries);
         return;
       }
-      delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
+      delayNs = Math.min(maxDelayNs, pauseNsToUse);
     } else {
-      delayNs = getPauseTime(pauseNsToUse, tries - 1);
+      delayNs = pauseNsToUse;
     }
 
     if (isServerOverloaded) {

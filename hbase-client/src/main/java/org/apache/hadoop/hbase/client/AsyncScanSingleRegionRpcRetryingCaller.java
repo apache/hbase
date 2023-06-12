@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -417,7 +418,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       completeExceptionally(!scannerClosed);
       return;
     }
-    long delayNs;
+
     OptionalLong maybePauseNsToUse =
       pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
     if (!maybePauseNsToUse.isPresent()) {
@@ -426,16 +427,24 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     }
     long pauseNsToUse = maybePauseNsToUse.getAsLong();
 
+    if (!(error instanceof RpcThrottlingException)) {
+      // RpcThrottlingException tells us exactly how long the client should wait for,
+      // so we should not factor in the retry count for said exception
+      pauseNsToUse = getPauseTime(pauseNsToUse, tries - 1);
+    }
+
+    long delayNs;
     if (scanTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
       if (maxDelayNs <= 0) {
         completeExceptionally(!scannerClosed);
         return;
       }
-      delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
+      delayNs = Math.min(maxDelayNs, pauseNsToUse);
     } else {
-      delayNs = getPauseTime(pauseNsToUse, tries - 1);
+      delayNs = pauseNsToUse;
     }
+
     if (scannerClosed) {
       completeWhenError(false);
       return;

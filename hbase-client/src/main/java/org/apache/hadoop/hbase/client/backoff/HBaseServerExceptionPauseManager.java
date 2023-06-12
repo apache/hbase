@@ -37,16 +37,27 @@ public class HBaseServerExceptionPauseManager {
     this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
   }
 
+  /**
+   * Returns the nanos, if any, for which the client should wait
+   * @param error           The exception from the server
+   * @param remainingTimeNs The remaining nanos before timeout
+   * @return The time, in nanos, to pause. If empty then pausing would exceed our timeout, so we
+   *         should throw now
+   */
   public OptionalLong getPauseNsFromException(Throwable error, long remainingTimeNs) {
     long expectedSleepNs;
     if (error instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
       expectedSleepNs = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
       if (expectedSleepNs > remainingTimeNs) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("RpcThrottlingException suggested pause of {}ns which would exceed "
+            + "the timeout. We should throw instead.", expectedSleepNs, rpcThrottlingException);
+        }
         return OptionalLong.empty();
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleeping for {}ms after catching RpcThrottlingException", expectedSleepNs,
+        LOG.debug("Sleeping for {}ns after catching RpcThrottlingException", expectedSleepNs,
           rpcThrottlingException);
       }
     } else {

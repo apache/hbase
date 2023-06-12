@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -132,6 +133,12 @@ public abstract class AsyncRpcRetryingCaller<T> {
     }
     long pauseNsToUse = maybePauseNsToUse.getAsLong();
 
+    if (!(error instanceof RpcThrottlingException)) {
+      // RpcThrottlingException tells us exactly how long the client should wait for,
+      // so we should not factor in the retry count for said exception
+      pauseNsToUse = getPauseTime(pauseNsToUse, tries - 1);
+    }
+
     long delayNs;
     if (operationTimeoutNs > 0) {
       long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
@@ -139,10 +146,11 @@ public abstract class AsyncRpcRetryingCaller<T> {
         completeExceptionally();
         return;
       }
-      delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
+      delayNs = Math.min(maxDelayNs, pauseNsToUse);
     } else {
-      delayNs = getPauseTime(pauseNsToUse, tries - 1);
+      delayNs = pauseNsToUse;
     }
+
     tries++;
     if (HBaseServerException.isServerOverloaded(error)) {
       Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
