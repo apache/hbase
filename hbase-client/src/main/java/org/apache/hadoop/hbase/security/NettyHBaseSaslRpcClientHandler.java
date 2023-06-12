@@ -87,14 +87,18 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       return;
     }
 
-    ChannelPipeline p = ctx.pipeline();
-    saslRpcClient.setupSaslHandler(p, HANDLER_NAME);
-    p.remove(SaslChallengeDecoder.class);
-    p.remove(this);
+    saslRpcClient.setupSaslHandler(ctx.pipeline(), HANDLER_NAME);
+    removeHandlers(ctx);
 
     setCryptoAESOption();
 
     saslPromise.setSuccess(true);
+  }
+
+  private void removeHandlers(ChannelHandlerContext ctx) {
+    ChannelPipeline p = ctx.pipeline();
+    p.remove(SaslChallengeDecoder.class);
+    p.remove(this);
   }
 
   private void setCryptoAESOption() {
@@ -142,6 +146,9 @@ public class NettyHBaseSaslRpcClientHandler extends SimpleChannelInboundHandler<
       } else {
         saslPromise.tryFailure(new FallbackDisallowedException());
       }
+      // When we switch to simple auth, we should also remove SaslChallengeDecoder and
+      // NettyHBaseSaslRpcClientHandler.
+      removeHandlers(ctx);
       return;
     }
     LOG.trace("Reading input token size={} for processing by initSASLContext", len);
