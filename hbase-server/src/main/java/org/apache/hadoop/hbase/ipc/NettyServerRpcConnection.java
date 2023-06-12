@@ -71,9 +71,10 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   void setupHandler() {
     channel.pipeline()
-      .addLast("frameDecoder", new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
-      .addLast("decoder", new NettyRpcServerRequestDecoder(rpcServer.metrics, this))
-      .addLast("encoder", new NettyRpcServerResponseEncoder(rpcServer.metrics));
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
+        new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder",
+        new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
   }
 
   void process(ByteBuf buf) throws IOException, InterruptedException {
@@ -115,6 +116,6 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   protected void doRespond(RpcResponse resp) {
-    channel.writeAndFlush(resp);
+    NettyFutureUtils.safeWriteAndFlush(channel, resp);
   }
 }
