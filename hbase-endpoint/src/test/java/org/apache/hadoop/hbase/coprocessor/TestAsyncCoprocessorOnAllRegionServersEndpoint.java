@@ -57,7 +57,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestAsyncCoprocessorOnAllRegionServersEndpoint.class);
 
-  private static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
+  private static final String THROW_CLASS_NAME = "java.io.FileNotFoundException";
   private static final String DUMMY_VALUE = "val";
   private static final int NUM_SLAVES = 5;
   private static final int NUM_SUCCESS_REGION_SERVERS = 3;
@@ -106,7 +106,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     resultMap.forEach((k, v) -> {
       assertTrue(v instanceof RetriesExhaustedException);
       Throwable e = (Throwable) v;
-      assertTrue(e.getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
+      assertTrue(e.getMessage().contains(THROW_CLASS_NAME));
     });
   }
 
@@ -115,16 +115,15 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
     AtomicInteger callCount = new AtomicInteger();
-    Map<ServerName, Object> resultMap =
-      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
-        DummyService::newStub, (s, c, done) -> {
-          callCount.addAndGet(1);
-          if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
-            s.dummyCall(c, request, done);
-          } else {
-            s.dummyThrow(c, request, done);
-          }
-        }).get();
+    Map<ServerName, Object> resultMap = admin.<DummyService.Stub,
+      DummyResponse> coprocessorServiceOnAllRegionServers(DummyService::newStub, (s, c, done) -> {
+        callCount.addAndGet(1);
+        if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
+          s.dummyCall(c, request, done);
+        } else {
+          s.dummyThrow(c, request, done);
+        }
+      }).get();
 
     AtomicInteger successCallCount = new AtomicInteger();
     resultMap.forEach((k, v) -> {
@@ -134,7 +133,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
         assertEquals(DUMMY_VALUE, resp.getValue());
       } else {
         Throwable e = (Throwable) v;
-        assertTrue(e.getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
+        assertTrue(e.getMessage().contains(THROW_CLASS_NAME));
       }
     });
     assertEquals(NUM_SUCCESS_REGION_SERVERS, successCallCount.get());
@@ -156,7 +155,8 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     @Override
     public void dummyThrow(RpcController controller, DummyRequest request,
       RpcCallback<DummyResponse> done) {
-      CoprocessorRpcUtils.setControllerException(controller, WHAT_TO_THROW);
+      CoprocessorRpcUtils.setControllerException(controller,
+        new FileNotFoundException("/file.txt"));
     }
   }
 }
