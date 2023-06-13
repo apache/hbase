@@ -21,11 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -35,7 +34,7 @@ import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -53,14 +52,15 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegion
 
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
-public class TestAsyncRegionServersCoprocessorEndpoint extends TestAsyncAdminBase {
+public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdminBase {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionServersCoprocessorEndpoint.class);
+    HBaseClassTestRule.forClass(TestAsyncCoprocessorOnAllRegionServersEndpoint.class);
 
   private static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
   private static final String DUMMY_VALUE = "val";
   private static final int NUM_SLAVES = 5;
+  private static final int NUM_SUCCESS_REGION_SERVERS = 3;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -75,18 +75,18 @@ public class TestAsyncRegionServersCoprocessorEndpoint extends TestAsyncAdminBas
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
   @Test
   public void testRegionServersCoprocessorService()
     throws ExecutionException, InterruptedException {
-    final List<JVMClusterUtil.RegionServerThread> regionServerThreads =
-      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
-    List<ServerName> serverNames = new ArrayList<>();
-    regionServerThreads.forEach(t -> serverNames.add(t.getRegionServer().getServerName()));
-
     DummyRequest request = DummyRequest.getDefaultInstance();
     Map<ServerName, Object> resultMap =
-      admin.<DummyService.Stub, DummyResponse> coprocessorService(DummyService::newStub,
-        (s, c, done) -> s.dummyCall(c, request, done), serverNames).get();
+      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
+        DummyService::newStub, (s, c, done) -> s.dummyCall(c, request, done)).get();
 
     resultMap.forEach((k, v) -> {
       assertTrue(v instanceof DummyResponse);
@@ -96,23 +96,48 @@ public class TestAsyncRegionServersCoprocessorEndpoint extends TestAsyncAdminBas
   }
 
   @Test
-  public void testRegionServerCoprocessorsServiceError()
+  public void testRegionServerCoprocessorsServiceAllFail()
     throws ExecutionException, InterruptedException {
-    final List<JVMClusterUtil.RegionServerThread> regionServerThreads =
-      TEST_UTIL.getHBaseCluster().getRegionServerThreads();
-    List<ServerName> serverNames = new ArrayList<>();
-    regionServerThreads.forEach(t -> serverNames.add(t.getRegionServer().getServerName()));
-
     DummyRequest request = DummyRequest.getDefaultInstance();
     Map<ServerName, Object> resultMap =
-      admin.<DummyService.Stub, DummyResponse> coprocessorService(DummyService::newStub,
-        (s, c, done) -> s.dummyThrow(c, request, done), serverNames).get();
+      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
+        DummyService::newStub, (s, c, done) -> s.dummyThrow(c, request, done)).get();
 
     resultMap.forEach((k, v) -> {
       assertTrue(v instanceof RetriesExhaustedException);
       Throwable e = (Throwable) v;
       assertTrue(e.getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
     });
+  }
+
+  @Test
+  public void testRegionServerCoprocessorsServicePartialFail()
+    throws ExecutionException, InterruptedException {
+    DummyRequest request = DummyRequest.getDefaultInstance();
+    AtomicInteger callCount = new AtomicInteger();
+    Map<ServerName, Object> resultMap =
+      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
+        DummyService::newStub, (s, c, done) -> {
+          callCount.addAndGet(1);
+          if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
+            s.dummyCall(c, request, done);
+          } else {
+            s.dummyThrow(c, request, done);
+          }
+        }).get();
+
+    AtomicInteger successCallCount = new AtomicInteger();
+    resultMap.forEach((k, v) -> {
+      if (v instanceof DummyResponse) {
+        successCallCount.addAndGet(1);
+        DummyResponse resp = (DummyResponse) v;
+        assertEquals(DUMMY_VALUE, resp.getValue());
+      } else {
+        Throwable e = (Throwable) v;
+        assertTrue(e.getMessage().contains(WHAT_TO_THROW.getClass().getName().trim()));
+      }
+    });
+    assertEquals(NUM_SUCCESS_REGION_SERVERS, successCallCount.get());
   }
 
   public static class DummyRegionServerEndpoint extends DummyService

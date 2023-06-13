@@ -3507,26 +3507,32 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorService(
-    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable, List<ServerName> serverNames) {
+  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable) {
     CompletableFuture<Map<ServerName, Object>> future = new CompletableFuture<>();
-    Map<ServerName, Object> resultMap = new HashMap<>();
-    for (ServerName rs : serverNames) {
-      FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e) -> {
-        boolean done;
-        synchronized (resultMap) {
-          if (e != null) {
-            resultMap.put(rs, e);
-          } else {
-            resultMap.put(rs, r);
+    FutureUtils.addListener(getRegionServers(), (rses, e1) -> {
+      if (e1 != null) {
+        future.completeExceptionally(e1);
+        return;
+      }
+      Map<ServerName, Object> resultMap = new HashMap<>();
+      for (ServerName rs : rses) {
+        FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e2) -> {
+          boolean done;
+          synchronized (resultMap) {
+            if (e2 != null) {
+              resultMap.put(rs, e2);
+            } else {
+              resultMap.put(rs, r);
+            }
+            done = resultMap.size() == rses.size();
           }
-          done = resultMap.size() == serverNames.size();
-        }
-        if (done) {
-          future.complete(resultMap);
-        }
-      });
-    }
+          if (done) {
+            future.complete(resultMap);
+          }
+        });
+      }
+    });
     return future;
   }
 

@@ -807,9 +807,9 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
-  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorService(
-    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable, List<ServerName> serverNames) {
-    return wrap(rawAdmin.coprocessorService(stubMaker, callable, serverNames));
+  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable) {
+    return wrap(rawAdmin.coprocessorServiceOnAllRegionServers(stubMaker, callable));
   }
 
   @Override
