@@ -58,6 +58,7 @@ public class TestInterfaceAlign {
     adminMethodNames.removeAll(getMethodNames(Closeable.class));
 
     asyncAdminMethodNames.remove("coprocessorService");
+    asyncAdminMethodNames.remove("coprocessorServiceOnAllRegionServers");
 
     adminMethodNames.forEach(method -> {
       boolean contains = asyncAdminMethodNames.contains(method);

@@ -132,6 +132,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
         DummyResponse resp = (DummyResponse) v;
         assertEquals(DUMMY_VALUE, resp.getValue());
       } else {
+        assertTrue(v instanceof RetriesExhaustedException);
         Throwable e = (Throwable) v;
         assertTrue(e.getMessage().contains(THROW_CLASS_NAME));
       }
