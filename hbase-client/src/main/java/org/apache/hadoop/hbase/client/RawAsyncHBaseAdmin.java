@@ -3510,25 +3510,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
     Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable) {
     CompletableFuture<Map<ServerName, Object>> future = new CompletableFuture<>();
-    FutureUtils.addListener(getRegionServers(), (rses, e1) -> {
+    FutureUtils.addListener(getRegionServers(), (regionServers, e1) -> {
       if (e1 != null) {
         future.completeExceptionally(e1);
         return;
       }
-      Map<ServerName, Object> resultMap = new HashMap<>();
-      for (ServerName rs : rses) {
+      ConcurrentHashMap<ServerName, Object> resultMap = new ConcurrentHashMap<>();
+      for (ServerName rs : regionServers) {
         FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e2) -> {
-          boolean done;
-          synchronized (resultMap) {
-            if (e2 != null) {
-              resultMap.put(rs, e2);
-            } else {
-              resultMap.put(rs, r);
-            }
-            done = resultMap.size() == rses.size();
+          if (e2 != null) {
+            resultMap.put(rs, e2);
+          } else {
+            resultMap.put(rs, r);
           }
-          if (done) {
-            future.complete(resultMap);
+          if (resultMap.size() == regionServers.size()) {
+            future.complete(Collections.unmodifiableMap(resultMap));
           }
         });
       }
