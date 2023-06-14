@@ -55,7 +55,7 @@ public abstract class BaseDecoder implements Codec.Decoder {
 
   @Override
   public boolean advance() throws IOException {
-    int firstByte = in.read();
+    int firstByte = skipZeroLength(in);
     if (firstByte == -1) {
       return false;
     } else {
@@ -70,6 +70,14 @@ public abstract class BaseDecoder implements Codec.Decoder {
       rethrowEofException(ioEx);
     }
     return true;
+  }
+
+  public static int skipZeroLength(InputStream in) throws IOException {
+    int firstByte;
+    do {
+      firstByte = in.read();
+    } while (firstByte == 0);
+    return firstByte;
   }
 
   private void rethrowEofException(IOException ioEx) throws IOException {

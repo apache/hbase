@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.io.DelegatingInputStream;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -79,7 +80,7 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
   private ReadWALKeyResult readWALKey(long originalPosition) {
     int firstByte;
     try {
-      firstByte = delegatingInput.read();
+      firstByte = BaseDecoder.skipZeroLength(delegatingInput);
     } catch (IOException e) {
       LOG.warn("Failed to read wal key length first byte", e);
       return KEY_ERROR_AND_RESET;
