@@ -3515,7 +3515,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(e1);
         return;
       }
-      ConcurrentHashMap<ServerName, Object> resultMap = new ConcurrentHashMap<>();
+      Map<ServerName, Object> resultMap = new ConcurrentHashMap<>();
       for (ServerName rs : regionServers) {
         FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e2) -> {
           if (e2 != null) {
