@@ -61,6 +61,13 @@ public class Utility {
 
   public static final int MAX_SPLIT_COUNT = (int) Math.pow(10, SPLIT_PREFIX_LENGTH);
 
+  /**
+   * Private Constructor
+   */
+  private Utility() {
+
+  }
+
   public static void deleteTable(Admin admin, String tableName) throws IOException {
     admin.disableTable(TableName.valueOf(tableName));
     admin.deleteTable(TableName.valueOf(tableName));
