@@ -28,7 +28,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -225,12 +227,15 @@ public class BulkDataGeneratorTool {
 
     table = line.getOptionValue("table");
 
-    if (line.hasOption("mapper-count"))
+    if (line.hasOption("mapper-count")) {
       mapperCount = Integer.parseInt(line.getOptionValue("mapper-count"));
-    if (line.hasOption("split-count"))
+    }
+    if (line.hasOption("split-count")) {
       splitCount = Integer.parseInt(line.getOptionValue("split-count"));
-    if (line.hasOption("rows-per-mapper"))
+    }
+    if (line.hasOption("rows-per-mapper")) {
       rowsPerMapper = Long.parseLong(line.getOptionValue("rows-per-mapper"));
+    }
 
     deleteTableIfExist = line.hasOption("delete-if-exist");
 
@@ -289,9 +294,8 @@ public class BulkDataGeneratorTool {
     final String commandSyntax = helpMessageCommand + " <OPTIONS> [-D<property=value>]*";
     final String helpMessageSuffix = "Examples:\n" + helpMessageCommand
       + " -t TEST_TABLE -mc 10 -r 100 -sc 10\n" + helpMessageCommand
-      + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -d -o \"DISABLE_BACKUP=true,NORMALIZATION_ENABLED=false\"\n"
-      + helpMessageCommand
-      + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192 -Dmapreduce.map.java.opts=-Xmx7782m\n";
+      + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -d -o \"BACKUP=false,NORMALIZATION_ENABLED=false\"\n"
+      + helpMessageCommand + " -t TEST_TABLE -mc 10 -r 100 -sc 10 -Dmapreduce.map.memory.mb=8192\n";
     helpFormatter.printHelp(commandSyntax, "", getOptions(), helpMessageSuffix);
   }
 }

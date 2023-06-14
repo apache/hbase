@@ -99,7 +99,7 @@ public class BulkDataGeneratorMapper
 
     int recordIndex = Integer.parseInt(key.toString());
 
-    // <6-characters-for-region-boundary-prefix>_<15-random-characters>_<record-index-for-this-mapper-task>
+    // <6-characters-region-boundary-prefix>_<15-random-chars>_<record-index-for-this-mapper-task>
     final String toolEventId =
       String.format("%0" + Utility.SPLIT_PREFIX_LENGTH + "d", recordIndex % (splitCount + 1)) + "_"
         + EnvironmentEdgeManager.currentTime() + (1e14 + (random.nextFloat() * 9e13)) + "_"
