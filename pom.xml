@@ -797,7 +797,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.2.4</hadoop-three.version>
+    <hadoop-three.version>3.3.6</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -3215,6 +3215,21 @@
 
   -->
   <profiles>
+
+   <profile>
+     <id>hadoop336rc0</id>
+      <activation>
+        <activeByDefault>yes</activeByDefault>
+      </activation>
+     <repositories>
+       <repository>
+         <id>hadoop336rc0</id>
+         <name>Hadoop 3.3.6 RC0 repository</name>
+         <url>https://repository.apache.org/content/repositories/orgapachehadoop-1378</url>
+       </repository>
+     </repositories>
+   </profile>
+
     <profile>
       <id>build-with-jdk8</id>
       <activation>
