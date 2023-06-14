@@ -154,9 +154,6 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       this.cellBlockStream.releaseResources();
       this.cellBlockStream = null;
     }
-    // If the call was run successfuly, we might have already returned the BB
-    // back to pool. No worries..Then inputCellBlock will be null
-    cleanup();
     span.end();
   }
 
