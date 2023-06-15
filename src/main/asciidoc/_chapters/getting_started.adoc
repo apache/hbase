@@ -371,13 +371,13 @@ The following command starts four additional RegionServers, running on sequentia
 +
 ----
 
-$ .bin/local-regionservers.sh start 2 3 4 5
+$ ./bin/local-regionservers.sh start 2 3 4 5
 ----
 +
 To stop a RegionServer manually, use the `local-regionservers.sh` command with the `stop` parameter and the offset of the server to stop.
 +
 ----
-$ .bin/local-regionservers.sh stop 3
+$ ./bin/local-regionservers.sh stop 3
 ----
 
 . Stop HBase.
