@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.OptionalLong;
 import java.util.concurrent.PriorityBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
@@ -386,7 +387,10 @@ class WALEntryStream implements Closeable {
       if (archivedLog != null) {
         openReader(archivedLog);
       } else {
-        throw fnfe;
+        // For now, this could happen only when reading meta wal for meta replicas.
+        // In this case, raising UncheckedIOException will let the endpoint deal with resetting
+        // the replication source. See HBASE-27871.
+        throw new UncheckedIOException(fnfe);
       }
     } catch (NullPointerException npe) {
       throw new IOException("NPE resetting reader, likely HDFS-4380", npe);
