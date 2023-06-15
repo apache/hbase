@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.coprocessor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Map;
@@ -31,6 +34,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
+import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -41,14 +47,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
-
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
-import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
 
 @RunWith(Parameterized.class)
 @Category({ ClientTests.class, MediumTests.class })
@@ -117,13 +115,13 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     AtomicInteger callCount = new AtomicInteger();
     Map<ServerName, Object> resultMap = admin.<DummyService.Stub,
       DummyResponse> coprocessorServiceOnAllRegionServers(DummyService::newStub, (s, c, done) -> {
-      callCount.addAndGet(1);
-      if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
-        s.dummyCall(c, request, done);
-      } else {
-        s.dummyThrow(c, request, done);
-      }
-    }).get();
+        callCount.addAndGet(1);
+        if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
+          s.dummyCall(c, request, done);
+        } else {
+          s.dummyThrow(c, request, done);
+        }
+      }).get();
 
     AtomicInteger successCallCount = new AtomicInteger();
     resultMap.forEach((k, v) -> {
