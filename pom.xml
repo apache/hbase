@@ -57,6 +57,20 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
+
+  <repositories>
+    <repository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+    <repository>
+      <id>hadoop336rc0</id>
+      <name>Hadoop 3.3.6 RC0 repository</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1378</url>
+    </repository>
+  </repositories>
+
   <developers>
     <developer>
       <id>achouhan</id>
@@ -3215,21 +3229,6 @@
 
   -->
   <profiles>
-
-   <profile>
-     <id>hadoop336rc0</id>
-      <activation>
-        <activeByDefault>yes</activeByDefault>
-      </activation>
-     <repositories>
-       <repository>
-         <id>hadoop336rc0</id>
-         <name>Hadoop 3.3.6 RC0 repository</name>
-         <url>https://repository.apache.org/content/repositories/orgapachehadoop-1378</url>
-       </repository>
-     </repositories>
-   </profile>
-
     <profile>
       <id>build-with-jdk8</id>
       <activation>
