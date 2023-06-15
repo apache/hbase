@@ -58,19 +58,6 @@
     </license>
   </licenses>
 
-  <repositories>
-    <repository>
-      <id>${distMgmtSnapshotsId}</id>
-      <name>${distMgmtSnapshotsName}</name>
-      <url>${distMgmtSnapshotsUrl}</url>
-    </repository>
-    <repository>
-      <id>hadoop336rc0</id>
-      <name>Hadoop 3.3.6 RC0 repository</name>
-      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1378</url>
-    </repository>
-  </repositories>
-
   <developers>
     <developer>
       <id>achouhan</id>
@@ -1809,6 +1796,19 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+    <repository>
+      <id>hadoop336rc0</id>
+      <name>Hadoop 3.3.6 RC0 repository</name>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-1378</url>
+    </repository>
+  </repositories>
   <build>
     <!-- Plugin versions are inherited from ASF parent pom: https://maven.apache.org/pom/asf/
          For specific version use a property and define it in the parent pom.
