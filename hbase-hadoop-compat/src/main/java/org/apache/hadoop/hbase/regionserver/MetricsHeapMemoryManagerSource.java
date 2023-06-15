@@ -131,9 +131,11 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String MEMSTORE_SIZE_GAUGE_NAME = "memStoreSize";
   String MEMSTORE_SIZE_GAUGE_DESC = "Global MemStore used in bytes by the RegionServer";
   String MEMSTORE_ONHEAP_SIZE_GAUGE_NAME = "memStoreOnHeapSize";
-  String MEMSTORE_ONHEAP_SIZE_GAUGE_DESC = "Global MemStore On-heap size in bytes by the RegionServer";
+  String MEMSTORE_ONHEAP_SIZE_GAUGE_DESC =
+    "Global MemStore On-heap size in bytes by the RegionServer";
   String MEMSTORE_OFFHEAP_SIZE_GAUGE_NAME = "memStoreOffHeapSize";
-  String MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC = "Global MemStore Off-heap size in bytes by the RegionServer";
+  String MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC =
+    "Global MemStore Off-heap size in bytes by the RegionServer";
 
   String BLOCKCACHE_SIZE_GAUGE_NAME = "blockCacheSize";
   String BLOCKCACHE_SIZE_GAUGE_DESC = "BlockCache used in bytes by the RegionServer";

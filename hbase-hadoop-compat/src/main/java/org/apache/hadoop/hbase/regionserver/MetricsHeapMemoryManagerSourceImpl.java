@@ -77,10 +77,10 @@ public class MetricsHeapMemoryManagerSourceImpl extends BaseSourceImpl
       getMetricsRegistry().newGauge(UNBLOCKED_FLUSH_GAUGE_NAME, UNBLOCKED_FLUSH_GAUGE_DESC, 0L);
     memStoreSizeGauge =
       getMetricsRegistry().newGauge(MEMSTORE_SIZE_GAUGE_NAME, MEMSTORE_SIZE_GAUGE_DESC, 0L);
-    memStoreOnHeapSizeGauge =
-      getMetricsRegistry().newGauge(MEMSTORE_ONHEAP_SIZE_GAUGE_NAME, MEMSTORE_ONHEAP_SIZE_GAUGE_DESC, 0L);
-    memStoreOffHeapSizeGauge =
-      getMetricsRegistry().newGauge(MEMSTORE_OFFHEAP_SIZE_GAUGE_NAME, MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC, 0L);
+    memStoreOnHeapSizeGauge = getMetricsRegistry().newGauge(MEMSTORE_ONHEAP_SIZE_GAUGE_NAME,
+      MEMSTORE_ONHEAP_SIZE_GAUGE_DESC, 0L);
+    memStoreOffHeapSizeGauge = getMetricsRegistry().newGauge(MEMSTORE_OFFHEAP_SIZE_GAUGE_NAME,
+      MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC, 0L);
     blockCacheSizeGauge =
       getMetricsRegistry().newGauge(BLOCKCACHE_SIZE_GAUGE_NAME, BLOCKCACHE_SIZE_GAUGE_DESC, 0L);
 
