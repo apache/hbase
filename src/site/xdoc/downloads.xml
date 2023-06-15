@@ -91,7 +91,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.5/hbase-2.5.5-hadoop3-bin.tar.gz">hadoop3-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.5/hbase-2.5.5-hadoop3-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.5/hbase-2.5.5-hadoop3-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.5.5/hbase-2.5.5-hadoop3-client-bin.tar.gz">hadoop3-client-bin</a> (<a href="https://downloads.apache.org/hbase/2.5.5/hbase-2.5.5-hadoop3-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.5.5/hbase-2.5.5-hadoop3-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td />
+      <td><em>stable release</em></td>
     </tr>
     <tr>
       <td style="test-align: left">
@@ -114,7 +114,7 @@ under the License.
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.17/hbase-2.4.17-bin.tar.gz">bin</a> (<a href="https://downloads.apache.org/hbase/2.4.17/hbase-2.4.17-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.17/hbase-2.4.17-bin.tar.gz.asc">asc</a>) <br />
         <a href="https://www.apache.org/dyn/closer.lua/hbase/2.4.17/hbase-2.4.17-client-bin.tar.gz">client-bin</a> (<a href="https://downloads.apache.org/hbase/2.4.17/hbase-2.4.17-client-bin.tar.gz.sha512">sha512</a> <a href="https://downloads.apache.org/hbase/2.4.17/hbase-2.4.17-client-bin.tar.gz.asc">asc</a>)
       </td>
-      <td><em>stable release</em></td>
+      <td />
     </tr>
   </table>
   </section>
