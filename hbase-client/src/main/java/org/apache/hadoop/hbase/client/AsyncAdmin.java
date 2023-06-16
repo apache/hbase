@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import com.google.protobuf.RpcChannel;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -1490,8 +1492,30 @@ public interface AsyncAdmin {
    *         {@link CompletableFuture}.
    * @see ServiceCaller
    */
-  <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
-    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable);
+  default <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
+    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable) {
+    CompletableFuture<Map<ServerName, Object>> future = new CompletableFuture<>();
+    addListener(getRegionServers(), (regionServers, e1) -> {
+      if (e1 != null) {
+        future.completeExceptionally(e1);
+        return;
+      }
+      Map<ServerName, Object> resultMap = new ConcurrentHashMap<>();
+      for (ServerName rs : regionServers) {
+        addListener(coprocessorService(stubMaker, callable, rs), (r, e2) -> {
+          if (e2 != null) {
+            resultMap.put(rs, e2);
+          } else {
+            resultMap.put(rs, r);
+          }
+          if (resultMap.size() == regionServers.size()) {
+            future.complete(Collections.unmodifiableMap(resultMap));
+          }
+        });
+      }
+    });
+    return future;
+  }
 
   /**
    * List all the dead region servers.

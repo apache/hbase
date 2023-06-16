@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
-import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -3435,32 +3434,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(controller.getFailed());
       } else {
         future.complete(resp);
-      }
-    });
-    return future;
-  }
-
-  @Override
-  public <S, R> CompletableFuture<Map<ServerName, Object>> coprocessorServiceOnAllRegionServers(
-    Function<RpcChannel, S> stubMaker, ServiceCaller<S, R> callable) {
-    CompletableFuture<Map<ServerName, Object>> future = new CompletableFuture<>();
-    FutureUtils.addListener(getRegionServers(), (regionServers, e1) -> {
-      if (e1 != null) {
-        future.completeExceptionally(e1);
-        return;
-      }
-      Map<ServerName, Object> resultMap = new ConcurrentHashMap<>();
-      for (ServerName rs : regionServers) {
-        FutureUtils.addListener(coprocessorService(stubMaker, callable, rs), (r, e2) -> {
-          if (e2 != null) {
-            resultMap.put(rs, e2);
-          } else {
-            resultMap.put(rs, r);
-          }
-          if (resultMap.size() == regionServers.size()) {
-            future.complete(Collections.unmodifiableMap(resultMap));
-          }
-        });
       }
     });
     return future;
