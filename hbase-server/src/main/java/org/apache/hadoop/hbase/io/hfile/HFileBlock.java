@@ -1356,6 +1356,13 @@ public class HFileBlock implements Cacheable {
 
     private final boolean isPreadAllBytes;
 
+    private final long readWarnTime;
+
+    /**
+     * If reading block cost time in milliseconds more than the threshold, a warning will be logged.
+     */
+    public static final String FS_READER_WARN_TIME_MS = "hbase.fs.reader.warn.time.ms";
+
     FSReaderImpl(ReaderContext readerContext, HFileContext fileContext, ByteBuffAllocator allocator,
       Configuration conf) throws IOException {
       this.fileSize = readerContext.getFileSize();
@@ -1373,6 +1380,8 @@ public class HFileBlock implements Cacheable {
       defaultDecodingCtx = new HFileBlockDefaultDecodingContext(conf, fileContext);
       encodedBlockDecodingCtx = defaultDecodingCtx;
       isPreadAllBytes = readerContext.isPreadAllBytes();
+      // Default warn threshold set to -1, it means skipping record the read block slow warning log.
+      readWarnTime = conf.getLong(FS_READER_WARN_TIME_MS, -1L);
     }
 
     @Override
@@ -1730,6 +1739,10 @@ public class HFileBlock implements Cacheable {
           hFileBlock.sanityCheckUncompressed();
         }
         LOG.trace("Read {} in {} ms", hFileBlock, duration);
+        if (!LOG.isTraceEnabled() && this.readWarnTime >= 0 && duration > this.readWarnTime) {
+          LOG.warn("Read Block Slow: read {} cost {} ms, threshold = {} ms", hFileBlock, duration,
+            this.readWarnTime);
+        }
         span.addEvent("Read block", attributesBuilder.build());
         // Cache next block header if we read it for the next time through here.
         if (nextBlockOnDiskSize != -1) {
