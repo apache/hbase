@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
@@ -48,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
@@ -130,6 +133,7 @@ public class HStoreFile implements StoreFile {
 
   // Block cache configuration and reference.
   private final CacheConfig cacheConf;
+  private final BloomFilterMetrics metrics;
 
   // Indicates if the file got compacted
   private volatile boolean compactedAway = false;
@@ -208,7 +212,7 @@ public class HStoreFile implements StoreFile {
    *                       actually present in the HFile, because column family configuration might
    *                       change. If this is {@link BloomType#NONE}, the existing Bloom filter is
    *                       ignored.
-   * @param primaryReplica true if this is a store file for primary replica, otherwise false. n
+   * @param primaryReplica true if this is a store file for primary replica, otherwise false.
    */
   public HStoreFile(FileSystem fs, Path p, Configuration conf, CacheConfig cacheConf,
     BloomType cfBloomType, boolean primaryReplica) throws IOException {
@@ -227,8 +231,26 @@ public class HStoreFile implements StoreFile {
    * @param cacheConf   The cache configuration and block cache reference.
    */
   public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf) {
+    this(fileInfo, cfBloomType, cacheConf, null);
+  }
+
+  /**
+   * Constructor, loads a reader and it's indices, etc. May allocate a substantial amount of ram
+   * depending on the underlying files (10-20MB?).
+   * @param fileInfo    The store file information.
+   * @param cfBloomType The bloom type to use for this store file as specified by column family
+   *                    configuration. This may or may not be the same as the Bloom filter type
+   *                    actually present in the HFile, because column family configuration might
+   *                    change. If this is {@link BloomType#NONE}, the existing Bloom filter is
+   *                    ignored.
+   * @param cacheConf   The cache configuration and block cache reference.
+   * @param metrics     Tracks bloom filter requests and results. May be null.
+   */
+  public HStoreFile(StoreFileInfo fileInfo, BloomType cfBloomType, CacheConfig cacheConf,
+    BloomFilterMetrics metrics) {
     this.fileInfo = fileInfo;
     this.cacheConf = cacheConf;
+    this.metrics = metrics;
     if (BloomFilterFactory.isGeneralBloomEnabled(fileInfo.getConf())) {
       this.cfBloomType = cfBloomType;
     } else {
@@ -321,12 +343,12 @@ public class HStoreFile implements StoreFile {
   }
 
   public int getRefCount() {
-    return fileInfo.refCount.get();
+    return fileInfo.getRefCount();
   }
 
   /** Returns true if the file is still used in reads */
   public boolean isReferencedInReads() {
-    int rc = fileInfo.refCount.get();
+    int rc = fileInfo.getRefCount();
     assert rc >= 0; // we should not go negative.
     return rc > 0;
   }
@@ -443,7 +465,7 @@ public class HStoreFile implements StoreFile {
 
     BloomType hfileBloomType = initialReader.getBloomFilterType();
     if (cfBloomType != BloomType.NONE) {
-      initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
+      initialReader.loadBloomfilter(BlockType.GENERAL_BLOOM_META, metrics);
       if (hfileBloomType != cfBloomType) {
         LOG.debug("HFile Bloom filter type for " + initialReader.getHFileReader().getName() + ": "
           + hfileBloomType + ", but " + cfBloomType + " specified in column family "
@@ -455,7 +477,7 @@ public class HStoreFile implements StoreFile {
     }
 
     // load delete family bloom filter
-    initialReader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
+    initialReader.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, metrics);
 
     try {
       byte[] data = metadataMap.get(TIMERANGE_KEY);
@@ -547,7 +569,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * @param evictOnClose whether to evict blocks belonging to this file n
+   * @param evictOnClose whether to evict blocks belonging to this file
    */
   public synchronized void closeStoreFile(boolean evictOnClose) throws IOException {
     if (this.initialReader != null) {
@@ -557,7 +579,7 @@ public class HStoreFile implements StoreFile {
   }
 
   /**
-   * Delete this file n
+   * Delete this file
    */
   public void deleteStoreFile() throws IOException {
     boolean evictOnClose = cacheConf != null ? cacheConf.shouldEvictOnClose() : true;
@@ -622,5 +644,27 @@ public class HStoreFile implements StoreFile {
 
   Set<String> getCompactedStoreFiles() {
     return Collections.unmodifiableSet(this.compactedStoreFiles);
+  }
+
+  long increaseRefCount() {
+    return this.fileInfo.increaseRefCount();
+  }
+
+  long decreaseRefCount() {
+    return this.fileInfo.decreaseRefCount();
+  }
+
+  static void increaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::increaseRefCount);
+  }
+
+  static void decreaseStoreFilesRefeCount(Collection<HStoreFile> storeFiles) {
+    if (CollectionUtils.isEmpty(storeFiles)) {
+      return;
+    }
+    storeFiles.forEach(HStoreFile::decreaseRefCount);
   }
 }

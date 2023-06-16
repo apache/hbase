@@ -96,7 +96,7 @@ public interface RpcCall extends RpcCallContext {
 
   /**
    * Send the response of this RPC call. Implementation provides the underlying facility
-   * (connection, etc) to send. n
+   * (connection, etc) to send.
    */
   void sendResponseIfReady() throws IOException;
 

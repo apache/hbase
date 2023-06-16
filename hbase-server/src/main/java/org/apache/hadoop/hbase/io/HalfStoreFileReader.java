@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntConsumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -69,13 +70,12 @@ public class HalfStoreFileReader extends StoreFileReader {
    * @param fileInfo  HFile info
    * @param cacheConf CacheConfig
    * @param r         original reference file (contains top or bottom)
-   * @param refCount  reference count
    * @param conf      Configuration
    */
   public HalfStoreFileReader(final ReaderContext context, final HFileInfo fileInfo,
-    final CacheConfig cacheConf, final Reference r, AtomicInteger refCount,
+    final CacheConfig cacheConf, final Reference r, StoreFileInfo storeFileInfo,
     final Configuration conf) throws IOException {
-    super(context, fileInfo, cacheConf, refCount, conf);
+    super(context, fileInfo, cacheConf, storeFileInfo, conf);
     // This is not actual midkey for this half-file; its just border
     // around which we split top and bottom. Have to look in files to find
     // actual last and first keys for bottom and top halves. Half-files don't
@@ -277,6 +277,11 @@ public class HalfStoreFileReader extends StoreFileReader {
       @Override
       public void shipped() throws IOException {
         this.delegate.shipped();
+      }
+
+      @Override
+      public void recordBlockSize(IntConsumer blockSizeConsumer) {
+        this.delegate.recordBlockSize(blockSizeConsumer);
       }
     };
   }

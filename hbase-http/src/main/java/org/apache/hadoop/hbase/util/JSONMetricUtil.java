@@ -40,6 +40,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
 @InterfaceAudience.Private
 public final class JSONMetricUtil {
 
@@ -109,8 +112,9 @@ public final class JSONMetricUtil {
    * Method for building map used for constructing ObjectName. Mapping is done with arrays indices
    * @param keys   Map keys
    * @param values Map values
-   * @return Map or null if arrays are empty * or have different number of elements
+   * @return Map or null if arrays are empty or have different number of elements
    */
+  @SuppressWarnings("JdkObsolete") // javax requires hashtable param for ObjectName constructor
   public static Hashtable<String, String> buldKeyValueTable(String[] keys, String[] values) {
     if (keys.length != values.length) {
       LOG.error("keys and values arrays must be same size");
@@ -141,7 +145,7 @@ public final class JSONMetricUtil {
   }
 
   public static String getProcessPID() {
-    return ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+    return Iterables.get(Splitter.on('@').split(ManagementFactory.getRuntimeMXBean().getName()), 0);
   }
 
   public static String getCommmand() throws MalformedObjectNameException, IOException {

@@ -17,15 +17,24 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_ENABLED;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT;
+import static org.apache.hadoop.hbase.io.crypto.tls.X509Util.TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.exceptions.X509Exception;
+import org.apache.hadoop.hbase.io.FileChangeWatcher;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -47,6 +56,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.OptionalSslHandler;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.GlobalEventExecutor;
 
 /**
@@ -78,6 +90,9 @@ public class NettyRpcServer extends RpcServer {
   private final Channel serverChannel;
   final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE, true);
   private final ByteBufAllocator channelAllocator;
+  private final AtomicReference<SslContext> sslContextForServer = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
+  private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -88,7 +103,7 @@ public class NettyRpcServer extends RpcServer {
     // Get the event loop group configuration from the server class if available.
     NettyEventLoopGroupConfig config = null;
     if (server instanceof HBaseServerBase) {
-      config = ((HBaseServerBase) server).getEventLoopGroupConfig();
+      config = ((HBaseServerBase<?>) server).getEventLoopGroupConfig();
     }
     if (config == null) {
       config = new NettyEventLoopGroupConfig(conf, "NettyRpcServer");
@@ -106,9 +121,15 @@ public class NettyRpcServer extends RpcServer {
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
           preambleDecoder.setSingleDecode(true);
-          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder);
-          pipeline.addLast(createNettyRpcServerPreambleHandler(),
-            new NettyRpcServerResponseEncoder(metrics));
+          if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
+            initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
+          }
+          pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
+            .addLast(createNettyRpcServerPreambleHandler())
+            // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
+            // send RpcResponse to client.
+            .addLast(NettyRpcServerResponseEncoder.NAME,
+              new NettyRpcServerResponseEncoder(metrics));
         }
       });
     try {
@@ -183,6 +204,14 @@ public class NettyRpcServer extends RpcServer {
       return;
     }
     LOG.info("Stopping server on " + this.serverChannel.localAddress());
+    FileChangeWatcher ks = keyStoreWatcher.getAndSet(null);
+    if (ks != null) {
+      ks.stop();
+    }
+    FileChangeWatcher ts = trustStoreWatcher.getAndSet(null);
+    if (ts != null) {
+      ts.stop();
+    }
     if (authTokenSecretMgr != null) {
       authTokenSecretMgr.stop();
       authTokenSecretMgr = null;
@@ -210,8 +239,61 @@ public class NettyRpcServer extends RpcServer {
 
   @Override
   public int getNumOpenConnections() {
-    int channelsCount = allChannels.size();
-    // allChannels also contains the server channel, so exclude that from the count.
-    return channelsCount > 0 ? channelsCount - 1 : channelsCount;
+    return allChannels.size();
+  }
+
+  private void initSSL(ChannelPipeline p, boolean supportPlaintext)
+    throws X509Exception, IOException {
+    SslContext nettySslContext = getSslContext();
+
+    if (supportPlaintext) {
+      p.addLast("ssl", new OptionalSslHandler(nettySslContext));
+      LOG.debug("Dual mode SSL handler added for channel: {}", p.channel());
+    } else {
+      SocketAddress remoteAddress = p.channel().remoteAddress();
+      SslHandler sslHandler;
+
+      if (remoteAddress instanceof InetSocketAddress) {
+        InetSocketAddress remoteInetAddress = (InetSocketAddress) remoteAddress;
+        String host;
+
+        if (conf.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true)) {
+          host = remoteInetAddress.getHostName();
+        } else {
+          host = remoteInetAddress.getHostString();
+        }
+
+        int port = remoteInetAddress.getPort();
+
+        /*
+         * our HostnameVerifier gets the host name from SSLEngine, so we have to construct the
+         * engine properly by passing the remote address
+         */
+        sslHandler = nettySslContext.newHandler(p.channel().alloc(), host, port);
+      } else {
+        sslHandler = nettySslContext.newHandler(p.channel().alloc());
+      }
+
+      p.addLast("ssl", sslHandler);
+      LOG.debug("SSL handler added for channel: {}", p.channel());
+    }
+  }
+
+  SslContext getSslContext() throws X509Exception, IOException {
+    SslContext result = sslContextForServer.get();
+    if (result == null) {
+      result = X509Util.createSslContextForServer(conf);
+      if (!sslContextForServer.compareAndSet(null, result)) {
+        // lost the race, another thread already set the value
+        result = sslContextForServer.get();
+      } else if (
+        keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
+          && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
+      ) {
+        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+          () -> sslContextForServer.set(null));
+      }
+    }
+    return result;
   }
 }

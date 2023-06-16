@@ -53,10 +53,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
-import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -70,6 +70,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.http.HttpVersion;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Handler;
@@ -81,6 +82,7 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Server;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.SslConnectionFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.ErrorHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.HandlerCollection;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.gzip.GzipHandler;
@@ -142,6 +144,7 @@ public class HttpServer implements FilterContainer {
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.groups";
   public static final String HTTP_PRIVILEGED_CONF_KEY =
     "hbase.security.authentication.ui.config.protected";
+  public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
@@ -153,6 +156,19 @@ public class HttpServer implements FilterContainer {
   public static final String SPNEGO_PROXYUSER_FILTER = "SpnegoProxyUserFilter";
   public static final String NO_CACHE_FILTER = "NoCacheFilter";
   public static final String APP_DIR = "webapps";
+  public static final String HTTP_UI_SHOW_STACKTRACE_KEY = "hbase.ui.show-stack-traces";
+
+  public static final String METRIC_SERVLETS_CONF_KEY = "hbase.http.metrics.servlets";
+  public static final String[] METRICS_SERVLETS_DEFAULT = { "jmx", "metrics", "prometheus" };
+  private static final ImmutableMap<String,
+    ServletConfig> METRIC_SERVLETS = new ImmutableMap.Builder<String, ServletConfig>()
+      .put("jmx",
+        new ServletConfig("jmx", "/jmx", "org.apache.hadoop.hbase.http.jmx.JMXJsonServlet"))
+      .put("metrics",
+        new ServletConfig("metrics", "/metrics", "org.apache.hadoop.metrics.MetricsServlet"))
+      .put("prometheus", new ServletConfig("prometheus", "/prometheus",
+        "org.apache.hadoop.hbase.http.prometheus.PrometheusHadoopServlet"))
+      .build();
 
   private final AccessControlList adminsAcl;
 
@@ -240,10 +256,10 @@ public class HttpServer implements FilterContainer {
     private int port = -1;
 
     /**
-     * Add an endpoint that the HTTP server should listen to. n * the endpoint of that the HTTP
-     * server should listen to. The scheme specifies the protocol (i.e. HTTP / HTTPS), the host
-     * specifies the binding address, and the port specifies the listening port. Unspecified or zero
-     * port means that the server can listen to any port.
+     * Add an endpoint that the HTTP server should listen to. the endpoint of that the HTTP server
+     * should listen to. The scheme specifies the protocol (i.e. HTTP / HTTPS), the host specifies
+     * the binding address, and the port specifies the listening port. Unspecified or zero port
+     * means that the server can listen to any port.
      */
     public Builder addEndpoint(URI endpoint) {
       endpoints.add(endpoint);
@@ -640,6 +656,14 @@ public class HttpServer implements FilterContainer {
         addFilterPathMapping(path, webAppContext);
       }
     }
+    // Check if disable stack trace property is configured
+    if (!conf.getBoolean(HTTP_UI_SHOW_STACKTRACE_KEY, true)) {
+      // Disable stack traces for server errors in UI
+      webServer.setErrorHandler(new ErrorHandler());
+      webServer.getErrorHandler().setShowStacks(false);
+      // Disable stack traces for web app errors in UI
+      webAppContext.getErrorHandler().setShowStacks(false);
+    }
   }
 
   private void addManagedListener(ServerConnector connector) {
@@ -657,7 +681,7 @@ public class HttpServer implements FilterContainer {
     ctx.getServletContext().setAttribute(org.apache.hadoop.http.HttpServer2.CONF_CONTEXT_ATTRIBUTE,
       conf);
     ctx.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
-    addNoCacheFilter(ctx);
+    addNoCacheFilter(ctx, conf);
     return ctx;
   }
 
@@ -679,9 +703,16 @@ public class HttpServer implements FilterContainer {
     return gzipHandler;
   }
 
-  private static void addNoCacheFilter(WebAppContext ctxt) {
-    defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
-      Collections.<String, String> emptyMap(), new String[] { "/*" });
+  private static void addNoCacheFilter(ServletContextHandler ctxt, Configuration conf) {
+    if (conf.getBoolean(HTTP_UI_NO_CACHE_ENABLE_KEY, false)) {
+      Map<String, String> filterConfig =
+        AuthenticationFilterInitializer.getFilterConfigMap(conf, "hbase.http.filter.");
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(), filterConfig,
+        new String[] { "/*" });
+    } else {
+      defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
+        Collections.<String, String> emptyMap(), new String[] { "/*" });
+    }
   }
 
   /** Get an array of FilterConfiguration specified in the conf */
@@ -727,6 +758,7 @@ public class HttpServer implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
+      addNoCacheFilter(logContext, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
@@ -751,16 +783,7 @@ public class HttpServer implements FilterContainer {
     // set up default servlets
     addPrivilegedServlet("stacks", "/stacks", StackServlet.class);
     addPrivilegedServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    // Hadoop3 has moved completely to metrics2, and dropped support for Metrics v1's
-    // MetricsServlet (see HADOOP-12504). We'll using reflection to load if against hadoop2.
-    // Remove when we drop support for hbase on hadoop2.x.
-    try {
-      Class<?> clz = Class.forName("org.apache.hadoop.metrics.MetricsServlet");
-      addPrivilegedServlet("metrics", "/metrics", clz.asSubclass(HttpServlet.class));
-    } catch (Exception e) {
-      // do nothing
-    }
-    addPrivilegedServlet("jmx", "/jmx", JMXJsonServlet.class);
+
     // While we don't expect users to have sensitive information in their configuration, they
     // might. Give them an option to not expose the service configuration to all users.
     if (conf.getBoolean(HTTP_PRIVILEGED_CONF_KEY, HTTP_PRIVILEGED_CONF_DEFAULT)) {
@@ -783,6 +806,22 @@ public class HttpServer implements FilterContainer {
       addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
       LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
         + "not specified. Disabling /prof endpoint.");
+    }
+
+    /* register metrics servlets */
+    String[] enabledServlets = conf.getStrings(METRIC_SERVLETS_CONF_KEY, METRICS_SERVLETS_DEFAULT);
+    for (String enabledServlet : enabledServlets) {
+      try {
+        ServletConfig servletConfig = METRIC_SERVLETS.get(enabledServlet);
+        if (servletConfig != null) {
+          Class<?> clz = Class.forName(servletConfig.getClazz());
+          addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+            clz.asSubclass(HttpServlet.class));
+        }
+      } catch (Exception e) {
+        /* shouldn't be fatal, so warn the user about it */
+        LOG.warn("Couldn't register the servlet " + enabledServlet, e);
+      }
     }
   }
 

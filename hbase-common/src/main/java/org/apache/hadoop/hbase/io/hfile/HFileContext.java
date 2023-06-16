@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -56,8 +57,9 @@ public class HFileContext implements HeapSize, Cloneable {
   /** the number of bytes per checksum value **/
   private int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
   /** Number of uncompressed bytes we allow per block. */
-  private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
+  private int blockSize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
+  private IndexBlockEncoding indexBlockEncoding = IndexBlockEncoding.NONE;
   /** Encryption algorithm and key used */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
   private long fileCreateTime;
@@ -81,7 +83,7 @@ public class HFileContext implements HeapSize, Cloneable {
     this.compressTags = context.compressTags;
     this.checksumType = context.checksumType;
     this.bytesPerChecksum = context.bytesPerChecksum;
-    this.blocksize = context.blocksize;
+    this.blockSize = context.blockSize;
     this.encoding = context.encoding;
     this.cryptoContext = context.cryptoContext;
     this.fileCreateTime = context.fileCreateTime;
@@ -89,13 +91,14 @@ public class HFileContext implements HeapSize, Cloneable {
     this.columnFamily = context.columnFamily;
     this.tableName = context.tableName;
     this.cellComparator = context.cellComparator;
+    this.indexBlockEncoding = context.indexBlockEncoding;
   }
 
   HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
     Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
     int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
     Encryption.Context cryptoContext, long fileCreateTime, String hfileName, byte[] columnFamily,
-    byte[] tableName, CellComparator cellComparator) {
+    byte[] tableName, CellComparator cellComparator, IndexBlockEncoding indexBlockEncoding) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc = includesMvcc;
     this.includesTags = includesTags;
@@ -103,9 +106,12 @@ public class HFileContext implements HeapSize, Cloneable {
     this.compressTags = compressTags;
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;
-    this.blocksize = blockSize;
+    this.blockSize = blockSize;
     if (encoding != null) {
       this.encoding = encoding;
+    }
+    if (indexBlockEncoding != null) {
+      this.indexBlockEncoding = indexBlockEncoding;
     }
     this.cryptoContext = cryptoContext;
     this.fileCreateTime = fileCreateTime;
@@ -115,8 +121,9 @@ public class HFileContext implements HeapSize, Cloneable {
     // If no cellComparator specified, make a guess based off tablename. If hbase:meta, then should
     // be the meta table comparator. Comparators are per table.
     this.cellComparator = cellComparator != null ? cellComparator
-      : this.tableName != null ? CellComparatorImpl.getCellComparator(this.tableName)
-      : CellComparator.getInstance();
+      : this.tableName != null
+        ? InnerStoreCellComparator.getInnerStoreCellComparator(this.tableName)
+      : InnerStoreCellComparator.INNER_STORE_COMPARATOR;
   }
 
   /** Returns true when on-disk blocks are compressed, and/or encrypted; false otherwise. */
@@ -175,7 +182,7 @@ public class HFileContext implements HeapSize, Cloneable {
   }
 
   public int getBlocksize() {
-    return blocksize;
+    return blockSize;
   }
 
   public long getFileCreateTime() {
@@ -184,6 +191,10 @@ public class HFileContext implements HeapSize, Cloneable {
 
   public DataBlockEncoding getDataBlockEncoding() {
     return encoding;
+  }
+
+  public IndexBlockEncoding getIndexBlockEncoding() {
+    return indexBlockEncoding;
   }
 
   public Encryption.Context getEncryptionContext() {
@@ -233,7 +244,7 @@ public class HFileContext implements HeapSize, Cloneable {
   @Override
   public HFileContext clone() {
     try {
-      return (HFileContext) (super.clone());
+      return (HFileContext) super.clone();
     } catch (CloneNotSupportedException e) {
       throw new AssertionError(); // Won't happen
     }
@@ -250,9 +261,11 @@ public class HFileContext implements HeapSize, Cloneable {
     sb.append(", bytesPerChecksum=");
     sb.append(bytesPerChecksum);
     sb.append(", blocksize=");
-    sb.append(blocksize);
+    sb.append(blockSize);
     sb.append(", encoding=");
     sb.append(encoding);
+    sb.append(", indexBlockEncoding=");
+    sb.append(indexBlockEncoding);
     sb.append(", includesMvcc=");
     sb.append(includesMvcc);
     sb.append(", includesTags=");

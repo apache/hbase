@@ -17,12 +17,29 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasName;
+import static org.apache.hadoop.hbase.client.trace.hamcrest.SpanDataMatchers.hasParentSpanId;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY;
+import static org.apache.hadoop.hbase.regionserver.CompactSplit.HBASE_REGION_SERVER_ENABLE_COMPACTION;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,21 +47,41 @@ import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MatcherPredicate;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.regionserver.TestHStoreFile;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetch {
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -60,6 +97,9 @@ public class TestPrefetch {
   private CacheConfig cacheConf;
   private FileSystem fs;
   private BlockCache blockCache;
+
+  @Rule
+  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
 
   @Before
   public void setUp() throws IOException {
@@ -82,8 +122,23 @@ public class TestPrefetch {
 
   @Test
   public void testPrefetch() throws Exception {
-    Path storeFile = writeStoreFile("TestPrefetch");
-    readStoreFile(storeFile);
+    TraceUtil.trace(() -> {
+      Path storeFile = writeStoreFile("TestPrefetch");
+      readStoreFile(storeFile);
+    }, "testPrefetch");
+
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<>(otelRule::getSpans,
+      hasItems(hasName("testPrefetch"), hasName("PrefetchExecutor.request"))));
+    final List<SpanData> spans = otelRule.getSpans();
+    if (LOG.isDebugEnabled()) {
+      StringTraceRenderer renderer = new StringTraceRenderer(spans);
+      renderer.render(LOG::debug);
+    }
+
+    final SpanData testSpan = spans.stream().filter(hasName("testPrefetch")::matches).findFirst()
+      .orElseThrow(AssertionError::new);
+    assertThat("prefetch spans happen on their own threads, detached from file open.", spans,
+      hasItem(allOf(hasName("PrefetchExecutor.request"), not(hasParentSpanId(testSpan)))));
   }
 
   @Test
@@ -112,6 +167,51 @@ public class TestPrefetch {
   }
 
   private void readStoreFile(Path storeFilePath) throws Exception {
+    readStoreFile(storeFilePath, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (
+        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(isCached);
+      }
+    });
+  }
+
+  private void readStoreFileCacheOnly(Path storeFilePath) throws Exception {
+    readStoreFile(storeFilePath, (r, o) -> {
+      HFileBlock block = null;
+      try {
+        block = r.readBlock(o, -1, false, true, false, true, null, null, true);
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+      return block;
+    }, (key, block) -> {
+      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      if (block.getBlockType() == BlockType.DATA) {
+        assertFalse(block.isUnpacked());
+      } else if (
+        block.getBlockType() == BlockType.ROOT_INDEX
+          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+      ) {
+        assertTrue(block.isUnpacked());
+      }
+      assertTrue(isCached);
+    });
+  }
+
+  private void readStoreFile(Path storeFilePath,
+    BiFunction<HFile.Reader, Long, HFileBlock> readFunction,
+    BiConsumer<BlockCacheKey, HFileBlock> validationFunction) throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
 
@@ -119,29 +219,141 @@ public class TestPrefetch {
       // Sleep for a bit
       Thread.sleep(1000);
     }
-
-    // Check that all of the data blocks were preloaded
-    BlockCache blockCache = cacheConf.getBlockCache().get();
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null);
+      HFileBlock block = readFunction.apply(reader, offset);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
-      boolean isCached = blockCache.getBlock(blockCacheKey, true, false, true) != null;
-      if (
-        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
-      ) {
-        assertTrue(isCached);
+      validationFunction.accept(blockCacheKey, block);
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
+  @Test
+  public void testPrefetchCompressed() throws Exception {
+    conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
+      .withBlockSize(DATA_BLOCK_SIZE).build();
+    Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
+    readStoreFileCacheOnly(storeFile);
+    conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
+
+  }
+
+  @Test
+  public void testPrefetchSkipsRefs() throws Exception {
+    testPrefetchWhenRefs(true, c -> {
+      boolean isCached = c != null;
+      assertFalse(isCached);
+    });
+  }
+
+  @Test
+  public void testPrefetchDoesntSkipRefs() throws Exception {
+    testPrefetchWhenRefs(false, c -> {
+      boolean isCached = c != null;
+      assertTrue(isCached);
+    });
+  }
+
+  @Test
+  public void testPrefetchDoesntSkipHFileLink() throws Exception {
+    testPrefetchWhenHFileLink(c -> {
+      boolean isCached = c != null;
+      assertTrue(isCached);
+    });
+  }
+
+  private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test)
+    throws Exception {
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchSkipRefs");
+    RegionInfo region =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchSkipRefs")).build();
+    Path regionDir = new Path(tableDir, region.getEncodedName());
+    Pair<Path, byte[]> fileWithSplitPoint =
+      writeStoreFileForSplit(new Path(regionDir, "cf"), context);
+    Path storeFile = fileWithSplitPoint.getFirst();
+    HRegionFileSystem regionFS =
+      HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, region);
+    HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true);
+    Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
+      new ConstantSizeRegionSplitPolicy());
+    conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
+    HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true);
+    refHsf.initReader();
+    HFile.Reader reader = refHsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      if (block.getBlockType() == BlockType.DATA) {
+        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
+      }
+      offset += block.getOnDiskSizeWithHeader();
+    }
+  }
+
+  private void testPrefetchWhenHFileLink(Consumer<Cacheable> test) throws Exception {
+    cacheConf = new CacheConfig(conf, blockCache);
+    HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    Path testDir = TEST_UTIL.getDataTestDir("testPrefetchWhenHFileLink");
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testPrefetchWhenHFileLink")).build();
+    // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
+    Configuration testConf = new Configuration(this.conf);
+    CommonFSUtils.setRootDir(testConf, testDir);
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
+      CommonFSUtils.getTableDir(testDir, hri.getTable()), hri);
+
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(context).build();
+    TestHStoreFile.writeStoreFile(writer, Bytes.toBytes("testPrefetchWhenHFileLink"),
+      Bytes.toBytes("testPrefetchWhenHFileLink"));
+
+    Path storeFilePath = regionFs.commitStoreFile("cf", writer.getPath());
+    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", "cf"));
+    HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath =
+      new Path(dstPath, HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    // Try to open store file from link
+    StoreFileInfo storeFileInfo = new StoreFileInfo(testConf, this.fs, linkFilePath, true);
+    HStoreFile hsf = new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf);
+    assertTrue(storeFileInfo.isLink());
+
+    hsf.initReader();
+    HFile.Reader reader = hsf.getReader().getHFileReader();
+    while (!reader.prefetchComplete()) {
+      // Sleep for a bit
+      Thread.sleep(1000);
+    }
+    long offset = 0;
+    while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
+      HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
+      if (block.getBlockType() == BlockType.DATA) {
+        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
       }
       offset += block.getOnDiskSizeWithHeader();
     }
   }
 
   private Path writeStoreFile(String fname) throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
+    return writeStoreFile(fname, meta);
+  }
+
+  private Path writeStoreFile(String fname, HFileContext context) throws IOException {
+    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
-      .withOutputDir(storeFileParentDir).withFileContext(meta).build();
+      .withOutputDir(storeFileParentDir).withFileContext(context).build();
     Random rand = ThreadLocalRandom.current();
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {
@@ -155,6 +367,28 @@ public class TestPrefetch {
 
     sfw.close();
     return sfw.getPath();
+  }
+
+  private Pair<Path, byte[]> writeStoreFileForSplit(Path storeDir, HFileContext context)
+    throws IOException {
+    StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(storeDir)
+      .withFileContext(context).build();
+    Random rand = ThreadLocalRandom.current();
+    final int rowLen = 32;
+    byte[] splitPoint = null;
+    for (int i = 0; i < NUM_KV; ++i) {
+      byte[] k = RandomKeyValueUtil.randomOrderedKey(rand, i);
+      byte[] v = RandomKeyValueUtil.randomValue(rand);
+      int cfLen = rand.nextInt(k.length - rowLen + 1);
+      KeyValue kv = new KeyValue(k, 0, rowLen, k, rowLen, cfLen, k, rowLen + cfLen,
+        k.length - rowLen - cfLen, rand.nextLong(), generateKeyType(rand), v, 0, v.length);
+      sfw.append(kv);
+      if (i == NUM_KV / 2) {
+        splitPoint = k;
+      }
+    }
+    sfw.close();
+    return new Pair(sfw.getPath(), splitPoint);
   }
 
   public static KeyValue.Type generateKeyType(Random rand) {

@@ -95,6 +95,7 @@ public interface CellComparator extends Comparator<Cell>, Serializable {
   }
 
   /**
+   * Lexicographically compare two rows
    * @param row ByteBuffer that wraps a row; will read from current position and will reading all
    *            remaining; will not disturb the ByteBuffer internal state.
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
@@ -111,7 +112,7 @@ public interface CellComparator extends Comparator<Cell>, Serializable {
   }
 
   /**
-   * Lexographically compares the two cells excluding the row part. It compares family, qualifier,
+   * Lexicographically compares the two cells excluding the row part. It compares family, qualifier,
    * timestamp and the type
    * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
@@ -121,7 +122,7 @@ public interface CellComparator extends Comparator<Cell>, Serializable {
   int compareWithoutRow(Cell leftCell, Cell rightCell);
 
   /**
-   * Lexographically compares the families of the two cells
+   * Lexicographically compares the families of the two cells
    * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
@@ -130,7 +131,7 @@ public interface CellComparator extends Comparator<Cell>, Serializable {
   int compareFamilies(Cell leftCell, Cell rightCell);
 
   /**
-   * Lexographically compares the qualifiers of the two cells
+   * Lexicographically compares the qualifiers of the two cells
    * @param leftCell  the left hand side cell
    * @param rightCell the right hand side cell
    * @return greater than 0 if leftCell is bigger, less than 0 if rightCell is bigger, 0 if both
@@ -163,10 +164,9 @@ public interface CellComparator extends Comparator<Cell>, Serializable {
   int compareTimestamps(long leftCellts, long rightCellts);
 
   /**
-   * @return A dumbed-down, fast comparator for hbase2 base-type, the {@link ByteBufferKeyValue}.
-   *         Create an instance when you make a new memstore, when you know only BBKVs will be
-   *         passed. Do not pollute with types other than BBKV if can be helped; the Comparator will
-   *         slow.
+   * Return a dumbed-down, fast comparator for hbase2 base-type, the {@link ByteBufferKeyValue}.
+   * Create an instance when you make a new memstore, when you know only BBKVs will be passed. Do
+   * not pollute with types other than BBKV if can be helped; the Comparator will slow.
    */
-  Comparator getSimpleComparator();
+  Comparator<Cell> getSimpleComparator();
 }

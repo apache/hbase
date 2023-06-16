@@ -243,6 +243,21 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBloomFilterRequestsCount() {
+    return 411;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return 412;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return 413;
+  }
+
+  @Override
   public double getPercentFileLocal() {
     return 99;
   }
@@ -318,6 +333,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBlockCacheHitCachingCount() {
+    return 16;
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     return 417;
   }
@@ -325,6 +345,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getBlockCachePrimaryMissCount() {
     return 421;
+  }
+
+  @Override
+  public long getBlockCacheMissCachingCount() {
+    return 17;
   }
 
   @Override

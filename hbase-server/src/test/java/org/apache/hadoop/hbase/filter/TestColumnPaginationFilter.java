@@ -75,7 +75,7 @@ public class TestColumnPaginationFilter {
 
   /**
    * The more specific functionality tests are contained within the TestFilters class. This class is
-   * mainly for testing serialization nn
+   * mainly for testing serialization
    */
   private void basicFilterTests(ColumnPaginationFilter filter) throws Exception {
     KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
@@ -83,7 +83,7 @@ public class TestColumnPaginationFilter {
   }
 
   /**
-   * Tests serialization n
+   * Tests serialization
    */
   @Test
   public void testSerialization() throws Exception {

@@ -83,6 +83,7 @@ show_usage() {
   if [ "${in_omnibus_tarball}" = "true" ]; then
     echo "  wal              Write-ahead-log analyzer"
     echo "  hfile            Store file analyzer"
+    echo "  sft              Store file tracker viewer"
     echo "  zkcli            Run the ZooKeeper shell"
     echo "  master           Run an HBase HMaster node"
     echo "  regionserver     Run an HBase HRegionServer node"
@@ -107,6 +108,8 @@ show_usage() {
   echo "  cellcounter      Run CellCounter tool"
   echo "  pre-upgrade      Run Pre-Upgrade validator tool"
   echo "  hbtop            Run HBTop tool"
+  echo "  credential       Run the Hadoop Credential Shell"
+  echo "  copyreppeers     Run CopyReplicationPeers tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
 }
 
@@ -493,7 +496,7 @@ add_jdk11_deps_to_classpath() {
 }
 
 add_jdk11_jvm_flags() {
-  HBASE_OPTS="$HBASE_OPTS -Dio.netty.tryReflectionSetAccessible=true --illegal-access=permit --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED"
+  HBASE_OPTS="$HBASE_OPTS -Dorg.apache.hbase.thirdparty.io.netty.tryReflectionSetAccessible=true --add-modules jdk.unsupported --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-exports java.base/jdk.internal.misc=ALL-UNNAMED --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED"
 }
 
 add_opentelemetry_agent() {
@@ -597,6 +600,8 @@ elif [ "$COMMAND" = "wal" ] ; then
   CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
+elif [ "$COMMAND" = "sft" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
   for f in $HBASE_HOME/lib/zkcli/*.jar; do
@@ -738,6 +743,10 @@ elif [ "$COMMAND" = "pre-upgrade" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.PreUpgradeValidator'
 elif [ "$COMMAND" = "completebulkload" ] ; then
   CLASS='org.apache.hadoop.hbase.tool.BulkLoadHFilesTool'
+elif [ "$COMMAND" = "chaosagent" ] ; then
+  CLASS='org.apache.hadoop.hbase.chaos.ChaosService'
+elif [ "$COMMAND" = "chaosmonkeyrunner" ] ; then
+  CLASS='org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner'
 elif [ "$COMMAND" = "hbtop" ] ; then
   CLASS='org.apache.hadoop.hbase.hbtop.HBTop'
   if [ -n "${shaded_jar}" ] ; then
@@ -759,6 +768,10 @@ elif [ "$COMMAND" = "hbtop" ] ; then
     HBASE_HBTOP_OPTS="${HBASE_HBTOP_OPTS} -Dlog4j2.configurationFile=file:${HBASE_HOME}/conf/log4j2-hbtop.properties"
   fi
   HBASE_OPTS="${HBASE_OPTS} ${HBASE_HBTOP_OPTS}"
+elif [ "$COMMAND" = "credential" ] ; then
+  CLASS='org.apache.hadoop.security.alias.CredentialShell'
+elif [ "$COMMAND" = "copyreppeers" ] ; then
+  CLASS='org.apache.hadoop.hbase.replication.ReplicationPeerMigrationTool'
 else
   CLASS=$COMMAND
 if [[ "$CLASS" =~ .*IntegrationTest.* ]] ; then
@@ -869,7 +882,7 @@ if [ "${DEBUG}" = "true" ]; then
 fi
 
 # resolve the command arguments
-read -r -a CMD_ARGS <<< "$@"
+CMD_ARGS=("$@")
 if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
   CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
 fi

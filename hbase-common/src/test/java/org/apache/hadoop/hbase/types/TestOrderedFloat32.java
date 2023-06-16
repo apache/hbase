@@ -34,8 +34,8 @@ import org.junit.rules.ExpectedException;
 
 @Category({ MiscTests.class, SmallTests.class })
 public class TestOrderedFloat32 {
-  private static final Float[] VALUES = new Float[] { Float.NaN, 1f, 22f, 333f, 4444f, 55555f,
-    666666f, 7777777f, 88888888f, 999999999f };
+  private static final Float[] VALUES =
+    new Float[] { Float.NaN, 1f, 22f, 333f, 4444f, 55555f, 666666f, 7777777f, 8888888f, 9999999f };
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =

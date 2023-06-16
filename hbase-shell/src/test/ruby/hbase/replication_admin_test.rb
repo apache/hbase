@@ -606,7 +606,7 @@ module Hbase
       assert_equal(0, command(:list_peers).length)
     end
 
-    define_test "set_peer_bandwidth: works with peer bandwidth upper limit" do
+    define_test 'set_peer_bandwidth: works with peer bandwidth upper limit' do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
@@ -621,7 +621,7 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
-    define_test "transit_peer_sync_replication_state: test" do
+    define_test 'transit_peer_sync_replication_state: test' do
       cluster_key = "server1.cie.com:2181:/hbase"
       remote_wal_dir = "hdfs://srv1:9999/hbase"
       table_cfs = { "ns3:table1" => [], "ns3:table2" => [],
@@ -652,7 +652,7 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
-    define_test "get_peer_config: works with simple clusterKey peer" do
+    define_test 'get_peer_config: works with simple clusterKey peer' do
       cluster_key = org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster::HOST + ":2181:/hbase-test"
       args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
@@ -696,7 +696,7 @@ module Hbase
       command(:remove_peer, peer_id_second)
     end
 
-    define_test "update_peer_config: can update peer config and data" do
+    define_test 'update_peer_config: can update peer config and data' do
       config_params = { "config1" => "value1", "config2" => "value2" }
       data_params = {"data1" => "value1", "data2" => "value2"}
       args = {ENDPOINT_CLASSNAME => @dummy_endpoint, CONFIG => config_params, DATA => data_params}
@@ -717,7 +717,7 @@ module Hbase
       assert_equal("value2", Bytes.to_string(peer_config.get_peer_data.get(Bytes.toBytes("data2"))))
     end
 
-    define_test "append_peer_exclude_namespaces: works with namespaces array" do
+    define_test 'append_peer_exclude_namespaces: works with namespaces array' do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
@@ -753,7 +753,7 @@ module Hbase
       command(:remove_peer, @peer_id)
     end
 
-    define_test "remove_peer_exclude_namespaces: works with namespaces array" do
+    define_test 'remove_peer_exclude_namespaces: works with namespaces array' do
       cluster_key = "zk4,zk5,zk6:11000:/hbase-test"
       args = {CLUSTER_KEY => cluster_key, ENDPOINT_CLASSNAME => @dummy_endpoint}
       command(:add_peer, @peer_id, args)
@@ -789,6 +789,20 @@ module Hbase
 
       # cleanup for future tests
       command(:remove_peer, @peer_id)
+    end
+
+    define_test 'peer_modification_switch' do
+      command(:peer_modification_switch, true)
+      output = capture_stdout { command(:peer_modification_enabled) }
+      assert(output.include?('true'))
+
+      output = capture_stdout { command(:peer_modification_switch, false, true) }
+      assert(output.include?('true'))
+      output = capture_stdout { command(:peer_modification_enabled) }
+      assert(output.include?('false'))
+
+      output = capture_stdout { command(:peer_modification_switch, true) }
+      assert(output.include?('false'))
     end
 
     # assert_raise fails on native exceptions - https://jira.codehaus.org/browse/JRUBY-5279

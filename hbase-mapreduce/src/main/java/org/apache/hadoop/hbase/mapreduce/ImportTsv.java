@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -148,7 +149,7 @@ public class ImportTsv extends Configured implements Tool {
 
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated. The row key
-     *                             should be the special token TsvParser.ROWKEY_COLUMN_SPEC n
+     *                             should be the special token TsvParser.ROWKEY_COLUMN_SPEC
      */
     public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
@@ -416,8 +417,8 @@ public class ImportTsv extends Configured implements Tool {
     }
 
     /**
-     * Return starting position and length of row key from the specified line bytes. nn * @return
-     * Pair of row key offset and length. n
+     * Return starting position and length of row key from the specified line bytes.
+     * @return Pair of row key offset and length.
      */
     public Pair<Integer, Integer> parseRowKey(byte[] lineBytes, int length)
       throws BadTsvLineException {
@@ -553,6 +554,22 @@ public class ImportTsv extends Configured implements Tool {
             String errorMsg = format("Table '%s' does not exist.", tableName);
             LOG.error(errorMsg);
             throw new TableNotFoundException(errorMsg);
+          }
+          try (Table table = connection.getTable(tableName)) {
+            ArrayList<String> unmatchedFamilies = new ArrayList<>();
+            Set<String> cfSet = getColumnFamilies(columns);
+            TableDescriptor tDesc = table.getDescriptor();
+            for (String cf : cfSet) {
+              if (!tDesc.hasColumnFamily(Bytes.toBytes(cf))) {
+                unmatchedFamilies.add(cf);
+              }
+            }
+            if (unmatchedFamilies.size() > 0) {
+              String noSuchColumnFamiliesMsg =
+                format("Column families: %s do not exist.", unmatchedFamilies);
+              LOG.error(noSuchColumnFamiliesMsg);
+              throw new NoSuchColumnFamilyException(noSuchColumnFamiliesMsg);
+            }
           }
           if (mapperClass.equals(TsvImporterTextMapper.class)) {
             usage(TsvImporterTextMapper.class.toString()

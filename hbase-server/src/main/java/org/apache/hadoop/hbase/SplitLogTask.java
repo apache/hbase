@@ -146,8 +146,8 @@ public class SplitLogTask {
 
   /**
    * @param data Serialized date to parse.
-   * @return An SplitLogTaskState instance made of the passed <code>data</code> n * @see
-   *         #toByteArray()
+   * @return An SplitLogTaskState instance made of the passed <code>data</code>
+   * @see #toByteArray()
    */
   public static SplitLogTask parseFrom(final byte[] data) throws DeserializationException {
     ProtobufUtil.expectPBMagicPrefix(data);

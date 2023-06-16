@@ -71,6 +71,19 @@ See Nick Dimiduk's contribution on this link:http://stackoverflow.com/questions/
 If you know how to fix this without opening a second port for HTTPS, patches are appreciated.
 ====
 
+[[hbase.ui.cache]]
+=== Disable cache in HBase UI
+
+Set the following configuration in hbase-site to set max age to zero and disable cache for the web UI:
+
+[source,xml]
+----
+<property>
+  <name>hbase.http.filter.no-store.enable</name>
+  <value>true</value>
+</property>
+----
+
 [[hbase.secure.spnego.ui]]
 === Using SPNEGO for Kerberos authentication with Web UIs
 
@@ -185,6 +198,64 @@ non-sensitive endpoints in the Web UI.
 
 If it doesn't go without saying: non-authenticated users cannot access any part of the Web UI.
 
+[[hbase.secure.ldap.ui]]
+=== Using LDAP authentication with Web UIs
+
+LDAP authentication to HBase Web UIs can be enabled via configuring LDAP with the `hbase.security.authentication.ui`
+property in _hbase-site.xml_. The `hbase.http.filter.initializers` property also needs to have the `AuthenticationFilterInitializer` class.
+
+*IMPORTANT:* A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or ‘start TLS’ extension), configure the public certificate of the LDAP server in the local truststore.
+The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active Directory) server. The authentication filter must be configured with the following init parameters:
+
+[source,xml]
+----
+<property>
+  <name>hbase.security.authentication.ui</name>
+  <value>ldap</value>
+  <description>Controls what kind of authentication should be used for the HBase web UIs.</description>
+</property>
+<property>
+  <name>hbase.http.filter.initializers</name>
+  <value>org.apache.hadoop.hbase.http.lib.AuthenticationFilterInitializer</value>
+  <description>Comma separated class names corresponding to the Filters that will be initialized.
+  Then, the Filters will be applied to all user facing jsp and servlet web pages.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.type</name>
+  <value>ldap</value>
+  <description>Defines authentication used for the HTTP web-consoles in Hadoop ecosystem.</description>
+</property>
+----
+
+A number of properties exist to configure LDAP authentication for the web server:
+
+[source,xml]
+----
+<property>
+  <name>hadoop.http.authentication.ldap.binddomain</name>
+  <value>EXAMPLE.COM</value>
+  <description>The LDAP bind domain value to be used with the LDAP server. This property is optional
+   and useful only in case of Active Directory server (e.g. example.com).</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.providerurl</name>
+  <value>ldap://ldap-server-host:8920</value>
+  <description>The url of the LDAP server.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.enablestarttls</name>
+  <value>false</value>
+  <description>A boolean value used to define if the LDAP server supports ‘StartTLS’ extension.</description>
+</property>
+<property>
+  <name>hadoop.http.authentication.ldap.basedn</name>
+  <value>ou=users,dc=example,dc=com</value>
+  <description>The base distinguished name (DN) to be used with the LDAP server. This value is
+  appended to the provided user id for authentication purpose. This property is not useful in case
+  of Active Directory server.</description>
+</property>
+----
+
 === Other UI security-related configuration
 
 While it is a clear anti-pattern for HBase developers, the developers acknowledge that the HBase
@@ -200,6 +271,15 @@ Users who wish to change this would set the following in their hbase-site.xml:
 <property>
   <name>hbase.security.authentication.ui.config.protected</name>
   <value>true</value>
+</property>
+----
+
+To disable showing stack traces in HBase UI for hiding sensitive information, set the following in hbase-site:
+[source,xml]
+----
+<property>
+  <name>hbase.ui.show-stack-traces</name>
+  <value>false</value>
 </property>
 ----
 
@@ -674,6 +754,329 @@ For more information about ACLs, please see the <<hbase.accesscontrol.configurat
 
 It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPNEGO HTTP authentication.
 This is future work.
+
+== Transport Level Security (TLS) in HBase RPC communication
+
+Since version `2.6.0` HBase supports TLS encryption in server-client and Master-RegionServer communication.
+link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[Transport Layer Security (TLS)] is a standard
+cryptographic protocol designed to provide communications security over a computer network. HBase TLS implementation
+works exactly how secure websites are accessed via *https* prefix in a web browser: once established all communication
+on the channel will be securely hidden from malicious access.
+
+The encryption works at the transport level which means it's independent of the configured authentication method. Secure
+client access mentioned in the previous section requires Kerberos to be configured and used in HBase authentication, while
+TLS can be configured with any other SASL mechanism or even with simple client access methods, effectively preventing
+attackers from eavesdropping the communication. No Kerberos KDC or other complicated infrastructure required.
+
+HBase TLS is based on the Netty library therefore it only works with Netty client and server RPC implementations. Netty's
+powerful SSL implementation is a great foundation for highly secure and performant communication providing the latest and
+greatest cryptographic solution at all times.
+
+Since Region Servers effectively work as clients from Master's perspective, TLS supports encrypted communication
+between cluster members too.
+
+[NOTE]
+====
+From version 2.6.0 HBase supports the
+link:https://hadoop.apache.org/docs/r3.3.4/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html[Hadoop CredentialProvider API]
+to avoid storing sensitive information in HBase configuration files. The recommended way of storing keystore / truststore passwords
+is to use one of the supported credential providers e.g. the local jceks file provider. You can find more information
+about how to setup credential providers in the Hadoop documentation.
+
+The CLI interface for accessing the Hadoop Credential Shell is also available in HBase CLI. Type `hbase credential` to get help.
+====
+
+=== Server side configuration
+
+We need to set up Java key store for the server. Key store is the list of private keys that a server can use to configure TLS
+encryption. See link:https://en.wikipedia.org/wiki/Transport_Layer_Security/[TLS wikipedia page]
+for further details of the protocol. Add the following configuration to `hbase-site.xml` on Master, Region Servers and HBase
+clients:
+
+[source,xml]
+----
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.keystore.location</name>
+  <value>/path/to/keystore.jks</value>
+</property>
+----
+
+Use `hbase.rpc.tls.keystore.password` alias to retrieve key store password from Hadoop credential provider.
+
+NOTE: The supported storefile formats are based on the registered security providers and the loader can be autodetected from
+the file extension. If needed, the file format can be explicitly specified with the `hbase.rpc.tls.keystore.type` property.
+
+=== Client side configuration
+
+We need to configure trust store for the client. Trust store contains the list of certificates that the client should trust
+when doing the handshake with the server. Add the following to `hbase-site.xml`.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.truststore.location</name>
+  <value>/path/to/truststore.jks</value>
+</property>
+----
+
+Use `hbase.rpc.tls.truststore.password` alias to retrieve trust store password from Hadoop credential provider.
+
+NOTE: The supported storefile formats are based on the registered security providers and the loader can be autodetected from
+the file extension. If needed, the file format can be explicitly specified with the `hbase.rpc.tls.truststore.type` property.
+
+However, specifying a trust store is not always required. Standard JDK implementations are shipped with a standard list
+of trusted certificates (the certificates of Certificate Authorities) and if your private key is provided by one of them,
+you don't need to configure your clients to trust it. Similarly to an internet browser, you don't need to set up the
+certificates of every single website you're planning to visit. Later in this documentation we'll walk through the steps of
+creating self-signed certificates which requires a trust store setup.
+
+You can check the list of public certificate authorities shipped with your JDK implementation:
+
+----
+keytool -keystore $JAVA_HOME/jre/lib/security/cacerts -list
+----
+
+Password is empty by default.
+
+=== Creating self-signed certificates
+
+While obtaining globally trusted certificates from Certificate Authorities is convenient, it's perfectly valid to generate
+your own private/public keypairs and set them up specifically for the HBase cluster. Especially if you don't want to enable
+public access to the cluster, paying money for a certificate doesn't make sense.
+
+Follow the following steps to generate self-signed certificates.
+
+. Create SSL key store JKS to store local credentials
+
+Please note that the alias (-alias) and the distinguished name (-dname) must match the hostname of the machine that is
+associated with, otherwise hostname verification won't work.
+
+----
+keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -keypass password -keystore keystore.jks -storepass password
+----
+
+At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member
+will have its own key store.
+
+[start=2]
+. Extract the signed public key (certificate) from each key store
+
+----
+keytool -exportcert -alias $(hostname -f) -keystore keystore.jks -file $(hostname -f).cer -rfc
+----
+
+[start=3]
+. Create SSL trust store JKS containing certificates for the clients
+
+The same truststore (storing all accepted certs) should be shared on participants of the cluster. You need to use different
+aliases to store multiple certificates in the same truststore. Name of the aliases doesn't matter.
+
+----
+keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
+----
+
+=== Upgrading existing non-TLS cluster with no downtime
+
+Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of
+port unification functionality. There's a property on server side called `hbase.server.netty.tls.supportplaintext`
+which makes possible to accept TLS and plaintext connections on the same socket port.
+
+. Create the necessary key stores and trust stores for all server participants as described in the previous section.
+
+. Enable secure communication on the Master node in _server-only_ mode with plaintext support.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>false</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>true</value>
+</property>
+...keystore / truststore setup ...
+----
+
+Restart the Master. Master now accepts both TLS/non-TLS connections and works with non-TLS in client mode.
+
+[start=3]
+. Enable secure communication on the Region Servers in both _server and client_ mode with plaintext support.
+Client mode here will ensure that RegionServer's communication to Master is encrypted.
+
+[WARNING]
+====
+*Replication*
+
+If you have read replicas enabled in your cluster or replication between two different clusters, you
+have to break this into two steps. Secure communication has to be enabled on the _server side_ first with plaintext
+support and once all Region Servers are upgraded you can repeat the upgrade by enabling _client side_ as well.
+
+You have to prepare all Region Servers for secure communication before upgrading the client side.
+====
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>true</value>
+</property>
+...keystore / truststore setup ...
+----
+
+Restart Region Servers in rolling restart fashion. They send requests with TLS and accept both TLS and non-TLS communication.
+
+[start=4]
+. Enable secure communication on the clients.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+...truststore setup ...
+----
+
+[start=5]
+. Enable client-mode TLS on master and disable plaintext mode.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.enabled</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.server.netty.tls.supportplaintext</name>
+  <value>false</value>
+</property>
+----
+
+Restart Master.
+
+[start=6]
+. Disable plaintext communication on the Region Servers by removing `supportplaintext` property. Restart RSs in rolling
+restart fashion.
+
+WARNING: Once `hbase.client.netty.tls.enabled` is enabled on the server side, the cluster will only be able to communicate
+with other clusters which have TLS enabled. For example, this would impact inter-cluster replication.
+
+=== Enable automatic certificate reloading
+
+Certificates usually expire after some time to improve security. In this case we need to replace them by modifying
+Keystore / Truststore files and HBase processes have to be restarted. In order to avoid that you can enable automatic
+file change detection and certificate reloading with the following option. Default: false.
+
+[source,xml]
+----
+<property>
+  <name>hbase.rpc.tls.certReload</name>
+  <value>true</value>
+</property>
+----
+
+=== Additional configuration
+
+==== Enabled protocols
+
+Comma-separated list of TLS protocol versions to enable. Default is empty.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.enabledProtocols</name>
+  <value>TLSv1.2,TLSv1.3</value>
+</property>
+----
+
+==== Default protocol
+
+Set the default TLS protocol version to use. Default is TLSv1.2. Use this protocol if enabled protocols is not defined.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.protocol</name>
+  <value>TLSv1.2</value>
+</property>
+----
+
+==== Enabled cipher suites
+
+List of enabled cipher suites in TLS protocol. Useful when you want to disable certain cipher suites due to recent
+security concerns. Default value is a mix of CBC and GCM ciphers. Due to performance reasons we prefer CBC ciphers for
+Java 8 and GCM ciphers for Java 9+.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.ciphersuites</name>
+  <value>TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256</value>
+</property>
+----
+
+==== Certificate Revocation Checking
+
+There's a built-in mechanism in JDK's TrustManager which automatically checks certificates for revocation. See
+link:https://docs.oracle.com/cd/E19263-01/817-5215/ssl.html#wp19807[Managing Server Certificates]. Disabled by default.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.clr</name>
+  <value>false</value>
+</property>
+----
+
+==== Online Certificate Status Protocol
+
+Enables link:https://en.wikipedia.org/wiki/OCSP_stapling[OCSP] stapling. Please note that not all `SSLProvider`
+implementations support OCSP stapling and an exception will be thrown upon. Disabled by default.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.ocsp</name>
+  <value>false</value>
+</property>
+----
+
+==== Client handshake timeout
+
+Set the TLS client handshake timeout is milliseconds. Default is 5 seconds.
+
+[source,xml]
+----
+<property>
+  <name>hbase.client.netty.tls.handshaketimeout</name>
+  <value>5000</value>
+</property>
+----
 
 == Securing Access to HDFS and ZooKeeper
 Secure HBase requires secure ZooKeeper and HDFS so that users cannot access and/or modify the metadata and data from under HBase. HBase uses HDFS (or configured file system) to keep its data files as well as write ahead logs (WALs) and other data. HBase uses ZooKeeper to store some metadata for operations (master address, table locks, recovery state, etc).
@@ -1704,6 +2107,8 @@ You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster
 </property>
 ----
 
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
+
 . (Optional) Configure encryption key hash algorithm.
 +
 Since link:https://issues.apache.org/jira/browse/HBASE-25181[HBASE-25181] it is possible to use
@@ -1934,6 +2339,8 @@ All options have been discussed separately in the sections above.
 </property>
 ----
 ====
+
+NOTE: Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
 
 .Example Group Mapper in Hadoop _core-site.xml_
 ====

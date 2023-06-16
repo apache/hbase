@@ -162,7 +162,7 @@ public final class HBaseClassTestRule implements TestRule {
 
   @Override
   public Statement apply(Statement base, Description description) {
-    return timeout.apply(systemExitRule.apply(base, description), description);
+    return systemExitRule.apply(timeout.apply(base, description), description);
   }
 
 }

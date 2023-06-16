@@ -362,8 +362,7 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
    * @param split A TableSplit corresponding to a range of rowkeys
    * @param n     Number of ranges after splitting. Pass 1 means no split for the range Pass 2 if
    *              you want to split the range in two;
-   * @return A list of TableSplit, the size of the list is n
-   * @throws IllegalArgumentIOException throws IllegalArgumentIOException
+   * @return A list of TableSplit, the size of the list is {@code n}
    */
   protected List<InputSplit> createNInputSplitsUniform(InputSplit split, int n)
     throws IllegalArgumentIOException {
@@ -581,7 +580,7 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
   /**
    * Allows subclasses to initialize the table information.
    * @param connection The Connection to the HBase cluster. MUST be unmanaged. We will close.
-   * @param tableName  The {@link TableName} of the table to process. n
+   * @param tableName  The {@link TableName} of the table to process.
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
     if (this.table != null || this.connection != null) {
@@ -642,7 +641,7 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
 
   /**
    * Close the Table and related objects that were initialized via
-   * {@link #initializeTable(Connection, TableName)}. n
+   * {@link #initializeTable(Connection, TableName)}.
    */
   protected void closeTable() throws IOException {
     close(admin, table, regionLocator, connection);

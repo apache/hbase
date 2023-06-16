@@ -217,7 +217,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
 
     public String signalCommand(ServiceType service, String signal) {
-      return String.format("%s | xargs sudo kill -s %s", findPidCommand(service), signal);
+      return String.format("%s | xargs kill -s %s", findPidCommand(service), signal);
     }
   }
 
@@ -280,21 +280,13 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    */
   static class ZookeeperShellCommandProvider extends CommandProvider {
     private final String zookeeperHome;
-    private final String confDir;
 
     ZookeeperShellCommandProvider(Configuration conf) throws IOException {
       zookeeperHome =
         conf.get("hbase.it.clustermanager.zookeeper.home", System.getenv("ZOOBINDIR"));
-      String tmp =
-        conf.get("hbase.it.clustermanager.zookeeper.conf.dir", System.getenv("ZOOCFGDIR"));
       if (zookeeperHome == null) {
         throw new IOException("ZooKeeper home configuration parameter i.e. "
           + "'hbase.it.clustermanager.zookeeper.home' is not configured properly.");
-      }
-      if (tmp != null) {
-        confDir = String.format("--config %s", tmp);
-      } else {
-        confDir = "";
       }
     }
 

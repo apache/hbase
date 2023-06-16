@@ -110,12 +110,8 @@ public class TestBytes {
     byte[] a = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     byte[] b = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
     byte[] c = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
-    byte[] d = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
     byte[] result1 = Bytes.add(a, b, c);
     byte[] result2 = Bytes.add(new byte[][] { a, b, c });
-    assertEquals(0, Bytes.compareTo(result1, result2));
-    byte[] result4 = Bytes.add(result1, d);
-    byte[] result5 = Bytes.add(new byte[][] { result1, d });
     assertEquals(0, Bytes.compareTo(result1, result2));
   }
 

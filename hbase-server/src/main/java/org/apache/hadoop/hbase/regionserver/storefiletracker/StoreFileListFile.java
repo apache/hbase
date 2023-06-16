@@ -73,7 +73,7 @@ class StoreFileListFile {
 
   private static final char TRACK_FILE_SEPARATOR = '.';
 
-  private static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
+  static final Pattern TRACK_FILE_PATTERN = Pattern.compile("^f(1|2)\\.\\d+$");
 
   // 16 MB, which is big enough for a tracker file
   private static final int MAX_FILE_SIZE = 16 * 1024 * 1024;
@@ -94,8 +94,7 @@ class StoreFileListFile {
     trackFileDir = new Path(ctx.getFamilyStoreDirectoryPath(), TRACK_FILE_DIR);
   }
 
-  private StoreFileList load(Path path) throws IOException {
-    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+  static StoreFileList load(FileSystem fs, Path path) throws IOException {
     byte[] data;
     int expectedChecksum;
     try (FSDataInputStream in = fs.open(path)) {
@@ -116,6 +115,11 @@ class StoreFileListFile {
         "Checksum mismatch, expected " + expectedChecksum + ", actual " + calculatedChecksum);
     }
     return StoreFileList.parseFrom(data);
+  }
+
+  StoreFileList load(Path path) throws IOException {
+    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+    return load(fs, path);
   }
 
   private int select(StoreFileList[] lists) {
@@ -258,7 +262,8 @@ class StoreFileListFile {
     } catch (IOException e) {
       // we will create new file with overwrite = true, so not a big deal here, only for speed up
       // loading as we do not need to read this file when loading
-      LOG.debug("Failed to delete old track file {}, ignoring the exception", e);
+      LOG.debug("Failed to delete old track file {}, ignoring the exception",
+        trackFiles[nextTrackFile], e);
     }
   }
 }

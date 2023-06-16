@@ -223,8 +223,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamesp
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespacesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableNamesByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
@@ -284,6 +288,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetQuotaStatesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.GetSpaceQuotaRegionSizesRequest;
@@ -325,10 +330,18 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.Enabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.EnableReplicationPeerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerConfigResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerModificationProceduresResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.GetReplicationPeerStateResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.IsReplicationPeerModificationEnabledResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ListReplicationPeersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.RemoveReplicationPeerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.ReplicationPeerModificationSwitchResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.TransitReplicationPeerSyncReplicationStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos.UpdateReplicationPeerConfigRequest;
@@ -561,6 +574,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return getTableNames(RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables));
   }
 
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return this.<List<TableName>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableNamesByStateRequest,
+        ListTableNamesByStateResponse, List<TableName>> call(controller, stub,
+          ListTableNamesByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableNamesByState(c, req, done),
+          (resp) -> ProtobufUtil.toTableNameList(resp.getTableNamesList())))
+      .call();
+  }
+
   private CompletableFuture<List<TableName>> getTableNames(GetTableNamesRequest request) {
     return this.<List<TableName>> newMasterCaller()
       .action((controller, stub) -> this.<GetTableNamesRequest, GetTableNamesResponse,
@@ -577,6 +601,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ListTableDescriptorsByNamespaceResponse, List<TableDescriptor>> call(controller, stub,
           ListTableDescriptorsByNamespaceRequest.newBuilder().setNamespaceName(name).build(),
           (s, c, req, done) -> s.listTableDescriptorsByNamespace(c, req, done),
+          (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
+      .call();
+  }
+
+  @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return this.<List<TableDescriptor>> newMasterCaller()
+      .action((controller, stub) -> this.<ListTableDescriptorsByStateRequest,
+        ListTableDescriptorsByStateResponse, List<TableDescriptor>> call(controller, stub,
+          ListTableDescriptorsByStateRequest.newBuilder().setIsEnabled(isEnabled).build(),
+          (s, c, req, done) -> s.listTableDescriptorsByState(c, req, done),
           (resp) -> ProtobufUtil.toTableDescriptorList(resp)))
       .call();
   }
@@ -3732,6 +3767,86 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
       }
     });
     return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    GetReplicationPeerStateRequest.Builder request = GetReplicationPeerStateRequest.newBuilder();
+    request.setPeerId(peerId);
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<GetReplicationPeerStateRequest,
+        GetReplicationPeerStateResponse, Boolean> call(controller, stub, request.build(),
+          (s, c, req, done) -> s.isReplicationPeerEnabled(c, req, done),
+          resp -> resp.getIsEnabled()))
+      .call();
+  }
+
+  private void waitUntilAllReplicationPeerModificationProceduresDone(
+    CompletableFuture<Boolean> future, boolean prevOn, int retries) {
+    CompletableFuture<List<ProcedureProtos.Procedure>> callFuture =
+      this.<List<ProcedureProtos.Procedure>> newMasterCaller()
+        .action((controller, stub) -> this.<GetReplicationPeerModificationProceduresRequest,
+          GetReplicationPeerModificationProceduresResponse, List<ProcedureProtos.Procedure>> call(
+            controller, stub, GetReplicationPeerModificationProceduresRequest.getDefaultInstance(),
+            (s, c, req, done) -> s.getReplicationPeerModificationProcedures(c, req, done),
+            resp -> resp.getProcedureList()))
+        .call();
+    addListener(callFuture, (r, e) -> {
+      if (e != null) {
+        future.completeExceptionally(e);
+      } else if (r.isEmpty()) {
+        // we are done
+        future.complete(prevOn);
+      } else {
+        // retry later to see if the procedures are done
+        retryTimer.newTimeout(
+          t -> waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, retries + 1),
+          ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+      }
+    });
+  }
+
+  @Override
+  public CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on,
+    boolean drainProcedures) {
+    ReplicationPeerModificationSwitchRequest request =
+      ReplicationPeerModificationSwitchRequest.newBuilder().setOn(on).build();
+    CompletableFuture<Boolean> callFuture = this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<ReplicationPeerModificationSwitchRequest,
+        ReplicationPeerModificationSwitchResponse, Boolean> call(controller, stub, request,
+          (s, c, req, done) -> s.replicationPeerModificationSwitch(c, req, done),
+          resp -> resp.getPreviousValue()))
+      .call();
+    // if we do not need to wait all previous peer modification procedure done, or we are enabling
+    // peer modification, just return here.
+    if (!drainProcedures || on) {
+      return callFuture;
+    }
+    // otherwise we need to wait until all previous peer modification procedure done
+    CompletableFuture<Boolean> future = new CompletableFuture<>();
+    addListener(callFuture, (prevOn, err) -> {
+      if (err != null) {
+        future.completeExceptionally(err);
+        return;
+      }
+      // even if the previous state is disabled, we still need to wait here, as there could be
+      // another client thread which called this method just before us and have already changed the
+      // state to off, but there are still peer modification procedures not finished, so we should
+      // also wait here.
+      waitUntilAllReplicationPeerModificationProceduresDone(future, prevOn, 0);
+    });
+    return future;
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerModificationEnabled() {
+    return this.<Boolean> newMasterCaller()
+      .action((controller, stub) -> this.<IsReplicationPeerModificationEnabledRequest,
+        IsReplicationPeerModificationEnabledResponse, Boolean> call(controller, stub,
+          IsReplicationPeerModificationEnabledRequest.getDefaultInstance(),
+          (s, c, req, done) -> s.isReplicationPeerModificationEnabled(c, req, done),
+          (resp) -> resp.getEnabled()))
+      .call();
   }
 
   @Override

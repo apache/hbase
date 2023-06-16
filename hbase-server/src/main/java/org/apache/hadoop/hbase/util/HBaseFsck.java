@@ -341,8 +341,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Constructor n * Configuration object n * if the master is not running n * if unable to connect
-   * to ZooKeeper
+   * Constructor Configuration object if the master is not running if unable to connect to ZooKeeper
    */
   public HBaseFsck(Configuration conf, ExecutorService exec) throws MasterNotRunningException,
     ZooKeeperConnectionException, IOException, ClassNotFoundException {
@@ -656,6 +655,8 @@ public class HBaseFsck extends Configured implements Closeable {
     loadDeployedRegions();
     // check whether hbase:meta is deployed and online
     recordMetaRegion();
+    // Report inconsistencies if there are any unknown servers.
+    reportUnknownServers();
     // Check if hbase:meta is found only once and in the right place
     if (!checkMetaRegion()) {
       String errorMsg = "hbase:meta table is not consistent. ";
@@ -706,6 +707,17 @@ public class HBaseFsck extends Configured implements Closeable {
     // Check integrity (does not fix)
     checkIntegrity();
     return errors.getErrorList().size();
+  }
+
+  private void reportUnknownServers() throws IOException {
+    List<ServerName> unknownServers = admin.listUnknownServers();
+    if (!unknownServers.isEmpty()) {
+      unknownServers.stream().forEach(serverName -> {
+        errors.reportError(ERROR_CODE.UNKNOWN_SERVER,
+          "Found unknown server, some of the regions held by this server may not get assigned. "
+            + String.format("Use HBCK2 scheduleRecoveries %s to recover.", serverName));
+      });
+    }
   }
 
   /**
@@ -983,11 +995,8 @@ public class HBaseFsck extends Configured implements Closeable {
           start = CellUtil.cloneRow(startKv.get());
           Optional<Cell> endKv = hf.getLastKey();
           end = CellUtil.cloneRow(endKv.get());
-        } catch (IOException ioe) {
+        } catch (Exception ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");
-          continue;
-        } catch (NullPointerException ioe) {
-          LOG.warn("Orphan file " + hfile + " is possibly corrupted HFile, skipping");
           continue;
         } finally {
           if (hf != null) {
@@ -1323,8 +1332,8 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * To get the column family list according to the column family dirs nn * @return a set of column
-   * families n
+   * To get the column family list according to the column family dirs
+   * @return a set of column families
    */
   private Set<String> getColumnFamilyList(Set<String> columns, HbckRegionInfo hbi)
     throws IOException {
@@ -1344,7 +1353,6 @@ public class HBaseFsck extends Configured implements Closeable {
    * 2. the correct colfamily list<br>
    * 3. the default properties for both {@link TableDescriptor} and
    * {@link ColumnFamilyDescriptor}<br>
-   * n
    */
   private boolean fabricateTableInfo(FSTableDescriptors fstd, TableName tableName,
     Set<String> columns) throws IOException {
@@ -1359,7 +1367,6 @@ public class HBaseFsck extends Configured implements Closeable {
 
   /**
    * To fix the empty REGIONINFO_QUALIFIER rows from hbase:meta <br>
-   * n
    */
   public void fixEmptyMetaCells() throws IOException {
     if (shouldFixEmptyMetaCells() && !emptyRegionInfoQualifiers.isEmpty()) {
@@ -1380,7 +1387,6 @@ public class HBaseFsck extends Configured implements Closeable {
    * &nbsp;2.2 the correct colfamily list<br>
    * &nbsp;2.3 the default properties for both {@link TableDescriptor} and
    * {@link ColumnFamilyDescriptor}<br>
-   * n
    */
   public void fixOrphanTables() throws IOException {
     if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
@@ -1560,7 +1566,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Load the list of disabled tables in ZK into local set. nn
+   * Load the list of disabled tables in ZK into local set.
    */
   private void loadTableStates() throws IOException {
     tableStates = MetaTableAccessor.getTableStates(connection);
@@ -1925,7 +1931,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     RegionInfo hri = RegionInfoBuilder.newBuilder(hi.getMetaEntry().getRegionInfo())
       .setOffline(false).setSplit(false).build();
-    Put p = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+    Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
     mutations.add(p);
 
     meta.mutateRow(mutations);
@@ -2328,7 +2334,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
   /**
    * Checks tables integrity. Goes over all regions and scans the tables. Collects all the pieces
-   * for each table and checks if there are missing, repeated or overlapping ones. n
+   * for each table and checks if there are missing, repeated or overlapping ones.
    */
   SortedMap<TableName, HbckTableInfo> checkIntegrity() throws IOException {
     tablesInfo = new TreeMap<>();
@@ -2564,8 +2570,8 @@ public class HBaseFsck extends Configured implements Closeable {
     return hbi;
   }
 
-  private void checkAndFixReplication() throws ReplicationException {
-    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, errors);
+  private void checkAndFixReplication() throws ReplicationException, IOException {
+    ReplicationChecker checker = new ReplicationChecker(getConf(), zkw, connection, errors);
     checker.checkUnDeletedQueues();
 
     if (checker.hasUnDeletedQueues() && this.fixReplication) {
@@ -2578,7 +2584,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Check values in regionInfo for hbase:meta Check if zero or more than one regions with
    * hbase:meta are found. If there are inconsistencies (i.e. zero or more than one regions pretend
    * to be holding the hbase:meta) try to fix that and report an error.
-   * @throws IOException from HBaseFsckRepair functions nn
+   * @throws IOException from HBaseFsckRepair functions
    */
   boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
     Map<Integer, HbckRegionInfo> metaRegions = new HashMap<>();
@@ -2863,7 +2869,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     /**
      * Report error information, but do not increment the error count. Intended for cases where the
-     * actual error would have been reported previously. n
+     * actual error would have been reported previously.
      */
     @Override
     public synchronized void report(String message) {
@@ -3519,7 +3525,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Main program nn
+   * Main program
    */
   public static void main(String[] args) throws Exception {
     // create a fsck object
@@ -3838,7 +3844,7 @@ public class HBaseFsck extends Configured implements Closeable {
       return;
     }
     ReplicationQueueStorage queueStorage =
-      ReplicationStorageFactory.getReplicationQueueStorage(zkw, getConf());
+      ReplicationStorageFactory.getReplicationQueueStorage(connection, getConf());
     List<ReplicationPeerDescription> peerDescriptions = admin.listReplicationPeers();
     if (peerDescriptions != null && peerDescriptions.size() > 0) {
       List<String> peers = peerDescriptions.stream()

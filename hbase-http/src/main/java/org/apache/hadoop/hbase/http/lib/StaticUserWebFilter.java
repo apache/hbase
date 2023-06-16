@@ -39,6 +39,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
+
 /**
  * Provides a servlet filter that pretends to authenticate a fake user (Dr.Who) so that the web UI
  * is usable for a secure cluster without authentication.
@@ -70,7 +73,7 @@ public class StaticUserWebFilter extends FilterInitializer {
     public boolean equals(Object other) {
       if (other == this) {
         return true;
-      } else if (other == null || other.getClass() != getClass()) {
+      } else if (!(other instanceof User)) {
         return false;
       }
       return ((User) other).name.equals(name);
@@ -143,8 +146,7 @@ public class StaticUserWebFilter extends FilterInitializer {
       // since we need to split out the username from the configured UGI.
       LOG.warn(
         DEPRECATED_UGI_KEY + " should not be used. Instead, use " + HBASE_HTTP_STATIC_USER + ".");
-      String[] parts = oldStyleUgi.split(",");
-      return parts[0];
+      return Iterables.get(Splitter.on(',').split(oldStyleUgi), 0);
     } else {
       return conf.get(HBASE_HTTP_STATIC_USER, DEFAULT_HBASE_HTTP_STATIC_USER);
     }

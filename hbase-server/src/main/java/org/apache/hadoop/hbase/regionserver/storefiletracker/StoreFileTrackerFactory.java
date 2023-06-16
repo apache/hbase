@@ -119,7 +119,7 @@ public final class StoreFileTrackerFactory {
   public static StoreFileTracker create(Configuration conf, boolean isPrimaryReplica,
     StoreContext ctx) {
     Class<? extends StoreFileTracker> tracker = getTrackerClass(conf);
-    LOG.info("instantiating StoreFileTracker impl {}", tracker.getName());
+    LOG.debug("instantiating StoreFileTracker impl {}", tracker.getName());
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 
@@ -170,7 +170,7 @@ public final class StoreFileTrackerFactory {
       throw new IllegalArgumentException("Should not specify " + configName + " as "
         + Trackers.MIGRATION + " because it can not be nested");
     }
-    LOG.info("instantiating StoreFileTracker impl {} as {}", tracker.getName(), configName);
+    LOG.debug("instantiating StoreFileTracker impl {} as {}", tracker.getName(), configName);
     return ReflectionUtils.newInstance(tracker, conf, isPrimaryReplica, ctx);
   }
 

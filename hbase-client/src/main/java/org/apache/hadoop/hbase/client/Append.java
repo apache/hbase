@@ -63,7 +63,7 @@ public class Append extends Mutation {
    * <p>
    * This range is used as [minStamp, maxStamp).
    * @param minStamp minimum timestamp value, inclusive
-   * @param maxStamp maximum timestamp value, exclusive n
+   * @param maxStamp maximum timestamp value, exclusive
    */
   public Append setTimeRange(long minStamp, long maxStamp) {
     tr = TimeRange.between(minStamp, maxStamp);
@@ -71,7 +71,7 @@ public class Append extends Mutation {
   }
 
   /**
-   * Gets the TimeRange used for this append. n
+   * Gets the TimeRange used for this append.
    */
   public TimeRange getTimeRange() {
     return this.tr;
@@ -83,7 +83,7 @@ public class Append extends Mutation {
   }
 
   /**
-   * n * True (default) if the append operation should return the results. A client that is not
+   * True (default) if the append operation should return the results. A client that is not
    * interested in the result can save network bandwidth setting this to false.
    */
   @Override
@@ -122,7 +122,7 @@ public class Append extends Mutation {
    * Create a Append operation for the specified row.
    * <p>
    * At least one column must be appended to.
-   * @param rowArray Makes a copy out of this buffer. nn
+   * @param rowArray Makes a copy out of this buffer.
    */
   public Append(final byte[] rowArray, final int rowOffset, final int rowLength) {
     checkRow(rowArray, rowOffset, rowLength);
@@ -144,7 +144,7 @@ public class Append extends Mutation {
    * Add the specified column and value to this Append operation.
    * @param family    family name
    * @param qualifier column qualifier
-   * @param value     value to append to specified column n
+   * @param value     value to append to specified column
    */
   public Append addColumn(byte[] family, byte[] qualifier, byte[] value) {
     KeyValue kv = new KeyValue(this.row, family, qualifier, this.ts, KeyValue.Type.Put, value);

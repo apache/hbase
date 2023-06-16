@@ -143,6 +143,7 @@ public class ByteBufferArray {
    * Transfer bytes from source {@link ByteBuff} to destination {@link ByteBuffer}. Position of both
    * source and destination will be advanced.
    */
+  @SuppressWarnings("UnnecessaryLambda")
   private static final BiConsumer<ByteBuffer, ByteBuff> WRITER = (dst, src) -> {
     int off = src.position(), len = dst.remaining();
     src.get(dst, off, len);
@@ -153,6 +154,7 @@ public class ByteBufferArray {
    * Transfer bytes from source {@link ByteBuffer} to destination {@link ByteBuff}, Position of both
    * source and destination will be advanced.
    */
+  @SuppressWarnings("UnnecessaryLambda")
   private static final BiConsumer<ByteBuffer, ByteBuff> READER = (src, dst) -> {
     int off = dst.position(), len = src.remaining(), srcOff = src.position();
     dst.put(off, ByteBuff.wrap(src), srcOff, len);

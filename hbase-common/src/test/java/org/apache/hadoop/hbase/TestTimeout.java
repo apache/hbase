@@ -44,6 +44,7 @@ public class TestTimeout {
   public void infiniteLoop() {
     // Launch a background non-daemon thread.
     Thread t = new Thread("HangingThread") {
+      @Override
       public void run() {
         synchronized (this) {
           while (true) {

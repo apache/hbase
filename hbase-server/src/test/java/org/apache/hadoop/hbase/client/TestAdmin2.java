@@ -177,7 +177,7 @@ public class TestAdmin2 extends TestAdminBase {
   }
 
   /**
-   * Test read only tables n
+   * Test read only tables
    */
   @Test
   public void testReadOnlyTable() throws Exception {
@@ -411,9 +411,11 @@ public class TestAdmin2 extends TestAdminBase {
       r.flush(true);
     }
     ADMIN.rollWALWriter(regionServer.getServerName());
-    int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
-    LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
-    assertTrue(("actual count: " + count), count <= 2);
+    TEST_UTIL.waitFor(5000, () -> {
+      int count = AbstractFSWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
+      LOG.info("after flushing all regions and rolling logs there are " + count + " log files");
+      return count <= 2;
+    });
   }
 
   private void setUpforLogRolling() {

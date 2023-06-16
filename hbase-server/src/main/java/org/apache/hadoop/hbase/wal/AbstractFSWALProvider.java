@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,7 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -38,9 +41,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.util.RecoverLeaseFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -69,15 +72,15 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
   public static final String SEPARATE_OLDLOGDIR = "hbase.separate.oldlogdir.by.regionserver";
   public static final boolean DEFAULT_SEPARATE_OLDLOGDIR = false;
 
-  // Only public so classes back in regionserver.wal can access
-  public interface Reader extends WAL.Reader {
+  public interface Initializer {
     /**
-     * @param fs   File system.
-     * @param path Path.
-     * @param c    Configuration.
-     * @param s    Input stream that may have been pre-opened by the caller; may be null.
+     * A method to initialize a WAL reader.
+     * @param startPosition the start position you want to read from, -1 means start reading from
+     *                      the first WAL entry. Notice that, the first entry is not started at
+     *                      position as we have several headers, so typically you should not pass 0
+     *                      here.
      */
-    void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
+    void init(FileSystem fs, Path path, Configuration c, long startPosition) throws IOException;
   }
 
   protected volatile T wal;
@@ -308,6 +311,10 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return matcher.matches() ? Long.parseLong(matcher.group(2)) : NO_TIMESTAMP;
   }
 
+  public static final Comparator<Path> TIMESTAMP_COMPARATOR =
+    Comparator.<Path, Long> comparing(p -> AbstractFSWALProvider.getTimestamp(p.getName()))
+      .thenComparing(Path::getName);
+
   /**
    * Construct the directory name for all WALs on a given server. Dir names currently look like this
    * for WALs: <code>hbase//WALs/kalashnikov.att.net,61634,1486865297088</code>.
@@ -336,6 +343,64 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       dirName.append(serverName);
     }
     return dirName.toString();
+  }
+
+  /**
+   * List all the old wal files for a dead region server.
+   * <p/>
+   * Initially added for supporting replication, where we need to get the wal files to replicate for
+   * a dead region server.
+   */
+  public static List<Path> getArchivedWALFiles(Configuration conf, ServerName serverName,
+    String logPrefix) throws IOException {
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    FileSystem fs = walRootDir.getFileSystem(conf);
+    List<Path> archivedWalFiles = new ArrayList<>();
+    // list both the root old wal dir and the separate old wal dir, so we will not miss any files if
+    // the SEPARATE_OLDLOGDIR config is changed
+    Path oldWalDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    try {
+      for (FileStatus status : fs.listStatus(oldWalDir, p -> p.getName().startsWith(logPrefix))) {
+        if (status.isFile()) {
+          archivedWalFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("Old WAL dir {} not exists", oldWalDir);
+      return Collections.emptyList();
+    }
+    Path separatedOldWalDir = new Path(oldWalDir, serverName.toString());
+    try {
+      for (FileStatus status : fs.listStatus(separatedOldWalDir,
+        p -> p.getName().startsWith(logPrefix))) {
+        if (status.isFile()) {
+          archivedWalFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("Seprated old WAL dir {} not exists", separatedOldWalDir);
+    }
+    return archivedWalFiles;
+  }
+
+  /**
+   * List all the wal files for a logPrefix.
+   */
+  public static List<Path> getWALFiles(Configuration c, ServerName serverName) throws IOException {
+    Path walRoot = new Path(CommonFSUtils.getWALRootDir(c), HConstants.HREGION_LOGDIR_NAME);
+    FileSystem fs = walRoot.getFileSystem(c);
+    List<Path> walFiles = new ArrayList<>();
+    Path walDir = new Path(walRoot, serverName.toString());
+    try {
+      for (FileStatus status : fs.listStatus(walDir)) {
+        if (status.isFile()) {
+          walFiles.add(status.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      LOG.info("WAL dir {} not exists", walDir);
+    }
+    return walFiles;
   }
 
   /**
@@ -418,10 +483,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
       serverName = ServerName.parseServerName(logDirName);
     } catch (IllegalArgumentException | IllegalStateException ex) {
       serverName = null;
-      LOG.warn("Cannot parse a server name from path=" + logFile + "; " + ex.getMessage());
+      LOG.warn("Cannot parse a server name from path={}", logFile, ex);
     }
-    if (serverName != null && serverName.getStartcode() < 0) {
-      LOG.warn("Invalid log file path=" + logFile);
+    if (serverName != null && serverName.getStartCode() < 0) {
+      LOG.warn("Invalid log file path={}, start code {} is less than 0", logFile,
+        serverName.getStartCode());
       serverName = null;
     }
     return serverName;
@@ -486,6 +552,11 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     }
 
     ServerName serverName = getServerNameFromWALDirectoryName(path);
+    if (serverName == null) {
+      LOG.warn("Can not extract server name from path {}, "
+        + "give up searching the separated old log dir", path);
+      return null;
+    }
     // Try finding the log in separate old log dir
     oldLogDir = new Path(walRootDir, new StringBuilder(HConstants.HREGION_OLDLOGDIR_NAME)
       .append(Path.SEPARATOR).append(serverName.getServerName()).toString());
@@ -498,61 +569,8 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
     return null;
   }
 
-  /**
-   * Opens WAL reader with retries and additional exception handling
-   * @param path path to WAL file
-   * @param conf configuration
-   * @return WAL Reader instance
-   */
-  public static org.apache.hadoop.hbase.wal.WAL.Reader openReader(Path path, Configuration conf)
-    throws IOException {
-    long retryInterval = 2000; // 2 sec
-    int maxAttempts = 30;
-    int attempt = 0;
-    Exception ee = null;
-    org.apache.hadoop.hbase.wal.WAL.Reader reader = null;
-    while (reader == null && attempt++ < maxAttempts) {
-      try {
-        // Detect if this is a new file, if so get a new reader else
-        // reset the current reader so that we see the new data
-        reader = WALFactory.createReader(path.getFileSystem(conf), path, conf);
-        return reader;
-      } catch (FileNotFoundException fnfe) {
-        // If the log was archived, continue reading from there
-        Path archivedLog = AbstractFSWALProvider.findArchivedLog(path, conf);
-        // archivedLog can be null if unable to locate in archiveDir.
-        if (archivedLog != null) {
-          return openReader(archivedLog, conf);
-        } else {
-          throw fnfe;
-        }
-      } catch (LeaseNotRecoveredException lnre) {
-        // HBASE-15019 the WAL was not closed due to some hiccup.
-        LOG.warn("Try to recover the WAL lease " + path, lnre);
-        recoverLease(conf, path);
-        reader = null;
-        ee = lnre;
-      } catch (NullPointerException npe) {
-        // Workaround for race condition in HDFS-4380
-        // which throws a NPE if we open a file before any data node has the most recent block
-        // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
-        LOG.warn("Got NPE opening reader, will retry.");
-        reader = null;
-        ee = npe;
-      }
-      if (reader == null) {
-        // sleep before next attempt
-        try {
-          Thread.sleep(retryInterval);
-        } catch (InterruptedException e) {
-        }
-      }
-    }
-    throw new IOException("Could not open reader", ee);
-  }
-
   // For HBASE-15019
-  private static void recoverLease(final Configuration conf, final Path path) {
+  public static void recoverLease(Configuration conf, Path path) {
     try {
       final FileSystem dfs = CommonFSUtils.getCurrentFileSystem(conf);
       RecoverLeaseFSUtils.recoverFileLease(dfs, path, conf, new CancelableProgressable() {
@@ -591,5 +609,30 @@ public abstract class AbstractFSWALProvider<T extends AbstractFSWAL<?>> implemen
    */
   public static String getWALPrefixFromWALName(String name) {
     return getWALNameGroupFromWALName(name, 1);
+  }
+
+  private static final Pattern SERVER_NAME_PATTERN = Pattern.compile("^[^"
+    + ServerName.SERVERNAME_SEPARATOR + "]+" + ServerName.SERVERNAME_SEPARATOR
+    + Addressing.VALID_PORT_REGEX + ServerName.SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX);
+
+  /**
+   * Parse the server name from wal prefix. A wal's name is always started with a server name in non
+   * test code.
+   * @throws IllegalArgumentException if the name passed in is not started with a server name
+   * @return the server name
+   */
+  public static ServerName parseServerNameFromWALName(String name) {
+    String decoded;
+    try {
+      decoded = URLDecoder.decode(name, StandardCharsets.UTF_8.name());
+    } catch (UnsupportedEncodingException e) {
+      throw new AssertionError("should never happen", e);
+    }
+    Matcher matcher = SERVER_NAME_PATTERN.matcher(decoded);
+    if (matcher.find()) {
+      return ServerName.valueOf(matcher.group());
+    } else {
+      throw new IllegalArgumentException(name + " is not started with a server name");
+    }
   }
 }

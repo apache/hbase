@@ -85,27 +85,32 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   /**
    * Update checkAndMutate histogram
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned for the check portion of the request
    */
-  void updateCheckAndMutate(long t);
+  void updateCheckAndMutate(long time, long blockBytesScanned);
 
   /**
    * Update the Get time histogram .
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned for the request
    */
-  void updateGet(long t);
+  void updateGet(long time, long blockBytesScanned);
 
   /**
    * Update the Increment time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned fetching the current value to
+   *                          increment
    */
-  void updateIncrement(long t);
+  void updateIncrement(long time, long blockBytesScanned);
 
   /**
    * Update the Append time histogram.
-   * @param t time it took
+   * @param time              time it took
+   * @param blockBytesScanned how many block bytes were scanned fetching the current value to append
    */
-  void updateAppend(long t);
+  void updateAppend(long time, long blockBytesScanned);
 
   /**
    * Update the Replay time histogram.
@@ -114,15 +119,12 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void updateReplay(long t);
 
   /**
-   * Update the scan size.
-   * @param scanSize size of the scan
+   * Update the scan metrics.
+   * @param time              response time of scan
+   * @param responseCellSize  size of the scan resposne
+   * @param blockBytesScanned size of block bytes scanned to retrieve the response
    */
-  void updateScanSize(long scanSize);
-
-  /**
-   * Update the scan time.
-   */
-  void updateScanTime(long t);
+  void updateScan(long time, long responseCellSize, long blockBytesScanned);
 
   /**
    * Increment the number of slow Puts that have happened.
@@ -288,6 +290,18 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STATIC_INDEX_SIZE_DESC = "Uncompressed size of the static indexes.";
   String STATIC_BLOOM_SIZE = "staticBloomSize";
   String STATIC_BLOOM_SIZE_DESC = "Uncompressed size of the static bloom filters.";
+
+  String BLOOM_FILTER_REQUESTS_COUNT = "bloomFilterRequestsCount";
+  String BLOOM_FILTER_REQUESTS_COUNT_DESC = "Count of requests to bloom filters.";
+
+  String BLOOM_FILTER_NEGATIVE_RESULTS_COUNT = "bloomFilterNegativeResultsCount";
+  String BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC =
+    "Count of bloom filter requests which returned a negative result.";
+
+  String BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT = "bloomFilterEligibleRequestsCount";
+  String BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC =
+    "Count of requests which could have used bloom filters but didn't because they weren't configured or loaded";
+
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
   String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
     "Number of mutations that have been sent by clients with the write ahead logging turned off.";
@@ -324,12 +338,18 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCK_CACHE_HIT_COUNT_DESC = "Count of the hit on the block cache.";
   String BLOCK_CACHE_PRIMARY_HIT_COUNT = "blockCacheHitCountPrimary";
   String BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC = "Count of hit on primary replica in the block cache.";
+  String BLOCK_CACHE_HIT_CACHING_COUNT = "blockCacheHitCachingCount";
+  String BLOCK_CACHE_HIT_CACHING_COUNT_DESC =
+    "Count of the hit on the block cache, for cacheable requests.";
   String BLOCK_CACHE_MISS_COUNT = "blockCacheMissCount";
   String BLOCK_COUNT_MISS_COUNT_DESC =
     "Number of requests for a block that missed the block cache.";
   String BLOCK_CACHE_PRIMARY_MISS_COUNT = "blockCacheMissCountPrimary";
   String BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC =
     "Number of requests for a block of primary replica that missed the block cache.";
+  String BLOCK_CACHE_MISS_CACHING_COUNT = "blockCacheMissCachingCount";
+  String BLOCK_COUNT_MISS_CACHING_COUNT_DESC =
+    "Number of requests for a block that missed the block cache, for cacheable requests.";
   String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
   String BLOCK_CACHE_EVICTION_COUNT_DESC =
     "Count of the number of blocks evicted from the block cache."
@@ -427,6 +447,13 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String SCAN_SIZE_KEY = "scanSize";
   String SCAN_TIME_KEY = "scanTime";
 
+  String BLOCK_BYTES_SCANNED_KEY = "blockBytesScannedCount";
+  String BLOCK_BYTES_SCANNED_DESC = "Count of block bytes scanned by read requests";
+  String GET_BLOCK_BYTES_SCANNED_KEY = "getBlockBytesScanned";
+  String SCAN_BLOCK_BYTES_SCANNED_KEY = "scanBlockBytesScanned";
+  String CHECK_AND_MUTATE_BLOCK_BYTES_SCANNED_KEY = "checkAndMutateBlockBytesScanned";
+  String INCREMENT_BLOCK_BYTES_SCANNED_KEY = "incrementBlockBytesScanned";
+  String APPEND_BLOCK_BYTES_SCANNED_KEY = "appendBlockBytesScanned";
   String SLOW_PUT_KEY = "slowPutCount";
   String SLOW_GET_KEY = "slowGetCount";
   String SLOW_DELETE_KEY = "slowDeleteCount";

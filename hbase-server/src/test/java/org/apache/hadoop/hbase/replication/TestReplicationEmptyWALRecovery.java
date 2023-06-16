@@ -161,11 +161,14 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
    */
   @Test
   public void testReplicationOfEmptyWALFollowingNonEmptyWAL() throws Exception {
+    final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
+    // make sure we only the current active wal file in queue
+    verifyNumberOfLogsInQueue(1, numRs);
+
     // Disable the replication peer to accumulate the non empty WAL followed by empty WAL
     hbaseAdmin.disableReplicationPeer(PEER_ID2);
-    int numOfEntriesToReplicate = 20;
 
-    final int numRs = UTIL1.getHBaseCluster().getRegionServerThreads().size();
+    int numOfEntriesToReplicate = 20;
     // for each RS, create an empty wal with same walGroupId
     final List<Path> emptyWalPaths = new ArrayList<>();
     long ts = EnvironmentEdgeManager.currentTime();
@@ -329,7 +332,6 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     for (int i = 0; i < numRs; i++) {
       HRegionServer hrs = UTIL1.getHBaseCluster().getRegionServer(i);
       Replication replicationService = (Replication) hrs.getReplicationSourceService();
-      replicationService.getReplicationManager().preLogRoll(emptyWalPaths.get(i));
       replicationService.getReplicationManager().postLogRoll(emptyWalPaths.get(i));
       RegionInfo regionInfo =
         UTIL1.getHBaseCluster().getRegions(htable1.getName()).get(0).getRegionInfo();

@@ -357,25 +357,6 @@ The number of consecutive WAL close errors we will allow
 `2`
 
 
-[[hbase.regionserver.hlog.reader.impl]]
-*`hbase.regionserver.hlog.reader.impl`*::
-+
-.Description
-The WAL file reader implementation.
-+
-.Default
-`org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader`
-
-
-[[hbase.regionserver.hlog.writer.impl]]
-*`hbase.regionserver.hlog.writer.impl`*::
-+
-.Description
-The WAL file writer implementation.
-+
-.Default
-`org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter`
-
 [[hbase.regionserver.global.memstore.size]]
 *`hbase.regionserver.global.memstore.size`*::
 +

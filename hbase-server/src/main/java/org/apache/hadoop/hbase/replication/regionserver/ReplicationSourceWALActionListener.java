@@ -44,11 +44,6 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   }
 
   @Override
-  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-    manager.preLogRoll(newPath);
-  }
-
-  @Override
   public void postLogRoll(Path oldPath, Path newPath) throws IOException {
     manager.postLogRoll(newPath);
   }
@@ -67,6 +62,10 @@ class ReplicationSourceWALActionListener implements WALActionsListener {
   static void scopeWALEdits(WALKey logKey, WALEdit logEdit, Configuration conf) {
     // For bulk load replication we need meta family to know the file we want to replicate.
     if (ReplicationUtils.isReplicationForBulkLoadDataEnabled(conf)) {
+      return;
+    }
+    // Allow replication marker row to pass through.
+    if (WALEdit.isReplicationMarkerEdit(logEdit)) {
       return;
     }
     // For replay, or if all the cells are markers, do not need to store replication scope.

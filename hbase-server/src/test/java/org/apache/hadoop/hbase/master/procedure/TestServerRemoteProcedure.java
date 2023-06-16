@@ -21,11 +21,8 @@ import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -57,7 +54,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,23 +70,19 @@ public class TestServerRemoteProcedure {
     HBaseClassTestRule.forClass(TestServerRemoteProcedure.class);
   @Rule
   public TestName name = new TestName();
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-  protected HBaseTestingUtil util;
-  protected MockRSProcedureDispatcher rsDispatcher;
-  protected MockMasterServices master;
-  protected AssignmentManager am;
-  protected NavigableMap<ServerName, SortedSet<byte[]>> regionsToRegionServers =
-    new ConcurrentSkipListMap<>();
+  private HBaseTestingUtil util;
+  private MockRSProcedureDispatcher rsDispatcher;
+  private MockMasterServices master;
+  private AssignmentManager am;
   // Simple executor to run some simple tasks.
-  protected ScheduledExecutorService executor;
+  private ScheduledExecutorService executor;
 
   @Before
   public void setUp() throws Exception {
     util = new HBaseTestingUtil();
     this.executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setUncaughtExceptionHandler((t, e) -> LOG.warn("Uncaught: ", e)).build());
-    master = new MockMasterServices(util.getConfiguration(), this.regionsToRegionServers);
+    master = new MockMasterServices(util.getConfiguration());
     rsDispatcher = new MockRSProcedureDispatcher(master);
     rsDispatcher.setMockRsExecutor(new NoopRSExecutor());
     master.start(2, rsDispatcher);

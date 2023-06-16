@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
@@ -226,7 +227,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   }
 
-  class MajorCompaction implements Runnable {
+  static class MajorCompaction implements Runnable {
 
     @Override
     public void run() {
@@ -242,7 +243,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     }
   }
 
-  class CleanMobAndArchive implements Runnable {
+  static class CleanMobAndArchive implements Runnable {
 
     @Override
     public void run() {
@@ -257,7 +258,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
           Thread.sleep(130000);
         } catch (Exception e) {
-          e.printStackTrace();
+          LOG.warn("Exception in CleanMobAndArchive", e);
         }
       }
     }
@@ -288,7 +289,8 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
             try {
               Thread.sleep(500);
             } catch (InterruptedException ee) {
-
+              // Restore interrupt status
+              Thread.currentThread().interrupt();
             }
           }
           if (i % 100000 == 0) {
@@ -323,7 +325,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
         Thread.sleep(1000);
       }
 
-      getNumberOfMobFiles(conf, table.getName(), new String(fam));
+      getNumberOfMobFiles(conf, table.getName(), new String(fam, StandardCharsets.UTF_8));
       LOG.info("Waiting for write thread to finish ...");
       writeData.join();
       // Cleanup again

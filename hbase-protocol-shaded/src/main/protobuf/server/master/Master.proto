@@ -512,6 +512,14 @@ message GetTableDescriptorsResponse {
   repeated TableSchema table_schema = 1;
 }
 
+message ListTableDescriptorsByStateRequest {
+  required bool is_enabled = 1;
+}
+
+message ListTableDescriptorsByStateResponse {
+  repeated TableSchema table_schema = 1;
+}
+
 message GetTableNamesRequest {
   optional string regex = 1;
   optional bool include_sys_tables = 2 [default=false];
@@ -519,6 +527,14 @@ message GetTableNamesRequest {
 }
 
 message GetTableNamesResponse {
+  repeated TableName table_names = 1;
+}
+
+message ListTableNamesByStateRequest {
+  required bool is_enabled = 1;
+}
+
+message ListTableNamesByStateResponse {
   repeated TableName table_names = 1;
 }
 
@@ -770,9 +786,17 @@ service MasterService {
   rpc GetTableDescriptors(GetTableDescriptorsRequest)
     returns(GetTableDescriptorsResponse);
 
+  /** List all enabled or disabled table descriptors. */
+  rpc ListTableDescriptorsByState(ListTableDescriptorsByStateRequest)
+    returns(ListTableDescriptorsByStateResponse);
+
   /** Get the list of table names. */
   rpc GetTableNames(GetTableNamesRequest)
     returns(GetTableNamesResponse);
+
+  /** List all enabled or disabled table names. */
+  rpc ListTableNamesByState(ListTableNamesByStateRequest)
+    returns(ListTableNamesByStateResponse);
 
   /** Return cluster status. */
   rpc GetClusterStatus(GetClusterStatusRequest)
@@ -1105,6 +1129,18 @@ service MasterService {
   /** Transit the state of current cluster in a synchronous replication peer */
   rpc TransitReplicationPeerSyncReplicationState(TransitReplicationPeerSyncReplicationStateRequest)
     returns(TransitReplicationPeerSyncReplicationStateResponse);
+
+  rpc IsReplicationPeerEnabled(GetReplicationPeerStateRequest)
+    returns(GetReplicationPeerStateResponse);
+
+  rpc ReplicationPeerModificationSwitch(ReplicationPeerModificationSwitchRequest)
+    returns(ReplicationPeerModificationSwitchResponse);
+
+  rpc GetReplicationPeerModificationProcedures(GetReplicationPeerModificationProceduresRequest)
+    returns(GetReplicationPeerModificationProceduresResponse);
+
+  rpc IsReplicationPeerModificationEnabled(IsReplicationPeerModificationEnabledRequest)
+    returns(IsReplicationPeerModificationEnabledResponse);
 
   /** Returns a list of ServerNames marked as decommissioned. */
   rpc ListDecommissionedRegionServers(ListDecommissionedRegionServersRequest)

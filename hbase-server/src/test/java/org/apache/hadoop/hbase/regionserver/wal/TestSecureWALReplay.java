@@ -23,8 +23,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
-import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.experimental.categories.Category;
@@ -41,10 +39,6 @@ public class TestSecureWALReplay extends TestWALReplay {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-      Reader.class);
-    conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-      Writer.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     AbstractTestWALReplay.setUpBeforeClass();
   }

@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterBase;
@@ -81,14 +82,19 @@ public final class BloomFilterFactory {
    * data.
    * @param meta   the byte array holding the Bloom filter's metadata, including version information
    * @param reader the {@link HFile} reader to use to lazily load Bloom filter blocks
-   * @return an instance of the correct type of Bloom filter n
+   * @return an instance of the correct type of Bloom filter
    */
   public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader)
     throws IllegalArgumentException, IOException {
+    return createFromMeta(meta, reader, null);
+  }
+
+  public static BloomFilter createFromMeta(DataInput meta, HFile.Reader reader,
+    BloomFilterMetrics metrics) throws IllegalArgumentException, IOException {
     int version = meta.readInt();
     switch (version) {
       case CompoundBloomFilterBase.VERSION:
-        return new CompoundBloomFilter(meta, reader);
+        return new CompoundBloomFilter(meta, reader, metrics);
 
       default:
         throw new IllegalArgumentException("Bad bloom filter format version " + version);
@@ -129,10 +135,10 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new general (Row or RowCol) Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nnn * @param maxKeys an
-   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
-   * enabled.
-   * @param writer the HFile writer
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
+   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
+   *                Bloom filters are enabled.
+   * @param writer  the HFile writer
    * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
    *         create one.
    */
@@ -170,10 +176,10 @@ public final class BloomFilterFactory {
 
   /**
    * Creates a new Delete Family Bloom filter at the time of
-   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing. nn * @param maxKeys an
-   * estimate of the number of keys we expect to insert. Irrelevant if compound Bloom filters are
-   * enabled.
-   * @param writer the HFile writer
+   * {@link org.apache.hadoop.hbase.regionserver.HStoreFile} writing.
+   * @param maxKeys an estimate of the number of keys we expect to insert. Irrelevant if compound
+   *                Bloom filters are enabled.
+   * @param writer  the HFile writer
    * @return the new Bloom filter, or null in case Bloom filters are disabled or when failed to
    *         create one.
    */

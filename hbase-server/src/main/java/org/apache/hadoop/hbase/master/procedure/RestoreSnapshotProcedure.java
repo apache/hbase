@@ -51,6 +51,8 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -96,7 +98,7 @@ public class RestoreSnapshotProcedure
    * Constructor
    * @param env             MasterProcedureEnv
    * @param tableDescriptor the table to operate on
-   * @param snapshot        snapshot to restore from n
+   * @param snapshot        snapshot to restore from
    */
   public RestoreSnapshotProcedure(final MasterProcedureEnv env,
     final TableDescriptor tableDescriptor, final SnapshotDescription snapshot,
@@ -320,13 +322,21 @@ public class RestoreSnapshotProcedure
 
   /**
    * Action before any real action of restoring from snapshot.
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    */
   private void prepareRestore(final MasterProcedureEnv env) throws IOException {
     final TableName tableName = getTableName();
     // Checks whether the table exists
     if (!env.getMasterServices().getTableDescriptors().exists(tableName)) {
       throw new TableNotFoundException(tableName);
+    }
+
+    // check whether ttl has expired for this snapshot
+    if (
+      SnapshotDescriptionUtils.isExpiredSnapshot(snapshot.getTtl(), snapshot.getCreationTime(),
+        EnvironmentEdgeManager.currentTime())
+    ) {
+      throw new SnapshotTTLExpiredException(ProtobufUtil.createSnapshotDesc(snapshot));
     }
 
     // Check whether table is disabled.
@@ -357,7 +367,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Update descriptor
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void updateTableDescriptor(final MasterProcedureEnv env) throws IOException {
     env.getMasterServices().getTableDescriptors().update(modifiedTableDescriptor);
@@ -365,7 +375,7 @@ public class RestoreSnapshotProcedure
 
   /**
    * Execute the on-disk Restore
-   * @param env MasterProcedureEnv n
+   * @param env MasterProcedureEnv
    **/
   private void restoreSnapshot(final MasterProcedureEnv env) throws IOException {
     MasterFileSystem fileSystemManager = env.getMasterServices().getMasterFileSystem();

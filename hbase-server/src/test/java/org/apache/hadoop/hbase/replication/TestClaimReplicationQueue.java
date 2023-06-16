@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionServerList;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
-import org.apache.hadoop.hbase.master.replication.ClaimReplicationQueuesProcedure;
+import org.apache.hadoop.hbase.master.replication.AssignReplicationQueuesProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
 
 /**
  * In HBASE-26029, we reimplement the claim queue operation with proc-v2 and make it a step in SCP,
- * this is a UT to make sure the {@link ClaimReplicationQueuesProcedure} works correctly.
+ * this is a UT to make sure the {@link AssignReplicationQueuesProcedure} works correctly.
  */
 @Category({ ReplicationTests.class, LargeTests.class })
 public class TestClaimReplicationQueue extends TestReplicationBase {
@@ -77,7 +77,7 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
       // return no region server to make the procedure hang
       if (EMPTY) {
         for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
-          if (e.getClassName().equals(ClaimReplicationQueuesProcedure.class.getName())) {
+          if (e.getClassName().equals(AssignReplicationQueuesProcedure.class.getName())) {
             return Collections.emptyList();
           }
         }
@@ -149,14 +149,14 @@ public class TestClaimReplicationQueue extends TestReplicationBase {
     HMaster master = UTIL1.getMiniHBaseCluster().getMaster();
     UTIL1.waitFor(30000,
       () -> master.getProcedures().stream()
-        .filter(p -> p instanceof ClaimReplicationQueuesProcedure)
+        .filter(p -> p instanceof AssignReplicationQueuesProcedure)
         .anyMatch(p -> p.getState() == ProcedureState.WAITING_TIMEOUT));
 
     hbaseAdmin.enableReplicationPeer(PEER_ID2);
     hbaseAdmin.enableReplicationPeer(PEER_ID3);
 
     EMPTY = false;
-    // wait until the SCP finished, ClaimReplicationQueuesProcedure is a sub procedure of SCP
+    // wait until the SCP finished, AssignReplicationQueuesProcedure is a sub procedure of SCP
     UTIL1.waitFor(30000, () -> master.getProcedures().stream()
       .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
 

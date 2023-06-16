@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SortedSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.BloomFilterMetrics;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
@@ -64,6 +64,7 @@ public class StoreFileReader {
 
   protected BloomFilter generalBloomFilter = null;
   protected BloomFilter deleteFamilyBloomFilter = null;
+  private BloomFilterMetrics bloomFilterMetrics = null;
   protected BloomType bloomFilterType;
   private final HFile.Reader reader;
   protected long sequenceID = -1;
@@ -76,24 +77,26 @@ public class StoreFileReader {
   private int prefixLength = -1;
   protected Configuration conf;
 
-  // Counter that is incremented every time a scanner is created on the
-  // store file. It is decremented when the scan on the store file is
-  // done. All StoreFileReader for the same StoreFile will share this counter.
-  private final AtomicInteger refCount;
+  /**
+   * All {@link StoreFileReader} for the same StoreFile will share the
+   * {@link StoreFileInfo#refCount}. Counter that is incremented every time a scanner is created on
+   * the store file. It is decremented when the scan on the store file is done.
+   */
+  private final StoreFileInfo storeFileInfo;
   private final ReaderContext context;
 
-  private StoreFileReader(HFile.Reader reader, AtomicInteger refCount, ReaderContext context,
+  private StoreFileReader(HFile.Reader reader, StoreFileInfo storeFileInfo, ReaderContext context,
     Configuration conf) {
     this.reader = reader;
     bloomFilterType = BloomType.NONE;
-    this.refCount = refCount;
+    this.storeFileInfo = storeFileInfo;
     this.context = context;
     this.conf = conf;
   }
 
   public StoreFileReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
-    AtomicInteger refCount, Configuration conf) throws IOException {
-    this(HFile.createReader(context, fileInfo, cacheConf, conf), refCount, context, conf);
+    StoreFileInfo storeFileInfo, Configuration conf) throws IOException {
+    this(HFile.createReader(context, fileInfo, cacheConf, conf), storeFileInfo, context, conf);
   }
 
   void copyFields(StoreFileReader storeFileReader) throws IOException {
@@ -118,7 +121,7 @@ public class StoreFileReader {
    */
   @InterfaceAudience.Private
   StoreFileReader() {
-    this.refCount = new AtomicInteger(0);
+    this.storeFileInfo = null;
     this.reader = null;
     this.context = null;
   }
@@ -149,7 +152,7 @@ public class StoreFileReader {
    * is opened.
    */
   int getRefCount() {
-    return refCount.get();
+    return storeFileInfo.getRefCount();
   }
 
   /**
@@ -157,7 +160,7 @@ public class StoreFileReader {
    * count so reader is not close until some object is holding the lock
    */
   void incrementRefCount() {
-    refCount.incrementAndGet();
+    storeFileInfo.increaseRefCount();
   }
 
   /**
@@ -165,7 +168,7 @@ public class StoreFileReader {
    * count, and also, if this is not the common pread reader, we should close it.
    */
   void readCompleted() {
-    refCount.decrementAndGet();
+    storeFileInfo.decreaseRefCount();
     if (context.getReaderType() == ReaderType.STREAM) {
       try {
         reader.close(false);
@@ -194,8 +197,8 @@ public class StoreFileReader {
    * @deprecated since 2.0.0 and will be removed in 3.0.0. Do not write further code which depends
    *             on this call. Instead use getStoreFileScanner() which uses the StoreFileScanner
    *             class/interface which is the preferred way to scan a store with higher level
-   *             concepts. n * should we cache the blocks? n * use pread (for concurrent small
-   *             readers) n * is scanner being used for compaction?
+   *             concepts. should we cache the blocks? use pread (for concurrent small readers) is
+   *             scanner being used for compaction?
    * @return the underlying HFileScanner
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-15296">HBASE-15296</a>
    */
@@ -261,6 +264,9 @@ public class StoreFileReader {
       case ROWPREFIX_FIXED_LENGTH:
         return passesGeneralRowPrefixBloomFilter(scan);
       default:
+        if (scan.isGetScan()) {
+          bloomFilterMetrics.incrementEligible();
+        }
         return true;
     }
   }
@@ -300,6 +306,7 @@ public class StoreFileReader {
   private boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
+      bloomFilterMetrics.incrementEligible();
       return true;
     }
 
@@ -314,12 +321,13 @@ public class StoreFileReader {
 
   /**
    * A method for checking Bloom filters. Called directly from StoreFileScanner in case of a
-   * multi-column query. n * the cell to check if present in BloomFilter
+   * multi-column query. the cell to check if present in BloomFilter
    * @return True if passes
    */
   public boolean passesGeneralRowColBloomFilter(Cell cell) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
+      bloomFilterMetrics.incrementEligible();
       return true;
     }
     // Used in ROW_COL bloom
@@ -341,6 +349,7 @@ public class StoreFileReader {
   private boolean passesGeneralRowPrefixBloomFilter(Scan scan) {
     BloomFilter bloomFilter = this.generalBloomFilter;
     if (bloomFilter == null) {
+      bloomFilterMetrics.incrementEligible();
       return true;
     }
 
@@ -392,7 +401,7 @@ public class StoreFileReader {
         // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
         if (keyIsAfterLast) {
           if (bloomFilterType == BloomType.ROWCOL) {
-            keyIsAfterLast = (CellComparator.getInstance().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
+            keyIsAfterLast = (getComparator().compare(kvKey, lastBloomKeyOnlyKV)) > 0;
           } else {
             keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
           }
@@ -406,10 +415,7 @@ public class StoreFileReader {
           Cell rowBloomKey = PrivateCellUtil.createFirstOnRow(kvKey);
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells. We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
-          if (
-            keyIsAfterLast
-              && (CellComparator.getInstance().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0
-          ) {
+          if (keyIsAfterLast && (getComparator().compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
             exists = false;
           } else {
             exists = bloomFilter.contains(kvKey, bloom, BloomType.ROWCOL)
@@ -491,12 +497,13 @@ public class StoreFileReader {
   }
 
   public void loadBloomfilter() {
-    this.loadBloomfilter(BlockType.GENERAL_BLOOM_META);
-    this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META);
+    this.loadBloomfilter(BlockType.GENERAL_BLOOM_META, null);
+    this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, null);
   }
 
-  public void loadBloomfilter(BlockType blockType) {
+  public void loadBloomfilter(BlockType blockType, BloomFilterMetrics metrics) {
     try {
+      this.bloomFilterMetrics = metrics;
       if (blockType == BlockType.GENERAL_BLOOM_META) {
         if (this.generalBloomFilter != null) return; // Bloom has been loaded
 
@@ -506,7 +513,7 @@ public class StoreFileReader {
           if (bloomFilterType == BloomType.NONE) {
             throw new IOException("valid bloom filter type not found in FileInfo");
           } else {
-            generalBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+            generalBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader, metrics);
             if (LOG.isTraceEnabled()) {
               LOG.trace("Loaded " + bloomFilterType.toString() + " "
                 + generalBloomFilter.getClass().getSimpleName() + " metadata for "
@@ -519,7 +526,9 @@ public class StoreFileReader {
 
         DataInput bloomMeta = reader.getDeleteBloomFilterMetadata();
         if (bloomMeta != null) {
-          deleteFamilyBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader);
+          // don't pass in metrics for the delete family bloom for now since the
+          // goal is to give users insight into blooms _they_ configured.
+          deleteFamilyBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta, reader, null);
           LOG.info(
             "Loaded Delete Family Bloom (" + deleteFamilyBloomFilter.getClass().getSimpleName()
               + ") metadata for " + reader.getName());

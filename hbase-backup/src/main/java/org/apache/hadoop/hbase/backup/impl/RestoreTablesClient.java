@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.RestoreRequest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.backup.util.RestoreTool;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -55,11 +56,12 @@ public class RestoreTablesClient {
   private String backupId;
   private TableName[] sTableArray;
   private TableName[] tTableArray;
-  private String targetRootDir;
+  private String backupRootDir;
+  private Path restoreRootDir;
   private boolean isOverwrite;
 
-  public RestoreTablesClient(Connection conn, RestoreRequest request) {
-    this.targetRootDir = request.getBackupRootDir();
+  public RestoreTablesClient(Connection conn, RestoreRequest request) throws IOException {
+    this.backupRootDir = request.getBackupRootDir();
     this.backupId = request.getBackupId();
     this.sTableArray = request.getFromTables();
     this.tTableArray = request.getToTables();
@@ -69,6 +71,12 @@ public class RestoreTablesClient {
     this.isOverwrite = request.isOverwrite();
     this.conn = conn;
     this.conf = conn.getConfiguration();
+    if (request.getRestoreRootDir() != null) {
+      restoreRootDir = new Path(request.getRestoreRootDir());
+    } else {
+      FileSystem fs = FileSystem.get(conf);
+      this.restoreRootDir = BackupUtils.getTmpRestoreOutputDir(fs, conf);
+    }
   }
 
   /**
@@ -131,7 +139,7 @@ public class RestoreTablesClient {
     String rootDir = image.getRootDir();
     String backupId = image.getBackupId();
     Path backupRoot = new Path(rootDir);
-    RestoreTool restoreTool = new RestoreTool(conf, backupRoot, backupId);
+    RestoreTool restoreTool = new RestoreTool(conf, backupRoot, restoreRootDir, backupId);
     Path tableBackupPath = HBackupFileSystem.getTableBackupPath(sTable, backupRoot, backupId);
     String lastIncrBackupId = images.length == 1 ? null : images[images.length - 1].getBackupId();
     // We need hFS only for full restore (see the code)
@@ -181,7 +189,7 @@ public class RestoreTablesClient {
 
   private List<Path> getFilesRecursively(String fileBackupDir)
     throws IllegalArgumentException, IOException {
-    FileSystem fs = FileSystem.get((new Path(fileBackupDir)).toUri(), new Configuration());
+    FileSystem fs = FileSystem.get(new Path(fileBackupDir).toUri(), new Configuration());
     List<Path> list = new ArrayList<>();
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(fileBackupDir), true);
     while (it.hasNext()) {
@@ -249,7 +257,7 @@ public class RestoreTablesClient {
     // case RESTORE_IMAGES:
     HashMap<TableName, BackupManifest> backupManifestMap = new HashMap<>();
     // check and load backup image manifest for the tables
-    Path rootPath = new Path(targetRootDir);
+    Path rootPath = new Path(backupRootDir);
     HBackupFileSystem.checkImageManifestExist(backupManifestMap, sTableArray, conf, rootPath,
       backupId);
 

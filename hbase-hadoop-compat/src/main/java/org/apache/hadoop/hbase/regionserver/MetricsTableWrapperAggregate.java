@@ -102,6 +102,24 @@ public interface MetricsTableWrapperAggregate {
   /** Returns Average age of store files for this table */
   long getAvgStoreFileAge(String table);
 
+  /** Returns the size of the static indexes for this table */
+  long getStaticIndexSize(String table);
+
+  /** Returns the size of the static blooms for this table */
+  long getStaticBloomSize(String table);
+
+  /** Returns count of bloom filter requests for this table. */
+  long getBloomFilterRequestsCount(String table);
+
+  /** Returns count of bloom filter requests which return a negative result for this table. */
+  long getBloomFilterNegativeResultsCount(String table);
+
+  /**
+   * Returns count of requests which could have used bloom filters for this table, but they weren't
+   * configured or loaded.
+   */
+  long getBloomFilterEligibleRequestsCount(String table);
+
   /** Returns Number of reference files for this table */
   long getNumReferenceFiles(String table);
 

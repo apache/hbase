@@ -396,7 +396,7 @@ public class ClassSize {
    * @return the size estimate, in bytes
    */
   private static long estimateBaseFromCoefficients(int[] coeff, boolean debug) {
-    long prealign_size = OBJECT + coeff[0] + coeff[2] * REFERENCE;
+    long prealign_size = (long) OBJECT + coeff[0] + coeff[2] * REFERENCE;
 
     // Round up to a multiple of 8
     long size = align(prealign_size) + align(coeff[1] * ARRAY);
@@ -429,7 +429,7 @@ public class ClassSize {
    * @return smallest number &gt;= input that is a multiple of 8
    */
   public static int align(int num) {
-    return (int) (align((long) num));
+    return (int) align((long) num);
   }
 
   /**

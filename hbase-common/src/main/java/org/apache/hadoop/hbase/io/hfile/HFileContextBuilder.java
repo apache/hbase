@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,12 +45,14 @@ public class HFileContextBuilder {
   /** Whether tags to be compressed or not **/
   private boolean compressTags = false;
   /** the checksum type **/
-  private ChecksumType checksumType = ChecksumType.getDefaultChecksumType();
+  private ChecksumType checkSumType = ChecksumType.getDefaultChecksumType();
   /** the number of bytes per checksum value **/
   private int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
   /** Number of uncompressed bytes we allow per block. */
-  private int blocksize = HConstants.DEFAULT_BLOCKSIZE;
+  private int blockSize = HConstants.DEFAULT_BLOCKSIZE;
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
+  /** the index block encoding type **/
+  private IndexBlockEncoding indexBlockEncoding = IndexBlockEncoding.NONE;
   /** Crypto context */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
   private long fileCreateTime = 0;
@@ -71,9 +74,9 @@ public class HFileContextBuilder {
     this.includesTags = hfc.isIncludesTags();
     this.compression = hfc.getCompression();
     this.compressTags = hfc.isCompressTags();
-    this.checksumType = hfc.getChecksumType();
+    this.checkSumType = hfc.getChecksumType();
     this.bytesPerChecksum = hfc.getBytesPerChecksum();
-    this.blocksize = hfc.getBlocksize();
+    this.blockSize = hfc.getBlocksize();
     this.encoding = hfc.getDataBlockEncoding();
     this.cryptoContext = hfc.getEncryptionContext();
     this.fileCreateTime = hfc.getFileCreateTime();
@@ -81,6 +84,7 @@ public class HFileContextBuilder {
     this.columnFamily = hfc.getColumnFamily();
     this.tableName = hfc.getTableName();
     this.cellComparator = hfc.getCellComparator();
+    this.indexBlockEncoding = hfc.getIndexBlockEncoding();
   }
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
@@ -109,7 +113,7 @@ public class HFileContextBuilder {
   }
 
   public HFileContextBuilder withChecksumType(ChecksumType checkSumType) {
-    this.checksumType = checkSumType;
+    this.checkSumType = checkSumType;
     return this;
   }
 
@@ -119,12 +123,17 @@ public class HFileContextBuilder {
   }
 
   public HFileContextBuilder withBlockSize(int blockSize) {
-    this.blocksize = blockSize;
+    this.blockSize = blockSize;
     return this;
   }
 
   public HFileContextBuilder withDataBlockEncoding(DataBlockEncoding encoding) {
     this.encoding = encoding;
+    return this;
+  }
+
+  public HFileContextBuilder withIndexBlockEncoding(IndexBlockEncoding indexBlockEncoding) {
+    this.indexBlockEncoding = indexBlockEncoding;
     return this;
   }
 
@@ -160,7 +169,7 @@ public class HFileContextBuilder {
 
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-      compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
-      fileCreateTime, hfileName, columnFamily, tableName, cellComparator);
+      compressTags, checkSumType, bytesPerChecksum, blockSize, encoding, cryptoContext,
+      fileCreateTime, hfileName, columnFamily, tableName, cellComparator, indexBlockEncoding);
   }
 }

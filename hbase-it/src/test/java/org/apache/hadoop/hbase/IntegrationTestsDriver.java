@@ -47,7 +47,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     System.exit(ret);
   }
 
-  private class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {
+  private static class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {
     private Pattern testFilterRe = Pattern.compile(".*\\.IntegrationTest.*");
 
     public IntegrationTestFilter() {

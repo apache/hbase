@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
@@ -76,7 +77,7 @@ public class TestAvlUtil {
       int key = rand.nextInt(MAX_KEY);
       TestAvlNode node = AvlTree.get(root, key, KEY_COMPARATOR);
       if (!treeMap.containsKey(key)) {
-        assert node == null;
+        assertNull(node);
         continue;
       }
       treeMap.remove(key);

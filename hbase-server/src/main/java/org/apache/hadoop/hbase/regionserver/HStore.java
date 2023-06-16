@@ -61,7 +61,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.InnerStoreCellComparator;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -243,6 +245,8 @@ public class HStore
   // SFT implementations.
   private final Supplier<StoreFileWriterCreationTracker> storeFileWriterCreationTrackerFactory;
 
+  private final boolean warmup;
+
   /**
    * Constructor
    * @param family    HColumnDescriptor for this column
@@ -274,7 +278,8 @@ public class HStore
     long ttl = determineTTLFromFamily(family);
     // Why not just pass a HColumnDescriptor in here altogether? Even if have
     // to clone it?
-    scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, region.getCellComparator());
+    scanInfo =
+      new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.storeContext.getComparator());
     this.memstore = getMemstore();
 
     this.offPeakHours = OffPeakHours.getInstance(conf);
@@ -290,6 +295,7 @@ public class HStore
       this.compactionCheckMultiplier = DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER;
     }
 
+    this.warmup = warmup;
     this.storeEngine = createStoreEngine(this, this.conf, region.getCellComparator());
     storeEngine.initialize(warmup);
     // if require writing to tmp dir first, then we just return null, which indicate that we do not
@@ -326,8 +332,11 @@ public class HStore
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
       .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
-      .withCellComparator(region.getCellComparator()).withColumnFamilyDescriptor(family)
-      .withCompactedFilesSupplier(this::getCompactedFiles)
+      .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
+        .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)
+          ? MetaCellComparator.META_COMPARATOR
+          : InnerStoreCellComparator.INNER_STORE_COMPARATOR)
+      .withColumnFamilyDescriptor(family).withCompactedFilesSupplier(this::getCompactedFiles)
       .withRegionFileSystem(region.getRegionFileSystem())
       .withFavoredNodesSupplier(this::getFavoredNodes)
       .withFamilyStoreDirectoryPath(
@@ -740,7 +749,7 @@ public class HStore
           public Void call() throws IOException {
             boolean evictOnClose =
               getCacheConfig() != null ? getCacheConfig().shouldEvictOnClose() : true;
-            f.closeStoreFile(evictOnClose);
+            f.closeStoreFile(!warmup && evictOnClose);
             return null;
           }
         });
@@ -885,15 +894,29 @@ public class HStore
     return sfs.stream().mapToLong(sf -> sf.getReader().length()).sum();
   }
 
-  private boolean completeFlush(List<HStoreFile> sfs, long snapshotId) throws IOException {
+  private boolean completeFlush(final List<HStoreFile> sfs, long snapshotId) throws IOException {
     // NOTE:we should keep clearSnapshot method inside the write lock because clearSnapshot may
     // close {@link DefaultMemStore#snapshot}, which may be used by
     // {@link DefaultMemStore#getScanners}.
     storeEngine.addStoreFiles(sfs,
-      snapshotId > 0 ? () -> this.memstore.clearSnapshot(snapshotId) : () -> {
+      // NOTE: here we must increase the refCount for storeFiles because we would open the
+      // storeFiles and get the StoreFileScanners for them in HStore.notifyChangedReadersObservers.
+      // If we don't increase the refCount here, HStore.closeAndArchiveCompactedFiles called by
+      // CompactedHFilesDischarger may archive the storeFiles after a concurrent compaction.Because
+      // HStore.requestCompaction is under storeEngine lock, so here we increase the refCount under
+      // storeEngine lock. see HBASE-27519 for more details.
+      snapshotId > 0 ? () -> {
+        this.memstore.clearSnapshot(snapshotId);
+        HStoreFile.increaseStoreFilesRefeCount(sfs);
+      } : () -> {
+        HStoreFile.increaseStoreFilesRefeCount(sfs);
       });
     // notify to be called here - only in case of flushes
-    notifyChangedReadersObservers(sfs);
+    try {
+      notifyChangedReadersObservers(sfs);
+    } finally {
+      HStoreFile.decreaseStoreFilesRefeCount(sfs);
+    }
     if (LOG.isTraceEnabled()) {
       long totalSize = getTotalSize(sfs);
       String traceMessage = "FLUSH time,count,size,store size,store files ["
@@ -961,10 +984,16 @@ public class HStore
       storeFilesToScan = this.storeEngine.getStoreFileManager().getFilesForScan(startRow,
         includeStartRow, stopRow, includeStopRow);
       memStoreScanners = this.memstore.getScanners(readPt);
+      // NOTE: here we must increase the refCount for storeFiles because we would open the
+      // storeFiles and get the StoreFileScanners for them.If we don't increase the refCount here,
+      // HStore.closeAndArchiveCompactedFiles called by CompactedHFilesDischarger may archive the
+      // storeFiles after a concurrent compaction.Because HStore.requestCompaction is under
+      // storeEngine lock, so here we increase the refCount under storeEngine lock. see HBASE-27484
+      // for more details.
+      HStoreFile.increaseStoreFilesRefeCount(storeFilesToScan);
     } finally {
       this.storeEngine.readUnlock();
     }
-
     try {
       // First the store file scanners
 
@@ -981,6 +1010,8 @@ public class HStore
     } catch (Throwable t) {
       clearAndClose(memStoreScanners);
       throw t instanceof IOException ? (IOException) t : new IOException(t);
+    } finally {
+      HStoreFile.decreaseStoreFilesRefeCount(storeFilesToScan);
     }
   }
 
@@ -2424,5 +2455,20 @@ public class HStore
   public Set<Path> getStoreFilesBeingWritten() {
     return storeFileWriterCreationTrackers.stream().flatMap(t -> t.get().stream())
       .collect(Collectors.toSet());
+  }
+
+  @Override
+  public long getBloomFilterRequestsCount() {
+    return storeEngine.getBloomFilterMetrics().getRequestsCount();
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return storeEngine.getBloomFilterMetrics().getNegativeResultsCount();
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return storeEngine.getBloomFilterMetrics().getEligibleRequestsCount();
   }
 }

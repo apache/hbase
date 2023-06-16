@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Optional;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -52,6 +53,11 @@ final public class OnlineLogRecord extends LogEntry {
         if (slowLogPayload.getMultiServiceCalls() == 0) {
           jsonObj.remove("multiServiceCalls");
         }
+        if (slowLogPayload.getScan().isPresent()) {
+          jsonObj.add("scan", gson.toJsonTree(slowLogPayload.getScan().get().toMap()));
+        } else {
+          jsonObj.remove("scan");
+        }
         return jsonObj;
       }).create();
 
@@ -59,6 +65,7 @@ final public class OnlineLogRecord extends LogEntry {
   private final int processingTime;
   private final int queueTime;
   private final long responseSize;
+  private final long blockBytesScanned;
   private final String clientAddress;
   private final String serverClass;
   private final String methodName;
@@ -71,6 +78,7 @@ final public class OnlineLogRecord extends LogEntry {
   private final int multiGetsCount;
   private final int multiMutationsCount;
   private final int multiServiceCalls;
+  private final Optional<Scan> scan;
 
   public long getStartTime() {
     return startTime;
@@ -86,6 +94,13 @@ final public class OnlineLogRecord extends LogEntry {
 
   public long getResponseSize() {
     return responseSize;
+  }
+
+  /**
+   * Return the amount of block bytes scanned to retrieve the response cells.
+   */
+  public long getBlockBytesScanned() {
+    return blockBytesScanned;
   }
 
   public String getClientAddress() {
@@ -128,15 +143,25 @@ final public class OnlineLogRecord extends LogEntry {
     return multiServiceCalls;
   }
 
-  private OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
-    final long responseSize, final String clientAddress, final String serverClass,
-    final String methodName, final String callDetails, final String param, final String regionName,
-    final String userName, final int multiGetsCount, final int multiMutationsCount,
-    final int multiServiceCalls) {
+  /**
+   * If {@value org.apache.hadoop.hbase.HConstants#SLOW_LOG_SCAN_PAYLOAD_ENABLED} is enabled then
+   * this value may be present and should represent the Scan that produced the given
+   * {@link OnlineLogRecord}
+   */
+  public Optional<Scan> getScan() {
+    return scan;
+  }
+
+  OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
+    final long responseSize, final long blockBytesScanned, final String clientAddress,
+    final String serverClass, final String methodName, final String callDetails, final String param,
+    final String regionName, final String userName, final int multiGetsCount,
+    final int multiMutationsCount, final int multiServiceCalls, final Scan scan) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
     this.responseSize = responseSize;
+    this.blockBytesScanned = blockBytesScanned;
     this.clientAddress = clientAddress;
     this.serverClass = serverClass;
     this.methodName = methodName;
@@ -147,6 +172,7 @@ final public class OnlineLogRecord extends LogEntry {
     this.multiGetsCount = multiGetsCount;
     this.multiMutationsCount = multiMutationsCount;
     this.multiServiceCalls = multiServiceCalls;
+    this.scan = Optional.ofNullable(scan);
   }
 
   public static class OnlineLogRecordBuilder {
@@ -154,6 +180,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int processingTime;
     private int queueTime;
     private long responseSize;
+    private long blockBytesScanned;
     private String clientAddress;
     private String serverClass;
     private String methodName;
@@ -164,6 +191,7 @@ final public class OnlineLogRecord extends LogEntry {
     private int multiGetsCount;
     private int multiMutationsCount;
     private int multiServiceCalls;
+    private Scan scan = null;
 
     public OnlineLogRecordBuilder setStartTime(long startTime) {
       this.startTime = startTime;
@@ -182,6 +210,14 @@ final public class OnlineLogRecord extends LogEntry {
 
     public OnlineLogRecordBuilder setResponseSize(long responseSize) {
       this.responseSize = responseSize;
+      return this;
+    }
+
+    /**
+     * Sets the amount of block bytes scanned to retrieve the response cells.
+     */
+    public OnlineLogRecordBuilder setBlockBytesScanned(long blockBytesScanned) {
+      this.blockBytesScanned = blockBytesScanned;
       return this;
     }
 
@@ -235,10 +271,15 @@ final public class OnlineLogRecord extends LogEntry {
       return this;
     }
 
+    public OnlineLogRecordBuilder setScan(Scan scan) {
+      this.scan = scan;
+      return this;
+    }
+
     public OnlineLogRecord build() {
-      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize, clientAddress,
-        serverClass, methodName, callDetails, param, regionName, userName, multiGetsCount,
-        multiMutationsCount, multiServiceCalls);
+      return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
+        blockBytesScanned, clientAddress, serverClass, methodName, callDetails, param, regionName,
+        userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan);
     }
   }
 
@@ -256,20 +297,23 @@ final public class OnlineLogRecord extends LogEntry {
 
     return new EqualsBuilder().append(startTime, that.startTime)
       .append(processingTime, that.processingTime).append(queueTime, that.queueTime)
-      .append(responseSize, that.responseSize).append(multiGetsCount, that.multiGetsCount)
+      .append(responseSize, that.responseSize).append(blockBytesScanned, that.blockBytesScanned)
+      .append(multiGetsCount, that.multiGetsCount)
       .append(multiMutationsCount, that.multiMutationsCount)
       .append(multiServiceCalls, that.multiServiceCalls).append(clientAddress, that.clientAddress)
       .append(serverClass, that.serverClass).append(methodName, that.methodName)
       .append(callDetails, that.callDetails).append(param, that.param)
-      .append(regionName, that.regionName).append(userName, that.userName).isEquals();
+      .append(regionName, that.regionName).append(userName, that.userName).append(scan, that.scan)
+      .isEquals();
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder(17, 37).append(startTime).append(processingTime).append(queueTime)
-      .append(responseSize).append(clientAddress).append(serverClass).append(methodName)
-      .append(callDetails).append(param).append(regionName).append(userName).append(multiGetsCount)
-      .append(multiMutationsCount).append(multiServiceCalls).toHashCode();
+      .append(responseSize).append(blockBytesScanned).append(clientAddress).append(serverClass)
+      .append(methodName).append(callDetails).append(param).append(regionName).append(userName)
+      .append(multiGetsCount).append(multiMutationsCount).append(multiServiceCalls).append(scan)
+      .toHashCode();
   }
 
   @Override
@@ -281,12 +325,12 @@ final public class OnlineLogRecord extends LogEntry {
   public String toString() {
     return new ToStringBuilder(this).append("startTime", startTime)
       .append("processingTime", processingTime).append("queueTime", queueTime)
-      .append("responseSize", responseSize).append("clientAddress", clientAddress)
-      .append("serverClass", serverClass).append("methodName", methodName)
-      .append("callDetails", callDetails).append("param", param).append("regionName", regionName)
-      .append("userName", userName).append("multiGetsCount", multiGetsCount)
-      .append("multiMutationsCount", multiMutationsCount)
-      .append("multiServiceCalls", multiServiceCalls).toString();
+      .append("responseSize", responseSize).append("blockBytesScanned", blockBytesScanned)
+      .append("clientAddress", clientAddress).append("serverClass", serverClass)
+      .append("methodName", methodName).append("callDetails", callDetails).append("param", param)
+      .append("regionName", regionName).append("userName", userName)
+      .append("multiGetsCount", multiGetsCount).append("multiMutationsCount", multiMutationsCount)
+      .append("multiServiceCalls", multiServiceCalls).append("scan", scan).toString();
   }
 
 }

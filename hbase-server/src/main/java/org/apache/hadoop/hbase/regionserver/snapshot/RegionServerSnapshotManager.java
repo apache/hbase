@@ -129,7 +129,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
 
   /**
    * Close <tt>this</tt> and all running snapshot tasks
-   * @param force forcefully stop all running tasks n
+   * @param force forcefully stop all running tasks
    */
   @Override
   public void stop(boolean force) throws IOException {
@@ -147,7 +147,8 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * If in a running state, creates the specified subprocedure for handling an online snapshot.
    * Because this gets the local list of regions to snapshot and not the set the master had, there
    * is a possibility of a race where regions may be missed. This detected by the master in the
-   * snapshot verification step. n * @return Subprocedure to submit to the ProcedureMember.
+   * snapshot verification step.
+   * @return Subprocedure to submit to the ProcedureMember.
    */
   public Subprocedure buildSubprocedure(SnapshotDescription snapshot) {
 
@@ -209,8 +210,9 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
    * miss some regions. For example, a region move during a snapshot could result in a region to be
    * skipped or done twice. This is manageable because the {@link MasterSnapshotVerifier} will
    * double check the region lists after the online portion of the snapshot completes and will
-   * explicitly fail the snapshot. n * @return the list of online regions. Empty list is returned if
-   * no regions are responsible for the given snapshot. n
+   * explicitly fail the snapshot.
+   * @return the list of online regions. Empty list is returned if no regions are responsible for
+   *         the given snapshot.
    */
   private List<HRegion> getRegionsToSnapshot(SnapshotDescription snapshot) throws IOException {
     List<HRegion> onlineRegions =
@@ -292,8 +294,8 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
     /**
      * Wait for all of the currently outstanding tasks submitted via {@link #submitTask(Callable)}.
      * This *must* be called after all tasks are submitted via submitTask.
-     * @return <tt>true</tt> on success, <tt>false</tt> otherwise n * @throws
-     *         SnapshotCreationException if the snapshot failed while we were waiting
+     * @return <tt>true</tt> on success, <tt>false</tt> otherwise
+     * @throws SnapshotCreationException if the snapshot failed while we were waiting
      */
     boolean waitForOutstandingTasks() throws ForeignException, InterruptedException {
       LOG.debug("Waiting for local region snapshots to finish.");
@@ -336,7 +338,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
     }
 
     /**
-     * This attempts to cancel out all pending and in progress tasks (interruptions issues) n
+     * This attempts to cancel out all pending and in progress tasks (interruptions issues)
      */
     void cancelTasks() throws InterruptedException {
       Collection<Future<Void>> tasks = futures;

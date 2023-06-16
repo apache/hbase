@@ -62,7 +62,7 @@ public final class SegmentFactory {
    * create empty immutable segment for initializations This ImmutableSegment is used as a place
    * holder for snapshot in Memstore. It won't flush later, So it is not necessary to record the
    * initial size for it.
-   * @param comparator comparator n
+   * @param comparator comparator
    */
   public ImmutableSegment createImmutableSegment(CellComparator comparator) {
     MutableSegment segment = generateMutableSegment(null, comparator, null, null);

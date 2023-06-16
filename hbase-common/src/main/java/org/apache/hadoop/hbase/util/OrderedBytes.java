@@ -643,7 +643,6 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int offset = dst.getOffset(), start = dst.getPosition();
-    int e = 0, startM;
 
     if (isNeg) { /* Small negative number: 0x14, -E, ~M */
       dst.put(NEG_SMALL);
@@ -655,13 +654,13 @@ public class OrderedBytes {
     int zerosBeforeFirstNonZero = abs.scale() - abs.precision();
     int lengthToMoveRight =
       zerosBeforeFirstNonZero % 2 == 0 ? zerosBeforeFirstNonZero : zerosBeforeFirstNonZero - 1;
-    e = lengthToMoveRight / 2;
+    int e = lengthToMoveRight / 2;
     abs = abs.movePointRight(lengthToMoveRight);
 
     putVaruint64(dst, e, !isNeg); // encode appropriate E value.
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
-    startM = dst.getPosition();
+    int startM = dst.getPosition();
     encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
@@ -695,8 +694,8 @@ public class OrderedBytes {
    * calling function.
    *
    * <pre>
-   *   Encoding:  M       (if E<=10)
-   *              E M     (if E>10)
+   *   Encoding:  M       (if E&lt;=10)
+   *              E M     (if E&gt;10)
    * </pre>
    * </p>
    * @param dst The destination to which encoded digits are written.
@@ -709,7 +708,6 @@ public class OrderedBytes {
     byte[] a = dst.getBytes();
     boolean isNeg = val.signum() == -1;
     final int start = dst.getPosition(), offset = dst.getOffset();
-    int e = 0, startM;
 
     if (isNeg) { /* Large negative number: 0x08, ~E, ~M */
       dst.put(NEG_LARGE);
@@ -720,7 +718,7 @@ public class OrderedBytes {
     // normalize abs(val) to determine E
     int integerDigits = abs.precision() - abs.scale();
     int lengthToMoveLeft = integerDigits % 2 == 0 ? integerDigits : integerDigits + 1;
-    e = lengthToMoveLeft / 2;
+    int e = lengthToMoveLeft / 2;
     abs = abs.movePointLeft(lengthToMoveLeft);
 
     // encode appropriate header byte and/or E value.
@@ -735,7 +733,7 @@ public class OrderedBytes {
     }
 
     // encode M by peeling off centimal digits, encoding x as 2x+1
-    startM = dst.getPosition();
+    int startM = dst.getPosition();
     encodeToCentimal(dst, abs);
     // terminal digit should be 2x
     a[offset + dst.getPosition() - 1] = (byte) (a[offset + dst.getPosition() - 1] & 0xfe);
@@ -748,7 +746,7 @@ public class OrderedBytes {
 
   /**
    * Encode a value val in [0.01, 1.0) into Centimals. Util function for
-   * {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal) and
+   * {@link OrderedBytes#encodeNumericLarge(PositionedByteRange, BigDecimal)} and
    * {@link OrderedBytes#encodeNumericSmall(PositionedByteRange, BigDecimal)}
    * @param dst The destination to which encoded digits are written.
    * @param val A BigDecimal after the normalization. The value must be in [0.01, 1.0).

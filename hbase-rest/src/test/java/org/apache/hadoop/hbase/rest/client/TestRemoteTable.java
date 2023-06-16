@@ -575,7 +575,7 @@ public class TestRemoteTable {
 
   /**
    * Tests scanner with limitation limit the number of rows each scanner scan fetch at life time The
-   * number of rows returned should be equal to the limit n
+   * number of rows returned should be equal to the limit
    */
   @Test
   public void testLimitedScan() throws Exception {

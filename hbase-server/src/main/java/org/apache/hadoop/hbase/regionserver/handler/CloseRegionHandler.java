@@ -102,7 +102,7 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       // Close the region
-      if (region.close(abort) == null) {
+      if (region.close(abort, false, true) == null) {
         // This region has already been closed. Should not happen (A unit test makes this
         // happen as a side effect, TestRegionObserverInterface.testPreWALAppendNotCalledOnMetaEdit)
         LOG.warn("Can't close {}; already closed", name);

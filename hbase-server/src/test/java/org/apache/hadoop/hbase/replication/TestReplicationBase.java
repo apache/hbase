@@ -216,7 +216,7 @@ public class TestReplicationBase {
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
   }
 
-  static void restartSourceCluster(int numSlaves) throws Exception {
+  protected static void restartSourceCluster(int numSlaves) throws Exception {
     Closeables.close(hbaseAdmin, true);
     Closeables.close(htable1, true);
     UTIL1.shutdownMiniHBaseCluster();

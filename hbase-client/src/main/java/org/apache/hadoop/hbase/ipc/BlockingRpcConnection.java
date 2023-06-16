@@ -395,7 +395,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // A provider which failed authentication, but doesn't have the ability to relogin with
         // some external system (e.g. username/password, the password either works or it doesn't)
         if (!provider.canRetry()) {
-          LOG.warn("Exception encountered while connecting to the server : " + ex);
+          LOG.warn("Exception encountered while connecting to the server " + remoteId.getAddress(),
+            ex);
           if (ex instanceof RemoteException) {
             throw (RemoteException) ex;
           }
@@ -410,7 +411,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // Other providers, like kerberos, could request a new ticket from a keytab. Let
         // them try again.
         if (currRetries < maxRetries) {
-          LOG.debug("Exception encountered while connecting to the server", ex);
+          LOG.debug("Exception encountered while connecting to the server " + remoteId.getAddress(),
+            ex);
 
           // Invoke the provider to perform the relogin
           provider.relogin();

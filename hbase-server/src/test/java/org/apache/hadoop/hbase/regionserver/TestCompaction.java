@@ -121,6 +121,7 @@ public class TestCompaction {
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
+    conf.setLong(HConstants.COMPACTION_SCANNER_SIZE_MAX, 10L);
     conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
       NoLimitThroughputController.class.getName());
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
@@ -782,7 +783,7 @@ public class TestCompaction {
    * We set compaction.kv.max to 10 so compaction will scan 10 versions each round, meanwhile we set
    * keepSeqIdPeriod=0 in {@link DummyCompactor} so all 10 versions of hfile2 will be written out
    * with seqId cleaned (set to 0) including cell-B, then when scanner goes to cell-A it will cause
-   * a scan out-of-order assertion error before HBASE-16931 n * if error occurs during the test
+   * a scan out-of-order assertion error before HBASE-16931 if error occurs during the test
    */
   @Test
   public void testCompactionSeqId() throws Exception {

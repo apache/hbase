@@ -330,7 +330,7 @@ public class HashTable extends Configured implements Tool {
     }
 
     /**
-     * Open a TableHash.Reader starting at the first hash at or after the given key. n
+     * Open a TableHash.Reader starting at the first hash at or after the given key.
      */
     public Reader newReader(Configuration conf, ImmutableBytesWritable startKey)
       throws IOException {

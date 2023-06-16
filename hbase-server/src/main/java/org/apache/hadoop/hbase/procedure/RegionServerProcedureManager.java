@@ -31,7 +31,7 @@ import org.apache.zookeeper.KeeperException;
 public abstract class RegionServerProcedureManager extends ProcedureManager {
   /**
    * Initialize a globally barriered procedure for region servers.
-   * @param rss Region Server service interface n
+   * @param rss Region Server service interface
    */
   public abstract void initialize(RegionServerServices rss) throws KeeperException;
 
@@ -42,7 +42,7 @@ public abstract class RegionServerProcedureManager extends ProcedureManager {
 
   /**
    * Close <tt>this</tt> and all running procedure tasks
-   * @param force forcefully stop all running tasks n
+   * @param force forcefully stop all running tasks
    */
   public abstract void stop(boolean force) throws IOException;
 }

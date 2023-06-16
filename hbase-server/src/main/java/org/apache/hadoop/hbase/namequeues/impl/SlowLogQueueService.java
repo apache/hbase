@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SlowLogParams;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.namequeues.LogHandlerUtils;
@@ -64,10 +65,13 @@ public class SlowLogQueueService implements NamedQueueService {
   private final boolean isSlowLogTableEnabled;
   private final SlowLogPersistentService slowLogPersistentService;
   private final Queue<TooSlowLog.SlowLogPayload> slowLogQueue;
+  private final boolean slowLogScanPayloadEnabled;
 
   public SlowLogQueueService(Configuration conf) {
     this.isOnlineLogProviderEnabled = conf.getBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY,
       HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
+    this.slowLogScanPayloadEnabled = conf.getBoolean(HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED,
+      HConstants.SLOW_LOG_SCAN_PAYLOAD_ENABLED_DEFAULT);
 
     if (!isOnlineLogProviderEnabled) {
       this.isSlowLogTableEnabled = false;
@@ -115,6 +119,7 @@ public class SlowLogQueueService implements NamedQueueService {
     final RpcCall rpcCall = rpcLogDetails.getRpcCall();
     final String clientAddress = rpcLogDetails.getClientAddress();
     final long responseSize = rpcLogDetails.getResponseSize();
+    final long blockBytesScanned = rpcLogDetails.getBlockBytesScanned();
     final String className = rpcLogDetails.getClassName();
     final TooSlowLog.SlowLogPayload.Type type = getLogType(rpcLogDetails);
     if (type == null) {
@@ -127,7 +132,8 @@ public class SlowLogQueueService implements NamedQueueService {
     long endTime = EnvironmentEdgeManager.currentTime();
     int processingTime = (int) (endTime - startTime);
     int qTime = (int) (startTime - receiveTime);
-    final SlowLogParams slowLogParams = ProtobufUtil.getSlowLogParams(param);
+    final SlowLogParams slowLogParams =
+      ProtobufUtil.getSlowLogParams(param, slowLogScanPayloadEnabled);
     int numGets = 0;
     int numMutations = 0;
     int numServiceCalls = 0;
@@ -150,15 +156,19 @@ public class SlowLogQueueService implements NamedQueueService {
     final String userName = rpcCall.getRequestUserName().orElse(StringUtils.EMPTY);
     final String methodDescriptorName =
       methodDescriptor != null ? methodDescriptor.getName() : StringUtils.EMPTY;
-    TooSlowLog.SlowLogPayload slowLogPayload = TooSlowLog.SlowLogPayload.newBuilder()
+    TooSlowLog.SlowLogPayload.Builder slowLogPayloadBuilder = TooSlowLog.SlowLogPayload.newBuilder()
       .setCallDetails(methodDescriptorName + "(" + param.getClass().getName() + ")")
       .setClientAddress(clientAddress).setMethodName(methodDescriptorName).setMultiGets(numGets)
       .setMultiMutations(numMutations).setMultiServiceCalls(numServiceCalls)
       .setParam(slowLogParams != null ? slowLogParams.getParams() : StringUtils.EMPTY)
       .setProcessingTime(processingTime).setQueueTime(qTime)
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
-      .setResponseSize(responseSize).setServerClass(className).setStartTime(startTime).setType(type)
-      .setUserName(userName).build();
+      .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
+      .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName);
+    if (slowLogParams != null && slowLogParams.getScan() != null) {
+      slowLogPayloadBuilder.setScan(slowLogParams.getScan());
+    }
+    TooSlowLog.SlowLogPayload slowLogPayload = slowLogPayloadBuilder.build();
     slowLogQueue.add(slowLogPayload);
     if (isSlowLogTableEnabled) {
       if (!slowLogPayload.getRegionName().startsWith("hbase:slowlog")) {
@@ -223,12 +233,12 @@ public class SlowLogQueueService implements NamedQueueService {
    * table.
    */
   @Override
-  public void persistAll() {
+  public void persistAll(Connection connection) {
     if (!isOnlineLogProviderEnabled) {
       return;
     }
     if (slowLogPersistentService != null) {
-      slowLogPersistentService.addAllLogsToSysTable();
+      slowLogPersistentService.addAllLogsToSysTable(connection);
     }
   }
 

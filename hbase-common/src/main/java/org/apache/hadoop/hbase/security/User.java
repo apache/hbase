@@ -139,7 +139,7 @@ public abstract class User {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof User)) {
       return false;
     }
     return ugi.equals(((User) o).ugi);
@@ -155,9 +155,7 @@ public abstract class User {
     return ugi.toString();
   }
 
-  /**
-   * Returns the {@code User} instance within current execution context.
-   */
+  /** Returns the {@code User} instance within current execution context. */
   public static User getCurrent() throws IOException {
     User user = new SecureHadoopUser();
     if (user.getUGI() == null) {
@@ -166,9 +164,7 @@ public abstract class User {
     return user;
   }
 
-  /**
-   * Executes the given action as the login user n * @return the result of the action n
-   */
+  /** Executes the given action as the login user */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
     try {
@@ -183,7 +179,7 @@ public abstract class User {
 
   /**
    * Wraps an underlying {@code UserGroupInformation} instance.
-   * @param ugi The base Hadoop user n
+   * @param ugi The base Hadoop user
    */
   public static User create(UserGroupInformation ugi) {
     if (ugi == null) {
@@ -274,20 +270,28 @@ public abstract class User {
   public static final class SecureHadoopUser extends User {
     private String shortName;
     private LoadingCache<String, String[]> cache;
+    /**
+     * Cache value of this instance's {@link #toString()} value. Computing this value is expensive.
+     * Assumes the UGI is never updated. See HBASE-27708.
+     */
+    private final String toString;
 
     public SecureHadoopUser() throws IOException {
       ugi = UserGroupInformation.getCurrentUser();
       this.cache = null;
+      this.toString = ugi.toString();
     }
 
     public SecureHadoopUser(UserGroupInformation ugi) {
       this.ugi = ugi;
       this.cache = null;
+      this.toString = ugi.toString();
     }
 
     public SecureHadoopUser(UserGroupInformation ugi, LoadingCache<String, String[]> cache) {
       this.ugi = ugi;
       this.cache = cache;
+      this.toString = ugi.toString();
     }
 
     @Override
@@ -324,7 +328,15 @@ public abstract class User {
       return ugi.doAs(action);
     }
 
-    /** @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[]) */
+    @Override
+    public String toString() {
+      return toString;
+    }
+
+    /**
+     * Create a user for testing.
+     * @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[])
+     */
     public static User createUserForTesting(Configuration conf, String name, String[] groups) {
       synchronized (UserProvider.class) {
         if (!(UserProvider.groups instanceof TestingGroups)) {
@@ -365,9 +377,7 @@ public abstract class User {
       }
     }
 
-    /**
-     * Returns the result of {@code UserGroupInformation.isSecurityEnabled()}.
-     */
+    /** Returns the result of {@code UserGroupInformation.isSecurityEnabled()}. */
     public static boolean isSecurityEnabled() {
       return UserGroupInformation.isSecurityEnabled();
     }

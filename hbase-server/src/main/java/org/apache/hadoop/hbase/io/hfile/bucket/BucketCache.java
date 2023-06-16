@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -64,6 +67,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
@@ -172,16 +176,12 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
-  /**
-   * Used in tests. If this flag is false and the cache speed is very fast, bucket cache will skip
-   * some blocks when caching. If the flag is true, we will wait until blocks are flushed to
-   * IOEngine.
-   */
-  boolean wait_when_cache = false;
-
   private final BucketCacheStats cacheStats = new BucketCacheStats();
 
+  /** BucketCache persister thread */
+  private BucketCachePersister cachePersister;
   private final String persistencePath;
+  static AtomicBoolean isCacheInconsistent = new AtomicBoolean(false);
   private final long cacheCapacity;
   /** Approximate block size */
   private final long blockSize;
@@ -239,10 +239,18 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
+  private String prefetchedFileListPath;
+
+  private long bucketcachePersistInterval;
+
   private static final String FILE_VERIFY_ALGORITHM =
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
 
+  private static final String QUEUE_ADDITION_WAIT_TIME =
+    "hbase.bucketcache.queue.addition.waittime";
+  private static final long DEFAULT_QUEUE_ADDITION_WAIT_TIME = 0;
+  private long queueAdditionWaitTime;
   /**
    * Use {@link java.security.MessageDigest} class's encryption algorithms to check persistent file
    * integrity, default algorithm is MD5
@@ -283,6 +291,10 @@ public class BucketCache implements BlockCache, HeapSize {
     this.singleFactor = conf.getFloat(SINGLE_FACTOR_CONFIG_NAME, DEFAULT_SINGLE_FACTOR);
     this.multiFactor = conf.getFloat(MULTI_FACTOR_CONFIG_NAME, DEFAULT_MULTI_FACTOR);
     this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
+    this.queueAdditionWaitTime =
+      conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
+    this.prefetchedFileListPath = conf.get(PREFETCH_PERSISTENCE_PATH_KEY);
+    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
 
     sanityCheckConfigs();
 
@@ -309,6 +321,7 @@ public class BucketCache implements BlockCache, HeapSize {
     this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
     if (ioEngine.isPersistent() && persistencePath != null) {
+      startBucketCachePersisterThread();
       try {
         retrieveFromFile(bucketSizes);
       } catch (IOException ioex) {
@@ -365,6 +378,12 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  void startBucketCachePersisterThread() {
+    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister.setDaemon(true);
+    cachePersister.start();
+  }
+
   boolean isCacheEnabled() {
     return this.cacheEnabled;
   }
@@ -379,7 +398,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Get the IOEngine from the IO engine name nnn * @return the IOEngine n
+   * Get the IOEngine from the IO engine name
+   * @return the IOEngine
    */
   private IOEngine getIOEngineFromName(String ioEngineName, long capacity, String persistencePath)
     throws IOException {
@@ -408,6 +428,10 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  public boolean isCachePersistenceEnabled() {
+    return (prefetchedFileListPath != null) && (persistencePath != null);
+  }
+
   /**
    * Cache the block with the specified name and buffer.
    * @param cacheKey block's cache key
@@ -426,7 +450,19 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
-    cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, false);
+  }
+
+  /**
+   * Cache the block with the specified name and buffer.
+   * @param cacheKey   block's cache key
+   * @param cachedItem block buffer
+   * @param inMemory   if block is in-memory
+   */
+  @Override
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+    boolean waitWhenCache) {
+    cacheBlockWithWait(cacheKey, cachedItem, inMemory, waitWhenCache && queueAdditionWaitTime > 0);
   }
 
   /**
@@ -463,6 +499,9 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!cacheEnabled) {
       return;
     }
+    if (cacheKey.getBlockType() == null && cachedItem.getBlockType() != null) {
+      cacheKey.setBlockType(cachedItem.getBlockType());
+    }
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re =
@@ -482,7 +521,7 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean successfulAddition = false;
     if (wait) {
       try {
-        successfulAddition = bq.offer(re, DEFAULT_CACHE_WAIT_TIME, TimeUnit.MILLISECONDS);
+        successfulAddition = bq.offer(re, queueAdditionWaitTime, TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
@@ -575,6 +614,12 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     if (evictedByEvictionProcess) {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
+    }
+    if (ioEngine.isPersistent()) {
+      if (prefetchedFileListPath != null) {
+        PrefetchExecutor.removePrefetchedFileWhileEvict(cacheKey.getHfileName());
+      }
+      setCacheInconsistent(true);
     }
   }
 
@@ -698,6 +743,14 @@ public class BucketCache implements BlockCache, HeapSize {
         this.heapSize.add(-1 * re.getData().heapSize());
       }
     });
+  }
+
+  public boolean isCacheInconsistent() {
+    return isCacheInconsistent.get();
+  }
+
+  public void setCacheInconsistent(boolean setCacheInconsistent) {
+    isCacheInconsistent.set(setCacheInconsistent);
   }
 
   /*
@@ -1024,13 +1077,19 @@ public class BucketCache implements BlockCache, HeapSize {
         final HFileContext fileContext = ((HFileBlock) re.getData()).getHFileContext();
         final String columnFamily = Bytes.toString(fileContext.getColumnFamily());
         final String tableName = Bytes.toString(fileContext.getTableName());
-        if (tableName != null && columnFamily != null) {
+        if (tableName != null) {
           sb.append(" Table: ");
           sb.append(tableName);
+        }
+        if (columnFamily != null) {
           sb.append(" CF: ");
           sb.append(columnFamily);
-          sb.append(" HFile: ");
+        }
+        sb.append(" HFile: ");
+        if (fileContext.getHFileName() != null) {
           sb.append(fileContext.getHFileName());
+        } else {
+          sb.append(re.getKey());
         }
       } else {
         sb.append(" HFile: ");
@@ -1140,6 +1199,9 @@ public class BucketCache implements BlockCache, HeapSize {
       // Only add if non-null entry.
       if (bucketEntries[i] != null) {
         putIntoBackingMap(key, bucketEntries[i]);
+        if (ioEngine.isPersistent()) {
+          setCacheInconsistent(true);
+        }
       }
       // Always remove from ramCache even if we failed adding it to the block cache above.
       boolean existed = ramCache.remove(key, re -> {
@@ -1189,14 +1251,16 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
-  private void persistToFile() throws IOException {
-    assert !cacheEnabled;
+  void persistToFile() throws IOException {
     if (!ioEngine.isPersistent()) {
       throw new IOException("Attempt to persist non-persistent cache mappings!");
     }
     try (FileOutputStream fos = new FileOutputStream(persistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
+    }
+    if (prefetchedFileListPath != null) {
+      PrefetchExecutor.persistToFile(prefetchedFileListPath);
     }
   }
 
@@ -1209,6 +1273,9 @@ public class BucketCache implements BlockCache, HeapSize {
       return;
     }
     assert !cacheEnabled;
+    if (prefetchedFileListPath != null) {
+      PrefetchExecutor.retrieveFromFile(prefetchedFileListPath);
+    }
 
     try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
@@ -1350,6 +1417,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
       + persistencePath);
     if (ioEngine.isPersistent() && persistencePath != null) {
+      cachePersister.interrupt();
       try {
         join();
         persistToFile();
@@ -1417,6 +1485,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
+    PrefetchExecutor.removePrefetchedFileWhileEvict(hfileName);
     Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
       true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
@@ -1554,7 +1623,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Only used in test n
+   * Only used in test
    */
   void stopWriterThreads() throws InterruptedException {
     for (WriterThread writerThread : writerThreads) {

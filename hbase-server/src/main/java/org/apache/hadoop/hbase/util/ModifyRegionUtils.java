@@ -88,7 +88,7 @@ public abstract class ModifyRegionUtils {
    * @param rootDir         Root directory for HBase instance
    * @param tableDescriptor description of the table
    * @param newRegions      {@link RegionInfo} that describes the regions to create
-   * @param task            {@link RegionFillTask} custom code to populate region after creation n
+   * @param task            {@link RegionFillTask} custom code to populate region after creation
    */
   public static List<RegionInfo> createRegions(final Configuration conf, final Path rootDir,
     final TableDescriptor tableDescriptor, final RegionInfo[] newRegions, final RegionFillTask task)
@@ -112,7 +112,7 @@ public abstract class ModifyRegionUtils {
    * @param rootDir         Root directory for HBase instance
    * @param tableDescriptor description of the table
    * @param newRegions      {@link RegionInfo} that describes the regions to create
-   * @param task            {@link RegionFillTask} custom code to populate region after creation n
+   * @param task            {@link RegionFillTask} custom code to populate region after creation
    */
   public static List<RegionInfo> createRegions(final ThreadPoolExecutor exec,
     final Configuration conf, final Path rootDir, final TableDescriptor tableDescriptor,
@@ -149,7 +149,7 @@ public abstract class ModifyRegionUtils {
    * @param rootDir         Root directory for HBase instance
    * @param tableDescriptor description of the table
    * @param newRegion       {@link RegionInfo} that describes the region to create
-   * @param task            {@link RegionFillTask} custom code to populate region after creation n
+   * @param task            {@link RegionFillTask} custom code to populate region after creation
    */
   public static RegionInfo createRegion(final Configuration conf, final Path rootDir,
     final TableDescriptor tableDescriptor, final RegionInfo newRegion, final RegionFillTask task)
@@ -176,7 +176,7 @@ public abstract class ModifyRegionUtils {
    * Execute the task on the specified set of regions.
    * @param exec    Thread Pool Executor
    * @param regions {@link RegionInfo} that describes the regions to edit
-   * @param task    {@link RegionFillTask} custom code to edit the region n
+   * @param task    {@link RegionFillTask} custom code to edit the region
    */
   public static void editRegions(final ThreadPoolExecutor exec,
     final Collection<RegionInfo> regions, final RegionEditTask task) throws IOException {

@@ -604,7 +604,9 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
     LOG.debug(prefix("Received ZooKeeper Event, " + "type=" + event.getType() + ", " + "state="
       + event.getState() + ", " + "path=" + event.getPath()));
     final String spanName = ZKWatcher.class.getSimpleName() + "-" + identifier;
-    zkEventProcessor.execute(TraceUtil.tracedRunnable(() -> processEvent(event), spanName));
+    if (!zkEventProcessor.isShutdown()) {
+      zkEventProcessor.execute(TraceUtil.tracedRunnable(() -> processEvent(event), spanName));
+    }
   }
 
   // Connection management
@@ -735,12 +737,20 @@ public class ZKWatcher implements Watcher, Abortable, Closeable {
    */
   @Override
   public void close() {
+    zkEventProcessor.shutdown();
     try {
-      recoverableZooKeeper.close();
+      if (!zkEventProcessor.awaitTermination(15, TimeUnit.SECONDS)) {
+        LOG.warn("ZKWatcher event processor has not finished to terminate.");
+        zkEventProcessor.shutdownNow();
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } finally {
-      zkEventProcessor.shutdownNow();
+      try {
+        recoverableZooKeeper.close();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 

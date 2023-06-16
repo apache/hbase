@@ -32,7 +32,9 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -171,6 +173,7 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -182,7 +185,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -270,7 +272,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test that I can use the max flushed sequence id after the close. n
+   * Test that I can use the max flushed sequence id after the close.
    */
   @Test
   public void testSequenceId() throws IOException {
@@ -304,7 +306,7 @@ public class TestHRegion {
    * starts a flush is ongoing, the first flush is skipped and only the second flush takes place.
    * However, two flushes are required in case previous flush fails and leaves some data in
    * snapshot. The bug could cause loss of data in current memstore. The fix is removing all
-   * conditions except abort check so we ensure 2 flushes for region close." n
+   * conditions except abort check so we ensure 2 flushes for region close."
    */
   @Test
   public void testCloseCarryingSnapshot() throws IOException {
@@ -415,9 +417,8 @@ public class TestHRegion {
     long onePutSize = region.getMemStoreDataSize();
     assertTrue(onePutSize > 0);
 
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
-    doThrow(new IOException()).when(mockedCPHost)
-      .postBatchMutate(Mockito.<MiniBatchOperationInProgress<Mutation>> any());
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
+    doThrow(new IOException()).when(mockedCPHost).postBatchMutate(any());
     region.setCoprocessorHost(mockedCPHost);
 
     put = new Put(value);
@@ -476,7 +477,7 @@ public class TestHRegion {
    * proceed for a couple cycles, the size in current memstore could be much larger than the
    * snapshot. It's likely to drift memstoreSize much smaller than expected. In extreme case, if the
    * error accumulates to even bigger than HRegion's memstore size limit, any further flush is
-   * skipped because flush does not do anything if memstoreSize is not larger than 0." n
+   * skipped because flush does not do anything if memstoreSize is not larger than 0."
    */
   @Test
   public void testFlushSizeAccounting() throws Exception {
@@ -1074,8 +1075,8 @@ public class TestHRegion {
 
       // now verify that the flush markers are written
       wal.shutdown();
-      WAL.Reader reader = WALFactory.createReader(fs, AbstractFSWALProvider.getCurrentFileName(wal),
-        TEST_UTIL.getConfiguration());
+      WALStreamReader reader = WALFactory.createStreamReader(fs,
+        AbstractFSWALProvider.getCurrentFileName(wal), TEST_UTIL.getConfiguration());
       try {
         List<WAL.Entry> flushDescriptors = new ArrayList<>();
         long lastFlushSeqId = -1;
@@ -1126,14 +1127,7 @@ public class TestHRegion {
         }
         writer.close();
       } finally {
-        if (null != reader) {
-          try {
-            reader.close();
-          } catch (IOException exception) {
-            LOG.warn("Problem closing wal: " + exception.getMessage());
-            LOG.debug("exception details", exception);
-          }
-        }
+        reader.close();
       }
 
       // close the region now, and reopen again
@@ -3387,25 +3381,24 @@ public class TestHRegion {
     final long initSize = region.getDataInMemoryWithoutWAL();
     // save normalCPHost and replaced by mockedCPHost
     RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
-    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    RegionCoprocessorHost mockedCPHost = mock(RegionCoprocessorHost.class);
     // Because the preBatchMutate returns void, we can't do usual Mockito when...then form. Must
     // do below format (from Mockito doc).
-    Mockito.doAnswer(new Answer<Void>() {
+    doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         MiniBatchOperationInProgress<Mutation> mb = invocation.getArgument(0);
         mb.addOperationsFromCP(0, new Mutation[] { addPut });
         return null;
       }
-    }).when(mockedCPHost).preBatchMutate(Mockito.isA(MiniBatchOperationInProgress.class));
+    }).when(mockedCPHost).preBatchMutate(isA(MiniBatchOperationInProgress.class));
     ColumnFamilyDescriptorBuilder builder =
       ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY_BYTES);
     ScanInfo info = new ScanInfo(CONF, builder.build(), Long.MAX_VALUE, Long.MAX_VALUE,
       region.getCellComparator());
-    Mockito.when(mockedCPHost.preFlushScannerOpen(Mockito.any(HStore.class), Mockito.any()))
-      .thenReturn(info);
-    Mockito
-      .when(mockedCPHost.preFlush(Mockito.any(), Mockito.any(StoreScanner.class), Mockito.any()))
+    when(mockedCPHost.preFlushScannerOpen(any(HStore.class), any())).thenReturn(info);
+
+    when(mockedCPHost.preFlush(any(), any(StoreScanner.class), any()))
       .thenAnswer(i -> i.getArgument(1));
     region.setCoprocessorHost(mockedCPHost);
 
@@ -3725,7 +3718,7 @@ public class TestHRegion {
   }
 
   /**
-   * This method tests https://issues.apache.org/jira/browse/HBASE-2516. n
+   * This method tests https://issues.apache.org/jira/browse/HBASE-2516.
    */
   @Test
   public void testGetScanner_WithRegionClosed() throws IOException {
@@ -4400,7 +4393,7 @@ public class TestHRegion {
 
   /**
    * Write an HFile block full with Cells whose qualifier that are identical between 0 and
-   * Short.MAX_VALUE. See HBASE-13329. n
+   * Short.MAX_VALUE. See HBASE-13329.
    */
   @Test
   public void testLongQualifier() throws Exception {
@@ -4420,8 +4413,8 @@ public class TestHRegion {
 
   /**
    * Flushes the cache in a thread while scanning. The tests verify that the scan is coherent - e.g.
-   * the returned results are always of the same or later update as the previous results. n * scan /
-   * compact n * thread join
+   * the returned results are always of the same or later update as the previous results. scan /
+   * compact thread join
    */
   @Test
   public void testFlushCacheWhileScanning() throws IOException, InterruptedException {
@@ -4562,8 +4555,7 @@ public class TestHRegion {
 
   /**
    * Writes very wide records and scans for the latest every time.. Flushes and compacts the region
-   * every now and then to keep things realistic. n * by flush / scan / compaction n * when joining
-   * threads
+   * every now and then to keep things realistic. by flush / scan / compaction when joining threads
    */
   @Test
   public void testWritesWhileScanning() throws IOException, InterruptedException {
@@ -4735,7 +4727,7 @@ public class TestHRegion {
 
   /**
    * Writes very wide records and gets the latest row every time.. Flushes and compacts the region
-   * aggressivly to catch issues. n * by flush / scan / compaction n * when joining threads
+   * aggressivly to catch issues. by flush / scan / compaction when joining threads
    */
   @Test
   public void testWritesWhileGetting() throws Exception {
@@ -5101,14 +5093,14 @@ public class TestHRegion {
 
   /**
    * Testcase to check state of region initialization task set to ABORTED or not if any exceptions
-   * during initialization n
+   * during initialization
    */
   @Test
   public void testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization() throws Exception {
     RegionInfo info;
     try {
-      FileSystem fs = Mockito.mock(FileSystem.class);
-      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+      FileSystem fs = mock(FileSystem.class);
+      when(fs.exists(any())).thenThrow(new IOException());
       TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
       ColumnFamilyDescriptor columnFamilyDescriptor =
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
@@ -5223,7 +5215,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check increment function with memstore flushing n
+   * Test case to check increment function with memstore flushing
    */
   @Test
   public void testParallelIncrementWithMemStoreFlush() throws Exception {
@@ -5308,7 +5300,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check append function with memstore flushing n
+   * Test case to check append function with memstore flushing
    */
   @Test
   public void testParallelAppendWithMemStoreFlush() throws Exception {
@@ -5366,7 +5358,7 @@ public class TestHRegion {
   }
 
   /**
-   * Test case to check put function with memstore flushing for same row, same ts n
+   * Test case to check put function with memstore flushing for same row, same ts
    */
   @Test
   public void testPutWithMemStoreFlush() throws Exception {
@@ -5739,7 +5731,7 @@ public class TestHRegion {
   }
 
   /*
-   * Assert first value in the passed region is <code>firstValue</code>. n * n * n * n
+   * Assert first value in the passed region is <code>firstValue</code>.
    */
   protected void assertScan(final HRegion r, final byte[] fs, final byte[] firstValue)
     throws IOException {
@@ -6919,6 +6911,75 @@ public class TestHRegion {
     // Original value written at T+20 should be gone now via family TTL
     r = region.get(new Get(row));
     assertNull(r.getValue(fam1, q1));
+  }
+
+  @Test
+  public void testTTLsUsingSmallHeartBeatCells() throws IOException {
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    final byte[] row = Bytes.toBytes("testRow");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+    final byte[] q5 = Bytes.toBytes("q5");
+    final byte[] q6 = Bytes.toBytes("q6");
+    final byte[] q7 = Bytes.toBytes("q7");
+    final byte[] q8 = Bytes.toBytes("q8");
+
+    // 10 seconds
+    int ttlSecs = 10;
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(
+        ColumnFamilyDescriptorBuilder.newBuilder(fam1).setTimeToLive(ttlSecs).build()).build();
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+    // using small heart beat cells
+    conf.setLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK, 2);
+
+    region = HBaseTestingUtil.createRegionAndWAL(
+      RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build(),
+      TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
+    assertNotNull(region);
+    long now = EnvironmentEdgeManager.currentTime();
+    // Add a cell that will expire in 5 seconds via cell TTL
+    region.put(new Put(row).addColumn(fam1, q1, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q3, now, HConstants.EMPTY_BYTE_ARRAY));
+    // Add a cell that will expire after 10 seconds via family setting
+    region
+      .put(new Put(row).addColumn(fam1, q4, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+    region
+      .put(new Put(row).addColumn(fam1, q5, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+
+    region.put(new Put(row).addColumn(fam1, q6, now, HConstants.EMPTY_BYTE_ARRAY));
+    region.put(new Put(row).addColumn(fam1, q7, now, HConstants.EMPTY_BYTE_ARRAY));
+    region
+      .put(new Put(row).addColumn(fam1, q8, now + ttlSecs * 1000 + 1, HConstants.EMPTY_BYTE_ARRAY));
+
+    // Flush so we are sure store scanning gets this right
+    region.flush(true);
+
+    // A query at time T+0 should return all cells
+    checkScan(8);
+    region.delete(new Delete(row).addColumn(fam1, q8));
+
+    // Increment time to T+ttlSecs seconds
+    edge.incrementTime(ttlSecs * 1000);
+    checkScan(2);
+  }
+
+  private void checkScan(int expectCellSize) throws IOException {
+    Scan s = new Scan().withStartRow(row);
+    ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
+    ScannerContext scannerContext = contextBuilder.build();
+    RegionScanner scanner = region.getScanner(s);
+    List<Cell> kvs = new ArrayList<>();
+    scanner.next(kvs, scannerContext);
+    assertEquals(expectCellSize, kvs.size());
+    scanner.close();
   }
 
   @Test

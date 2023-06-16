@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup.regionserver;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -56,7 +57,7 @@ public class LogRollBackupSubprocedure extends Subprocedure {
     this.rss = rss;
     this.taskManager = taskManager;
     if (data != null) {
-      backupRoot = new String(data);
+      backupRoot = new String(data, StandardCharsets.UTF_8);
     }
   }
 

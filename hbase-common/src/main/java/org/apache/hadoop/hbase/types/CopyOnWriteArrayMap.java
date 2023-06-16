@@ -38,6 +38,7 @@ import org.apache.yetus.audience.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
+@SuppressWarnings({ "unchecked", "rawtypes", "hiding", "TypeParameterShadowing" })
 public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
   implements Map<K, V>, ConcurrentNavigableMap<K, V> {
   private final Comparator<? super K> keyComparator;
@@ -331,7 +332,8 @@ public class CopyOnWriteArrayMap<K, V> extends AbstractMap<K, V>
     if (index < 0) {
       COWEntry<K, V> newEntry = new COWEntry<>(key, value);
       this.holder = current.insert(-(index + 1), newEntry);
-      return value;
+      // putIfAbsent contract requires returning null if no previous entry exists
+      return null;
     }
     return current.entries[index].getValue();
   }

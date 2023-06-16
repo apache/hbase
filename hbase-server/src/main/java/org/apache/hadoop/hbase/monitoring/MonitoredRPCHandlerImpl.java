@@ -44,8 +44,8 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl implements Monito
   private boolean snapshot = false;
   private Map<String, Object> callInfoMap = new HashMap<>();
 
-  public MonitoredRPCHandlerImpl() {
-    super(false);
+  public MonitoredRPCHandlerImpl(String description) {
+    super(false, description);
     // in this implementation, WAITING indicates that the handler is not
     // actively servicing an RPC call.
     setState(State.WAITING);

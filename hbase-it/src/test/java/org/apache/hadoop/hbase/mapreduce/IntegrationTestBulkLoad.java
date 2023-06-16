@@ -365,7 +365,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       taskId = taskId + iteration * numMapTasks;
       numMapTasks = numMapTasks * numIterations;
 
-      long chainId = Math.abs(ThreadLocalRandom.current().nextLong());
+      long chainId = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
       chainId = chainId - (chainId % numMapTasks) + taskId; // ensure that chainId is unique per
                                                             // task and across iterations
       LongWritable[] keys = new LongWritable[] { new LongWritable(chainId) };
@@ -663,7 +663,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   /**
-   * After adding data to the table start a mr job to nnn
+   * After adding data to the table start a mr job to
    */
   private void runCheck() throws IOException, ClassNotFoundException, InterruptedException {
     LOG.info("Running check");

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.BLOCK_COMPRESSED_SIZE_PREDICATOR;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -38,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
@@ -72,10 +74,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.PreviousBlockCompressionRatePredicator;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext;
 import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.UncompressedBlockSizePredicator;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -113,7 +116,7 @@ public class TestHStoreFile {
   private static final Logger LOG = LoggerFactory.getLogger(TestHStoreFile.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-  private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
+  private static Path ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile");
   private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
@@ -172,7 +175,7 @@ public class TestHStoreFile {
   byte[] SPLITKEY = new byte[] { (LAST_CHAR + FIRST_CHAR) / 2, FIRST_CHAR };
 
   /*
-   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it. nn
+   * Writes HStoreKey and ImmutableBytes data to passed writer and then closes it.
    */
   public static void writeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier)
     throws IOException {
@@ -182,6 +185,24 @@ public class TestHStoreFile {
         for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
           byte[] b = new byte[] { (byte) d, (byte) e };
           writer.append(new KeyValue(b, fam, qualifier, now, b));
+        }
+      }
+    } finally {
+      writer.close();
+    }
+  }
+
+  public static void writeLargeStoreFile(final StoreFileWriter writer, byte[] fam, byte[] qualifier,
+    int rounds) throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    try {
+      for (int i = 0; i < rounds; i++) {
+        for (char d = FIRST_CHAR; d <= LAST_CHAR; d++) {
+          for (char e = FIRST_CHAR; e <= LAST_CHAR; e++) {
+            byte[] b = new byte[] { (byte) d, (byte) e };
+            byte[] key = new byte[] { (byte) i };
+            writer.append(new KeyValue(key, fam, qualifier, now, b));
+          }
         }
       }
     } finally {
@@ -575,10 +596,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
     StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -623,7 +644,10 @@ public class TestHStoreFile {
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
@@ -639,7 +663,10 @@ public class TestHStoreFile {
     float err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
@@ -658,10 +685,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
     reader.loadFileInfo();
     reader.loadBloomfilter();
 
@@ -697,7 +724,11 @@ public class TestHStoreFile {
   @Test
   public void testReseek() throws Exception {
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
+    Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
+
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs).withFilePath(f)
@@ -707,10 +738,10 @@ public class TestHStoreFile {
     writer.close();
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
-    HFileInfo fileInfo = new HFileInfo(context, conf);
-    StoreFileReader reader =
-      new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-    fileInfo.initMetaAndIndex(reader.getHFileReader());
+    StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+    storeFileInfo.initHFileInfo(context);
+    StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+    storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
 
     // Now do reseek with empty KV to position to the beginning of the file
 
@@ -741,9 +772,13 @@ public class TestHStoreFile {
     // 2nd for loop for every column (2*colCount)
     float[] expErr = { 2 * rowCount * colCount * err, 2 * rowCount * 2 * colCount * err };
 
+    if (!fs.exists(ROOT_DIR)) {
+      fs.mkdirs(ROOT_DIR);
+    }
     for (int x : new int[] { 0, 1 }) {
       // write the file
-      Path f = new Path(ROOT_DIR, name.getMethodName() + x);
+      Path f = StoreFileWriter.getUniqueFile(fs, ROOT_DIR);
+
       HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
         .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
       // Make a store file and write data to it.
@@ -767,10 +802,10 @@ public class TestHStoreFile {
       ReaderContext context =
         new ReaderContextBuilder().withFilePath(f).withFileSize(fs.getFileStatus(f).getLen())
           .withFileSystem(fs).withInputStreamWrapper(new FSDataInputStreamWrapper(fs, f)).build();
-      HFileInfo fileInfo = new HFileInfo(context, conf);
-      StoreFileReader reader =
-        new StoreFileReader(context, fileInfo, cacheConf, new AtomicInteger(0), conf);
-      fileInfo.initMetaAndIndex(reader.getHFileReader());
+      StoreFileInfo storeFileInfo = new StoreFileInfo(conf, fs, f, true);
+      storeFileInfo.initHFileInfo(context);
+      StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
       reader.loadFileInfo();
       reader.loadBloomfilter();
       StoreFileScanner scanner = getStoreFileScanner(reader, false, false);
@@ -1191,6 +1226,57 @@ public class TestHStoreFile {
         assertTrue(diff >= 0 && diff < (BLOCKSIZE_SMALL * 0.05));
       }
     }
+  }
+
+  @Test
+  public void testDataBlockSizeCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR,
+      PreviousBlockCompressionRatePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(12,
+      (s, c) -> (c > 2 && c < 11) ? s >= BLOCKSIZE_SMALL * 10 : true);
+  }
+
+  @Test
+  public void testDataBlockSizeUnCompressed() throws Exception {
+    conf.set(BLOCK_COMPRESSED_SIZE_PREDICATOR, UncompressedBlockSizePredicator.class.getName());
+    testDataBlockSizeWithCompressionRatePredicator(200, (s, c) -> s < BLOCKSIZE_SMALL * 10);
+  }
+
+  private void testDataBlockSizeWithCompressionRatePredicator(int expectedBlockCount,
+    BiFunction<Integer, Integer, Boolean> validation) throws Exception {
+    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path path = new Path(dir, "1234567890");
+    DataBlockEncoding dataBlockEncoderAlgo = DataBlockEncoding.FAST_DIFF;
+    cacheConf = new CacheConfig(conf);
+    HFileContext meta =
+      new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL).withChecksumType(CKTYPE)
+        .withBytesPerCheckSum(CKBYTES).withDataBlockEncoding(dataBlockEncoderAlgo)
+        .withCompression(Compression.Algorithm.GZ).build();
+    // Make a store file and write data to it.
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(path).withMaxKeyCount(2000).withFileContext(meta).build();
+    writeLargeStoreFile(writer, Bytes.toBytes(name.getMethodName()),
+      Bytes.toBytes(name.getMethodName()), 200);
+    writer.close();
+    HStoreFile storeFile =
+      new HStoreFile(fs, writer.getPath(), conf, cacheConf, BloomType.NONE, true);
+    storeFile.initReader();
+    HFile.Reader fReader =
+      HFile.createReader(fs, writer.getPath(), storeFile.getCacheConf(), true, conf);
+    FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, writer.getPath());
+    long fileSize = fs.getFileStatus(writer.getPath()).getLen();
+    FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+    long offset = trailer.getFirstDataBlockOffset(), max = trailer.getLastDataBlockOffset();
+    HFileBlock block;
+    int blockCount = 0;
+    while (offset <= max) {
+      block = fReader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+        /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
+      offset += block.getOnDiskSizeWithHeader();
+      blockCount++;
+      assertTrue(validation.apply(block.getUncompressedSizeWithoutHeader(), blockCount));
+    }
+    assertEquals(expectedBlockCount, blockCount);
   }
 
 }

@@ -18,12 +18,9 @@
 package org.apache.hadoop.hbase.util;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Locale;
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
@@ -37,6 +34,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetric;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufAllocatorMetricProvider;
 import org.apache.hbase.thirdparty.io.netty.buffer.PooledByteBufAllocator;
+import org.apache.hbase.thirdparty.io.netty.util.internal.PlatformDependent;
 
 /**
  * Utilities for interacting with and monitoring DirectByteBuffer allocations.
@@ -49,6 +47,7 @@ public class DirectMemoryUtils {
   private static final MBeanServer BEAN_SERVER;
   private static final ObjectName NIO_DIRECT_POOL;
   private static final boolean HAS_MEMORY_USED_ATTRIBUTE;
+  private static final long MAX_DIRECT_MEMORY = PlatformDependent.estimateMaxDirectMemory();
 
   static {
     // initialize singletons. Only maintain a reference to the MBeanServer if
@@ -77,36 +76,9 @@ public class DirectMemoryUtils {
     HAS_MEMORY_USED_ATTRIBUTE = a != null;
   }
 
-  /**
-   * @return the setting of -XX:MaxDirectMemorySize as a long. Returns 0 if -XX:MaxDirectMemorySize
-   *         is not set.
-   */
+  /** Returns the direct memory limit of the current progress */
   public static long getDirectMemorySize() {
-    RuntimeMXBean runtimemxBean = ManagementFactory.getRuntimeMXBean();
-    List<String> arguments = runtimemxBean.getInputArguments();
-    long multiplier = 1; // for the byte case.
-    for (String s : arguments) {
-      if (s.contains("-XX:MaxDirectMemorySize=")) {
-        String memSize = s.toLowerCase(Locale.ROOT).replace("-xx:maxdirectmemorysize=", "").trim();
-
-        if (memSize.contains("k")) {
-          multiplier = 1024;
-        }
-
-        else if (memSize.contains("m")) {
-          multiplier = 1048576;
-        }
-
-        else if (memSize.contains("g")) {
-          multiplier = 1073741824;
-        }
-        memSize = memSize.replaceAll("[^\\d]", "");
-
-        long retValue = Long.parseLong(memSize);
-        return retValue * multiplier;
-      }
-    }
-    return 0;
+    return MAX_DIRECT_MEMORY;
   }
 
   /** Returns the current amount of direct memory used. */
@@ -134,8 +106,8 @@ public class DirectMemoryUtils {
    * Every once a while, the JVM checks the reference queue and cleans the DirectByteBuffers.
    * However, as this doesn't happen immediately after discarding all references to a
    * DirectByteBuffer, it's easy to OutOfMemoryError yourself using DirectByteBuffers. This function
-   * explicitly calls the Cleaner method of a DirectByteBuffer. n * The DirectByteBuffer that will
-   * be "cleaned". Utilizes reflection.
+   * explicitly calls the Cleaner method of a DirectByteBuffer. The DirectByteBuffer that will be
+   * "cleaned". Utilizes reflection.
    */
   public static void destroyDirectByteBuffer(ByteBuffer toBeDestroyed)
     throws IllegalArgumentException, IllegalAccessException, InvocationTargetException,

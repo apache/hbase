@@ -131,7 +131,7 @@ public interface SplitLogManagerCoordination {
   void deleteTask(String taskName);
 
   /**
-   * Support method to init constants such as timeout. Mostly required for UTs. n
+   * Support method to init constants such as timeout. Mostly required for UTs.
    */
   void init() throws IOException;
 }

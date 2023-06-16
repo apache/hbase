@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.CUMULATIVE_SIZE_LIMIT_MB_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.RegionNormalizerWorker.DEFAULT_CUMULATIVE_SIZE_LIMIT_MB;
 import static org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 import java.time.Instant;
@@ -227,6 +229,14 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       List<NormalizationPlan> mergePlans = computeMergeNormalizationPlans(ctx);
       mergePlansCount = mergePlans.size();
       plans.addAll(mergePlans);
+    }
+
+    if (
+      normalizerConfiguration.getCumulativePlansSizeLimitMb() != DEFAULT_CUMULATIVE_SIZE_LIMIT_MB
+    ) {
+      // If we are going to truncate our list of plans, shuffle the split and merge plans together
+      // so that the merge plans, which are listed last, are not starved out.
+      shuffleNormalizationPlans(plans);
     }
 
     LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, "
@@ -464,6 +474,14 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return getRegionSizeMB(regionInfo) >= normalizerConfiguration.getMergeMinRegionSizeMb(ctx);
   }
 
+  /**
+   * This very simple method exists so we can verify it was called in a unit test. Visible for
+   * testing.
+   */
+  void shuffleNormalizationPlans(List<NormalizationPlan> plans) {
+    Collections.shuffle(plans);
+  }
+
   private static boolean logTraceReason(final BooleanSupplier predicate, final String fmtWhenTrue,
     final Object... args) {
     final boolean value = predicate.getAsBoolean();
@@ -484,6 +502,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final int mergeMinRegionCount;
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
+    private final long cumulativePlansSizeLimitMb;
 
     private NormalizerConfiguration() {
       conf = null;
@@ -492,6 +511,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = DEFAULT_MERGE_MIN_REGION_COUNT;
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
+      cumulativePlansSizeLimitMb = DEFAULT_CUMULATIVE_SIZE_LIMIT_MB;
     }
 
     private NormalizerConfiguration(final Configuration conf,
@@ -502,6 +522,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = parseMergeMinRegionCount(conf);
       mergeMinRegionAge = parseMergeMinRegionAge(conf);
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
+      cumulativePlansSizeLimitMb =
+        conf.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB);
       logConfigurationUpdated(SPLIT_ENABLED_KEY, currentConfiguration.isSplitEnabled(),
         splitEnabled);
       logConfigurationUpdated(MERGE_ENABLED_KEY, currentConfiguration.isMergeEnabled(),
@@ -573,6 +595,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         return getMergeMinRegionSizeMb();
       }
       return mergeMinRegionSizeMb;
+    }
+
+    private long getCumulativePlansSizeLimitMb() {
+      return cumulativePlansSizeLimitMb;
     }
   }
 

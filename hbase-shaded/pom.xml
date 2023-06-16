@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-build-configuration</artifactId>
-    <version>3.0.0-alpha-4-SNAPSHOT</version>
+    <version>${revision}</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-shaded</artifactId>
@@ -83,7 +83,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.4</version>
+          <version>3.4.1</version>
           <executions>
             <execution>
               <id>aggregate-into-a-jar-with-relocated-third-parties</id>
@@ -129,6 +129,18 @@
                 </artifactSet>
                 <relocations>
                   <!-- top level com not including sun-->
+                  <relocation>
+                    <pattern>com.sun.istack</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.istack</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.sun.jersey</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.jersey</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.sun.xml</pattern>
+                    <shadedPattern>${shaded.prefix}.com.sun.xml</shadedPattern>
+                  </relocation>
                   <relocation>
                     <pattern>com.cedarsoftware</pattern>
                     <shadedPattern>${shaded.prefix}.com.cedarsoftware</shadedPattern>
@@ -412,6 +424,15 @@
                   <relocation>
                     <pattern>org.agrona</pattern>
                     <shadedPattern>${shaded.prefix}.org.agrona</shadedPattern>
+                  </relocation>
+                  <!-- okhttp -->
+                  <relocation>
+                    <pattern>okhttp3.</pattern>
+                    <shadedPattern>${shaded.prefix}.okhttp3.</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>kotlin.</pattern>
+                    <shadedPattern>${shaded.prefix}.kotlin.</shadedPattern>
                   </relocation>
                 </relocations>
                 <transformers>

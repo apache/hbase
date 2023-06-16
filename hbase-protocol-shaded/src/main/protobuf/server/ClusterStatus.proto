@@ -350,6 +350,7 @@ message ClusterStatus {
   repeated TableRegionStatesCount table_region_states_count = 12;
   repeated ServerTask master_tasks = 13;
   repeated ServerName decommissioned_servers = 14;
+  repeated ServerName unknown_servers = 15;
 }
 
 enum Option {
@@ -367,4 +368,5 @@ enum Option {
   TABLE_TO_REGIONS_COUNT = 11;
   TASKS = 12;
   DECOMMISSIONED_SERVERS = 13;
+  UNKNOWN_SERVERS = 14;
 }

@@ -68,7 +68,7 @@ public interface RpcCallContext {
 
   /**
    * Sets a callback which has to be executed at the end of this RPC call. Such a callback is an
-   * optional one for any Rpc call. n
+   * optional one for any Rpc call.
    */
   void setCallBack(RpcCallback callback);
 
@@ -87,9 +87,18 @@ public interface RpcCallContext {
    */
   void incrementResponseCellSize(long cellSize);
 
-  long getResponseBlockSize();
+  /**
+   * Get the number of block bytes scanned by the current call. In order to serve a response, 1 or
+   * more lower level blocks must be loaded (from disk or cache) and scanned for the requested
+   * cells. This value includes the total block size for each block loaded for the request.
+   */
+  long getBlockBytesScanned();
 
-  void incrementResponseBlockSize(long blockSize);
+  /**
+   * Increment the number of block bytes scanned by the current call. See
+   * {@link #getBlockBytesScanned()} for details.
+   */
+  void incrementBlockBytesScanned(long blockSize);
 
   long getResponseExceptionSize();
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -118,8 +119,8 @@ public class StreamUtils {
   }
 
   /**
-   * Reads a varInt value stored in an array. n * Input array where the varInt is available n *
-   * Offset in the input array where varInt is available
+   * Reads a varInt value stored in an array. Input array where the varInt is available Offset in
+   * the input array where varInt is available
    * @return A pair of integers in which first value is the actual decoded varInt value and second
    *         value as number of bytes taken by this varInt for it's storage in the input array.
    * @throws IOException When varint is malformed and not able to be read correctly
@@ -204,6 +205,22 @@ public class StreamUtils {
       }
     }
     return new Pair<>(result, newOffset - offset);
+  }
+
+  /**
+   * Read a byte from the given stream using the read method, and throw EOFException if it returns
+   * -1, like the implementation in {@code DataInputStream}.
+   * <p/>
+   * This is useful because casting the return value of read method into byte directly will make us
+   * lose the ability to check whether there is a byte and its value is -1 or we reach EOF, as
+   * casting int -1 to byte also returns -1.
+   */
+  public static byte readByte(InputStream in) throws IOException {
+    int r = in.read();
+    if (r < 0) {
+      throw new EOFException();
+    }
+    return (byte) r;
   }
 
   public static short toShort(byte hi, byte lo) {

@@ -27,7 +27,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface TimeMeasurable<T> {
 
   /**
-   * Measure elapsed time. n
+   * Measure elapsed time.
    */
   T measure();
 }

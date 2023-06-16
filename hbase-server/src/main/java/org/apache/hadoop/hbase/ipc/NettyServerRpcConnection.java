@@ -33,7 +33,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescrip
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -70,10 +69,12 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     this.remotePort = inetSocketAddress.getPort();
   }
 
-  void setupDecoder() {
-    ChannelPipeline p = channel.pipeline();
-    p.addLast("frameDecoder", new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this));
-    p.addLast("decoder", new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
+  void setupHandler() {
+    channel.pipeline()
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
+        new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder",
+        new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
   }
 
   void process(ByteBuf buf) throws IOException, InterruptedException {
@@ -115,6 +116,6 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   protected void doRespond(RpcResponse resp) {
-    channel.writeAndFlush(resp);
+    NettyFutureUtils.safeWriteAndFlush(channel, resp);
   }
 }

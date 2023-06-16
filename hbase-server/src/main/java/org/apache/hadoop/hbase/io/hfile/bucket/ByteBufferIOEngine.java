@@ -64,8 +64,8 @@ public class ByteBufferIOEngine implements IOEngine {
   private final long capacity;
 
   /**
-   * Construct the ByteBufferIOEngine with the given capacity n * @throws IOException ideally here
-   * no exception to be thrown from the allocator
+   * Construct the ByteBufferIOEngine with the given capacity
+   * @throws IOException ideally here no exception to be thrown from the allocator
    */
   public ByteBufferIOEngine(long capacity) throws IOException {
     this.capacity = capacity;
@@ -80,7 +80,7 @@ public class ByteBufferIOEngine implements IOEngine {
   }
 
   /**
-   * Memory IO engine is always unable to support persistent storage for the cache n
+   * Memory IO engine is always unable to support persistent storage for the cache
    */
   @Override
   public boolean isPersistent() {

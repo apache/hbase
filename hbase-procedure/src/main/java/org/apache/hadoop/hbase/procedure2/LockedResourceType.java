@@ -26,5 +26,6 @@ public enum LockedResourceType {
   TABLE,
   REGION,
   PEER,
-  META
+  META,
+  GLOBAL
 }

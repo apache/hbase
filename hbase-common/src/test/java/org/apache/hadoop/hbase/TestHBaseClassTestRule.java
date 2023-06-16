@@ -59,6 +59,7 @@ public class TestHBaseClassTestRule {
   }
 
   @RunWith(Parameterized.class)
+  @SuppressWarnings("UnusedMethod")
   private static class InValidParameterizedClass {
     // Not valid because parameters method is private.
     @Parameters

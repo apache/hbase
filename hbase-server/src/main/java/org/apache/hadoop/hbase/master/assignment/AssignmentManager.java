@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -153,6 +154,25 @@ public class AssignmentManager {
   private static final int DEFAULT_RIT_STUCK_WARNING_THRESHOLD = 60 * 1000;
   public static final String UNEXPECTED_STATE_REGION = "Unexpected state for ";
 
+  public static final String FORCE_REGION_RETAINMENT = "hbase.master.scp.retain.assignment.force";
+
+  public static final boolean DEFAULT_FORCE_REGION_RETAINMENT = false;
+
+  /** The wait time in millis before checking again if the region's previous RS is back online */
+  public static final String FORCE_REGION_RETAINMENT_WAIT_INTERVAL =
+    "hbase.master.scp.retain.assignment.force.wait-interval";
+
+  public static final long DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL = 50;
+
+  /**
+   * The number of times to check if the region's previous RS is back online, before giving up and
+   * proceeding with assignment on a new RS
+   */
+  public static final String FORCE_REGION_RETAINMENT_RETRIES =
+    "hbase.master.scp.retain.assignment.force.retries";
+
+  public static final int DEFAULT_FORCE_REGION_RETAINMENT_RETRIES = 600;
+
   private final ProcedureEvent<?> metaAssignEvent = new ProcedureEvent<>("meta assign");
   private final ProcedureEvent<?> metaLoadEvent = new ProcedureEvent<>("meta load");
 
@@ -201,6 +221,12 @@ public class AssignmentManager {
 
   private Thread assignThread;
 
+  private final boolean forceRegionRetainment;
+
+  private final long forceRegionRetainmentWaitInterval;
+
+  private final int forceRegionRetainmentRetries;
+
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
   }
@@ -240,6 +266,13 @@ public class AssignmentManager {
     }
     minVersionToMoveSysTables =
       conf.get(MIN_VERSION_MOVE_SYS_TABLES_CONFIG, DEFAULT_MIN_VERSION_MOVE_SYS_TABLES_CONFIG);
+
+    forceRegionRetainment =
+      conf.getBoolean(FORCE_REGION_RETAINMENT, DEFAULT_FORCE_REGION_RETAINMENT);
+    forceRegionRetainmentWaitInterval = conf.getLong(FORCE_REGION_RETAINMENT_WAIT_INTERVAL,
+      DEFAULT_FORCE_REGION_RETAINMENT_WAIT_INTERVAL);
+    forceRegionRetainmentRetries =
+      conf.getInt(FORCE_REGION_RETAINMENT_RETRIES, DEFAULT_FORCE_REGION_RETAINMENT_RETRIES);
   }
 
   private void mirrorMetaLocations() throws IOException, KeeperException {
@@ -408,6 +441,18 @@ public class AssignmentManager {
 
   int getAssignMaxAttempts() {
     return assignMaxAttempts;
+  }
+
+  public boolean isForceRegionRetainment() {
+    return forceRegionRetainment;
+  }
+
+  public long getForceRegionRetainmentWaitInterval() {
+    return forceRegionRetainmentWaitInterval;
+  }
+
+  public int getForceRegionRetainmentRetries() {
+    return forceRegionRetainmentRetries;
   }
 
   int getAssignRetryImmediatelyMaxAttempts() {
@@ -1049,8 +1094,6 @@ public class AssignmentManager {
     regionStateStore.deleteRegions(regions);
     for (int i = 0; i < regions.size(); ++i) {
       final RegionInfo regionInfo = regions.get(i);
-      // we expect the region to be offline
-      regionStates.removeFromOfflineRegions(regionInfo);
       regionStates.deleteRegion(regionInfo);
     }
   }
@@ -1706,26 +1749,29 @@ public class AssignmentManager {
   };
 
   /**
-   * Query META if the given <code>RegionInfo</code> exists, adding to
-   * <code>AssignmentManager.regionStateStore</code> cache if the region is found in META.
-   * @param regionEncodedName encoded name for the region to be loaded from META into
-   *                          <code>AssignmentManager.regionStateStore</code> cache
-   * @return <code>RegionInfo</code> instance for the given region if it is present in META and got
-   *         successfully loaded into <code>AssignmentManager.regionStateStore</code> cache,
-   *         <b>null</b> otherwise.
-   * @throws UnknownRegionException if any errors occur while querying meta.
+   * Attempt to load {@code regionInfo} from META, adding any results to the
+   * {@link #regionStateStore} Is NOT aware of replica regions.
+   * @param regionInfo the region to be loaded from META.
+   * @throws IOException If some error occurs while querying META or parsing results.
    */
-  public RegionInfo loadRegionFromMeta(String regionEncodedName) throws UnknownRegionException {
-    try {
-      RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
-      regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
-      return regionStates.getRegionState(regionEncodedName) == null
-        ? null
-        : regionStates.getRegionState(regionEncodedName).getRegion();
-    } catch (IOException e) {
-      throw new UnknownRegionException(
-        "Error trying to load region " + regionEncodedName + " from META", e);
-    }
+  public void populateRegionStatesFromMeta(@NonNull final RegionInfo regionInfo)
+    throws IOException {
+    final String regionEncodedName = RegionInfo.DEFAULT_REPLICA_ID == regionInfo.getReplicaId()
+      ? regionInfo.getEncodedName()
+      : RegionInfoBuilder.newBuilder(regionInfo).setReplicaId(RegionInfo.DEFAULT_REPLICA_ID).build()
+        .getEncodedName();
+    populateRegionStatesFromMeta(regionEncodedName);
+  }
+
+  /**
+   * Attempt to load {@code regionEncodedName} from META, adding any results to the
+   * {@link #regionStateStore} Is NOT aware of replica regions.
+   * @param regionEncodedName encoded name for the region to be loaded from META.
+   * @throws IOException If some error occurs while querying META or parsing results.
+   */
+  public void populateRegionStatesFromMeta(@NonNull String regionEncodedName) throws IOException {
+    final RegionMetaLoadingVisitor visitor = new RegionMetaLoadingVisitor();
+    regionStateStore.visitMetaForRegion(regionEncodedName, visitor);
   }
 
   private void loadMeta() throws IOException {
@@ -1879,8 +1925,20 @@ public class AssignmentManager {
     return regionStates.getAssignedRegions();
   }
 
+  /**
+   * Resolve a cached {@link RegionInfo} from the region name as a {@code byte[]}.
+   */
   public RegionInfo getRegionInfo(final byte[] regionName) {
     final RegionStateNode regionState = regionStates.getRegionStateNodeFromName(regionName);
+    return regionState != null ? regionState.getRegionInfo() : null;
+  }
+
+  /**
+   * Resolve a cached {@link RegionInfo} from the encoded region name as a {@code String}.
+   */
+  public RegionInfo getRegionInfo(final String encodedRegionName) {
+    final RegionStateNode regionState =
+      regionStates.getRegionStateNodeFromEncodedRegionName(encodedRegionName);
     return regionState != null ? regionState.getRegionInfo() : null;
   }
 

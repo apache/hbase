@@ -39,9 +39,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WAL.Reader;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -123,8 +123,8 @@ public class TestSyncReplicationActive extends SyncReplicationTestBase {
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));
     Assert.assertTrue(files.length > 0);
     for (FileStatus file : files) {
-      try (
-        Reader reader = WALFactory.createReader(fs2, file.getPath(), utility.getConfiguration())) {
+      try (WALStreamReader reader =
+        NoEOFWALStreamReader.create(fs2, file.getPath(), utility.getConfiguration())) {
         Entry entry = reader.next();
         Assert.assertTrue(entry != null);
         while (entry != null) {

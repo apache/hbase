@@ -82,21 +82,21 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor nn
+   * Constructor
    */
   public CellModel(byte[] column, byte[] value) {
     this(column, HConstants.LATEST_TIMESTAMP, value);
   }
 
   /**
-   * Constructor nnn
+   * Constructor
    */
   public CellModel(byte[] column, byte[] qualifier, byte[] value) {
     this(column, qualifier, HConstants.LATEST_TIMESTAMP, value);
   }
 
   /**
-   * Constructor from KeyValue n
+   * Constructor from KeyValue
    */
   public CellModel(org.apache.hadoop.hbase.Cell cell) {
     this(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell), cell.getTimestamp(),
@@ -104,7 +104,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor nnn
+   * Constructor
    */
   public CellModel(byte[] column, long timestamp, byte[] value) {
     this.column = column;
@@ -113,7 +113,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   }
 
   /**
-   * Constructor nnnn
+   * Constructor
    */
   public CellModel(byte[] column, byte[] qualifier, long timestamp, byte[] value) {
     this.column = CellUtil.makeColumn(column, qualifier);

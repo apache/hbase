@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -63,12 +64,15 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
+
 /**
  * A collection for methods used by multiple classes to backup HBase tables.
  */
 @InterfaceAudience.Private
 public final class BackupUtils {
-  protected static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BackupUtils.class);
   public static final String LOGNAME_SEPARATOR = ".";
   public static final int MILLISEC_IN_HOUR = 3600000;
 
@@ -136,9 +140,10 @@ public final class BackupUtils {
         // write a copy of descriptor to the target directory
         Path target = new Path(backupInfo.getTableBackupDir(table));
         FileSystem targetFs = target.getFileSystem(conf);
-        FSTableDescriptors descriptors =
-          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf));
-        descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        try (FSTableDescriptors descriptors =
+          new FSTableDescriptors(targetFs, CommonFSUtils.getRootDir(conf))) {
+          descriptors.createTableDescriptorForTableDirectory(target, orig, false);
+        }
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
@@ -279,13 +284,8 @@ public final class BackupUtils {
     if (tables == null) {
       return null;
     }
-    String[] tableArray = tables.split(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND);
-
-    TableName[] ret = new TableName[tableArray.length];
-    for (int i = 0; i < tableArray.length; i++) {
-      ret[i] = TableName.valueOf(tableArray[i]);
-    }
-    return ret;
+    return Splitter.on(BackupRestoreConstants.TABLENAME_DELIMITER_IN_COMMAND).splitToStream(tables)
+      .map(TableName::valueOf).toArray(TableName[]::new);
   }
 
   /**
@@ -361,6 +361,10 @@ public final class BackupUtils {
    * @return host name
    */
   public static String parseHostFromOldLog(Path p) {
+    // Skip master wals
+    if (p.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)) {
+      return null;
+    }
     try {
       String n = p.getName();
       int idx = n.lastIndexOf(LOGNAME_SEPARATOR);
@@ -594,8 +598,7 @@ public final class BackupUtils {
       }
 
       private long getTimestamp(String backupId) {
-        String[] split = backupId.split("_");
-        return Long.parseLong(split[1]);
+        return Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
       }
     });
     return infos;
@@ -687,21 +690,38 @@ public final class BackupUtils {
     return isValid;
   }
 
-  public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
-    throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    String tmp =
-      conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
-    Path path = new Path(tmp + Path.SEPARATOR + "bulk_output-" + tableName + "-"
-      + EnvironmentEdgeManager.currentTime());
+  public static Path getBulkOutputDir(Path restoreRootDir, String tableName, Configuration conf,
+    boolean deleteOnExit) throws IOException {
+    FileSystem fs = restoreRootDir.getFileSystem(conf);
+    Path path = new Path(restoreRootDir,
+      "bulk_output-" + tableName + "-" + EnvironmentEdgeManager.currentTime());
     if (deleteOnExit) {
       fs.deleteOnExit(path);
     }
     return path;
   }
 
-  public static Path getBulkOutputDir(String tableName, Configuration conf) throws IOException {
-    return getBulkOutputDir(tableName, conf, true);
+  public static Path getBulkOutputDir(Path restoreRootDir, String tableName, Configuration conf)
+    throws IOException {
+    return getBulkOutputDir(restoreRootDir, tableName, conf, true);
+  }
+
+  public static Path getBulkOutputDir(String tableName, Configuration conf, boolean deleteOnExit)
+    throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    return getBulkOutputDir(getTmpRestoreOutputDir(fs, conf), tableName, conf, deleteOnExit);
+  }
+
+  /**
+   * Build temporary output path
+   * @param fs   filesystem for default output dir
+   * @param conf configuration
+   * @return output path
+   */
+  public static Path getTmpRestoreOutputDir(FileSystem fs, Configuration conf) {
+    String tmp =
+      conf.get(HConstants.TEMPORARY_FS_DIRECTORY_KEY, fs.getHomeDirectory() + "/hbase-staging");
+    return new Path(tmp);
   }
 
   public static String getFileNameCompatibleString(TableName table) {
@@ -734,7 +754,7 @@ public final class BackupUtils {
   public static String findMostRecentBackupId(String[] backupIds) {
     long recentTimestamp = Long.MIN_VALUE;
     for (String backupId : backupIds) {
-      long ts = Long.parseLong(backupId.split("_")[1]);
+      long ts = Long.parseLong(Iterators.get(Splitter.on('_').split(backupId).iterator(), 1));
       if (ts > recentTimestamp) {
         recentTimestamp = ts;
       }

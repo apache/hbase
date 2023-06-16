@@ -93,6 +93,14 @@ public class CacheConfig {
   public static final String DROP_BEHIND_CACHE_COMPACTION_KEY =
     "hbase.hfile.drop.behind.compaction";
 
+  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file.list.path";
+
+  /**
+   * Configuration key to set interval for persisting bucket cache to disk.
+   */
+  public static final String BUCKETCACHE_PERSIST_INTERVAL_KEY =
+    "hbase.bucketcache.persist.intervalinmillis";
+
   // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
@@ -200,7 +208,7 @@ public class CacheConfig {
   }
 
   /**
-   * Constructs a cache configuration copied from the specified configuration. n
+   * Constructs a cache configuration copied from the specified configuration.
    */
   public CacheConfig(CacheConfig cacheConf) {
     this.cacheDataOnRead = cacheConf.cacheDataOnRead;

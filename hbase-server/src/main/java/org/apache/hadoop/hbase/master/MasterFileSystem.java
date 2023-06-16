@@ -306,7 +306,7 @@ public class MasterFileSystem {
   }
 
   /**
-   * Make sure the directories under rootDir have good permissions. Create if necessary. nn
+   * Make sure the directories under rootDir have good permissions. Create if necessary.
    */
   private void checkSubDir(final Path p, final String dirPermsConfName) throws IOException {
     FileSystem fs = p.getFileSystem(conf);
@@ -335,7 +335,7 @@ public class MasterFileSystem {
 
   /**
    * Check permissions for bulk load staging directory. This directory has special hidden
-   * permissions. Create it if necessary. n
+   * permissions. Create it if necessary.
    */
   private void checkStagingDir() throws IOException {
     Path p = new Path(this.rootdir, HConstants.BULKLOAD_STAGING_DIR_NAME);

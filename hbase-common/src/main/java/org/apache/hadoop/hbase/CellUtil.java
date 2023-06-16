@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.function.Function;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -78,7 +77,8 @@ public final class CellUtil {
   /**
    * Makes a column in family:qualifier form from separate byte arrays.
    * <p>
-   * Not recommended for usage as this is old-style API. nn * @return family:qualifier
+   * Not recommended for usage as this is old-style API.
+   * @return family:qualifier
    */
   public static byte[] makeColumn(byte[] family, byte[] qualifier) {
     return Bytes.add(family, COLUMN_FAMILY_DELIM_ARRAY, qualifier);
@@ -293,9 +293,7 @@ public final class CellUtil {
     return destinationOffset + vlen;
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterables</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterables</code> */
   public static CellScanner
     createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
@@ -321,17 +319,15 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellIterable</code>
-   */
+  /** Returns CellScanner interface over <code>cellIterable</code> */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
     if (cellIterable == null) return null;
     return createCellScanner(cellIterable.iterator());
   }
 
   /**
-   * n * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code>
-   * is null
+   * Returns CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   * null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
     if (cells == null) return null;
@@ -353,9 +349,7 @@ public final class CellUtil {
     };
   }
 
-  /**
-   * n * @return CellScanner interface over <code>cellArray</code>
-   */
+  /** Returns CellScanner interface over <code>cellArray</code> */
   public static CellScanner createCellScanner(final Cell[] cellArray) {
     return new CellScanner() {
       private final Cell[] cells = cellArray;
@@ -486,8 +480,7 @@ public final class CellUtil {
   }
 
   /**
-   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal n * @param buf
-   * the serialized keyvalue format byte[]
+   * Finds if the qualifier part of the cell and the KV serialized byte[] are equal.
    * @return true if the qualifier matches, false otherwise
    */
   public static boolean matchingQualifier(final Cell left, final byte[] buf) {
@@ -561,8 +554,8 @@ public final class CellUtil {
   }
 
   /**
-   * @return True if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
-   *         or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
+   * Return true if a delete type, a {@link KeyValue.Type#Delete} or a {KeyValue.Type#DeleteFamily}
+   * or a {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
   @SuppressWarnings("deprecation")
   public static boolean isDelete(final Cell cell) {
@@ -572,13 +565,13 @@ public final class CellUtil {
   /** Returns True if this cell is a Put. */
   @SuppressWarnings("deprecation")
   public static boolean isPut(Cell cell) {
-    return cell.getTypeByte() == Type.Put.getCode();
+    return cell.getTypeByte() == KeyValue.Type.Put.getCode();
   }
 
   /**
    * Sets the given timestamp to the cell. Note that this method is a LimitedPrivate API and may
-   * change between minor releases. nn * @throws IOException when the passed cell is not of type
-   * {@link ExtendedCell}
+   * change between minor releases.
+   * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
   public static void setTimestamp(Cell cell, long ts) throws IOException {
@@ -587,8 +580,7 @@ public final class CellUtil {
 
   /**
    * Sets the given timestamp to the cell. Note that this method is a LimitedPrivate API and may
-   * change between minor releases. n * @param ts buffer containing the timestamp value
-   * @param tsOffset offset to the new timestamp
+   * change between minor releases.
    * @throws IOException when the passed cell is not of type {@link ExtendedCell}
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -603,6 +595,7 @@ public final class CellUtil {
   }
 
   /**
+   * Return the Key portion of the passed <code>cell</code> as a String.
    * @param cell         the cell to convert
    * @param rowConverter used to convert the row of the cell to a string
    * @return The Key portion of the passed <code>cell</code> as a String.
@@ -623,7 +616,7 @@ public final class CellUtil {
     sb.append('/');
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');
-    sb.append(Type.codeToType(cell.getTypeByte()));
+    sb.append(KeyValue.Type.codeToType(cell.getTypeByte()));
     if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
       sb.append("/vlen=");
       sb.append(cell.getValueLength());
@@ -676,15 +669,14 @@ public final class CellUtil {
     return CellComparator.getInstance().compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
   }
 
-  /**
-   * Compares the row of two keyvalues for equality nn * @return True if rows match.
-   */
+  /** Compares the row of two keyvalues for equality */
   public static boolean matchingRows(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
     short rrowlength = right.getRowLength();
     return matchingRows(left, lrowlength, right, rrowlength);
   }
 
+  /** Compares the row of two keyvalues for equality */
   public static boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
     final short rrowlength) {
     if (lrowlength != rrowlength) return false;
@@ -708,10 +700,7 @@ public final class CellUtil {
       right.getRowOffset(), rrowlength);
   }
 
-  /**
-   * Compares the row and column of two keyvalues for equality nn * @return True if same row and
-   * column.
-   */
+  /** Compares the row and column of two keyvalues for equality */
   public static boolean matchingRowColumn(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
     short rrowlength = right.getRowLength();
@@ -738,6 +727,7 @@ public final class CellUtil {
     return matchingColumn(left, lfamlength, lqlength, right, rfamlength, rqlength);
   }
 
+  /** Compares the row and column of two keyvalues for equality */
   public static boolean matchingRowColumnBytes(final Cell left, final Cell right) {
     int lrowlength = left.getRowLength();
     int rrowlength = right.getRowLength();

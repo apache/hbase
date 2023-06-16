@@ -144,12 +144,22 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.listTableDescriptors(pattern, includeSysTables);
   }
 
+  @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    return admin.listTableDescriptorsByState(isEnabled);
+  }
+
   public TableName[] listTableNames() throws IOException {
     return admin.listTableNames();
   }
 
   public TableName[] listTableNames(Pattern pattern, boolean includeSysTables) throws IOException {
     return admin.listTableNames(pattern, includeSysTables);
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    return admin.listTableNamesByState(isEnabled);
   }
 
   public TableDescriptor getDescriptor(TableName tableName)
@@ -676,6 +686,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.transitReplicationPeerSyncReplicationStateAsync(peerId, state);
   }
 
+  @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    return admin.isReplicationPeerEnabled(peerId);
+  }
+
   public void decommissionRegionServers(List<ServerName> servers, boolean offload)
     throws IOException {
     admin.decommissionRegionServers(servers, offload);
@@ -938,5 +953,16 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   @Override
   public void flushMasterStore() throws IOException {
     admin.flushMasterStore();
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    return admin.replicationPeerModificationSwitch(on, drainProcedures);
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    return admin.isReplicationPeerModificationEnabled();
   }
 }

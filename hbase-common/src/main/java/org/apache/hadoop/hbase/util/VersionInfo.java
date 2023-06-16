@@ -19,11 +19,15 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Version;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * This class finds the Version information for HBase.
@@ -137,9 +141,9 @@ public class VersionInfo {
    */
   private static String[] getVersionComponents(final String version) {
     assert (version != null);
-    String[] strComps = version.split("[\\.-]");
+    List<String> list = Splitter.onPattern("[\\.-]").splitToList(version);
+    String[] strComps = list.toArray(new String[list.size()]);
     assert (strComps.length > 0);
-
     String[] comps = new String[strComps.length];
     for (int i = 0; i < strComps.length; ++i) {
       if (StringUtils.isNumeric(strComps[i])) {
@@ -162,7 +166,7 @@ public class VersionInfo {
   }
 
   public static int getMajorVersion(String version) {
-    return Integer.parseInt(version.split("\\.")[0]);
+    return Integer.parseInt(Iterables.get(Splitter.on('.').split(version), 0));
   }
 
   public static void main(String[] args) {

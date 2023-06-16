@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALStreamReader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -189,7 +189,8 @@ public class TestRaceWhenCreatingReplicationSource {
 
       @Override
       public boolean evaluate() throws Exception {
-        try (WAL.Reader reader = WALFactory.createReader(FS, LOG_PATH, UTIL.getConfiguration())) {
+        try (WALStreamReader reader =
+          WALFactory.createStreamReader(FS, LOG_PATH, UTIL.getConfiguration())) {
           return reader.next() != null;
         } catch (IOException e) {
           return false;
@@ -201,7 +202,8 @@ public class TestRaceWhenCreatingReplicationSource {
         return "Replication has not catched up";
       }
     });
-    try (WAL.Reader reader = WALFactory.createReader(FS, LOG_PATH, UTIL.getConfiguration())) {
+    try (WALStreamReader reader =
+      WALFactory.createStreamReader(FS, LOG_PATH, UTIL.getConfiguration())) {
       Cell cell = reader.next().getEdit().getCells().get(0);
       assertEquals(1, Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
       assertArrayEquals(CF, CellUtil.cloneFamily(cell));

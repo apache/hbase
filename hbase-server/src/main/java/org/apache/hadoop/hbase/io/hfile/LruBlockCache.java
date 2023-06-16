@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -147,10 +148,12 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   /**
    * Defined the cache map as {@link ConcurrentHashMap} here, because in
-   * {@link LruBlockCache#getBlock}, we need to guarantee the atomicity of map#computeIfPresent
-   * (key, func). Besides, the func method must execute exactly once only when the key is present
-   * and under the lock context, otherwise the reference count will be messed up. Notice that the
-   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that.
+   * {@link LruBlockCache#getBlock}, we need to guarantee the atomicity of map#k (key, func).
+   * Besides, the func method must execute exactly once only when the key is present and under the
+   * lock context, otherwise the reference count will be messed up. Notice that the
+   * {@link java.util.concurrent.ConcurrentSkipListMap} can not guarantee that. Some code using
+   * #computeIfPresent also expects the supplier to be executed only once. ConcurrentHashMap can
+   * guarantee that. Other types may not.
    */
   private transient final ConcurrentHashMap<BlockCacheKey, LruCachedBlock> map;
 
@@ -174,13 +177,25 @@ public class LruBlockCache implements FirstLevelBlockCache {
   private final AtomicLong size;
 
   /** Current size of data blocks */
-  private final LongAdder dataBlockSize;
+  private final LongAdder dataBlockSize = new LongAdder();
+
+  /** Current size of index blocks */
+  private final LongAdder indexBlockSize = new LongAdder();
+
+  /** Current size of bloom blocks */
+  private final LongAdder bloomBlockSize = new LongAdder();
 
   /** Current number of cached elements */
   private final AtomicLong elements;
 
   /** Current number of cached data block elements */
-  private final LongAdder dataBlockElements;
+  private final LongAdder dataBlockElements = new LongAdder();
+
+  /** Current number of cached index block elements */
+  private final LongAdder indexBlockElements = new LongAdder();
+
+  /** Current number of cached bloom block elements */
+  private final LongAdder bloomBlockElements = new LongAdder();
 
   /** Cache access count (sequential ID) */
   private final AtomicLong count;
@@ -307,8 +322,6 @@ public class LruBlockCache implements FirstLevelBlockCache {
     this.stats = new CacheStats(this.getClass().getSimpleName());
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
-    this.dataBlockElements = new LongAdder();
-    this.dataBlockSize = new LongAdder();
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
     this.size = new AtomicLong(this.overhead);
     this.hardCapacityLimitFactor = hardLimitFactor;
@@ -417,7 +430,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     long val = elements.incrementAndGet();
-    if (buf.getBlockType().isData()) {
+    if (buf.getBlockType().isBloom()) {
+      bloomBlockElements.increment();
+    } else if (buf.getBlockType().isIndex()) {
+      indexBlockElements.increment();
+    } else if (buf.getBlockType().isData()) {
       dataBlockElements.increment();
     }
     if (LOG.isTraceEnabled()) {
@@ -473,8 +490,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (evict) {
       heapsize *= -1;
     }
-    if (bt != null && bt.isData()) {
-      dataBlockSize.add(heapsize);
+    if (bt != null) {
+      if (bt.isBloom()) {
+        bloomBlockSize.add(heapsize);
+      } else if (bt.isIndex()) {
+        indexBlockSize.add(heapsize);
+      } else if (bt.isData()) {
+        dataBlockSize.add(heapsize);
+      }
     }
     return size.addAndGet(heapsize);
   }
@@ -491,6 +514,7 @@ public class LruBlockCache implements FirstLevelBlockCache {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
+    // Note: 'map' must be a ConcurrentHashMap or the supplier may be invoked more than once.
     LruCachedBlock cb = map.computeIfPresent(cacheKey, (key, val) -> {
       // It will be referenced by RPC path, so increase here. NOTICE: Must do the retain inside
       // this block. because if retain outside the map#computeIfPresent, the evictBlock may remove
@@ -572,31 +596,46 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    LruCachedBlock previous = map.remove(block.getCacheKey());
-    if (previous == null) {
+    final MutableBoolean evicted = new MutableBoolean(false);
+    // Note: 'map' must be a ConcurrentHashMap or the supplier may be invoked more than once.
+    map.computeIfPresent(block.getCacheKey(), (k, v) -> {
+      // Run the victim handler before we remove the mapping in the L1 map. It must complete
+      // quickly because other removal or insertion operations can be blocked in the meantime.
+      if (evictedByEvictionProcess && victimHandler != null) {
+        victimHandler.cacheBlock(k, v.getBuffer());
+      }
+      // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
+      // NOT move this up because if we do that then the victimHandler may access the buffer with
+      // refCnt = 0 which is disallowed.
+      v.getBuffer().release();
+      evicted.setTrue();
+      // By returning null from the supplier we remove the mapping from the L1 map.
+      return null;
+    });
+    // If we didn't find anything to evict there is nothing more to do here.
+    if (evicted.isFalse()) {
       return 0;
     }
+    // We evicted the block so update L1 statistics.
     updateSizeMetrics(block, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    if (block.getBuffer().getBlockType().isData()) {
+    BlockType bt = block.getBuffer().getBlockType();
+    if (bt.isBloom()) {
+      bloomBlockElements.decrement();
+    } else if (bt.isIndex()) {
+      indexBlockElements.decrement();
+    } else if (bt.isData()) {
       dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
       // update the stats counter.
       stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
-      if (victimHandler != null) {
-        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
-      }
     }
-    // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
-    // NOT move this up because if do that then the victimHandler may access the buffer with
-    // refCnt = 0 which is disallowed.
-    previous.getBuffer().release();
     return block.heapSize();
   }
 
@@ -851,6 +890,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
     return this.dataBlockSize.sum();
   }
 
+  public long getCurrentIndexSize() {
+    return this.indexBlockSize.sum();
+  }
+
+  public long getCurrentBloomSize() {
+    return this.bloomBlockSize.sum();
+  }
+
   @Override
   public long getFreeSize() {
     return getMaxSize() - getCurrentSize();
@@ -869,6 +916,14 @@ public class LruBlockCache implements FirstLevelBlockCache {
   @Override
   public long getDataBlockCount() {
     return this.dataBlockElements.sum();
+  }
+
+  public long getIndexBlockCount() {
+    return this.indexBlockElements.sum();
+  }
+
+  public long getBloomBlockCount() {
+    return this.bloomBlockElements.sum();
   }
 
   EvictionThread getEvictionThread() {

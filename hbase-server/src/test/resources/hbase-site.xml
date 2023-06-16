@@ -277,4 +277,9 @@
     <value>3</value>
     <description>Default is unbounded</description>
   </property>
+  <property>
+    <name>hbase.bucketcache.queue.addition.waittime</name>
+    <value>1000</value>
+    <description>Default is 0</description>
+  </property>
 </configuration>

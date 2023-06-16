@@ -140,8 +140,8 @@ If this list goes out of date or you can't reach the listed person, reach out to
 
 | 1.7
 | Reid Chan
-| Check the https://hbase.apache.org/downloads.html[download] page
-| *NOT YET*
+| 1.7.2
+| August 2022
 
 | 2.0
 | Michael Stack
@@ -164,6 +164,11 @@ If this list goes out of date or you can't reach the listed person, reach out to
 | October 2021
 
 | 2.4
+| Andrew Purtell
+| Check the https://hbase.apache.org/downloads.html[download] page
+| *NOT YET*
+
+| 2.5
 | Andrew Purtell
 | Check the https://hbase.apache.org/downloads.html[download] page
 | *NOT YET*

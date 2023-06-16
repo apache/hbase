@@ -201,7 +201,7 @@ public interface Store {
   /**
    * Checks the underlying store files, and opens the files that have not been opened, and removes
    * the store file readers for store files no longer available. Mainly used by secondary region
-   * replicas to keep up to date with the primary region files. n
+   * replicas to keep up to date with the primary region files.
    */
   void refreshStoreFiles() throws IOException;
 
@@ -240,4 +240,16 @@ public interface Store {
    *         if you try to set a configuration.
    */
   Configuration getReadOnlyConfiguration();
+
+  /** Returns count of bloom filter results for this store. */
+  long getBloomFilterRequestsCount();
+
+  /** Returns count of negative results for bloom filter requests for this store. */
+  long getBloomFilterNegativeResultsCount();
+
+  /**
+   * Returns count of requests which could have used bloom filters, but they weren't configured or
+   * loaded.
+   */
+  long getBloomFilterEligibleRequestsCount();
 }

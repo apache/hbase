@@ -23,22 +23,13 @@
   <parent>
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-build-configuration</artifactId>
-    <version>3.0.0-alpha-4-SNAPSHOT</version>
+    <version>${revision}</version>
     <relativePath>../hbase-build-configuration</relativePath>
   </parent>
   <artifactId>hbase-rest</artifactId>
   <name>Apache HBase - Rest</name>
   <description>HBase Rest Server</description>
   <dependencies>
-    <!--This one is upfront to get in front of
-         any dependency that pulls in jersey-core.
-         Jersey-core has implemented version 1
-         Interfaces of what is in this dependency
-         which does version 2.-->
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-    </dependency>
     <!-- Intra-project dependencies -->
     <dependency>
       <groupId>org.apache.hbase</groupId>
@@ -208,11 +199,6 @@
     <dependency>
       <groupId>org.apache.kerby</groupId>
       <artifactId>kerb-simplekdc</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-minikdc</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -456,6 +442,11 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-auth</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minikdc</artifactId>
+          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>

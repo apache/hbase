@@ -30,7 +30,7 @@ public class NanoTimer {
   private long cumulate = 0;
 
   /**
-   * Constructor n * Start the timer upon construction.
+   * Constructor Start the timer upon construction.
    */
   public NanoTimer(boolean start) {
     if (start) this.start();
@@ -99,7 +99,7 @@ public class NanoTimer {
 
   /**
    * A utility method to format a time duration in nano seconds into a human understandable stirng.
-   * n * Time duration in nano seconds.
+   * Time duration in nano seconds.
    * @return String representation.
    */
   public static String nanoTimeToString(long t) {
@@ -163,7 +163,7 @@ public class NanoTimer {
   }
 
   /**
-   * Simple tester. n
+   * Simple tester.
    */
   public static void main(String[] args) {
     long i = 7;

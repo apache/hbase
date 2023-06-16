@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -41,10 +40,13 @@ public class TestCellComparator {
     HBaseClassTestRule.forClass(TestCellComparator.class);
 
   private CellComparator comparator = CellComparator.getInstance();
+  private CellComparator innerStoreComparator = InnerStoreCellComparator.INNER_STORE_COMPARATOR;
+
   byte[] row1 = Bytes.toBytes("row1");
   byte[] row2 = Bytes.toBytes("row2");
   byte[] row_1_0 = Bytes.toBytes("row10");
 
+  byte[] fam0 = HConstants.EMPTY_BYTE_ARRAY;
   byte[] fam1 = Bytes.toBytes("fam1");
   byte[] fam2 = Bytes.toBytes("fam2");
   byte[] fam_1_2 = Bytes.toBytes("fam12");
@@ -58,51 +60,69 @@ public class TestCellComparator {
   public void testCompareCells() {
     KeyValue kv1 = new KeyValue(row1, fam1, qual1, val);
     KeyValue kv2 = new KeyValue(row2, fam1, qual1, val);
-    assertTrue((comparator.compare(kv1, kv2)) < 0);
+    assertTrue(comparator.compare(kv1, kv2) < 0);
 
     kv1 = new KeyValue(row1, fam2, qual1, val);
     kv2 = new KeyValue(row1, fam1, qual1, val);
-    assertTrue((comparator.compareFamilies(kv1, kv2) > 0));
+    assertTrue(comparator.compareFamilies(kv1, kv2) > 0);
 
     kv1 = new KeyValue(row1, fam1, qual1, 1L, val);
     kv2 = new KeyValue(row1, fam1, qual1, 2L, val);
-    assertTrue((comparator.compare(kv1, kv2) > 0));
+    assertTrue(comparator.compare(kv1, kv2) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Maximum);
-    assertTrue((comparator.compare(kv1, kv2) > 0));
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Maximum);
+    assertTrue(comparator.compare(kv1, kv2) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    assertTrue((CellUtil.equals(kv1, kv2)));
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    assertTrue(CellUtil.equals(kv1, kv2));
+  }
+
+  @Test
+  public void testCompareCellsWithEmptyFamily() {
+    KeyValue kv1 = new KeyValue(row1, fam0, qual1, val);
+    KeyValue kv2 = new KeyValue(row1, fam1, qual1, val);
+    assertTrue(comparator.compare(kv1, kv2) < 0);
+    assertTrue(innerStoreComparator.compare(kv1, kv2) < 0);
+
+    kv1 = new KeyValue(row1, fam0, qual2, val);
+    kv2 = new KeyValue(row1, fam0, qual1, val);
+    assertTrue(comparator.compare(kv1, kv2) > 0);
+    assertTrue(innerStoreComparator.compare(kv1, kv2) > 0);
+
+    kv1 = new KeyValue(row1, fam0, qual2, val);
+    kv2 = new KeyValue(row1, fam0, qual1, val);
+    assertTrue(comparator.compareFamilies(kv1, kv2) == 0);
+    assertTrue(innerStoreComparator.compareFamilies(kv1, kv2) == 0);
+
+    kv1 = new KeyValue(row1, fam1, qual2, val);
+    kv2 = new KeyValue(row1, fam1, qual1, val);
+    assertTrue(comparator.compareFamilies(kv1, kv2) == 0);
+    assertTrue(innerStoreComparator.compareFamilies(kv1, kv2) == 0);
   }
 
   @Test
   public void testCompareCellWithKey() throws Exception {
     KeyValue kv1 = new KeyValue(row1, fam1, qual1, val);
     KeyValue kv2 = new KeyValue(row2, fam1, qual1, val);
-    assertTrue(
-      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) < 0);
+    assertTrue(PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length) < 0);
 
     kv1 = new KeyValue(row1, fam2, qual1, val);
     kv2 = new KeyValue(row1, fam1, qual1, val);
-    assertTrue(
-      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    assertTrue(PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length) > 0);
 
     kv1 = new KeyValue(row1, fam1, qual1, 1L, val);
     kv2 = new KeyValue(row1, fam1, qual1, 2L, val);
-    assertTrue(
-      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    assertTrue(PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Maximum);
-    assertTrue(
-      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) > 0);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Maximum);
+    assertTrue(PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length) > 0);
 
-    kv1 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    kv2 = new KeyValue(row1, fam1, qual1, 1L, Type.Put);
-    assertTrue(
-      (PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length)) == 0);
+    kv1 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1L, KeyValue.Type.Put);
+    assertTrue(PrivateCellUtil.compare(comparator, kv1, kv2.getKey(), 0, kv2.getKey().length) == 0);
   }
 
   @Test
@@ -234,13 +254,10 @@ public class TestCellComparator {
     // This will output the keys incorrectly.
     boolean assertion = false;
     int count = 0;
-    try {
-      for (Cell k : set) {
-        assertTrue("count=" + count + ", " + k.toString(), count++ == k.getTimestamp());
+    for (Cell k : set) {
+      if (!(count++ == k.getTimestamp())) {
+        assertion = true;
       }
-    } catch (AssertionError e) {
-      // Expected
-      assertion = true;
     }
     assertTrue(assertion);
     // Make set with good comparator

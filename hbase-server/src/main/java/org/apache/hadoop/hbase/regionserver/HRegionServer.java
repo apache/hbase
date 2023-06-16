@@ -19,8 +19,17 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK;
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_KEY;
+import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore.NAMED_QUEUE_CHORE_DURATION_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_CHORE_DURATION_KEY;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
+import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.util.DNS.UNSAFE_RS_HOSTNAME_KEY;
 
 import io.opentelemetry.api.trace.Span;
@@ -90,7 +99,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.client.locking.LockServiceClient;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -111,7 +120,7 @@ import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.RSMobFileCleanerChore;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.SlowLogTableOpsChore;
+import org.apache.hadoop.hbase.namequeues.NamedQueueServiceChore;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -134,7 +143,10 @@ import org.apache.hadoop.hbase.regionserver.http.RSStatusServlet;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.FlushThroughputControllerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -174,6 +186,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.ServiceDescriptor;
@@ -194,7 +207,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Reg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.UserLoad;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.Coprocessor.Builder;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -367,7 +379,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private final RegionServerAccounting regionServerAccounting;
 
-  private SlowLogTableOpsChore slowLogTableOpsChore = null;
+  private NamedQueueServiceChore namedQueueServiceChore = null;
 
   // Block cache
   private BlockCache blockCache;
@@ -469,6 +481,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private Timer abortMonitor;
 
   private RegionReplicationBufferManager regionReplicationBufferManager;
+
+  /*
+   * Chore that creates replication marker rows.
+   */
+  private ReplicationMarkerChore replicationMarkerChore;
 
   /**
    * Starts a HRegionServer at the default location.
@@ -751,6 +768,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   public boolean isClusterUp() {
     return this.masterless
       || (this.clusterStatusTracker != null && this.clusterStatusTracker.isClusterUp());
+  }
+
+  private void initializeReplicationMarkerChore() {
+    boolean replicationMarkerEnabled =
+      conf.getBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
+    // If replication or replication marker is not enabled then return immediately.
+    if (replicationMarkerEnabled) {
+      int period = conf.getInt(REPLICATION_MARKER_CHORE_DURATION_KEY,
+        REPLICATION_MARKER_CHORE_DURATION_DEFAULT);
+      replicationMarkerChore = new ReplicationMarkerChore(this, this, period, conf);
+    }
   }
 
   /**
@@ -1159,7 +1187,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     serverLoad.setReadRequestsCount(this.metricsRegionServerImpl.getReadRequestsCount());
     serverLoad.setWriteRequestsCount(this.metricsRegionServerImpl.getWriteRequestsCount());
     Set<String> coprocessors = getWAL(null).getCoprocessorHost().getCoprocessors();
-    Builder coprocessorBuilder = Coprocessor.newBuilder();
+    Coprocessor.Builder coprocessorBuilder = Coprocessor.newBuilder();
     for (String coprocessor : coprocessors) {
       serverLoad.addCoprocessors(coprocessorBuilder.setName(coprocessor).build());
     }
@@ -1346,22 +1374,27 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           String hostnameFromMasterPOV = e.getValue();
           this.serverName = ServerName.valueOf(hostnameFromMasterPOV,
             rpcServices.getSocketAddress().getPort(), this.startcode);
+          String expectedHostName = rpcServices.getSocketAddress().getHostName();
+          // if Master use-ip is enabled, RegionServer use-ip will be enabled by default even if it
+          // is set to disable. so we will use the ip of the RegionServer to compare with the
+          // hostname passed by the Master, see HBASE-27304 for details.
           if (
-            !StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(useThisHostnameInstead)
+            StringUtils.isBlank(useThisHostnameInstead) && getActiveMaster().isPresent()
+              && InetAddresses.isInetAddress(getActiveMaster().get().getHostname())
           ) {
+            expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
+          }
+          boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
+            ? hostnameFromMasterPOV.equals(expectedHostName)
+            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+          if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
-              + this.useThisHostnameInstead + ", but now=" + hostnameFromMasterPOV;
+              + (StringUtils.isBlank(useThisHostnameInstead)
+                ? rpcServices.getSocketAddress().getHostName()
+                : this.useThisHostnameInstead)
+              + ", but now=" + hostnameFromMasterPOV;
             LOG.error(msg);
             throw new IOException(msg);
-          }
-          if (
-            StringUtils.isBlank(useThisHostnameInstead)
-              && !hostnameFromMasterPOV.equals(rpcServices.getSocketAddress().getHostName())
-          ) {
-            String msg = "Master passed us a different hostname to use; was="
-              + rpcServices.getSocketAddress().getHostName() + ", but now=" + hostnameFromMasterPOV;
-            LOG.error(msg);
           }
           continue;
         }
@@ -1700,7 +1733,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    WALFactory factory = new WALFactory(conf, serverName.toString(), this, true);
+    WALFactory factory = new WALFactory(conf, serverName, this, true);
     // TODO Replication make assumptions here based on the default filesystem impl
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
@@ -1718,7 +1751,21 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
     // Instantiate replication if replication enabled. Pass it the log directories.
     createNewReplicationInstance(conf, this, this.walFs, logDir, oldLogDir, factory);
+
+    WALActionsListener walEventListener = getWALEventTrackerListener(conf);
+    if (walEventListener != null && factory.getWALProvider() != null) {
+      factory.getWALProvider().addWALActionsListener(walEventListener);
+    }
     this.walFactory = factory;
+  }
+
+  private WALActionsListener getWALEventTrackerListener(Configuration conf) {
+    if (conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT)) {
+      WALEventTrackerListener listener =
+        new WALEventTrackerListener(conf, getNamedQueueRecorder(), getServerName());
+      return listener;
+    }
+    return null;
   }
 
   /**
@@ -1888,15 +1935,18 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.fsUtilizationChore != null) {
       choreService.scheduleChore(fsUtilizationChore);
     }
-    if (this.slowLogTableOpsChore != null) {
-      choreService.scheduleChore(slowLogTableOpsChore);
+    if (this.namedQueueServiceChore != null) {
+      choreService.scheduleChore(namedQueueServiceChore);
     }
     if (this.brokenStoreFileCleaner != null) {
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
-
     if (this.rsMobFileCleanerChore != null) {
       choreService.scheduleChore(rsMobFileCleanerChore);
+    }
+    if (replicationMarkerChore != null) {
+      LOG.info("Starting replication marker chore");
+      choreService.scheduleChore(replicationMarkerChore);
     }
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -1945,10 +1995,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     final boolean isSlowLogTableEnabled = conf.getBoolean(HConstants.SLOW_LOG_SYS_TABLE_ENABLED_KEY,
       HConstants.DEFAULT_SLOW_LOG_SYS_TABLE_ENABLED_KEY);
-    if (isSlowLogTableEnabled) {
+    final boolean walEventTrackerEnabled =
+      conf.getBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, WAL_EVENT_TRACKER_ENABLED_DEFAULT);
+
+    if (isSlowLogTableEnabled || walEventTrackerEnabled) {
       // default chore duration: 10 min
-      final int duration = conf.getInt("hbase.slowlog.systable.chore.duration", 10 * 60 * 1000);
-      slowLogTableOpsChore = new SlowLogTableOpsChore(this, duration, this.namedQueueRecorder);
+      // After <version number>, we will remove hbase.slowlog.systable.chore.duration conf property
+      final int slowLogChoreDuration = conf.getInt(HConstants.SLOW_LOG_SYS_TABLE_CHORE_DURATION_KEY,
+        DEFAULT_SLOW_LOG_SYS_TABLE_CHORE_DURATION);
+
+      final int namedQueueChoreDuration =
+        conf.getInt(NAMED_QUEUE_CHORE_DURATION_KEY, NAMED_QUEUE_CHORE_DURATION_DEFAULT);
+      // Considering min of slowLogChoreDuration and namedQueueChoreDuration
+      int choreDuration = Math.min(slowLogChoreDuration, namedQueueChoreDuration);
+
+      namedQueueServiceChore = new NamedQueueServiceChore(this, choreDuration,
+        this.namedQueueRecorder, this.getConnection());
     }
 
     if (this.nonceManager != null) {
@@ -1998,11 +2060,21 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     this.rsMobFileCleanerChore = new RSMobFileCleanerChore(this);
 
     registerConfigurationObservers();
+    initializeReplicationMarkerChore();
   }
 
   private void registerConfigurationObservers() {
+    // Register Replication if possible, as now we support recreating replication peer storage, for
+    // migrating across different replication peer storages online
+    if (replicationSourceHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSourceHandler);
+    }
+    if (!sameReplicationSourceAndSink && replicationSinkHandler instanceof ConfigurationObserver) {
+      configurationManager.registerObserver((ConfigurationObserver) replicationSinkHandler);
+    }
     // Registering the compactSplitThread object with the ConfigurationManager.
     configurationManager.registerObserver(this.compactSplitThread);
+    configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
   }
@@ -2292,8 +2364,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /**
    * Cause the server to exit without closing the regions it is serving, the log it is using and
    * without notifying the master. Used unit testing and on catastrophic events such as HDFS is
-   * yanked out from under hbase or we OOME. n * the reason we are aborting n * the exception that
-   * caused the abort, or null
+   * yanked out from under hbase or we OOME. the reason we are aborting the exception that caused
+   * the abort, or null
    */
   @Override
   public void abort(String reason, Throwable cause) {
@@ -2383,7 +2455,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       bootstrapNodeManager.stop();
     }
     if (this.cacheFlusher != null) {
-      this.cacheFlusher.join();
+      this.cacheFlusher.shutdown();
     }
     if (this.walRoller != null) {
       this.walRoller.close();
@@ -2504,7 +2576,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   /*
    * Let the master know we're here Run initialization using parameters passed us by the master.
    * @return A Map of key/value configurations we got from the Master else null if we failed to
-   * register. n
+   * register.
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) {
@@ -2904,6 +2976,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * <p>
    * If a close was in progress, this new request will be ignored, and an exception thrown.
    * </p>
+   * <p>
+   * Provides additional flag to indicate if this region blocks should be evicted from the cache.
+   * </p>
    * @param encodedName Region to close
    * @param abort       True if we are aborting
    * @param destination Where the Region is being moved too... maybe null if unknown.
@@ -3248,11 +3323,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return Optional.ofNullable(this.mobFileCache);
   }
 
-  /** Returns : Returns the ConfigurationManager object for testing purposes. */
-  ConfigurationManager getConfigurationManager() {
-    return configurationManager;
-  }
-
   CacheEvictionStats clearRegionBlockCache(Region region) {
     long evictedBlocks = 0;
 
@@ -3522,13 +3592,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   protected NamedQueueRecorder createNamedQueueRecord() {
-    final boolean isOnlineLogProviderEnabled = conf.getBoolean(
-      HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, HConstants.DEFAULT_ONLINE_LOG_PROVIDER_ENABLED);
-    if (isOnlineLogProviderEnabled) {
-      return NamedQueueRecorder.getInstance(conf);
-    } else {
-      return null;
-    }
+    return NamedQueueRecorder.getInstance(conf);
   }
 
   @Override
@@ -3562,9 +3626,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(executorStatusChore);
     shutdownChore(storefileRefresher);
     shutdownChore(fsUtilizationChore);
-    shutdownChore(slowLogTableOpsChore);
+    shutdownChore(namedQueueServiceChore);
     shutdownChore(brokenStoreFileCleaner);
     shutdownChore(rsMobFileCleanerChore);
+    shutdownChore(replicationMarkerChore);
   }
 
   @Override

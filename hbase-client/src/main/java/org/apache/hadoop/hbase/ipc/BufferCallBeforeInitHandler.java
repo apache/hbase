@@ -33,6 +33,8 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 @InterfaceAudience.Private
 class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
 
+  static final String NAME = "BufferCall";
+
   private enum BufferCallAction {
     FLUSH,
     FAIL
@@ -75,6 +77,11 @@ class BufferCallBeforeInitHandler extends ChannelDuplexHandler {
     } else {
       ctx.write(msg, promise);
     }
+  }
+
+  @Override
+  public void flush(ChannelHandlerContext ctx) throws Exception {
+    // do not flush anything out
   }
 
   @Override

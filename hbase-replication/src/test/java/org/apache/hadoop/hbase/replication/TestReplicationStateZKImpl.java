@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
@@ -77,10 +78,10 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     zkTimeoutCount = 0;
-    rqs = ReplicationStorageFactory.getReplicationQueueStorage(zkw, conf);
-    rp = ReplicationFactory.getReplicationPeers(zkw, conf);
+    rp =
+      ReplicationFactory.getReplicationPeers(FileSystem.get(utility.getConfiguration()), zkw, conf);
     OUR_KEY = ZKConfig.getZooKeeperClusterKey(conf);
   }
 

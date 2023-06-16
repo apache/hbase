@@ -99,6 +99,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private volatile long storefileIndexSize = 0;
   private volatile long totalStaticIndexSize = 0;
   private volatile long totalStaticBloomSize = 0;
+  private volatile long bloomFilterRequestsCount = 0;
+  private volatile long bloomFilterNegativeResultsCount = 0;
+  private volatile long bloomFilterEligibleRequestsCount = 0;
   private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
   private volatile double percentFileLocal = 0;
@@ -328,6 +331,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getBlockCacheHitCachingCount() {
+    return this.cacheStats != null ? this.cacheStats.getHitCachingCount() : 0L;
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     return this.cacheStats != null ? this.cacheStats.getMissCount() : 0L;
   }
@@ -335,6 +343,11 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   @Override
   public long getBlockCachePrimaryMissCount() {
     return this.cacheStats != null ? this.cacheStats.getPrimaryMissCount() : 0L;
+  }
+
+  @Override
+  public long getBlockCacheMissCachingCount() {
+    return this.cacheStats != null ? this.cacheStats.getMissCachingCount() : 0L;
   }
 
   @Override
@@ -617,6 +630,21 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getBloomFilterRequestsCount() {
+    return bloomFilterRequestsCount;
+  }
+
+  @Override
+  public long getBloomFilterNegativeResultsCount() {
+    return bloomFilterNegativeResultsCount;
+  }
+
+  @Override
+  public long getBloomFilterEligibleRequestsCount() {
+    return bloomFilterEligibleRequestsCount;
+  }
+
+  @Override
   public long getNumMutationsWithoutWAL() {
     return numMutationsWithoutWAL;
   }
@@ -778,6 +806,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         long tempStorefileIndexSize = 0;
         long tempTotalStaticIndexSize = 0;
         long tempTotalStaticBloomSize = 0;
+        long tempBloomFilterRequestsCount = 0;
+        long tempBloomFilterNegativeResultsCount = 0;
+        long tempBloomFilterEligibleRequestsCount = 0;
         long tempNumMutationsWithoutWAL = 0;
         long tempDataInMemoryWithoutWAL = 0;
         double tempPercentFileLocal = 0;
@@ -884,6 +915,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
             tempStorefileIndexSize += store.getStorefilesRootLevelIndexSize();
             tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
             tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
+            tempBloomFilterRequestsCount += store.getBloomFilterRequestsCount();
+            tempBloomFilterNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+            tempBloomFilterEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
             tempFlushedCellsCount += store.getFlushedCellsCount();
             tempCompactedCellsCount += store.getCompactedCellsCount();
             tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
@@ -948,12 +982,12 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
         lastRan = currentTime;
 
-        final WALProvider provider = regionServer.getWalFactory().getWALProvider();
-        final WALProvider metaProvider = regionServer.getWalFactory().getMetaWALProvider();
-        numWALFiles = (provider == null ? 0 : provider.getNumLogFiles())
-          + (metaProvider == null ? 0 : metaProvider.getNumLogFiles());
-        walFileSize = (provider == null ? 0 : provider.getLogFileSize())
-          + (metaProvider == null ? 0 : metaProvider.getLogFileSize());
+        List<WALProvider> providers = regionServer.getWalFactory().getAllWALProviders();
+        for (WALProvider provider : providers) {
+          numWALFiles += provider.getNumLogFiles();
+          walFileSize += provider.getLogFileSize();
+        }
+
         // Copy over computed values so that no thread sees half computed values.
         numStores = tempNumStores;
         numStoreFiles = tempNumStoreFiles;
@@ -984,6 +1018,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         storefileIndexSize = tempStorefileIndexSize;
         totalStaticIndexSize = tempTotalStaticIndexSize;
         totalStaticBloomSize = tempTotalStaticBloomSize;
+        bloomFilterRequestsCount = tempBloomFilterRequestsCount;
+        bloomFilterNegativeResultsCount = tempBloomFilterNegativeResultsCount;
+        bloomFilterEligibleRequestsCount = tempBloomFilterEligibleRequestsCount;
         numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
         dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
         percentFileLocal = tempPercentFileLocal;

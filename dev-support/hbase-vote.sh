@@ -159,7 +159,7 @@ function build_from_source() {
 
 function run_tests() {
     rm -f "${OUTPUT_PATH_PREFIX}"_run_tests
-    mvn package "${MVN_PROFILES[@]}" "${MVN_PROPERTIES[@]}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
+    mvn clean package "${MVN_PROFILES[@]}" "${MVN_PROPERTIES[@]}" -Dsurefire.rerunFailingTestsCount=3 2>&1 | tee "${OUTPUT_PATH_PREFIX}"_run_tests && UNIT_TEST_PASSED=1
 }
 
 function execute() {
@@ -175,7 +175,7 @@ function print_when_exit() {
         * Built from source (${JAVA_VERSION}): $( ((BUILD_FROM_SOURCE_PASSED)) && echo "ok" || echo "failed" )
          - mvn clean install ${MVN_PROPERTIES[@]} -DskipTests
         * Unit tests pass (${JAVA_VERSION}): $( ((UNIT_TEST_PASSED)) && echo "ok" || echo "failed" )
-         - mvn package ${MVN_PROFILES[@]} ${MVN_PROPERTIES[@]} -Dsurefire.rerunFailingTestsCount=3
+         - mvn clean package ${MVN_PROFILES[@]} ${MVN_PROPERTIES[@]} -Dsurefire.rerunFailingTestsCount=3
 __EOF
   if ((CHECKSUM_PASSED)) && ((SIGNATURE_PASSED)) && ((RAT_CHECK_PASSED)) && ((BUILD_FROM_SOURCE_PASSED)) && ((UNIT_TEST_PASSED)) ; then
     exit 0

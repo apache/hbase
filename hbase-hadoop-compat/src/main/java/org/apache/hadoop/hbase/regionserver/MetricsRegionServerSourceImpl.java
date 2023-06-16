@@ -48,6 +48,13 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   private final MetricHistogram scanSizeHisto;
   private final MetricHistogram scanTimeHisto;
 
+  private final MutableFastCounter blockBytesScannedCount;
+  private final MetricHistogram checkAndMutateBlockBytesScanned;
+  private final MetricHistogram getBlockBytesScanned;
+  private final MetricHistogram incrementBlockBytesScanned;
+  private final MetricHistogram appendBlockBytesScanned;
+  private final MetricHistogram scanBlockBytesScanned;
+
   private final MutableFastCounter slowPut;
   private final MutableFastCounter slowDelete;
   private final MutableFastCounter slowGet;
@@ -125,6 +132,16 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
     scanSizeHisto = getMetricsRegistry().newSizeHistogram(SCAN_SIZE_KEY);
     scanTimeHisto = getMetricsRegistry().newTimeHistogram(SCAN_TIME_KEY);
 
+    blockBytesScannedCount =
+      getMetricsRegistry().newCounter(BLOCK_BYTES_SCANNED_KEY, BLOCK_BYTES_SCANNED_DESC, 0L);
+    checkAndMutateBlockBytesScanned =
+      getMetricsRegistry().newSizeHistogram(CHECK_AND_MUTATE_BLOCK_BYTES_SCANNED_KEY);
+    getBlockBytesScanned = getMetricsRegistry().newSizeHistogram(GET_BLOCK_BYTES_SCANNED_KEY);
+    incrementBlockBytesScanned =
+      getMetricsRegistry().newSizeHistogram(INCREMENT_BLOCK_BYTES_SCANNED_KEY);
+    appendBlockBytesScanned = getMetricsRegistry().newSizeHistogram(APPEND_BLOCK_BYTES_SCANNED_KEY);
+    scanBlockBytesScanned = getMetricsRegistry().newSizeHistogram(SCAN_BLOCK_BYTES_SCANNED_KEY);
+
     flushTimeHisto = getMetricsRegistry().newTimeHistogram(FLUSH_TIME, FLUSH_TIME_DESC);
     flushMemstoreSizeHisto =
       getMetricsRegistry().newSizeHistogram(FLUSH_MEMSTORE_SIZE, FLUSH_MEMSTORE_SIZE_DESC);
@@ -192,18 +209,30 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void updateGet(long t) {
+  public void updateGet(long t, long blockBytesScanned) {
     getHisto.add(t);
+    if (blockBytesScanned > 0) {
+      blockBytesScannedCount.incr(blockBytesScanned);
+      getBlockBytesScanned.add(blockBytesScanned);
+    }
   }
 
   @Override
-  public void updateIncrement(long t) {
+  public void updateIncrement(long t, long blockBytesScanned) {
     incrementHisto.add(t);
+    if (blockBytesScanned > 0) {
+      blockBytesScannedCount.incr(blockBytesScanned);
+      incrementBlockBytesScanned.add(blockBytesScanned);
+    }
   }
 
   @Override
-  public void updateAppend(long t) {
+  public void updateAppend(long t, long blockBytesScanned) {
     appendHisto.add(t);
+    if (blockBytesScanned > 0) {
+      blockBytesScannedCount.incr(blockBytesScanned);
+      appendBlockBytesScanned.add(blockBytesScanned);
+    }
   }
 
   @Override
@@ -212,13 +241,13 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void updateScanSize(long scanSize) {
-    scanSizeHisto.add(scanSize);
-  }
-
-  @Override
-  public void updateScanTime(long t) {
-    scanTimeHisto.add(t);
+  public void updateScan(long time, long responseSize, long blockBytesScanned) {
+    scanTimeHisto.add(time);
+    scanSizeHisto.add(responseSize);
+    if (blockBytesScanned > 0) {
+      blockBytesScannedCount.incr(blockBytesScanned);
+      scanBlockBytesScanned.add(blockBytesScanned);
+    }
   }
 
   @Override
@@ -372,11 +401,16 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
           rsWrap.getBlockCacheHitCount())
         .addCounter(Interns.info(BLOCK_CACHE_PRIMARY_HIT_COUNT, BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC),
           rsWrap.getBlockCachePrimaryHitCount())
+        .addCounter(Interns.info(BLOCK_CACHE_HIT_CACHING_COUNT, BLOCK_CACHE_HIT_CACHING_COUNT_DESC),
+          rsWrap.getBlockCacheHitCachingCount())
         .addCounter(Interns.info(BLOCK_CACHE_MISS_COUNT, BLOCK_COUNT_MISS_COUNT_DESC),
           rsWrap.getBlockCacheMissCount())
         .addCounter(
           Interns.info(BLOCK_CACHE_PRIMARY_MISS_COUNT, BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC),
           rsWrap.getBlockCachePrimaryMissCount())
+        .addCounter(
+          Interns.info(BLOCK_CACHE_MISS_CACHING_COUNT, BLOCK_COUNT_MISS_CACHING_COUNT_DESC),
+          rsWrap.getBlockCacheMissCachingCount())
         .addCounter(Interns.info(BLOCK_CACHE_EVICTION_COUNT, BLOCK_CACHE_EVICTION_COUNT_DESC),
           rsWrap.getBlockCacheEvictedCount())
         .addCounter(
@@ -506,6 +540,13 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getTotalStaticIndexSize())
       .addGauge(Interns.info(STATIC_BLOOM_SIZE, STATIC_BLOOM_SIZE_DESC),
         rsWrap.getTotalStaticBloomSize())
+      .addCounter(Interns.info(BLOOM_FILTER_REQUESTS_COUNT, BLOOM_FILTER_REQUESTS_COUNT_DESC),
+        rsWrap.getBloomFilterRequestsCount())
+      .addCounter(
+        Interns.info(BLOOM_FILTER_NEGATIVE_RESULTS_COUNT, BLOOM_FILTER_NEGATIVE_RESULTS_COUNT_DESC),
+        rsWrap.getBloomFilterNegativeResultsCount())
+      .addCounter(Interns.info(BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT,
+        BLOOM_FILTER_ELIGIBLE_REQUESTS_COUNT_DESC), rsWrap.getBloomFilterEligibleRequestsCount())
       .addGauge(Interns.info(NUMBER_OF_MUTATIONS_WITHOUT_WAL, NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC),
         rsWrap.getNumMutationsWithoutWAL())
       .addGauge(Interns.info(DATA_SIZE_WITHOUT_WAL, DATA_SIZE_WITHOUT_WAL_DESC),
@@ -634,8 +675,12 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void updateCheckAndMutate(long t) {
-    checkAndMutateHisto.add(t);
+  public void updateCheckAndMutate(long time, long blockBytesScanned) {
+    checkAndMutateHisto.add(time);
+    if (blockBytesScanned > 0) {
+      blockBytesScannedCount.incr(blockBytesScanned);
+      checkAndMutateBlockBytesScanned.add(blockBytesScanned);
+    }
   }
 
   @Override

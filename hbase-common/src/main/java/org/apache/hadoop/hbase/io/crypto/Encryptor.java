@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Encryptor {
 
   /**
-   * Set the secret key n
+   * Set the secret key
    */
   public void setKey(Key key);
 
@@ -50,12 +50,12 @@ public interface Encryptor {
   public byte[] getIv();
 
   /**
-   * Set the initialization vector n
+   * Set the initialization vector
    */
   public void setIv(byte[] iv);
 
   /**
-   * Create a stream for encryption n
+   * Create a stream for encryption
    */
   public OutputStream createEncryptionStream(OutputStream out);
 

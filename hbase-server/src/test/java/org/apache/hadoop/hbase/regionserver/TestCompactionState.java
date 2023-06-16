@@ -147,8 +147,9 @@ public class TestCompactionState {
 
   /**
    * Load data to a table, flush it to disk, trigger compaction, confirm the compaction state is
-   * right and wait till it is done. nnn * @param singleFamily otherwise, run compaction on all cfs
-   * @param stateSource get the state by Admin or Master nn
+   * right and wait till it is done.
+   * @param singleFamily otherwise, run compaction on all cfs
+   * @param stateSource  get the state by Admin or Master
    */
   private void compaction(final String tableName, final int flushes,
     final CompactionState expectedState, boolean singleFamily, StateSource stateSource)

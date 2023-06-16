@@ -143,12 +143,6 @@ public final class MasterRegion {
     flusherAndCompactor.onUpdate();
   }
 
-  /**
-   * The design for master region is to only load all the data to memory at once when starting, so
-   * typically you should not use the get method to get a single row of data at runtime.
-   */
-  @RestrictedApi(explanation = "Should only be called in tests", link = "",
-      allowedOnPath = ".*/src/test/.*")
   public Result get(Get get) throws IOException {
     return region.get(get);
   }
@@ -277,6 +271,9 @@ public final class MasterRegion {
     WAL wal = createWAL(walFactory, walRoller, serverName, walFs, walRootDir, regionInfo);
     conf.set(HRegion.SPECIAL_RECOVERED_EDITS_DIR,
       replayEditsDir.makeQualified(walFs.getUri(), walFs.getWorkingDirectory()).toString());
+    // we do not do WAL splitting here so it is possible to have uncleanly closed WAL files, so we
+    // need to ignore EOFException.
+    conf.setBoolean(HRegion.RECOVERED_EDITS_IGNORE_EOF, true);
     return HRegion.openHRegionFromTableDir(conf, fs, tableDir, regionInfo, td, wal, null, null);
   }
 
@@ -383,7 +380,7 @@ public final class MasterRegion {
       params.archivedWalSuffix(), params.rollPeriodMs(), params.flushSize());
     walRoller.start();
 
-    WALFactory walFactory = new WALFactory(conf, server.getServerName().toString(), server, false);
+    WALFactory walFactory = new WALFactory(conf, server.getServerName(), server, false);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, td.getTableName());
     Path initializingFlag = new Path(tableDir, INITIALIZING_FLAG);
     Path initializedFlag = new Path(tableDir, INITIALIZED_FLAG);

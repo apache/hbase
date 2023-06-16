@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.client.locking;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -115,7 +115,7 @@ public class TestEntityLocks {
   }
 
   /**
-   * Test basic lock function - requestLock, await, unlock. n
+   * Test basic lock function - requestLock, await, unlock.
    */
   @Test
   public void testEntityLock() throws Exception {

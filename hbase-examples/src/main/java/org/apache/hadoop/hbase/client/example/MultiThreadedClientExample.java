@@ -30,7 +30,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.TableName;
@@ -240,7 +239,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
         byte[] rk = Bytes.toBytes(ThreadLocalRandom.current().nextLong());
         Put p = new Put(rk);
         p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(rk).setFamily(FAMILY)
-          .setQualifier(QUAL).setTimestamp(p.getTimestamp()).setType(Type.Put).setValue(value)
+          .setQualifier(QUAL).setTimestamp(p.getTimestamp()).setType(Cell.Type.Put).setValue(value)
           .build());
         t.put(p);
       }

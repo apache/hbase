@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
-import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -116,7 +115,7 @@ public interface MasterServices extends Server {
 
   /**
    * Check table is modifiable; i.e. exists and is offline.
-   * @param tableName Name of table to check. nnn
+   * @param tableName Name of table to check.
    */
   // We actually throw the exceptions mentioned in the
   void checkTableModifiable(final TableName tableName)
@@ -125,8 +124,8 @@ public interface MasterServices extends Server {
   /**
    * Create a table using the given table definition.
    * @param desc      The table definition
-   * @param splitKeys Starting row keys for the initial table regions. If null nn * a single region
-   *                  is created.
+   * @param splitKeys Starting row keys for the initial table regions. If null a single region is
+   *                  created.
    */
   long createTable(final TableDescriptor desc, final byte[][] splitKeys, final long nonceGroup,
     final long nonce) throws IOException;
@@ -139,7 +138,7 @@ public interface MasterServices extends Server {
 
   /**
    * Delete a table
-   * @param tableName The table name nnn
+   * @param tableName The table name
    */
   long deleteTable(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException;
@@ -147,7 +146,7 @@ public interface MasterServices extends Server {
   /**
    * Truncate a table
    * @param tableName      The table name
-   * @param preserveSplits True if the splits should be preserved nnn
+   * @param preserveSplits True if the splits should be preserved
    */
   public long truncateTable(final TableName tableName, final boolean preserveSplits,
     final long nonceGroup, final long nonce) throws IOException;
@@ -155,7 +154,7 @@ public interface MasterServices extends Server {
   /**
    * Modify the descriptor of an existing table
    * @param tableName  The table name
-   * @param descriptor The updated table descriptor nnn
+   * @param descriptor The updated table descriptor
    */
   long modifyTable(final TableName tableName, final TableDescriptor descriptor,
     final long nonceGroup, final long nonce) throws IOException;
@@ -168,14 +167,14 @@ public interface MasterServices extends Server {
 
   /**
    * Enable an existing table
-   * @param tableName The table name nnn
+   * @param tableName The table name
    */
   long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException;
 
   /**
    * Disable an existing table
-   * @param tableName The table name nnn
+   * @param tableName The table name
    */
   long disableTable(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException;
@@ -183,7 +182,7 @@ public interface MasterServices extends Server {
   /**
    * Add a new column to an existing table
    * @param tableName The table name
-   * @param column    The column definition nnn
+   * @param column    The column definition
    */
   long addColumn(final TableName tableName, final ColumnFamilyDescriptor column,
     final long nonceGroup, final long nonce) throws IOException;
@@ -191,7 +190,7 @@ public interface MasterServices extends Server {
   /**
    * Modify the column descriptor of an existing column in an existing table
    * @param tableName  The table name
-   * @param descriptor The updated column definition nnn
+   * @param descriptor The updated column definition
    */
   long modifyColumn(final TableName tableName, final ColumnFamilyDescriptor descriptor,
     final long nonceGroup, final long nonce) throws IOException;
@@ -205,7 +204,7 @@ public interface MasterServices extends Server {
   /**
    * Delete a column from an existing table
    * @param tableName  The table name
-   * @param columnName The column name nnn
+   * @param columnName The column name
    */
   long deleteColumn(final TableName tableName, final byte[] columnName, final long nonceGroup,
     final long nonce) throws IOException;
@@ -216,7 +215,7 @@ public interface MasterServices extends Server {
    * @param forcible       whether to force to merge even two regions are not adjacent
    * @param nonceGroup     used to detect duplicate
    * @param nonce          used to detect duplicate
-   * @return procedure Id n
+   * @return procedure Id
    */
   long mergeRegions(final RegionInfo[] regionsToMerge, final boolean forcible,
     final long nonceGroup, final long nonce) throws IOException;
@@ -227,7 +226,7 @@ public interface MasterServices extends Server {
    * @param splitRow   split point
    * @param nonceGroup used to detect duplicate
    * @param nonce      used to detect duplicate
-   * @return procedure Id n
+   * @return procedure Id
    */
   long splitRegion(final RegionInfo regionInfo, final byte[] splitRow, final long nonceGroup,
     final long nonce) throws IOException;
@@ -271,46 +270,46 @@ public interface MasterServices extends Server {
    * Abort a procedure.
    * @param procId                ID of the procedure
    * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
-   * @return true if aborted, false if procedure already completed or does not exist n
+   * @return true if aborted, false if procedure already completed or does not exist
    */
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
     throws IOException;
 
   /**
    * Get procedures
-   * @return procedure list n
+   * @return procedure list
    */
   public List<Procedure<?>> getProcedures() throws IOException;
 
   /**
    * Get locks
-   * @return lock list n
+   * @return lock list
    */
   public List<LockedResource> getLocks() throws IOException;
 
   /**
    * Get list of table descriptors by namespace
-   * @param name namespace name nn
+   * @param name namespace name
    */
   public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
 
   /**
    * Get list of table names by namespace
    * @param name namespace name
-   * @return table names n
+   * @return table names
    */
   public List<TableName> listTableNamesByNamespace(String name) throws IOException;
 
   /**
    * @param table the table for which last successful major compaction time is queried
    * @return the timestamp of the last successful major compaction for the passed table, or 0 if no
-   *         HFile resulting from a major compaction exists n
+   *         HFile resulting from a major compaction exists
    */
   public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
 
   /**
-   * n * @return the timestamp of the last successful major compaction for the passed region or 0 if
-   * no HFile resulting from a major compaction exists n
+   * Returns the timestamp of the last successful major compaction for the passed region or 0 if no
+   * HFile resulting from a major compaction exists
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 
@@ -391,6 +390,10 @@ public interface MasterServices extends Server {
   long transitReplicationPeerSyncReplicationState(String peerId, SyncReplicationState clusterState)
     throws ReplicationException, IOException;
 
+  boolean replicationPeerModificationSwitch(boolean on) throws IOException;
+
+  boolean isReplicationPeerModificationEnabled();
+
   /** Returns {@link LockManager} to lock namespaces/tables/regions. */
   LockManager getLockManager();
 
@@ -434,8 +437,8 @@ public interface MasterServices extends Server {
   RSGroupInfoManager getRSGroupInfoManager();
 
   /**
-   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized, false
-   * is returned.
+   * Queries the state of the {@code LoadBalancerStateStore}. If the balancer is not initialized,
+   * false is returned.
    * @return The state of the load balancer, or false if the load balancer isn't defined.
    */
   boolean isBalancerOn();

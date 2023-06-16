@@ -76,7 +76,7 @@ public class HBaseFsckRepair {
   /**
    * Fix unassigned by creating/transition the unassigned ZK node for this region to OFFLINE state
    * with a special flag to tell the master that this is a forced operation by HBCK. This assumes
-   * that info is in META. nnnn
+   * that info is in META.
    */
   public static void fixUnassigned(Admin admin, RegionInfo region)
     throws IOException, KeeperException, InterruptedException {
@@ -150,7 +150,7 @@ public class HBaseFsckRepair {
     Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
-    Put put = MetaTableAccessor.makePutFromRegionInfo(hri, EnvironmentEdgeManager.currentTime());
+    Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
     if (numReplicas > 1) {
       Random rand = ThreadLocalRandom.current();
       ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);

@@ -116,7 +116,8 @@ public interface Table extends Closeable {
    * @param results Empty Object[], same size as actions. Provides access to partial results, in
    *                case an exception is thrown. A null in the result array means that the call for
    *                that action failed, even after retries. The order of the objects in the results
-   *                array corresponds to the order of actions in the request list. n * @since 0.90.0
+   *                array corresponds to the order of actions in the request list.
+   * @since 0.90.0
    */
   default void batch(final List<? extends Row> actions, final Object[] results)
     throws IOException, InterruptedException {
@@ -264,8 +265,8 @@ public interface Table extends Closeable {
    * @apiNote In 3.0.0 version, the input list {@code deletes} will no longer be modified. Also,
    *          {@link #put(List)} runs pre-flight validations on the input list on client. Currently
    *          {@link #delete(List)} doesn't run validations on the client, there is no need
-   *          currently, but this may change in the future. An * {@link IllegalArgumentException}
-   *          will be thrown in this case.
+   *          currently, but this may change in the future. An {@link IllegalArgumentException} will
+   *          be thrown in this case.
    */
   default void delete(List<Delete> deletes) throws IOException {
     throw new NotImplementedException("Add an implementation!");

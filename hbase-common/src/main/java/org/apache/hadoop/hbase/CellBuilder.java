@@ -48,7 +48,7 @@ public interface CellBuilder {
   Cell build();
 
   /**
-   * Remove all internal elements from builder. n
+   * Remove all internal elements from builder.
    */
   CellBuilder clear();
 }

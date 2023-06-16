@@ -28,7 +28,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface Decryptor {
 
   /**
-   * Set the secret key n
+   * Set the secret key
    */
   public void setKey(Key key);
 
@@ -45,12 +45,12 @@ public interface Decryptor {
   public int getBlockSize();
 
   /**
-   * Set the initialization vector n
+   * Set the initialization vector
    */
   public void setIv(byte[] iv);
 
   /**
-   * Create a stream for decryption n
+   * Create a stream for decryption
    */
   public InputStream createDecryptionStream(InputStream in);
 

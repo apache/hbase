@@ -27,12 +27,12 @@ import org.apache.hbase.thirdparty.com.google.common.escape.Escapers;
 
 /**
  * Utility class for converting objects to JRuby. It handles null, Boolean, Number, String, byte[],
- * List&lt;Object>, Map&lt;String, Object> structures.
+ * List&lt;Object&gt;, Map&lt;String, Object&gt; structures.
  * <p>
  * E.g.
  *
  * <pre>
- * Map&lt;String, Object> map = new LinkedHashMap&lt;>();
+ * Map&lt;String, Object&gt; map = new LinkedHashMap&lt;&gt;();
  * map.put("null", null);
  * map.put("boolean", true);
  * map.put("number", 1);
@@ -45,8 +45,8 @@ import org.apache.hbase.thirdparty.com.google.common.escape.Escapers;
  * Calling {@link #print(Object)} method will result:
  *
  * <pre>
- * { null => '', boolean => 'true', number => '1', string => 'str',
- *   binary => '010203', list => [ '1', '2', 'true' ] }
+ * { null =&gt; '', boolean =&gt; 'true', number =&gt; '1', string =&gt; 'str',
+ *   binary =&gt; '010203', list =&gt; [ '1', '2', 'true' ] }
  * </pre>
  * </p>
  */

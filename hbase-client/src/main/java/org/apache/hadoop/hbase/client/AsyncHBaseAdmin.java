@@ -105,6 +105,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<List<TableDescriptor>> listTableDescriptorsByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableDescriptorsByState(isEnabled));
+  }
+
+  @Override
   public CompletableFuture<List<TableName>> listTableNames(boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(includeSysTables));
   }
@@ -113,6 +118,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   public CompletableFuture<List<TableName>> listTableNames(Pattern pattern,
     boolean includeSysTables) {
     return wrap(rawAdmin.listTableNames(pattern, includeSysTables));
+  }
+
+  @Override
+  public CompletableFuture<List<TableName>> listTableNamesByState(boolean isEnabled) {
+    return wrap(rawAdmin.listTableNamesByState(isEnabled));
   }
 
   @Override
@@ -482,6 +492,22 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Boolean> isReplicationPeerEnabled(String peerId) {
+    return wrap(rawAdmin.isReplicationPeerEnabled(peerId));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> replicationPeerModificationSwitch(boolean on,
+    boolean drainProcedures) {
+    return wrap(rawAdmin.replicationPeerModificationSwitch(on, drainProcedures));
+  }
+
+  @Override
+  public CompletableFuture<Boolean> isReplicationPeerModificationEnabled() {
+    return wrap(rawAdmin.isReplicationPeerModificationEnabled());
+  }
+
+  @Override
   public CompletableFuture<Void> snapshot(SnapshotDescription snapshot) {
     return wrap(rawAdmin.snapshot(snapshot));
   }
@@ -773,6 +799,11 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<ServerName>> listDeadServers() {
     return wrap(rawAdmin.listDeadServers());
+  }
+
+  @Override
+  public CompletableFuture<List<ServerName>> listUnknownServers() {
+    return wrap(rawAdmin.listUnknownServers());
   }
 
   @Override

@@ -67,18 +67,20 @@ public class RestoreTool {
   private final String[] ignoreDirs = { HConstants.RECOVERED_EDITS_DIR };
   protected Configuration conf;
   protected Path backupRootPath;
+  protected Path restoreRootDir;
   protected String backupId;
   protected FileSystem fs;
 
   // store table name and snapshot dir mapping
   private final HashMap<TableName, Path> snapshotMap = new HashMap<>();
 
-  public RestoreTool(Configuration conf, final Path backupRootPath, final String backupId)
-    throws IOException {
+  public RestoreTool(Configuration conf, final Path backupRootPath, final Path restoreRootDir,
+    final String backupId) throws IOException {
     this.conf = conf;
     this.backupRootPath = backupRootPath;
     this.backupId = backupId;
     this.fs = backupRootPath.getFileSystem(conf);
+    this.restoreRootDir = restoreRootDir;
   }
 
   /**
@@ -200,7 +202,7 @@ public class RestoreTool {
       }
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
 
-      restoreService.run(logDirs, tableNames, newTableNames, false);
+      restoreService.run(logDirs, tableNames, restoreRootDir, newTableNames, false);
     }
   }
 
@@ -325,8 +327,7 @@ public class RestoreTool {
             + ", will only create table");
         }
         tableDescriptor = TableDescriptorBuilder.copy(newTableName, tableDescriptor);
-        checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, null, tableDescriptor,
-          truncateIfExists);
+        checkAndCreateTable(conn, newTableName, null, tableDescriptor, truncateIfExists);
         return;
       } else {
         throw new IllegalStateException(
@@ -347,13 +348,12 @@ public class RestoreTool {
 
       // should only try to create the table with all region informations, so we could pre-split
       // the regions in fine grain
-      checkAndCreateTable(conn, tableBackupPath, tableName, newTableName, regionPathList,
-        tableDescriptor, truncateIfExists);
+      checkAndCreateTable(conn, newTableName, regionPathList, tableDescriptor, truncateIfExists);
       RestoreJob restoreService = BackupRestoreFactory.getRestoreJob(conf);
       Path[] paths = new Path[regionPathList.size()];
       regionPathList.toArray(paths);
-      restoreService.run(paths, new TableName[] { tableName }, new TableName[] { newTableName },
-        true);
+      restoreService.run(paths, new TableName[] { tableName }, restoreRootDir,
+        new TableName[] { newTableName }, true);
 
     } catch (Exception e) {
       LOG.error(e.toString(), e);
@@ -460,17 +460,15 @@ public class RestoreTool {
    * Prepare the table for bulkload, most codes copied from {@code createTable} method in
    * {@code BulkLoadHFilesTool}.
    * @param conn             connection
-   * @param tableBackupPath  path
-   * @param tableName        table name
    * @param targetTableName  target table name
    * @param regionDirList    region directory list
    * @param htd              table descriptor
    * @param truncateIfExists truncates table if exists
    * @throws IOException exception
    */
-  private void checkAndCreateTable(Connection conn, Path tableBackupPath, TableName tableName,
-    TableName targetTableName, ArrayList<Path> regionDirList, TableDescriptor htd,
-    boolean truncateIfExists) throws IOException {
+  private void checkAndCreateTable(Connection conn, TableName targetTableName,
+    ArrayList<Path> regionDirList, TableDescriptor htd, boolean truncateIfExists)
+    throws IOException {
     try (Admin admin = conn.getAdmin()) {
       boolean createNew = false;
       if (admin.tableExists(targetTableName)) {

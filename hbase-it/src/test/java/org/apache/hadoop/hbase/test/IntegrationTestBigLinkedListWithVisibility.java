@@ -71,6 +71,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
@@ -204,7 +205,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       protected void persist(org.apache.hadoop.mapreduce.Mapper.Context output, long count,
         byte[][] prev, byte[][] current, byte[] id) throws IOException {
         String visibilityExps = "";
-        String[] split = labels.split(COMMA);
+        String[] split = Splitter.on(COMMA).splitToStream(labels).toArray(String[]::new);
         for (int i = 0; i < current.length; i++) {
           for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
             Put put = new Put(current[i]);
@@ -248,18 +249,16 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     public int runCopier(String outputDir) throws Exception {
-      Job job = null;
-      Scan scan = null;
-      job = new Job(getConf());
+      Job job = new Job(getConf());
       job.setJobName("Data copier");
       job.getConfiguration().setInt("INDEX", labelIndex);
       job.getConfiguration().set("LABELS", labels);
       job.setJarByClass(getClass());
-      scan = new Scan();
+      Scan scan = new Scan();
       scan.setCacheBlocks(false);
       scan.setRaw(true);
 
-      String[] split = labels.split(COMMA);
+      String[] split = Splitter.on(COMMA).splitToStream(labels).toArray(String[]::new);
       scan.setAuthorizations(
         new Authorizations(split[this.labelIndex * 2], split[(this.labelIndex * 2) + 1]));
       if (delete) {
@@ -424,7 +423,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
       scan.setCaching(10000);
       scan.setCacheBlocks(false);
-      String[] split = labels.split(COMMA);
+      String[] split = Splitter.on(COMMA).splitToStream(labels).toArray(String[]::new);
 
       scan.setAuthorizations(
         new Authorizations(split[this.labelIndex * 2], split[(this.labelIndex * 2) + 1]));
@@ -470,7 +469,6 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
   static class VisibilityLoop extends Loop {
     private static final int SLEEP_IN_MS = 5000;
     private static final Logger LOG = LoggerFactory.getLogger(VisibilityLoop.class);
-    IntegrationTestBigLinkedListWithVisibility it;
 
     @Override
     protected void runGenerator(int numMappers, long numNodes, String outputDir, Integer width,
@@ -652,10 +650,6 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
   @Override
   public int runTestFromCommandLine() throws Exception {
-    Tool tool = null;
-    Loop loop = new VisibilityLoop();
-    loop.it = this;
-    tool = loop;
-    return ToolRunner.run(getConf(), tool, otherArgs);
+    return ToolRunner.run(getConf(), new VisibilityLoop(), otherArgs);
   }
 }

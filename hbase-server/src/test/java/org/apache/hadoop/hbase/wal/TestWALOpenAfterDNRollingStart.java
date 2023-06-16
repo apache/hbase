@@ -98,7 +98,7 @@ public class TestWALOpenAfterDNRollingStart {
    * all datanode restarted (rolling upgrade, for example). Before this patch, low replication
    * detection is only used when syncing wal. But if the wal haven't had any entry whiten, it will
    * never know all the replica of the wal is broken(because of dn restarting). And this wal can
-   * never be open n
+   * never be open
    */
   @Test
   public void test() throws Exception {
@@ -121,8 +121,8 @@ public class TestWALOpenAfterDNRollingStart {
       currentFile = new Path(oldLogDir, currentFile.getName());
     }
     // if the log is not rolled, then we can never open this wal forever.
-    try (WAL.Reader reader = WALFactory.createReader(TEST_UTIL.getTestFileSystem(), currentFile,
-      TEST_UTIL.getConfiguration())) {
+    try (WALStreamReader reader = NoEOFWALStreamReader.create(TEST_UTIL.getTestFileSystem(),
+      currentFile, TEST_UTIL.getConfiguration())) {
       reader.next();
     }
   }

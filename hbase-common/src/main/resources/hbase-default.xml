@@ -279,16 +279,6 @@ possible configurations would overwhelm and obscure the important.
     to ride over transient HDFS errors.</description>
   </property>
   <property>
-    <name>hbase.regionserver.hlog.reader.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader</value>
-    <description>The WAL file reader implementation.</description>
-  </property>
-  <property>
-    <name>hbase.regionserver.hlog.writer.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter</value>
-    <description>The WAL file writer implementation.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
@@ -654,11 +644,6 @@ possible configurations would overwhelm and obscure the important.
     <value>3</value>
     <description>The minimum number of regions in a table to consider it for merge
       normalization.</description>
-  </property>
-  <property>
-    <name>hbase.normalizer.merge.min_region_age.days</name>
-    <value>3</value>
-    <description>The minimum age for a region to be considered for a merge, in days.</description>
   </property>
   <property>
     <name>hbase.normalizer.merge.min_region_age.days</name>
@@ -1787,6 +1772,14 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.http.metrics.servlets</name>
+    <value>jmx,metrics,prometheus</value>
+    <description>
+      Comma separated list of servlet names to enable for metrics collection. Supported
+      servlets are jmx, metrics, prometheus
+    </description>
+  </property>
+  <property>
   	<name>hbase.replication.rpc.codec</name>
   	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
   	<description>
@@ -2022,7 +2015,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.namedqueue.provider.classes</name>
-    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService</value>
+    <value>org.apache.hadoop.hbase.namequeues.impl.SlowLogQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerDecisionQueueService,org.apache.hadoop.hbase.namequeues.impl.BalancerRejectionQueueService,org.apache.hadoop.hbase.namequeues.WALEventTrackerQueueService</value>
     <description>
       Default values for NamedQueueService implementors. This comma separated full class names
       represent all implementors of NamedQueueService that we would like to be invoked by

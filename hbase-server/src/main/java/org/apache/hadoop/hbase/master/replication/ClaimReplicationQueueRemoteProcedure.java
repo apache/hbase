@@ -19,15 +19,22 @@ package org.apache.hadoop.hbase.master.replication;
 
 import java.io.IOException;
 import java.util.Optional;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.RSProcedureDispatcher.ServerOperation;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
 import org.apache.hadoop.hbase.master.procedure.ServerRemoteProcedure;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
+import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteOperation;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher.RemoteProcedure;
+import org.apache.hadoop.hbase.replication.ReplicationQueueId;
 import org.apache.hadoop.hbase.replication.regionserver.ClaimReplicationQueueCallable;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,34 +50,59 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   private static final Logger LOG =
     LoggerFactory.getLogger(ClaimReplicationQueueRemoteProcedure.class);
 
-  private ServerName crashedServer;
-
-  private String queue;
+  private ReplicationQueueId queueId;
 
   public ClaimReplicationQueueRemoteProcedure() {
   }
 
-  public ClaimReplicationQueueRemoteProcedure(ServerName crashedServer, String queue,
-    ServerName targetServer) {
-    this.crashedServer = crashedServer;
-    this.queue = queue;
+  public ClaimReplicationQueueRemoteProcedure(ReplicationQueueId queueId, ServerName targetServer) {
+    this.queueId = queueId;
     this.targetServer = targetServer;
+  }
+
+  // check whether ReplicationSyncUp has already done the work for us, if so, we should skip
+  // claiming the replication queues and deleting them instead.
+  private boolean shouldSkip(MasterProcedureEnv env) throws IOException {
+    MasterFileSystem mfs = env.getMasterFileSystem();
+    Path syncUpDir = new Path(mfs.getRootDir(), ReplicationSyncUp.INFO_DIR);
+    return mfs.getFileSystem().exists(new Path(syncUpDir, getServerName().getServerName()));
+  }
+
+  @Override
+  protected synchronized Procedure<MasterProcedureEnv>[] execute(MasterProcedureEnv env)
+    throws ProcedureYieldException, ProcedureSuspendedException, InterruptedException {
+    try {
+      if (shouldSkip(env)) {
+        LOG.info("Skip claiming {} because replication sync up has already done it for us",
+          getServerName());
+        return null;
+      }
+    } catch (IOException e) {
+      LOG.warn("failed to check whether we should skip claiming {} due to replication sync up",
+        getServerName(), e);
+      // just finish the procedure here, as the AssignReplicationQueuesProcedure will reschedule
+      return null;
+    }
+    return super.execute(env);
   }
 
   @Override
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
     assert targetServer.equals(remote);
+    ClaimReplicationQueueRemoteParameter.Builder builder = ClaimReplicationQueueRemoteParameter
+      .newBuilder().setCrashedServer(ProtobufUtil.toServerName(queueId.getServerName()))
+      .setQueue(queueId.getPeerId());
+    queueId.getSourceServerName()
+      .ifPresent(sourceServer -> builder.setSourceServer(ProtobufUtil.toServerName(sourceServer)));
     return Optional.of(new ServerOperation(this, getProcId(), ClaimReplicationQueueCallable.class,
-      ClaimReplicationQueueRemoteParameter.newBuilder()
-        .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue).build()
-        .toByteArray()));
+      builder.build().toByteArray()));
   }
 
   @Override
   public ServerName getServerName() {
     // return crashed server here, as we are going to recover its replication queues so we should
     // use its scheduler queue instead of the one for the target server.
-    return crashedServer;
+    return queueId.getServerName();
   }
 
   @Override
@@ -86,8 +118,7 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
-      LOG.warn("Failed to claim replication queue {} of crashed server on server {} ", queue,
-        crashedServer, targetServer, error);
+      LOG.warn("Failed to claim replication queue {} on server {} ", queueId, targetServer, error);
       this.succ = false;
     } else {
       this.succ = true;
@@ -111,17 +142,26 @@ public class ClaimReplicationQueueRemoteProcedure extends ServerRemoteProcedure
 
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
-    serializer.serialize(ClaimReplicationQueueRemoteStateData.newBuilder()
-      .setCrashedServer(ProtobufUtil.toServerName(crashedServer)).setQueue(queue)
-      .setTargetServer(ProtobufUtil.toServerName(targetServer)).build());
+    ClaimReplicationQueueRemoteStateData.Builder builder = ClaimReplicationQueueRemoteStateData
+      .newBuilder().setCrashedServer(ProtobufUtil.toServerName(queueId.getServerName()))
+      .setQueue(queueId.getPeerId()).setTargetServer(ProtobufUtil.toServerName(targetServer));
+    queueId.getSourceServerName()
+      .ifPresent(sourceServer -> builder.setSourceServer(ProtobufUtil.toServerName(sourceServer)));
+    serializer.serialize(builder.build());
   }
 
   @Override
   protected void deserializeStateData(ProcedureStateSerializer serializer) throws IOException {
     ClaimReplicationQueueRemoteStateData data =
       serializer.deserialize(ClaimReplicationQueueRemoteStateData.class);
-    crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
-    queue = data.getQueue();
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
+    ServerName crashedServer = ProtobufUtil.toServerName(data.getCrashedServer());
+    String queue = data.getQueue();
+    if (data.hasSourceServer()) {
+      queueId = new ReplicationQueueId(crashedServer, queue,
+        ProtobufUtil.toServerName(data.getSourceServer()));
+    } else {
+      queueId = new ReplicationQueueId(crashedServer, queue);
+    }
   }
 }

@@ -30,7 +30,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 public interface ScanLabelGenerator extends Configurable {
 
   /**
-   * Helps to get a list of lables associated with an UGI nn * @return The labels
+   * Helps to get a list of lables associated with an UGI
+   * @return The labels
    */
   public List<String> getLabels(User user, Authorizations authorizations);
 }

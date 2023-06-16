@@ -22,6 +22,7 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.Cell;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
@@ -225,7 +228,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * compaction.
    * @param store   who we scan
    * @param scan    the spec
-   * @param columns which columns we are scanning n
+   * @param columns which columns we are scanning
    */
   public StoreScanner(HStore store, ScanInfo scanInfo, Scan scan, NavigableSet<byte[]> columns,
     long readPt) throws IOException {
@@ -384,8 +387,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Seek the specified scanners with the given key nn * @param isLazy true if using lazy seek
-   * @param isParallelSeek true if using parallel seek n
+   * Seek the specified scanners with the given key
+   * @param isLazy         true if using lazy seek
+   * @param isParallelSeek true if using parallel seek
    */
   protected void seekScanners(List<? extends KeyValueScanner> scanners, Cell seekKey,
     boolean isLazy, boolean isParallelSeek) throws IOException {
@@ -530,8 +534,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Get the next row of values from this Store. nn * @return true if there are more rows, false if
-   * scanner is done
+   * Get the next row of values from this Store.
+   * @return true if there are more rows, false if scanner is done
    */
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
@@ -568,9 +572,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
-    if (!scannerContext.getKeepProgress()) {
+    if (!scannerContext.getKeepProgress() && !scannerContext.getSkippingRow()) {
       scannerContext.clearProgress();
     }
+
+    Optional<RpcCall> rpcCall =
+      matcher.isUserScan() ? RpcServer.getCurrentCall() : Optional.empty();
 
     int count = 0;
     long totalBytesRead = 0;
@@ -611,6 +618,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           // here, we still need to scan all the qualifiers before returning...
           scannerContext.returnImmediately();
         }
+
+        heap.recordBlockSize(blockSize -> {
+          if (rpcCall.isPresent()) {
+            rpcCall.get().incrementBlockBytesScanned(blockSize);
+          }
+          scannerContext.incrementBlockProgress(blockSize);
+        });
+
         prevCell = cell;
         scannerContext.setLastPeekedCell(cell);
         topChanged = false;
@@ -748,6 +763,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           default:
             throw new RuntimeException("UNEXPECTED");
+        }
+
+        // One last chance to break due to size limit. The INCLUDE* cases above already check
+        // limit and continue. For the various filtered cases, we need to check because block
+        // size limit may have been exceeded even if we don't add cells to result list.
+        if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_CELLS)) {
+          return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
       } while ((cell = this.heap.peek()) != null);
 
@@ -1051,7 +1073,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Check whether scan as expected order nnnn
+   * Check whether scan as expected order
    */
   protected void checkScanOrder(Cell prevKV, Cell kv, CellComparator comparator)
     throws IOException {
@@ -1065,8 +1087,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   /**
-   * Do a reseek in a normal StoreScanner(scan forward) n * @return true if scanner has values left,
-   * false if end of scanner n
+   * Do a reseek in a normal StoreScanner(scan forward)
+   * @return true if scanner has values left, false if end of scanner
    */
   protected boolean seekAsDirection(Cell kv) throws IOException {
     return reseek(kv);
@@ -1157,7 +1179,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /**
    * Seek storefiles in parallel to optimize IO latency as much as possible
    * @param scanners the list {@link KeyValueScanner}s to be read from
-   * @param kv       the KeyValue on which the operation is being requested n
+   * @param kv       the KeyValue on which the operation is being requested
    */
   private void parallelSeek(final List<? extends KeyValueScanner> scanners, final Cell kv)
     throws IOException {

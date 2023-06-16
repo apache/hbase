@@ -54,9 +54,8 @@ public class TestCoreMasterCoprocessor {
   private MasterCoprocessorHost mch;
 
   @Before
-  public void before() throws IOException {
-    String methodName = this.name.getMethodName();
-    this.ms = new MockMasterServices(HTU.getConfiguration(), null);
+  public void before() throws Exception {
+    this.ms = new MockMasterServices(HTU.getConfiguration());
     this.mch = new MasterCoprocessorHost(this.ms, HTU.getConfiguration());
     this.mch.preMasterInitialization();
   }
@@ -87,7 +86,7 @@ public class TestCoreMasterCoprocessor {
 
   /**
    * Assert that when a Coprocessor is annotated with CoreCoprocessor, then it is possible to access
-   * a MasterServices instance. Assert the opposite too. Do it to MasterCoprocessors. n
+   * a MasterServices instance. Assert the opposite too. Do it to MasterCoprocessors.
    */
   @Test
   public void testCoreRegionCoprocessor() throws IOException {

@@ -59,6 +59,12 @@ public class ChoreService {
    */
   @InterfaceAudience.Private
   public final static int MIN_CORE_POOL_SIZE = 1;
+  /**
+   * The initial number of threads in the core pool for the {@link ChoreService}.
+   */
+  public static final String CHORE_SERVICE_INITIAL_POOL_SIZE =
+    "hbase.choreservice.initial.pool.size";
+  public static final int DEFAULT_CHORE_SERVICE_INITIAL_POOL_SIZE = 1;
 
   /**
    * This thread pool is used to schedule all of the Chores
@@ -134,6 +140,7 @@ public class ChoreService {
   }
 
   /**
+   * Schedule a chore.
    * @param chore Chore to be scheduled. If the chore is already scheduled with another ChoreService
    *              instance, that schedule will be cancelled (i.e. a Chore can only ever be scheduled
    *              with a single ChoreService instance).
@@ -181,13 +188,14 @@ public class ChoreService {
    * @param chore The Chore to be rescheduled. If the chore is not scheduled with this ChoreService
    *              yet then this call is equivalent to a call to scheduleChore.
    */
-  private void rescheduleChore(ScheduledChore chore) {
+  private void rescheduleChore(ScheduledChore chore, boolean immediately) {
     if (scheduledChores.containsKey(chore)) {
       ScheduledFuture<?> future = scheduledChores.get(chore);
       future.cancel(false);
     }
-    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(),
-      chore.getPeriod(), chore.getTimeUnit());
+    // set initial delay to 0 as we want to run it immediately
+    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(chore,
+      immediately ? 0 : chore.getPeriod(), chore.getPeriod(), chore.getTimeUnit());
     scheduledChores.put(chore, future);
   }
 
@@ -243,7 +251,7 @@ public class ChoreService {
       allowedOnPath = ".*/org/apache/hadoop/hbase/ScheduledChore.java")
   synchronized void triggerNow(ScheduledChore chore) {
     assert chore.getChoreService() == this;
-    rescheduleChore(chore);
+    rescheduleChore(chore, true);
   }
 
   /** Returns number of chores that this service currently has scheduled */
@@ -252,8 +260,8 @@ public class ChoreService {
   }
 
   /**
-   * @return number of chores that this service currently has scheduled that are missing their
-   *         scheduled start time
+   * Return number of chores that this service currently has scheduled that are missing their
+   * scheduled start time
    */
   int getNumberOfChoresMissingStartTime() {
     return choresMissingStartTime.size();
@@ -273,9 +281,6 @@ public class ChoreService {
     private final static String THREAD_NAME_SUFFIX = ".Chore.";
     private AtomicInteger threadNumber = new AtomicInteger(1);
 
-    /**
-     * @param threadPrefix The prefix given to all threads created by this factory
-     */
     public ChoreServiceThreadFactory(final String threadPrefix) {
       this.threadPrefix = threadPrefix;
     }
@@ -345,14 +350,14 @@ public class ChoreService {
     // the chore is NOT rescheduled, future executions of this chore will be delayed more and
     // more on each iteration. This hurts us because the ScheduledThreadPoolExecutor allocates
     // idle threads to chores based on how delayed they are.
-    rescheduleChore(chore);
+    rescheduleChore(chore, false);
     printChoreDetails("onChoreMissedStartTime", chore);
   }
 
   /**
-   * shutdown the service. Any chores that are scheduled for execution will be cancelled. Any chores
-   * in the middle of execution will be interrupted and shutdown. This service will be unusable
-   * after this method has been called (i.e. future scheduling attempts will fail).
+   * Shut down the service. Any chores that are scheduled for execution will be cancelled. Any
+   * chores in the middle of execution will be interrupted and shutdown. This service will be
+   * unusable after this method has been called (i.e. future scheduling attempts will fail).
    * <p/>
    * Notice that, this will only clean the chore from this ChoreService but you could still schedule
    * the chore with other ChoreService.
@@ -390,9 +395,7 @@ public class ChoreService {
     }
   }
 
-  /**
-   * Prints a summary of important details about the chore. Used for debugging purposes
-   */
+  /** Prints a summary of important details about the chore. Used for debugging purposes */
   private void printChoreDetails(final String header, ScheduledChore chore) {
     if (!LOG.isTraceEnabled()) {
       return;
@@ -408,9 +411,7 @@ public class ChoreService {
     }
   }
 
-  /**
-   * Prints a summary of important details about the service. Used for debugging purposes
-   */
+  /** Prints a summary of important details about the service. Used for debugging purposes */
   private void printChoreServiceDetails(final String header) {
     if (!LOG.isTraceEnabled()) {
       return;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.shaded.protobuf;
 import static org.apache.hadoop.hbase.protobuf.ProtobufMagic.PB_MAGIC;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -129,6 +130,8 @@ import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 import org.apache.hbase.thirdparty.com.google.gson.JsonArray;
@@ -137,6 +140,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.Parser;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -198,6 +202,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetComplet
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ListTableDescriptorsByStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -227,6 +232,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  */
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ProtobufUtil.class.getName());
 
   private ProtobufUtil() {
   }
@@ -507,6 +514,18 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Get a list of TableDescriptor from ListTableDescriptorsByNamespaceResponse protobuf
+   * @param proto the ListTableDescriptorsByNamespaceResponse
+   * @return a list of TableDescriptor
+   */
+  public static List<TableDescriptor>
+    toTableDescriptorList(ListTableDescriptorsByStateResponse proto) {
+    if (proto == null) return new ArrayList<>();
+    return proto.getTableSchemaList().stream().map(ProtobufUtil::toTableDescriptor)
+      .collect(Collectors.toList());
+  }
+
+  /**
    * get the split keys in form "byte [][]" from a CreateTableRequest proto
    * @param proto the CreateTableRequest
    * @return the split keys
@@ -562,7 +581,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Get to a client Get
    * @param proto the protocol buffer Get to convert
-   * @return the converted client Get n
+   * @return the converted client Get
    */
   public static Get toGet(final ClientProtos.Get proto) throws IOException {
     if (proto == null) return null;
@@ -647,7 +666,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Mutate to a Put.
    * @param proto The protocol buffer MutationProto to convert
-   * @return A client Put. n
+   * @return A client Put.
    */
   public static Put toPut(final MutationProto proto) throws IOException {
     return toPut(proto, null);
@@ -657,7 +676,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Mutate to a Put.
    * @param proto       The protocol buffer MutationProto to convert
    * @param cellScanner If non-null, the Cell data that goes with this proto.
-   * @return A client Put. n
+   * @return A client Put.
    */
   public static Put toPut(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -741,7 +760,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Mutate to a Delete
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted client Delete n
+   * @return the converted client Delete
    */
   public static Delete toDelete(final MutationProto proto) throws IOException {
     return toDelete(proto, null);
@@ -751,7 +770,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Mutate to a Delete
    * @param proto       the protocol buffer Mutate to convert
    * @param cellScanner if non-null, the data that goes with this delete.
-   * @return the converted client Delete n
+   * @return the converted client Delete
    */
   public static Delete toDelete(final MutationProto proto, final CellScanner cellScanner)
     throws IOException {
@@ -920,7 +939,7 @@ public final class ProtobufUtil {
   /**
    * Convert a MutateRequest to Mutation
    * @param proto the protocol buffer Mutate to convert
-   * @return the converted Mutation n
+   * @return the converted Mutation
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
     MutationType type = proto.getMutateType();
@@ -968,7 +987,7 @@ public final class ProtobufUtil {
   /**
    * Convert a client Scan to a protocol buffer Scan
    * @param scan the client Scan to convert
-   * @return the converted protocol buffer Scan n
+   * @return the converted protocol buffer Scan
    */
   public static ClientProtos.Scan toScan(final Scan scan) throws IOException {
     ClientProtos.Scan.Builder scanBuilder = ClientProtos.Scan.newBuilder();
@@ -1062,7 +1081,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer Scan to a client Scan
    * @param proto the protocol buffer Scan to convert
-   * @return the converted client Scan n
+   * @return the converted client Scan
    */
   public static Scan toScan(final ClientProtos.Scan proto) throws IOException {
     byte[] startRow = HConstants.EMPTY_START_ROW;
@@ -1182,7 +1201,7 @@ public final class ProtobufUtil {
   /**
    * Create a protocol buffer Get based on a client Get.
    * @param get the client Get
-   * @return a protocol buffer Get n
+   * @return a protocol buffer Get
    */
   public static ClientProtos.Get toGet(final Get get) throws IOException {
     ClientProtos.Get.Builder builder = ClientProtos.Get.newBuilder();
@@ -1248,7 +1267,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer Mutate based on a client Mutation nn * @return a protobuf'd Mutation n
+   * Create a protocol buffer Mutate based on a client Mutation
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
     final long nonce) throws IOException {
@@ -1297,8 +1317,8 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf. nnn * @return a
-   * protobuf'd Mutation n
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
     final MutationProto.Builder builder) throws IOException {
@@ -1307,8 +1327,8 @@ public final class ProtobufUtil {
 
   /**
    * Create a protocol buffer MutationProto based on a client Mutation. Does NOT include data.
-   * Understanding is that the Cell will be transported other than via protobuf. nn * @return a
-   * protobuf'd Mutation n
+   * Understanding is that the Cell will be transported other than via protobuf.
+   * @return a protobuf'd Mutation
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation)
     throws IOException {
@@ -1334,8 +1354,8 @@ public final class ProtobufUtil {
 
   /**
    * Code shared by {@link #toMutation(MutationType, Mutation)} and
-   * {@link #toMutationNoData(MutationType, Mutation)} nn * @return A partly-filled out protobuf'd
-   * Mutation.
+   * {@link #toMutationNoData(MutationType, Mutation)}
+   * @return A partly-filled out protobuf'd Mutation.
    */
   private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
     final Mutation mutation, MutationProto.Builder builder) {
@@ -1468,7 +1488,7 @@ public final class ProtobufUtil {
    * Convert a protocol buffer Result to a client Result
    * @param proto   the protocol buffer Result to convert
    * @param scanner Optional cell scanner.
-   * @return the converted client Result n
+   * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
     throws IOException {
@@ -1583,8 +1603,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a delete KeyValue type to protocol buffer DeleteType. n * @return protocol buffer
-   * DeleteType n
+   * Convert a delete KeyValue type to protocol buffer DeleteType.
+   * @return protocol buffer DeleteType
    */
   public static DeleteType toDeleteType(KeyValue.Type type) throws IOException {
     switch (type) {
@@ -1604,7 +1624,7 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer DeleteType to delete KeyValue type.
    * @param type The DeleteType
-   * @return The type. n
+   * @return The type.
    */
   public static KeyValue.Type fromDeleteType(DeleteType type) throws IOException {
     switch (type) {
@@ -1690,7 +1710,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to close a region given a region name using admin protocol. nnn
+   * A helper to close a region given a region name using admin protocol.
    */
   public static void closeRegion(final RpcController controller,
     final AdminService.BlockingInterface admin, final ServerName server, final byte[] regionName)
@@ -1705,7 +1725,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to warmup a region given a region name using admin protocol nn *
+   * A helper to warmup a region given a region name using admin protocol
    */
   public static void warmupRegion(final RpcController controller,
     final AdminService.BlockingInterface admin,
@@ -1722,7 +1742,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to open a region using admin protocol. nnn
+   * A helper to open a region using admin protocol.
    */
   public static void openRegion(final RpcController controller,
     final AdminService.BlockingInterface admin, ServerName server,
@@ -1736,8 +1756,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to get the all the online regions on a region server using admin protocol. n * @return
-   * a list of online region info n
+   * A helper to get the all the online regions on a region server using admin protocol.
+   * @return a list of online region info
    */
   public static List<org.apache.hadoop.hbase.client.RegionInfo>
     getOnlineRegions(final AdminService.BlockingInterface admin) throws IOException {
@@ -2069,7 +2089,8 @@ public final class ProtobufUtil {
   /**
    * Return short version of Message toString'd, shorter than TextFormat#shortDebugString. Tries to
    * NOT print out data both because it can be big but also so we do not have data in our logs. Use
-   * judiciously. n * @return toString of passed <code>m</code>
+   * judiciously.
+   * @return toString of passed <code>m</code>
    */
   public static String getShortTextFormat(Message m) {
     if (m == null) return "null";
@@ -2127,7 +2148,7 @@ public final class ProtobufUtil {
    * @param message Message object {@link Message}
    * @return SlowLogParams with regionName(for filter queries) and params
    */
-  public static SlowLogParams getSlowLogParams(Message message) {
+  public static SlowLogParams getSlowLogParams(Message message, boolean slowLogScanPayloadEnabled) {
     if (message == null) {
       return null;
     }
@@ -2135,7 +2156,11 @@ public final class ProtobufUtil {
       ScanRequest scanRequest = (ScanRequest) message;
       String regionName = getStringForByteString(scanRequest.getRegion().getValue());
       String params = TextFormat.shortDebugString(message);
-      return new SlowLogParams(regionName, params);
+      if (slowLogScanPayloadEnabled) {
+        return new SlowLogParams(regionName, params, scanRequest.getScan());
+      } else {
+        return new SlowLogParams(regionName, params);
+      }
     } else if (message instanceof MutationProto) {
       MutationProto mutationProto = (MutationProto) message;
       String params = "type= " + mutationProto.getMutateType().toString();
@@ -2216,8 +2241,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer CellVisibility to a client CellVisibility n * @return the converted
-   * client CellVisibility
+   * Convert a protocol buffer CellVisibility to a client CellVisibility
+   * @return the converted client CellVisibility
    */
   public static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
     if (proto == null) return null;
@@ -2225,8 +2250,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility n * @return the
-   * converted client CellVisibility n
+   * Convert a protocol buffer CellVisibility bytes to a client CellVisibility
+   * @return the converted client CellVisibility
    */
   public static CellVisibility toCellVisibility(byte[] protoBytes) throws DeserializationException {
     if (protoBytes == null) return null;
@@ -2242,8 +2267,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer CellVisibility based on a client CellVisibility. n * @return a
-   * protocol buffer CellVisibility
+   * Create a protocol buffer CellVisibility based on a client CellVisibility.
+   * @return a protocol buffer CellVisibility
    */
   public static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
     ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
@@ -2252,8 +2277,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Authorizations to a client Authorizations n * @return the converted
-   * client Authorizations
+   * Convert a protocol buffer Authorizations to a client Authorizations
+   * @return the converted client Authorizations
    */
   public static Authorizations toAuthorizations(ClientProtos.Authorizations proto) {
     if (proto == null) return null;
@@ -2261,8 +2286,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer Authorizations bytes to a client Authorizations n * @return the
-   * converted client Authorizations n
+   * Convert a protocol buffer Authorizations bytes to a client Authorizations
+   * @return the converted client Authorizations
    */
   public static Authorizations toAuthorizations(byte[] protoBytes) throws DeserializationException {
     if (protoBytes == null) return null;
@@ -2278,8 +2303,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Create a protocol buffer Authorizations based on a client Authorizations. n * @return a
-   * protocol buffer Authorizations
+   * Create a protocol buffer Authorizations based on a client Authorizations.
+   * @return a protocol buffer Authorizations
    */
   public static ClientProtos.Authorizations toAuthorizations(Authorizations authorizations) {
     ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
@@ -2290,8 +2315,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer TimeUnit to a client TimeUnit n * @return the converted client
-   * TimeUnit
+   * Convert a protocol buffer TimeUnit to a client TimeUnit
+   * @return the converted client TimeUnit
    */
   public static TimeUnit toTimeUnit(final HBaseProtos.TimeUnit proto) {
     switch (proto) {
@@ -2314,8 +2339,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a client TimeUnit to a protocol buffer TimeUnit n * @return the converted protocol
-   * buffer TimeUnit
+   * Convert a client TimeUnit to a protocol buffer TimeUnit
+   * @return the converted protocol buffer TimeUnit
    */
   public static HBaseProtos.TimeUnit toProtoTimeUnit(final TimeUnit timeUnit) {
     switch (timeUnit) {
@@ -2338,8 +2363,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer ThrottleType to a client ThrottleType n * @return the converted
-   * client ThrottleType
+   * Convert a protocol buffer ThrottleType to a client ThrottleType
+   * @return the converted client ThrottleType
    */
   public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
     switch (proto) {
@@ -2367,8 +2392,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a client ThrottleType to a protocol buffer ThrottleType n * @return the converted
-   * protocol buffer ThrottleType
+   * Convert a client ThrottleType to a protocol buffer ThrottleType
+   * @return the converted protocol buffer ThrottleType
    */
   public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
     switch (type) {
@@ -2396,8 +2421,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer QuotaScope to a client QuotaScope n * @return the converted client
-   * QuotaScope
+   * Convert a protocol buffer QuotaScope to a client QuotaScope
+   * @return the converted client QuotaScope
    */
   public static QuotaScope toQuotaScope(final QuotaProtos.QuotaScope proto) {
     switch (proto) {
@@ -2410,8 +2435,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a client QuotaScope to a protocol buffer QuotaScope n * @return the converted protocol
-   * buffer QuotaScope
+   * Convert a client QuotaScope to a protocol buffer QuotaScope
+   * @return the converted protocol buffer QuotaScope
    */
   public static QuotaProtos.QuotaScope toProtoQuotaScope(final QuotaScope scope) {
     switch (scope) {
@@ -2424,8 +2449,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a protocol buffer QuotaType to a client QuotaType n * @return the converted client
-   * QuotaType
+   * Convert a protocol buffer QuotaType to a client QuotaType
+   * @return the converted client QuotaType
    */
   public static QuotaType toQuotaScope(final QuotaProtos.QuotaType proto) {
     switch (proto) {
@@ -2438,8 +2463,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a client QuotaType to a protocol buffer QuotaType n * @return the converted protocol
-   * buffer QuotaType
+   * Convert a client QuotaType to a protocol buffer QuotaType
+   * @return the converted protocol buffer QuotaType
    */
   public static QuotaProtos.QuotaType toProtoQuotaScope(final QuotaType type) {
     switch (type) {
@@ -2566,7 +2591,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeDelimitedFrom avoid the hard-coded 64MB limit for decoding
    * buffers
    * @param builder current message builder
-   * @param in      Inputsream with delimited protobuf data n
+   * @param in      Inputsream with delimited protobuf data
    */
   public static void mergeDelimitedFrom(Message.Builder builder, InputStream in)
     throws IOException {
@@ -2588,7 +2613,7 @@ public final class ProtobufUtil {
    * where the message size is known
    * @param builder current message builder
    * @param in      InputStream containing protobuf data
-   * @param size    known size of protobuf data n
+   * @param size    known size of protobuf data
    */
   public static void mergeFrom(Message.Builder builder, InputStream in, int size)
     throws IOException {
@@ -2602,7 +2627,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers
    * where the message size is not known
    * @param builder current message builder
-   * @param in      InputStream containing protobuf data n
+   * @param in      InputStream containing protobuf data
    */
   public static void mergeFrom(Message.Builder builder, InputStream in) throws IOException {
     final CodedInputStream codedInput = CodedInputStream.newInstance(in);
@@ -2615,7 +2640,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
    * working with ByteStrings
    * @param builder current message builder
-   * @param bs      ByteString containing the n
+   * @param bs      ByteString containing the
    */
   public static void mergeFrom(Message.Builder builder, ByteString bs) throws IOException {
     final CodedInputStream codedInput = bs.newCodedInput();
@@ -2628,7 +2653,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
    * working with byte arrays
    * @param builder current message builder
-   * @param b       byte array n
+   * @param b       byte array
    */
   public static void mergeFrom(Message.Builder builder, byte[] b) throws IOException {
     final CodedInputStream codedInput = CodedInputStream.newInstance(b);
@@ -2641,7 +2666,7 @@ public final class ProtobufUtil {
    * This version of protobuf's mergeFrom avoids the hard-coded 64MB limit for decoding buffers when
    * working with byte arrays
    * @param builder current message builder
-   * @param b       byte array nnn
+   * @param b       byte array
    */
   public static void mergeFrom(Message.Builder builder, byte[] b, int offset, int length)
     throws IOException {
@@ -2821,7 +2846,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from {@link GetRegionInfoResponse.CompactionState} state
-   * @param state the protobuf CompactionState n
+   * @param state the protobuf CompactionState
    */
   public static CompactionState createCompactionState(GetRegionInfoResponse.CompactionState state) {
     return CompactionState.valueOf(state.toString());
@@ -2833,7 +2858,7 @@ public final class ProtobufUtil {
 
   /**
    * Creates {@link CompactionState} from {@link RegionLoad.CompactionState} state
-   * @param state the protobuf CompactionState n
+   * @param state the protobuf CompactionState
    */
   public static CompactionState
     createCompactionStateForRegionLoad(RegionLoad.CompactionState state) {
@@ -2938,9 +2963,7 @@ public final class ProtobufUtil {
       stats.getCompactionPressure());
   }
 
-  /**
-   * n * @return A String version of the passed in <code>msg</code>
-   */
+  /** Returns A String version of the passed in <code>msg</code> */
   public static String toText(Message msg) {
     return TextFormat.shortDebugString(msg);
   }
@@ -2950,7 +2973,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Contain ServiceException inside here. Take a callable that is doing our pb rpc and run it. n
+   * Contain ServiceException inside here. Take a callable that is doing our pb rpc and run it.
    */
   public static <T> T call(Callable<T> callable) throws IOException {
     try {
@@ -2992,6 +3015,19 @@ public final class ProtobufUtil {
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
     ServerName destinationServer, long closeProcId) {
+    return ProtobufUtil.getBuilder(server, regionName, destinationServer, closeProcId).build();
+  }
+
+  public static CloseRegionRequest buildCloseRegionRequest(ServerName server, byte[] regionName,
+    ServerName destinationServer, long closeProcId, boolean evictCache) {
+    CloseRegionRequest.Builder builder =
+      getBuilder(server, regionName, destinationServer, closeProcId);
+    builder.setEvictCache(evictCache);
+    return builder.build();
+  }
+
+  public static CloseRegionRequest.Builder getBuilder(ServerName server, byte[] regionName,
+    ServerName destinationServer, long closeProcId) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region =
       RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
@@ -3003,7 +3039,7 @@ public final class ProtobufUtil {
       builder.setServerStartCode(server.getStartcode());
     }
     builder.setCloseProcId(closeProcId);
-    return builder.build();
+    return builder;
   }
 
   public static ProcedureDescription buildProcedureDescription(String signature, String instance,
@@ -3061,7 +3097,7 @@ public final class ProtobufUtil {
    *             magic and that is then followed by a protobuf that has a serialized
    *             {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data to a ServerName
-   *         instance. n
+   *         instance.
    */
   public static ServerName parseServerNameFrom(final byte[] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;
@@ -3339,7 +3375,7 @@ public final class ProtobufUtil {
    * @return SlowLog Payload for client usecase
    */
   private static LogEntry getSlowLogRecord(final TooSlowLog.SlowLogPayload slowLogPayload) {
-    OnlineLogRecord onlineLogRecord =
+    OnlineLogRecord.OnlineLogRecordBuilder onlineLogRecord =
       new OnlineLogRecord.OnlineLogRecordBuilder().setCallDetails(slowLogPayload.getCallDetails())
         .setClientAddress(slowLogPayload.getClientAddress())
         .setMethodName(slowLogPayload.getMethodName())
@@ -3349,9 +3385,17 @@ public final class ProtobufUtil {
         .setParam(slowLogPayload.getParam()).setProcessingTime(slowLogPayload.getProcessingTime())
         .setQueueTime(slowLogPayload.getQueueTime()).setRegionName(slowLogPayload.getRegionName())
         .setResponseSize(slowLogPayload.getResponseSize())
+        .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
-        .setUserName(slowLogPayload.getUserName()).build();
-    return onlineLogRecord;
+        .setUserName(slowLogPayload.getUserName());
+    if (slowLogPayload.hasScan()) {
+      try {
+        onlineLogRecord.setScan(ProtobufUtil.toScan(slowLogPayload.getScan()));
+      } catch (Exception e) {
+        LOG.warn("Failed to convert Scan proto {}", slowLogPayload.getScan(), e);
+      }
+    }
+    return onlineLogRecord.build();
   }
 
   /**
@@ -3673,4 +3717,52 @@ public final class ProtobufUtil {
       .setStartTime(task.getStartTime()).setCompletionTime(task.getCompletionTime()).build();
   }
 
+  /**
+   * Check whether this IPBE indicates EOF or not.
+   * <p/>
+   * We will check the exception message, if it is likely the one of
+   * InvalidProtocolBufferException.truncatedMessage, we will consider it as EOF, otherwise not.
+   */
+  public static boolean isEOF(InvalidProtocolBufferException e) {
+    return e.getMessage().contains("input has been truncated");
+  }
+
+  /**
+   * This is a wrapper of the PB message's parseDelimitedFrom. The difference is, if we can not
+   * determine whether there are enough bytes in stream, i.e, the available method does not have a
+   * valid return value, we will try to read all the bytes to a byte array first, and then parse the
+   * pb message with {@link Parser#parseFrom(byte[])} instead of call
+   * {@link Parser#parseDelimitedFrom(InputStream)} directly. This is because even if the bytes are
+   * not enough bytes, {@link Parser#parseDelimitedFrom(InputStream)} could still return without any
+   * errors but just leave us a partial PB message.
+   * @return The PB message if we can parse it successfully, otherwise there will always be an
+   *         exception thrown, will never return {@code null}.
+   */
+  public static <T extends Message> T parseDelimitedFrom(InputStream in, Parser<T> parser)
+    throws IOException {
+    int firstByte = in.read();
+    if (firstByte < 0) {
+      throw new EOFException("EOF while reading message size");
+    }
+    int size = CodedInputStream.readRawVarint32(firstByte, in);
+    int available = in.available();
+    if (available > 0) {
+      if (available < size) {
+        throw new EOFException("Available bytes not enough for parsing PB message, expect at least "
+          + size + " bytes, but only " + available + " bytes available");
+      }
+      // this piece of code is copied from GeneratedMessageV3.parseFrom
+      try {
+        return parser.parseFrom(ByteStreams.limit(in, size));
+      } catch (InvalidProtocolBufferException e) {
+        throw e.unwrapIOException();
+      }
+    } else {
+      // this usually means the stream does not have a proper available implementation, let's read
+      // the content to an byte array before parsing.
+      byte[] bytes = new byte[size];
+      ByteStreams.readFully(in, bytes);
+      return parser.parseFrom(bytes);
+    }
+  }
 }

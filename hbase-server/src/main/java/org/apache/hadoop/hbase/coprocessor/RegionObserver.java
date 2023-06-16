@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanOptions;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileReader;
@@ -277,6 +278,15 @@ public interface RegionObserver {
    * {@link InternalScanner} with a custom implementation that is returned from this method. The
    * custom scanner can then inspect {@link org.apache.hadoop.hbase.Cell}s from the wrapped scanner,
    * applying its own policy to what gets written.
+   * <p>
+   * If implementations are wrapping the passed in {@link InternalScanner}, they can also have their
+   * implementation implement {@link Shipper} and delegate to the original scanner. This will cause
+   * compactions to free up memory as they progress, which is especially important for people using
+   * off-heap memory pools.
+   * <p>
+   * Keep in mind that when {@link Shipper#shipped()} is called, any cell references you maintain in
+   * your implementation may get corrupted. As such you should make sure to deep clone any cells
+   * that you need to keep reference to across invocations of shipped.
    * @param c        the environment provided by the region server
    * @param store    the store being compacted
    * @param scanner  the scanner over existing data used in the store file rewriting
@@ -570,15 +580,15 @@ public interface RegionObserver {
 
   /**
    * This will be called for region operations where read lock is acquired in
-   * {@link Region#startRegionOperation()}. n * @param operation The operation is about to be taken
-   * on the region
+   * {@link Region#startRegionOperation()}.
+   * @param operation The operation is about to be taken on the region
    */
   default void postStartRegionOperation(ObserverContext<RegionCoprocessorEnvironment> ctx,
     Operation operation) throws IOException {
   }
 
   /**
-   * Called after releasing read lock in {@link Region#closeRegionOperation()}. nn
+   * Called after releasing read lock in {@link Region#closeRegionOperation()}.
    */
   default void postCloseRegionOperation(ObserverContext<RegionCoprocessorEnvironment> ctx,
     Operation operation) throws IOException {
@@ -589,8 +599,8 @@ public interface RegionObserver {
    * batch operation fails.
    * <p>
    * Note: Do not retain references to any Cells in Mutations beyond the life of this invocation. If
-   * need a Cell reference for later use, copy the cell and use that. nn * @param success true if
-   * batch operation is successful otherwise false.
+   * need a Cell reference for later use, copy the cell and use that.
+   * @param success true if batch operation is successful otherwise false.
    */
   default void postBatchMutateIndispensably(ObserverContext<RegionCoprocessorEnvironment> ctx,
     MiniBatchOperationInProgress<Mutation> miniBatchOp, boolean success) throws IOException {
@@ -1463,8 +1473,8 @@ public interface RegionObserver {
    * @param fs     fileystem to read from
    * @param p      path to the file
    * @param in     {@link FSDataInputStreamWrapper}
-   * @param size   Full size of the file n * @param r original reference file. This will be not null
-   *               only when reading a split file.
+   * @param size   Full size of the file
+   * @param r      original reference file. This will be not null only when reading a split file.
    * @param reader the base reader, if not {@code null}, from previous RegionObserver in the chain
    * @return a Reader instance to use instead of the base reader if overriding default behavior,
    *         null otherwise
@@ -1485,8 +1495,8 @@ public interface RegionObserver {
    * @param fs     fileystem to read from
    * @param p      path to the file
    * @param in     {@link FSDataInputStreamWrapper}
-   * @param size   Full size of the file n * @param r original reference file. This will be not null
-   *               only when reading a split file.
+   * @param size   Full size of the file
+   * @param r      original reference file. This will be not null only when reading a split file.
    * @param reader the base reader instance
    * @return The reader to use
    * @deprecated For Phoenix only, StoreFileReader is not a stable interface.

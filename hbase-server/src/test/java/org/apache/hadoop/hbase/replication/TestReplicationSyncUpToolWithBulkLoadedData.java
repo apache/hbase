@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -71,40 +72,50 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
 
   @Test
   public void testSyncUpTool() throws Exception {
-    /**
-     * Set up Replication: on Master and one Slave Table: t1_syncup and t2_syncup columnfamily:
-     * 'cf1' : replicated 'norep': not replicated
-     */
+    // Set up Replication:
+    // on Master and one Slave Table: t1_syncup and t2_syncup
+    // columnfamily:
+    // 'cf1' : replicated
+    // 'norep': not replicated
     setupReplication();
 
-    /**
-     * Prepare 24 random hfile ranges required for creating hfiles
-     */
+    // Prepare 24 random hfile ranges required for creating hfiles
     Iterator<String> randomHFileRangeListIterator = null;
     Set<String> randomHFileRanges = new HashSet<>(24);
     for (int i = 0; i < 24; i++) {
-      randomHFileRanges.add(UTIL1.getRandomUUID().toString());
+      randomHFileRanges.add(HBaseTestingUtil.getRandomUUID().toString());
     }
     List<String> randomHFileRangeList = new ArrayList<>(randomHFileRanges);
     Collections.sort(randomHFileRangeList);
     randomHFileRangeListIterator = randomHFileRangeList.iterator();
 
-    /**
-     * at Master: t1_syncup: Load 50 rows into cf1, and 50 rows from other hdfs into cf1, and 3 rows
-     * into norep t2_syncup: Load 100 rows into cf1, and 100 rows from other hdfs into cf1, and 3
-     * rows into norep verify correctly replicated to slave
-     */
+    // at Master:
+    // t1_syncup: Load 50 rows into cf1, and 50 rows from other hdfs into cf1, and 3 rows into norep
+    // t2_syncup: Load 100 rows into cf1, and 100 rows from other hdfs into cf1, and 3 rows into
+    // norep
+    // verify correctly replicated to slave
     loadAndReplicateHFiles(true, randomHFileRangeListIterator);
 
-    /**
-     * Verify hfile load works step 1: stop hbase on Slave step 2: at Master: t1_syncup: Load
-     * another 100 rows into cf1 and 3 rows into norep t2_syncup: Load another 200 rows into cf1 and
-     * 3 rows into norep step 3: stop hbase on master, restart hbase on Slave step 4: verify Slave
-     * still has the rows before load t1_syncup: 100 rows from cf1 t2_syncup: 200 rows from cf1 step
-     * 5: run syncup tool on Master step 6: verify that hfiles show up on Slave and 'norep' does not
-     * t1_syncup: 200 rows from cf1 t2_syncup: 400 rows from cf1 verify correctly replicated to
-     * Slave
-     */
+    // Verify hfile load works
+    //
+    // step 1: stop hbase on Slave
+    //
+    // step 2: at Master:
+    // t1_syncup: Load another 100 rows into cf1 and 3 rows into norep
+    // t2_syncup: Load another 200 rows into cf1 and 3 rows into norep
+    //
+    // step 3: stop hbase on master, restart hbase on Slave
+    //
+    // step 4: verify Slave still has the rows before load
+    // t1_syncup: 100 rows from cf1
+    // t2_syncup: 200 rows from cf1
+    //
+    // step 5: run syncup tool on Master
+    //
+    // step 6: verify that hfiles show up on Slave and 'norep' does not
+    // t1_syncup: 200 rows from cf1
+    // t2_syncup: 400 rows from cf1
+    // verify correctly replicated to Slave
     mimicSyncUpAfterBulkLoad(randomHFileRangeListIterator);
 
   }
@@ -139,34 +150,12 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     syncUp(UTIL1);
 
     // After syun up
-    for (int i = 0; i < NB_RETRIES; i++) {
-      syncUp(UTIL1);
-      rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
-      rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
-      if (i == NB_RETRIES - 1) {
-        if (rowCountHt1TargetAtPeer1 != 200 || rowCountHt2TargetAtPeer1 != 400) {
-          // syncUP still failed. Let's look at the source in case anything wrong there
-          restartSourceHBaseCluster(1);
-          rowCount_ht1Source = countRows(ht1Source);
-          LOG.debug("t1_syncup should have 206 rows at source, and it is " + rowCount_ht1Source);
-          rowCount_ht2Source = countRows(ht2Source);
-          LOG.debug("t2_syncup should have 406 rows at source, and it is " + rowCount_ht2Source);
-        }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 200 rows", 200,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 400 rows", 400,
-          rowCountHt2TargetAtPeer1);
-      }
-      if (rowCountHt1TargetAtPeer1 == 200 && rowCountHt2TargetAtPeer1 == 400) {
-        LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
-        break;
-      } else {
-        LOG.debug("SyncUpAfterBulkLoad failed at retry = " + i + ", with rowCount_ht1TargetPeer1 ="
-          + rowCountHt1TargetAtPeer1 + " and rowCount_ht2TargetAtPeer1 ="
-          + rowCountHt2TargetAtPeer1);
-      }
-      Thread.sleep(SLEEP_TIME);
-    }
+    rowCountHt1TargetAtPeer1 = countRows(ht1TargetAtPeer1);
+    rowCountHt2TargetAtPeer1 = countRows(ht2TargetAtPeer1);
+    assertEquals("@Peer1 t1_syncup should be sync up and have 200 rows", 200,
+      rowCountHt1TargetAtPeer1);
+    assertEquals("@Peer1 t2_syncup should be sync up and have 400 rows", 400,
+      rowCountHt2TargetAtPeer1);
   }
 
   private void loadAndReplicateHFiles(boolean verifyReplicationOnSlave,

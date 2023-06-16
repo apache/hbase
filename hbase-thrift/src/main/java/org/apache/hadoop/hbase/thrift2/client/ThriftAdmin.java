@@ -175,6 +175,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public List<TableDescriptor> listTableDescriptorsByState(boolean isEnabled) throws IOException {
+    throw new NotImplementedException("listTableDescriptorsByState not supported in ThriftAdmin");
+  }
+
+  @Override
   public TableName[] listTableNames() throws IOException {
     return listTableNames(null);
   }
@@ -193,6 +198,11 @@ public class ThriftAdmin implements Admin {
     } catch (TException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public List<TableName> listTableNamesByState(boolean isEnabled) throws IOException {
+    throw new NotImplementedException("listTableNamesByState not supported in ThriftAdmin");
   }
 
   @Override
@@ -1032,6 +1042,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public boolean isReplicationPeerEnabled(String peerId) throws IOException {
+    throw new NotImplementedException("isReplicationPeerEnabled not supported in ThriftAdmin");
+  }
+
+  @Override
   public void decommissionRegionServers(List<ServerName> servers, boolean offload) {
     throw new NotImplementedException("decommissionRegionServers not supported in ThriftAdmin");
 
@@ -1313,5 +1328,18 @@ public class ThriftAdmin implements Admin {
   @Override
   public void flushMasterStore() throws IOException {
     throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
+    throws IOException {
+    throw new NotImplementedException(
+      "replicationPeerModificationSwitch not supported in ThriftAdmin");
+  }
+
+  @Override
+  public boolean isReplicationPeerModificationEnabled() throws IOException {
+    throw new NotImplementedException(
+      "isReplicationPeerModificationEnabled not supported in ThriftAdmin");
   }
 }

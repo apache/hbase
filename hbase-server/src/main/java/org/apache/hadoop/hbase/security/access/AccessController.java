@@ -430,7 +430,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   /**
    * Determine if cell ACLs covered by the operation grant access. This is expensive.
-   * @return false if cell ACLs failed to grant access, true otherwise n
+   * @return false if cell ACLs failed to grant access, true otherwise
    */
   private boolean checkCoveringPermission(User user, OpType request, RegionCoprocessorEnvironment e,
     byte[] row, Map<byte[], ? extends Collection<?>> familyMap, long opTs, Action... actions)
@@ -1024,7 +1024,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   /**
-   * Create the ACL table n
+   * Create the ACL table
    */
   private static void createACLTable(Admin admin) throws IOException {
     /** Table descriptor for ACL table */
@@ -1072,6 +1072,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       AuthResult result = AuthResult.allow("cloneSnapshot " + snapshot.getName(),
         "Snapshot owner check allowed", user, null, hTableDescriptor.getTableName(), null);
       AccessChecker.logResult(result);
+    } else if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, user)) {
+      requireNamespacePermission(ctx, "cloneSnapshot",
+        hTableDescriptor.getTableName().getNamespaceAsString(), Action.ADMIN);
     } else {
       accessChecker.requirePermission(user, "cloneSnapshot " + snapshot.getName(), null,
         Action.ADMIN);
@@ -1817,7 +1820,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   /**
    * Authorization check for SecureBulkLoadProtocol.prepareBulkLoad()
-   * @param ctx the context n
+   * @param ctx the context
    */
   @Override
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -1829,7 +1832,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   /**
    * Authorization security check for SecureBulkLoadProtocol.cleanupBulkLoad()
-   * @param ctx the context n
+   * @param ctx the context
    */
   @Override
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)

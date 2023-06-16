@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetri
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -58,7 +57,7 @@ public class ReplicationSourceShipper extends Thread {
   private final Configuration conf;
   protected final String walGroupId;
   protected final ReplicationSourceLogQueue logQueue;
-  private final ReplicationSource source;
+  protected final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
   // It will be accessed by the stats thread so make it volatile
@@ -151,18 +150,6 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   /**
-   * get batchEntry size excludes bulk load file sizes. Uses ReplicationSourceWALReader's static
-   * method.
-   */
-  private int getBatchEntrySizeExcludeBulkLoad(WALEntryBatch entryBatch) {
-    int totalSize = 0;
-    for (Entry entry : entryBatch.getWalEntries()) {
-      totalSize += ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(entry);
-    }
-    return totalSize;
-  }
-
-  /**
    * Do the shipping logic
    */
   private void shipEdits(WALEntryBatch entryBatch) {
@@ -173,7 +160,6 @@ public class ReplicationSourceShipper extends Thread {
       return;
     }
     int currentSize = (int) entryBatch.getHeapSize();
-    int sizeExcludeBulkLoad = getBatchEntrySizeExcludeBulkLoad(entryBatch);
     source.getSourceMetrics()
       .setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
     while (isActive()) {
@@ -217,7 +203,7 @@ public class ReplicationSourceShipper extends Thread {
         // this sizeExcludeBulkLoad has to use same calculation that when calling
         // acquireBufferQuota() in ReplicationSourceWALReader because they maintain
         // same variable: totalBufferUsed
-        source.postShipEdits(entries, sizeExcludeBulkLoad);
+        source.postShipEdits(entries, entryBatch.getUsedBufferSize());
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
           entryBatch.getNbHFiles());
@@ -313,10 +299,6 @@ public class ReplicationSourceShipper extends Thread {
     this.entryReader = entryReader;
   }
 
-  long getStartPosition() {
-    return 0;
-  }
-
   protected boolean isActive() {
     return source.isSourceActive() && state == WorkerState.RUNNING && !isInterrupted();
   }
@@ -366,20 +348,17 @@ public class ReplicationSourceShipper extends Thread {
         return;
       }
     }
-    LongAccumulator totalToDecrement = new LongAccumulator((a, b) -> a + b, 0);
-    entryReader.entryBatchQueue.forEach(w -> {
-      entryReader.entryBatchQueue.remove(w);
-      w.getWalEntries().forEach(e -> {
-        long entrySizeExcludeBulkLoad = ReplicationSourceWALReader.getEntrySizeExcludeBulkLoad(e);
-        totalToDecrement.accumulate(entrySizeExcludeBulkLoad);
-      });
-    });
+    long totalReleasedBytes = 0;
+    while (true) {
+      WALEntryBatch batch = entryReader.entryBatchQueue.poll();
+      if (batch == null) {
+        break;
+      }
+      totalReleasedBytes += source.getSourceManager().releaseWALEntryBatchBufferQuota(batch);
+    }
     if (LOG.isTraceEnabled()) {
       LOG.trace("Decrementing totalBufferUsed by {}B while stopping Replication WAL Readers.",
-        totalToDecrement.longValue());
+        totalReleasedBytes);
     }
-    long newBufferUsed =
-      source.getSourceManager().getTotalBufferUsed().addAndGet(-totalToDecrement.longValue());
-    source.getSourceManager().getGlobalMetrics().setWALReaderEditsBufferBytes(newBufferUsed);
   }
 }

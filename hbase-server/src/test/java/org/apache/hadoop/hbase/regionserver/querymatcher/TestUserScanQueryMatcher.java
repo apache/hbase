@@ -162,7 +162,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
   /**
    * Verify that {@link ScanQueryMatcher} only skips expired KeyValue instances and does not exit
    * early from the row (skipping later non-expired KeyValues). This version mimics a Get with
-   * explicitly specified column qualifiers. n
+   * explicitly specified column qualifiers.
    */
   @Test
   public void testMatch_ExpiredExplicit() throws IOException {
@@ -205,7 +205,7 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
   /**
    * Verify that {@link ScanQueryMatcher} only skips expired KeyValue instances and does not exit
    * early from the row (skipping later non-expired KeyValues). This version mimics a Get with
-   * wildcard-inferred column qualifiers. n
+   * wildcard-inferred column qualifiers.
    */
   @Test
   public void testMatch_ExpiredWildcard() throws IOException {

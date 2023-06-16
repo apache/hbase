@@ -181,10 +181,10 @@ class ReportMakingVisitor implements ClientMetaTableAccessor.CloseableVisitor {
           addOverlap(this.highestEndKeyRegionInfo, ri);
         }
       }
+      this.previous = ri;
+      this.highestEndKeyRegionInfo =
+        MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
     }
-    this.previous = ri;
-    this.highestEndKeyRegionInfo =
-      MetaFixer.getRegionInfoWithLargestEndKey(this.highestEndKeyRegionInfo, ri);
     return ri;
   }
 

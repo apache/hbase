@@ -22,6 +22,7 @@ import static java.lang.String.format;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -56,13 +57,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
+import org.apache.hadoop.hbase.client.AsyncTableRegionLocator;
 import org.apache.hadoop.hbase.client.ClusterConnectionFactory;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -88,6 +93,7 @@ import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.FsDelegationToken;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -113,6 +119,13 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   private static final Logger LOG = LoggerFactory.getLogger(BulkLoadHFilesTool.class);
 
+  /**
+   * Keep locality while generating HFiles for bulkload. See HBASE-12596
+   */
+  public static final String LOCALITY_SENSITIVE_CONF_KEY =
+    "hbase.bulkload.locality.sensitive.enabled";
+  private static final boolean DEFAULT_LOCALITY_SENSITIVE = true;
+
   public static final String NAME = "completebulkload";
   /**
    * Whether to run validation on hfiles before loading.
@@ -123,6 +136,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
    * of compacting at server side
    */
   public static final String BULK_LOAD_HFILES_BY_FAMILY = "hbase.mapreduce.bulkload.by.family";
+
+  public static final String FAIL_IF_NEED_SPLIT_HFILE =
+    "hbase.loadincremental.fail.if.need.split.hfile";
 
   // We use a '.' prefix which is ignored when walking directory trees
   // above. It is invalid family name.
@@ -141,6 +157,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
   private List<String> clusterIds = new ArrayList<>();
   private boolean replicate = true;
+  private boolean failIfNeedSplitHFile = false;
 
   public BulkLoadHFilesTool(Configuration conf) {
     // make a copy, just to be sure we're not overriding someone else's config
@@ -159,6 +176,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     nrThreads =
       conf.getInt("hbase.loadincremental.threads.max", Runtime.getRuntime().availableProcessors());
     bulkLoadByFamily = conf.getBoolean(BULK_LOAD_HFILES_BY_FAMILY, false);
+    failIfNeedSplitHFile = conf.getBoolean(FAIL_IF_NEED_SPLIT_HFILE, false);
   }
 
   // Initialize a thread pool
@@ -534,7 +552,6 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     Set<Future<Pair<List<LoadQueueItem>, String>>> splittingFutures = new HashSet<>();
     while (!queue.isEmpty()) {
       final LoadQueueItem item = queue.remove();
-
       final Callable<Pair<List<LoadQueueItem>, String>> call =
         () -> groupOrSplit(conn, tableName, regionGroups, item, startEndKeys);
       splittingFutures.add(pool.submit(call));
@@ -572,8 +589,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     return UUID.randomUUID().toString().replaceAll("-", "");
   }
 
-  private List<LoadQueueItem> splitStoreFile(LoadQueueItem item, TableDescriptor tableDesc,
-    byte[] splitKey) throws IOException {
+  private List<LoadQueueItem> splitStoreFile(AsyncTableRegionLocator loc, LoadQueueItem item,
+    TableDescriptor tableDesc, byte[] splitKey) throws IOException {
     Path hfilePath = item.getFilePath();
     byte[] family = item.getFamily();
     Path tmpDir = hfilePath.getParent();
@@ -588,7 +605,8 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
 
     Path botOut = new Path(tmpDir, uniqueName + ".bottom");
     Path topOut = new Path(tmpDir, uniqueName + ".top");
-    splitStoreFile(getConf(), hfilePath, familyDesc, splitKey, botOut, topOut);
+
+    splitStoreFile(loc, getConf(), hfilePath, familyDesc, splitKey, botOut, topOut);
 
     FileSystem fs = tmpDir.getFileSystem(getConf());
     fs.setPermission(tmpDir, FsPermission.valueOf("-rwxrwxrwx"));
@@ -699,6 +717,11 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       Bytes.compareTo(last.get(), startEndKeys.get(firstKeyRegionIdx).getSecond()) < 0 || Bytes
         .equals(startEndKeys.get(firstKeyRegionIdx).getSecond(), HConstants.EMPTY_BYTE_ARRAY);
     if (!lastKeyInRange) {
+      if (failIfNeedSplitHFile) {
+        throw new IOException(
+          "The key range of hfile=" + hfilePath + " fits into no region. " + "And because "
+            + FAIL_IF_NEED_SPLIT_HFILE + " was set to true, we just skip the next steps.");
+      }
       int lastKeyRegionIdx = getRegionIndex(startEndKeys, last.get());
       int splitIdx = (firstKeyRegionIdx + lastKeyRegionIdx) / 2;
       // make sure the splitPoint is valid in case region overlap occur, maybe the splitPoint bigger
@@ -707,8 +730,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         checkRegionIndexValid(splitIdx, startEndKeys, tableName);
       }
       byte[] splitPoint = startEndKeys.get(splitIdx).getSecond();
-      List<LoadQueueItem> lqis =
-        splitStoreFile(item, FutureUtils.get(conn.getAdmin().getDescriptor(tableName)), splitPoint);
+      List<LoadQueueItem> lqis = splitStoreFile(conn.getRegionLocator(tableName), item,
+        FutureUtils.get(conn.getAdmin().getDescriptor(tableName)), splitPoint);
+
       return new Pair<>(lqis, null);
     }
 
@@ -718,35 +742,38 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   }
 
   /**
-   * Split a storefile into a top and bottom half, maintaining the metadata, recreating bloom
-   * filters, etc.
+   * Split a storefile into a top and bottom half with favored nodes, maintaining the metadata,
+   * recreating bloom filters, etc.
    */
   @InterfaceAudience.Private
-  static void splitStoreFile(Configuration conf, Path inFile, ColumnFamilyDescriptor familyDesc,
-    byte[] splitKey, Path bottomOut, Path topOut) throws IOException {
+  static void splitStoreFile(AsyncTableRegionLocator loc, Configuration conf, Path inFile,
+    ColumnFamilyDescriptor familyDesc, byte[] splitKey, Path bottomOut, Path topOut)
+    throws IOException {
     // Open reader with no block cache, and not in-memory
     Reference topReference = Reference.createTopReference(splitKey);
     Reference bottomReference = Reference.createBottomReference(splitKey);
 
-    copyHFileHalf(conf, inFile, topOut, topReference, familyDesc);
-    copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc);
+    copyHFileHalf(conf, inFile, topOut, topReference, familyDesc, loc);
+    copyHFileHalf(conf, inFile, bottomOut, bottomReference, familyDesc, loc);
   }
 
   /**
-   * Copy half of an HFile into a new HFile.
+   * Copy half of an HFile into a new HFile with favored nodes.
    */
   private static void copyHFileHalf(Configuration conf, Path inFile, Path outFile,
-    Reference reference, ColumnFamilyDescriptor familyDescriptor) throws IOException {
+    Reference reference, ColumnFamilyDescriptor familyDescriptor, AsyncTableRegionLocator loc)
+    throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
     CacheConfig cacheConf = CacheConfig.DISABLED;
     HalfStoreFileReader halfReader = null;
     StoreFileWriter halfWriter = null;
     try {
       ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, inFile).build();
-      HFileInfo hfile = new HFileInfo(context, conf);
-      halfReader =
-        new HalfStoreFileReader(context, hfile, cacheConf, reference, new AtomicInteger(0), conf);
-      hfile.initMetaAndIndex(halfReader.getHFileReader());
+      StoreFileInfo storeFileInfo =
+        new StoreFileInfo(conf, fs, fs.getFileStatus(inFile), reference);
+      storeFileInfo.initHFileInfo(context);
+      halfReader = (HalfStoreFileReader) storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(halfReader.getHFileReader());
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -756,13 +783,51 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
         .withChecksumType(StoreUtils.getChecksumType(conf))
         .withBytesPerCheckSum(StoreUtils.getBytesPerChecksum(conf)).withBlockSize(blocksize)
         .withDataBlockEncoding(familyDescriptor.getDataBlockEncoding()).withIncludesTags(true)
-        .build();
-      halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
-        .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
+
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
-        halfWriter.append(scanner.getCell());
+        final Cell cell = scanner.getCell();
+        if (null != halfWriter) {
+          halfWriter.append(cell);
+        } else {
+
+          // init halfwriter
+          if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
+            byte[] rowKey = CellUtil.cloneRow(cell);
+            HRegionLocation hRegionLocation = FutureUtils.get(loc.getRegionLocation(rowKey));
+            InetSocketAddress[] favoredNodes = null;
+            if (null == hRegionLocation) {
+              LOG.warn(
+                "Failed get region location for  rowkey {} , Using writer without favoured nodes.",
+                Bytes.toString(rowKey));
+              halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+            } else {
+              LOG.debug("First rowkey: [{}]", Bytes.toString(rowKey));
+              InetSocketAddress initialIsa =
+                new InetSocketAddress(hRegionLocation.getHostname(), hRegionLocation.getPort());
+              if (initialIsa.isUnresolved()) {
+                LOG.warn("Failed get location for region {} , Using writer without favoured nodes.",
+                  hRegionLocation);
+                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                  .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+              } else {
+                LOG.debug("Use favored nodes writer: {}", initialIsa.getHostString());
+                favoredNodes = new InetSocketAddress[] { initialIsa };
+                halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+                  .withBloomType(bloomFilterType).withFileContext(hFileContext)
+                  .withFavoredNodes(favoredNodes).build();
+              }
+            }
+          } else {
+            halfWriter = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(outFile)
+              .withBloomType(bloomFilterType).withFileContext(hFileContext).build();
+          }
+          halfWriter.append(cell);
+        }
+
       } while (scanner.next());
 
       for (Map.Entry<byte[], byte[]> entry : fileInfo.entrySet()) {

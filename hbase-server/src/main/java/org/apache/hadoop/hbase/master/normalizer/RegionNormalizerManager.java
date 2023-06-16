@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.normalizer;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,9 +28,7 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
-import org.apache.hadoop.hbase.zookeeper.RegionNormalizerTracker;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +41,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class RegionNormalizerManager implements PropagatingConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(RegionNormalizerManager.class);
 
-  private final RegionNormalizerTracker regionNormalizerTracker;
+  private final RegionNormalizerStateStore regionNormalizerStateStore;
   private final RegionNormalizerChore regionNormalizerChore;
   private final RegionNormalizerWorkQueue<TableName> workQueue;
   private final RegionNormalizerWorker worker;
@@ -52,11 +51,11 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
   private boolean started = false;
   private boolean stopped = false;
 
-  RegionNormalizerManager(@NonNull final RegionNormalizerTracker regionNormalizerTracker,
+  RegionNormalizerManager(@NonNull final RegionNormalizerStateStore regionNormalizerStateStore,
     @Nullable final RegionNormalizerChore regionNormalizerChore,
     @Nullable final RegionNormalizerWorkQueue<TableName> workQueue,
     @Nullable final RegionNormalizerWorker worker) {
-    this.regionNormalizerTracker = regionNormalizerTracker;
+    this.regionNormalizerStateStore = regionNormalizerStateStore;
     this.regionNormalizerChore = regionNormalizerChore;
     this.workQueue = workQueue;
     this.worker = worker;
@@ -90,7 +89,6 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
       if (started) {
         return;
       }
-      regionNormalizerTracker.start();
       if (worker != null) {
         // worker will be null when master is in maintenance mode.
         pool.submit(worker);
@@ -108,7 +106,6 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
         return;
       }
       pool.shutdownNow(); // shutdownNow to interrupt the worker thread sitting on `take()`
-      regionNormalizerTracker.stop();
       stopped = true;
     }
   }
@@ -121,19 +118,15 @@ public class RegionNormalizerManager implements PropagatingConfigurationObserver
    * Return {@code true} if region normalizer is on, {@code false} otherwise
    */
   public boolean isNormalizerOn() {
-    return regionNormalizerTracker.isNormalizerOn();
+    return regionNormalizerStateStore.get();
   }
 
   /**
    * Set region normalizer on/off
    * @param normalizerOn whether normalizer should be on or off
    */
-  public void setNormalizerOn(boolean normalizerOn) {
-    try {
-      regionNormalizerTracker.setNormalizerOn(normalizerOn);
-    } catch (KeeperException e) {
-      LOG.warn("Error flipping normalizer switch", e);
-    }
+  public void setNormalizerOn(boolean normalizerOn) throws IOException {
+    regionNormalizerStateStore.set(normalizerOn);
   }
 
   /**

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.io.hfile.BlockCompressedSizePredicator.MAX_BLOCK_SIZE_UNCOMPRESSED;
+
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -32,13 +34,16 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaCellComparator;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -90,6 +95,11 @@ public class HFileWriterImpl implements HFile.Writer {
   /** Used for calculating the average value length. */
   protected long totalValueLength = 0;
 
+  /** Len of the biggest cell. */
+  protected long lenOfBiggestCell = 0;
+  /** Key of the biggest cell. */
+  protected byte[] keyOfBiggestCell;
+
   /** Total uncompressed bytes, maybe calculate a compression ratio later. */
   protected long totalUncompressedBytes = 0;
 
@@ -121,6 +131,8 @@ public class HFileWriterImpl implements HFile.Writer {
    * no encoding.
    */
   protected final HFileDataBlockEncoder blockEncoder;
+
+  protected final HFileIndexBlockEncoder indexBlockEncoder;
 
   protected final HFileContext hFileContext;
 
@@ -169,6 +181,12 @@ public class HFileWriterImpl implements HFile.Writer {
       this.blockEncoder = new HFileDataBlockEncoderImpl(encoding);
     } else {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
+    }
+    IndexBlockEncoding indexBlockEncoding = hFileContext.getIndexBlockEncoding();
+    if (indexBlockEncoding != IndexBlockEncoding.NONE) {
+      this.indexBlockEncoder = new HFileIndexBlockEncoderImpl(indexBlockEncoding);
+    } else {
+      this.indexBlockEncoder = NoOpIndexBlockEncoder.INSTANCE;
     }
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -292,11 +310,12 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IllegalStateException("finishInit called twice");
     }
     blockWriter =
-      new HFileBlock.Writer(conf, blockEncoder, hFileContext, cacheConf.getByteBuffAllocator());
+      new HFileBlock.Writer(conf, blockEncoder, hFileContext, cacheConf.getByteBuffAllocator(),
+        conf.getInt(MAX_BLOCK_SIZE_UNCOMPRESSED, hFileContext.getBlocksize() * 10));
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(blockWriter,
-      cacheIndexesOnWrite ? cacheConf : null, cacheIndexesOnWrite ? name : null);
+      cacheIndexesOnWrite ? cacheConf : null, cacheIndexesOnWrite ? name : null, indexBlockEncoder);
     dataBlockIndexWriter.setMaxChunkSize(HFileBlockIndex.getMaxChunkSize(conf));
     dataBlockIndexWriter.setMinIndexNumEntries(HFileBlockIndex.getMinIndexNumEntries(conf));
     inlineBlockWriters.add(dataBlockIndexWriter);
@@ -319,6 +338,7 @@ public class HFileWriterImpl implements HFile.Writer {
       shouldFinishBlock = blockWriter.encodedBlockSizeWritten() >= hFileContext.getBlocksize()
         || blockWriter.blockSizeWritten() >= hFileContext.getBlocksize();
     }
+    shouldFinishBlock &= blockWriter.checkBoundariesWithPredicate();
     if (shouldFinishBlock) {
       finishBlock();
       writeInlineBlocks(false);
@@ -537,7 +557,7 @@ public class HFileWriterImpl implements HFile.Writer {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
       try {
         cache.cacheBlock(new BlockCacheKey(name, offset, true, cacheFormatBlock.getBlockType()),
-          cacheFormatBlock);
+          cacheFormatBlock, cacheConf.isInMemory(), true);
       } finally {
         // refCnt will auto increase when block add to Cache, see RAMCache#putIfAbsent
         cacheFormatBlock.release();
@@ -561,8 +581,8 @@ public class HFileWriterImpl implements HFile.Writer {
    * Add a meta block to the end of the file. Call before close(). Metadata blocks are expensive.
    * Fill one with a bunch of serialized data rather than do a metadata block per metadata instance.
    * If metadata is small, consider adding to file info using
-   * {@link #appendFileInfo(byte[], byte[])} n * name of the block n * will call readFields to get
-   * data later (DO NOT REUSE)
+   * {@link #appendFileInfo(byte[], byte[])} name of the block will call readFields to get data
+   * later (DO NOT REUSE)
    */
   @Override
   public void appendMetaBlock(String metaBlockName, Writable content) {
@@ -586,6 +606,8 @@ public class HFileWriterImpl implements HFile.Writer {
     }
     // Save data block encoder metadata in the file info.
     blockEncoder.saveMetadata(this);
+    // Save index block encoder metadata in the file info.
+    indexBlockEncoder.saveMetadata(this);
     // Write out the end of the data blocks, then write meta data blocks.
     // followed by fileinfo, data block index and meta block index.
 
@@ -708,7 +730,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   /**
    * Add key/value to file. Keys must be added in an order that agrees with the Comparator passed on
-   * construction. n * Cell to add. Cannot be empty nor null.
+   * construction. Cell to add. Cannot be empty nor null.
    */
   @Override
   public void append(final Cell cell) throws IOException {
@@ -726,7 +748,10 @@ public class HFileWriterImpl implements HFile.Writer {
 
     totalKeyLength += PrivateCellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += cell.getValueLength();
-
+    if (lenOfBiggestCell < PrivateCellUtil.estimatedSerializedSizeOf(cell)) {
+      lenOfBiggestCell = PrivateCellUtil.estimatedSerializedSizeOf(cell);
+      keyOfBiggestCell = PrivateCellUtil.getCellKeySerializedAsKeyValueKey(cell);
+    }
     // Are we the first key in this block?
     if (firstCellInBlock == null) {
       // If cell is big, block will be closed and this firstCellInBlock reference will only last
@@ -780,6 +805,16 @@ public class HFileWriterImpl implements HFile.Writer {
     // Average value length.
     int avgValueLen = entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(HFileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
+
+    // Biggest cell.
+    if (keyOfBiggestCell != null) {
+      fileInfo.append(HFileInfo.KEY_OF_BIGGEST_CELL, keyOfBiggestCell, false);
+      fileInfo.append(HFileInfo.LEN_OF_BIGGEST_CELL, Bytes.toBytes(lenOfBiggestCell), false);
+      LOG.debug("Len of the biggest cell in {} is {}, key is {}",
+        this.getPath() == null ? "" : this.getPath().toString(), lenOfBiggestCell,
+        CellUtil.toString(new KeyValue.KeyOnlyKeyValue(keyOfBiggestCell), false));
+    }
+
     if (hFileContext.isIncludesTags()) {
       // When tags are not being written in this file, MAX_TAGS_LEN is excluded
       // from the FileInfo
