@@ -1980,7 +1980,7 @@ public class HFileBlock implements Cacheable {
   /**
    * Return the number of bytes required to store all the checksums for this block. Each checksum
    * value is a 4 byte integer. <br/>
-   * NOTE:ByteBuff returned by {@link HFileBlock#getBufferWithoutHeader()} and
+   * NOTE: ByteBuff returned by {@link HFileBlock#getBufferWithoutHeader()} and
    * {@link HFileBlock#getBufferReadOnly} or DataInputStream returned by
    * {@link HFileBlock#getByteStream()} does not include checksum.
    */
