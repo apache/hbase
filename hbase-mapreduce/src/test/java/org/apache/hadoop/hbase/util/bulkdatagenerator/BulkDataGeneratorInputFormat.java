@@ -17,14 +17,11 @@
  */
 package org.apache.hadoop.hbase.util.bulkdatagenerator;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -47,7 +44,7 @@ public class BulkDataGeneratorInputFormat extends InputFormat<Text, NullWritable
     // Create a number of input splits equal to the number of mapper tasks
     ArrayList<InputSplit> splits = new ArrayList<InputSplit>();
     for (int i = 0; i < mapperCount; ++i) {
-      splits.add(new FakeInputSplit());
+      splits.add(new BulkDataGeneratorInputSplit());
     }
     return splits;
   }
@@ -59,29 +56,5 @@ public class BulkDataGeneratorInputFormat extends InputFormat<Text, NullWritable
       new BulkDataGeneratorRecordReader();
     bulkDataGeneratorRecordReader.initialize(split, context);
     return bulkDataGeneratorRecordReader;
-  }
-
-  /**
-   * Dummy input split to be used by {@link BulkDataGeneratorRecordReader}
-   */
-  private static class FakeInputSplit extends InputSplit implements Writable {
-
-    @Override
-    public void readFields(DataInput arg0) throws IOException {
-    }
-
-    @Override
-    public void write(DataOutput arg0) throws IOException {
-    }
-
-    @Override
-    public long getLength() throws IOException, InterruptedException {
-      return 0;
-    }
-
-    @Override
-    public String[] getLocations() throws IOException, InterruptedException {
-      return new String[0];
-    }
   }
 }
