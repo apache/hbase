@@ -204,10 +204,10 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
 
     private void init(HFileBlock blk, int numEntries) throws IOException {
       DataInputStream in = readRootIndex(blk, numEntries);
-      // after reading the root index the checksum bytes have to
-      // be subtracted to know if the mid key exists.
-      int checkSumBytes = blk.totalChecksumBytes();
-      if ((in.available() - checkSumBytes) < MID_KEY_METADATA_SIZE) {
+      // HFileBlock.getByteStream() returns a byte stream for reading the data( excluding checksum)
+      // of root index block, so after reading the root index there is no need to subtract the
+      // checksum bytes.
+      if (in.available() < MID_KEY_METADATA_SIZE) {
         // No mid-key metadata available.
         return;
       }
