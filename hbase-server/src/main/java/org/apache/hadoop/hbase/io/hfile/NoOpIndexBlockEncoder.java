@@ -204,7 +204,7 @@ public class NoOpIndexBlockEncoder implements HFileIndexBlockEncoder {
 
     private void init(HFileBlock blk, int numEntries) throws IOException {
       DataInputStream in = readRootIndex(blk, numEntries);
-      // HFileBlock.getByteStream() returns a byte stream for reading the data( excluding checksum)
+      // HFileBlock.getByteStream() returns a byte stream for reading the data(excluding checksum)
       // of root index block, so after reading the root index there is no need to subtract the
       // checksum bytes.
       if (in.available() < MID_KEY_METADATA_SIZE) {

@@ -802,6 +802,7 @@ public class TestHFileBlockIndex {
       dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
       NoOpEncodedSeeker noOpEncodedSeeker = (NoOpEncodedSeeker) encoder.encoderSeeker;
+      // Assert we have read midkey metadata successfully.
       assertTrue(noOpEncodedSeeker.midLeafBlockOffset >= 0);
       assertTrue(noOpEncodedSeeker.midLeafBlockOnDiskSize > 0);
       assertTrue(noOpEncodedSeeker.midKeyEntry >= 0);
