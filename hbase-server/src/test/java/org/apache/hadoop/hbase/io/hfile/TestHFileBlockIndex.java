@@ -42,11 +42,13 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -729,5 +731,66 @@ public class TestHFileBlockIndex {
       scanner.seekTo(CellUtil.createCell(keys.get(i)));
     }
     reader.close();
+  }
+
+  /**
+   * This test is for HBASE-27940, which midkey metadata in root index block would always be ignored
+   * by {@link BlockIndexReader#readMultiLevelIndexRoot}.
+   */
+  @Test
+  public void testMidKeyReadSuccessfullyFromRootIndexBlock() throws IOException {
+    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, 128);
+    Path hfilePath =
+      new Path(TEST_UTIL.getDataTestDir(), "testMidKeyReadSuccessfullyFromRootIndexBlock");
+    Compression.Algorithm compressAlgo = Compression.Algorithm.NONE;
+    int entryCount = 50000;
+    HFileContext context = new HFileContextBuilder().withBlockSize(4096).withIncludesTags(false)
+      .withDataBlockEncoding(DataBlockEncoding.NONE).withCompression(compressAlgo).build();
+
+    try (HFile.Writer writer = new HFile.WriterFactory(conf, new CacheConfig(conf))
+      .withPath(fs, hfilePath).withFileContext(context).create()) {
+
+      List<KeyValue> keyValues = new ArrayList<>(entryCount);
+      for (int i = 0; i < entryCount; ++i) {
+        byte[] keyBytes = RandomKeyValueUtil.randomOrderedKey(RNG, i);
+        // A random-length random value.
+        byte[] valueBytes = RandomKeyValueUtil.randomValue(RNG);
+        KeyValue keyValue =
+          new KeyValue(keyBytes, null, null, HConstants.LATEST_TIMESTAMP, valueBytes);
+        writer.append(keyValue);
+        keyValues.add(keyValue);
+      }
+    }
+
+    try (FSDataInputStream fsdis = fs.open(hfilePath)) {
+      long fileSize = fs.getFileStatus(hfilePath).getLen();
+      FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, fileSize);
+
+      assertEquals(3, trailer.getMajorVersion());
+      assertEquals(entryCount, trailer.getEntryCount());
+      HFileContext meta = new HFileContextBuilder().withCompression(compressAlgo)
+        .withIncludesMvcc(false).withIncludesTags(false)
+        .withDataBlockEncoding(DataBlockEncoding.NONE).withHBaseCheckSum(true).build();
+      ReaderContext readerContext =
+        new ReaderContextBuilder().withInputStreamWrapper(new FSDataInputStreamWrapper(fsdis))
+          .withFilePath(hfilePath).withFileSystem(fs).withFileSize(fileSize).build();
+      HFileBlock.FSReader blockReader =
+        new HFileBlock.FSReaderImpl(readerContext, meta, ByteBuffAllocator.HEAP);
+
+      HFileBlockIndex.CellBasedKeyBlockIndexReader dataBlockIndexReader =
+        new HFileBlockIndex.CellBasedKeyBlockIndexReader(trailer.createComparator(),
+          trailer.getNumDataIndexLevels());
+
+      HFileBlock.BlockIterator blockIter = blockReader.blockRange(trailer.getLoadOnOpenDataOffset(),
+        fileSize - trailer.getTrailerSize());
+      // Data index. We also read statistics about the block index written after
+      // the root level.
+      dataBlockIndexReader.readMultiLevelIndexRoot(
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
+      // Assert we have read midkey metadata successfully.
+      assertTrue(dataBlockIndexReader.midLeafBlockOffset >= 0);
+      assertTrue(dataBlockIndexReader.midLeafBlockOnDiskSize > 0);
+      assertTrue(dataBlockIndexReader.midKeyEntry >= 0);
+    }
   }
 }
