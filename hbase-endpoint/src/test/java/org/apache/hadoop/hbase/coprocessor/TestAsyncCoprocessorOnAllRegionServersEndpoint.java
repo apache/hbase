@@ -31,8 +31,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncAdminClientUtils;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.client.ServiceCaller;
 import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
@@ -82,10 +84,11 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
   public void testRegionServersCoprocessorService()
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
-    Map<ServerName, Object> resultMap =
-      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
-        DummyService::newStub, (s, c, done) -> s.dummyCall(c, request, done)).get();
-
+    Map<ServerName,
+      Object> resultMap = AsyncAdminClientUtils.coprocessorServiceOnAllRegionServers(admin,
+        DummyService::newStub, (ServiceCaller<DummyService.Stub, DummyResponse>) (stub, controller,
+          rpcCallback) -> stub.dummyCall(controller, request, rpcCallback))
+        .get();
     resultMap.forEach((k, v) -> {
       assertTrue(v instanceof DummyResponse);
       DummyResponse resp = (DummyResponse) v;
@@ -97,9 +100,11 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
   public void testRegionServerCoprocessorsServiceAllFail()
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
-    Map<ServerName, Object> resultMap =
-      admin.<DummyService.Stub, DummyResponse> coprocessorServiceOnAllRegionServers(
-        DummyService::newStub, (s, c, done) -> s.dummyThrow(c, request, done)).get();
+    Map<ServerName,
+      Object> resultMap = AsyncAdminClientUtils.coprocessorServiceOnAllRegionServers(admin,
+        DummyService::newStub, (ServiceCaller<DummyService.Stub, DummyResponse>) (stub, controller,
+          rpcCallback) -> stub.dummyThrow(controller, request, rpcCallback))
+        .get();
 
     resultMap.forEach((k, v) -> {
       assertTrue(v instanceof RetriesExhaustedException);
@@ -113,15 +118,16 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
     AtomicInteger callCount = new AtomicInteger();
-    Map<ServerName, Object> resultMap = admin.<DummyService.Stub,
-      DummyResponse> coprocessorServiceOnAllRegionServers(DummyService::newStub, (s, c, done) -> {
-        callCount.addAndGet(1);
-        if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
-          s.dummyCall(c, request, done);
-        } else {
-          s.dummyThrow(c, request, done);
-        }
-      }).get();
+    Map<ServerName, Object> resultMap =
+      AsyncAdminClientUtils.coprocessorServiceOnAllRegionServers(admin, DummyService::newStub,
+        (ServiceCaller<DummyService.Stub, DummyResponse>) (stub, controller, rpcCallback) -> {
+          callCount.addAndGet(1);
+          if (callCount.get() <= NUM_SUCCESS_REGION_SERVERS) {
+            stub.dummyCall(controller, request, rpcCallback);
+          } else {
+            stub.dummyThrow(controller, request, rpcCallback);
+          }
+        }).get();
 
     AtomicInteger successCallCount = new AtomicInteger();
     resultMap.forEach((k, v) -> {
