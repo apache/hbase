@@ -103,6 +103,7 @@ public class StoreFileReader {
     this.generalBloomFilter = storeFileReader.generalBloomFilter;
     this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
     this.bloomFilterType = storeFileReader.bloomFilterType;
+    this.bloomFilterMetrics = storeFileReader.bloomFilterMetrics;
     this.sequenceID = storeFileReader.sequenceID;
     this.timeRange = storeFileReader.timeRange;
     this.lastBloomKey = storeFileReader.lastBloomKey;
@@ -563,11 +564,11 @@ public class StoreFileReader {
     return generalBloomFilter != null ? generalBloomFilter.getKeyCount() : reader.getEntries();
   }
 
-  public void setGeneralBloomFilterFaulty() {
+  private void setGeneralBloomFilterFaulty() {
     generalBloomFilter = null;
   }
 
-  public void setDeleteFamilyBloomFilterFaulty() {
+  private void setDeleteFamilyBloomFilterFaulty() {
     this.deleteFamilyBloomFilter = null;
   }
 
