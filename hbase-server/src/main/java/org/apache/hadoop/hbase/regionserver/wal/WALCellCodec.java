@@ -288,6 +288,11 @@ public class WALCellCodec implements Codec {
 
     @Override
     protected Cell parseCell() throws IOException {
+      int firstByte = in.read();
+      while (firstByte == 0) {
+        firstByte = in.read();
+      }
+      ((PBIS) in).unread(firstByte);
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       int tagsLength = StreamUtils.readRawVarint32(in);

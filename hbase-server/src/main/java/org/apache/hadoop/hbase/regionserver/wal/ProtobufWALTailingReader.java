@@ -79,7 +79,9 @@ public class ProtobufWALTailingReader extends AbstractProtobufWALReader
   private ReadWALKeyResult readWALKey(long originalPosition) {
     int firstByte;
     try {
-      firstByte = delegatingInput.read();
+      do {
+        firstByte = delegatingInput.read();
+      } while (firstByte == 0);
     } catch (IOException e) {
       LOG.warn("Failed to read wal key length first byte", e);
       return KEY_ERROR_AND_RESET;
