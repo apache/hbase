@@ -2065,6 +2065,9 @@ public class HStore
 
   @Override
   public boolean needsCompaction() {
+    if (!region.getTableDescriptor().isCompactionEnabled()) {
+      return false;
+    }
     List<HStoreFile> filesCompactingClone = null;
     synchronized (filesCompacting) {
       filesCompactingClone = Lists.newArrayList(filesCompacting);
