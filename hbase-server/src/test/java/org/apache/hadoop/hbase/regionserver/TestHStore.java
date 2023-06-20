@@ -996,11 +996,14 @@ public class TestHStore {
     int minFilesToCompact = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     // table which enables compaction
-    // HStore.needsCompaction would return false if the number of store files less than hbase.hstore.compactionThreshold
-    // HStore.needsCompaction would return true if the number of store files greater than or quals to hbase.hstore.compactionThreshold
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(table))
-      .setSplitEnabled(false);
-    init(name.getMethodName(), conf, builder, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    // HStore.needsCompaction would return false if the number of store files less than
+    // hbase.hstore.compactionThreshold
+    // HStore.needsCompaction would return true if the number of store files greater than or quals
+    // to hbase.hstore.compactionThreshold
+    TableDescriptorBuilder builder =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setSplitEnabled(false);
+    init(name.getMethodName(), conf, builder,
+      ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     LOG.info("The table has already enabled Compaction.");
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     store.add(cell, memStoreSizing);
@@ -1018,11 +1021,10 @@ public class TestHStore {
 
     // table which disable compaction
     // HStore.needsCompaction would return false no matter how much store files there are
-    TableDescriptorBuilder builderDisableCompaction = TableDescriptorBuilder.newBuilder(TableName.valueOf(table))
-      .setSplitEnabled(false)
-      .setCompactionEnabled(false);
-    init(name.getMethodName(), conf, builderDisableCompaction, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
-    LOG.info(store.getHRegion().getTableDescriptor().isCompactionEnabled() ? enableCompactionMsg : disableCompactionMsg);
+    TableDescriptorBuilder builderDisableCompaction = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(table)).setSplitEnabled(false).setCompactionEnabled(false);
+    init(name.getMethodName(), conf, builderDisableCompaction,
+      ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     LOG.info("The table has already disabled Compaction.");
     MemStoreSizing memStoreSizingDisableCompaction = new NonThreadSafeMemStoreSizing();
     store.add(cell, memStoreSizingDisableCompaction);
