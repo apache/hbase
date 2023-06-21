@@ -175,7 +175,7 @@ public class RegionAsTable implements Table {
 
     @Override
     public ScanMetrics getScanMetrics() {
-      throw null;
+      return null;
     }
   }
 
