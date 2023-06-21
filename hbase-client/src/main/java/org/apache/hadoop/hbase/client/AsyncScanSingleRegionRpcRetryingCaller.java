@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -419,32 +417,13 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    OptionalLong maybePauseNsToUse =
-      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error,
+      remainingTimeNs() - SLEEP_DELTA_NS, tries, scanTimeoutNs > 0);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally(!scannerClosed);
       return;
     }
-    long pauseNsToUse = maybePauseNsToUse.getAsLong();
-
-    if (!(error instanceof RpcThrottlingException)) {
-      // RpcThrottlingException tells us exactly how long the client should wait for,
-      // so we should not factor in the retry count for said exception
-      pauseNsToUse = getPauseTime(pauseNsToUse, tries - 1);
-    }
-
-    long delayNs;
-    if (scanTimeoutNs > 0) {
-      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
-      if (maxDelayNs <= 0) {
-        completeExceptionally(!scannerClosed);
-        return;
-      }
-      delayNs = Math.min(maxDelayNs, pauseNsToUse);
-    } else {
-      delayNs = pauseNsToUse;
-    }
-
+    long delayNs = maybePauseNsToUse.getAsLong();
     if (scannerClosed) {
       completeWhenError(false);
       return;

@@ -57,7 +57,7 @@ public class TestHBaseServerExceptionPauseManager {
   @Test
   public void itSupportsRpcThrottlingNanos() {
     OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, Long.MAX_VALUE);
+      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, Long.MAX_VALUE, 1, true);
     assertTrue(pauseNanos.isPresent());
     assertEquals(pauseNanos.getAsLong(), WAIT_INTERVAL_NANOS);
   }
@@ -65,22 +65,42 @@ public class TestHBaseServerExceptionPauseManager {
   @Test
   public void itSupportsServerOverloadedExceptionNanos() {
     OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(SERVER_OVERLOADED_EXCEPTION, Long.MAX_VALUE);
+      pauseManager.getPauseNsFromException(SERVER_OVERLOADED_EXCEPTION, Long.MAX_VALUE, 1, true);
     assertTrue(pauseNanos.isPresent());
-    assertEquals(pauseNanos.getAsLong(), PAUSE_NANOS_FOR_SERVER_OVERLOADED);
+
+    // account for 1% jitter in pause time
+    assertTrue(pauseNanos.getAsLong() >= PAUSE_NANOS_FOR_SERVER_OVERLOADED * 0.99);
+    assertTrue(pauseNanos.getAsLong() <= PAUSE_NANOS_FOR_SERVER_OVERLOADED * 1.01);
   }
 
   @Test
   public void itSupportsOtherExceptionNanos() {
-    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, Long.MAX_VALUE);
+    OptionalLong pauseNanos =
+      pauseManager.getPauseNsFromException(OTHER_EXCEPTION, Long.MAX_VALUE, 1, true);
     assertTrue(pauseNanos.isPresent());
-    assertEquals(pauseNanos.getAsLong(), PAUSE_NANOS);
+
+    // account for 1% jitter in pause time
+    assertTrue(pauseNanos.getAsLong() >= PAUSE_NANOS * 0.99);
+    assertTrue(pauseNanos.getAsLong() <= PAUSE_NANOS * 1.01);
   }
 
   @Test
-  public void itThrottledTimeoutFastFail() {
-    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, 0L);
+  public void itTimesOutRpcThrottlingException() {
+    OptionalLong pauseNanos =
+      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, -1L, 1, true);
     assertFalse(pauseNanos.isPresent());
+  }
+
+  @Test
+  public void itTimesOutRpcOtherException() {
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, -1L, 1, true);
+    assertFalse(pauseNanos.isPresent());
+  }
+
+  @Test
+  public void itDoesNotTimeOutIfDisabled() {
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, -1L, 1, false);
+    assertTrue(pauseNanos.isPresent());
   }
 
 }

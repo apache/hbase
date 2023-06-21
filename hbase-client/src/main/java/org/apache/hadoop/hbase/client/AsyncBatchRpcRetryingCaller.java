@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
@@ -60,7 +59,6 @@ import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
-import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -475,33 +473,14 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
 
-    boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
-    OptionalLong maybePauseNsToUse =
-      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error,
+      remainingTimeNs() - SLEEP_DELTA_NS, tries, operationTimeoutNs > 0);
     if (!maybePauseNsToUse.isPresent()) {
       failAll(actions, tries);
       return;
     }
-    long pauseNsToUse = maybePauseNsToUse.getAsLong();
-    if (!(error instanceof RpcThrottlingException)) {
-      // RpcThrottlingException tells us exactly how long the client should wait for,
-      // so we should not factor in the retry count for said exception
-      pauseNsToUse = getPauseTime(pauseNsToUse, tries - 1);
-    }
-
-    long delayNs;
-    if (operationTimeoutNs > 0) {
-      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
-      if (maxDelayNs <= 0) {
-        failAll(actions, tries);
-        return;
-      }
-      delayNs = Math.min(maxDelayNs, pauseNsToUse);
-    } else {
-      delayNs = pauseNsToUse;
-    }
-
-    if (isServerOverloaded) {
+    long delayNs = maybePauseNsToUse.getAsLong();
+    if (HBaseServerException.isServerOverloaded(error)) {
       Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
       metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
     }

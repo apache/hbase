@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client.backoff;
 
+import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
+
 import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseServerException;
@@ -44,7 +46,8 @@ public class HBaseServerExceptionPauseManager {
    * @return The time, in nanos, to pause. If empty then pausing would exceed our timeout, so we
    *         should throw now
    */
-  public OptionalLong getPauseNsFromException(Throwable error, long remainingTimeNs) {
+  public OptionalLong getPauseNsFromException(Throwable error, long remainingTimeNs, int tries,
+    boolean hasTimeout) {
     long expectedSleepNs;
     if (error instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
@@ -63,7 +66,18 @@ public class HBaseServerExceptionPauseManager {
     } else {
       expectedSleepNs =
         HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
+      // RpcThrottlingException tells us exactly how long the client should wait for,
+      // so we should not factor in the retry count for said exception
+      expectedSleepNs = getPauseTime(expectedSleepNs, tries - 1);
     }
+
+    if (hasTimeout) {
+      if (remainingTimeNs <= 0) {
+        return OptionalLong.empty();
+      }
+      expectedSleepNs = Math.min(remainingTimeNs, expectedSleepNs);
+    }
+
     return OptionalLong.of(expectedSleepNs);
   }
 
