@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,9 +56,15 @@ import org.junit.rules.TestName;
 
 /**
  * A UT to make sure that everything is fine when we fail to load bloom filter.
+ * <p>
+ * See HBASE-27936 for more details.
  */
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestBloomFilterFaulty {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestBloomFilterFaulty.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -148,8 +156,8 @@ public class TestBloomFilterFaulty {
   }
 
   private void testStreamScan() throws IOException {
-    RegionAsTable table = new RegionAsTable(region);
-    try (ResultScanner scanner = table.getScanner(new Scan().setReadType(ReadType.STREAM))) {
+    try (RegionAsTable table = new RegionAsTable(region);
+      ResultScanner scanner = table.getScanner(new Scan().setReadType(ReadType.STREAM))) {
       for (int i = 5; i < 10; i++) {
         Result result = scanner.next();
         assertEquals(i, Bytes.toInt(result.getRow()));
