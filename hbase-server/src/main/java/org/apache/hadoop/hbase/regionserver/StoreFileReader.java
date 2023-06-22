@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.regionserver.HStoreFile.BLOOM_FILTER_TYPE_
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.DELETE_FAMILY_COUNT;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.LAST_BLOOM_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.Map;
@@ -103,6 +104,7 @@ public class StoreFileReader {
     this.generalBloomFilter = storeFileReader.generalBloomFilter;
     this.deleteFamilyBloomFilter = storeFileReader.deleteFamilyBloomFilter;
     this.bloomFilterType = storeFileReader.bloomFilterType;
+    this.bloomFilterMetrics = storeFileReader.bloomFilterMetrics;
     this.sequenceID = storeFileReader.sequenceID;
     this.timeRange = storeFileReader.timeRange;
     this.lastBloomKey = storeFileReader.lastBloomKey;
@@ -500,7 +502,9 @@ public class StoreFileReader {
     return fi;
   }
 
-  public void loadBloomfilter() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  void loadBloomfilter() {
     this.loadBloomfilter(BlockType.GENERAL_BLOOM_META, null);
     this.loadBloomfilter(BlockType.DELETE_FAMILY_BLOOM_META, null);
   }
@@ -550,7 +554,9 @@ public class StoreFileReader {
     }
   }
 
-  private void setBloomFilterFaulty(BlockType blockType) {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/StoreFileReader.java|.*/src/test/.*")
+  void setBloomFilterFaulty(BlockType blockType) {
     if (blockType == BlockType.GENERAL_BLOOM_META) {
       setGeneralBloomFilterFaulty();
     } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {
@@ -567,11 +573,11 @@ public class StoreFileReader {
     return generalBloomFilter != null ? generalBloomFilter.getKeyCount() : reader.getEntries();
   }
 
-  public void setGeneralBloomFilterFaulty() {
+  private void setGeneralBloomFilterFaulty() {
     generalBloomFilter = null;
   }
 
-  public void setDeleteFamilyBloomFilterFaulty() {
+  private void setDeleteFamilyBloomFilterFaulty() {
     this.deleteFamilyBloomFilter = null;
   }
 

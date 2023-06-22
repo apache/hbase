@@ -154,8 +154,7 @@ public class StoreFileWriter implements CellSink, ShipperListener {
       this.bloomType = BloomType.NONE;
     }
 
-    // initialize delete family Bloom filter when there is NO RowCol Bloom
-    // filter
+    // initialize delete family Bloom filter when there is NO RowCol Bloom filter
     if (this.bloomType != BloomType.ROWCOL) {
       this.deleteFamilyBloomFilterWriter = BloomFilterFactory.createDeleteBloomAtWrite(conf,
         cacheConf, (int) Math.min(maxKeys, Integer.MAX_VALUE), writer);
