@@ -238,8 +238,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MAX_COMPACTED_STORE_FILE_REF_COUNT = "maxCompactedStoreFileRefCount";
   String MEMSTORE_SIZE = "memStoreSize";
   String MEMSTORE_SIZE_DESC = "Size of the memstore";
-  String MEMSTORE_ONHEAP_SIZE = "memStoreOnHeapSize";
-  String MEMSTORE_ONHEAP_SIZE_DESC = "On-heap Size of the memstore";
+  String MEMSTORE_HEAP_SIZE = "memStoreHeapSize";
+  String MEMSTORE_HEAP_SIZE_DESC = "On-heap Size of the memstore";
   String MEMSTORE_OFFHEAP_SIZE = "memStoreOffHeapSize";
   String MEMSTORE_OFFHEAP_SIZE_DESC = "Off-heap Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
