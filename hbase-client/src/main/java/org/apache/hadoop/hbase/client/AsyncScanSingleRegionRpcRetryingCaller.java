@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCCallsMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.incRPCRetriesMetrics;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
@@ -343,7 +342,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
+      scanTimeoutNs, nextCallStartNs);
   }
 
   private long elapsedMs() {
@@ -417,8 +417,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error,
-      remainingTimeNs() - SLEEP_DELTA_NS, tries, scanTimeoutNs > 0);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally(!scannerClosed);
       return;

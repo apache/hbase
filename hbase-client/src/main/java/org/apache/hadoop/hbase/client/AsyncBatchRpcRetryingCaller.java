@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
@@ -161,7 +160,6 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.actions = new ArrayList<>(actions.size());
     this.futures = new ArrayList<>(actions.size());
     this.action2Future = new IdentityHashMap<>(actions.size());
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
       Action action;
@@ -180,6 +178,8 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     this.action2Errors = new IdentityHashMap<>();
     this.startNs = System.nanoTime();
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
+      operationTimeoutNs, startNs);
   }
 
   private static boolean hasIncrementOrAppend(Row action) {
@@ -473,8 +473,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
 
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error,
-      remainingTimeNs() - SLEEP_DELTA_NS, tries, operationTimeoutNs > 0);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
     if (!maybePauseNsToUse.isPresent()) {
       failAll(actions, tries);
       return;

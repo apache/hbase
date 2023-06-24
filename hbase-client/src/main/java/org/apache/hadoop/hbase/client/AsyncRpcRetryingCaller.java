@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
@@ -92,7 +91,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
+    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
+      operationTimeoutNs, startNs);
   }
 
   private long elapsedMs() {
@@ -123,8 +123,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error,
-      remainingTimeNs() - SLEEP_DELTA_NS, tries, operationTimeoutNs > 0);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally();
       return;

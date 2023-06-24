@@ -47,27 +47,40 @@ public class TestHBaseServerExceptionPauseManager {
   private final Throwable OTHER_EXCEPTION = new RuntimeException("");
   private final HBaseServerException SERVER_OVERLOADED_EXCEPTION = new HBaseServerException(true);
 
-  private final HBaseServerExceptionPauseManager pauseManager =
-    new HBaseServerExceptionPauseManager(PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED);
-
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestHBaseServerExceptionPauseManager.class);
 
   @Test
-  public void itSupportsRpcThrottlingNanos() {
-    OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, Long.MAX_VALUE, 1, true);
+  public void itSupportsRpcThrottlingNanosNoTimeout() {
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 0, System.nanoTime());
+
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, 1);
+
+    assertTrue(pauseNanos.isPresent());
+    assertEquals(pauseNanos.getAsLong(), WAIT_INTERVAL_NANOS);
+  }
+
+  @Test
+  public void itSupportsRpcThrottlingNanosLenientTimeout() {
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, System.nanoTime() * 2, System.nanoTime());
+
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, 1);
+
     assertTrue(pauseNanos.isPresent());
     assertEquals(pauseNanos.getAsLong(), WAIT_INTERVAL_NANOS);
   }
 
   @Test
   public void itSupportsServerOverloadedExceptionNanos() {
-    OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(SERVER_OVERLOADED_EXCEPTION, Long.MAX_VALUE, 1, true);
-    assertTrue(pauseNanos.isPresent());
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 0, System.nanoTime());
 
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(SERVER_OVERLOADED_EXCEPTION, 1);
+
+    assertTrue(pauseNanos.isPresent());
     // account for 1% jitter in pause time
     assertTrue(pauseNanos.getAsLong() >= PAUSE_NANOS_FOR_SERVER_OVERLOADED * 0.99);
     assertTrue(pauseNanos.getAsLong() <= PAUSE_NANOS_FOR_SERVER_OVERLOADED * 1.01);
@@ -75,10 +88,12 @@ public class TestHBaseServerExceptionPauseManager {
 
   @Test
   public void itSupportsOtherExceptionNanos() {
-    OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(OTHER_EXCEPTION, Long.MAX_VALUE, 1, true);
-    assertTrue(pauseNanos.isPresent());
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 0, System.nanoTime());
 
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, 1);
+
+    assertTrue(pauseNanos.isPresent());
     // account for 1% jitter in pause time
     assertTrue(pauseNanos.getAsLong() >= PAUSE_NANOS * 0.99);
     assertTrue(pauseNanos.getAsLong() <= PAUSE_NANOS * 1.01);
@@ -86,20 +101,31 @@ public class TestHBaseServerExceptionPauseManager {
 
   @Test
   public void itTimesOutRpcThrottlingException() {
-    OptionalLong pauseNanos =
-      pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, -1L, 1, true);
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 1, System.nanoTime());
+
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(RPC_THROTTLING_EXCEPTION, 1);
+
     assertFalse(pauseNanos.isPresent());
   }
 
   @Test
   public void itTimesOutRpcOtherException() {
-    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, -1L, 1, true);
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 1, System.nanoTime());
+
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, 1);
+
     assertFalse(pauseNanos.isPresent());
   }
 
   @Test
   public void itDoesNotTimeOutIfDisabled() {
-    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, -1L, 1, false);
+    HBaseServerExceptionPauseManager pauseManager = new HBaseServerExceptionPauseManager(
+      PAUSE_NANOS, PAUSE_NANOS_FOR_SERVER_OVERLOADED, 0, System.nanoTime());
+
+    OptionalLong pauseNanos = pauseManager.getPauseNsFromException(OTHER_EXCEPTION, 1);
+
     assertTrue(pauseNanos.isPresent());
   }
 
