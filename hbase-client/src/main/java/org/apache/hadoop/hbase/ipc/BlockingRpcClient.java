@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.Map;
 import javax.net.SocketFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,7 +43,7 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * SocketFactory
    */
   BlockingRpcClient(Configuration conf) {
-    this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null, null);
+    this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null, Collections.emptyMap());
   }
 
   /**

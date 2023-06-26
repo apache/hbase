@@ -31,6 +31,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -128,7 +129,7 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
     SocketAddress localAddress, User user) {
-    this(conf, registry, clusterId, localAddress, user, null);
+    this(conf, registry, clusterId, localAddress, user, Collections.emptyMap());
   }
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,

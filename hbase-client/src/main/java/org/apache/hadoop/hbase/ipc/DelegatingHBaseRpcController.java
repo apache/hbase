@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
@@ -115,7 +116,7 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
 
   @Override
   public Map<String, byte[]> getAttributes() {
-    return null;
+    return Collections.emptyMap();
   }
 
   @Override

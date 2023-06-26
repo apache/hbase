@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.MetricsConnection;
@@ -60,7 +61,7 @@ public final class RpcClientFactory {
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
     MetricsConnection metrics) {
-    return createClient(conf, clusterId, null, metrics, null);
+    return createClient(conf, clusterId, null, metrics, Collections.emptyMap());
   }
 
   private static String getRpcClientClass(Configuration conf) {
