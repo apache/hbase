@@ -91,8 +91,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
-      operationTimeoutNs, startNs);
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
   }
 
   private long elapsedMs() {
@@ -100,7 +100,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   protected final long remainingTimeNs() {
-    return operationTimeoutNs - (System.nanoTime() - startNs);
+    return pauseManager.remainingTimeNs(startNs);
   }
 
   protected final void completeExceptionally() {
@@ -123,7 +123,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries, startNs);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally();
       return;

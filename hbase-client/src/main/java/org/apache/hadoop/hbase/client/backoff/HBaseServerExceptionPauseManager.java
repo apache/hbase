@@ -35,14 +35,12 @@ public class HBaseServerExceptionPauseManager {
   private final long pauseNs;
   private final long pauseNsForServerOverloaded;
   private final long timeoutNs;
-  private final long startNs;
 
   public HBaseServerExceptionPauseManager(long pauseNs, long pauseNsForServerOverloaded,
-    long timeoutNs, long startNs) {
+    long timeoutNs) {
     this.pauseNs = pauseNs;
     this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.timeoutNs = timeoutNs;
-    this.startNs = startNs;
   }
 
   /**
@@ -52,12 +50,12 @@ public class HBaseServerExceptionPauseManager {
    * @return The time, in nanos, to pause. If empty then pausing would exceed our timeout, so we
    *         should throw now
    */
-  public OptionalLong getPauseNsFromException(Throwable error, int tries) {
+  public OptionalLong getPauseNsFromException(Throwable error, int tries, long startNs) {
     long expectedSleepNs;
+    long remainingTimeNs = remainingTimeNs(startNs) - SLEEP_DELTA_NS;
     if (error instanceof RpcThrottlingException) {
       RpcThrottlingException rpcThrottlingException = (RpcThrottlingException) error;
       expectedSleepNs = TimeUnit.MILLISECONDS.toNanos(rpcThrottlingException.getWaitInterval());
-      long remainingTimeNs = remainingTimeNs();
       if (expectedSleepNs > remainingTimeNs && remainingTimeNs > 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("RpcThrottlingException suggested pause of {}ns which would exceed "
@@ -78,7 +76,6 @@ public class HBaseServerExceptionPauseManager {
     }
 
     if (timeoutNs > 0) {
-      long remainingTimeNs = remainingTimeNs();
       if (remainingTimeNs <= 0) {
         return OptionalLong.empty();
       }
@@ -88,8 +85,8 @@ public class HBaseServerExceptionPauseManager {
     return OptionalLong.of(expectedSleepNs);
   }
 
-  private long remainingTimeNs() {
-    return timeoutNs - (System.nanoTime() - startNs) - SLEEP_DELTA_NS;
+  public long remainingTimeNs(long startNs) {
+    return timeoutNs - (System.nanoTime() - startNs);
   }
 
 }

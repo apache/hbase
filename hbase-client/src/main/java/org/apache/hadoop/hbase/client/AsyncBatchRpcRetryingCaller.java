@@ -178,8 +178,8 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     this.action2Errors = new IdentityHashMap<>();
     this.startNs = System.nanoTime();
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
-      operationTimeoutNs, startNs);
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
   }
 
   private static boolean hasIncrementOrAppend(Row action) {
@@ -200,10 +200,6 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
     }
     return false;
-  }
-
-  private long remainingTimeNs() {
-    return operationTimeoutNs - (System.nanoTime() - startNs);
   }
 
   private List<ThrowableWithExtraContext> removeErrors(Action action) {
@@ -365,7 +361,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void sendToServer(ServerName serverName, ServerRequest serverReq, int tries) {
     long remainingNs;
     if (operationTimeoutNs > 0) {
-      remainingNs = remainingTimeNs();
+      remainingNs = pauseManager.remainingTimeNs(startNs);
       if (remainingNs <= 0) {
         failAll(serverReq.actionsByRegion.values().stream().flatMap(r -> r.actions.stream()),
           tries);
@@ -473,7 +469,7 @@ class AsyncBatchRpcRetryingCaller<T> {
       return;
     }
 
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries, startNs);
     if (!maybePauseNsToUse.isPresent()) {
       failAll(actions, tries);
       return;
@@ -489,7 +485,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void groupAndSend(Stream<Action> actions, int tries) {
     long locateTimeoutNs;
     if (operationTimeoutNs > 0) {
-      locateTimeoutNs = remainingTimeNs();
+      locateTimeoutNs = pauseManager.remainingTimeNs(startNs);
       if (locateTimeoutNs <= 0) {
         failAll(actions, tries);
         return;

@@ -342,16 +342,12 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded,
-      scanTimeoutNs, nextCallStartNs);
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, scanTimeoutNs);
   }
 
   private long elapsedMs() {
     return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - nextCallStartNs);
-  }
-
-  private long remainingTimeNs() {
-    return scanTimeoutNs - (System.nanoTime() - nextCallStartNs);
   }
 
   private void closeScanner() {
@@ -417,7 +413,8 @@ class AsyncScanSingleRegionRpcRetryingCaller {
       return;
     }
 
-    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries);
+    OptionalLong maybePauseNsToUse =
+      pauseManager.getPauseNsFromException(error, tries, nextCallStartNs);
     if (!maybePauseNsToUse.isPresent()) {
       completeExceptionally(!scannerClosed);
       return;
