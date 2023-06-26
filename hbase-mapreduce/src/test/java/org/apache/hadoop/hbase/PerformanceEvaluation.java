@@ -2723,6 +2723,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     for (CmdDescriptor command : COMMANDS.values()) {
       System.err.println(String.format(" %-20s %s", command.getName(), command.getDescription()));
     }
+    System.err.println(String.format(" %-20s %s", "? extends Test", "Run custom implementation of provided Test present in classpath"));
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of clients "
