@@ -93,7 +93,7 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (Exception e) {
-      setFailure("master-flush-table", e);
+      LOG.warn("Retriable error trying to flush table=" + getTableName() + " state=" + state, e);
     }
     return Flow.HAS_MORE_STATE;
   }
