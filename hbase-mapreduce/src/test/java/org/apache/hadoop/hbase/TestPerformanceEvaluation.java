@@ -359,4 +359,14 @@ public class TestPerformanceEvaluation {
     assertEquals(true, options.valueRandom);
   }
 
+  @Test
+  public void testCustomTestClass() {
+    Queue<String> opts = new LinkedList<>();
+    String testClassName = "org.apache.hadoop.hbase.PESampleTestImpl";
+    opts.offer(testClassName);
+    opts.offer("1");
+    PerformanceEvaluation.TestOptions options = PerformanceEvaluation.parseOpts(opts);
+    assertNotNull(options);
+    assertNotNull(options.getCmdName());
+  }
 }
