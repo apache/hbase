@@ -360,11 +360,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // recreate the table when user has requested presplit or when existing
     // {RegionSplitPolicy,replica count} does not match requested, or when the
     // number of column families does not match requested.
-    if ((exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
+    if (
+      (exists && opts.presplitRegions != DEFAULT_OPTS.presplitRegions
         && opts.presplitRegions != admin.getRegions(tableName).size())
-        || (!isReadCmd && desc != null && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
+        || (!isReadCmd && desc != null
+          && !StringUtils.equals(desc.getRegionSplitPolicyClassName(), opts.splitPolicy))
         || (!isReadCmd && desc != null && desc.getRegionReplication() != opts.replicas)
-        || (desc != null && desc.getColumnFamilyCount() != opts.families)) {
+        || (desc != null && desc.getColumnFamilyCount() != opts.families)
+    ) {
       needsDelete = true;
       // wait, why did it delete my table?!?
       LOG.debug(MoreObjects.toStringHelper("needsDelete").add("needsDelete", needsDelete)
@@ -779,11 +782,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.bufferSize = that.bufferSize;
       this.commandProperties = that.commandProperties;
     }
-    
+
     public Properties getCommandProperties() {
       return commandProperties;
     }
-    
+
     public int getCaching() {
       return this.caching;
     }
@@ -2350,7 +2353,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     @Override
-    protected boolean testRow(final int i, final long startTime) throws IOException {
+    boolean testRow(final int i, final long startTime) throws IOException {
       byte[] row = generateRow(i);
       Put put = new Put(row);
       for (int family = 0; family < opts.families; family++) {
@@ -2623,7 +2626,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       System.err.println(message);
     }
     System.err.print("Usage: hbase " + shortName);
-    System.err.println("  <OPTIONS> [-D<property=value>]* <command> <nclients>");
+    System.err.println("  <OPTIONS> [-D<property=value>]* <command|class> <nclients>");
     System.err.println();
     System.err.println("General Options:");
     System.err.println(
@@ -2723,7 +2726,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     for (CmdDescriptor command : COMMANDS.values()) {
       System.err.println(String.format(" %-20s %s", command.getName(), command.getDescription()));
     }
-    System.err.println(String.format(" %-20s %s", "? extends Test", "Run custom implementation of provided Test present in classpath"));
+    System.err.println();
+    System.err.println("Class:");
+    System.err.println("To run any custom implementation of PerformanceEvaluation.Test, "
+      + "provide the classname of the implementaion class in place of "
+      + "command name and it will be loaded at runtime from classpath.:");
+    System.err.println("Please consider to contribute back "
+      + "this custom test impl into a builtin PE command for the benefit of the community");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of clients "
@@ -3024,14 +3033,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
         String fileName = String.valueOf(cmd.substring(commandPropertiesFile.length()));
         Properties properties = new Properties();
         try {
-          properties.load(PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName));
+          properties
+            .load(PerformanceEvaluation.class.getClassLoader().getResourceAsStream(fileName));
           opts.commandProperties = properties;
         } catch (IOException e) {
           LOG.error("Failed to load metricIds from properties file", e);
         }
         continue;
       }
-      
+
       validateParsedOpts(opts);
 
       if (isCommandClass(cmd)) {
@@ -3145,13 +3155,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   private static boolean isCommandClass(String cmd) {
-    return !COMMANDS.containsKey(cmd) ? isCustomTestClass(cmd) : true;
+    return COMMANDS.containsKey(cmd) || isCustomTestClass(cmd);
   }
 
   private static boolean isCustomTestClass(String cmd) {
     Class<? extends Test> cmdClass;
     try {
-      cmdClass = (Class<? extends Test>) PerformanceEvaluation.class.getClassLoader().loadClass(cmd);
+      cmdClass =
+        (Class<? extends Test>) PerformanceEvaluation.class.getClassLoader().loadClass(cmd);
       addCommandDescriptor(cmdClass, cmd, "custom command");
       return true;
     } catch (Throwable th) {
@@ -3159,7 +3170,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return false;
     }
   }
-  
+
   private static Class<? extends TestBase> determineCommandClass(String cmd) {
     CmdDescriptor descriptor = COMMANDS.get(cmd);
     return descriptor != null ? descriptor.getCmdClass() : null;
