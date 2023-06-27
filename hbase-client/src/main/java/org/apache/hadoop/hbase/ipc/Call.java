@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -62,6 +63,13 @@ class Call {
   private final RpcCallback<Call> callback;
   final Span span;
   Timeout timeoutTask;
+
+  Call(int id, final Descriptors.MethodDescriptor md, Message param, final CellScanner cells,
+    final Message responseDefaultType, int timeout, int priority, RpcCallback<Call> callback,
+    MetricsConnection.CallStats callStats) {
+    this(id, md, param, cells, responseDefaultType, timeout, priority, Collections.emptyMap(),
+      callback, callStats);
+  }
 
   Call(int id, final Descriptors.MethodDescriptor md, Message param, final CellScanner cells,
     final Message responseDefaultType, int timeout, int priority, Map<String, byte[]> attributes,
