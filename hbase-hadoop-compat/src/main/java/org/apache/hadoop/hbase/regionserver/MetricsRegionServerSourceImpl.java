@@ -520,6 +520,10 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
       .addGauge(Interns.info(MAX_STOREFILE_COUNT, MAX_STOREFILE_COUNT_DESC),
         rsWrap.getMaxStoreFiles())
       .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemStoreSize())
+      .addGauge(Interns.info(MEMSTORE_HEAP_SIZE, MEMSTORE_HEAP_SIZE_DESC),
+        rsWrap.getOnHeapMemStoreSize())
+      .addGauge(Interns.info(MEMSTORE_OFFHEAP_SIZE, MEMSTORE_OFFHEAP_SIZE_DESC),
+        rsWrap.getOffHeapMemStoreSize())
       .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
       .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
         rsWrap.getStoreFileSizeGrowthRate())
