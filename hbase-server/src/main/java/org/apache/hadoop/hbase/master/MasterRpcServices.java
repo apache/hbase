@@ -534,6 +534,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerReportResponse regionServerReport(RpcController controller,
     RegionServerReportRequest request) throws ServiceException {
     try {
@@ -565,6 +566,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerStartupResponse regionServerStartup(RpcController controller,
     RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
@@ -596,6 +598,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ReportRSFatalErrorResponse reportRSFatalError(RpcController controller,
     ReportRSFatalErrorRequest request) throws ServiceException {
     String errorText = request.getErrorMessage();
