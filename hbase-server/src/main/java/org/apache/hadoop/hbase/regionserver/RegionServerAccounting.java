@@ -121,12 +121,12 @@ public class RegionServerAccounting {
     return globalMemStoreDataSize.sum();
   }
 
-  /** Returns the global memstore heap size in the RegionServer */
+  /** Returns the global memstore on-heap size in the RegionServer */
   public long getGlobalMemStoreHeapSize() {
     return this.globalMemStoreHeapSize.sum();
   }
 
-  /** Returns the global memstore heap size in the RegionServer */
+  /** Returns the global memstore off-heap size in the RegionServer */
   public long getGlobalMemStoreOffHeapSize() {
     return this.globalMemStoreOffHeapSize.sum();
   }
