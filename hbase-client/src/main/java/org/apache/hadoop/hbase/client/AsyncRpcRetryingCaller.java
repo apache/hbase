@@ -32,11 +32,13 @@ import java.util.function.Supplier;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -137,6 +139,10 @@ public abstract class AsyncRpcRetryingCaller<T> {
       delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
     } else {
       delayNs = getPauseTime(pauseNsToUse, tries - 1);
+    }
+    if (!(error instanceof ServerNotRunningYetException || error instanceof PleaseHoldException)) {
+      // when the error does not imply dead server, do not use the retry backoff factor
+      delayNs = Math.min(delayNs, pauseNsToUse);
     }
     tries++;
     if (HBaseServerException.isServerOverloaded(error)) {
