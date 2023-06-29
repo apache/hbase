@@ -70,6 +70,7 @@ public abstract class PersistentIOEngine implements IOEngine {
         sb.append(getFileSize(filePath));
         sb.append(file.lastModified());
       }
+      LOG.debug("Checksum for persistence cache: {}", sb);
       MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
       messageDigest.update(Bytes.toBytes(sb.toString()));
       return messageDigest.digest();

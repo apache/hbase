@@ -91,7 +91,7 @@ class BucketEntry implements HBaseReferenceCounted {
   /**
    * Time this block was cached. Presumes we are created just before we are added to the cache.
    */
-  private final long cachedTime = System.nanoTime();
+  private long cachedTime = System.nanoTime();
 
   /**
    * @param createRecycler used to free this {@link BucketEntry} when {@link BucketEntry#refCnt}
@@ -100,12 +100,18 @@ class BucketEntry implements HBaseReferenceCounted {
    */
   BucketEntry(long offset, int length, long accessCounter, boolean inMemory,
     Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
+    this(offset, length, accessCounter, System.nanoTime(), inMemory, createRecycler, allocator);
+  }
+
+  BucketEntry(long offset, int length, long accessCounter, long cachedTime, boolean inMemory,
+    Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
     if (createRecycler == null) {
       throw new IllegalArgumentException("createRecycler could not be null!");
     }
     setOffset(offset);
     this.length = length;
     this.accessCounter = accessCounter;
+    this.cachedTime = cachedTime;
     this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
     this.refCnt = RefCnt.create(createRecycler.apply(this));
 

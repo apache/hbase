@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,11 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
+            cacheConf.getBlockCache().ifPresent( bc -> {
+              if (bc instanceof BucketCache) {
+                ((BucketCache) bc).fileCacheCompleted(path.getName());
+              }
+            });
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {

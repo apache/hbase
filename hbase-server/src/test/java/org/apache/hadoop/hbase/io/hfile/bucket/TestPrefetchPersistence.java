@@ -106,8 +106,6 @@ public class TestPrefetchPersistence {
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
-    prefetchPersistencePath = testDir + "/prefetch.persistence";
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, prefetchPersistencePath);
     fs = HFileSystem.get(conf);
   }
 
@@ -132,10 +130,10 @@ public class TestPrefetchPersistence {
 
     bucketCache.shutdown();
     assertTrue(new File(testDir + "/bucket.persistence").exists());
-    assertTrue(new File(testDir + "/prefetch.persistence").exists());
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
+    cacheConf = new CacheConfig(conf, bucketCache);
     assertFalse(new File(testDir + "/bucket.persistence").exists());
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertTrue(usedSize != 0);
@@ -148,9 +146,9 @@ public class TestPrefetchPersistence {
 
   public void closeStoreFile(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
-    assertTrue(PrefetchExecutor.isFilePrefetched(path.getName()));
+    assertTrue(bucketCache.prefetchCompleted.containsKey(path.getName()));
     reader.close(true);
-    assertFalse(PrefetchExecutor.isFilePrefetched(path.getName()));
+    assertFalse(bucketCache.prefetchCompleted.containsKey(path.getName()));
   }
 
   public void readStoreFile(Path storeFilePath, long offset) throws Exception {
