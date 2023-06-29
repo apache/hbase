@@ -1350,6 +1350,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
           !isCompaction, shouldUseHeap(expectedBlockType, cacheable));
         try {
           validateBlockType(hfileBlock, expectedBlockType);
+          cacheKey.setBlockType(hfileBlock.getBlockType());
         } catch (IOException e) {
           hfileBlock.release();
           throw e;

@@ -18,13 +18,16 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_TX_THRESHOLD;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -50,6 +53,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -152,14 +158,15 @@ public class BucketCache implements BlockCache, HeapSize {
   transient Map<BlockCacheKey, BucketEntry> backingMap;
   /**
    * Map of hFile -> Region -> File size. This map is used to track all files completed prefetch,
-   * together with the region those belong to and the total cached size for the region.TestBlockEvictionOnRegionMovement
+   * together with the region those belong to and the total cached size for the
+   * region.TestBlockEvictionOnRegionMovement
    */
-  final Map<String,Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
+  final Map<String, Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
   /**
    * Map of region -> total size of the region prefetched on this region server. This is the total
    * size of hFiles for this region prefetched on this region server
    */
-  final Map<String,Long> regionCachedSizeMap = new ConcurrentHashMap<>();
+  final Map<String, Long> regionCachedSizeMap = new ConcurrentHashMap<>();
 
   private BucketCachePersister cachePersister;
 
@@ -196,6 +203,8 @@ public class BucketCache implements BlockCache, HeapSize {
   private final BucketCacheStats cacheStats = new BucketCacheStats();
   private final String persistencePath;
   static AtomicBoolean isCacheInconsistent = new AtomicBoolean(false);
+
+  static AtomicLong txsCount = new AtomicLong(0);
   private final long cacheCapacity;
   /** Approximate block size */
   private final long blockSize;
@@ -255,6 +264,8 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private long bucketcachePersistInterval;
 
+  private long bucketCacheTXsThreshold;
+
   private static final String FILE_VERIFY_ALGORITHM =
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
   private static final String DEFAULT_FILE_VERIFY_ALGORITHM = "MD5";
@@ -305,7 +316,8 @@ public class BucketCache implements BlockCache, HeapSize {
     this.memoryFactor = conf.getFloat(MEMORY_FACTOR_CONFIG_NAME, DEFAULT_MEMORY_FACTOR);
     this.queueAdditionWaitTime =
       conf.getLong(QUEUE_ADDITION_WAIT_TIME, DEFAULT_QUEUE_ADDITION_WAIT_TIME);
-    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 1000);
+    this.bucketcachePersistInterval = conf.getLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, 10000);
+    this.bucketCacheTXsThreshold = conf.getLong(BUCKETCACHE_PERSIST_TX_THRESHOLD, 1000);
 
     sanityCheckConfigs();
 
@@ -394,7 +406,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   void startBucketCachePersisterThread() {
-    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister =
+      new BucketCachePersister(this, bucketcachePersistInterval, bucketCacheTXsThreshold);
     cachePersister.setDaemon(true);
     cachePersister.start();
   }
@@ -549,6 +562,7 @@ public class BucketCache implements BlockCache, HeapSize {
     } else {
       this.blockNumber.increment();
       this.heapSize.add(cachedItem.heapSize());
+      blocksByHFile.add(cacheKey);
     }
   }
 
@@ -608,7 +622,11 @@ public class BucketCache implements BlockCache, HeapSize {
         // When using file io engine persistent cache,
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
-        backingMap.remove(key);
+        BucketEntry entry = backingMap.remove(key);
+        if (entry != null) {
+          entry.release();
+          recordEviction(key, entry);
+        }
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -636,7 +654,8 @@ public class BucketCache implements BlockCache, HeapSize {
     if (evictedByEvictionProcess) {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
-    if (ioEngine.isPersistent()) {
+    if (isCachePersistent()) {
+      recordEviction(cacheKey, bucketEntry);
       removeFileFromPrefetch(cacheKey.getHfileName());
       setCacheInconsistent(true);
     }
@@ -770,6 +789,18 @@ public class BucketCache implements BlockCache, HeapSize {
 
   public void setCacheInconsistent(boolean setCacheInconsistent) {
     isCacheInconsistent.set(setCacheInconsistent);
+  }
+
+  public void resetTXsCount() {
+    txsCount.set(0);
+  }
+
+  public void decreaseTXsCount(long txsFilesDeleted) {
+    txsCount.addAndGet((txsFilesDeleted * -1));
+  }
+
+  public long getTXsCount() {
+    return txsCount.get();
   }
 
   /*
@@ -1070,6 +1101,10 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param bucketEntry Bucket entry to put into backingMap.
    */
   protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
+    if (isCachePersistent()) {
+      recordAddition(key, bucketEntry);
+      setCacheInconsistent(true);
+    }
     BucketEntry previousEntry = backingMap.put(key, bucketEntry);
     if (previousEntry != null && previousEntry != bucketEntry) {
       previousEntry.withWriteLock(offsetLock, () -> {
@@ -1275,6 +1310,7 @@ public class BucketCache implements BlockCache, HeapSize {
       throw new IOException("Attempt to persist non-persistent cache mappings!");
     }
     File tempPersistencePath = new File(persistencePath + EnvironmentEdgeManager.currentTime());
+    long startTime = EnvironmentEdgeManager.currentTime();
     try (FileOutputStream fos = new FileOutputStream(tempPersistencePath, false)) {
       fos.write(ProtobufMagic.PB_MAGIC);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
@@ -1283,10 +1319,101 @@ public class BucketCache implements BlockCache, HeapSize {
       LOG.warn("Failed to commit cache persistent file. We might lose cached blocks if "
         + "RS crashes/restarts before we successfully checkpoint again.");
     }
+    LOG.debug("Saving current state of bucket cache index map took {}ms.",
+      EnvironmentEdgeManager.currentTime() - startTime);
+  }
+
+  private void recordTransaction(BlockCacheKey key, BucketEntry bucketEntry,
+    BucketCacheProtos.TransactionType type) {
+    if (persistencePath != null) {
+      File path = new File(persistencePath + "tx-" + System.nanoTime());
+      long startTime = EnvironmentEdgeManager.currentTime();
+      try (FileOutputStream fos = new FileOutputStream(path, false)) {
+        fos.write(ProtobufMagic.PB_MAGIC);
+        BucketProtoUtils.toPB(this, key, bucketEntry, type).writeDelimitedTo(fos);
+        txsCount.incrementAndGet();
+        fos.flush();
+      } catch (Exception e) {
+        LOG.error("Failed to record cache transaction {} for key {}. In the event of a crash, "
+          + "this key would require a re-cache.", type.name(), key, e);
+      }
+      LOG.debug("Cache transaction recording took {}ms",
+        EnvironmentEdgeManager.currentTime() - startTime);
+    }
   }
 
   private boolean isCachePersistent() {
     return ioEngine.isPersistent() && persistencePath != null;
+  }
+
+  void recordAddition(BlockCacheKey key, BucketEntry entry) {
+    recordTransaction(key, entry, BucketCacheProtos.TransactionType.addition);
+  }
+
+  void recordEviction(BlockCacheKey key, BucketEntry entry) {
+    recordTransaction(key, entry, BucketCacheProtos.TransactionType.eviction);
+  }
+
+  List<File> listTransactions(boolean oldTxs) {
+    String persistencePathDir = persistencePath.substring(0, persistencePath.lastIndexOf("/"));
+    File persistenceDir = new File(persistencePathDir);
+    List<File> files = Arrays.stream(persistenceDir.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File pathname) {
+        if (pathname.getName().contains("tx")) {
+          File indexMap = new File(persistencePath);
+          long txTime = pathname.lastModified();
+          if (oldTxs) {
+            return txTime < indexMap.lastModified();
+          } else {
+            return txTime >= indexMap.lastModified();
+          }
+        }
+        return false;
+      }
+    })).sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
+    return files;
+  }
+
+  void cleanOldTransactions() {
+    List<File> files = listTransactions(true);
+    files.stream().forEach(f -> f.delete());
+    decreaseTXsCount(files.size());
+    LOG.info("deleted {} old tx files.", files.size());
+  }
+
+  int replayTransactions() {
+    List<File> files = listTransactions(false);
+    LOG.info("replaying {} txs...", files.size());
+    MutableInt count = new MutableInt(0);
+    files.stream().forEach(f -> {
+      try (FileInputStream is = new FileInputStream(f)) {
+        int pblen = ProtobufMagic.lengthOfPBMagic();
+        byte[] pbuf = new byte[pblen];
+        IOUtils.readFully(is, pbuf, 0, pblen);
+        BucketCacheProtos.BucketCacheTransaction tx =
+          BucketCacheProtos.BucketCacheTransaction.parseDelimitedFrom(is);
+        BlockCacheKey key = BucketProtoUtils.fromPB(tx.getKey());
+        if (tx.getType() == BucketCacheProtos.TransactionType.addition) {
+          BucketEntry entry = BucketProtoUtils.fromPB(tx.getEntry(), this::createRecycler);
+          backingMap.put(key, entry);
+        } else {
+          BucketEntry entry = backingMap.remove(key);
+          if (entry != null) {
+            entry.release();
+          }
+          fullyCachedFiles.remove(key.getHfileName());
+        }
+        count.increment();
+      } catch (Exception e) {
+        LOG.warn(
+          "Error reading TX file {}. This tx file will be skipped. "
+            + "This was TX file # {} of a total {}",
+          f.getName(), count.getValue(), files.size(), e);
+        f.renameTo(new File(f.getAbsolutePath().replace("tx", "err")));
+      }
+    });
+    return files.size();
   }
 
   /**
@@ -1299,7 +1426,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     assert !cacheEnabled;
 
-    try (FileInputStream in = deleteFileOnClose(persistenceFile)) {
+    try (FileInputStream in = new FileInputStream(persistenceFile)) {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       int read = in.read(pbuf);
@@ -1379,6 +1506,33 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  private int replayNewerTxs() {
+    long startTime = EnvironmentEdgeManager.currentTime();
+    int replayed = replayTransactions();
+    LOG.info("Finished replay of bucket cache transactions. This took {}ms.",
+      EnvironmentEdgeManager.currentTime() - startTime);
+    return replayed;
+  }
+
+  private void validateMapAgainstCache() {
+    int totalKeysOriginally = backingMap.size();
+    long startTime = EnvironmentEdgeManager.currentTime();
+    for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()) {
+      try {
+        ((FileIOEngine) ioEngine).checkCacheTime(keyEntry.getValue());
+      } catch (IOException e1) {
+        LOG.debug("Check for key {} failed. Removing it from map.", keyEntry.getKey());
+        BucketEntry entry = backingMap.remove(keyEntry.getKey());
+        if (entry != null) {
+          entry.release();
+        }
+        fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
+      }
+    }
+    LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
+      totalKeysOriginally, backingMap.size(), (EnvironmentEdgeManager.currentTime() - startTime));
+  }
+
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
       this::createRecycler);
@@ -1388,23 +1542,22 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
           algorithm);
-      } catch (IOException e) {
-        LOG.warn("Checksum for cache file failed. "
-          + "We need to validate each cache key in the backing map. This may take some time...");
-        long startTime = EnvironmentEdgeManager.currentTime();
-        int totalKeysOriginally = backingMap.size();
-        for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()) {
-          try {
-            ((FileIOEngine) ioEngine).checkCacheTime(keyEntry.getValue());
-          } catch (IOException e1) {
-            LOG.debug("Check for key {} failed. Removing it from map.", keyEntry.getKey());
-            backingMap.remove(keyEntry.getKey());
-            fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
-          }
+        // Checksum is based on cache file last modified time. In some cases, last modified time may
+        // not get properly updated even when new blocks have been written to the cache, so if we
+        // have newer txs to replay, we also need to validate each block
+        // in the cache against the index map
+        if (replayNewerTxs() > 0) {
+          validateMapAgainstCache();
         }
-        LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
-          totalKeysOriginally, backingMap.size(),
-          (EnvironmentEdgeManager.currentTime() - startTime));
+      } catch (IOException e) {
+        LOG.warn("Checksum for cache file failed, so we should have "
+          + "new additions/evictions to replay.");
+        // Checksum failed. we need to replay newer txs (if any)
+        replayNewerTxs();
+        // Even if there was no new txs to replay, we still have to
+        // validate the cache against the index map, as the cache file itself
+        // may be corrupt and some blocks may not be accessible
+        validateMapAgainstCache();
       }
     } else {
       // if has not checksum, it means the persistence file is old format
@@ -1443,7 +1596,7 @@ public class BucketCache implements BlockCache, HeapSize {
     for (int i = 0; i < writerThreads.length; ++i)
       writerThreads[i].interrupt();
     this.ramCache.clear();
-    if (!ioEngine.isPersistent() || persistencePath == null) {
+    if (!isCachePersistent()) {
       // If persistent ioengine and a path, we will serialize out the backingMap.
       this.backingMap.clear();
       this.fullyCachedFiles.clear();
@@ -1670,17 +1823,17 @@ public class BucketCache implements BlockCache, HeapSize {
           HFileBlock block = (HFileBlock) data;
           ByteBuff sliceBuf = block.getBufferReadOnly();
           block.getMetaData(metaBuff);
-          ioEngine.write(sliceBuf, offset);
           // adds the cache time after the block and metadata part
           if (isCachePersistent) {
-            ioEngine.write(metaBuff, offset + len - metaBuff.limit() - Long.BYTES);
             ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
             buffer.putLong(bucketEntry.getCachedTime());
             buffer.rewind();
-            ioEngine.write(buffer, (offset + len - Long.BYTES));
+            ioEngine.write(buffer, offset);
+            ioEngine.write(sliceBuf, offset + Long.BYTES);
           } else {
-            ioEngine.write(metaBuff, offset + len - metaBuff.limit());
+            ioEngine.write(sliceBuf, offset);
           }
+          ioEngine.write(metaBuff, offset + len - metaBuff.limit());
         } else {
           // Only used for testing.
           ByteBuffer bb = ByteBuffer.allocate(len);
@@ -1948,19 +2101,21 @@ public class BucketCache implements BlockCache, HeapSize {
       String regionEncodedName = regionEntry.getFirst();
       long filePrefetchSize = regionEntry.getSecond();
       LOG.debug("Removing file {} for region {}", hfileName, regionEncodedName);
-      regionCachedSizeMap.computeIfPresent(regionEncodedName,
-        (rn, pf) -> pf - filePrefetchSize);
+      regionCachedSizeMap.computeIfPresent(regionEncodedName, (rn, pf) -> pf - filePrefetchSize);
       // If all the blocks for a region are evicted from the cache, remove the entry for that region
-      if (regionCachedSizeMap.containsKey(regionEncodedName) &&
-        regionCachedSizeMap.get(regionEncodedName) == 0) {
+      if (
+        regionCachedSizeMap.containsKey(regionEncodedName)
+          && regionCachedSizeMap.get(regionEncodedName) == 0
+      ) {
         regionCachedSizeMap.remove(regionEncodedName);
       }
     }
     fullyCachedFiles.remove(hfileName);
   }
+
   public void fileCacheCompleted(Path filePath, long size) {
-    Pair<String,Long> pair = new Pair<>();
-    //sets the region name
+    Pair<String, Long> pair = new Pair<>();
+    // sets the region name
     String regionName = filePath.getParent().getParent().getName();
     pair.setFirst(regionName);
     pair.setSecond(size);

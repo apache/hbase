@@ -54,6 +54,12 @@ final class BucketProtoUtils {
       .build();
   }
 
+  static BucketCacheProtos.BucketCacheTransaction toPB(BucketCache cache, BlockCacheKey key,
+    BucketEntry entry, BucketCacheProtos.TransactionType transactionType) {
+    return BucketCacheProtos.BucketCacheTransaction.newBuilder().setKey(toPB(key))
+      .setEntry(toPB(entry)).setType(transactionType).build();
+  }
+
   private static BucketCacheProtos.BackingMap toPB(Map<BlockCacheKey, BucketEntry> backingMap) {
     BucketCacheProtos.BackingMap.Builder builder = BucketCacheProtos.BackingMap.newBuilder();
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
@@ -121,22 +127,32 @@ final class BucketProtoUtils {
     }
   }
 
+  static BlockCacheKey fromPB(BucketCacheProtos.BlockCacheKey protoKey) {
+    return new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
+      protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+  }
+
+  static BucketEntry fromPB(BucketCacheProtos.BucketEntry protoValue,
+    Function<BucketEntry, Recycler> createRecycler) throws IOException {
+    BucketEntry entry = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
+      protoValue.getDiskSizeWithHeader(), protoValue.getAccessCounter(), protoValue.getCachedTime(),
+      protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
+      ByteBuffAllocator.HEAP);
+    entry.deserializerIndex = (byte) HFileBlock.BLOCK_DESERIALIZER.getDeserializerIdentifier();
+    return entry;
+  }
+
   static ConcurrentHashMap<BlockCacheKey, BucketEntry> fromPB(Map<Integer, String> deserializers,
     BucketCacheProtos.BackingMap backingMap, Function<BucketEntry, Recycler> createRecycler)
     throws IOException {
     ConcurrentHashMap<BlockCacheKey, BucketEntry> result = new ConcurrentHashMap<>();
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
-      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
-        protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+      BlockCacheKey key = fromPB(protoKey);
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.
-      BucketEntry value = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
-        protoValue.getDiskSizeWithHeader(), protoValue.getAccessCounter(),
-        protoValue.getCachedTime(),
-        protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
-        ByteBuffAllocator.HEAP);
+      BucketEntry value = fromPB(protoValue, createRecycler);
       // This is the deserializer that we stored
       int oldIndex = protoValue.getDeserialiserIndex();
       String deserializerClass = deserializers.get(oldIndex);
@@ -187,13 +203,13 @@ final class BucketProtoUtils {
         throw new Error("Unrecognized BlockType.");
     }
   }
+
   static Map<String, BucketCacheProtos.RegionFileSizeMap>
-  toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
     Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
     prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
       BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
-        BucketCacheProtos.RegionFileSizeMap.newBuilder()
-          .setRegionName(regionPrefetchMap.getFirst())
+        BucketCacheProtos.RegionFileSizeMap.newBuilder().setRegionName(regionPrefetchMap.getFirst())
           .setRegionCachedSize(regionPrefetchMap.getSecond()).build();
       tmpMap.put(hfileName, tmpRegionFileSize);
     });
@@ -201,7 +217,7 @@ final class BucketProtoUtils {
   }
 
   static Map<String, Pair<String, Long>>
-  fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
+    fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
     Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
     prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
       hfileMap.put(hfileName,

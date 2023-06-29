@@ -50,6 +50,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
@@ -60,6 +62,8 @@ public class TestVerifyBucketCacheFile {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestVerifyBucketCacheFile.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestVerifyBucketCacheFile.class);
 
   @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   public static Iterable<Object[]> data() {
@@ -314,22 +318,39 @@ public class TestVerifyBucketCacheFile {
       CacheTestUtils.generateHFileBlocks(constructedBlockSize, 4);
     // Add three blocks
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
+    LOG.info("blocks[0].getBlockName(): {}, cached time: {}", blocks[0].getBlockName(),
+      bucketCache.backingMap.get(blocks[0].getBlockName()).getCachedTime());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
+    LOG.info("blocks[1].getBlockName(): {}, cached time: {}", blocks[1].getBlockName(),
+      bucketCache.backingMap.get(blocks[1].getBlockName()).getCachedTime());
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[2].getBlockName(), blocks[2].getBlock());
+    LOG.info("blocks[2].getBlockName(): {}, cached time: {}", blocks[2].getBlockName(),
+      bucketCache.backingMap.get(blocks[2].getBlockName()).getCachedTime());
     // saves the current state
     bucketCache.persistToFile();
+    bucketCache.cleanOldTransactions();
+    bucketCache.resetTXsCount();
+
+    assertEquals(blocks[0].getBlock(),
+      bucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
+    assertEquals(blocks[1].getBlock(),
+      bucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
+    assertEquals(blocks[2].getBlock(),
+      bucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
     // evicts first block
     bucketCache.evictBlock(blocks[0].getBlockName());
-
     // now adds a fourth block to bucket cache
     cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[3].getBlockName(), blocks[3].getBlock());
+    LOG.info("blocks[3].getBlockName(): {}, cached time: {}", blocks[3].getBlockName(),
+      bucketCache.backingMap.get(blocks[3].getBlockName()).getCachedTime());
     // Creates new bucket cache instance without persisting to file after evicting first block
     // and caching fourth block. So the bucket cache file has only the last three blocks,
     // but backing map (containing cache keys) was persisted when first three blocks
     // were in the cache. So the state on this recovery is:
     // - Backing map: [block0, block1, block2]
     // - Cache: [block1, block2, block3]
-    // Therefore, this bucket cache would be able to recover only block1 and block2.
+    // However, we should have the txs files for the evictions of block0 and addition of block3,
+    // so after replaying all txs, we should be able to recover the last cache state.
     BucketCache newBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
       DEFAULT_ERROR_TOLERATION_DURATION, conf);
@@ -339,8 +360,9 @@ public class TestVerifyBucketCacheFile {
       newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
     assertEquals(blocks[2].getBlock(),
       newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
-    assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
-    assertEquals(2, newBucketCache.backingMap.size());
+    assertEquals(blocks[3].getBlock(),
+      newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
+    assertEquals(3, newBucketCache.backingMap.size());
     TEST_UTIL.cleanupTestDir();
   }
 
@@ -358,4 +380,5 @@ public class TestVerifyBucketCacheFile {
     cache.cacheBlock(cacheKey, block);
     waitUntilFlushedToBucket(cache, cacheKey);
   }
+
 }
