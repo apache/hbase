@@ -280,7 +280,7 @@ public final class ConnectionUtils {
   }
 
   // Add a delta to avoid timeout immediately after a retry sleeping.
-  static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
+  public static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
 
   static Get toCheckExistenceOnly(Get get) {
     if (get.isCheckExistenceOnly()) {
