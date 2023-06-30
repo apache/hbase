@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.backoff.HBaseServerExceptionPauseManager;
 import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -56,10 +56,6 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   private final long startNs;
 
-  private final long pauseNs;
-
-  private final long pauseNsForServerOverloaded;
-
   private int tries = 1;
 
   private final int maxAttempts;
@@ -78,14 +74,14 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   protected final HBaseRpcController controller;
 
+  private final HBaseServerExceptionPauseManager pauseManager;
+
   public AsyncRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
     long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
     long rpcTimeoutNs, int startLogErrorsCnt) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.priority = priority;
-    this.pauseNs = pauseNs;
-    this.pauseNsForServerOverloaded = pauseNsForServerOverloaded;
     this.maxAttempts = maxAttempts;
     this.operationTimeoutNs = operationTimeoutNs;
     this.rpcTimeoutNs = rpcTimeoutNs;
@@ -95,6 +91,8 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.controller.setPriority(priority);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
   }
 
   private long elapsedMs() {
@@ -102,7 +100,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   protected final long remainingTimeNs() {
-    return operationTimeoutNs - (System.nanoTime() - startNs);
+    return pauseManager.remainingTimeNs(startNs);
   }
 
   protected final void completeExceptionally() {
@@ -125,19 +123,12 @@ public abstract class AsyncRpcRetryingCaller<T> {
   }
 
   private void tryScheduleRetry(Throwable error) {
-    long pauseNsToUse =
-      HBaseServerException.isServerOverloaded(error) ? pauseNsForServerOverloaded : pauseNs;
-    long delayNs;
-    if (operationTimeoutNs > 0) {
-      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
-      if (maxDelayNs <= 0) {
-        completeExceptionally();
-        return;
-      }
-      delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
-    } else {
-      delayNs = getPauseTime(pauseNsToUse, tries - 1);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries, startNs);
+    if (!maybePauseNsToUse.isPresent()) {
+      completeExceptionally();
+      return;
     }
+    long delayNs = maybePauseNsToUse.getAsLong();
     tries++;
     if (HBaseServerException.isServerOverloaded(error)) {
       Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
