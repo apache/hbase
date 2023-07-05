@@ -812,7 +812,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hstore.compactionThreshold</name>
     <value>3</value>
-    <description> If more than this number of StoreFiles exist in any one Store
+    <description> If more than or equal to this number of StoreFiles exist in any one Store
       (one StoreFile is written per flush of MemStore), a compaction is run to rewrite all
       StoreFiles into a single StoreFile. Larger values delay compaction, but when compaction does
       occur, it takes longer to complete.</description>
