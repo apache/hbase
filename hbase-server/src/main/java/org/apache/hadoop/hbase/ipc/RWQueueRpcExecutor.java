@@ -55,16 +55,16 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final QueueBalancer writeBalancer;
   private final QueueBalancer readBalancer;
   private final QueueBalancer scanBalancer;
-  private final int writeHandlersCount;
-  private final int readHandlersCount;
-  private final int scanHandlersCount;
-  private final int numWriteQueues;
-  private final int numReadQueues;
-  private final int numScanQueues;
+  protected final int writeHandlersCount;
+  protected final int readHandlersCount;
+  protected final int scanHandlersCount;
+  protected final int numWriteQueues;
+  protected final int numReadQueues;
+  protected final int numScanQueues;
 
-  private final AtomicInteger activeWriteHandlerCount = new AtomicInteger(0);
-  private final AtomicInteger activeReadHandlerCount = new AtomicInteger(0);
-  private final AtomicInteger activeScanHandlerCount = new AtomicInteger(0);
+  protected final AtomicInteger activeWriteHandlerCount = new AtomicInteger(0);
+  protected final AtomicInteger activeReadHandlerCount = new AtomicInteger(0);
+  protected final AtomicInteger activeScanHandlerCount = new AtomicInteger(0);
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int maxQueueLength,
     final PriorityFunction priority, final Configuration conf, final Abortable abortable) {
