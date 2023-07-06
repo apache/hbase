@@ -652,7 +652,28 @@ public final class MetricsConnection implements StatisticTrackable {
       concurrentCallsPerServerHist.update(callsPerServer);
     }
     // Update the counter that tracks RPCs by type.
-    final String methodName = method.getService().getName() + "_" + method.getName();
+    StringBuilder methodName = new StringBuilder();
+    methodName.append(method.getService().getName()).append("_").append(method.getName());
+    // Distinguish mutate types.
+    if ("Mutate".equals(method.getName())) {
+      final MutationType type = ((MutateRequest) param).getMutation().getMutateType();
+      switch (type) {
+        case APPEND:
+          methodName.append("(Append)");
+          break;
+        case DELETE:
+          methodName.append("(Delete)");
+          break;
+        case INCREMENT:
+          methodName.append("(Increment)");
+          break;
+        case PUT:
+          methodName.append("(Put)");
+          break;
+        default:
+          methodName.append("(Unknown)");
+      }
+    }
     getMetric(CNT_BASE + methodName, rpcCounters, counterFactory).inc();
     if (e != null) {
       getMetric(FAILURE_CNT_BASE + methodName, rpcCounters, counterFactory).inc();
@@ -729,7 +750,7 @@ public final class MetricsConnection implements StatisticTrackable {
       }
     }
     // Fallback to dynamic registry lookup for DDL methods.
-    updateRpcGeneric(methodName, stats);
+    updateRpcGeneric(methodName.toString(), stats);
   }
 
   public void incrCacheDroppingExceptions(Object exception) {
