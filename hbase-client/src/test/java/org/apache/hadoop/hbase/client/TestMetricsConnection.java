@@ -99,7 +99,7 @@ public class TestMetricsConnection {
   }
 
   @Test
-  public void testMetricsWithMutiConnections() throws IOException {
+  public void testMetricsWithMultiConnections() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, "unit-test");
@@ -181,6 +181,7 @@ public class TestMetricsConnection {
         MetricsConnection.newCallStats(), null);
     }
 
+    MetricsConnectionSnapshot metricsConnSnap = METRICS.snapshot();
     final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
     final String rpcFailureCountPrefix =
       "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
@@ -192,6 +193,7 @@ public class TestMetricsConnection {
       metricKey = rpcCountPrefix + method;
       metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
       assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal >= loop);
+      assertEquals(metricVal, metricsConnSnap.getRpcCounters().get(metricKey).longValue());
 
       metricKey = rpcFailureCountPrefix + method;
       counter = METRICS.getRpcCounters().get(metricKey);
@@ -199,9 +201,12 @@ public class TestMetricsConnection {
       if (method.equals("Get") || method.equals("Mutate")) {
         // no failure
         assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == 0);
+        assertEquals(0, metricsConnSnap.getRpcCounters().getOrDefault(metricKey, 0L).longValue());
       } else {
         // has failure
         assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+        assertEquals(loop,
+          metricsConnSnap.getRpcCounters().getOrDefault(metricKey, 0L).longValue());
       }
     }
 
@@ -210,18 +215,22 @@ public class TestMetricsConnection {
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertEquals(loop, metricsConnSnap.getRpcCounters().getOrDefault(metricKey, 0L).longValue());
 
     // local exception
     metricKey = "rpcLocalExceptions_CallTimeoutException";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop);
+    assertEquals(loop, metricsConnSnap.getRpcCounters().getOrDefault(metricKey, 0L).longValue());
 
     // total exception
     metricKey = "rpcTotalExceptions";
     counter = METRICS.getRpcCounters().get(metricKey);
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertTrue("metric: " + metricKey + " val: " + metricVal, metricVal == loop * 2);
+    assertEquals(loop * 2,
+      metricsConnSnap.getRpcCounters().getOrDefault(metricKey, 0L).longValue());
 
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),

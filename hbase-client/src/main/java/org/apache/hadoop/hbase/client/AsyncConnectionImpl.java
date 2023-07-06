@@ -453,4 +453,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
   Optional<MetricsConnection> getConnectionMetrics() {
     return metrics;
   }
+
+  @Override
+  public MetricsConnectionSnapshot getMetrics() {
+    return metrics.map(MetricsConnection::snapshot).orElse(null);
+  }
 }
