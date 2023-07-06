@@ -4208,6 +4208,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        if (regionMetrics == null) {
+          LOG.warn("Can not get compaction details for the region: {} , it may be not online.",
+            regionInfo.getRegionNameAsString());
+          continue;
+        }
         if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
           if (compactionState == CompactionState.MINOR) {
             compactionState = CompactionState.MAJOR_AND_MINOR;
