@@ -48,16 +48,16 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
   public AdaptiveFastPathRWQueueRpcExecutor(String name, int handlerCount, int maxQueueLength,
     PriorityFunction priority, Configuration conf, Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
-    float slackRatio = conf.getFloat(FASTPATH_ADAPTIVE_RATIO, FASTPATH_ADAPTIVE_DEFAULT);
+    float adaptiveRatio = conf.getFloat(FASTPATH_ADAPTIVE_RATIO, FASTPATH_ADAPTIVE_DEFAULT);
     if (!checkAdaptiveRatioRationality(conf)) {
-      LOG.warn("The slackRatio should be in (0.0, 1.0) but get " + slackRatio
+      LOG.warn("The adaptive ratio should be in (0.0, 1.0) but get " + adaptiveRatio
         + " using the default ratio: " + FASTPATH_ADAPTIVE_DEFAULT);
-      slackRatio = FASTPATH_ADAPTIVE_DEFAULT;
+      adaptiveRatio = FASTPATH_ADAPTIVE_DEFAULT;
     }
 
-    writeSharedHandlers = (int) (slackRatio * writeHandlersCount);
-    readSharedHandlers = (int) (slackRatio * readHandlersCount);
-    scanSharedHandlers = (int) (slackRatio * scanHandlersCount);
+    writeSharedHandlers = (int) (adaptiveRatio * writeHandlersCount);
+    readSharedHandlers = (int) (adaptiveRatio * readHandlersCount);
+    scanSharedHandlers = (int) (adaptiveRatio * scanHandlersCount);
   }
 
   @Override
