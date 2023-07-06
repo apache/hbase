@@ -50,8 +50,8 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
     float slackRatio = conf.getFloat(FASTPATH_ADAPTIVE_RATIO, FASTPATH_ADAPTIVE_DEFAULT);
     if (!checkAdaptiveRatioRationality(conf)) {
-      LOG.warn("The slackRatio should be in (0.0, 1.0) but get " + slackRatio +
-        " using the default ratio: " + FASTPATH_ADAPTIVE_DEFAULT);
+      LOG.warn("The slackRatio should be in (0.0, 1.0) but get " + slackRatio
+        + " using the default ratio: " + FASTPATH_ADAPTIVE_DEFAULT);
       slackRatio = FASTPATH_ADAPTIVE_DEFAULT;
     }
 
@@ -65,14 +65,16 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
     RpcCall call = callTask.getRpcCall();
     boolean isWriteRequest = isWriteRequest(call.getHeader(), call.getParam());
     boolean shouldDispatchToScanQueue = shouldDispatchToScanQueue(callTask);
-    FastPathRpcHandler handler = isWriteRequest ? writeHandlerStack.poll() :
-      shouldDispatchToScanQueue ? scanHandlerStack.poll() : readHandlerStack.poll();
+    FastPathRpcHandler handler = isWriteRequest ? writeHandlerStack.poll()
+      : shouldDispatchToScanQueue ? scanHandlerStack.poll()
+      : readHandlerStack.poll();
     if (handler == null) {
       handler = sharedHandlerStack.poll();
     }
 
-    return handler != null ? handler.loadCallRunner(callTask) :
-      dispatchTo(isWriteRequest, shouldDispatchToScanQueue, callTask);
+    return handler != null
+      ? handler.loadCallRunner(callTask)
+      : dispatchTo(isWriteRequest, shouldDispatchToScanQueue, callTask);
   }
 
   @Override
@@ -101,10 +103,10 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
     final int handlerCount, final BlockingQueue<CallRunner> q,
     final AtomicInteger activeHandlerCount, final AtomicInteger failedHandlerCount,
     final Abortable abortable) {
-    Deque<FastPathRpcHandler> handlerStack =
-      name.contains("shared") ? sharedHandlerStack :
-        name.contains("read") ? readHandlerStack :
-          name.contains("write") ? writeHandlerStack : scanHandlerStack;
+    Deque<FastPathRpcHandler> handlerStack = name.contains("shared") ? sharedHandlerStack
+      : name.contains("read") ? readHandlerStack
+      : name.contains("write") ? writeHandlerStack
+      : scanHandlerStack;
     return new FastPathRpcHandler(name, handlerFailureThreshhold, handlerCount, q,
       activeHandlerCount, failedHandlerCount, abortable, handlerStack);
   }
