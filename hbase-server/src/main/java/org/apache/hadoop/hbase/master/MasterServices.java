@@ -480,12 +480,12 @@ public interface MasterServices extends Server {
 
   /**
    * Flush an existing table
-   * @param tableName    The table name
-   * @param columnFamily The column family
-   * @param nonceGroup   the nonce group
-   * @param nonce        the nonce
+   * @param tableName      The table name
+   * @param columnFamilies The column families to flush
+   * @param nonceGroup     the nonce group
+   * @param nonce          the nonce
    * @return the flush procedure id
    */
-  long flushTable(final TableName tableName, final byte[] columnFamily, final long nonceGroup,
-    final long nonce) throws IOException;
+  long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
+    final long nonceGroup, final long nonce) throws IOException;
 }

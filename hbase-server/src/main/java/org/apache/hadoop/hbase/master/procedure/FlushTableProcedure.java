@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
@@ -25,10 +29,12 @@ import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -41,7 +47,7 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
 
   private TableName tableName;
 
-  private byte[] columnFamily;
+  private List<byte[]> columnFamilies;
 
   public FlushTableProcedure() {
     super();
@@ -51,10 +57,11 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
     this(env, tableName, null);
   }
 
-  public FlushTableProcedure(MasterProcedureEnv env, TableName tableName, byte[] columnFamily) {
+  public FlushTableProcedure(MasterProcedureEnv env, TableName tableName,
+    List<byte[]> columnFamilies) {
     super(env);
     this.tableName = tableName;
-    this.columnFamily = columnFamily;
+    this.columnFamilies = columnFamilies;
   }
 
   @Override
@@ -93,15 +100,21 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
     } catch (Exception e) {
-      LOG.warn("Retriable error trying to flush table=" + getTableName() + " state=" + state, e);
+      if (e instanceof DoNotRetryIOException) {
+        // for example, TableNotFoundException or TableNotEnabledException
+        setFailure("master-flush-table", e);
+        LOG.warn("Unrecoverable error trying to flush " + getTableName() + " state=" + state, e);
+      } else {
+        LOG.warn("Retriable error trying to flush " + getTableName() + " state=" + state, e);
+      }
     }
     return Flow.HAS_MORE_STATE;
   }
 
   @Override
-  protected void rollbackState(MasterProcedureEnv env, FlushTableState flushTableState)
+  protected void rollbackState(MasterProcedureEnv env, FlushTableState state)
     throws IOException, InterruptedException {
-    throw new UnsupportedOperationException();
+    // nothing to rollback
   }
 
   @Override
@@ -134,8 +147,12 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
     super.serializeStateData(serializer);
     FlushTableProcedureStateData.Builder builder = FlushTableProcedureStateData.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    if (columnFamily != null) {
-      builder.setColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    if (columnFamilies != null) {
+      for (byte[] columnFamily : columnFamilies) {
+        if (columnFamily != null && columnFamily.length > 0) {
+          builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+        }
+      }
     }
     serializer.serialize(builder.build());
   }
@@ -145,23 +162,27 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
     super.deserializeStateData(serializer);
     FlushTableProcedureStateData data = serializer.deserialize(FlushTableProcedureStateData.class);
     this.tableName = ProtobufUtil.toTableName(data.getTableName());
-    if (data.hasColumnFamily()) {
-      this.columnFamily = data.getColumnFamily().toByteArray();
+    if (data.getColumnFamilyCount() > 0) {
+      this.columnFamilies = data.getColumnFamilyList().stream().filter(cf -> !cf.isEmpty())
+        .map(ByteString::toByteArray).collect(Collectors.toList());
     }
   }
 
   private FlushRegionProcedure[] createFlushRegionProcedures(MasterProcedureEnv env) {
     return env.getAssignmentManager().getTableRegions(getTableName(), true).stream()
       .filter(r -> RegionReplicaUtil.isDefaultReplica(r))
-      .map(r -> new FlushRegionProcedure(r, columnFamily)).toArray(FlushRegionProcedure[]::new);
+      .map(r -> new FlushRegionProcedure(r, columnFamilies)).toArray(FlushRegionProcedure[]::new);
   }
 
   @Override
   public void toStringClassDetails(StringBuilder builder) {
     builder.append(getClass().getName()).append(", id=").append(getProcId()).append(", table=")
       .append(tableName);
-    if (columnFamily != null) {
-      builder.append(", columnFamily=").append(Bytes.toString(columnFamily));
+    if (columnFamilies != null) {
+      builder.append(", columnFamilies=[")
+        .append(Strings.JOINER
+          .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())))
+        .append("]");
     }
   }
 
@@ -172,7 +193,7 @@ public class FlushTableProcedure extends AbstractStateMachineTableProcedure<Flus
         MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
         MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)
     ) {
-      setFailure("master-flush-table", new IOException("FlushProcedure is DISABLED"));
+      setFailure("master-flush-table", new HBaseIOException("FlushTableProcedureV2 is DISABLED"));
     }
   }
 }

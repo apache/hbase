@@ -198,17 +198,17 @@ enum FlushTableState {
 
 message FlushTableProcedureStateData {
   required TableName table_name = 1;
-  optional bytes column_family = 2;
+  repeated bytes column_family = 2;
 }
 
 message FlushRegionProcedureStateData {
   required RegionInfo region = 1;
-  optional bytes column_family = 2;
+  repeated bytes column_family = 2;
 }
 
 message FlushRegionParameter {
   required RegionInfo region = 1;
-  optional bytes column_family = 2;
+  repeated bytes column_family = 2;
 }
 
 enum SnapshotState {

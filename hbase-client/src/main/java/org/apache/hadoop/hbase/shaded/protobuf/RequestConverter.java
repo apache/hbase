@@ -1717,11 +1717,13 @@ public final class RequestConverter {
   }
 
   public static FlushTableRequest buildFlushTableRequest(final TableName tableName,
-    final byte[] columnFamily, final long nonceGroup, final long nonce) {
+    final List<byte[]> columnFamilies, final long nonceGroup, final long nonce) {
     FlushTableRequest.Builder builder = FlushTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-    if (columnFamily != null) {
-      builder.setColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    if (!columnFamilies.isEmpty()) {
+      for (byte[] columnFamily : columnFamilies) {
+        builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+      }
     }
     return builder.setNonceGroup(nonceGroup).setNonce(nonce).build();
   }

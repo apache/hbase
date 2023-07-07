@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -42,6 +44,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -55,7 +58,7 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   private static final Logger LOG = LoggerFactory.getLogger(FlushRegionProcedure.class);
 
   private RegionInfo region;
-  private byte[] columnFamily;
+  private List<byte[]> columnFamilies;
   private ProcedureEvent<?> event;
   private boolean dispatched;
   private boolean succ;
@@ -68,9 +71,9 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
     this(region, null);
   }
 
-  public FlushRegionProcedure(RegionInfo region, byte[] columnFamily) {
+  public FlushRegionProcedure(RegionInfo region, List<byte[]> columnFamilies) {
     this.region = region;
-    this.columnFamily = columnFamily;
+    this.columnFamilies = columnFamilies;
   }
 
   @Override
@@ -182,8 +185,12 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     FlushRegionProcedureStateData.Builder builder = FlushRegionProcedureStateData.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
-    if (columnFamily != null) {
-      builder.setColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    if (columnFamilies != null) {
+      for (byte[] columnFamily : columnFamilies) {
+        if (columnFamily != null && columnFamily.length > 0) {
+          builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+        }
+      }
     }
     serializer.serialize(builder.build());
   }
@@ -193,8 +200,9 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
     FlushRegionProcedureStateData data =
       serializer.deserialize(FlushRegionProcedureStateData.class);
     this.region = ProtobufUtil.toRegionInfo(data.getRegion());
-    if (data.hasColumnFamily()) {
-      this.columnFamily = data.getColumnFamily().toByteArray();
+    if (data.getColumnFamilyCount() > 0) {
+      this.columnFamilies = data.getColumnFamilyList().stream().filter(cf -> !cf.isEmpty())
+        .map(ByteString::toByteArray).collect(Collectors.toList());
     }
   }
 
@@ -202,8 +210,12 @@ public class FlushRegionProcedure extends Procedure<MasterProcedureEnv>
   public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv env, ServerName serverName) {
     FlushRegionParameter.Builder builder = FlushRegionParameter.newBuilder();
     builder.setRegion(ProtobufUtil.toRegionInfo(region));
-    if (columnFamily != null) {
-      builder.setColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+    if (columnFamilies != null) {
+      for (byte[] columnFamily : columnFamilies) {
+        if (columnFamily != null && columnFamily.length > 0) {
+          builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+        }
+      }
     }
     return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
       FlushRegionCallable.class, builder.build().toByteArray()));

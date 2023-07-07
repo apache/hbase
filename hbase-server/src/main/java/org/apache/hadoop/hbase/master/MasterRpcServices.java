@@ -3597,9 +3597,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public FlushTableResponse flushTable(RpcController controller, FlushTableRequest req)
     throws ServiceException {
     TableName tableName = ProtobufUtil.toTableName(req.getTableName());
-    byte[] columnFamily = req.hasColumnFamily() ? req.getColumnFamily().toByteArray() : null;
+    List<byte[]> columnFamilies = req.getColumnFamilyCount() > 0
+      ? req.getColumnFamilyList().stream().filter(cf -> !cf.isEmpty()).map(ByteString::toByteArray)
+        .collect(Collectors.toList())
+      : null;
     try {
-      long procId = server.flushTable(tableName, columnFamily, req.getNonceGroup(), req.getNonce());
+      long procId =
+        server.flushTable(tableName, columnFamilies, req.getNonceGroup(), req.getNonce());
       return FlushTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);

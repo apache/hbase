@@ -33,8 +33,11 @@ import org.junit.Before;
 public class TestFlushTableProcedureBase {
 
   protected static HBaseTestingUtil TEST_UTIL;
+
   protected TableName TABLE_NAME;
-  protected byte[] FAMILY;
+  protected byte[] FAMILY1;
+  protected byte[] FAMILY2;
+  protected byte[] FAMILY3;
 
   @Before
   public void setup() throws Exception {
@@ -42,10 +45,15 @@ public class TestFlushTableProcedureBase {
     addConfiguration(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
     TABLE_NAME = TableName.valueOf(Bytes.toBytes("TestFlushTable"));
-    FAMILY = Bytes.toBytes("cf");
+    FAMILY1 = Bytes.toBytes("cf1");
+    FAMILY2 = Bytes.toBytes("cf2");
+    FAMILY3 = Bytes.toBytes("cf3");
     final byte[][] splitKeys = new RegionSplitter.HexStringSplit().split(10);
-    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILY, splitKeys);
-    TEST_UTIL.loadTable(table, FAMILY, false);
+    Table table =
+      TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY1, FAMILY2, FAMILY3 }, splitKeys);
+    TEST_UTIL.loadTable(table, FAMILY1, false);
+    TEST_UTIL.loadTable(table, FAMILY2, false);
+    TEST_UTIL.loadTable(table, FAMILY3, false);
   }
 
   protected void addConfiguration(Configuration config) {
@@ -63,6 +71,18 @@ public class TestFlushTableProcedureBase {
   protected void assertTableMemStoreEmpty() {
     long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
       .mapToLong(HRegion::getMemStoreDataSize).sum();
+    Assert.assertEquals(0, totalSize);
+  }
+
+  protected void assertColumnFamilyMemStoreNotEmpty(byte[] columnFamily) {
+    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
+      .mapToLong(r -> r.getStore(columnFamily).getMemStoreSize().getDataSize()).sum();
+    Assert.assertTrue(totalSize > 0);
+  }
+
+  protected void assertColumnFamilyMemStoreEmpty(byte[] columnFamily) {
+    long totalSize = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).stream()
+      .mapToLong(r -> r.getStore(columnFamily).getMemStoreSize().getDataSize()).sum();
     Assert.assertEquals(0, totalSize);
   }
 

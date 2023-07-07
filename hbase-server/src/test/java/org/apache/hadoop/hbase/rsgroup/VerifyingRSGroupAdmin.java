@@ -237,6 +237,10 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.flush(tableName, columnFamily);
   }
 
+  public void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException {
+    admin.flush(tableName, columnFamilies);
+  }
+
   public void flushRegion(byte[] regionName) throws IOException {
     admin.flushRegion(regionName);
   }

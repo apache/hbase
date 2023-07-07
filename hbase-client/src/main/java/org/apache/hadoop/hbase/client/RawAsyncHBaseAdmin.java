@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -953,31 +954,37 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
-    return flush(tableName, null);
+    return flush(tableName, Collections.emptyList());
+  }
+
+  public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    return flush(tableName, Collections.singletonList(columnFamily));
   }
 
   @Override
-  public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+  public CompletableFuture<Void> flush(TableName tableName, List<byte[]> columnFamilyList) {
     // This is for keeping compatibility with old implementation.
     // If the server version is lower than the client version, it's possible that the
     // flushTable method is not present in the server side, if so, we need to fall back
     // to the old implementation.
-    FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamily,
+    List<byte[]> columnFamilies = columnFamilyList.stream()
+      .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
+    FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
       ng.getNonceGroup(), ng.newNonce());
     CompletableFuture<Void> procFuture = this.<FlushTableRequest, FlushTableResponse> procedureCall(
       tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
       (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
-    // here we use another new CompletableFuture because the
-    // procFuture is not fully controlled by ourselves.
     CompletableFuture<Void> future = new CompletableFuture<>();
     addListener(procFuture, (ret, error) -> {
       if (error != null) {
-        if (error instanceof DoNotRetryIOException) {
+        if (error instanceof TableNotFoundException || error instanceof TableNotEnabledException) {
+          future.completeExceptionally(error);
+        } else if (error instanceof DoNotRetryIOException) {
           // usually this is caused by the method is not present on the server or
           // the hbase hadoop version does not match the running hadoop version.
           // if that happens, we need fall back to the old flush implementation.
           LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1", error);
-          legacyFlush(future, tableName, columnFamily);
+          legacyFlush(future, tableName, columnFamilies);
         } else {
           future.completeExceptionally(error);
         }
@@ -989,7 +996,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private void legacyFlush(CompletableFuture<Void> future, TableName tableName,
-    byte[] columnFamily) {
+    List<byte[]> columnFamilies) {
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
@@ -1003,8 +1010,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.completeExceptionally(new TableNotEnabledException(tableName));
           } else {
             Map<String, String> props = new HashMap<>();
-            if (columnFamily != null) {
-              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            if (columnFamilies != null && !columnFamilies.isEmpty()) {
+              props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
+                .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
             }
             addListener(
               execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(), props),

@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -26,6 +27,8 @@ import org.apache.hadoop.hbase.procedure2.BaseRSProcedureCallable;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.FlushRegionParameter;
@@ -37,7 +40,7 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
 
   private RegionInfo regionInfo;
 
-  private byte[] columnFamily;
+  private List<byte[]> columnFamilies;
 
   @Override
   protected void doCall() throws Exception {
@@ -49,11 +52,10 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
     region.startRegionOperation();
     try {
       HRegion.FlushResult res;
-      if (columnFamily == null) {
+      if (columnFamilies == null) {
         res = region.flush(true);
       } else {
-        res = region.flushcache(Collections.singletonList(columnFamily), false,
-          FlushLifeCycleTracker.DUMMY);
+        res = region.flushcache(columnFamilies, false, FlushLifeCycleTracker.DUMMY);
       }
       if (res.getResult() == HRegion.FlushResult.Result.CANNOT_FLUSH) {
         throw new IOException("Unable to complete flush " + regionInfo);
@@ -68,8 +70,9 @@ public class FlushRegionCallable extends BaseRSProcedureCallable {
   protected void initParameter(byte[] parameter) throws Exception {
     FlushRegionParameter param = FlushRegionParameter.parseFrom(parameter);
     this.regionInfo = ProtobufUtil.toRegionInfo(param.getRegion());
-    if (param.hasColumnFamily()) {
-      this.columnFamily = param.getColumnFamily().toByteArray();
+    if (param.getColumnFamilyCount() > 0) {
+      this.columnFamilies = param.getColumnFamilyList().stream().filter(cf -> !cf.isEmpty())
+        .map(ByteString::toByteArray).collect(Collectors.toList());
     }
   }
 

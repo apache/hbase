@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -51,6 +53,20 @@ public class TestFlushTableProcedureWithDoNotSupportFlushTableMaster
     assertTableMemStoreEmpty();
   }
 
+  @Test
+  public void testSingleColumnFamilyFlushFallback() throws IOException {
+    assertColumnFamilyMemStoreNotEmpty(FAMILY1);
+    TEST_UTIL.getAdmin().flush(TABLE_NAME, FAMILY1);
+    assertColumnFamilyMemStoreEmpty(FAMILY1);
+  }
+
+  @Test
+  public void testMultiColumnFamilyFlushFallback() throws IOException {
+    assertTableMemStoreNotEmpty();
+    TEST_UTIL.getAdmin().flush(TABLE_NAME, Arrays.asList(FAMILY1, FAMILY2, FAMILY3));
+    assertTableMemStoreEmpty();
+  }
+
   public static final class DoNotSupportFlushTableMaster extends HMaster {
 
     public DoNotSupportFlushTableMaster(Configuration conf) throws IOException {
@@ -58,8 +74,8 @@ public class TestFlushTableProcedureWithDoNotSupportFlushTableMaster
     }
 
     @Override
-    public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
-      throws IOException {
+    public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+      long nonce) throws IOException {
       throw new DoNotRetryIOException("UnsupportedOperation: flushTable");
     }
   }

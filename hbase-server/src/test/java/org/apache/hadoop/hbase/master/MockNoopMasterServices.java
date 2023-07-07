@@ -528,6 +528,7 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+<<<<<<< HEAD
   public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
     return null;
   }
@@ -538,8 +539,8 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public long flushTable(TableName tableName, byte[] columnFamily, long nonceGroup, long nonce)
-    throws IOException {
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
     return 0;
   }
 }

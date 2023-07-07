@@ -18,14 +18,14 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -45,39 +45,25 @@ public class TestFlushTableProcedure extends TestFlushTableProcedureBase {
   }
 
   @Test
-  public void testMasterRestarts() throws IOException {
+  public void testFlushTableExceptionally() throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    admin.disableTable(TABLE_NAME);
+    Assert.assertThrows(TableNotEnabledException.class, () -> admin.flush(TABLE_NAME));
+    admin.deleteTable(TABLE_NAME);
+    Assert.assertThrows(TableNotFoundException.class, () -> admin.flush(TABLE_NAME));
+  }
+
+  @Test
+  public void testSingleColumnFamilyFlush() throws IOException {
     assertTableMemStoreNotEmpty();
-
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    MasterProcedureEnv env = procExec.getEnvironment();
-    FlushTableProcedure proc = new FlushTableProcedure(env, TABLE_NAME);
-    long procId = procExec.submitProcedure(proc);
-    TEST_UTIL.waitFor(5000, 1000, () -> proc.getState().getNumber() > 1);
-
-    TEST_UTIL.getHBaseCluster().killMaster(master.getServerName());
-    TEST_UTIL.getHBaseCluster().waitForMasterToStop(master.getServerName(), 30000);
-    TEST_UTIL.getHBaseCluster().startMaster();
-    TEST_UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
-
-    master = TEST_UTIL.getHBaseCluster().getMaster();
-    procExec = master.getMasterProcedureExecutor();
-    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    TEST_UTIL.getAdmin().flush(TABLE_NAME, Arrays.asList(FAMILY1, FAMILY2, FAMILY3));
     assertTableMemStoreEmpty();
   }
 
   @Test
-  public void testSkipRIT() throws IOException {
-    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TABLE_NAME).get(0);
-
-    TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
-      .getRegionStateNode(region.getRegionInfo())
-      .setState(RegionState.State.CLOSING, RegionState.State.OPEN);
-
-    FlushRegionProcedure proc = new FlushRegionProcedure(region.getRegionInfo());
-    TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor().submitProcedure(proc);
-
-    // wait for a time which is shorter than RSProcedureDispatcher delays
-    TEST_UTIL.waitFor(5000, () -> proc.isFinished());
+  public void testMultiColumnFamilyFlush() throws IOException {
+    assertTableMemStoreNotEmpty();
+    TEST_UTIL.getAdmin().flush(TABLE_NAME, Arrays.asList(FAMILY1, FAMILY2, FAMILY3));
+    assertTableMemStoreEmpty();
   }
 }
