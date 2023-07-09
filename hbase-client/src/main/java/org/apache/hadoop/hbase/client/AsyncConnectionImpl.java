@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
+import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -121,6 +122,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
   private final String metricsScope;
   private final Optional<MetricsConnection> metrics;
 
+  private JvmPauseMonitor pauseMonitor;
+
   private final ClusterStatusListener clusterStatusListener;
 
   private volatile ConnectionOverAsyncConnection conn;
@@ -179,6 +182,10 @@ public class AsyncConnectionImpl implements AsyncConnection {
       }
     }
     this.clusterStatusListener = listener;
+    if (conf.getBoolean("hbase.client.pause.monitor.enable", true)) {
+      pauseMonitor = new JvmPauseMonitor(conf);
+      pauseMonitor.start();
+    }
   }
 
   private void spawnRenewalChore(final UserGroupInformation user) {
@@ -239,6 +246,9 @@ public class AsyncConnectionImpl implements AsyncConnection {
       }
       if (metrics.isPresent()) {
         MetricsConnection.deleteMetricsConnection(metricsScope);
+      }
+      if (pauseMonitor != null) {
+        pauseMonitor.stop();
       }
       ConnectionOverAsyncConnection c = this.conn;
       if (c != null) {
