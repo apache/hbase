@@ -27,6 +27,8 @@ import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRI
 import static org.apache.hadoop.hbase.client.NonceGenerator.CLIENT_NONCES_ENABLED_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.SERVER_NAME_KEY;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_DEFAULT;
+import static org.apache.hadoop.hbase.util.JvmPauseMonitor.PAUSE_MONITOR_ENABLE_KEY;
 
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
@@ -182,8 +184,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
       }
     }
     this.clusterStatusListener = listener;
-    if (conf.getBoolean("hbase.client.pause.monitor.enable", true)) {
-      pauseMonitor = new JvmPauseMonitor(conf);
+    if (conf.getBoolean(PAUSE_MONITOR_ENABLE_KEY, PAUSE_MONITOR_ENABLE_DEFAULT)) {
+      pauseMonitor = JvmPauseMonitor.getInstance(conf);
       pauseMonitor.start();
     }
   }
