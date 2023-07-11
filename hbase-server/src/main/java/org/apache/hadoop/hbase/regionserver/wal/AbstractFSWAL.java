@@ -485,7 +485,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     return floor << 1;
   }
 
-  protected void setWaitOnShutdownInSeconds(int waitOnShutdownInSeconds,
+  protected final void setWaitOnShutdownInSeconds(int waitOnShutdownInSeconds,
     String waitOnShutdownInSecondsConfigKey) {
     this.waitOnShutdownInSeconds = waitOnShutdownInSeconds;
     this.waitOnShutdownInSecondsConfigKey = waitOnShutdownInSecondsConfigKey;
