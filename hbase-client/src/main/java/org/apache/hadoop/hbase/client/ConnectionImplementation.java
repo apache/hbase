@@ -962,7 +962,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       // Query the meta region
       long pauseBase = this.pause;
-      takeUserRegionLock();
       long lockStartTime = 0;
       boolean lockedUserRegion = false;
       try {
