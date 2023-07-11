@@ -46,7 +46,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * which detects GC pauses(Todd Lipcon)
  */
 @InterfaceAudience.Private
-public class JvmPauseMonitor {
+public final class JvmPauseMonitor {
   private static final Logger LOG = LoggerFactory.getLogger(JvmPauseMonitor.class);
 
   private static final AtomicInteger REF_CNT = new AtomicInteger();
@@ -136,7 +136,7 @@ public class JvmPauseMonitor {
     return map;
   }
 
-  private static class GcTimes {
+  private static final class GcTimes {
     private GcTimes(GarbageCollectorMXBean gcBean) {
       gcCount = gcBean.getCollectionCount();
       gcTimeMillis = gcBean.getCollectionTime();
