@@ -29,10 +29,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -69,7 +71,10 @@ public class TestAsyncClientPauseForRpcThrottling {
 
   private static AsyncConnection CONN;
   private static final AtomicBoolean THROTTLE = new AtomicBoolean(false);
+  private static final AtomicInteger FORCE_RETRIES = new AtomicInteger(0);
   private static final long WAIT_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1);
+  private static final int RETRY_COUNT = 3;
+  private static final int MAX_MULTIPLIER_EXPECTATION = 2;
 
   public static final class ThrottlingRSRpcServicesForTest extends RSRpcServices {
 
@@ -80,6 +85,7 @@ public class TestAsyncClientPauseForRpcThrottling {
     @Override
     public ClientProtos.GetResponse get(RpcController controller, ClientProtos.GetRequest request)
       throws ServiceException {
+      maybeForceRetry();
       maybeThrottle();
       return super.get(controller, request);
     }
@@ -87,6 +93,7 @@ public class TestAsyncClientPauseForRpcThrottling {
     @Override
     public ClientProtos.MultiResponse multi(RpcController rpcc, ClientProtos.MultiRequest request)
       throws ServiceException {
+      maybeForceRetry();
       maybeThrottle();
       return super.multi(rpcc, request);
     }
@@ -94,8 +101,16 @@ public class TestAsyncClientPauseForRpcThrottling {
     @Override
     public ClientProtos.ScanResponse scan(RpcController controller,
       ClientProtos.ScanRequest request) throws ServiceException {
+      maybeForceRetry();
       maybeThrottle();
       return super.scan(controller, request);
+    }
+
+    private void maybeForceRetry() throws ServiceException {
+      if (FORCE_RETRIES.get() > 0) {
+        FORCE_RETRIES.addAndGet(-1);
+        throw new ServiceException(new RegionTooBusyException("Retry"));
+      }
     }
 
     private void maybeThrottle() throws ServiceException {
@@ -121,6 +136,12 @@ public class TestAsyncClientPauseForRpcThrottling {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    assertTrue(
+      "The MAX_MULTIPLIER_EXPECTATION must be less than HConstants.RETRY_BACKOFF[RETRY_COUNT] "
+        + "in order for our tests to adequately verify that we aren't "
+        + "multiplying throttled pauses based on the retry count.",
+      MAX_MULTIPLIER_EXPECTATION < HConstants.RETRY_BACKOFF[RETRY_COUNT]);
+
     UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     UTIL.startMiniCluster(1);
     UTIL.getMiniHBaseCluster().getConfiguration().setClass(HConstants.REGION_SERVER_IMPL,
@@ -149,14 +170,24 @@ public class TestAsyncClientPauseForRpcThrottling {
   }
 
   private void assertTime(Callable<Void> callable, long time, boolean isGreater) throws Exception {
-    long startNs = System.nanoTime();
-    callable.call();
-    long costNs = System.nanoTime() - startNs;
+    long costNs = getCostNs(callable);
     if (isGreater) {
       assertTrue(costNs > time);
     } else {
       assertTrue(costNs <= time);
     }
+  }
+
+  private void assertTimeBetween(Callable<Void> callable, long minNs, long maxNs) throws Exception {
+    long costNs = getCostNs(callable);
+    assertTrue(costNs > minNs);
+    assertTrue(costNs < maxNs);
+  }
+
+  private long getCostNs(Callable<Void> callable) throws Exception {
+    long startNs = System.nanoTime();
+    callable.call();
+    return System.nanoTime() - startNs;
   }
 
   @Test
@@ -191,6 +222,21 @@ public class TestAsyncClientPauseForRpcThrottling {
       assertThrows(ExecutionException.class, () -> table.get(new Get(Bytes.toBytes(0))).get());
       return null;
     }, WAIT_INTERVAL_NANOS, false);
+  }
+
+  @Test
+  public void itDoesNotMultiplyThrottledGetWait() throws Exception {
+    THROTTLE.set(true);
+    FORCE_RETRIES.set(RETRY_COUNT);
+
+    AsyncTable<AdvancedScanResultConsumer> table =
+      CONN.getTableBuilder(TABLE_NAME).setOperationTimeout(1, TimeUnit.MINUTES)
+        .setMaxRetries(RETRY_COUNT + 1).setRetryPause(1, TimeUnit.NANOSECONDS).build();
+
+    assertTimeBetween(() -> {
+      table.get(new Get(Bytes.toBytes(0))).get();
+      return null;
+    }, WAIT_INTERVAL_NANOS, MAX_MULTIPLIER_EXPECTATION * WAIT_INTERVAL_NANOS);
   }
 
   @Test
@@ -245,6 +291,26 @@ public class TestAsyncClientPauseForRpcThrottling {
   }
 
   @Test
+  public void itDoesNotMultiplyThrottledBatchWait() throws Exception {
+    THROTTLE.set(true);
+    FORCE_RETRIES.set(RETRY_COUNT);
+
+    assertTimeBetween(() -> {
+      List<CompletableFuture<?>> futures = new ArrayList<>();
+      try (AsyncBufferedMutator mutator =
+        CONN.getBufferedMutatorBuilder(TABLE_NAME).setOperationTimeout(1, TimeUnit.MINUTES)
+          .setMaxRetries(RETRY_COUNT + 1).setRetryPause(1, TimeUnit.NANOSECONDS).build()) {
+        for (int i = 100; i < 110; i++) {
+          futures.add(mutator
+            .mutate(new Put(Bytes.toBytes(i)).addColumn(FAMILY, QUALIFIER, Bytes.toBytes(i))));
+        }
+      }
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+      return null;
+    }, WAIT_INTERVAL_NANOS, MAX_MULTIPLIER_EXPECTATION * WAIT_INTERVAL_NANOS);
+  }
+
+  @Test
   public void itWaitsForThrottledScan() throws Exception {
     boolean isThrottled = true;
     THROTTLE.set(isThrottled);
@@ -290,5 +356,25 @@ public class TestAsyncClientPauseForRpcThrottling {
       }
       return null;
     }, WAIT_INTERVAL_NANOS, false);
+  }
+
+  @Test
+  public void itDoesNotMultiplyThrottledScanWait() throws Exception {
+    THROTTLE.set(true);
+    FORCE_RETRIES.set(RETRY_COUNT);
+
+    AsyncTable<AdvancedScanResultConsumer> table =
+      CONN.getTableBuilder(TABLE_NAME).setOperationTimeout(1, TimeUnit.MINUTES)
+        .setMaxRetries(RETRY_COUNT + 1).setRetryPause(1, TimeUnit.NANOSECONDS).build();
+
+    assertTimeBetween(() -> {
+      try (ResultScanner scanner = table.getScanner(new Scan().setCaching(80))) {
+        for (int i = 0; i < 100; i++) {
+          Result result = scanner.next();
+          assertArrayEquals(Bytes.toBytes(i), result.getValue(FAMILY, QUALIFIER));
+        }
+      }
+      return null;
+    }, WAIT_INTERVAL_NANOS, MAX_MULTIPLIER_EXPECTATION * WAIT_INTERVAL_NANOS);
   }
 }

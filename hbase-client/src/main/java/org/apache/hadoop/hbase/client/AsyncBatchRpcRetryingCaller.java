@@ -18,9 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.CellUtil.createCellScanner;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.SLEEP_DELTA_NS;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.calcPriority;
-import static org.apache.hadoop.hbase.client.ConnectionUtils.getPauseTime;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.resetController;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 import static org.apache.hadoop.hbase.util.ConcurrentMapUtils.computeIfAbsent;
@@ -162,7 +160,8 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.actions = new ArrayList<>(actions.size());
     this.futures = new ArrayList<>(actions.size());
     this.action2Future = new IdentityHashMap<>(actions.size());
-    this.pauseManager = new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded);
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
       Action action;
@@ -201,10 +200,6 @@ class AsyncBatchRpcRetryingCaller<T> {
       }
     }
     return false;
-  }
-
-  private long remainingTimeNs() {
-    return operationTimeoutNs - (System.nanoTime() - startNs);
   }
 
   private List<ThrowableWithExtraContext> removeErrors(Action action) {
@@ -366,7 +361,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void sendToServer(ServerName serverName, ServerRequest serverReq, int tries) {
     long remainingNs;
     if (operationTimeoutNs > 0) {
-      remainingNs = remainingTimeNs();
+      remainingNs = pauseManager.remainingTimeNs(startNs);
       if (remainingNs <= 0) {
         failAll(serverReq.actionsByRegion.values().stream().flatMap(r -> r.actions.stream()),
           tries);
@@ -473,27 +468,13 @@ class AsyncBatchRpcRetryingCaller<T> {
       groupAndSend(actions, tries);
       return;
     }
-    long delayNs;
-    boolean isServerOverloaded = HBaseServerException.isServerOverloaded(error);
-    OptionalLong maybePauseNsToUse =
-      pauseManager.getPauseNsFromException(error, remainingTimeNs() - SLEEP_DELTA_NS);
+    OptionalLong maybePauseNsToUse = pauseManager.getPauseNsFromException(error, tries, startNs);
     if (!maybePauseNsToUse.isPresent()) {
       failAll(actions, tries);
       return;
     }
-    long pauseNsToUse = maybePauseNsToUse.getAsLong();
-
-    if (operationTimeoutNs > 0) {
-      long maxDelayNs = remainingTimeNs() - SLEEP_DELTA_NS;
-      if (maxDelayNs <= 0) {
-        failAll(actions, tries);
-        return;
-      }
-      delayNs = Math.min(maxDelayNs, getPauseTime(pauseNsToUse, tries - 1));
-    } else {
-      delayNs = getPauseTime(pauseNsToUse, tries - 1);
-    }
-    if (isServerOverloaded) {
+    long delayNs = maybePauseNsToUse.getAsLong();
+    if (HBaseServerException.isServerOverloaded(error)) {
       Optional<MetricsConnection> metrics = conn.getConnectionMetrics();
       metrics.ifPresent(m -> m.incrementServerOverloadedBackoffTime(delayNs, TimeUnit.NANOSECONDS));
     }
@@ -503,7 +484,7 @@ class AsyncBatchRpcRetryingCaller<T> {
   private void groupAndSend(Stream<Action> actions, int tries) {
     long locateTimeoutNs;
     if (operationTimeoutNs > 0) {
-      locateTimeoutNs = remainingTimeNs();
+      locateTimeoutNs = pauseManager.remainingTimeNs(startNs);
       if (locateTimeoutNs <= 0) {
         failAll(actions, tries);
         return;
