@@ -72,7 +72,7 @@ public final class JvmPauseMonitor {
 
   private Thread monitorThread;
   private volatile boolean shouldRun = true;
-  private JvmPauseMonitorSource metricsSource;
+  private final JvmPauseMonitorSource metricsSource;
 
   public static synchronized JvmPauseMonitor getInstance(Configuration conf) {
     return getInstance(conf, null);
@@ -217,10 +217,6 @@ public final class JvmPauseMonitor {
 
   public JvmPauseMonitorSource getMetricsSource() {
     return metricsSource;
-  }
-
-  public void setMetricsSource(JvmPauseMonitorSource metricsSource) {
-    this.metricsSource = metricsSource;
   }
 
   /**
