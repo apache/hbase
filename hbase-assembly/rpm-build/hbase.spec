@@ -41,7 +41,7 @@ Name: hbase
 Version: %{hbase_version}
 Release: %{release}
 BuildArch: noarch
-Summary: HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. 
+Summary: HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
 URL: http://hbase.apache.org/
 Group: Systems/Daemons
 Buildroot: %{_topdir}/INSTALL/hbase-%{version}
@@ -76,8 +76,6 @@ Summary: The Hadoop HBase master Server.
 Group: System/Daemons
 Requires: %{name} >= %{hbase_major_version}
 Requires(pre): %{name} >= %{hbase_major_version}
-# Required for init scripts
-Requires: /lib/lsb/init-functions
 
 %description master
 HMaster is the "coordinator server" for a HBase. There is only one HMaster for a single HBase deployment.
@@ -87,7 +85,6 @@ Summary: The Hadoop HBase RegionServer server.
 Group: System/Daemons
 Requires: %{name} >= %{hbase_major_version}
 Requires(pre): %{name} >= %{hbase_major_version}
-Requires: /lib/lsb/init-functions
 
 %description regionserver
 HRegionServer makes a set of HRegions available to clients. It checks in with the HMaster. There are many HRegionServers in a single HBase deployment.
@@ -97,8 +94,6 @@ Summary: The Hadoop HBase Thrift Interface
 Group: System/Daemons
 Requires: %{name} >= %{hbase_major_version}
 Requires(pre): %{name} >= %{hbase_major_version}
-# Required for init scripts
-Requires: /lib/lsb/init-functions
 
 %description thrift
 ThriftServer - this class starts up a Thrift server which implements the Hbase API specified in the Hbase.thrift IDL file.
@@ -109,8 +104,6 @@ Summary: The Hadoop HBase Thrift2 Interface
 Group: System/Daemons
 Requires: %{name} >= %{hbase_major_version}
 Requires(pre): %{name} >= %{hbase_major_version}
-# Required for init scripts
-Requires: /lib/lsb/init-functions
 
 %description thrift2
 Thrift2 Server to supersede original Thrift Server.
@@ -121,8 +114,6 @@ Summary: The Apache HBase REST gateway
 Group: System/Daemons
 Requires: %{name} >= %{hbase_major_version}
 Requires(pre): %{name} >= %{hbase_major_version}
-# Required for init scripts
-Requires: /lib/lsb/init-functions
 
 %description rest
 The Apache HBase REST gateway
