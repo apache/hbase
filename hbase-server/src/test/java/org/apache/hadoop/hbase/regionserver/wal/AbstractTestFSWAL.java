@@ -545,7 +545,7 @@ public abstract class AbstractTestFSWAL {
     CountDownLatch holdAppend) throws IOException {
     AbstractFSWAL<?> wal = newWAL(FS, CommonFSUtils.getRootDir(CONF), testName,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
-    wal.init();
+    // newWAL has already called wal.init()
     wal.registerWALActionsListener(new WALActionsListener() {
       @Override
       public void visitLogEntryBeforeWrite(RegionInfo info, WALKey logKey, WALEdit logEdit) {
