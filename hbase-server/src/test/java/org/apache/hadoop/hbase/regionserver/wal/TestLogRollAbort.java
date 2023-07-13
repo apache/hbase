@@ -17,8 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
@@ -52,21 +57,29 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 
 /**
  * Tests for conditions that should trigger RegionServer aborts when rolling the current WAL fails.
  */
+@RunWith(Parameterized.class)
 @Category({ RegionServerTests.class, MediumTests.class })
 public class TestLogRollAbort {
 
@@ -103,14 +116,23 @@ public class TestLogRollAbort {
     // the namenode might still try to choose the recently-dead datanode
     // for a pipeline, so try to a new pipeline multiple times
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 10);
-    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
+    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "asyncfs");
+  }
+
+  @Parameters(name = "{index}: walProvider={0}")
+  public static List<Object[]> params() {
+    return Arrays.asList(new Object[] { "filesystem" }, new Object[] { "asyncfs" });
   }
 
   private Configuration conf;
   private FileSystem fs;
 
+  @Parameter
+  public String walProvider;
+
   @Before
   public void setUp() throws Exception {
+    TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
     TEST_UTIL.startMiniCluster(2);
 
     cluster = TEST_UTIL.getHBaseCluster();
@@ -211,7 +233,7 @@ public class TestLogRollAbort {
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();
-      ((AbstractFSWAL<?>) log).replaceWriter(((FSHLog) log).getOldPath(), null, null);
+      closeWriter((AbstractFSWAL<?>) log);
 
       // code taken from MasterFileSystem.getLogDirs(), which is called from
       // MasterFileSystem.splitLog() handles RS shutdowns (as observed by the splitting process)
@@ -226,21 +248,28 @@ public class TestLogRollAbort {
       WALSplitter.split(HBASELOGDIR, rsSplitDir, OLDLOGDIR, fs, conf, wals);
 
       LOG.debug("Trying to roll the WAL.");
-      try {
-        log.rollWriter();
-        Assert.fail("rollWriter() did not throw any exception.");
-      } catch (IOException ioe) {
-        if (ioe.getCause() instanceof FileNotFoundException) {
-          LOG.info("Got the expected exception: ", ioe.getCause());
-        } else {
-          Assert.fail("Unexpected exception: " + ioe);
-        }
+      IOException error = assertThrows(IOException.class, () -> log.rollWriter());
+      if (error instanceof RemoteException) {
+        error = ((RemoteException) error).unwrapRemoteException();
       }
+      assertTrue("unexpected error: " + Throwables.getStackTraceAsString(error),
+        error instanceof FileNotFoundException
+          || error.getCause() instanceof FileNotFoundException);
     } finally {
       wals.close();
       if (fs.exists(thisTestsDir)) {
         fs.delete(thisTestsDir, true);
       }
     }
+  }
+
+  private <W extends WALProvider.WriterBase> void closeWriter(AbstractFSWAL<W> wal) {
+    wal.waitForSafePoint();
+    long oldFileLen = wal.writer.getLength();
+    wal.closeWriter(wal.writer, wal.getOldPath());
+    wal.logRollAndSetupWalProps(wal.getOldPath(), null, oldFileLen);
+    wal.writer = null;
+    wal.onWriterReplaced(null);
+    wal.rollRequested.set(false);
   }
 }
