@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.toCheckExistenceOnl
 import static org.apache.hadoop.hbase.util.FutureUtils.allOf;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -109,6 +110,8 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * @return scan rpc timeout in the specified time unit
    */
   long getScanTimeout(TimeUnit unit);
+
+  Map<String, byte[]> getRequestAttributes();
 
   /**
    * Test for the existence of columns in the table, as specified by the Get.

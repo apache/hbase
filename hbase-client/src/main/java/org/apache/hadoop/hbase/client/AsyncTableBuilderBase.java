@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -49,6 +51,8 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   protected int maxAttempts;
 
   protected int startLogErrorsCnt;
+
+  protected Map<String, byte[]> requestAttributes = new HashMap<>();
 
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
@@ -119,6 +123,12 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   @Override
   public AsyncTableBuilderBase<C> setStartLogErrorsCnt(int startLogErrorsCnt) {
     this.startLogErrorsCnt = startLogErrorsCnt;
+    return this;
+  }
+
+  @Override
+  public AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    this.requestAttributes = requestAttributes;
     return this;
   }
 }

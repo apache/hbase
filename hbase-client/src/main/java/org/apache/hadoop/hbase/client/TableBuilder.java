@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Map;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,6 +55,10 @@ public interface TableBuilder {
    * Set timeout for each write(put, delete) rpc request.
    */
   TableBuilder setWriteRpcTimeout(int timeout);
+
+  TableBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
+
+  Map<String, byte[]> getRequestAttributes();
 
   /**
    * Create the {@link Table} instance.

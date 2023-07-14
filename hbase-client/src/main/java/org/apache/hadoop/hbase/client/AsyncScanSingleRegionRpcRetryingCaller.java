@@ -31,6 +31,7 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
@@ -316,7 +317,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     AdvancedScanResultConsumer consumer, Interface stub, HRegionLocation loc,
     boolean isRegionServerRemote, int priority, long scannerLeaseTimeoutPeriodNs, long pauseNs,
     long pauseNsForServerOverloaded, int maxAttempts, long scanTimeoutNs, long rpcTimeoutNs,
-    int startLogErrorsCnt) {
+    int startLogErrorsCnt, Map<String, byte[]> requestAttributes) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.scan = scan;
@@ -341,6 +342,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     this.priority = priority;
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
+    this.controller.setRequestAttributes(requestAttributes);
     this.exceptions = new ArrayList<>();
     this.pauseManager =
       new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, scanTimeoutNs);

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -35,6 +37,8 @@ abstract class TableBuilderBase implements TableBuilder {
   protected int readRpcTimeout;
 
   protected int writeRpcTimeout;
+
+  protected Map<String, byte[]> requestAttributes = new HashMap<>();
 
   TableBuilderBase(TableName tableName, ConnectionConfiguration connConf) {
     if (tableName == null) {
@@ -72,5 +76,16 @@ abstract class TableBuilderBase implements TableBuilder {
   public TableBuilderBase setWriteRpcTimeout(int timeout) {
     this.writeRpcTimeout = timeout;
     return this;
+  }
+
+  @Override
+  public TableBuilderBase setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    this.requestAttributes = requestAttributes;
+    return this;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
   }
 }

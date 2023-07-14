@@ -419,23 +419,24 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       }
 
       final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
-      Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
-        hrc.getCallTimeout(), hrc.getPriority(), hrc.getAttributes(), new RpcCallback<Call>() {
-          @Override
-          public void run(Call call) {
-            try (Scope scope = call.span.makeCurrent()) {
-              counter.decrementAndGet();
-              onCallFinished(call, hrc, addr, callback);
-            } finally {
-              if (hrc.failed()) {
-                TraceUtil.setError(span, hrc.getFailed());
-              } else {
-                span.setStatus(StatusCode.OK);
+      Call call =
+        new Call(nextCallId(), md, param, hrc.cellScanner(), returnType, hrc.getCallTimeout(),
+          hrc.getPriority(), hrc.getRequestAttributes(), new RpcCallback<Call>() {
+            @Override
+            public void run(Call call) {
+              try (Scope scope = call.span.makeCurrent()) {
+                counter.decrementAndGet();
+                onCallFinished(call, hrc, addr, callback);
+              } finally {
+                if (hrc.failed()) {
+                  TraceUtil.setError(span, hrc.getFailed());
+                } else {
+                  span.setStatus(StatusCode.OK);
+                }
+                span.end();
               }
-              span.end();
             }
-          }
-        }, cs);
+          }, cs);
       ConnectionId remoteId = new ConnectionId(ticket, md.getService().getName(), addr);
       int count = counter.incrementAndGet();
       try {

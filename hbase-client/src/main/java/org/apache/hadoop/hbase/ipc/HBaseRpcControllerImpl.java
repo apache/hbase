@@ -72,6 +72,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
    */
   private CellScanner cellScanner;
 
+  private Map<String, byte[]> requestAttributes = Collections.emptyMap();
+
   public HBaseRpcControllerImpl() {
     this(null, (CellScanner) null);
   }
@@ -169,8 +171,13 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
   }
 
   @Override
-  public Map<String, byte[]> getAttributes() {
-    return Collections.emptyMap();
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
+  }
+
+  @Override
+  public void setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    this.requestAttributes = requestAttributes;
   }
 
   @Override
