@@ -24,10 +24,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsIO {
 
+  private static MetricsIO instance;
   private final MetricsIOSource source;
   private final MetricsIOWrapper wrapper;
 
-  public MetricsIO(MetricsIOWrapper wrapper) {
+  // visible for testing only
+  MetricsIO(MetricsIOWrapper wrapper) {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
       .createIO(wrapper), wrapper);
   }
@@ -35,6 +37,17 @@ public class MetricsIO {
   MetricsIO(MetricsIOSource source, MetricsIOWrapper wrapper) {
     this.source = source;
     this.wrapper = wrapper;
+  }
+
+  /**
+   * Get a static instance for the MetricsIO so that accessors access the same instance
+   */
+  public static MetricsIO getInstance() {
+    if (instance != null) {
+      return instance;
+    }
+    instance = new MetricsIO(new MetricsIOWrapperImpl());
+    return instance;
   }
 
   public MetricsIOSource getMetricsSource() {
