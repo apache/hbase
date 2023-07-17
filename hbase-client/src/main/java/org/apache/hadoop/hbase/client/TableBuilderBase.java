@@ -83,9 +83,4 @@ abstract class TableBuilderBase implements TableBuilder {
     this.requestAttributes = requestAttributes;
     return this;
   }
-
-  @Override
-  public Map<String, byte[]> getRequestAttributes() {
-    return requestAttributes;
-  }
 }

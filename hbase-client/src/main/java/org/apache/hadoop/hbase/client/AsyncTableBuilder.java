@@ -139,7 +139,7 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   AsyncTableBuilder<C> setStartLogErrorsCnt(int startLogErrorsCnt);
 
   /**
-   * Sets a request attribute
+   * Sets the map of request attributes
    */
   AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes);
 

@@ -111,6 +111,10 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    */
   long getScanTimeout(TimeUnit unit);
 
+  /**
+   * Get the map of request attributes
+   * @return a map of request attributes supplied by the client
+   */
   Map<String, byte[]> getRequestAttributes();
 
   /**

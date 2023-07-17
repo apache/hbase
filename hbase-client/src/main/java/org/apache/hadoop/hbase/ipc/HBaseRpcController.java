@@ -72,8 +72,14 @@ public interface HBaseRpcController extends RpcController, CellScannable {
 
   boolean hasCallTimeout();
 
+  /**
+   * Get the map of request attributes
+   */
   Map<String, byte[]> getRequestAttributes();
 
+  /**
+   * Set the map of request attributes
+   */
   void setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
