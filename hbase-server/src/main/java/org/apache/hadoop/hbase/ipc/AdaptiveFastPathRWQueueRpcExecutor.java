@@ -65,15 +65,15 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
     float readRatio = conf.getFloat(FASTPATH_ADAPTIVE_RADIO_READ, FASTPATH_ADAPTIVE_DEFAULT);
     float scanRatio = conf.getFloat(FASTPATH_ADAPTIVE_RADIO_SCAN, FASTPATH_ADAPTIVE_DEFAULT);
 
-    writeSharedHandlers = checkRatioRationality(conf, FASTPATH_ADAPTIVE_RADIO_WRITE) ?
-      (int) (writeRatio * writeHandlersCount) :
-      (int) (adaptiveRatio * writeHandlersCount);
-    readSharedHandlers = checkRatioRationality(conf, FASTPATH_ADAPTIVE_RADIO_READ) ?
-      (int) (readRatio * readHandlersCount) :
-      (int) (adaptiveRatio * readHandlersCount);
-    scanSharedHandlers = checkRatioRationality(conf, FASTPATH_ADAPTIVE_RADIO_SCAN) ?
-      (int) (scanRatio * scanHandlersCount) :
-      (int) (adaptiveRatio * scanHandlersCount);
+    writeSharedHandlers = checkRatioRationality(writeRatio)
+      ? (int) (writeRatio * writeHandlersCount)
+      : (int) (adaptiveRatio * writeHandlersCount);
+    readSharedHandlers = checkRatioRationality(readRatio)
+      ? (int) (readRatio * readHandlersCount)
+      : (int) (adaptiveRatio * readHandlersCount);
+    scanSharedHandlers = checkRatioRationality(scanRatio)
+      ? (int) (scanRatio * scanHandlersCount)
+      : (int) (adaptiveRatio * scanHandlersCount);
   }
 
   @Override
@@ -144,11 +144,11 @@ public class AdaptiveFastPathRWQueueRpcExecutor extends FastPathRWQueueRpcExecut
   }
 
   static boolean checkAdaptiveRatioRationality(Configuration conf) {
-    return checkRatioRationality(conf, FASTPATH_ADAPTIVE_RATIO);
+    float ratio = conf.getFloat(FASTPATH_ADAPTIVE_RATIO, FASTPATH_ADAPTIVE_DEFAULT);
+    return checkRatioRationality(ratio);
   }
 
-  private static boolean checkRatioRationality(Configuration conf, String propertyName) {
-    float ratio = conf.getFloat(propertyName, FASTPATH_ADAPTIVE_DEFAULT);
+  private static boolean checkRatioRationality(float ratio) {
     return !(ratio <= 0) && !(ratio >= 1.0f);
   }
 }
