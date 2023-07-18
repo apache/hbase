@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
@@ -148,7 +149,8 @@ public class TestTLSHandshadeFailure {
       Address.fromParts("127.0.0.1", server.getLocalPort()));
     NettyRpcConnection conn = client.createConnection(id);
     BlockingRpcCallback<Call> done = new BlockingRpcCallback<>();
-    Call call = new Call(1, null, null, null, null, 0, 0, done, new CallStats());
+    Call call =
+      new Call(1, null, null, null, null, 0, 0, Collections.emptyMap(), done, new CallStats());
     HBaseRpcController hrc = new HBaseRpcControllerImpl();
     conn.sendRequest(call, hrc);
     done.get();

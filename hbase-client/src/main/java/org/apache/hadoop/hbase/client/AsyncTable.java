@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
@@ -115,7 +116,9 @@ public interface AsyncTable<C extends ScanResultConsumerBase> {
    * Get the map of request attributes
    * @return a map of request attributes supplied by the client
    */
-  Map<String, byte[]> getRequestAttributes();
+  default Map<String, byte[]> getRequestAttributes() {
+    throw new NotImplementedException("Add an implementation!");
+  }
 
   /**
    * Test for the existence of columns in the table, as specified by the Get.

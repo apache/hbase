@@ -324,7 +324,6 @@ public class ThriftConnection implements Connection {
 
       @Override
       public TableBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
-        this.setRequestAttributes(requestAttributes);
         return this;
       }
 
