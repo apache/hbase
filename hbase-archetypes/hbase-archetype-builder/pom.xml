@@ -25,7 +25,7 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-archetypes</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>hbase-archetype-builder</artifactId>

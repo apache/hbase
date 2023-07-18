@@ -24,7 +24,7 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>hbase-annotations</artifactId>

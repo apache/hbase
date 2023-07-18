@@ -24,7 +24,7 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-shaded</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>hbase-shaded-client</artifactId>
   <name>Apache HBase - Shaded - Client (with Hadoop bundled)</name>
