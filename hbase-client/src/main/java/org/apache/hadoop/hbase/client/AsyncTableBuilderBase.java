@@ -128,7 +128,14 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   @Override
   public AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes) {
-    this.requestAttributes = requestAttributes;
+    this.requestAttributes = new HashMap<>(requestAttributes.size());
+    this.requestAttributes.putAll(requestAttributes);
+    return this;
+  }
+
+  @Override
+  public AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value) {
+    this.requestAttributes.put(key, value);
     return this;
   }
 }

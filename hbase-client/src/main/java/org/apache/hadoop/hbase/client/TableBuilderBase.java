@@ -80,7 +80,14 @@ abstract class TableBuilderBase implements TableBuilder {
 
   @Override
   public TableBuilderBase setRequestAttributes(Map<String, byte[]> requestAttributes) {
-    this.requestAttributes = requestAttributes;
+    this.requestAttributes = new HashMap<>(requestAttributes.size());
+    this.requestAttributes.putAll(requestAttributes);
+    return this;
+  }
+
+  @Override
+  public TableBuilderBase setRequestAttribute(String key, byte[] value) {
+    this.requestAttributes.put(key, value);
     return this;
   }
 }

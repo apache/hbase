@@ -62,6 +62,11 @@ public interface TableBuilder {
   TableBuilder setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
+   * Set a request attribute
+   */
+  TableBuilder setRequestAttribute(String key, byte[] value);
+
+  /**
    * Create the {@link Table} instance.
    */
   Table build();

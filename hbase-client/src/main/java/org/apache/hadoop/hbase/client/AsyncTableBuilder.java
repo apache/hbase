@@ -144,6 +144,11 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
+   * Set a request attribute
+   */
+  AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value);
+
+  /**
    * Create the {@link AsyncTable} instance.
    */
   AsyncTable<C> build();
