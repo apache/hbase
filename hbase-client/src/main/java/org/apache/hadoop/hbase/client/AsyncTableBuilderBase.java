@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +53,7 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
 
   protected int startLogErrorsCnt;
 
-  protected Map<String, byte[]> requestAttributes = new HashMap<>();
+  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
   AsyncTableBuilderBase(TableName tableName, AsyncConnectionConfiguration connConf) {
     this.tableName = tableName;
@@ -127,14 +128,10 @@ abstract class AsyncTableBuilderBase<C extends ScanResultConsumerBase>
   }
 
   @Override
-  public AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes) {
-    this.requestAttributes = new HashMap<>(requestAttributes.size());
-    this.requestAttributes.putAll(requestAttributes);
-    return this;
-  }
-
-  @Override
   public AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value) {
+    if (this.requestAttributes.isEmpty()) {
+      this.requestAttributes = new HashMap<>();
+    }
     this.requestAttributes.put(key, value);
     return this;
   }

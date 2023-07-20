@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.hbase.TableName;
@@ -38,7 +39,7 @@ abstract class TableBuilderBase implements TableBuilder {
 
   protected int writeRpcTimeout;
 
-  protected Map<String, byte[]> requestAttributes = new HashMap<>();
+  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
   TableBuilderBase(TableName tableName, ConnectionConfiguration connConf) {
     if (tableName == null) {
@@ -79,14 +80,10 @@ abstract class TableBuilderBase implements TableBuilder {
   }
 
   @Override
-  public TableBuilderBase setRequestAttributes(Map<String, byte[]> requestAttributes) {
-    this.requestAttributes = new HashMap<>(requestAttributes.size());
-    this.requestAttributes.putAll(requestAttributes);
-    return this;
-  }
-
-  @Override
   public TableBuilderBase setRequestAttribute(String key, byte[] value) {
+    if (this.requestAttributes.isEmpty()) {
+      this.requestAttributes = new HashMap<>();
+    }
     this.requestAttributes.put(key, value);
     return this;
   }

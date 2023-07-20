@@ -323,7 +323,7 @@ public class ThriftConnection implements Connection {
       }
 
       @Override
-      public TableBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      public TableBuilder setRequestAttribute(String key, byte[] value) {
         return this;
       }
 

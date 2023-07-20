@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -137,11 +136,6 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
    * Set the number of retries that are allowed before we start to log.
    */
   AsyncTableBuilder<C> setStartLogErrorsCnt(int startLogErrorsCnt);
-
-  /**
-   * Sets the map of request attributes
-   */
-  AsyncTableBuilder<C> setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
    * Set a request attribute
