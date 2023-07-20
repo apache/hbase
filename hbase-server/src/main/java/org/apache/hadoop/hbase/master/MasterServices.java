@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -360,6 +361,12 @@ public interface MasterServices extends Server {
    * Returns the {@link ReplicationPeerManager}.
    */
   ReplicationPeerManager getReplicationPeerManager();
+
+  /**
+   * Returns the {@link ReplicationLogCleanerBarrier}. It will be used at multiple places so we put
+   * it in MasterServices directly.
+   */
+  ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier();
 
   /**
    * Returns the {@link SyncReplicationReplayWALManager}.

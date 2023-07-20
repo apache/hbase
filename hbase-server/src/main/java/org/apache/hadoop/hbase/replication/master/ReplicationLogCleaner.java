@@ -65,6 +65,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   // queue for a given peer, that why we can use a String peerId as key instead of
   // ReplicationQueueId.
   private Map<ServerName, Map<String, Map<String, ReplicationGroupOffset>>> replicationOffsets;
+  private ReplicationLogCleanerBarrier barrier;
   private ReplicationPeerManager rpm;
   private Supplier<Set<ServerName>> getNotFullyDeadServers;
 
@@ -84,7 +85,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       LOG.error("Error occurred while executing queueStorage.hasData()", e);
       return;
     }
-    canFilter = rpm.getReplicationLogCleanerBarrier().start();
+    canFilter = barrier.start();
     if (canFilter) {
       notFullyDeadServers = getNotFullyDeadServers.get();
       peerIds = rpm.listPeers(null).stream().map(ReplicationPeerDescription::getPeerId)
@@ -98,7 +99,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
         allQueueData = rpm.getQueueStorage().listAllQueues();
       } catch (ReplicationException e) {
         LOG.error("Can not list all replication queues, give up cleaning", e);
-        rpm.getReplicationLogCleanerBarrier().stop();
+        barrier.stop();
         canFilter = false;
         notFullyDeadServers = null;
         peerIds = null;
@@ -122,7 +123,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
   @Override
   public void postClean() {
     if (canFilter) {
-      rpm.getReplicationLogCleanerBarrier().stop();
+      barrier.stop();
       canFilter = false;
       // release memory
       notFullyDeadServers = null;
@@ -244,6 +245,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate {
       Object master = params.get(HMaster.MASTER);
       if (master != null && master instanceof MasterServices) {
         MasterServices m = (MasterServices) master;
+        barrier = m.getReplicationLogCleanerBarrier();
         rpm = m.getReplicationPeerManager();
         getNotFullyDeadServers = () -> getNotFullyDeadServers(m);
         return;

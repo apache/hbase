@@ -229,6 +229,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp.ReplicationSyncUpToolInfo;
@@ -363,6 +364,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private AssignmentManager assignmentManager;
 
   private RSGroupInfoManager rsGroupInfoManager;
+
+  private final ReplicationLogCleanerBarrier replicationLogCleanerBarrier =
+    new ReplicationLogCleanerBarrier();
 
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
@@ -4104,6 +4108,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public ReplicationPeerManager getReplicationPeerManager() {
     return replicationPeerManager;
+  }
+
+  @Override
+  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
+    return replicationLogCleanerBarrier;
   }
 
   public HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>>
