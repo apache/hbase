@@ -126,8 +126,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
 
       table.get(new Get(Bytes.toBytes(0)));
     }
@@ -144,8 +144,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
       List<Get> gets = ImmutableList.of(new Get(Bytes.toBytes(0)), new Get(Bytes.toBytes(1)));
       table.get(gets);
     }
@@ -162,8 +162,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
 
       table.exists(new Get(Bytes.toBytes(0)));
     }
@@ -180,8 +180,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
       ResultScanner scanner = table.getScanner(new Scan());
       scanner.next();
     }
@@ -197,8 +197,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
       Put put = new Put(Bytes.toBytes("a"));
       put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
       table.put(put);
@@ -215,8 +215,8 @@ public class TestRequestAndConnectionAttributes {
     try (
       Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
         CONNECTION_ATTRIBUTES);
-      Table table = conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)
-        .setRequestAttributes(REQUEST_ATTRIBUTES).build()) {
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
       Put put = new Put(Bytes.toBytes("a"));
       put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
       table.put(put);
@@ -249,6 +249,11 @@ public class TestRequestAndConnectionAttributes {
     for (int i = 0; i < j; i++) {
       REQUEST_ATTRIBUTES.put(String.valueOf(i), Bytes.toBytes(UUID.randomUUID().toString()));
     }
+  }
+
+  private static TableBuilder configureRequestAttributes(TableBuilder tableBuilder) {
+    REQUEST_ATTRIBUTES.forEach(tableBuilder::setRequestAttribute);
+    return tableBuilder;
   }
 
   public static class AttributesCoprocessor implements RegionObserver, RegionCoprocessor {
