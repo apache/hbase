@@ -24,7 +24,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsIO {
 
-  private static MetricsIO instance;
+  private static volatile MetricsIO instance;
   private final MetricsIOSource source;
   private final MetricsIOWrapper wrapper;
 
@@ -40,13 +40,17 @@ public class MetricsIO {
   }
 
   /**
-   * Get a static instance for the MetricsIO so that accessors access the same instance
+   * Get a static instance for the MetricsIO so that accessors access the same instance. We want to
+   * lazy initialize so that correct process name is in place. See HBASE-27966 for more details.
    */
   public static MetricsIO getInstance() {
-    if (instance != null) {
-      return instance;
+    if (instance == null) {
+      synchronized (MetricsIO.class) {
+        if (instance == null) {
+          instance = new MetricsIO(new MetricsIOWrapperImpl());
+        }
+      }
     }
-    instance = new MetricsIO(new MetricsIOWrapperImpl());
     return instance;
   }
 
