@@ -224,7 +224,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
             lockEntry = procLock.getLockEntry(getProcId());
           } catch (IOException ioe) {
             LOG.error("Error while acquiring execution lock for procedure {}"
-              + " when trying to wake it up, aborting...", ioe);
+              + " when trying to wake it up, aborting...", this, ioe);
             env.getMasterServices().abort("Can not acquire procedure execution lock", e);
             return;
           }
