@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.MigrationIterator;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkLastPushedSeqId;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration.ZkReplicationQueueData;
-import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -114,9 +113,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
 
   // Only allow to add one sync replication peer concurrently
   private final Semaphore syncReplicationPeerLock = new Semaphore(1);
-
-  private final ReplicationLogCleanerBarrier replicationLogCleanerBarrier =
-    new ReplicationLogCleanerBarrier();
 
   private final String clusterId;
 
@@ -723,10 +719,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
 
   public void releaseSyncReplicationPeerLock() {
     syncReplicationPeerLock.release();
-  }
-
-  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
-    return replicationLogCleanerBarrier;
   }
 
   @Override

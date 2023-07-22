@@ -80,8 +80,8 @@ public class TestReplicationLogCleaner {
   @Before
   public void setUp() throws ReplicationException {
     services = mock(MasterServices.class);
+    when(services.getReplicationLogCleanerBarrier()).thenReturn(new ReplicationLogCleanerBarrier());
     ReplicationPeerManager rpm = mock(ReplicationPeerManager.class);
-    when(rpm.getReplicationLogCleanerBarrier()).thenReturn(new ReplicationLogCleanerBarrier());
     when(services.getReplicationPeerManager()).thenReturn(rpm);
     when(rpm.listPeers(null)).thenReturn(new ArrayList<>());
     ReplicationQueueStorage rqs = mock(ReplicationQueueStorage.class);
@@ -157,7 +157,7 @@ public class TestReplicationLogCleaner {
 
   @Test
   public void testCanNotFilter() {
-    assertTrue(services.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable());
+    assertTrue(services.getReplicationLogCleanerBarrier().disable());
     List<FileStatus> files = Arrays.asList(new FileStatus());
     assertSame(Collections.emptyList(), runCleaner(cleaner, files));
   }
