@@ -214,8 +214,8 @@ public class TestMigrateReplicationQueueFromZkToTableProcedure {
     EXTRA_REGION_SERVERS
       .put(ServerName.valueOf("localhost", 54321, EnvironmentEdgeManager.currentTime()), metrics);
 
-    ReplicationLogCleanerBarrier barrier = UTIL.getHBaseCluster().getMaster()
-      .getReplicationPeerManager().getReplicationLogCleanerBarrier();
+    ReplicationLogCleanerBarrier barrier =
+      UTIL.getHBaseCluster().getMaster().getReplicationLogCleanerBarrier();
     assertTrue(barrier.start());
 
     ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
