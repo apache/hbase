@@ -51,7 +51,7 @@ public interface MemStoreLAB {
   String MSLAB_CLASS_NAME = "hbase.regionserver.mslab.class";
 
   String CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
-  int CHUNK_SIZE_DEFAULT = 2047 * 1024;
+  int CHUNK_SIZE_DEFAULT = 2048 * 1024;
   String INDEX_CHUNK_SIZE_PERCENTAGE_KEY = "hbase.hregion.memstore.mslab.indexchunksize.percent";
   float INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT = 0.1f;
   String MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
