@@ -715,20 +715,18 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 inMgr = master.getRSGroupInfoManager();
         }
         for (ServerName deadServerName: deadServerNames) {
-            String rsGroupName = "default";
+            String rsGroupName = null;
             if (inMgr != null){
                 RSGroupInfo groupInfo = inMgr.getRSGroupOfServer(deadServerName.getAddress());
-                rsGroupName = (groupInfo == null ? "default" : groupInfo.getName());
+                rsGroupName = groupInfo == null ? RSGroupInfo.DEFAULT_GROUP : groupInfo.getName();
             }
     </%java>
     <tr>
     	<th></th>
         <td><% deadServerName %></td>
         <td><% deadServerUtil.getTimeOfDeath(deadServerName) %></td>
-        <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
-            <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) %>
-                <td><% rsGroupName %></td>
-            </%if>
+        <%if rsGroupName != null %>
+            <td><% rsGroupName %></td>
         </%if>
     </tr>
     <%java>
