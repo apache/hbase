@@ -323,7 +323,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   public AsyncRequestFutureImpl(AsyncProcessTask task, List<Action> actions, long nonceGroup,
-    AsyncProcess asyncProcess) {
+    AsyncProcess asyncProcess, Map<String, byte[]> requestAttributes) {
     this.pool = task.getPool();
     this.callback = task.getCallback();
     this.nonceGroup = nonceGroup;
@@ -1316,7 +1316,8 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private MultiServerCallable createCallable(final ServerName server, TableName tableName,
     final MultiAction multi) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server, multi,
-      asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority());
+      asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority(),
+      asyncProcess.getRequestAttributes());
   }
 
   private void updateResult(int index, Object result) {

@@ -434,7 +434,8 @@ public class HTableMultiplexer {
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
       // Specify 0 retries in AsyncProcess because we need to reassign puts to different queues
       // if regions are moved.
-      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory, 0);
+      this.ap = new AsyncProcess(conn, conf, rpcCallerFactory, rpcControllerFactory, 0,
+        Collections.emptyMap());
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
       this.pool = pool;

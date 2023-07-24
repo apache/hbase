@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -354,7 +355,8 @@ public class SpaceQuotaHelperForTests {
     Table table = conn.getTable(tn);
     final String bulkToken = new SecureBulkLoadClient(conf, table).prepareBulkLoad(conn);
     return new ClientServiceCallable<Void>(conn, tn, Bytes.toBytes("row"),
-      new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET) {
+      new RpcControllerFactory(conf).newController(), HConstants.PRIORITY_UNSET,
+      Collections.emptyMap()) {
       @Override
       public Void rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;

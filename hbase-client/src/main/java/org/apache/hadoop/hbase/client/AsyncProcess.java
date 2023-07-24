@@ -434,7 +434,8 @@ class AsyncProcess {
 
   <CResult> AsyncRequestFutureImpl<CResult> createAsyncRequestFuture(AsyncProcessTask task,
     List<Action> actions, long nonceGroup) {
-    return new AsyncRequestFutureImpl<>(task, actions, nonceGroup, this);
+    return new AsyncRequestFutureImpl<>(task, actions, nonceGroup, this,
+      task.getRequestAttributes());
   }
 
   /** Wait until the async does not have more than max tasks in progress. */

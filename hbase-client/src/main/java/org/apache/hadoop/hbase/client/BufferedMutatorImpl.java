@@ -142,7 +142,9 @@ public class BufferedMutatorImpl implements BufferedMutator {
     RpcControllerFactory rpcFactory, BufferedMutatorParams params) {
     this(conn, params,
       // puts need to track errors globally due to how the APIs currently work.
-      new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, rpcFactory));
+      // todo rmattingly support buffered mutator request attributes
+      new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, rpcFactory,
+        Collections.emptyMap()));
   }
 
   private void checkClose() {

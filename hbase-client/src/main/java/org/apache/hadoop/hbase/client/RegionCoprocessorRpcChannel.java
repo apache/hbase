@@ -23,6 +23,7 @@ import com.google.protobuf.RpcController;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.util.Collections;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -78,7 +79,8 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     final Context context = Context.current();
     ClientServiceCallable<CoprocessorServiceResponse> callable =
       new ClientServiceCallable<CoprocessorServiceResponse>(this.conn, this.table, this.row,
-        this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
+        this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET,
+        Collections.emptyMap()) {
         @Override
         protected CoprocessorServiceResponse rpcCall() throws Exception {
           try (Scope ignored = context.makeCurrent()) {

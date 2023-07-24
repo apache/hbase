@@ -225,6 +225,27 @@ public class TestRequestAndConnectionAttributes {
   }
 
   @Test
+  public void testRequestAttributesCheckAndMutate() throws IOException {
+    assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
+    addRandomRequestAttributes();
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (
+      Connection conn = ConnectionFactory.createConnection(conf, null, AuthUtil.loginClient(conf),
+        CONNECTION_ATTRIBUTES);
+      Table table = configureRequestAttributes(
+        conn.getTableBuilder(REQUEST_ATTRIBUTES_TEST_TABLE, EXECUTOR_SERVICE)).build()) {
+      Put put = new Put(Bytes.toBytes("a"));
+      put.addColumn(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      CheckAndMutate checkAndMutate = CheckAndMutate.newBuilder(Bytes.toBytes("a"))
+        .ifEquals(REQUEST_ATTRIBUTES_TEST_TABLE_CF, Bytes.toBytes("c"), Bytes.toBytes("v"))
+        .build(put);
+      table.checkAndMutate(checkAndMutate);
+    }
+    assertTrue(REQUEST_ATTRIBUTES_VALIDATED.get());
+  }
+
+  @Test
   public void testNoRequestAttributes() throws IOException {
     assertFalse(REQUEST_ATTRIBUTES_VALIDATED.get());
     TableName tableName = TableName.valueOf("testNoRequestAttributesScan");

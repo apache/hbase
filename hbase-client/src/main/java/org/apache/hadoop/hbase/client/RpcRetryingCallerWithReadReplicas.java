@@ -95,8 +95,8 @@ public class RpcRetryingCallerWithReadReplicas {
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection,
         RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
-        rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(),
-        PRIORITY_UNSET);
+        rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(), PRIORITY_UNSET,
+        Collections.emptyMap());
       this.id = id;
       this.location = location;
     }

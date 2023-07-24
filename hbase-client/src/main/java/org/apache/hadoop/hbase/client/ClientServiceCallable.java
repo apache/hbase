@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -34,9 +36,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 public abstract class ClientServiceCallable<T>
   extends RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
 
+  protected Map<String, byte[]> requestAttributes;
+
   public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
-    RpcController rpcController, int priority) {
-    super(connection, tableName, row, rpcController, priority);
+    RpcController rpcController, int priority, Map<String, byte[]> requestAttributes) {
+    super(connection, tableName, row,
+      HBaseRpcControllerImpl.configureRequestAttributes(rpcController, requestAttributes),
+      priority);
+    this.requestAttributes = requestAttributes;
   }
 
   @Override
