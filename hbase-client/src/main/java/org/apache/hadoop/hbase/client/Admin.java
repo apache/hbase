@@ -2615,4 +2615,6 @@ public interface Admin extends Abortable, Closeable {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  Map<String, Boolean> getPrefetchedFilesList(ServerName serverName) throws IOException;
 }

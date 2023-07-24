@@ -1837,4 +1837,6 @@ public interface AsyncAdmin {
    * Flush master local region
    */
   CompletableFuture<Void> flushMasterStore();
+
+  CompletableFuture<Map<String, Boolean>> getPrefetchedFilesList(ServerName serverName);
 }

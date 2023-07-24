@@ -959,6 +959,10 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     admin.flushMasterStore();
   }
 
+  @Override public Map<String, Boolean> getPrefetchedFilesList(ServerName serverName) throws IOException {
+    return admin.getPrefetchedFilesList(serverName);
+  }
+
   @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {

@@ -144,6 +144,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.StopServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetPrefetchedFilesListRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetPrefetchedFilesListResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -4453,4 +4455,17 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
           (s, c, req, done) -> s.flushMasterStore(c, req, done), resp -> null))
       .call();
   }
+
+  @Override public CompletableFuture<Map<String, Boolean>> getPrefetchedFilesList(ServerName serverName) {
+    GetPrefetchedFilesListRequest.Builder request =
+      GetPrefetchedFilesListRequest.newBuilder();
+    return this.<Map<String, Boolean>> newAdminCaller()
+      .action((controller, stub) -> this.
+        <GetPrefetchedFilesListRequest,
+          GetPrefetchedFilesListResponse, Map<String, Boolean>> adminCall(controller, stub,
+        request.build(),
+        (s, c, req, done) -> s.getPrefetchedFilesList(c, req, done),
+        resp -> resp.getPrefetchedFilesMap())).serverName(serverName).call();
+  }
+
 }

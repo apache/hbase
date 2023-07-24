@@ -178,6 +178,23 @@ public final class PrefetchExecutor {
     }
   }
 
+  public static Map<String, Boolean> readFromFile(String path) throws IOException {
+    assert (path != null);
+    File prefetchPersistenceFile = new File(path);
+    Map<String, Boolean> protoPrefetchedFilesMap;
+    if (!prefetchPersistenceFile.exists()) {
+      LOG.warn("Prefetch persistence file does not exist!");
+      return null;
+    }
+    LOG.info("Reading from prefetch persistence file: {} ", path);
+    FileInputStream fis = new FileInputStream(prefetchPersistenceFile);
+    PersistentPrefetchProtos.PrefetchedHfileName proto =
+      PersistentPrefetchProtos.PrefetchedHfileName.parseDelimitedFrom(fis);
+    protoPrefetchedFilesMap = proto.getPrefetchedFilesMap();
+    fis.close();
+    return protoPrefetchedFilesMap;
+  }
+
   private static FileInputStream deleteFileOnClose(final File file) throws IOException {
     return new FileInputStream(file) {
       private File myFile;

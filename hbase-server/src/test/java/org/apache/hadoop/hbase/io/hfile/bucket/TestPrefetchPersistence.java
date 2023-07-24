@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.Before;
@@ -143,6 +147,31 @@ public class TestPrefetchPersistence {
     readStoreFile(storeFile2, 0);
     // Test Close Store File
     closeStoreFile(storeFile2);
+    TEST_UTIL.cleanupTestDir();
+  }
+
+  @Test
+  public void testPrefetchPersistenceFileParsing() throws Exception {
+
+    bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf);
+    cacheConf = new CacheConfig(conf, bucketCache);
+
+    long usedSize = bucketCache.getAllocator().getUsedSize();
+    assertEquals(0, usedSize);
+    assertTrue(new File(testDir + "/bucket.cache").exists());
+    // Load Cache
+    Path storeFile = writeStoreFile("TestPrefetch0");
+    Path storeFile2 = writeStoreFile("TestPrefetch1");
+    readStoreFile(storeFile, 0);
+    readStoreFile(storeFile2, 0);
+    // Wait for the prefetch persistence file to be created.
+    Thread.sleep(1500);
+    assertTrue(new File(testDir + "/prefetch.persistence").exists());
+    assertEquals(2, bucketCache.getPrefetchedFilesList().size());
+    assertTrue(bucketCache.getPrefetchedFilesList().containsKey(storeFile.getName()));
+    assertTrue(bucketCache.getPrefetchedFilesList().containsKey(storeFile2.getName()));
     TEST_UTIL.cleanupTestDir();
   }
 

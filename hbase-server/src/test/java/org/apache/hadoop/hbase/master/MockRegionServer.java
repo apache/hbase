@@ -678,6 +678,12 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
+  public AdminProtos.GetPrefetchedFilesListResponse getPrefetchedFilesList(RpcController controller,
+    AdminProtos.GetPrefetchedFilesListRequest request) throws ServiceException {
+    return null;
+  }
+
+  @Override
   public GetSpaceQuotaSnapshotsResponse getSpaceQuotaSnapshots(RpcController controller,
     GetSpaceQuotaSnapshotsRequest request) throws ServiceException {
     return null;

@@ -1264,6 +1264,16 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  public Map<String, Boolean> getPrefetchedFilesList() throws IOException {
+    assert (prefetchedFileListPath != null);
+    File prefetchPersistenceFile = new File(prefetchedFileListPath);
+    if(!prefetchPersistenceFile.exists()) {
+      LOG.info("Prefetch Persistence File does not exist!");
+      return null;
+    }
+    return PrefetchExecutor.readFromFile(prefetchedFileListPath);
+  }
+
   /**
    * @see #persistToFile()
    */

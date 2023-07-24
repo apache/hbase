@@ -87,6 +87,8 @@ import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
@@ -123,6 +125,7 @@ import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequest
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.DNS.ServerType;
@@ -3908,6 +3911,28 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public AdminProtos.GetPrefetchedFilesListResponse getPrefetchedFilesList(RpcController controller,
+    AdminProtos.GetPrefetchedFilesListRequest request) throws ServiceException {
+    AdminProtos.GetPrefetchedFilesListResponse.Builder responseBuilder =
+      AdminProtos.GetPrefetchedFilesListResponse.newBuilder();
+    server.getBlockCache().ifPresent(blockCache -> {
+      if (blockCache instanceof CombinedBlockCache) {
+        BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
+        if (l2 instanceof BucketCache) {
+          try {
+            LOG.info("Getting the list of prefetched files for server: {}", server.getServerName());
+            Map<String, Boolean> prefetchedFilesListMap = ((BucketCache) l2).getPrefetchedFilesList();
+            responseBuilder.putAllPrefetchedFiles(prefetchedFilesListMap);
+          } catch (IOException e) {
+            LOG.warn("Exception when trying to read the list of prefetched files! {}", e.getMessage());
+          }
+        }
+      }
+    });
+    return responseBuilder.build();
   }
 
   @Override

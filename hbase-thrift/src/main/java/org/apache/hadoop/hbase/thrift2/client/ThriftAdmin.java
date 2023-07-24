@@ -1335,6 +1335,10 @@ public class ThriftAdmin implements Admin {
     throw new NotImplementedException("flushMasterStore not supported in ThriftAdmin");
   }
 
+  @Override public Map<String, Boolean> getPrefetchedFilesList(ServerName serverName) throws IOException {
+    return null;
+  }
+
   @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {

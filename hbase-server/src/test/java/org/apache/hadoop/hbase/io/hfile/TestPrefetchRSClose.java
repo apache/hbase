@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,11 +31,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -123,10 +126,50 @@ public class TestPrefetchRSClose {
     assertTrue(new File(testDir + "/bucket.persistence").exists());
     assertTrue(new File(testDir + "/prefetch.persistence").exists());
 
+
     // Start the RS and validate
     cluster.startRegionServer();
     assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
+  }
+
+  @Test
+  public void testPrefetchPersistenceFileParsing() throws Exception {
+
+    // Write to table and flush
+    TableName tableName = TableName.valueOf("table1");
+    byte[] row0 = Bytes.toBytes("row1");
+    byte[] family = Bytes.toBytes("family");
+    byte[] qf1 = Bytes.toBytes("qf1");
+    byte[] value1 = Bytes.toBytes("value1");
+
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
+    Table table = TEST_UTIL.createTable(td, null);
+    try {
+      // put data
+      Put put0 = new Put(row0);
+      put0.addColumn(family, qf1, 1, value1);
+      table.put(put0);
+      TEST_UTIL.flush(tableName);
+    } finally {
+      Thread.sleep(2000);
+    }
+
+    // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
+    // should exist.
+    assertTrue(new File(testDir + "/bucket.persistence").exists());
+    assertTrue(new File(testDir + "/prefetch.persistence").exists());
+
+    HRegionServer regionServingRS =
+      cluster.getRegionServer(1).getRegions(tableName).size() == 1
+        ? cluster.getRegionServer(1)
+        : cluster.getRegionServer(0);
+    assertTrue(regionServingRS.getBlockCache().isPresent());
+
+    Admin admin = TEST_UTIL.getAdmin();
+    Map<String, Boolean> prefetchedFilesList = admin.getPrefetchedFilesList(regionServingRS.getServerName());
+    assertEquals(1, prefetchedFilesList.size());
   }
 
   @After

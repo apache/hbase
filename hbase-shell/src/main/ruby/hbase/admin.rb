@@ -1891,6 +1891,19 @@ module Hbase
     def list_tables_by_state(isEnabled)
       @admin.listTableNamesByState(isEnabled).map(&:getNameAsString)
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of prefetched files on the region server
+    def get_prefetched_files(server_name_string)
+      # Retrieve the server name corresponding to the passed server_name_string
+        server_name = getServerName(server_name_string)
+      # Fail if we can not find a server corresponding to the passed server_name_string
+            if server_name.nil?
+              raise(ArgumentError,
+                   "Could not find any server with name #{server_name_string}")
+            end
+      @admin.getPrefetchedFilesList(server_name).to_a
+    end
   end
   # rubocop:enable Metrics/ClassLength
 end

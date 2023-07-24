@@ -113,6 +113,7 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -3382,6 +3383,12 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(e);
     }
     throw new ServiceException("Invalid request params");
+  }
+
+  @Override
+  public AdminProtos.GetPrefetchedFilesListResponse getPrefetchedFilesList(RpcController controller,
+    AdminProtos.GetPrefetchedFilesListRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 
   private MasterProtos.BalancerDecisionsResponse

@@ -329,6 +329,14 @@ message ClearSlowLogResponses {
   required bool is_cleaned = 1;
 }
 
+message GetPrefetchedFilesListRequest {
+  optional string server_name = 1;
+}
+
+message GetPrefetchedFilesListResponse {
+  map<string, bool> prefetched_files = 1;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -404,5 +412,8 @@ service AdminService {
 
   rpc GetLogEntries(LogRequest)
     returns(LogEntry);
+
+  rpc GetPrefetchedFilesList(GetPrefetchedFilesListRequest)
+    returns(GetPrefetchedFilesListResponse);
 
 }
