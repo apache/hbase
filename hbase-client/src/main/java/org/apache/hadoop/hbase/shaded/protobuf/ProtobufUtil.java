@@ -2114,7 +2114,8 @@ public final class ProtobufUtil {
       return new SlowLogParams(regionName, params);
     } else if (message instanceof MutationProto) {
       MutationProto mutationProto = (MutationProto) message;
-      String params = "type= " + mutationProto.getMutateType().toString();
+      String params = "type= " + mutationProto.getMutateType().toString() + ", row= "
+        + getStringForByteString(mutationProto.getRow());
       return new SlowLogParams(params);
     } else if (message instanceof GetRequest) {
       GetRequest getRequest = (GetRequest) message;
@@ -2133,7 +2134,8 @@ public final class ProtobufUtil {
     } else if (message instanceof MutateRequest) {
       MutateRequest mutateRequest = (MutateRequest) message;
       String regionName = getStringForByteString(mutateRequest.getRegion().getValue());
-      String params = "region= " + regionName;
+      String params = "region= " + regionName + ", row= "
+        + getStringForByteString(mutateRequest.getMutation().getRow());
       return new SlowLogParams(regionName, params);
     } else if (message instanceof CoprocessorServiceRequest) {
       CoprocessorServiceRequest coprocessorServiceRequest = (CoprocessorServiceRequest) message;
