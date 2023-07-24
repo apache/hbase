@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
@@ -129,8 +130,8 @@ public class TestClientTimeouts {
    */
   public static class RandomTimeoutRpcClient extends BlockingRpcClient {
     public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-      MetricsConnection metrics) {
-      super(conf, clusterId, localAddr, metrics);
+      MetricsConnection metrics, Map<String, byte[]> connectionAttributes) {
+      super(conf, clusterId, localAddr, metrics, connectionAttributes);
     }
 
     // Return my own instance, one that does random timeouts
