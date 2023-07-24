@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -70,6 +71,16 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   void setCallTimeout(int callTimeout);
 
   boolean hasCallTimeout();
+
+  /**
+   * Get the map of request attributes
+   */
+  Map<String, byte[]> getRequestAttributes();
+
+  /**
+   * Set the map of request attributes
+   */
+  void setRequestAttributes(Map<String, byte[]> requestAttributes);
 
   /**
    * Set failed with an exception to pass on. For use in async rpc clients

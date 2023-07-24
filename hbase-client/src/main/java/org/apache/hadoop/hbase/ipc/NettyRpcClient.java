@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -55,7 +57,12 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
 
   public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
     MetricsConnection metrics) {
-    super(configuration, clusterId, localAddress, metrics);
+    this(configuration, clusterId, localAddress, metrics, Collections.emptyMap());
+  }
+
+  public NettyRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
+    MetricsConnection metrics, Map<String, byte[]> connectionAttributes) {
+    super(configuration, clusterId, localAddress, metrics, connectionAttributes);
     Pair<EventLoopGroup, Class<? extends Channel>> groupAndChannelClass =
       NettyRpcClientConfigHelper.getEventLoopConfig(conf);
     if (groupAndChannelClass == null) {
@@ -75,7 +82,7 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
 
   /** Used in test only. */
   public NettyRpcClient(Configuration configuration) {
-    this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null);
+    this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null, Collections.emptyMap());
   }
 
   @Override

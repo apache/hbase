@@ -561,6 +561,11 @@ class TableOverAsyncTable implements Table {
   }
 
   @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return table.getRequestAttributes();
+  }
+
+  @Override
   public RegionLocator getRegionLocator() throws IOException {
     return conn.toConnection().getRegionLocator(getName());
   }

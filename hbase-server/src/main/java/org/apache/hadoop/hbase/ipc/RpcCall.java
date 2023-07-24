@@ -27,6 +27,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
@@ -81,6 +82,8 @@ public interface RpcCall extends RpcCallContext {
 
   /** Returns The request header of this call. */
   RequestHeader getHeader();
+
+  ConnectionHeader getConnectionHeader();
 
   /** Returns Port of remote address in this call */
   int getRemotePort();
