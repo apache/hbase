@@ -37,6 +37,10 @@
 # Disable debuginfo package
 %define debug_package %{nil}
 
+# HubSpot: use zstd because it decompresses much faster
+%define _binary_payload w19.zstdio
+%define _source_payload w19.zstdio
+
 Name: hbase
 Version: %{hbase_version}
 Release: %{release}
