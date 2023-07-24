@@ -22,8 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.util.Random;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;

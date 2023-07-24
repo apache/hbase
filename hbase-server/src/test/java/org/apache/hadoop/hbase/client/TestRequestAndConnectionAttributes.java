@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -79,11 +79,11 @@ public class TestRequestAndConnectionAttributes {
   private static final TableName REQUEST_ATTRIBUTES_TEST_TABLE =
     TableName.valueOf("testRequestAttributes");
 
-  private static HBaseTestingUtil TEST_UTIL = null;
+  private static HBaseTestingUtility TEST_UTIL = null;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    TEST_UTIL = new HBaseTestingUtil();
+    TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(REQUEST_ATTRIBUTES_TEST_TABLE,
       new byte[][] { REQUEST_ATTRIBUTES_TEST_TABLE_CF }, 1, HConstants.DEFAULT_BLOCKSIZE,

@@ -1605,8 +1605,8 @@ public class TestHFileOutputFormat2 {
 
     private final Connection delegate;
 
-    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user, Map<String, byte[]> connectionAttributes)
-      throws IOException {
+    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user,
+      Map<String, byte[]> connectionAttributes) throws IOException {
       Configuration confForDelegate = new Configuration(conf);
       confForDelegate.unset(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL);
       delegate = createConnection(confForDelegate, es, user, connectionAttributes);

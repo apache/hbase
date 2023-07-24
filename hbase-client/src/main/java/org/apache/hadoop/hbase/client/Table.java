@@ -979,7 +979,6 @@ public interface Table extends Closeable {
   }
 
   /**
-<<<<<<< HEAD
    * Get timeout (millisecond) of each operation for in Table instance.
    * @deprecated since 2.0 and will be removed in 3.0 version use
    *             {@link #getOperationTimeout(TimeUnit)} instead

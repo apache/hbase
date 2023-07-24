@@ -210,9 +210,9 @@ public class ConnectionFactory {
    * }
    * </pre>
    *
-   * @param conf configuration
-   * @param user the user the connection is for
-   * @param pool the thread pool to use for batch operations
+   * @param conf                 configuration
+   * @param user                 the user the connection is for
+   * @param pool                 the thread pool to use for batch operations
    * @param connectionAttributes attributes to be sent along to server during connection establish
    * @return Connection object for <code>conf</code>
    */
