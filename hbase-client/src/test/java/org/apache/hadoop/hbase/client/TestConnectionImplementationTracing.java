@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -44,7 +45,8 @@ public class TestConnectionImplementationTracing extends TestTracingBase {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent(),
+      Collections.emptyMap());
   }
 
   @After

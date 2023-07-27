@@ -32,6 +32,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -59,7 +60,8 @@ public class TestRegionLocatorTracing extends TestTracingBase {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent());
+    conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent(),
+      Collections.emptyMap());
   }
 
   @After
