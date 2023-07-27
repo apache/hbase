@@ -284,6 +284,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final int operationTimeout;
   private final int rpcTimeout;
   private final AsyncProcess asyncProcess;
+  private final Map<String, byte[]> requestAttributes;
 
   /**
    * For {@link AsyncRequestFutureImpl#manageError(int, Row, Retry, Throwable, ServerName)}. Only
@@ -323,7 +324,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   }
 
   public AsyncRequestFutureImpl(AsyncProcessTask task, List<Action> actions, long nonceGroup,
-    AsyncProcess asyncProcess, Map<String, byte[]> requestAttributes) {
+    AsyncProcess asyncProcess) {
     this.pool = task.getPool();
     this.callback = task.getCallback();
     this.nonceGroup = nonceGroup;
@@ -398,6 +399,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     if (task.getCallable() == null) {
       tracker = new RetryingTimeTracker().start();
     }
+    this.requestAttributes = task.getRequestAttributes();
   }
 
   protected Set<CancellableRegionServerCallable> getCallsInProgress() {
@@ -1317,7 +1319,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     final MultiAction multi) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server, multi,
       asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority(),
-      asyncProcess.getRequestAttributes());
+      requestAttributes);
   }
 
   private void updateResult(int index, Object result) {

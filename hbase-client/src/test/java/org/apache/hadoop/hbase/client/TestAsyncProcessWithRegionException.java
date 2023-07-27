@@ -199,7 +199,7 @@ public class TestAsyncProcessWithRegionException {
 
     MyAsyncProcess(ClusterConnection hc, Configuration conf) {
       super(hc, conf, new RpcRetryingCallerFactory(conf, hc.getConnectionConfiguration()),
-        new RpcControllerFactory(conf), Collections.emptyMap());
+        new RpcControllerFactory(conf));
     }
 
     public AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows)

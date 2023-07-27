@@ -403,9 +403,9 @@ public class TestClientNoCluster extends Configured implements Tool {
     final AtomicLong sequenceids = new AtomicLong(0);
     private final Configuration conf;
 
-    ManyServersManyRegionsConnection(Configuration conf, ExecutorService pool, User user)
-      throws IOException {
-      super(conf, pool, user);
+    ManyServersManyRegionsConnection(Configuration conf, ExecutorService pool, User user,
+      Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, requestAttributes);
       int serverCount = conf.getInt("hbase.test.servers", 10);
       this.serversByClient = new HashMap<>(serverCount);
       this.meta =

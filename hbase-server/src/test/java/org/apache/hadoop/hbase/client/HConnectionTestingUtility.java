@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -127,7 +126,7 @@ public class HConnectionTestingUtility {
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
     AsyncProcess asyncProcess = new AsyncProcess(c, conf,
       RpcRetryingCallerFactory.instantiate(conf, connectionConfiguration, c.getConnectionMetrics()),
-      RpcControllerFactory.instantiate(conf), Collections.emptyMap());
+      RpcControllerFactory.instantiate(conf));
     Mockito.when(c.getAsyncProcess()).thenReturn(asyncProcess);
     Mockito.when(c.getNewRpcRetryingCallerFactory(conf))
       .thenReturn(RpcRetryingCallerFactory.instantiate(conf, connectionConfiguration,

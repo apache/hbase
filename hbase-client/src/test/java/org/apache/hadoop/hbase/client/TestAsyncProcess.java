@@ -185,14 +185,14 @@ public class TestAsyncProcess {
 
     public MyAsyncProcess(ClusterConnection hc, Configuration conf) {
       super(hc, conf, new RpcRetryingCallerFactory(conf, hc.getConnectionConfiguration()),
-        new RpcControllerFactory(conf), Collections.emptyMap());
+        new RpcControllerFactory(conf));
       service = Executors.newFixedThreadPool(5);
       this.conf = conf;
     }
 
     public MyAsyncProcess(ClusterConnection hc, Configuration conf, AtomicInteger nbThreads) {
       super(hc, conf, new RpcRetryingCallerFactory(conf, hc.getConnectionConfiguration()),
-        new RpcControllerFactory(conf), Collections.emptyMap());
+        new RpcControllerFactory(conf));
       service = new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS, new SynchronousQueue<>(),
         new CountingThreadFactory(nbThreads));
     }
@@ -273,7 +273,7 @@ public class TestAsyncProcess {
 
     public MyAsyncRequestFutureImpl(AsyncProcessTask task, List<Action> actions, long nonceGroup,
       AsyncProcess asyncProcess) {
-      super(task, actions, nonceGroup, asyncProcess, Collections.emptyMap());
+      super(task, actions, nonceGroup, asyncProcess);
     }
 
     @Override
@@ -1705,7 +1705,7 @@ public class TestAsyncProcess {
   static class AsyncProcessForThrowableCheck extends AsyncProcess {
     public AsyncProcessForThrowableCheck(ClusterConnection hc, Configuration conf) {
       super(hc, conf, new RpcRetryingCallerFactory(conf, hc.getConnectionConfiguration()),
-        new RpcControllerFactory(conf), Collections.emptyMap());
+        new RpcControllerFactory(conf));
     }
   }
 

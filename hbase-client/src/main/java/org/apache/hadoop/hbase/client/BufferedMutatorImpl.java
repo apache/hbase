@@ -143,8 +143,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
     this(conn, params,
       // puts need to track errors globally due to how the APIs currently work.
       // todo rmattingly support buffered mutator request attributes
-      new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, rpcFactory,
-        Collections.emptyMap()));
+      new AsyncProcess(conn, conn.getConfiguration(), rpcCallerFactory, rpcFactory));
   }
 
   private void checkClose() {

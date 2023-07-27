@@ -127,7 +127,7 @@ public class AsyncProcessTask<T> {
       return this;
     }
 
-    Builder<T> setRequestAttributes(Map<String, byte[]> setRequestAttributes) {
+    Builder<T> setRequestAttributes(Map<String, byte[]> requestAttributes) {
       this.requestAttributes = requestAttributes;
       return this;
     }

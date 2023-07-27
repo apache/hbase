@@ -36,14 +36,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 public abstract class ClientServiceCallable<T>
   extends RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
 
-  protected Map<String, byte[]> requestAttributes;
-
   public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
     RpcController rpcController, int priority, Map<String, byte[]> requestAttributes) {
     super(connection, tableName, row,
-      HBaseRpcControllerImpl.configureRequestAttributes(rpcController, requestAttributes),
-      priority);
-    this.requestAttributes = requestAttributes;
+      HBaseRpcControllerImpl.configureRequestAttributes(rpcController, requestAttributes), priority,
+      requestAttributes);
   }
 
   @Override

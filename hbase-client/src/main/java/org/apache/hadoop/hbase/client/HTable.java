@@ -400,7 +400,7 @@ public class HTable implements Table {
     RpcRetryingCallerWithReadReplicas callable =
       new RpcRetryingCallerWithReadReplicas(rpcControllerFactory, tableName, this.connection, get,
         pool, connConfiguration.getRetriesNumber(), operationTimeoutMs, readRpcTimeoutMs,
-        connConfiguration.getPrimaryCallTimeoutMicroSecond());
+        connConfiguration.getPrimaryCallTimeoutMicroSecond(), requestAttributes);
     return callable.call(operationTimeoutMs);
   }
 
@@ -482,13 +482,6 @@ public class HTable implements Table {
   public <R> void batchCallback(final List<? extends Row> actions, final Object[] results,
     final Batch.Callback<R> callback) throws IOException, InterruptedException {
     doBatchWithCallback(actions, results, callback, connection, pool, tableName, requestAttributes);
-  }
-
-  public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
-    Batch.Callback<R> callback, ClusterConnection connection, ExecutorService pool,
-    TableName tableName) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    doBatchWithCallback(actions, results, callback, connection, pool, tableName,
-      Collections.emptyMap());
   }
 
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
@@ -1118,7 +1111,7 @@ public class HTable implements Table {
 
   @Override
   public CoprocessorRpcChannel coprocessorService(byte[] row) {
-    return new RegionCoprocessorRpcChannel(connection, tableName, row);
+    return new RegionCoprocessorRpcChannel(connection, tableName, row, requestAttributes);
   }
 
   @Override
@@ -1149,7 +1142,7 @@ public class HTable implements Table {
       Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (final byte[] r : keys) {
         final RegionCoprocessorRpcChannel channel =
-          new RegionCoprocessorRpcChannel(connection, tableName, r);
+          new RegionCoprocessorRpcChannel(connection, tableName, r, requestAttributes);
         Future<R> future = wrappedPool.submit(() -> {
           T instance =
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
