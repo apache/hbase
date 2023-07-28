@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.regionserver.HRegionFileSystem.REGION_INFO_FILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -123,14 +124,16 @@ public class TestPrefetchPersistence {
     assertEquals(0, usedSize);
     assertTrue(new File(testDir + "/bucket.cache").exists());
     // Load Cache
-    Path storeFile = writeStoreFile("TestPrefetch0");
-    Path storeFile2 = writeStoreFile("TestPrefetch1");
+    Path storeFile = writeStoreFile("Region0", "TestPrefetch0");
+    Path storeFile2 = writeStoreFile("Region1", "TestPrefetch1");
     readStoreFile(storeFile, 0);
     readStoreFile(storeFile2, 0);
     usedSize = bucketCache.getAllocator().getUsedSize();
     assertNotEquals(0, usedSize);
 
     bucketCache.shutdown();
+    // Reset the info maintained in PrefetchExecutor
+    PrefetchExecutor.reset();
     assertTrue(new File(testDir + "/bucket.persistence").exists());
     assertTrue(new File(testDir + "/prefetch.persistence").exists());
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
@@ -149,8 +152,12 @@ public class TestPrefetchPersistence {
   public void closeStoreFile(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
     assertTrue(PrefetchExecutor.isFilePrefetched(path.getName()));
+    int initialRegionPrefetchInfoSize = PrefetchExecutor.getRegionPrefetchInfo().size();
+    assertTrue(initialRegionPrefetchInfoSize > 0);
     reader.close(true);
     assertFalse(PrefetchExecutor.isFilePrefetched(path.getName()));
+    int newRegionPrefetchInfoSize = PrefetchExecutor.getRegionPrefetchInfo().size();
+    assertTrue(initialRegionPrefetchInfoSize - newRegionPrefetchInfoSize == 1);
   }
 
   public void readStoreFile(Path storeFilePath, long offset) throws Exception {
@@ -174,8 +181,11 @@ public class TestPrefetchPersistence {
     }
   }
 
-  public Path writeStoreFile(String fname) throws IOException {
-    Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(), fname);
+  public Path writeStoreFile(String regionName, String fname) throws IOException {
+    // Create store files as per the following directory structure
+    // <region name>/<column family>/<hFile>
+    Path regionDir = new Path(TEST_UTIL.getDataTestDir(), regionName);
+    Path storeFileParentDir = new Path(regionDir, fname);
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     StoreFileWriter sfw = new StoreFileWriter.Builder(conf, cacheConf, fs)
       .withOutputDir(storeFileParentDir).withFileContext(meta).build();
@@ -191,6 +201,19 @@ public class TestPrefetchPersistence {
     }
 
     sfw.close();
+
+    // Create a dummy .regioninfo file as the PrefetchExecutor needs it to find out the region name
+    // to be added to the prefetch file list
+    Path regionInfoFilePath = new Path(regionDir, REGION_INFO_FILE);
+    File regionInfoFile = new File(regionInfoFilePath.toString());
+    LOG.info("Create file: {}", regionInfoFilePath);
+    try {
+      if (!regionInfoFile.exists() && !regionInfoFile.createNewFile()) {
+        assertFalse("Unable to create .regioninfo file", true);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     return sfw.getPath();
   }
 

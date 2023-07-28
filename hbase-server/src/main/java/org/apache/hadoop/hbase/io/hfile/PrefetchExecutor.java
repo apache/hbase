@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
@@ -53,7 +55,8 @@ public final class PrefetchExecutor {
   private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Set of files for which prefetch is completed */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_SHOULD_BE_FINAL")
-  private static HashMap<String, Boolean> prefetchCompleted = new HashMap<>();
+  private static ConcurrentHashMap<String, Long> regionPrefetchSizeMap = new ConcurrentHashMap<>();
+  private static HashMap<String, Map<String, Long>> prefetchCompleted = new HashMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
@@ -120,9 +123,35 @@ public final class PrefetchExecutor {
     }
   }
 
-  public static void complete(Path path) {
+  private static void removeFileFromPrefetch(String hFileName) {
+    // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
+    if (prefetchCompleted.containsKey(hFileName)) {
+      Map.Entry<String, Long> regionEntry =
+        prefetchCompleted.get(hFileName).entrySet().iterator().next();
+      String regionEncodedName = regionEntry.getKey();
+      long filePrefetchedSize = regionEntry.getValue();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removing file {} for region {}", hFileName, regionEncodedName);
+      }
+      regionPrefetchSizeMap.computeIfPresent(regionEncodedName,
+        (rn, pf) -> pf - filePrefetchedSize);
+      // If all the blocks for a region are evicted from the cache, remove the entry for that region
+      if (
+        regionPrefetchSizeMap.containsKey(regionEncodedName)
+          && regionPrefetchSizeMap.get(regionEncodedName) == 0
+      ) {
+        regionPrefetchSizeMap.remove(regionEncodedName);
+      }
+    }
+    prefetchCompleted.remove(hFileName);
+  }
+
+  public static void complete(final String regionName, Path path, long size) {
     prefetchFutures.remove(path);
-    prefetchCompleted.put(path.getName(), true);
+    Map<String, Long> tmpMap = new HashMap<>();
+    tmpMap.put(regionName, size);
+    prefetchCompleted.put(path.getName(), tmpMap);
+    regionPrefetchSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
     LOG.debug("Prefetch completed for {}", path.getName());
   }
 
@@ -173,9 +202,26 @@ public final class PrefetchExecutor {
     try (FileInputStream fis = deleteFileOnClose(prefetchPersistenceFile)) {
       PersistentPrefetchProtos.PrefetchedHfileName proto =
         PersistentPrefetchProtos.PrefetchedHfileName.parseDelimitedFrom(fis);
-      Map<String, Boolean> protoPrefetchedFilesMap = proto.getPrefetchedFilesMap();
-      prefetchCompleted.putAll(protoPrefetchedFilesMap);
+      Map<String, PersistentPrefetchProtos.RegionFileSizeMap> protoPrefetchedFilesMap =
+        proto.getPrefetchedFilesMap();
+      prefetchCompleted.putAll(PrefetchProtoUtils.fromPB(protoPrefetchedFilesMap));
+      updateRegionSizeMapWhileRetrievingFromFile();
     }
+  }
+
+  private static void updateRegionSizeMapWhileRetrievingFromFile() {
+    // Update the regionPrefetchedSizeMap with the region size while restarting the region server
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updating region size map after retrieving prefetch file list");
+    }
+    prefetchCompleted.forEach((hFileName, hFileSize) -> {
+      // Get the region name for each file
+      Map.Entry<String, Long> regionEntry = hFileSize.entrySet().iterator().next();
+      String regionEncodedName = regionEntry.getKey();
+      long filePrefetchSize = regionEntry.getValue();
+      regionPrefetchSizeMap.merge(regionEncodedName, filePrefetchSize,
+        (oldpf, fileSize) -> oldpf + fileSize);
+    });
   }
 
   private static FileInputStream deleteFileOnClose(final File file) throws IOException {
@@ -203,11 +249,22 @@ public final class PrefetchExecutor {
   }
 
   public static void removePrefetchedFileWhileEvict(String hfileName) {
-    prefetchCompleted.remove(hfileName);
+    removeFileFromPrefetch(hfileName);
   }
 
   public static boolean isFilePrefetched(String hfileName) {
     return prefetchCompleted.containsKey(hfileName);
+  }
+
+  public static Map<String, Long> getRegionPrefetchInfo() {
+    return regionPrefetchSizeMap;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*(/src/test/.*|PrefetchExecutor).java")
+  public static void reset() {
+    prefetchCompleted = new HashMap<>();
+    regionPrefetchSizeMap = new ConcurrentHashMap<>();
   }
 
   private PrefetchExecutor() {

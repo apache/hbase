@@ -77,6 +77,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
+            String regionName = getRegionName(path);
+            PrefetchExecutor.complete(regionName, path, offset);
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
@@ -93,11 +95,19 @@ public class HFilePreadReader extends HFileReaderImpl {
                 LOG.warn("Close prefetch stream reader failed, path: " + path, e);
               }
             }
-            PrefetchExecutor.complete(path);
           }
         }
       });
     }
+  }
+
+  /*
+   * Get the region name for the given file path. A HFile is always kept under the <region>/<column
+   * family>/<hfile>. To find the region for a given hFile, just find the name of the grandparent
+   * directory.
+   */
+  private static String getRegionName(Path path) {
+    return path.getParent().getParent().getName();
   }
 
   private static String getPathOffsetEndStr(final Path path, final long offset, final long end) {

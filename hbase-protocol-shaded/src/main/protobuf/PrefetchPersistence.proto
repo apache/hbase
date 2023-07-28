@@ -27,5 +27,9 @@ option optimize_for = SPEED;
 
 
 message PrefetchedHfileName {
-  map<string, bool> prefetched_files = 1;
+  map<string, RegionFileSizeMap> prefetched_files = 1;
+}
+
+message RegionFileSizeMap {
+  map<string, uint64> region_file_size = 1;
 }
