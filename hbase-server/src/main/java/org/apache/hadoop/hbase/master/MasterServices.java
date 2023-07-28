@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -367,6 +368,11 @@ public interface MasterServices extends Server {
    * it in MasterServices directly.
    */
   ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier();
+
+  /**
+   * Returns the SyncReplicationPeerLock.
+   */
+  Semaphore getSyncReplicationPeerLock();
 
   /**
    * Returns the {@link SyncReplicationReplayWALManager}.

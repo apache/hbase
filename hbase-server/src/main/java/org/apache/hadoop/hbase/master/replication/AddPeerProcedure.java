@@ -89,7 +89,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
       env.getMasterServices().getReplicationLogCleanerBarrier().enable();
     }
     if (peerConfig.isSyncReplication()) {
-      env.getReplicationPeerManager().releaseSyncReplicationPeerLock();
+      env.getMasterServices().getSyncReplicationPeerLock().release();
     }
     super.releaseLatch(env);
   }
@@ -108,7 +108,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
     }
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw suspend(env.getMasterConfiguration(),
           backoff -> LOG.warn(
             "Can not acquire sync replication peer lock for peer {}, sleep {} secs", peerId,
@@ -147,7 +147,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
     }
     cleanerDisabled = true;
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw new IllegalStateException(
           "Can not acquire sync replication peer lock for peer " + peerId);
       }

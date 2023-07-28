@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -367,6 +368,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private final ReplicationLogCleanerBarrier replicationLogCleanerBarrier =
     new ReplicationLogCleanerBarrier();
+
+  // Only allow to add one sync replication peer concurrently
+  private final Semaphore syncReplicationPeerLock = new Semaphore(1);
 
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
@@ -4113,6 +4117,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
     return replicationLogCleanerBarrier;
+  }
+
+  @Override
+  public Semaphore getSyncReplicationPeerLock() {
+    return syncReplicationPeerLock;
   }
 
   public HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>>
