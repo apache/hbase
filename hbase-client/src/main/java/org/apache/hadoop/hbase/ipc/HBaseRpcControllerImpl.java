@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
-import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 
 /**
  * Get instances via {@link RpcControllerFactory} on client-side.
@@ -281,17 +280,5 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
       + ", cancelled=" + cancelled + ", cancellationCbs=" + cancellationCbs + ", exception="
       + exception + ", regionInfo=" + regionInfo + ", priority=" + priority + ", cellScanner="
       + cellScanner + '}';
-  }
-
-  public static RpcController configureRequestAttributes(RpcController rpcController,
-    Map<String, byte[]> requestAttributes) { // todo rmattingly delete?
-    if (
-      !requestAttributes.isEmpty() && rpcController != null
-        && rpcController instanceof HBaseRpcController
-    ) {
-      HBaseRpcController controller = (HBaseRpcController) rpcController;
-      controller.setRequestAttributes(requestAttributes);
-    }
-    return rpcController;
   }
 }

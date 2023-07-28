@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -38,9 +37,7 @@ public abstract class ClientServiceCallable<T>
 
   public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
     RpcController rpcController, int priority, Map<String, byte[]> requestAttributes) {
-    super(connection, tableName, row,
-      HBaseRpcControllerImpl.configureRequestAttributes(rpcController, requestAttributes), priority,
-      requestAttributes);
+    super(connection, tableName, row, rpcController, priority, requestAttributes);
   }
 
   @Override
