@@ -163,7 +163,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
+        <version>${exec.maven.version}</version>
         <executions>
           <!-- It's easier to have two copies of our validation
                script than to copy it via remote-resources-plugin, but
