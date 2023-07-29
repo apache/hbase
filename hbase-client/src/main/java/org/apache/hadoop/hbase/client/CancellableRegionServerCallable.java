@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -41,8 +42,9 @@ abstract class CancellableRegionServerCallable<T> extends ClientServiceCallable<
   private final int rpcTimeout;
 
   CancellableRegionServerCallable(Connection connection, TableName tableName, byte[] row,
-    RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker, int priority) {
-    super(connection, tableName, row, rpcController, priority);
+    RpcController rpcController, int rpcTimeout, RetryingTimeTracker tracker, int priority,
+    Map<String, byte[]> requestAttributes) {
+    super(connection, tableName, row, rpcController, priority, requestAttributes);
     this.rpcTimeout = rpcTimeout;
     this.tracker = tracker;
   }

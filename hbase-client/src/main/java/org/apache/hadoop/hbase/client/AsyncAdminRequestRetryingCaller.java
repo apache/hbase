@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -44,7 +45,7 @@ public class AsyncAdminRequestRetryingCaller<T> extends AsyncRpcRetryingCaller<T
     long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
     long rpcTimeoutNs, int startLogErrorsCnt, ServerName serverName, Callable<T> callable) {
     super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, Collections.emptyMap());
     this.serverName = serverName;
     this.callable = callable;
   }

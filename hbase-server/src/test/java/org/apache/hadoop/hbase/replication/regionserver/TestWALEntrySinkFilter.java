@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -217,7 +218,7 @@ public class TestWALEntrySinkFilter {
     private final Configuration conf;
 
     public DevNullAsyncConnection(Configuration conf, ConnectionRegistry registry, String clusterId,
-      User user) {
+      User user, Map<String, byte[]> connectionAttributes) {
       this.conf = conf;
     }
 

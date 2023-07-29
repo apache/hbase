@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForScan;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -37,9 +38,10 @@ public class ClientSimpleScanner extends ClientScanner {
   public ClientSimpleScanner(Configuration configuration, Scan scan, TableName name,
     ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
     RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
-    int scannerTimeout, int replicaCallTimeoutMicroSecondScan) throws IOException {
+    int scannerTimeout, int replicaCallTimeoutMicroSecondScan,
+    Map<String, byte[]> requestAttributes) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan);
+      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan, requestAttributes);
   }
 
   @Override
@@ -59,6 +61,6 @@ public class ClientSimpleScanner extends ClientScanner {
       scan.withStartRow(createClosestRowAfter(scan.getStartRow()), true);
     }
     return new ScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-      this.rpcControllerFactory, getScanReplicaId());
+      this.rpcControllerFactory, getScanReplicaId(), requestAttributes);
   }
 }

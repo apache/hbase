@@ -25,6 +25,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -98,6 +99,11 @@ class AsyncTableImpl implements AsyncTable<ScanResultConsumer> {
   @Override
   public long getScanTimeout(TimeUnit unit) {
     return rawTable.getScanTimeout(unit);
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return rawTable.getRequestAttributes();
   }
 
   private <T> CompletableFuture<T> wrap(CompletableFuture<T> future) {

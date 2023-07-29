@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -117,7 +118,8 @@ public class MultiHConnection {
     ClusterConnection conn =
       (ClusterConnection) connections[ThreadLocalRandom.current().nextInt(noOfConnections)];
 
-    HTable.doBatchWithCallback(actions, results, callback, conn, batchPool, tableName);
+    HTable.doBatchWithCallback(actions, results, callback, conn, batchPool, tableName,
+      Collections.emptyMap());
   }
 
   // Copied from ConnectionImplementation.getBatchPool()

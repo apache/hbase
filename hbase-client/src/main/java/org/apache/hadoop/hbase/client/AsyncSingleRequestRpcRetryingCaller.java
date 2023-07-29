@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -57,9 +58,10 @@ class AsyncSingleRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCaller<T> {
   public AsyncSingleRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
     TableName tableName, byte[] row, int replicaId, RegionLocateType locateType,
     Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
-    int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt,
+    Map<String, byte[]> requestAttributes) {
     super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+      operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, requestAttributes);
     this.tableName = tableName;
     this.row = row;
     this.replicaId = replicaId;

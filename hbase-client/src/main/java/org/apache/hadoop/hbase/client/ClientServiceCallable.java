@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -35,8 +36,8 @@ public abstract class ClientServiceCallable<T>
   extends RegionServerCallable<T, ClientProtos.ClientService.BlockingInterface> {
 
   public ClientServiceCallable(Connection connection, TableName tableName, byte[] row,
-    RpcController rpcController, int priority) {
-    super(connection, tableName, row, rpcController, priority);
+    RpcController rpcController, int priority, Map<String, byte[]> requestAttributes) {
+    super(connection, tableName, row, rpcController, priority, requestAttributes);
   }
 
   @Override

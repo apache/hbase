@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -284,7 +285,16 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    * @param conf Configuration object
    */
   ConnectionImplementation(Configuration conf, ExecutorService pool, User user) throws IOException {
-    this(conf, pool, user, null);
+    this(conf, pool, user, null, Collections.emptyMap());
+  }
+
+  /**
+   * constructor
+   * @param conf Configuration object
+   */
+  ConnectionImplementation(Configuration conf, ExecutorService pool, User user,
+    Map<String, byte[]> connectionAttributes) throws IOException {
+    this(conf, pool, user, null, connectionAttributes);
   }
 
   /**
@@ -292,6 +302,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   ConnectionImplementation(Configuration conf, ExecutorService pool, User user,
     ConnectionRegistry registry) throws IOException {
+    this(conf, pool, user, registry, Collections.emptyMap());
+  }
+
+  /**
+   * Constructor, for creating cluster connection with provided ConnectionRegistry.
+   */
+  ConnectionImplementation(Configuration conf, ExecutorService pool, User user,
+    ConnectionRegistry registry, Map<String, byte[]> connectionAttributes) throws IOException {
     this.conf = conf;
     this.user = user;
     if (user != null && user.isLoginFromKeytab()) {
@@ -348,7 +366,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
       this.metaCache = new MetaCache(this.metrics);
 
-      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,
+        connectionAttributes);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, connectionConfig,
         interceptor, this.stats, this.metrics);
@@ -476,7 +495,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       @Override
       public Table build() {
         return new HTable(ConnectionImplementation.this, this, rpcCallerFactory,
-          rpcControllerFactory, pool);
+          rpcControllerFactory, pool, requestAttributes);
       }
     };
   }
@@ -1030,10 +1049,10 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         final Span span = new TableOperationSpanBuilder(this)
           .setTableName(TableName.META_TABLE_NAME).setOperation(s).build();
         try (Scope ignored = span.makeCurrent();
-          ReversedClientScanner rcs =
-            new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME, this, rpcCallerFactory,
-              rpcControllerFactory, getMetaLookupPool(), connectionConfig.getMetaReadRpcTimeout(),
-              connectionConfig.getMetaScanTimeout(), metaReplicaCallTimeoutScanInMicroSecond)) {
+          ReversedClientScanner rcs = new ReversedClientScanner(conf, s, TableName.META_TABLE_NAME,
+            this, rpcCallerFactory, rpcControllerFactory, getMetaLookupPool(),
+            connectionConfig.getMetaReadRpcTimeout(), connectionConfig.getMetaScanTimeout(),
+            metaReplicaCallTimeoutScanInMicroSecond, Collections.emptyMap())) {
           boolean tableNotFound = true;
           for (;;) {
             Result regionInfoRow = rcs.next();

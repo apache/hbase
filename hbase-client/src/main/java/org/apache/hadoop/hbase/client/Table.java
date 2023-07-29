@@ -1002,4 +1002,12 @@ public interface Table extends Closeable {
   default void setOperationTimeout(int operationTimeout) {
     throw new NotImplementedException("Add an implementation!");
   }
+
+  /**
+   * Get the attributes to be submitted with requests
+   * @return map of request attributes
+   */
+  default Map<String, byte[]> getRequestAttributes() {
+    throw new NotImplementedException("Add an implementation!");
+  }
 }

@@ -23,6 +23,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -64,9 +65,10 @@ public class ClientAsyncPrefetchScanner extends ClientSimpleScanner {
   public ClientAsyncPrefetchScanner(Configuration configuration, Scan scan, TableName name,
     ClusterConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
     RpcControllerFactory rpcControllerFactory, ExecutorService pool, int scanReadRpcTimeout,
-    int scannerTimeout, int replicaCallTimeoutMicroSecondScan) throws IOException {
+    int scannerTimeout, int replicaCallTimeoutMicroSecondScan,
+    Map<String, byte[]> requestAttributes) throws IOException {
     super(configuration, scan, name, connection, rpcCallerFactory, rpcControllerFactory, pool,
-      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan);
+      scanReadRpcTimeout, scannerTimeout, replicaCallTimeoutMicroSecondScan, requestAttributes);
     exceptionsQueue = new ConcurrentLinkedQueue<>();
     final Context context = Context.current();
     final Runnable runnable = context.wrap(new PrefetchRunnable());

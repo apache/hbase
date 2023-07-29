@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,8 +83,8 @@ public class TestReversedScannerCallable {
   public void testPrepareAlwaysUsesCache() throws Exception {
     when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0)).thenReturn(regionLocations);
 
-    ReversedScannerCallable callable =
-      new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+    ReversedScannerCallable callable = new ReversedScannerCallable(connection, TABLE_NAME,
+      DEFAULT_SCAN, null, rpcFactory, 0, Collections.emptyMap());
     callable.prepare(false);
     callable.prepare(true);
 
@@ -94,8 +95,8 @@ public class TestReversedScannerCallable {
   public void testHandleDisabledTable() throws IOException {
     when(connection.isTableDisabled(TABLE_NAME)).thenReturn(true);
 
-    ReversedScannerCallable callable =
-      new ReversedScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+    ReversedScannerCallable callable = new ReversedScannerCallable(connection, TABLE_NAME,
+      DEFAULT_SCAN, null, rpcFactory, 0, Collections.emptyMap());
 
     assertThrows(TableNotEnabledException.class, () -> callable.prepare(true));
   }
@@ -116,8 +117,8 @@ public class TestReversedScannerCallable {
       .thenReturn(regionLocations);
 
     Scan scan = new Scan().setReversed(true);
-    ReversedScannerCallable callable =
-      new ReversedScannerCallable(connection, TABLE_NAME, scan, null, rpcFactory, 0);
+    ReversedScannerCallable callable = new ReversedScannerCallable(connection, TABLE_NAME, scan,
+      null, rpcFactory, 0, Collections.emptyMap());
 
     callable.prepare(false);
 

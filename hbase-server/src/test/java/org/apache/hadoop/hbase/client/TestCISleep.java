@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.net.SocketTimeoutException;
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
@@ -95,7 +96,7 @@ public class TestCISleep extends AbstractTestCITimeout {
     ClientServiceCallable<Object> regionServerCallable =
       new ClientServiceCallable<Object>(TEST_UTIL.getConnection(), tableName, FAM_NAM,
         new RpcControllerFactory(TEST_UTIL.getConfiguration()).newController(),
-        HConstants.PRIORITY_UNSET) {
+        HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
         @Override
         protected Object rpcCall() throws Exception {
           return null;

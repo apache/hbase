@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -341,7 +342,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
           calls.getAndIncrement();
           return new ClientServiceCallable<byte[]>(conn, tableName, first,
             new RpcControllerFactory(util.getConfiguration()).newController(),
-            HConstants.PRIORITY_UNSET) {
+            HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
             @Override
             public byte[] rpcCall() throws Exception {
               throw new IOException("Error calling something on RegionServer");

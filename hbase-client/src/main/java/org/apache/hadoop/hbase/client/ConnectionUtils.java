@@ -27,6 +27,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -140,8 +141,9 @@ public final class ConnectionUtils {
    * region re-lookups.
    */
   static class MasterlessConnection extends ConnectionImplementation {
-    MasterlessConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
-      super(conf, pool, user);
+    MasterlessConnection(Configuration conf, ExecutorService pool, User user,
+      Map<String, byte[]> requestAttributes) throws IOException {
+      super(conf, pool, user, requestAttributes);
     }
 
     @Override
