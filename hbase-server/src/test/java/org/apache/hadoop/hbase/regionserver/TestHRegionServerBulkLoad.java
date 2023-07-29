@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -215,7 +216,7 @@ public class TestHRegionServerBulkLoad {
         new SecureBulkLoadClient(UTIL.getConfiguration(), table).prepareBulkLoad(conn);
       ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, tableName,
         Bytes.toBytes("aaa"), new RpcControllerFactory(UTIL.getConfiguration()).newController(),
-        HConstants.PRIORITY_UNSET) {
+        HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
         @Override
         public Void rpcCall() throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
@@ -239,7 +240,7 @@ public class TestHRegionServerBulkLoad {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
           new RpcControllerFactory(UTIL.getConfiguration()).newController(),
-          HConstants.PRIORITY_UNSET) {
+          HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
           @Override
           protected Void rpcCall() throws Exception {
             LOG.debug("compacting " + getLocation() + " for row " + Bytes.toStringBinary(getRow()));

@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -488,22 +489,24 @@ public class TestReplicaWithCluster {
     table = conn.getTable(hdt.getTableName());
     final String bulkToken =
       new SecureBulkLoadClient(HTU.getConfiguration(), table).prepareBulkLoad(conn);
-    ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, hdt.getTableName(),
-      TestHRegionServerBulkLoad.rowkey(0),
-      new RpcControllerFactory(HTU.getConfiguration()).newController(), HConstants.PRIORITY_UNSET) {
-      @Override
-      protected Void rpcCall() throws Exception {
-        LOG.debug("Going to connect to server " + getLocation() + " for row "
-          + Bytes.toStringBinary(getRow()));
-        SecureBulkLoadClient secureClient = null;
-        byte[] regionName = getLocation().getRegionInfo().getRegionName();
-        try (Table table = conn.getTable(getTableName())) {
-          secureClient = new SecureBulkLoadClient(HTU.getConfiguration(), table);
-          secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName, true, null, bulkToken);
+    ClientServiceCallable<Void> callable =
+      new ClientServiceCallable<Void>(conn, hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0),
+        new RpcControllerFactory(HTU.getConfiguration()).newController(), HConstants.PRIORITY_UNSET,
+        Collections.emptyMap()) {
+        @Override
+        protected Void rpcCall() throws Exception {
+          LOG.debug("Going to connect to server " + getLocation() + " for row "
+            + Bytes.toStringBinary(getRow()));
+          SecureBulkLoadClient secureClient = null;
+          byte[] regionName = getLocation().getRegionInfo().getRegionName();
+          try (Table table = conn.getTable(getTableName())) {
+            secureClient = new SecureBulkLoadClient(HTU.getConfiguration(), table);
+            secureClient.secureBulkLoadHFiles(getStub(), famPaths, regionName, true, null,
+              bulkToken);
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
     RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(HTU.getConfiguration());
     RpcRetryingCaller<Void> caller = factory.newCaller();
     caller.callWithRetries(callable, 10000);

@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -54,8 +55,9 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param replicaId   the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-    ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId) {
-    super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
+    ScanMetrics scanMetrics, RpcControllerFactory rpcFactory, int replicaId,
+    Map<String, byte[]> requestAttributes) {
+    super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId, requestAttributes);
   }
 
   @Override
@@ -162,7 +164,7 @@ public class ReversedScannerCallable extends ScannerCallable {
   @Override
   public ScannerCallable getScannerCallableForReplica(int id) {
     ReversedScannerCallable r = new ReversedScannerCallable(getConnection(), getTableName(),
-      this.getScan(), this.scanMetrics, rpcControllerFactory, id);
+      this.getScan(), this.scanMetrics, rpcControllerFactory, id, requestAttributes);
     r.setCaching(this.getCaching());
     return r;
   }

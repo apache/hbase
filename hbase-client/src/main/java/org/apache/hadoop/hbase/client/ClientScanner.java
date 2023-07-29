@@ -27,6 +27,7 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -90,6 +91,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected final int primaryOperationTimeout;
   private int retries;
   protected final ExecutorService pool;
+  protected final Map<String, byte[]> requestAttributes;
 
   /**
    * Create a new ClientScanner for the specified table Note that the passed {@link Scan}'s start
@@ -102,7 +104,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
     ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
     RpcControllerFactory controllerFactory, ExecutorService pool, int scanReadRpcTimeout,
-    int scannerTimeout, int primaryOperationTimeout) throws IOException {
+    int scannerTimeout, int primaryOperationTimeout, Map<String, byte[]> requestAttributes)
+    throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(
         "Scan table=" + tableName + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -123,6 +126,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     }
     this.readRpcTimeout = scanReadRpcTimeout;
     this.scannerTimeout = scannerTimeout;
+    this.requestAttributes = requestAttributes;
 
     // check if application wants to collect scan metrics
     initScanMetrics(scan);

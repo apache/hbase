@@ -130,6 +130,8 @@ public class HTable implements Table {
   private final RpcRetryingCallerFactory rpcCallerFactory;
   private final RpcControllerFactory rpcControllerFactory;
 
+  private final Map<String, byte[]> requestAttributes;
+
   // Marked Private @since 1.0
   @InterfaceAudience.Private
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
@@ -165,7 +167,8 @@ public class HTable implements Table {
   @InterfaceAudience.Private
   protected HTable(final ConnectionImplementation connection, final TableBuilderBase builder,
     final RpcRetryingCallerFactory rpcCallerFactory,
-    final RpcControllerFactory rpcControllerFactory, final ExecutorService pool) {
+    final RpcControllerFactory rpcControllerFactory, final ExecutorService pool,
+    final Map<String, byte[]> requestAttributes) {
     this.connection = Preconditions.checkNotNull(connection, "connection is null");
     this.configuration = connection.getConfiguration();
     this.connConfiguration = connection.getConnectionConfiguration();
@@ -197,6 +200,7 @@ public class HTable implements Table {
     this.scanTimeout = builder.scanTimeout;
     this.scannerCaching = connConfiguration.getScannerCaching();
     this.scannerMaxResultSize = connConfiguration.getScannerMaxResultSize();
+    this.requestAttributes = requestAttributes;
 
     // puts need to track errors globally due to how the APIs currently work.
     multiAp = this.connection.getAsyncProcess();
@@ -323,16 +327,16 @@ public class HTable implements Table {
       if (scan.isReversed()) {
         return new ReversedClientScanner(getConfiguration(), scan, getName(), connection,
           rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-          replicaTimeout);
+          replicaTimeout, requestAttributes);
       } else {
         if (async) {
           return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), connection,
             rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout);
+            replicaTimeout, requestAttributes);
         } else {
           return new ClientSimpleScanner(getConfiguration(), scan, getName(), connection,
             rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout);
+            replicaTimeout, requestAttributes);
         }
       }
     }
@@ -379,18 +383,19 @@ public class HTable implements Table {
 
     if (get.getConsistency() == Consistency.STRONG) {
       final Get configuredGet = get;
-      ClientServiceCallable<Result> callable = new ClientServiceCallable<Result>(this.connection,
-        getName(), get.getRow(), this.rpcControllerFactory.newController(), get.getPriority()) {
-        @Override
-        protected Result rpcCall() throws Exception {
-          ClientProtos.GetRequest request = RequestConverter
-            .buildGetRequest(getLocation().getRegionInfo().getRegionName(), configuredGet);
-          ClientProtos.GetResponse response = doGet(request);
-          return response == null
-            ? null
-            : ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
-        }
-      };
+      ClientServiceCallable<Result> callable =
+        new ClientServiceCallable<Result>(this.connection, getName(), get.getRow(),
+          this.rpcControllerFactory.newController(), get.getPriority(), requestAttributes) {
+          @Override
+          protected Result rpcCall() throws Exception {
+            ClientProtos.GetRequest request = RequestConverter
+              .buildGetRequest(getLocation().getRegionInfo().getRegionName(), configuredGet);
+            ClientProtos.GetResponse response = doGet(request);
+            return response == null
+              ? null
+              : ProtobufUtil.toResult(response.getResult(), getRpcControllerCellScanner());
+          }
+        };
       return rpcCallerFactory.<Result> newCaller(readRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }
@@ -399,7 +404,7 @@ public class HTable implements Table {
     RpcRetryingCallerWithReadReplicas callable =
       new RpcRetryingCallerWithReadReplicas(rpcControllerFactory, tableName, this.connection, get,
         pool, connConfiguration.getRetriesNumber(), operationTimeoutMs, readRpcTimeoutMs,
-        connConfiguration.getPrimaryCallTimeoutMicroSecond());
+        connConfiguration.getPrimaryCallTimeoutMicroSecond(), requestAttributes);
     return callable.call(operationTimeoutMs);
   }
 
@@ -457,10 +462,10 @@ public class HTable implements Table {
 
   public void batch(final List<? extends Row> actions, final Object[] results, int rpcTimeout)
     throws InterruptedException, IOException {
-    AsyncProcessTask task =
-      AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName).setRowAccess(actions)
-        .setResults(results).setRpcTimeout(rpcTimeout).setOperationTimeout(operationTimeoutMs)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+    AsyncProcessTask task = AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
+      .setRowAccess(actions).setResults(results).setRpcTimeout(rpcTimeout)
+      .setOperationTimeout(operationTimeoutMs).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+      .setRequestAttributes(requestAttributes).build();
     final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
       .build();
@@ -480,12 +485,13 @@ public class HTable implements Table {
   @Override
   public <R> void batchCallback(final List<? extends Row> actions, final Object[] results,
     final Batch.Callback<R> callback) throws IOException, InterruptedException {
-    doBatchWithCallback(actions, results, callback, connection, pool, tableName);
+    doBatchWithCallback(actions, results, callback, connection, pool, tableName, requestAttributes);
   }
 
   public static <R> void doBatchWithCallback(List<? extends Row> actions, Object[] results,
     Batch.Callback<R> callback, ClusterConnection connection, ExecutorService pool,
-    TableName tableName) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
+    TableName tableName, Map<String, byte[]> requestAttributes)
+    throws InterruptedIOException, RetriesExhaustedWithDetailsException {
     int operationTimeout = connection.getConnectionConfiguration().getOperationTimeout();
     int writeTimeout = connection.getConfiguration().getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
       connection.getConfiguration().getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -493,7 +499,8 @@ public class HTable implements Table {
     AsyncProcessTask<R> task =
       AsyncProcessTask.newBuilder(callback).setPool(pool).setTableName(tableName)
         .setRowAccess(actions).setResults(results).setOperationTimeout(operationTimeout)
-        .setRpcTimeout(writeTimeout).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+        .setRpcTimeout(writeTimeout).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+        .setRequestAttributes(requestAttributes).build();
     final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
       .build();
@@ -516,7 +523,7 @@ public class HTable implements Table {
     TraceUtil.trace(() -> {
       ClientServiceCallable<Void> callable =
         new ClientServiceCallable<Void>(this.connection, getName(), delete.getRow(),
-          this.rpcControllerFactory.newController(), delete.getPriority()) {
+          this.rpcControllerFactory.newController(), delete.getPriority(), requestAttributes) {
           @Override
           protected Void rpcCall() throws Exception {
             MutateRequest request = RequestConverter
@@ -557,16 +564,17 @@ public class HTable implements Table {
       new TableOperationSpanBuilder(connection).setTableName(tableName).setOperation(put);
     TraceUtil.trace(() -> {
       validatePut(put);
-      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(this.connection,
-        getName(), put.getRow(), this.rpcControllerFactory.newController(), put.getPriority()) {
-        @Override
-        protected Void rpcCall() throws Exception {
-          MutateRequest request =
-            RequestConverter.buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
-          doMutate(request);
-          return null;
-        }
-      };
+      ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(this.connection, getName(), put.getRow(),
+          this.rpcControllerFactory.newController(), put.getPriority(), requestAttributes) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            MutateRequest request = RequestConverter
+              .buildMutateRequest(getLocation().getRegionInfo().getRegionName(), put);
+            doMutate(request);
+            return null;
+          }
+        };
       rpcCallerFactory.<Void> newCaller(this.writeRpcTimeoutMs).callWithRetries(callable,
         this.operationTimeoutMs);
     }, supplier);
@@ -596,7 +604,7 @@ public class HTable implements Table {
       CancellableRegionServerCallable<MultiResponse> callable =
         new CancellableRegionServerCallable<MultiResponse>(this.connection, getName(), rm.getRow(),
           rpcControllerFactory.newController(), writeRpcTimeoutMs,
-          new RetryingTimeTracker().start(), rm.getMaxPriority()) {
+          new RetryingTimeTracker().start(), rm.getMaxPriority(), requestAttributes) {
           @Override
           protected MultiResponse rpcCall() throws Exception {
             MultiRequest request = RequestConverter.buildMultiRequest(
@@ -618,7 +626,8 @@ public class HTable implements Table {
       AsyncProcessTask task = AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
         .setRowAccess(rm.getMutations()).setCallable(callable).setRpcTimeout(writeRpcTimeoutMs)
         .setOperationTimeout(operationTimeoutMs)
-        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).setResults(results).build();
+        .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).setResults(results)
+        .setRequestAttributes(requestAttributes).build();
       AsyncRequestFuture ars = multiAp.submit(task);
       ars.waitUntilDone();
       if (ars.hasError()) {
@@ -644,7 +653,7 @@ public class HTable implements Table {
       checkHasFamilies(append);
       NoncedRegionServerCallable<Result> callable =
         new NoncedRegionServerCallable<Result>(this.connection, getName(), append.getRow(),
-          this.rpcControllerFactory.newController(), append.getPriority()) {
+          this.rpcControllerFactory.newController(), append.getPriority(), requestAttributes) {
           @Override
           protected Result rpcCall() throws Exception {
             MutateRequest request =
@@ -670,7 +679,7 @@ public class HTable implements Table {
       checkHasFamilies(increment);
       NoncedRegionServerCallable<Result> callable =
         new NoncedRegionServerCallable<Result>(this.connection, getName(), increment.getRow(),
-          this.rpcControllerFactory.newController(), increment.getPriority()) {
+          this.rpcControllerFactory.newController(), increment.getPriority(), requestAttributes) {
           @Override
           protected Result rpcCall() throws Exception {
             MutateRequest request =
@@ -710,7 +719,7 @@ public class HTable implements Table {
 
       NoncedRegionServerCallable<Long> callable =
         new NoncedRegionServerCallable<Long>(this.connection, getName(), row,
-          this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          this.rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET, requestAttributes) {
           @Override
           protected Long rpcCall() throws Exception {
             MutateRequest request = RequestConverter.buildIncrementRequest(
@@ -823,7 +832,7 @@ public class HTable implements Table {
     CancellableRegionServerCallable<MultiResponse> callable =
       new CancellableRegionServerCallable<MultiResponse>(connection, getName(), rm.getRow(),
         rpcControllerFactory.newController(), writeRpcTimeoutMs, new RetryingTimeTracker().start(),
-        rm.getMaxPriority()) {
+        rm.getMaxPriority(), requestAttributes) {
         @Override
         protected MultiResponse rpcCall() throws Exception {
           MultiRequest request =
@@ -853,7 +862,7 @@ public class HTable implements Table {
       // TODO any better timeout?
       .setRpcTimeout(Math.max(readRpcTimeoutMs, writeRpcTimeoutMs))
       .setOperationTimeout(operationTimeoutMs).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-      .build();
+      .setRequestAttributes(requestAttributes).build();
     AsyncRequestFuture ars = multiAp.submit(task);
     ars.waitUntilDone();
     if (ars.hasError()) {
@@ -917,7 +926,7 @@ public class HTable implements Table {
     long nonce = getNonce();
     ClientServiceCallable<CheckAndMutateResult> callable =
       new ClientServiceCallable<CheckAndMutateResult>(this.connection, getName(), row,
-        this.rpcControllerFactory.newController(), mutation.getPriority()) {
+        this.rpcControllerFactory.newController(), mutation.getPriority(), requestAttributes) {
         @Override
         protected CheckAndMutateResult rpcCall() throws Exception {
           MutateRequest request =
@@ -1106,7 +1115,7 @@ public class HTable implements Table {
 
   @Override
   public CoprocessorRpcChannel coprocessorService(byte[] row) {
-    return new RegionCoprocessorRpcChannel(connection, tableName, row);
+    return new RegionCoprocessorRpcChannel(connection, tableName, row, requestAttributes);
   }
 
   @Override
@@ -1137,7 +1146,7 @@ public class HTable implements Table {
       Map<byte[], Future<R>> futures = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (final byte[] r : keys) {
         final RegionCoprocessorRpcChannel channel =
-          new RegionCoprocessorRpcChannel(connection, tableName, r);
+          new RegionCoprocessorRpcChannel(connection, tableName, r, requestAttributes);
         Future<R> future = wrappedPool.submit(() -> {
           T instance =
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.newServiceStub(service, channel);
@@ -1338,7 +1347,8 @@ public class HTable implements Table {
         AsyncProcessTask.newBuilder(resultsCallback).setPool(context.wrap(pool))
           .setTableName(tableName).setRowAccess(execs).setResults(results)
           .setRpcTimeout(readRpcTimeoutMs).setOperationTimeout(operationTimeoutMs)
-          .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL).build();
+          .setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
+          .setRequestAttributes(requestAttributes).build();
       AsyncRequestFuture future = asyncProcess.submit(task);
       future.waitUntilDone();
 
@@ -1435,6 +1445,11 @@ public class HTable implements Table {
           .isSuccess();
       }, supplier);
     }
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
   }
 
   private class CheckAndMutateWithFilterBuilderImpl implements CheckAndMutateWithFilterBuilder {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
@@ -146,7 +147,7 @@ public class HConnectionTestingUtility {
    */
   public static ClusterConnection getSpiedConnection(final Configuration conf) throws IOException {
     ConnectionImplementation connection =
-      Mockito.spy(new ConnectionImplementation(conf, null, null));
+      Mockito.spy(new ConnectionImplementation(conf, null, null, Collections.emptyMap()));
     return connection;
   }
 

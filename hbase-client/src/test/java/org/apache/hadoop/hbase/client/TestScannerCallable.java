@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -78,8 +79,8 @@ public class TestScannerCallable {
   public void testPrepareAlwaysUsesCache() throws Exception {
     when(connection.locateRegion(TABLE_NAME, ROW, true, true, 0)).thenReturn(regionLocations);
 
-    ScannerCallable callable =
-      new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+    ScannerCallable callable = new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null,
+      rpcFactory, 0, Collections.emptyMap());
     callable.prepare(false);
     callable.prepare(true);
 
@@ -90,8 +91,8 @@ public class TestScannerCallable {
   public void testHandleDisabledTable() throws IOException {
     when(connection.isTableDisabled(TABLE_NAME)).thenReturn(true);
 
-    ScannerCallable callable =
-      new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null, rpcFactory, 0);
+    ScannerCallable callable = new ScannerCallable(connection, TABLE_NAME, DEFAULT_SCAN, null,
+      rpcFactory, 0, Collections.emptyMap());
 
     assertThrows(TableNotEnabledException.class, () -> callable.prepare(true));
   }

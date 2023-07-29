@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.translateException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
@@ -78,7 +79,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
 
   public AsyncRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn, int priority,
     long pauseNs, long pauseNsForServerOverloaded, int maxAttempts, long operationTimeoutNs,
-    long rpcTimeoutNs, int startLogErrorsCnt) {
+    long rpcTimeoutNs, int startLogErrorsCnt, Map<String, byte[]> requestAttributes) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.priority = priority;
@@ -89,6 +90,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.future = new CompletableFuture<>();
     this.controller = conn.rpcControllerFactory.newController();
     this.controller.setPriority(priority);
+    this.controller.setRequestAttributes(requestAttributes);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();
     this.pauseManager =

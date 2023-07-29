@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -65,6 +66,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    */
   protected final RpcController rpcController;
   private int priority = HConstants.NORMAL_QOS;
+  protected final Map<String, byte[]> requestAttributes;
 
   /**
    * @param connection    Connection to use.
@@ -73,18 +75,19 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
    * @param row           The row we want in <code>tableName</code>.
    */
   public RegionServerCallable(Connection connection, TableName tableName, byte[] row,
-    RpcController rpcController) {
-    this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS);
+    RpcController rpcController, Map<String, byte[]> requestAttributes) {
+    this(connection, tableName, row, rpcController, HConstants.NORMAL_QOS, requestAttributes);
   }
 
   public RegionServerCallable(Connection connection, TableName tableName, byte[] row,
-    RpcController rpcController, int priority) {
+    RpcController rpcController, int priority, Map<String, byte[]> requestAttributes) {
     super();
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
     this.rpcController = rpcController;
     this.priority = priority;
+    this.requestAttributes = requestAttributes;
   }
 
   protected RpcController getRpcController() {
@@ -119,6 +122,7 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
           hrc.setPriority(tableName);
           hrc.setPriority(priority);
           hrc.setCallTimeout(callTimeout);
+          hrc.setRequestAttributes(requestAttributes);
         }
       }
       return rpcCall();

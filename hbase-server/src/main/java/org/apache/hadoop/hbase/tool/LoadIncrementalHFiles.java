@@ -548,7 +548,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       lqis.stream().map(lqi -> Pair.newPair(lqi.getFamily(), lqi.getFilePath().toString()))
         .collect(Collectors.toList());
     return new ClientServiceCallable<byte[]>(conn, tableName, first,
-      rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+      rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
       @Override
       protected byte[] rpcCall() throws Exception {
         SecureBulkLoadClient secureClient = null;

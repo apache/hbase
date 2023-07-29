@@ -30,6 +30,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -121,6 +123,11 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
     User user) {
+    this(conf, registry, clusterId, user, Collections.emptyMap());
+  }
+
+  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
+    User user, Map<String, byte[]> connectionAttributes) {
     this.conf = conf;
     this.user = user;
 
@@ -135,7 +142,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
     } else {
       this.metrics = Optional.empty();
     }
-    this.rpcClient = RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null));
+    this.rpcClient =
+      RpcClientFactory.createClient(conf, clusterId, metrics.orElse(null), connectionAttributes);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcTimeout =
       (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));

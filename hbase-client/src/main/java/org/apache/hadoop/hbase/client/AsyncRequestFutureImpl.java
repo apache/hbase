@@ -286,6 +286,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
   private final int operationTimeout;
   private final int rpcTimeout;
   private final AsyncProcess asyncProcess;
+  private final Map<String, byte[]> requestAttributes;
 
   /**
    * For {@link AsyncRequestFutureImpl#manageError(int, Row, Retry, Throwable, ServerName)}. Only
@@ -398,6 +399,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     if (task.getCallable() == null) {
       tracker = new RetryingTimeTracker().start();
     }
+    this.requestAttributes = task.getRequestAttributes();
   }
 
   protected Set<CancellableRegionServerCallable> getCallsInProgress() {
@@ -1345,7 +1347,7 @@ class AsyncRequestFutureImpl<CResult> implements AsyncRequestFuture {
     final MultiAction multi, int numAttempt) {
     return new MultiServerCallable(asyncProcess.connection, tableName, server, multi,
       asyncProcess.rpcFactory.newController(), rpcTimeout, tracker, multi.getPriority(),
-      numAttempt);
+      requestAttributes, numAttempt);
   }
 
   private void updateResult(int index, Object result) {

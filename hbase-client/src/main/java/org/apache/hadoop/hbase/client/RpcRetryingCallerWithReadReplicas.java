@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -67,10 +68,12 @@ public class RpcRetryingCallerWithReadReplicas {
   private final int retries;
   private final RpcControllerFactory rpcControllerFactory;
   private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
+  private final Map<String, byte[]> requestAttributes;
 
   public RpcRetryingCallerWithReadReplicas(RpcControllerFactory rpcControllerFactory,
     TableName tableName, ClusterConnection cConnection, final Get get, ExecutorService pool,
-    int retries, int operationTimeout, int rpcTimeout, int timeBeforeReplicas) {
+    int retries, int operationTimeout, int rpcTimeout, int timeBeforeReplicas,
+    Map<String, byte[]> requestAttributes) {
     this.rpcControllerFactory = rpcControllerFactory;
     this.tableName = tableName;
     this.cConnection = cConnection;
@@ -82,6 +85,7 @@ public class RpcRetryingCallerWithReadReplicas {
     this.rpcTimeout = rpcTimeout;
     this.timeBeforeReplicas = timeBeforeReplicas;
     this.rpcRetryingCallerFactory = new RpcRetryingCallerFactory(conf);
+    this.requestAttributes = requestAttributes;
   }
 
   /**
@@ -94,8 +98,8 @@ public class RpcRetryingCallerWithReadReplicas {
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection,
         RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow(),
-        rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(),
-        PRIORITY_UNSET);
+        rpcControllerFactory.newController(), rpcTimeout, new RetryingTimeTracker(), PRIORITY_UNSET,
+        RpcRetryingCallerWithReadReplicas.this.requestAttributes);
       this.id = id;
       this.location = location;
     }

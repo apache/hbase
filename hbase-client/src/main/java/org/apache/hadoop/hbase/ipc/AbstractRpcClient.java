@@ -26,6 +26,7 @@ import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -106,6 +107,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   private boolean running = true; // if client runs
 
   protected final Configuration conf;
+  protected final Map<String, byte[]> connectionAttributes;
   protected final String clusterId;
   protected final SocketAddress localAddr;
   protected final MetricsConnection metrics;
@@ -154,7 +156,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
    * @param metrics   the connection metrics
    */
   public AbstractRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-    MetricsConnection metrics) {
+    MetricsConnection metrics, Map<String, byte[]> connectionAttributes) {
     this.userProvider = UserProvider.instantiate(conf);
     this.localAddr = localAddr;
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
@@ -167,6 +169,7 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
 
     this.minIdleTimeBeforeClose = conf.getInt(IDLE_TIME, 120000); // 2 minutes
     this.conf = conf;
+    this.connectionAttributes = connectionAttributes;
     this.codec = getCodec();
     this.compressor = getCompressor(conf);
     this.fallbackAllowed = conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
@@ -415,23 +418,24 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
       }
 
       final AtomicInteger counter = concurrentCounterCache.getUnchecked(addr);
-      Call call = new Call(nextCallId(), md, param, hrc.cellScanner(), returnType,
-        hrc.getCallTimeout(), hrc.getPriority(), new RpcCallback<Call>() {
-          @Override
-          public void run(Call call) {
-            try (Scope scope = call.span.makeCurrent()) {
-              counter.decrementAndGet();
-              onCallFinished(call, hrc, addr, callback);
-            } finally {
-              if (hrc.failed()) {
-                TraceUtil.setError(span, hrc.getFailed());
-              } else {
-                span.setStatus(StatusCode.OK);
+      Call call =
+        new Call(nextCallId(), md, param, hrc.cellScanner(), returnType, hrc.getCallTimeout(),
+          hrc.getPriority(), hrc.getRequestAttributes(), new RpcCallback<Call>() {
+            @Override
+            public void run(Call call) {
+              try (Scope scope = call.span.makeCurrent()) {
+                counter.decrementAndGet();
+                onCallFinished(call, hrc, addr, callback);
+              } finally {
+                if (hrc.failed()) {
+                  TraceUtil.setError(span, hrc.getFailed());
+                } else {
+                  span.setStatus(StatusCode.OK);
+                }
+                span.end();
               }
-              span.end();
             }
-          }
-        }, cs);
+          }, cs);
       ConnectionId remoteId = new ConnectionId(ticket, md.getService().getName(), addr);
       int count = counter.incrementAndGet();
       try {

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.HConstants.PRIORITY_UNSET;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,7 +57,7 @@ public class SecureBulkLoadClient {
     try {
       ClientServiceCallable<String> callable =
         new ClientServiceCallable<String>(conn, table.getName(), HConstants.EMPTY_START_ROW,
-          this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
+          this.rpcControllerFactory.newController(), PRIORITY_UNSET, Collections.emptyMap()) {
           @Override
           protected String rpcCall() throws Exception {
             byte[] regionName = getLocation().getRegionInfo().getRegionName();
@@ -78,19 +79,20 @@ public class SecureBulkLoadClient {
 
   public void cleanupBulkLoad(final Connection conn, final String bulkToken) throws IOException {
     try {
-      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, table.getName(),
-        HConstants.EMPTY_START_ROW, this.rpcControllerFactory.newController(), PRIORITY_UNSET) {
-        @Override
-        protected Void rpcCall() throws Exception {
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          RegionSpecifier region =
-            RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
-          CleanupBulkLoadRequest request =
-            CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bulkToken).build();
-          getStub().cleanupBulkLoad(null, request);
-          return null;
-        }
-      };
+      ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(conn, table.getName(), HConstants.EMPTY_START_ROW,
+          this.rpcControllerFactory.newController(), PRIORITY_UNSET, Collections.emptyMap()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            byte[] regionName = getLocation().getRegionInfo().getRegionName();
+            RegionSpecifier region =
+              RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName);
+            CleanupBulkLoadRequest request =
+              CleanupBulkLoadRequest.newBuilder().setRegion(region).setBulkToken(bulkToken).build();
+            getStub().cleanupBulkLoad(null, request);
+            return null;
+          }
+        };
       RpcRetryingCallerFactory.instantiate(conn.getConfiguration(), null, null).<Void> newCaller()
         .callWithRetries(callable, Integer.MAX_VALUE);
     } catch (Throwable throwable) {

@@ -23,6 +23,7 @@ import com.google.protobuf.RpcController;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -50,6 +51,7 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
   private byte[] lastRegion;
   private final int operationTimeout;
   private final RpcRetryingCallerFactory rpcCallerFactory;
+  private final Map<String, byte[]> requestAttributes;
 
   /**
    * Constructor
@@ -57,12 +59,14 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
    * @param table to connect to
    * @param row   to locate region with
    */
-  RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row) {
+  RegionCoprocessorRpcChannel(ClusterConnection conn, TableName table, byte[] row,
+    Map<String, byte[]> requestAttributes) {
     this.table = table;
     this.row = row;
     this.conn = conn;
     this.operationTimeout = conn.getConnectionConfiguration().getOperationTimeout();
     this.rpcCallerFactory = conn.getRpcRetryingCallerFactory();
+    this.requestAttributes = requestAttributes;
   }
 
   @Override
@@ -78,7 +82,8 @@ class RegionCoprocessorRpcChannel extends SyncCoprocessorRpcChannel {
     final Context context = Context.current();
     ClientServiceCallable<CoprocessorServiceResponse> callable =
       new ClientServiceCallable<CoprocessorServiceResponse>(this.conn, this.table, this.row,
-        this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET) {
+        this.conn.getRpcControllerFactory().newController(), HConstants.PRIORITY_UNSET,
+        requestAttributes) {
         @Override
         protected CoprocessorServiceResponse rpcCall() throws Exception {
           try (Scope ignored = context.makeCurrent()) {

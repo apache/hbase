@@ -114,6 +114,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   private final HBaseServerExceptionPauseManager pauseManager;
 
+  private final Map<String, byte[]> requestAttributes;
+
   // we can not use HRegionLocation as the map key because the hashCode and equals method of
   // HRegionLocation only consider serverName.
   private static final class RegionRequest {
@@ -149,7 +151,8 @@ class AsyncBatchRpcRetryingCaller<T> {
 
   public AsyncBatchRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
     TableName tableName, List<? extends Row> actions, long pauseNs, long pauseNsForServerOverloaded,
-    int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    int maxAttempts, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt,
+    Map<String, byte[]> requestAttributes) {
     this.retryTimer = retryTimer;
     this.conn = conn;
     this.tableName = tableName;
@@ -160,6 +163,8 @@ class AsyncBatchRpcRetryingCaller<T> {
     this.actions = new ArrayList<>(actions.size());
     this.futures = new ArrayList<>(actions.size());
     this.action2Future = new IdentityHashMap<>(actions.size());
+    this.pauseManager =
+      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
     for (int i = 0, n = actions.size(); i < n; i++) {
       Row rawAction = actions.get(i);
       Action action;
@@ -178,8 +183,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     }
     this.action2Errors = new IdentityHashMap<>();
     this.startNs = System.nanoTime();
-    this.pauseManager =
-      new HBaseServerExceptionPauseManager(pauseNs, pauseNsForServerOverloaded, operationTimeoutNs);
+    this.requestAttributes = requestAttributes;
   }
 
   private static boolean hasIncrementOrAppend(Row action) {
@@ -392,6 +396,7 @@ class AsyncBatchRpcRetryingCaller<T> {
     HBaseRpcController controller = conn.rpcControllerFactory.newController();
     resetController(controller, Math.min(rpcTimeoutNs, remainingNs),
       calcPriority(serverReq.getPriority(), tableName));
+    controller.setRequestAttributes(requestAttributes);
     if (!cells.isEmpty()) {
       controller.setCellScanner(createCellScanner(cells));
     }

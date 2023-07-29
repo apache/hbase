@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.Map;
 import javax.net.SocketFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,7 +43,13 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * SocketFactory
    */
   BlockingRpcClient(Configuration conf) {
-    this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
+    this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null, Collections.emptyMap());
+  }
+
+  // Temporary for backwards compatibility
+  public BlockingRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
+    MetricsConnection metrics) {
+    this(conf, clusterId, localAddr, metrics, Collections.emptyMap());
   }
 
   /**
@@ -53,8 +61,8 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
    * @param metrics   the connection metrics
    */
   public BlockingRpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
-    MetricsConnection metrics) {
-    super(conf, clusterId, localAddr, metrics);
+    MetricsConnection metrics, Map<String, byte[]> connectionAttributes) {
+    super(conf, clusterId, localAddr, metrics, connectionAttributes);
     this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
   }
 

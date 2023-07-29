@@ -25,6 +25,7 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.updateServerSideMet
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -108,9 +109,10 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
    *                             {@link com.google.protobuf.RpcController}
    */
   public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-    ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
+    ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id,
+    Map<String, byte[]> requestAttributes) {
     super(connection, tableName, scan.getStartRow(), rpcControllerFactory.newController(),
-      scan.getPriority());
+      scan.getPriority(), requestAttributes);
     this.id = id;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
@@ -423,7 +425,7 @@ public class ScannerCallable extends ClientServiceCallable<Result[]> {
 
   public ScannerCallable getScannerCallableForReplica(int id) {
     ScannerCallable s = new ScannerCallable(this.getConnection(), getTableName(), this.getScan(),
-      this.scanMetrics, this.rpcControllerFactory, id);
+      this.scanMetrics, this.rpcControllerFactory, id, requestAttributes);
     s.setCaching(this.caching);
     return s;
   }

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -63,6 +65,7 @@ public class AsyncProcessTask<T> {
     private int operationTimeout;
     private CancellableRegionServerCallable callable;
     private Object[] results;
+    private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
     private Builder() {
     }
@@ -124,9 +127,14 @@ public class AsyncProcessTask<T> {
       return this;
     }
 
+    Builder<T> setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      this.requestAttributes = requestAttributes;
+      return this;
+    }
+
     public AsyncProcessTask<T> build() {
       return new AsyncProcessTask<>(pool, tableName, rows, submittedRows, callback, callable,
-        needResults, rpcTimeout, operationTimeout, results);
+        needResults, rpcTimeout, operationTimeout, results, requestAttributes);
     }
   }
 
@@ -140,16 +148,18 @@ public class AsyncProcessTask<T> {
   private final int rpcTimeout;
   private final int operationTimeout;
   private final Object[] results;
+  private final Map<String, byte[]> requestAttributes;
 
   AsyncProcessTask(AsyncProcessTask<T> task) {
     this(task.getPool(), task.getTableName(), task.getRowAccess(), task.getSubmittedRows(),
       task.getCallback(), task.getCallable(), task.getNeedResults(), task.getRpcTimeout(),
-      task.getOperationTimeout(), task.getResults());
+      task.getOperationTimeout(), task.getResults(), task.getRequestAttributes());
   }
 
   AsyncProcessTask(ExecutorService pool, TableName tableName, RowAccess<? extends Row> rows,
     SubmittedRows size, Batch.Callback<T> callback, CancellableRegionServerCallable callable,
-    boolean needResults, int rpcTimeout, int operationTimeout, Object[] results) {
+    boolean needResults, int rpcTimeout, int operationTimeout, Object[] results,
+    Map<String, byte[]> requestAttributes) {
     this.pool = pool;
     this.tableName = tableName;
     this.rows = rows;
@@ -160,6 +170,7 @@ public class AsyncProcessTask<T> {
     this.rpcTimeout = rpcTimeout;
     this.operationTimeout = operationTimeout;
     this.results = results;
+    this.requestAttributes = requestAttributes;
   }
 
   public int getOperationTimeout() {
@@ -188,6 +199,10 @@ public class AsyncProcessTask<T> {
 
   CancellableRegionServerCallable getCallable() {
     return callable;
+  }
+
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
   }
 
   Object[] getResults() {

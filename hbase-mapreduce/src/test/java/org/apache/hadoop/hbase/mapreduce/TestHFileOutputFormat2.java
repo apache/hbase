@@ -1605,12 +1605,11 @@ public class TestHFileOutputFormat2 {
 
     private final Connection delegate;
 
-    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user)
-      throws IOException {
+    public ConfigurationCaptorConnection(Configuration conf, ExecutorService es, User user,
+      Map<String, byte[]> connectionAttributes) throws IOException {
       Configuration confForDelegate = new Configuration(conf);
       confForDelegate.unset(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL);
-      delegate = createConnection(confForDelegate, es, user);
-
+      delegate = createConnection(confForDelegate, es, user, connectionAttributes);
       final String uuid = conf.get(UUID_KEY);
       if (uuid != null) {
         confs.computeIfAbsent(UUID.fromString(uuid), u -> new CopyOnWriteArrayList<>()).add(conf);

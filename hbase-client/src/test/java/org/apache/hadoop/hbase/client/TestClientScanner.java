@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -108,7 +109,8 @@ public class TestClientScanner {
       throws IOException {
       super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, primaryOperationTimeout);
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, primaryOperationTimeout,
+        Collections.emptyMap());
     }
 
     @Override

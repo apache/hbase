@@ -524,7 +524,7 @@ public class TestAsyncProcess {
     final AtomicInteger nbThreads = new AtomicInteger(0);
 
     protected MyConnectionImpl(Configuration conf) throws IOException {
-      super(setupConf(conf), null, null);
+      super(setupConf(conf), null, null, Collections.emptyMap());
     }
 
     private static Configuration setupConf(Configuration conf) {

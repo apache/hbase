@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.noMoreResultsForReverseScan;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -39,9 +40,10 @@ public class ReversedClientScanner extends ClientScanner {
   public ReversedClientScanner(Configuration conf, Scan scan, TableName tableName,
     ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
     RpcControllerFactory controllerFactory, ExecutorService pool, int scanReadRpcTimeout,
-    int scannerTimeout, int primaryOperationTimeout) throws IOException {
+    int scannerTimeout, int primaryOperationTimeout, Map<String, byte[]> requestAttributes)
+    throws IOException {
     super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
-      scanReadRpcTimeout, scannerTimeout, primaryOperationTimeout);
+      scanReadRpcTimeout, scannerTimeout, primaryOperationTimeout, requestAttributes);
   }
 
   @Override
@@ -56,6 +58,6 @@ public class ReversedClientScanner extends ClientScanner {
   @Override
   protected ReversedScannerCallable createScannerCallable() {
     return new ReversedScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
-      this.rpcControllerFactory, getScanReplicaId());
+      this.rpcControllerFactory, getScanReplicaId(), requestAttributes);
   }
 }

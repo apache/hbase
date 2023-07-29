@@ -44,6 +44,7 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -191,35 +192,34 @@ public class TestHTableTracing extends TestTracingBase {
       }
     }).when(stub).get(any(HBaseRpcController.class), any(GetRequest.class));
 
-    conn =
-      spy(new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent()) {
-        @Override
-        public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-          RegionLocator locator = mock(HRegionLocator.class);
-          Answer<HRegionLocation> answer = new Answer<HRegionLocation>() {
+    conn = spy(new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent(),
+      Collections.emptyMap()) {
+      @Override
+      public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+        RegionLocator locator = mock(HRegionLocator.class);
+        Answer<HRegionLocation> answer = new Answer<HRegionLocation>() {
 
-            @Override
-            public HRegionLocation answer(InvocationOnMock invocation) throws Throwable {
-              TableName tableName = TableName.META_TABLE_NAME;
-              RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
-              ServerName serverName = MASTER_HOST;
-              HRegionLocation loc = new HRegionLocation(info, serverName);
-              return loc;
-            }
-          };
-          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt(),
-            anyBoolean());
-          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class));
-          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt());
-          doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyBoolean());
-          return locator;
-        }
+          @Override
+          public HRegionLocation answer(InvocationOnMock invocation) throws Throwable {
+            TableName tableName = TableName.META_TABLE_NAME;
+            RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
+            ServerName serverName = MASTER_HOST;
+            HRegionLocation loc = new HRegionLocation(info, serverName);
+            return loc;
+          }
+        };
+        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt(), anyBoolean());
+        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class));
+        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyInt());
+        doAnswer(answer).when(locator).getRegionLocation(any(byte[].class), anyBoolean());
+        return locator;
+      }
 
-        @Override
-        public ClientService.BlockingInterface getClient(ServerName serverName) throws IOException {
-          return stub;
-        }
-      });
+      @Override
+      public ClientService.BlockingInterface getClient(ServerName serverName) throws IOException {
+        return stub;
+      }
+    });
     // this setup of AsyncProcess is for MultiResponse
     AsyncProcess asyncProcess = mock(AsyncProcess.class);
     AsyncRequestFuture asyncRequestFuture = mock(AsyncRequestFuture.class);

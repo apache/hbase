@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem;
@@ -100,18 +101,19 @@ public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBul
       // bulk load HFiles
       final ClusterConnection conn = (ClusterConnection) UTIL.getAdmin().getConnection();
       RpcControllerFactory rpcControllerFactory = new RpcControllerFactory(UTIL.getConfiguration());
-      ClientServiceCallable<Void> callable = new ClientServiceCallable<Void>(conn, tableName,
-        Bytes.toBytes("aaa"), rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
-        @Override
-        protected Void rpcCall() throws Exception {
-          LOG.info("Non-secure old client");
-          byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          BulkLoadHFileRequest request =
-            RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName, true, null, null);
-          getStub().bulkLoadHFile(null, request);
-          return null;
-        }
-      };
+      ClientServiceCallable<Void> callable =
+        new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
+          rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
+          @Override
+          protected Void rpcCall() throws Exception {
+            LOG.info("Non-secure old client");
+            byte[] regionName = getLocation().getRegionInfo().getRegionName();
+            BulkLoadHFileRequest request =
+              RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName, true, null, null);
+            getStub().bulkLoadHFile(null, request);
+            return null;
+          }
+        };
       RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
       RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
       caller.callWithRetries(callable, Integer.MAX_VALUE);
@@ -120,7 +122,7 @@ public class TestHRegionServerBulkLoadWithOldClient extends TestHRegionServerBul
       if (numBulkLoads.get() % 5 == 0) {
         // 5 * 50 = 250 open file handles!
         callable = new ClientServiceCallable<Void>(conn, tableName, Bytes.toBytes("aaa"),
-          rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET) {
+          rpcControllerFactory.newController(), HConstants.PRIORITY_UNSET, Collections.emptyMap()) {
           @Override
           protected Void rpcCall() throws Exception {
             LOG.debug("compacting " + getLocation() + " for row " + Bytes.toStringBinary(getRow()));

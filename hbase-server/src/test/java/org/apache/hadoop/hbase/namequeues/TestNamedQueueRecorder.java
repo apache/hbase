@@ -632,6 +632,7 @@ public class TestNamedQueueRecorder {
     return getRpcCall(userName, Optional.of(forcedParamIndex));
   }
 
+  @SuppressWarnings("checkstyle:methodlength")
   private static RpcCall getRpcCall(String userName, Optional<Integer> forcedParamIndex) {
     RpcCall rpcCall = new RpcCall() {
       @Override
@@ -666,7 +667,6 @@ public class TestNamedQueueRecorder {
 
       @Override
       public void setStartTime(long startTime) {
-
       }
 
       @Override
@@ -691,6 +691,11 @@ public class TestNamedQueueRecorder {
 
       @Override
       public RPCProtos.RequestHeader getHeader() {
+        return null;
+      }
+
+      @Override
+      public RPCProtos.ConnectionHeader getConnectionHeader() {
         return null;
       }
 

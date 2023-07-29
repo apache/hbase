@@ -941,7 +941,7 @@ public class HRegionServer extends Thread
       // Setup RPC client for master communication
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId,
         new InetSocketAddress(this.rpcServices.isa.getAddress(), 0),
-        clusterConnection.getConnectionMetrics());
+        clusterConnection.getConnectionMetrics(), Collections.emptyMap());
       span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server

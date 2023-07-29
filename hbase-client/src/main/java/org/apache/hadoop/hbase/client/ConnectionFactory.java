@@ -22,6 +22,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
@@ -101,7 +103,7 @@ public class ConnectionFactory {
    */
   public static Connection createConnection() throws IOException {
     Configuration conf = HBaseConfiguration.create();
-    return createConnection(conf, null, AuthUtil.loginClient(conf));
+    return createConnection(conf, null, AuthUtil.loginClient(conf), Collections.emptyMap());
   }
 
   /**
@@ -128,7 +130,7 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf) throws IOException {
-    return createConnection(conf, null, AuthUtil.loginClient(conf));
+    return createConnection(conf, null, AuthUtil.loginClient(conf), Collections.emptyMap());
   }
 
   /**
@@ -157,7 +159,7 @@ public class ConnectionFactory {
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool)
     throws IOException {
-    return createConnection(conf, pool, AuthUtil.loginClient(conf));
+    return createConnection(conf, pool, AuthUtil.loginClient(conf), Collections.emptyMap());
   }
 
   /**
@@ -185,7 +187,7 @@ public class ConnectionFactory {
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf, User user) throws IOException {
-    return createConnection(conf, null, user);
+    return createConnection(conf, null, user, Collections.emptyMap());
   }
 
   /**
@@ -208,13 +210,14 @@ public class ConnectionFactory {
    * }
    * </pre>
    *
-   * @param conf configuration
-   * @param user the user the connection is for
-   * @param pool the thread pool to use for batch operations
+   * @param conf                 configuration
+   * @param user                 the user the connection is for
+   * @param pool                 the thread pool to use for batch operations
+   * @param connectionAttributes attributes to be sent along to server during connection establish
    * @return Connection object for <code>conf</code>
    */
   public static Connection createConnection(Configuration conf, ExecutorService pool,
-    final User user) throws IOException {
+    final User user, Map<String, byte[]> connectionAttributes) throws IOException {
     return TraceUtil.trace(() -> {
       String className = conf.get(ClusterConnection.HBASE_CLIENT_CONNECTION_IMPL,
         ConnectionImplementation.class.getName());
@@ -226,11 +229,11 @@ public class ConnectionFactory {
       }
       try {
         // Default HCM#HCI is not accessible; make it so before invoking.
-        Constructor<?> constructor =
-          clazz.getDeclaredConstructor(Configuration.class, ExecutorService.class, User.class);
+        Constructor<?> constructor = clazz.getDeclaredConstructor(Configuration.class,
+          ExecutorService.class, User.class, Map.class);
         constructor.setAccessible(true);
-        return user.runAs((PrivilegedExceptionAction<
-          Connection>) () -> (Connection) constructor.newInstance(conf, pool, user));
+        return user.runAs((PrivilegedExceptionAction<Connection>) () -> (Connection) constructor
+          .newInstance(conf, pool, user, connectionAttributes));
       } catch (Exception e) {
         throw new IOException(e);
       }
@@ -284,6 +287,27 @@ public class ConnectionFactory {
    */
   public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
     final User user) {
+    return createAsyncConnection(conf, user, null);
+  }
+
+  /**
+   * Create a new AsyncConnection instance using the passed {@code conf} and {@code user}.
+   * AsyncConnection encapsulates all housekeeping for a connection to the cluster. All tables and
+   * interfaces created from returned connection share zookeeper connection, meta cache, and
+   * connections to region servers and masters.
+   * <p>
+   * The caller is responsible for calling {@link AsyncConnection#close()} on the returned
+   * connection instance.
+   * <p>
+   * Usually you should only create one AsyncConnection instance in your code and use it everywhere
+   * as it is thread safe.
+   * @param conf                 configuration
+   * @param user                 the user the asynchronous connection is for
+   * @param connectionAttributes attributes to be sent along to server during connection establish
+   * @return AsyncConnection object wrapped by CompletableFuture
+   */
+  public static CompletableFuture<AsyncConnection> createAsyncConnection(Configuration conf,
+    final User user, Map<String, byte[]> connectionAttributes) {
     return TraceUtil.tracedFuture(() -> {
       CompletableFuture<AsyncConnection> future = new CompletableFuture<>();
       ConnectionRegistry registry = ConnectionRegistryFactory.getRegistry(conf);
@@ -303,7 +327,7 @@ public class ConnectionFactory {
         try {
           future.complete(
             user.runAs((PrivilegedExceptionAction<? extends AsyncConnection>) () -> ReflectionUtils
-              .newInstance(clazz, conf, registry, clusterId, user)));
+              .newInstance(clazz, conf, registry, clusterId, user, connectionAttributes)));
         } catch (Exception e) {
           registry.close();
           future.completeExceptionally(e);
