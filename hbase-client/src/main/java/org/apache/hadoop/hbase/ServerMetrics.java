@@ -106,4 +106,6 @@ public interface ServerMetrics {
   @Nullable
   List<ServerTask> getTasks();
 
+  /** Returns the region prefetch information for the regions hosted on this server */
+  Map<String, Integer> getRegionPrefetchInfo();
 }
