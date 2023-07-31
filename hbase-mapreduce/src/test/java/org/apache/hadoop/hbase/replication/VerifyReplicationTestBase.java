@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -99,7 +100,7 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
     htable3 = connection2.getTable(peerTableName);
   }
 
-  static void runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
+  static Counters runVerifyReplication(String[] args, int expectedGoodRows, int expectedBadRows)
     throws IOException, InterruptedException, ClassNotFoundException {
     Job job = new VerifyReplication().createSubmittableJob(new Configuration(CONF1), args);
     if (job == null) {
@@ -112,6 +113,7 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
       job.getCounters().findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
     assertEquals(expectedBadRows,
       job.getCounters().findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+    return job.getCounters();
   }
 
   /**
@@ -436,6 +438,127 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
     runVerifyReplication(args, 0, NB_ROWS_IN_BATCH);
     checkRestoreTmpDir(CONF1, tmpPath1, 2);
     checkRestoreTmpDir(CONF2, tmpPath2, 2);
+  }
+
+  @Test
+  public void testVerifyReplicationThreadedRecompares() throws Exception {
+    // Populate the tables with same data
+    runBatchCopyTest();
+
+    // ONLY_IN_PEER_TABLE_ROWS
+    Put put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH)));
+    put.addColumn(noRepfamName, row, row);
+    htable3.put(put);
+
+    // CONTENT_DIFFERENT_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH - 1)));
+    put.addColumn(noRepfamName, row, Bytes.toBytes("diff value"));
+    htable3.put(put);
+
+    // ONLY_IN_SOURCE_TABLE_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH + 1)));
+    put.addColumn(noRepfamName, row, row);
+    htable1.put(put);
+
+    String[] args = new String[] { "--recompareThreads=10", "--recompareTries=3",
+      "--recompareSleep=1", "--peerTableName=" + peerTableName.getNameAsString(),
+      getClusterKey(UTIL2), tableName.getNameAsString() };
+    Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 9);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
+      9);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
+      1);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
+      1);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue(), 1);
+  }
+
+  @Test
+  public void testFailsRemainingComparesAfterShutdown() throws Exception {
+    // Populate the tables with same data
+    runBatchCopyTest();
+
+    // ONLY_IN_PEER_TABLE_ROWS
+    Put put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH)));
+    put.addColumn(noRepfamName, row, row);
+    htable3.put(put);
+
+    // CONTENT_DIFFERENT_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH - 1)));
+    put.addColumn(noRepfamName, row, Bytes.toBytes("diff value"));
+    htable3.put(put);
+
+    // ONLY_IN_SOURCE_TABLE_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH + 1)));
+    put.addColumn(noRepfamName, row, row);
+    htable1.put(put);
+
+    /**
+     * recompareSleep is set to exceed how long we wait on
+     * {@link VerifyReplication#reCompareExecutor} termination when doing cleanup. this allows us to
+     * test the counter-incrementing logic if the executor still hasn't terminated after the call to
+     * shutdown and awaitTermination
+     */
+    String[] args = new String[] { "--recompareThreads=1", "--recompareTries=1",
+      "--recompareSleep=121000", "--peerTableName=" + peerTableName.getNameAsString(),
+      getClusterKey(UTIL2), tableName.getNameAsString() };
+
+    Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 3);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
+      3);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
+      1);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
+      1);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue(), 1);
+  }
+
+  @Test
+  public void testVerifyReplicationSynchronousRecompares() throws Exception {
+    // Populate the tables with same data
+    runBatchCopyTest();
+
+    // ONLY_IN_PEER_TABLE_ROWS
+    Put put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH)));
+    put.addColumn(noRepfamName, row, row);
+    htable3.put(put);
+
+    // CONTENT_DIFFERENT_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH - 1)));
+    put.addColumn(noRepfamName, row, Bytes.toBytes("diff value"));
+    htable3.put(put);
+
+    // ONLY_IN_SOURCE_TABLE_ROWS
+    put = new Put(Bytes.toBytes(Integer.toString(NB_ROWS_IN_BATCH + 1)));
+    put.addColumn(noRepfamName, row, row);
+    htable1.put(put);
+
+    String[] args = new String[] { "--recompareTries=3", "--recompareSleep=1",
+      "--peerTableName=" + peerTableName.getNameAsString(), getClusterKey(UTIL2),
+      tableName.getNameAsString() };
+    Counters counters = runVerifyReplication(args, NB_ROWS_IN_BATCH - 1, 3);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.FAILED_RECOMPARE).getValue(), 9);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.RECOMPARES).getValue(),
+      9);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_PEER_TABLE_ROWS).getValue(),
+      1);
+    assertEquals(
+      counters.findCounter(VerifyReplication.Verifier.Counters.CONTENT_DIFFERENT_ROWS).getValue(),
+      1);
+    assertEquals(counters.findCounter(VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS)
+      .getValue(), 1);
   }
 
   @AfterClass
