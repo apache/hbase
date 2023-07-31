@@ -52,6 +52,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import org.apache.commons.io.FileUtils;
@@ -2907,6 +2908,25 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
   }
 
   /**
+   * Waits for all the regions of a table to be prefetched fully
+   * @param table Table to be wait on.
+   */
+  public void waitForAtleastOneRegionToBePrefetchedOnServer(TableName table, ServerName serverName,
+    long millisTimeout) throws InterruptedException, IOException {
+    waitFor(millisTimeout, predicateAtLeastOneRegionIsPrefetchedOnServer(table, serverName));
+  }
+
+  public void waitForAllRegionsForTableToBePrefetched(TableName table, long millisTimeout)
+    throws InterruptedException, IOException {
+    waitFor(millisTimeout, predicateAllRegionsForTableArePrefetched(table));
+  }
+
+  public void waitForMajorityRegionsForTableToBePrefetched(TableName table, long millisTimeout)
+    throws InterruptedException, IOException {
+    waitFor(millisTimeout, predicateMajorityRegionsArePrefetched(table));
+  }
+
+  /**
    * Make sure that at least the specified number of region servers are running. We don't count the
    * ones that are currently stopping or are stopped.
    * @param num minimum number of region servers that should be running
@@ -3638,6 +3658,110 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
           }
         }
         return tableAvailable;
+      }
+    };
+  }
+
+  /**
+   * Returns a {@Link Predicate} for checking that all the regions for a table are prefetched
+   */
+  public Waiter.Predicate<IOException>
+    predicateAllRegionsForTableArePrefetched(final TableName tableName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return "Not all the regions for the table " + tableName.getNameAsString()
+          + " are prefetched";
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        List<HRegion> regions = getMiniHBaseCluster().getRegions(tableName);
+        int totalRegionCount = regions.size();
+        AtomicInteger prefetchedRegionCount = new AtomicInteger();
+        for (HRegion r : regions) {
+          getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().forEach((sn, sm) -> {
+            sm.getRegionMetrics().forEach((rn, rm) -> {
+              String regionNameAsString = r.getRegionInfo().getRegionNameAsString();
+              String regionString = rm.getNameAsString();
+              if (regionNameAsString.equals(regionString)) {
+                if (rm.getCurrentRegionCachedRatio() == 1.0f) {
+                  prefetchedRegionCount.getAndIncrement();
+                }
+              }
+            });
+          });
+        }
+        return getAdmin().tableExists(tableName) && totalRegionCount == prefetchedRegionCount.get();
+      }
+    };
+  }
+
+  /**
+   * Returns a {@Link Predicate} for checking that at least one region for the table is prefetched
+   */
+  public Waiter.Predicate<IOException> predicateAtLeastOneRegionIsPrefetchedOnServer(
+    final TableName tableName, final ServerName serverName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return "No Regions for table " + tableName.getNameAsString() + " prefetched on server "
+          + serverName.getAddress();
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        List<HRegion> regions = getMiniHBaseCluster().getRegions(tableName);
+        AtomicInteger prefetchedRegionCount = new AtomicInteger();
+        ServerMetrics sm =
+          getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().get(serverName);
+        for (HRegion r : regions) {
+          sm.getRegionMetrics().forEach((rn, rm) -> {
+            if (
+              r.getRegionInfo().getRegionNameAsString().equals(rm.getNameAsString())
+                && rm.getCurrentRegionCachedRatio() == 1.0f
+            ) {
+              prefetchedRegionCount.getAndIncrement();
+            }
+          });
+        }
+        return getAdmin().tableExists(tableName) && prefetchedRegionCount.get() > 0;
+      }
+    };
+  }
+
+  /**
+   * Returns a {@Link Predicate} for checking that more than half of the regions for the table are
+   * prefetched
+   */
+  public Waiter.Predicate<IOException>
+    predicateMajorityRegionsArePrefetched(final TableName tableName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return "No Regions for table " + tableName.getNameAsString() + " prefetched";
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        List<HRegion> regions = getMiniHBaseCluster().getRegions(tableName);
+        int totalRegionCount = regions.size();
+        AtomicInteger prefetchedRegionCount = new AtomicInteger();
+        for (HRegion r : regions) {
+          getMiniHBaseCluster().getClusterMetrics().getLiveServerMetrics().forEach((sn, sm) -> {
+            sm.getRegionMetrics().forEach((rn, rm) -> {
+              String regionNameAsString = r.getRegionInfo().getRegionNameAsString();
+              String regionString = rm.getNameAsString();
+              if (regionNameAsString.equals(regionString)) {
+                if (rm.getCurrentRegionCachedRatio() == 1.0f) {
+                  prefetchedRegionCount.getAndIncrement();
+                }
+              }
+            });
+          });
+        }
+        return getAdmin().tableExists(tableName)
+          && (float) prefetchedRegionCount.get() / totalRegionCount > 0.5f;
       }
     };
   }

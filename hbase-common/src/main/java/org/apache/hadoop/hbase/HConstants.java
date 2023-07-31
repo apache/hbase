@@ -1336,6 +1336,11 @@ public final class HConstants {
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
   /**
+   * Prefetch persistence path key
+   */
+  public static final String PREFETCH_PERSISTENCE_PATH_KEY = "hbase.prefetch.file.list.path";
+
+  /**
    * HConstants for fast fail on the client side follow
    */
   /**
