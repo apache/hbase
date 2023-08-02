@@ -56,8 +56,16 @@ public final class PrefetchExecutor {
   private static final Map<Path, Future<?>> prefetchFutures = new ConcurrentSkipListMap<>();
   /** Set of files for which prefetch is completed */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_SHOULD_BE_FINAL")
-  private static ConcurrentHashMap<String, Long> regionPrefetchSizeMap = new ConcurrentHashMap<>();
-  private static HashMap<String, Map<String, Long>> prefetchCompleted = new HashMap<>();
+  /**
+   * Map of region -> total size of the region prefetched on this region server.
+   * This is the total size of hFiles for this region prefetched on this region server
+   */
+  private static Map<String, Long> regionPrefetchSizeMap = new ConcurrentHashMap<>();
+  /**
+   * Map of hFile -> Region -> File size.
+   * This map is used by the prefetch executor while caching or evicting individual hFiles.
+   */
+  private static Map<String, Map<String, Long>> prefetchCompleted = new HashMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
@@ -131,9 +139,7 @@ public final class PrefetchExecutor {
         prefetchCompleted.get(hFileName).entrySet().iterator().next();
       String regionEncodedName = regionEntry.getKey();
       long filePrefetchedSize = regionEntry.getValue();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removing file {} for region {}", hFileName, regionEncodedName);
-      }
+      LOG.debug("Removing file {} for region {}", hFileName, regionEncodedName);
       regionPrefetchSizeMap.computeIfPresent(regionEncodedName,
         (rn, pf) -> pf - filePrefetchedSize);
       // If all the blocks for a region are evicted from the cache, remove the entry for that region
@@ -212,9 +218,7 @@ public final class PrefetchExecutor {
 
   private static void updateRegionSizeMapWhileRetrievingFromFile() {
     // Update the regionPrefetchedSizeMap with the region size while restarting the region server
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Updating region size map after retrieving prefetch file list");
-    }
+    LOG.debug("Updating region size map after retrieving prefetch file list");
     prefetchCompleted.forEach((hFileName, hFileSize) -> {
       // Get the region name for each file
       Map.Entry<String, Long> regionEntry = hFileSize.entrySet().iterator().next();
