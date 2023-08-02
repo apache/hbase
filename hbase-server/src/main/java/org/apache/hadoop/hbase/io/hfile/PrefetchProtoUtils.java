@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hbase.util.Pair;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.PersistentPrefetchProtos;
 
@@ -26,8 +28,26 @@ final class PrefetchProtoUtils {
   }
 
   static PersistentPrefetchProtos.PrefetchedHfileName
-    toPB(Map<String, Boolean> prefetchedHfileNames) {
-    return PersistentPrefetchProtos.PrefetchedHfileName.newBuilder()
-      .putAllPrefetchedFiles(prefetchedHfileNames).build();
+    toPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    Map<String, PersistentPrefetchProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
+    prefetchedHfileNames.forEach((hFileName, regionPrefetchMap) -> {
+      PersistentPrefetchProtos.RegionFileSizeMap tmpRegionFileSize =
+        PersistentPrefetchProtos.RegionFileSizeMap.newBuilder()
+          .setRegionName(regionPrefetchMap.getFirst())
+          .setRegionPrefetchSize(regionPrefetchMap.getSecond()).build();
+      tmpMap.put(hFileName, tmpRegionFileSize);
+    });
+    return PersistentPrefetchProtos.PrefetchedHfileName.newBuilder().putAllPrefetchedFiles(tmpMap)
+      .build();
+  }
+
+  static Map<String, Pair<String, Long>>
+    fromPB(Map<String, PersistentPrefetchProtos.RegionFileSizeMap> prefetchHFileNames) {
+    Map<String, Pair<String, Long>> hFileMap = new HashMap<>();
+    prefetchHFileNames.forEach((hFileName, regionPrefetchMap) -> {
+      hFileMap.put(hFileName,
+        new Pair<>(regionPrefetchMap.getRegionName(), regionPrefetchMap.getRegionPrefetchSize()));
+    });
+    return hFileMap;
   }
 }
