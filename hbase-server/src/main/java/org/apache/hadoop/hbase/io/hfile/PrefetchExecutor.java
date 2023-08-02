@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -257,7 +258,7 @@ public final class PrefetchExecutor {
   }
 
   public static Map<String, Long> getRegionPrefetchInfo() {
-    return regionPrefetchSizeMap;
+    return Collections.unmodifiableMap(regionPrefetchSizeMap);
   }
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
