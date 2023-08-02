@@ -31,5 +31,6 @@ message PrefetchedHfileName {
 }
 
 message RegionFileSizeMap {
-  map<string, uint64> region_file_size = 1;
+  required string region_name = 1;
+  required uint64 region_prefetch_size = 2;
 }

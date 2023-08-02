@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,15 +58,15 @@ public final class PrefetchExecutor {
   /** Set of files for which prefetch is completed */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_SHOULD_BE_FINAL")
   /**
-   * Map of region -> total size of the region prefetched on this region server.
-   * This is the total size of hFiles for this region prefetched on this region server
+   * Map of region -> total size of the region prefetched on this region server. This is the total
+   * size of hFiles for this region prefetched on this region server
    */
   private static Map<String, Long> regionPrefetchSizeMap = new ConcurrentHashMap<>();
   /**
-   * Map of hFile -> Region -> File size.
-   * This map is used by the prefetch executor while caching or evicting individual hFiles.
+   * Map of hFile -> Region -> File size. This map is used by the prefetch executor while caching or
+   * evicting individual hFiles.
    */
-  private static Map<String, Map<String, Long>> prefetchCompleted = new HashMap<>();
+  private static Map<String, Pair<String, Long>> prefetchCompleted = new HashMap<>();
   /** Executor pool shared among all HFiles for block prefetch */
   private static final ScheduledExecutorService prefetchExecutorPool;
   /** Delay before beginning prefetch */
@@ -135,10 +136,9 @@ public final class PrefetchExecutor {
   private static void removeFileFromPrefetch(String hFileName) {
     // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
     if (prefetchCompleted.containsKey(hFileName)) {
-      Map.Entry<String, Long> regionEntry =
-        prefetchCompleted.get(hFileName).entrySet().iterator().next();
-      String regionEncodedName = regionEntry.getKey();
-      long filePrefetchedSize = regionEntry.getValue();
+      Pair<String, Long> regionEntry = prefetchCompleted.get(hFileName);
+      String regionEncodedName = regionEntry.getFirst();
+      long filePrefetchedSize = regionEntry.getSecond();
       LOG.debug("Removing file {} for region {}", hFileName, regionEncodedName);
       regionPrefetchSizeMap.computeIfPresent(regionEncodedName,
         (rn, pf) -> pf - filePrefetchedSize);
@@ -155,9 +155,7 @@ public final class PrefetchExecutor {
 
   public static void complete(final String regionName, Path path, long size) {
     prefetchFutures.remove(path);
-    Map<String, Long> tmpMap = new HashMap<>();
-    tmpMap.put(regionName, size);
-    prefetchCompleted.put(path.getName(), tmpMap);
+    prefetchCompleted.put(path.getName(), new Pair<>(regionName, size));
     regionPrefetchSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
     LOG.debug("Prefetch completed for {}", path.getName());
   }
@@ -221,9 +219,8 @@ public final class PrefetchExecutor {
     LOG.debug("Updating region size map after retrieving prefetch file list");
     prefetchCompleted.forEach((hFileName, hFileSize) -> {
       // Get the region name for each file
-      Map.Entry<String, Long> regionEntry = hFileSize.entrySet().iterator().next();
-      String regionEncodedName = regionEntry.getKey();
-      long filePrefetchSize = regionEntry.getValue();
+      String regionEncodedName = hFileSize.getFirst();
+      long filePrefetchSize = hFileSize.getSecond();
       regionPrefetchSizeMap.merge(regionEncodedName, filePrefetchSize,
         (oldpf, fileSize) -> oldpf + fileSize);
     });
