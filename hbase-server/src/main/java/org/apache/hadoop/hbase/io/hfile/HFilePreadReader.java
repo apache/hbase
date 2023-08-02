@@ -137,6 +137,15 @@ public class HFilePreadReader extends HFileReaderImpl {
     }
   }
 
+  /*
+   * Get the region name for the given file path. A HFile is always kept under the <region>/<column
+   * family>/<hfile>. To find the region for a given hFile, just find the name of the grandparent
+   * directory.
+   */
+  private static String getRegionName(Path path) {
+    return path.getParent().getParent().getName();
+  }
+
   private static String getPathOffsetEndStr(final Path path, final long offset, final long end) {
     return "path=" + path.toString() + ", offset=" + offset + ", end=" + end;
   }
