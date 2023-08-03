@@ -100,9 +100,9 @@ final class BucketProtoUtils {
 
   private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
-      .setCachedTime(entry.getCachedTime())
-      .setLength(entry.getLength()).setDeserialiserIndex(entry.deserializerIndex)
-      .setAccessCounter(entry.getAccessCounter()).setPriority(toPB(entry.getPriority())).build();
+      .setCachedTime(entry.getCachedTime()).setLength(entry.getLength())
+      .setDeserialiserIndex(entry.deserializerIndex).setAccessCounter(entry.getAccessCounter())
+      .setPriority(toPB(entry.getPriority())).build();
   }
 
   private static BucketCacheProtos.BlockPriority toPB(BlockPriority p) {

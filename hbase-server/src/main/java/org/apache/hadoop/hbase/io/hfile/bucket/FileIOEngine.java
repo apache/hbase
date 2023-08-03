@@ -153,8 +153,8 @@ public class FileIOEngine extends PersistentIOEngine {
       long cachedNanoTime = dstBuff.getLong();
       if (be.getCachedTime() != cachedNanoTime) {
         dstBuff.release();
-        throw new HBaseIOException("The cached time recorded within the cached block differs " +
-          "from its bucket entry, so it might not be the same.");
+        throw new HBaseIOException("The cached time recorded within the cached block differs "
+          + "from its bucket entry, so it might not be the same.");
       }
       dstBuff.rewind();
       dstBuff.limit(length - Long.BYTES);
@@ -179,8 +179,8 @@ public class FileIOEngine extends PersistentIOEngine {
     long cachedNanoTime = dstBuff.getLong();
     if (be.getCachedTime() != cachedNanoTime) {
       dstBuff.release();
-      throw new HBaseIOException("The cached time recorded within the cached block differs " +
-        "from its bucket entry, so it might not be the same.");
+      throw new HBaseIOException("The cached time recorded within the cached block differs "
+        + "from its bucket entry, so it might not be the same.");
     }
   }
 

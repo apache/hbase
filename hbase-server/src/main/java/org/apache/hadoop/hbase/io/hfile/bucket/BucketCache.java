@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -66,7 +67,6 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hbase.thirdparty.com.google.protobuf.compiler.PluginProtos;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -319,7 +318,7 @@ public class BucketCache implements BlockCache, HeapSize {
     this.backingMap = new ConcurrentHashMap<>((int) blockNumCapacity);
 
     if (isCachePersistent()) {
-      if(ioEngine instanceof FileIOEngine) {
+      if (ioEngine instanceof FileIOEngine) {
         startBucketCachePersisterThread();
       }
       try {
@@ -379,8 +378,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   void startBucketCachePersisterThread() {
-    cachePersister =
-      new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
     cachePersister.setDaemon(true);
     cachePersister.start();
   }
@@ -505,9 +503,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
     LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
-    RAMQueueEntry re =
-      new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(), inMemory,
-        isCachePersistent() && ioEngine instanceof FileIOEngine);
+    RAMQueueEntry re = new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(),
+      inMemory, isCachePersistent() && ioEngine instanceof FileIOEngine);
     /**
      * Don't use ramCache.put(cacheKey, re) here. because there may be a existing entry with same
      * key in ramCache, the heap size of bucket cache need to update if replacing entry from
@@ -592,7 +589,7 @@ public class BucketCache implements BlockCache, HeapSize {
           return cachedBlock;
         }
       } catch (HBaseIOException hioex) {
-        //When using file io engine persistent cache,
+        // When using file io engine persistent cache,
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
         backingMap.remove(key);
@@ -1261,9 +1258,8 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
-  void
-  persistToFile() throws IOException {
-    if(!isCachePersistent()) {
+  void persistToFile() throws IOException {
+    if (!isCachePersistent()) {
       throw new IOException("Attempt to persist non-persistent cache mappings!");
     }
     File tempPersistencePath = new File(persistencePath + EnvironmentEdgeManager.currentTime());
@@ -1352,7 +1348,7 @@ public class BucketCache implements BlockCache, HeapSize {
     }.init(file);
   }
 
-  private void  verifyCapacityAndClasses(long capacitySize, String ioclass, String mapclass)
+  private void verifyCapacityAndClasses(long capacitySize, String ioclass, String mapclass)
     throws IOException {
     if (capacitySize != cacheCapacity) {
       throw new IOException("Mismatched cache capacity:" + StringUtils.byteDesc(capacitySize)
@@ -1382,9 +1378,9 @@ public class BucketCache implements BlockCache, HeapSize {
           + "We need to validate each cache key in the backing map. This may take some time...");
         long startTime = EnvironmentEdgeManager.currentTime();
         int totalKeysOriginally = backingMap.size();
-        for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()){
+        for (Map.Entry<BlockCacheKey, BucketEntry> keyEntry : backingMap.entrySet()) {
           try {
-            ((FileIOEngine)ioEngine).checkCacheTime(keyEntry.getValue());
+            ((FileIOEngine) ioEngine).checkCacheTime(keyEntry.getValue());
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Removing it from map.", keyEntry.getKey());
             backingMap.remove(keyEntry.getKey());
@@ -1449,7 +1445,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
       + persistencePath);
     if (ioEngine.isPersistent() && persistencePath != null) {
-      if(cachePersister != null) {
+      if (cachePersister != null) {
         cachePersister.interrupt();
       }
       try {
@@ -1593,7 +1589,7 @@ public class BucketCache implements BlockCache, HeapSize {
     private boolean isCachePersistent;
 
     RAMQueueEntry(BlockCacheKey bck, Cacheable data, long accessCounter, boolean inMemory,
-        boolean isCachePersistent) {
+      boolean isCachePersistent) {
       this.key = bck;
       this.data = data;
       this.accessCounter = accessCounter;
@@ -1629,7 +1625,8 @@ public class BucketCache implements BlockCache, HeapSize {
         return null;
       }
       if (isCachePersistent && data instanceof HFileBlock) {
-        len += Long.BYTES; //we need to record the cache time for consistency check in case of recovery
+        len += Long.BYTES; // we need to record the cache time for consistency check in case of
+                           // recovery
       }
       long offset = alloc.allocateBlock(len);
       boolean succ = false;
@@ -1644,7 +1641,7 @@ public class BucketCache implements BlockCache, HeapSize {
           ByteBuff sliceBuf = block.getBufferReadOnly();
           block.getMetaData(metaBuff);
           ioEngine.write(sliceBuf, offset);
-          //adds the cache time after the block and metadata part
+          // adds the cache time after the block and metadata part
           if (isCachePersistent) {
             ioEngine.write(metaBuff, offset + len - metaBuff.limit() - Long.BYTES);
             ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);

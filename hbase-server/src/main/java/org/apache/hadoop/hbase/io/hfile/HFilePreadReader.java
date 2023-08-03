@@ -78,7 +78,7 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
-            cacheConf.getBlockCache().ifPresent( bc -> {
+            cacheConf.getBlockCache().ifPresent(bc -> {
               if (bc instanceof BucketCache) {
                 ((BucketCache) bc).fileCacheCompleted(path.getName());
               }

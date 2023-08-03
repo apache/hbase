@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
 public final class PrefetchExecutor {
 
@@ -125,6 +126,7 @@ public final class PrefetchExecutor {
     }
     return true;
   }
+
   private PrefetchExecutor() {
   }
 }

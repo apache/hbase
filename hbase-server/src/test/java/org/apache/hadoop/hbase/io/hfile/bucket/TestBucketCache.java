@@ -331,7 +331,8 @@ public class TestBucketCache {
 
   private void testRetrievalUtils(Path testDir, String ioEngineName)
     throws IOException, InterruptedException {
-    final String persistencePath = testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
+    final String persistencePath =
+      testDir + "/bucket.persistence" + EnvironmentEdgeManager.currentTime();
     BucketCache bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
       constructedBlockSizes, writeThreads, writerQLen, persistencePath);
     try {
