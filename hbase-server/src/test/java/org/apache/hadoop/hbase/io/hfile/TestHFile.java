@@ -1019,6 +1019,15 @@ public class TestHFile {
     testReaderCombinedCache("LRU");
   }
 
+  /**
+   * HBASE-27995
+   */
+  @Test
+  public void testReaderWithAdaptiveLruCombinedBlockCacheWithHardCapacityLimit() throws Exception {
+    conf.setDouble(LruAdaptiveBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME, -0.4921875);
+    testReaderWithAdaptiveLruCombinedBlockCache();
+  }
+
   private void testReaderCombinedCache(final String l1CachePolicy) throws Exception {
     int bufCount = 1024;
     int blockSize = 64 * 1024;
@@ -1049,7 +1058,9 @@ public class TestHFile {
           Assert.assertFalse(hfb.isSharedMem());
         }
       } finally {
-        cachedBlock.release();
+        if (null != cachedBlock) {
+          cachedBlock.release();
+        }
       }
       block.release(); // return back the ByteBuffer back to allocator.
     }
