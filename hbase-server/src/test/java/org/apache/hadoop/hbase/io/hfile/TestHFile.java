@@ -1020,7 +1020,7 @@ public class TestHFile {
   }
 
   /**
-   * HBASE-27995
+   * Tet case for HBASE-27995
    */
   @Test
   public void testReaderWithAdaptiveLruCombinedBlockCacheWithHardCapacityLimit() throws Exception {
