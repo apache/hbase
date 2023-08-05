@@ -528,7 +528,6 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-<<<<<<< HEAD
   public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
     return null;
   }
