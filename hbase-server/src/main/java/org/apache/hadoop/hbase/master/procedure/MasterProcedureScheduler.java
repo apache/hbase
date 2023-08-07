@@ -646,7 +646,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (hasNoLockNeededProcedure(queue)) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("DO NOT remove {} from run queue because there are still procedures that do "
-              + "not need to acquire locks in the queue", queue);
+            + "not need to acquire locks in the queue", queue);
         }
       } else {
         removeFromRunQueue(tableRunQueue, queue, () -> procedure + " held the exclusive lock");
@@ -966,8 +966,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         // In tests we may pass procedures other than ServerProcedureInterface, just pass null if
         // so.
         ServerQueue queue = getServerQueue(serverName,
-            procedure instanceof ServerProcedureInterface
-              ? (ServerProcedureInterface) procedure
+          procedure instanceof ServerProcedureInterface
+            ? (ServerProcedureInterface) procedure
             : null);
         if (hasNoLockNeededProcedure(queue)) {
           if (LOG.isTraceEnabled()) {

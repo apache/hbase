@@ -273,10 +273,10 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure<TE
   }
 
   /**
-   *  If the procedure does not require any lock protection during execution, you can declare
-   *  that the procedure does not require locks through the following method, which will help
-   *  speed up the scheduling of the procedure. It's a little dangerous to override this method,
-   *  do not change its behavior unless you know what you are doing. See HBASE-27905 for details.
+   * If the procedure does not require any lock protection during execution, you can declare that
+   * the procedure does not require locks through the following method, which will help speed up the
+   * scheduling of the procedure. It's a little dangerous to override this method, do not change its
+   * behavior unless you know what you are doing. See HBASE-27905 for details.
    * @return true if procedure requires lock protection during execution, otherwise false
    */
   public boolean needLock() {
