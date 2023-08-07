@@ -1015,9 +1015,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
 
   public void logStats() {
     // Log size
-    long totalSize = heapSize();
-    long freeSize = maxSize - totalSize;
-    LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " + "freeSize="
+    long usedSize = heapSize();
+    long freeSize = maxSize - usedSize;
+    LruBlockCache.LOG.info("usedSize=" + StringUtils.byteDesc(usedSize) + ", " + "freeSize="
       + StringUtils.byteDesc(freeSize) + ", " + "max=" + StringUtils.byteDesc(this.maxSize) + ", "
       + "blockCount=" + getBlockCount() + ", " + "accesses=" + stats.getRequestCount() + ", "
       + "hits=" + stats.getHitCount() + ", " + "hitRatio="
