@@ -284,7 +284,7 @@
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
-          <version>3.6.2.Final</version>
+          <version>3.9.8.Final</version>
           <scope>test</scope>
         </dependency>
         <dependency>
