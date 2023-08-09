@@ -779,6 +779,30 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Find length of common prefix in two arrays.
+   * @param left        ByteBuffer to be compared.
+   * @param leftOffset  Offset in left ByteBuffer.
+   * @param leftLength  Length of left ByteBuffer.
+   * @param right       Array to be compared
+   * @param rightOffset Offset in right Array.
+   * @param rightLength Length of right Array.
+   */
+  public static int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
+    int rightOffset, int rightLength) {
+    int length = Math.min(leftLength, rightLength);
+    int result = 0;
+
+    while (
+      result < length
+        && ByteBufferUtils.toByte(left, leftOffset + result) == right[rightOffset + result]
+    ) {
+      result++;
+    }
+
+    return result;
+  }
+
+  /**
    * Check whether two parts in the same buffer are equal.
    * @param buffer      In which buffer there are parts
    * @param offsetLeft  Beginning of first part.
