@@ -1459,6 +1459,17 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  /**
+   * Needed mostly for UTs that might run in the same VM and create different BucketCache instances
+   * on different UT methods.
+   */
+  @Override
+  public void finalize() {
+    if (cachePersister != null) {
+      cachePersister.interrupt();
+    }
+  }
+
   @Override
   public CacheStats getStats() {
     return cacheStats;
