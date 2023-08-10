@@ -1267,7 +1267,10 @@ public class BucketCache implements BlockCache, HeapSize {
       fos.write(ProtobufMagic.PB_MAGIC);
       BucketProtoUtils.toPB(this).writeDelimitedTo(fos);
     }
-    tempPersistencePath.renameTo(new File(persistencePath));
+    if (!tempPersistencePath.renameTo(new File(persistencePath))) {
+      LOG.warn("Failed to commit cache persistent file. We might lose cached blocks if "
+        + "RS crashes/restarts before we successfully checkpoint again.");
+    }
   }
 
   private boolean isCachePersistent() {
