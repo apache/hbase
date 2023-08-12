@@ -87,11 +87,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
 @InterfaceAudience.Private
-abstract class ServerRpcConnection implements Closeable {
+abstract class ServerRpcConnection<T extends RpcServer> implements Closeable {
 
   private static final TextMapGetter<RPCTInfo> getter = new RPCTInfoGetter();
 
-  protected final RpcServer rpcServer;
+  protected final T rpcServer;
   // If the connection header has been read or not.
   protected boolean connectionHeaderRead = false;
 
@@ -128,7 +128,7 @@ abstract class ServerRpcConnection implements Closeable {
   protected UserGroupInformation ugi = null;
   protected SaslServerAuthenticationProviders saslProviders = null;
 
-  public ServerRpcConnection(RpcServer rpcServer) {
+  public ServerRpcConnection(T rpcServer) {
     this.rpcServer = rpcServer;
     this.callCleanup = null;
     this.saslProviders = SaslServerAuthenticationProviders.getInstance(rpcServer.getConf());

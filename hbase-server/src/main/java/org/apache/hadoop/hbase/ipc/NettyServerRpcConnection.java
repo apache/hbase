@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
+import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -33,6 +34,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescrip
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.util.AttributeKey;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -41,13 +44,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-class NettyServerRpcConnection extends ServerRpcConnection {
+class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
 
+  private static final AttributeKey<NettyServerRpcConnection> ATTR =
+    AttributeKey.newInstance("connection");
   final Channel channel;
+  private volatile boolean aborted = false;
+  private boolean writable = true;
+  private long unwritableStartTime;
 
   NettyServerRpcConnection(NettyRpcServer rpcServer, Channel channel) {
     super(rpcServer);
     this.channel = channel;
+    channel.attr(ATTR).set(this);
     rpcServer.allChannels.add(channel);
     NettyRpcServer.LOG.trace("Connection {}; # active connections={}", channel.remoteAddress(),
       rpcServer.allChannels.size() - 1);
@@ -67,6 +76,10 @@ class NettyServerRpcConnection extends ServerRpcConnection {
       this.hostAddress = inetSocketAddress.getAddress().getHostAddress();
     }
     this.remotePort = inetSocketAddress.getPort();
+  }
+
+  static NettyServerRpcConnection get(Channel channel) {
+    return channel.attr(ATTR).get();
   }
 
   void setupHandler() {
@@ -95,6 +108,51 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     }
   }
 
+  /**
+   * Sets the writable state on the connection, and tracks metrics around time spent unwritable.
+   * When unwritable, we setAutoRead(false) so that the server does not read any more bytes from the
+   * client until it's able to flush some outbound bytes first.
+   */
+  void setWritable(boolean newWritableValue) {
+    assert channel.eventLoop().inEventLoop();
+
+    if (!rpcServer.isWriteBufferWaterMarkEnabled()) {
+      return;
+    }
+
+    boolean oldWritableValue = this.writable;
+    this.writable = newWritableValue;
+    channel.config().setAutoRead(newWritableValue);
+
+    if (!oldWritableValue && newWritableValue) {
+      // changing from not writable to writable, update metrics
+      rpcServer.getMetrics()
+        .unwritableTime(EnvironmentEdgeManager.currentTime() - unwritableStartTime);
+      unwritableStartTime = 0;
+    } else if (oldWritableValue && !newWritableValue) {
+      // changing from writable to non-writable, set start time
+      unwritableStartTime = EnvironmentEdgeManager.currentTime();
+    }
+  }
+
+  /**
+   * Immediately and forcibly closes the connection. To be used only from the event loop and only in
+   * cases where a more graceful close is not possible.
+   */
+  void abort() {
+    assert channel.eventLoop().inEventLoop();
+    if (aborted) {
+      return;
+    }
+
+    // We need to forcefully abort, because otherwise memory will continue to build up
+    // while graceful close is executed (dependent on handlers). Especially true
+    // when SslHandler is enabled, as it prefers to send a close_notify to the client first.
+    channel.config().setOption(ChannelOption.SO_LINGER, 0);
+    NettyUnsafeUtils.closeDirect(channel);
+    aborted = true;
+  }
+
   @Override
   public synchronized void close() {
     channel.close();
@@ -102,7 +160,7 @@ class NettyServerRpcConnection extends ServerRpcConnection {
 
   @Override
   public boolean isConnectionOpen() {
-    return channel.isOpen();
+    return channel.isOpen() && !aborted;
   }
 
   @Override
@@ -118,4 +176,5 @@ class NettyServerRpcConnection extends ServerRpcConnection {
   protected void doRespond(RpcResponse resp) {
     NettyFutureUtils.safeWriteAndFlush(channel, resp);
   }
+
 }

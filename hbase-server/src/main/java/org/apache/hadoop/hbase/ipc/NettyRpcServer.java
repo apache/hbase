@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
+import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -53,6 +55,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPipeline;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.ServerChannel;
+import org.apache.hbase.thirdparty.io.netty.channel.WriteBufferWaterMark;
 import org.apache.hbase.thirdparty.io.netty.channel.group.ChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.group.DefaultChannelGroup;
 import org.apache.hbase.thirdparty.io.netty.handler.codec.FixedLengthFrameDecoder;
@@ -84,6 +87,38 @@ public class NettyRpcServer extends RpcServer {
   static final String UNPOOLED_ALLOCATOR_TYPE = "unpooled";
   static final String HEAP_ALLOCATOR_TYPE = "heap";
 
+  /**
+   * Low watermark for pending outbound bytes of a single netty channel. If the high watermark was
+   * exceeded, channel will have setAutoRead to true again. The server will start reading incoming
+   * bytes (requests) from the client channel.
+   */
+  private static final String CHANNEL_WRITABLE_LOW_WATERMARK_KEY =
+    "hbase.server.netty.writable.watermark.low";
+  private static final int CHANNEL_WRITABLE_LOW_WATERMARK_DEFAULT = 0;
+
+  /**
+   * High watermark for pending outbound bytes of a single netty channel. If the number of pending
+   * outbound bytes exceeds this threshold, setAutoRead will be false for the channel. The server
+   * will stop reading incoming requests from the client channel.
+   * <p>
+   * Note: any requests already in the call queue will still be processed.
+   */
+  private static final String CHANNEL_WRITABLE_HIGH_WATERMARK_KEY =
+    "hbase.server.netty.writable.watermark.high";
+  private static final int CHANNEL_WRITABLE_HIGH_WATERMARK_DEFAULT = 0;
+
+  /**
+   * Fatal watermark for pending outbound bytes of a single netty channel. If the number of pending
+   * outbound bytes exceeds this threshold, the connection will be forcibly closed so that memory
+   * can be reclaimed. The client will have to re-establish a new connection and retry any in-flight
+   * requests.
+   * <p>
+   * Note: must be higher than the high watermark, otherwise it's ignored.
+   */
+  private static final String CHANNEL_WRITABLE_FATAL_WATERMARK_KEY =
+    "hbase.server.netty.writable.watermark.fatal";
+  private static final int CHANNEL_WRITABLE_FATAL_WATERMARK_DEFAULT = 0;
+
   private final InetSocketAddress bindAddress;
 
   private final CountDownLatch closed = new CountDownLatch(1);
@@ -93,6 +128,10 @@ public class NettyRpcServer extends RpcServer {
   private final AtomicReference<SslContext> sslContextForServer = new AtomicReference<>();
   private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
   private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
+
+  private final ServerBootstrap bootstrap;
+  private volatile int writeBufferFatalThreshold;
+  private volatile WriteBufferWaterMark writeBufferWaterMark;
 
   public NettyRpcServer(Server server, String name, List<BlockingServiceAndInterface> services,
     InetSocketAddress bindAddress, Configuration conf, RpcScheduler scheduler,
@@ -108,15 +147,20 @@ public class NettyRpcServer extends RpcServer {
     if (config == null) {
       config = new NettyEventLoopGroupConfig(conf, "NettyRpcServer");
     }
+
+    // call before creating bootstrap below so that the necessary configs can be set
+    configureNettyWatermarks(conf);
+
     EventLoopGroup eventLoopGroup = config.group();
     Class<? extends ServerChannel> channelClass = config.serverChannelClass();
-    ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
+    bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
       .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
       .childOption(ChannelOption.SO_REUSEADDR, true)
       .childHandler(new ChannelInitializer<Channel>() {
         @Override
         protected void initChannel(Channel ch) throws Exception {
+          ch.config().setWriteBufferWaterMark(writeBufferWaterMark);
           ch.config().setAllocator(channelAllocator);
           ChannelPipeline pipeline = ch.pipeline();
           FixedLengthFrameDecoder preambleDecoder = new FixedLengthFrameDecoder(6);
@@ -129,7 +173,7 @@ public class NettyRpcServer extends RpcServer {
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
             // send RpcResponse to client.
             .addLast(NettyRpcServerResponseEncoder.NAME,
-              new NettyRpcServerResponseEncoder(metrics));
+              new NettyRpcServerResponseEncoder(NettyRpcServer.this, metrics));
         }
       });
     try {
@@ -140,6 +184,71 @@ public class NettyRpcServer extends RpcServer {
     }
     initReconfigurable(conf);
     this.scheduler.init(new RpcSchedulerContext(this));
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    super.onConfigurationChange(newConf);
+    configureNettyWatermarks(newConf);
+  }
+
+  private void configureNettyWatermarks(Configuration conf) {
+    int watermarkLow =
+      conf.getInt(CHANNEL_WRITABLE_LOW_WATERMARK_KEY, CHANNEL_WRITABLE_LOW_WATERMARK_DEFAULT);
+    int watermarkHigh =
+      conf.getInt(CHANNEL_WRITABLE_HIGH_WATERMARK_KEY, CHANNEL_WRITABLE_HIGH_WATERMARK_DEFAULT);
+    int fatalThreshold =
+      conf.getInt(CHANNEL_WRITABLE_FATAL_WATERMARK_KEY, CHANNEL_WRITABLE_FATAL_WATERMARK_DEFAULT);
+
+    WriteBufferWaterMark oldWaterMark = writeBufferWaterMark;
+    int oldFatalThreshold = writeBufferFatalThreshold;
+
+    boolean disabled = false;
+    if (watermarkHigh == 0 && watermarkLow == 0) {
+      // if both are 0, use the netty default, which we will treat as "disabled".
+      // when disabled, we won't manage autoRead in response to writability changes.
+      writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
+      disabled = true;
+    } else {
+      writeBufferWaterMark = new WriteBufferWaterMark(watermarkLow, watermarkHigh);
+
+      // only apply this check when watermark is enabled. this way we give the operator some
+      // flexibility if they want to try enabling fatal threshold without backpressure.
+      if (fatalThreshold > 0 && fatalThreshold <= watermarkHigh) {
+        LOG.warn("Detected a {} value of {}, which is lower than the {} value of {}, ignoring.",
+          CHANNEL_WRITABLE_FATAL_WATERMARK_KEY, fatalThreshold, CHANNEL_WRITABLE_HIGH_WATERMARK_KEY,
+          watermarkHigh);
+        fatalThreshold = 0;
+      }
+    }
+
+    writeBufferFatalThreshold = fatalThreshold;
+
+    if (
+      oldWaterMark != null && (oldWaterMark.low() != writeBufferWaterMark.low()
+        || oldWaterMark.high() != writeBufferWaterMark.high()
+        || oldFatalThreshold != writeBufferFatalThreshold)
+    ) {
+      LOG.info("Updated netty outbound write buffer watermarks: low={}, high={}, fatal={}",
+        disabled ? "disabled" : writeBufferWaterMark.low(),
+        disabled ? "disabled" : writeBufferWaterMark.high(), writeBufferFatalThreshold);
+    }
+
+    // update any existing channels
+    if (bootstrap != null) {
+      for (Channel channel : allChannels) {
+        channel.config().setWriteBufferWaterMark(writeBufferWaterMark);
+        // if disabling watermark, set auto read to true in case channel had been exceeding
+        // previous watermark
+        if (disabled) {
+          channel.config().setAutoRead(true);
+        }
+      }
+    }
+  }
+
+  public boolean isWriteBufferWaterMarkEnabled() {
+    return writeBufferWaterMark != WriteBufferWaterMark.DEFAULT;
   }
 
   private ByteBufAllocator getChannelAllocator(Configuration conf) throws IOException {
@@ -295,5 +404,20 @@ public class NettyRpcServer extends RpcServer {
       }
     }
     return result;
+  }
+
+  public int getWriteBufferFatalThreshold() {
+    return writeBufferFatalThreshold;
+  }
+
+  public Pair<Long, Long> getTotalAndMaxNettyOutboundBytes() {
+    long total = 0;
+    long max = 0;
+    for (Channel channel : allChannels) {
+      long outbound = NettyUnsafeUtils.getTotalPendingOutboundBytes(channel);
+      total += outbound;
+      max = Math.max(max, outbound);
+    }
+    return Pair.newPair(total, max);
   }
 }

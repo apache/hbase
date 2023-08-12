@@ -43,6 +43,12 @@ class NettyRpcServerRequestDecoder extends SimpleChannelInboundHandler<ByteBuf> 
   }
 
   @Override
+  public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+    connection.setWritable(ctx.channel().isWritable());
+    ctx.fireChannelWritabilityChanged();
+  }
+
+  @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
     NettyRpcServer.LOG.warn("Connection {}; caught unexpected downstream exception.",
       ctx.channel().remoteAddress(), e);

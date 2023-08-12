@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
+import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.buffer.Unpooled;
+import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundHandlerAdapter;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
@@ -31,17 +34,28 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 @InterfaceAudience.Private
 class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
 
+  private static final ConnectionClosedException EXCEPTION =
+    new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold");
   static final String NAME = "NettyRpcServerResponseEncoder";
 
+  private final NettyRpcServer rpcServer;
   private final MetricsHBaseServer metrics;
 
-  NettyRpcServerResponseEncoder(MetricsHBaseServer metrics) {
+  NettyRpcServerResponseEncoder(NettyRpcServer rpcServer, MetricsHBaseServer metrics) {
+    this.rpcServer = rpcServer;
     this.metrics = metrics;
   }
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
     throws Exception {
+
+    // drop the message if fatal threshold is reached, as the connection will be closed
+    if (handleFatalThreshold(ctx)) {
+      promise.setFailure(EXCEPTION);
+      return;
+    }
+
     if (msg instanceof RpcResponse) {
       RpcResponse resp = (RpcResponse) msg;
       BufferChain buf = resp.getResponse();
@@ -54,5 +68,34 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
     } else {
       ctx.write(msg, promise);
     }
+  }
+
+  private boolean handleFatalThreshold(ChannelHandlerContext ctx) {
+    int fatalThreshold = rpcServer.getWriteBufferFatalThreshold();
+    if (fatalThreshold <= 0) {
+      return false;
+    }
+
+    Channel channel = ctx.channel();
+    long outboundBytes = NettyUnsafeUtils.getTotalPendingOutboundBytes(channel);
+    if (outboundBytes < fatalThreshold) {
+      return false;
+    }
+
+    NettyServerRpcConnection conn = NettyServerRpcConnection.get(channel);
+    if (conn == null) {
+      return false;
+    }
+
+    if (conn.isConnectionOpen()) {
+      metrics.maxOutboundBytesExceeded();
+      RpcServer.LOG.warn(
+        "{}: Closing connection because outbound buffer size of {} exceeds fatal threshold of {}",
+        channel.remoteAddress(), outboundBytes, fatalThreshold);
+      conn.abort();
+    }
+
+    return true;
+
   }
 }
