@@ -627,7 +627,9 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   public void fileCacheCompleted(String fileName) {
-    prefetchCompleted.put(fileName, true);
+    if (isCachePersistent()) {
+      prefetchCompleted.put(fileName, true);
+    }
   }
 
   /**

@@ -79,8 +79,11 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             cacheConf.getBlockCache().ifPresent(bc -> {
-              if (bc instanceof BucketCache) {
-                ((BucketCache) bc).fileCacheCompleted(path.getName());
+              if (bc instanceof CombinedBlockCache) {
+                BlockCache l2 = ((CombinedBlockCache) bc).getSecondLevelCache();
+                if (l2 instanceof BucketCache) {
+                  ((BucketCache) l2).fileCacheCompleted(path.getName());
+                }
               }
             });
           } catch (IOException e) {
