@@ -49,7 +49,6 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
   private static final AttributeKey<NettyServerRpcConnection> ATTR =
     AttributeKey.newInstance("connection");
   final Channel channel;
-  private volatile boolean aborted = false;
   private boolean writable = true;
   private long unwritableStartTime;
 
@@ -141,16 +140,14 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
    */
   void abort() {
     assert channel.eventLoop().inEventLoop();
-    if (aborted) {
-      return;
-    }
 
     // We need to forcefully abort, because otherwise memory will continue to build up
-    // while graceful close is executed (dependent on handlers). Especially true
-    // when SslHandler is enabled, as it prefers to send a close_notify to the client first.
+    // while graceful close is executed (dependent on handlers).
+    // Setting SO_LINGER to 0 ensures that the socket is closed immediately, and we do not wait for
+    // the client to acknowledge. closeDirect skips any handlers which may delay the close, such
+    // as SslHandler which tries to send a close_notify and wait for reply from client.
     channel.config().setOption(ChannelOption.SO_LINGER, 0);
     NettyUnsafeUtils.closeDirect(channel);
-    aborted = true;
   }
 
   @Override
@@ -160,7 +157,7 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
 
   @Override
   public boolean isConnectionOpen() {
-    return channel.isOpen() && !aborted;
+    return channel.isOpen();
   }
 
   @Override
