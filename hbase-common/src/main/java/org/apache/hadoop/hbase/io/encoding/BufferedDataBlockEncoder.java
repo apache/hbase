@@ -1036,7 +1036,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
     // These findCommonPrefix* methods rely on the fact that keyOnlyKv is the "right" cell argument
     // and always on-heap
 
-    private static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
+    private static int findCommonPrefixInRowPart(Cell left, KeyValue.KeyOnlyKeyValue right,
+      int rowCommonPrefix) {
       if (left instanceof ByteBufferExtendedCell) {
         ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
         return ByteBufferUtils.findCommonPrefix(bbLeft.getRowByteBuffer(),
@@ -1050,7 +1051,8 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
 
-    private static int findCommonPrefixInFamilyPart(Cell left, Cell right, int familyCommonPrefix) {
+    private static int findCommonPrefixInFamilyPart(Cell left, KeyValue.KeyOnlyKeyValue right,
+      int familyCommonPrefix) {
       if (left instanceof ByteBufferExtendedCell) {
         ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
         return ByteBufferUtils.findCommonPrefix(bbLeft.getFamilyByteBuffer(),
@@ -1066,7 +1068,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
 
-    private static int findCommonPrefixInQualifierPart(Cell left, Cell right,
+    private static int findCommonPrefixInQualifierPart(Cell left, KeyValue.KeyOnlyKeyValue right,
       int qualifierCommonPrefix) {
       if (left instanceof ByteBufferExtendedCell) {
         ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
