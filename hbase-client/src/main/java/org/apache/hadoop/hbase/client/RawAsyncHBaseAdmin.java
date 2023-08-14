@@ -957,6 +957,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     return flush(tableName, Collections.emptyList());
   }
 
+  @Override
   public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
     return flush(tableName, Collections.singletonList(columnFamily));
   }
