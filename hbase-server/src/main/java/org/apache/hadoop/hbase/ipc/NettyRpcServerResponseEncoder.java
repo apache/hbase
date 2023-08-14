@@ -39,10 +39,13 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
   static final String NAME = "NettyRpcServerResponseEncoder";
 
   private final NettyRpcServer rpcServer;
+  private final NettyServerRpcConnection conn;
   private final MetricsHBaseServer metrics;
 
-  NettyRpcServerResponseEncoder(NettyRpcServer rpcServer, MetricsHBaseServer metrics) {
+  NettyRpcServerResponseEncoder(NettyRpcServer rpcServer, NettyServerRpcConnection conn,
+    MetricsHBaseServer metrics) {
     this.rpcServer = rpcServer;
+    this.conn = conn;
     this.metrics = metrics;
   }
 
@@ -79,11 +82,6 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
     Channel channel = ctx.channel();
     long outboundBytes = NettyUnsafeUtils.getTotalPendingOutboundBytes(channel);
     if (outboundBytes < fatalThreshold) {
-      return false;
-    }
-
-    NettyServerRpcConnection conn = NettyServerRpcConnection.get(channel);
-    if (conn == null) {
       return false;
     }
 

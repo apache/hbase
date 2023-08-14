@@ -35,7 +35,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
-import org.apache.hbase.thirdparty.io.netty.util.AttributeKey;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -46,8 +45,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 @InterfaceAudience.Private
 class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
 
-  private static final AttributeKey<NettyServerRpcConnection> ATTR =
-    AttributeKey.newInstance("connection");
   final Channel channel;
   private boolean writable = true;
   private long unwritableStartTime;
@@ -55,7 +52,6 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
   NettyServerRpcConnection(NettyRpcServer rpcServer, Channel channel) {
     super(rpcServer);
     this.channel = channel;
-    channel.attr(ATTR).set(this);
     rpcServer.allChannels.add(channel);
     NettyRpcServer.LOG.trace("Connection {}; # active connections={}", channel.remoteAddress(),
       rpcServer.allChannels.size() - 1);
@@ -75,10 +71,6 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
       this.hostAddress = inetSocketAddress.getAddress().getHostAddress();
     }
     this.remotePort = inetSocketAddress.getPort();
-  }
-
-  static NettyServerRpcConnection get(Channel channel) {
-    return channel.attr(ATTR).get();
   }
 
   void setupHandler() {

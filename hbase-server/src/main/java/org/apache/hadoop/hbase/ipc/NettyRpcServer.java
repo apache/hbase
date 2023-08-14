@@ -168,12 +168,13 @@ public class NettyRpcServer extends RpcServer {
           if (conf.getBoolean(HBASE_SERVER_NETTY_TLS_ENABLED, false)) {
             initSSL(pipeline, conf.getBoolean(HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, true));
           }
+          NettyServerRpcConnection conn = createNettyServerRpcConnection(ch);
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
-            .addLast(createNettyRpcServerPreambleHandler())
+            .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
             // send RpcResponse to client.
             .addLast(NettyRpcServerResponseEncoder.NAME,
-              new NettyRpcServerResponseEncoder(NettyRpcServer.this, metrics));
+              new NettyRpcServerResponseEncoder(NettyRpcServer.this, conn, metrics));
         }
       });
     try {
@@ -281,10 +282,10 @@ public class NettyRpcServer extends RpcServer {
     }
   }
 
-  // will be overriden in tests
+  // will be overridden in tests
   @InterfaceAudience.Private
-  protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
-    return new NettyRpcServerPreambleHandler(NettyRpcServer.this);
+  protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
+    return new NettyServerRpcConnection(NettyRpcServer.this, channel);
   }
 
   @Override
