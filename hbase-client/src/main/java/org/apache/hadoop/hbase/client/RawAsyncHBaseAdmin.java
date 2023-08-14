@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ClientMetaTableAccessor;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
 import org.apache.hadoop.hbase.ClusterMetricsBuilder;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -96,6 +97,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,6 +182,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProced
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -950,12 +954,50 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName) {
-    return flush(tableName, null);
+    return flush(tableName, Collections.emptyList());
   }
 
   @Override
   public CompletableFuture<Void> flush(TableName tableName, byte[] columnFamily) {
+    return flush(tableName, Collections.singletonList(columnFamily));
+  }
+
+  @Override
+  public CompletableFuture<Void> flush(TableName tableName, List<byte[]> columnFamilyList) {
+    // This is for keeping compatibility with old implementation.
+    // If the server version is lower than the client version, it's possible that the
+    // flushTable method is not present in the server side, if so, we need to fall back
+    // to the old implementation.
+    List<byte[]> columnFamilies = columnFamilyList.stream()
+      .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
+    FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName, columnFamilies,
+      ng.getNonceGroup(), ng.newNonce());
+    CompletableFuture<Void> procFuture = this.<FlushTableRequest, FlushTableResponse> procedureCall(
+      tableName, request, (s, c, req, done) -> s.flushTable(c, req, done),
+      (resp) -> resp.getProcId(), new FlushTableProcedureBiConsumer(tableName));
     CompletableFuture<Void> future = new CompletableFuture<>();
+    addListener(procFuture, (ret, error) -> {
+      if (error != null) {
+        if (error instanceof TableNotFoundException || error instanceof TableNotEnabledException) {
+          future.completeExceptionally(error);
+        } else if (error instanceof DoNotRetryIOException) {
+          // usually this is caused by the method is not present on the server or
+          // the hbase hadoop version does not match the running hadoop version.
+          // if that happens, we need fall back to the old flush implementation.
+          LOG.info("Unrecoverable error in master side. Fallback to FlushTableProcedure V1", error);
+          legacyFlush(future, tableName, columnFamilies);
+        } else {
+          future.completeExceptionally(error);
+        }
+      } else {
+        future.complete(ret);
+      }
+    });
+    return future;
+  }
+
+  private void legacyFlush(CompletableFuture<Void> future, TableName tableName,
+    List<byte[]> columnFamilies) {
     addListener(tableExists(tableName), (exists, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
@@ -969,8 +1011,9 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
             future.completeExceptionally(new TableNotEnabledException(tableName));
           } else {
             Map<String, String> props = new HashMap<>();
-            if (columnFamily != null) {
-              props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+            if (columnFamilies != null && !columnFamilies.isEmpty()) {
+              props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
+                .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
             }
             addListener(
               execProcedure(FLUSH_TABLE_PROCEDURE_SIGNATURE, tableName.getNameAsString(), props),
@@ -985,7 +1028,6 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         });
       }
     });
-    return future;
   }
 
   @Override
@@ -2765,6 +2807,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     @Override
     String getOperationType() {
       return "MODIFY_COLUMN_FAMILY_STORE_FILE_TRACKER";
+    }
+  }
+
+  private static class FlushTableProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    FlushTableProcedureBiConsumer(TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "FLUSH";
     }
   }
 
