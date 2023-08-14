@@ -536,4 +536,10 @@ public class MockNoopMasterServices implements MasterServices {
   public Semaphore getSyncReplicationPeerLock() {
     return null;
   }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    return 0;
+  }
 }

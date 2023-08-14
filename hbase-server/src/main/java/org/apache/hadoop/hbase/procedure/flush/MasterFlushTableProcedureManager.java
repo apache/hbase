@@ -58,6 +58,10 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
+  public static final String FLUSH_PROCEDURE_ENABLED = "hbase.flush.procedure.enabled";
+
+  public static final boolean FLUSH_PROCEDURE_ENABLED_DEFAULT = true;
+
   private static final String FLUSH_TIMEOUT_MILLIS_KEY = "hbase.flush.master.timeoutMillis";
   private static final int FLUSH_TIMEOUT_MILLIS_DEFAULT = 60000;
   private static final String FLUSH_WAKE_MILLIS_KEY = "hbase.flush.master.wakeMillis";
@@ -142,13 +146,13 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
 
-    HBaseProtos.NameStringPair family = null;
+    HBaseProtos.NameStringPair families = null;
     for (HBaseProtos.NameStringPair nsp : desc.getConfigurationList()) {
       if (HConstants.FAMILY_KEY_STR.equals(nsp.getName())) {
-        family = nsp;
+        families = nsp;
       }
     }
-    byte[] procArgs = family != null ? family.toByteArray() : new byte[0];
+    byte[] procArgs = families != null ? families.toByteArray() : new byte[0];
 
     // Kick of the global procedure from the master coordinator to the region servers.
     // We rely on the existing Distributed Procedure framework to prevent any concurrent
