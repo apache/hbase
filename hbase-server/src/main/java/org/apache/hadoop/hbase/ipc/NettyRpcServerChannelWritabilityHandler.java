@@ -27,6 +27,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
+import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Handler to enforce writability protections on our server channels: - Responds to channel
@@ -39,6 +40,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
  * be the last handler in the pipeline so that it's the first handler to receive any messages sent
  * to channel.write() or channel.writeAndFlush().
  */
+@InterfaceAudience.Private
 public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandler {
 
   private static final ConnectionClosedException EXCEPTION =
@@ -101,7 +103,7 @@ public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandle
     return true;
   }
 
-  private boolean handleWritabilityChanged(ChannelHandlerContext ctx) {
+  private void handleWritabilityChanged(ChannelHandlerContext ctx) {
     boolean oldWritableValue = this.writable;
 
     this.writable = ctx.channel().isWritable();
