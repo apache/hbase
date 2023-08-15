@@ -77,8 +77,8 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
     channel.pipeline()
       .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
         new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
-      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder", new NettyRpcServerRequestDecoder(
-        rpcServer.metrics, this, rpcServer::isWritabilityBackpressureEnabled));
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder",
+        new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
   }
 
   void process(ByteBuf buf) throws IOException, InterruptedException {

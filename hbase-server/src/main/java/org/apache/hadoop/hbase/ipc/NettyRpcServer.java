@@ -171,10 +171,14 @@ public class NettyRpcServer extends RpcServer {
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
             .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
-            // send RpcResponse to client. We pass in an IntSupplier for the fatal threshold so
-            // that it can be live updated by update_config
-            .addLast(NettyRpcServerResponseEncoder.NAME,
-              new NettyRpcServerResponseEncoder(metrics, () -> writeBufferFatalThreshold));
+            // send RpcResponse to client.
+            .addLast(NettyRpcServerResponseEncoder.NAME, new NettyRpcServerResponseEncoder(metrics))
+            // Add writability handler after the response encoder, so we can abort writes before
+            // they get encoded, if the fatal threshold is exceeded. We pass in suppliers here so
+            // that the handler configs can be live updated via update_config.
+            .addLast(NettyRpcServerChannelWritabilityHandler.NAME,
+              new NettyRpcServerChannelWritabilityHandler(metrics, () -> writeBufferFatalThreshold,
+                () -> isWritabilityBackpressureEnabled()));
         }
       });
     try {
