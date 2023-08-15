@@ -183,6 +183,12 @@ public class HStore
   // All access must be synchronized.
   // TODO: ideally, this should be part of storeFileManager, as we keep passing this to it.
   private final List<HStoreFile> filesCompacting = Lists.newArrayList();
+
+  // Compaction LongAdders
+  final LongAdder compactionsFinishedCount = new LongAdder();
+  final LongAdder compactionsFailedCount = new LongAdder();
+  final LongAdder compactionNumFilesCompacted = new LongAdder();
+  final LongAdder compactionNumBytesCompacted = new LongAdder();
   final LongAdder compactionsQueuedCount = new LongAdder();
 
   // All access must be synchronized.
@@ -1593,7 +1599,8 @@ public class HStore
   }
 
   private void finishCompactionRequest(CompactionRequestImpl cr) {
-    this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
+    this.region.reportCompactionRequestEnd(cr.isMajor());
+    reportCompactionRequestEnd(cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
       offPeakCompactionTracker.set(false);
       cr.setOffPeak(false);
@@ -2498,7 +2505,37 @@ public class HStore
   }
 
   @Override
+  public long getCompactionsFinishedCount() {
+    return this.compactionsFinishedCount.sum();
+  }
+
+  @Override
+  public long getCompactionsFailedCount() {
+    return this.compactionsFailedCount.sum();
+  }
+
+  @Override
+  public long getCompactionsNumFiles() {
+    return this.compactionNumFilesCompacted.sum();
+  }
+
+  @Override
+  public long getCompactionsNumBytes() {
+    return this.compactionNumBytesCompacted.sum();
+  }
+
+  @Override
   public long getCompactionsQueuedCount() {
     return this.compactionsQueuedCount.sum();
+  }
+
+  public void reportCompactionRequestFailure() {
+    compactionsFailedCount.increment();
+  }
+
+  public void reportCompactionRequestEnd(int numFiles, long filesSizeCompacted) {
+    compactionsFinishedCount.increment();
+    compactionNumFilesCompacted.add(numFiles);
+    compactionNumBytesCompacted.add(filesSizeCompacted);
   }
 }

@@ -688,11 +688,11 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
         if (remoteEx != ex) {
           LOG.info("Compaction failed at original callstack: " + formatStackTrace(ex));
         }
-        region.reportCompactionRequestFailure();
+        store.reportCompactionRequestFailure();
         server.checkFileSystem();
       } catch (Exception ex) {
         LOG.error("Compaction failed " + this, ex);
-        region.reportCompactionRequestFailure();
+        store.reportCompactionRequestFailure();
         server.checkFileSystem();
       } finally {
         tracker.afterExecution(store);

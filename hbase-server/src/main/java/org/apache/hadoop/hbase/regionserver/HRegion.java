@@ -358,11 +358,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // Number of requests blocked by memstore size.
   private final LongAdder blockedRequestsCount = new LongAdder();
 
-  // Compaction LongAdders
-  final LongAdder compactionsFinished = new LongAdder();
-  final LongAdder compactionsFailed = new LongAdder();
-  final LongAdder compactionNumFilesCompacted = new LongAdder();
-  final LongAdder compactionNumBytesCompacted = new LongAdder();
   final LongAdder flushesQueued = new LongAdder();
 
   private BlockCache blockCache;
@@ -8620,19 +8615,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     (isMajor ? majorInProgress : minorInProgress).incrementAndGet();
   }
 
-  public void reportCompactionRequestEnd(boolean isMajor, int numFiles, long filesSizeCompacted) {
+  public void reportCompactionRequestEnd(boolean isMajor) {
     int newValue = (isMajor ? majorInProgress : minorInProgress).decrementAndGet();
-
-    // metrics
-    compactionsFinished.increment();
-    compactionNumFilesCompacted.add(numFiles);
-    compactionNumBytesCompacted.add(filesSizeCompacted);
-
     assert newValue >= 0;
-  }
-
-  public void reportCompactionRequestFailure() {
-    compactionsFailed.increment();
   }
 
   public void incrementFlushesQueuedCount() {
