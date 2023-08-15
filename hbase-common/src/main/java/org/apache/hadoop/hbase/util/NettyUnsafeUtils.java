@@ -52,6 +52,7 @@ public final class NettyUnsafeUtils {
    */
   public static long getTotalPendingOutboundBytes(Channel channel) {
     ChannelOutboundBuffer outboundBuffer = channel.unsafe().outboundBuffer();
+    // can be null when the channel is closing
     if (outboundBuffer == null) {
       return 0;
     }
