@@ -1729,7 +1729,29 @@ public class HFileBlock implements Cacheable {
         }
         onDiskSizeWithHeader = getOnDiskSizeWithHeader(headerBuf, checksumSupport);
       }
-      int preReadHeaderSize = headerBuf == null ? 0 : hdrSize;
+      int preReadHeaderSize = 0;
+      if (headerBuf == null ||
+          headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) != onDisSizeWithHeader) {
+        // This could happen in an edge case. Could refer to ticket HBASE-26780
+        // We should get a positive block size from the headerBuf.
+        // But in the edge case, the block size from the headerBuf is 0.
+        // And this will make this method fail in #verifyOnDiskSizeMatchesHeader.
+        // There must be something wrong when we cache the header in the previous read.
+        // We skip the headerBuff and read it from HDFS again.
+        //
+        // The exception are all in this format:
+        //     onDiskSizeWithHeader=xxxx != 33
+        // 33 is the header size with checksum used in
+        // verifyOnDiskSizeMatchesHeader#getOnDiskSizeWithHeader#headerSize.
+        //
+        // If the block size in the cached header does not match this block, we skip it.
+        // If it is due to file corruption, the following verification will fail and throw
+        // exception as well.
+        headerBuf = null;
+      } else {
+        preReadHeaderSize = hdrSize;
+      }
+
       // Allocate enough space to fit the next block's header too; saves a seek next time through.
       // onDiskBlock is whole block + header + checksums then extra hdrSize to read next header;
       // onDiskSizeWithHeader is header, body, and any checksums if present. preReadHeaderSize
