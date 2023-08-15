@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundBuffer;
 
 /**
  * Wraps some usages of netty's unsafe API, for ease of maintainability.
