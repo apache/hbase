@@ -26,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -45,7 +46,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   private final HRegion region;
   private ScheduledExecutorService executor;
-  private Runnable runnable;
+  @VisibleForTesting
+  protected Runnable runnable;
   private long numStoreFiles;
   private long storeRefCount;
   private long maxCompactedStoreFileRefCount;
