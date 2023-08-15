@@ -1731,7 +1731,7 @@ public class HFileBlock implements Cacheable {
       }
       int preReadHeaderSize = 0;
       if (headerBuf == null ||
-          headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) != onDisSizeWithHeader) {
+          headerBuf.getInt(Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX) != onDiskSizeWithHeader) {
         // This could happen in an edge case. Could refer to ticket HBASE-26780
         // We should get a positive block size from the headerBuf.
         // But in the edge case, the block size from the headerBuf is 0.
