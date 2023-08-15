@@ -66,5 +66,9 @@ public interface MetricsHBaseServerWrapper {
 
   long getNettyDmUsage();
 
+  /**
+   * These two metrics are calculated together, so we want to return them in one call
+   * @return pair containing total (first) and max (second) pending outbound bytes.
+   */
   Pair<Long, Long> getTotalAndMaxNettyOutboundBytes();
 }

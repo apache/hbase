@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.util.function.BooleanSupplier;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -34,17 +36,40 @@ class NettyRpcServerRequestDecoder extends SimpleChannelInboundHandler<ByteBuf> 
   private final MetricsHBaseServer metrics;
 
   private final NettyServerRpcConnection connection;
+  private final BooleanSupplier isWritabilityBackpressureEnabled;
+
+  private boolean writable;
+  private long unwritableStartTime;
 
   public NettyRpcServerRequestDecoder(MetricsHBaseServer metrics,
-    NettyServerRpcConnection connection) {
+    NettyServerRpcConnection connection, BooleanSupplier isWritabilityBackpressureEnabled) {
     super(false);
     this.metrics = metrics;
     this.connection = connection;
+    this.isWritabilityBackpressureEnabled = isWritabilityBackpressureEnabled;
   }
 
   @Override
   public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-    connection.setWritable(ctx.channel().isWritable());
+    // if backpressure is enabled, we want to manage the channel's setAutoRead based on
+    // whether the channel is writable. We also track metrics about how much time the channel
+    // spends unwritable.
+    if (isWritabilityBackpressureEnabled.getAsBoolean()) {
+      boolean oldWritableValue = this.writable;
+
+      this.writable = ctx.channel().isWritable();
+      ;
+      ctx.channel().config().setAutoRead(this.writable);
+
+      if (!oldWritableValue && this.writable) {
+        // changing from not writable to writable, update metrics
+        metrics.unwritableTime(EnvironmentEdgeManager.currentTime() - unwritableStartTime);
+        unwritableStartTime = 0;
+      } else if (oldWritableValue && !this.writable) {
+        // changing from writable to non-writable, set start time
+        unwritableStartTime = EnvironmentEdgeManager.currentTime();
+      }
+    }
     ctx.fireChannelWritabilityChanged();
   }
 

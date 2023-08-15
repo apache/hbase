@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
+import org.apache.hbase.thirdparty.io.netty.channel.ChannelOutboundBuffer;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
@@ -31,9 +33,17 @@ public final class NettyUnsafeUtils {
   }
 
   /**
-   * Directly closes the channel, skipping any handlers in the pipeline
+   * Directly closes the channel, setting SO_LINGER to 0 and skipping any handlers in the pipeline.
+   * This is useful for cases where it's important to immediately close without any delay.
+   * Otherwise, pipeline handlers and even general TCP flows can cause a normal close to take
+   * upwards of a few second or more. This will likely cause the client side to see either a
+   * "Connection reset by peer" or unexpected ConnectionClosedException.
+   * <p>
+   * <b>It's necessary to call this from within the channel's eventLoop!</b>
    */
-  public static void closeDirect(Channel channel) {
+  public static void closeImmediately(Channel channel) {
+    assert channel.eventLoop().inEventLoop();
+    channel.config().setOption(ChannelOption.SO_LINGER, 0);
     channel.unsafe().close(channel.voidPromise());
   }
 
@@ -41,6 +51,10 @@ public final class NettyUnsafeUtils {
    * Get total bytes pending write to socket
    */
   public static long getTotalPendingOutboundBytes(Channel channel) {
-    return channel.unsafe().outboundBuffer().totalPendingWriteBytes();
+    ChannelOutboundBuffer outboundBuffer = channel.unsafe().outboundBuffer();
+    if (outboundBuffer == null) {
+      return 0;
+    }
+    return outboundBuffer.totalPendingWriteBytes();
   }
 }

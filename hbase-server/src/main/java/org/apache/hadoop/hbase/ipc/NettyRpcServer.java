@@ -92,7 +92,7 @@ public class NettyRpcServer extends RpcServer {
    * exceeded, channel will have setAutoRead to true again. The server will start reading incoming
    * bytes (requests) from the client channel.
    */
-  private static final String CHANNEL_WRITABLE_LOW_WATERMARK_KEY =
+  public static final String CHANNEL_WRITABLE_LOW_WATERMARK_KEY =
     "hbase.server.netty.writable.watermark.low";
   private static final int CHANNEL_WRITABLE_LOW_WATERMARK_DEFAULT = 0;
 
@@ -103,7 +103,7 @@ public class NettyRpcServer extends RpcServer {
    * <p>
    * Note: any requests already in the call queue will still be processed.
    */
-  private static final String CHANNEL_WRITABLE_HIGH_WATERMARK_KEY =
+  public static final String CHANNEL_WRITABLE_HIGH_WATERMARK_KEY =
     "hbase.server.netty.writable.watermark.high";
   private static final int CHANNEL_WRITABLE_HIGH_WATERMARK_DEFAULT = 0;
 
@@ -115,7 +115,7 @@ public class NettyRpcServer extends RpcServer {
    * <p>
    * Note: must be higher than the high watermark, otherwise it's ignored.
    */
-  private static final String CHANNEL_WRITABLE_FATAL_WATERMARK_KEY =
+  public static final String CHANNEL_WRITABLE_FATAL_WATERMARK_KEY =
     "hbase.server.netty.writable.watermark.fatal";
   private static final int CHANNEL_WRITABLE_FATAL_WATERMARK_DEFAULT = 0;
 
@@ -129,7 +129,6 @@ public class NettyRpcServer extends RpcServer {
   private final AtomicReference<FileChangeWatcher> keyStoreWatcher = new AtomicReference<>();
   private final AtomicReference<FileChangeWatcher> trustStoreWatcher = new AtomicReference<>();
 
-  private final ServerBootstrap bootstrap;
   private volatile int writeBufferFatalThreshold;
   private volatile WriteBufferWaterMark writeBufferWaterMark;
 
@@ -153,7 +152,7 @@ public class NettyRpcServer extends RpcServer {
 
     EventLoopGroup eventLoopGroup = config.group();
     Class<? extends ServerChannel> channelClass = config.serverChannelClass();
-    bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
+    ServerBootstrap bootstrap = new ServerBootstrap().group(eventLoopGroup).channel(channelClass)
       .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
       .childOption(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
       .childOption(ChannelOption.SO_REUSEADDR, true)
@@ -172,9 +171,10 @@ public class NettyRpcServer extends RpcServer {
           pipeline.addLast(NettyRpcServerPreambleHandler.DECODER_NAME, preambleDecoder)
             .addLast(new NettyRpcServerPreambleHandler(NettyRpcServer.this, conn))
             // We need NettyRpcServerResponseEncoder here because NettyRpcServerPreambleHandler may
-            // send RpcResponse to client.
+            // send RpcResponse to client. We pass in an IntSupplier for the fatal threshold so
+            // that it can be live updated by update_config
             .addLast(NettyRpcServerResponseEncoder.NAME,
-              new NettyRpcServerResponseEncoder(NettyRpcServer.this, conn, metrics));
+              new NettyRpcServerResponseEncoder(metrics, () -> writeBufferFatalThreshold));
         }
       });
     try {
@@ -211,7 +211,28 @@ public class NettyRpcServer extends RpcServer {
       writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
       disabled = true;
     } else {
-      writeBufferWaterMark = new WriteBufferWaterMark(watermarkLow, watermarkHigh);
+      // netty checks pendingOutboundBytes < watermarkLow. It can never be less than 0, so set to
+      // 1 to avoid confusing behavior.
+      if (watermarkLow == 0) {
+        LOG.warn(
+          "Detected a {} value of 0, which is impossible to achieve "
+            + "due to how netty evaluates these thresholds, setting to 1",
+          CHANNEL_WRITABLE_LOW_WATERMARK_KEY);
+        watermarkLow = 1;
+      }
+
+      // netty validates the watermarks and throws an exception if high < low, fail more gracefully
+      // by disabling the watermarks and warning.
+      if (watermarkHigh <= watermarkLow) {
+        LOG.warn(
+          "Detected {} value {}, lower than {} value {}. This will fail netty validation, "
+            + "so disabling",
+          CHANNEL_WRITABLE_HIGH_WATERMARK_KEY, watermarkHigh, CHANNEL_WRITABLE_LOW_WATERMARK_KEY,
+          watermarkLow);
+        writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
+      } else {
+        writeBufferWaterMark = new WriteBufferWaterMark(watermarkLow, watermarkHigh);
+      }
 
       // only apply this check when watermark is enabled. this way we give the operator some
       // flexibility if they want to try enabling fatal threshold without backpressure.
@@ -232,23 +253,22 @@ public class NettyRpcServer extends RpcServer {
     ) {
       LOG.info("Updated netty outbound write buffer watermarks: low={}, high={}, fatal={}",
         disabled ? "disabled" : writeBufferWaterMark.low(),
-        disabled ? "disabled" : writeBufferWaterMark.high(), writeBufferFatalThreshold);
+        disabled ? "disabled" : writeBufferWaterMark.high(),
+        writeBufferFatalThreshold <= 0 ? "disabled" : writeBufferFatalThreshold);
     }
 
     // update any existing channels
-    if (bootstrap != null) {
-      for (Channel channel : allChannels) {
-        channel.config().setWriteBufferWaterMark(writeBufferWaterMark);
-        // if disabling watermark, set auto read to true in case channel had been exceeding
-        // previous watermark
-        if (disabled) {
-          channel.config().setAutoRead(true);
-        }
+    for (Channel channel : allChannels) {
+      channel.config().setWriteBufferWaterMark(writeBufferWaterMark);
+      // if disabling watermark, set auto read to true in case channel had been exceeding
+      // previous watermark
+      if (disabled) {
+        channel.config().setAutoRead(true);
       }
     }
   }
 
-  public boolean isWriteBufferWaterMarkEnabled() {
+  public boolean isWritabilityBackpressureEnabled() {
     return writeBufferWaterMark != WriteBufferWaterMark.DEFAULT;
   }
 

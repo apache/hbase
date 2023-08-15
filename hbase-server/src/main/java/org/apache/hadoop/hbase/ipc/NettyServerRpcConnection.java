@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NettyFutureUtils;
-import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
@@ -34,7 +33,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescrip
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
-import org.apache.hbase.thirdparty.io.netty.channel.ChannelOption;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
@@ -74,11 +72,13 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
   }
 
   void setupHandler() {
+    // we pass in a BooleanSupplier for backpressure enabled state so that it can be live
+    // updated by update_config
     channel.pipeline()
       .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
         new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
-      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder",
-        new NettyRpcServerRequestDecoder(rpcServer.metrics, this));
+      .addBefore(NettyRpcServerResponseEncoder.NAME, "decoder", new NettyRpcServerRequestDecoder(
+        rpcServer.metrics, this, rpcServer::isWritabilityBackpressureEnabled));
   }
 
   void process(ByteBuf buf) throws IOException, InterruptedException {
@@ -97,49 +97,6 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
     } finally {
       this.callCleanup = null;
     }
-  }
-
-  /**
-   * Sets the writable state on the connection, and tracks metrics around time spent unwritable.
-   * When unwritable, we setAutoRead(false) so that the server does not read any more bytes from the
-   * client until it's able to flush some outbound bytes first.
-   */
-  void setWritable(boolean newWritableValue) {
-    assert channel.eventLoop().inEventLoop();
-
-    if (!rpcServer.isWriteBufferWaterMarkEnabled()) {
-      return;
-    }
-
-    boolean oldWritableValue = this.writable;
-    this.writable = newWritableValue;
-    channel.config().setAutoRead(newWritableValue);
-
-    if (!oldWritableValue && newWritableValue) {
-      // changing from not writable to writable, update metrics
-      rpcServer.getMetrics()
-        .unwritableTime(EnvironmentEdgeManager.currentTime() - unwritableStartTime);
-      unwritableStartTime = 0;
-    } else if (oldWritableValue && !newWritableValue) {
-      // changing from writable to non-writable, set start time
-      unwritableStartTime = EnvironmentEdgeManager.currentTime();
-    }
-  }
-
-  /**
-   * Immediately and forcibly closes the connection. To be used only from the event loop and only in
-   * cases where a more graceful close is not possible.
-   */
-  void abort() {
-    assert channel.eventLoop().inEventLoop();
-
-    // We need to forcefully abort, because otherwise memory will continue to build up
-    // while graceful close is executed (dependent on handlers).
-    // Setting SO_LINGER to 0 ensures that the socket is closed immediately, and we do not wait for
-    // the client to acknowledge. closeDirect skips any handlers which may delay the close, such
-    // as SslHandler which tries to send a close_notify and wait for reply from client.
-    channel.config().setOption(ChannelOption.SO_LINGER, 0);
-    NettyUnsafeUtils.closeDirect(channel);
   }
 
   @Override
@@ -165,5 +122,4 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
   protected void doRespond(RpcResponse resp) {
     NettyFutureUtils.safeWriteAndFlush(channel, resp);
   }
-
 }

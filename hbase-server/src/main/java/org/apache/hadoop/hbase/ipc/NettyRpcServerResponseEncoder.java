@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.util.function.IntSupplier;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,15 +39,13 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
     new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold");
   static final String NAME = "NettyRpcServerResponseEncoder";
 
-  private final NettyRpcServer rpcServer;
-  private final NettyServerRpcConnection conn;
   private final MetricsHBaseServer metrics;
+  private final IntSupplier pendingBytesFatalThreshold;
 
-  NettyRpcServerResponseEncoder(NettyRpcServer rpcServer, NettyServerRpcConnection conn,
-    MetricsHBaseServer metrics) {
-    this.rpcServer = rpcServer;
-    this.conn = conn;
+  NettyRpcServerResponseEncoder(MetricsHBaseServer metrics,
+    IntSupplier pendingBytesFatalThreshold) {
     this.metrics = metrics;
+    this.pendingBytesFatalThreshold = pendingBytesFatalThreshold;
   }
 
   @Override
@@ -74,7 +73,7 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
   }
 
   private boolean handleFatalThreshold(ChannelHandlerContext ctx) {
-    int fatalThreshold = rpcServer.getWriteBufferFatalThreshold();
+    int fatalThreshold = pendingBytesFatalThreshold.getAsInt();
     if (fatalThreshold <= 0) {
       return false;
     }
@@ -85,12 +84,12 @@ class NettyRpcServerResponseEncoder extends ChannelOutboundHandlerAdapter {
       return false;
     }
 
-    if (conn.isConnectionOpen()) {
+    if (channel.isOpen()) {
       metrics.maxOutboundBytesExceeded();
       RpcServer.LOG.warn(
         "{}: Closing connection because outbound buffer size of {} exceeds fatal threshold of {}",
         channel.remoteAddress(), outboundBytes, fatalThreshold);
-      conn.abort();
+      NettyUnsafeUtils.closeImmediately(channel);
     }
 
     return true;
