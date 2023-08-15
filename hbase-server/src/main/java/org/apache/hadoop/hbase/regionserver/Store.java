@@ -253,28 +253,18 @@ public interface Store {
    */
   long getBloomFilterEligibleRequestsCount();
 
-  /**
-   * @return the number of finished compactions for this store.
-   */
+  /** Returns the number of finished compactions for this store. */
   long getCompactionsFinishedCount();
 
-  /**
-   * @return the number of failed compactions for this store.
-   */
+  /** Returns the number of failed compactions for this store. */
   long getCompactionsFailedCount();
 
-  /**
-   * @return the number of files of compactions for this store.
-   */
+  /** Returns the number of files of compactions for this store. */
   long getCompactionsNumFiles();
 
-  /**
-   * @return the number of bytes of compactions for this store.
-   */
+  /** Returns the number of bytes of compactions for this store. */
   long getCompactionsNumBytes();
 
-  /**
-   * @return the number of compactions queued for this store.
-   */
+  /** Returns the number of compactions queued for this store. */
   long getCompactionsQueuedCount();
 }
