@@ -44,7 +44,13 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
 public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandler {
 
   private static final ConnectionClosedException EXCEPTION =
-    new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold");
+    new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold") {
+      @Override
+      public Throwable fillInStackTrace() {
+        // the stacktrace is noisy and not very useful here.
+        return this;
+      }
+    };
 
   static final String NAME = "NettyRpcServerChannelWritabilityHandler";
 
@@ -52,7 +58,7 @@ public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandle
   private final IntSupplier pendingBytesFatalThreshold;
   private final BooleanSupplier isWritabilityBackpressureEnabled;
 
-  private boolean writable;
+  private boolean writable = true;
   private long unwritableStartTime;
 
   NettyRpcServerChannelWritabilityHandler(MetricsHBaseServer metrics,
