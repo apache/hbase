@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
 @Deprecated
 @InterfaceAudience.Private
-class SimpleServerRpcConnection extends ServerRpcConnection<SimpleRpcServer> {
+class SimpleServerRpcConnection extends ServerRpcConnection {
 
   final SocketChannel channel;
   private ByteBuff data;

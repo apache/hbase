@@ -22,18 +22,18 @@ import java.util.function.IntSupplier;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NettyUnsafeUtils;
+import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
-import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Handler to enforce writability protections on our server channels: - Responds to channel
- * writability events, which are triggered when the total pending bytes for a channel passes
- * configured high and low watermarks. When high watermark is exceeded, the channel is
- * setAutoRead(false). This way, we won't accept new requests from the client until some pending
+ * Handler to enforce writability protections on our server channels: <br>
+ * - Responds to channel writability events, which are triggered when the total pending bytes for a
+ * channel passes configured high and low watermarks. When high watermark is exceeded, the channel
+ * is setAutoRead(false). This way, we won't accept new requests from the client until some pending
  * outbound bytes are successfully received by the client.<br>
  * - Pre-processes any channel write requests. If the total pending outbound bytes exceeds a fatal
  * threshold, the channel is forcefully closed and the write is set to failed. This handler should

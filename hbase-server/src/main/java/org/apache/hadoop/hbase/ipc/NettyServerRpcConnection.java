@@ -41,11 +41,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  * @since 2.0.0
  */
 @InterfaceAudience.Private
-class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
+class NettyServerRpcConnection extends ServerRpcConnection {
 
   final Channel channel;
-  private boolean writable = true;
-  private long unwritableStartTime;
 
   NettyServerRpcConnection(NettyRpcServer rpcServer, Channel channel) {
     super(rpcServer);
@@ -72,8 +70,6 @@ class NettyServerRpcConnection extends ServerRpcConnection<NettyRpcServer> {
   }
 
   void setupHandler() {
-    // we pass in a BooleanSupplier for backpressure enabled state so that it can be live
-    // updated by update_config
     channel.pipeline()
       .addBefore(NettyRpcServerResponseEncoder.NAME, "frameDecoder",
         new NettyRpcFrameDecoder(rpcServer.maxRequestSize, this))
