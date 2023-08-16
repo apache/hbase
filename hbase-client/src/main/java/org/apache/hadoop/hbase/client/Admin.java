@@ -887,6 +887,28 @@ public interface Admin extends Abortable, Closeable {
   void flush(TableName tableName, byte[] columnFamily) throws IOException;
 
   /**
+   * Flush the specified column family stores on all regions of the passed table. This runs as a
+   * synchronous operation.
+   * @param tableName      table to flush
+   * @param columnFamilies column families within a table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException;
+
+  /**
+   * Flush a table but does not block and wait for it to finish. You can use Future.get(long,
+   * TimeUnit) to wait on the operation to complete. It may throw ExecutionException if there was an
+   * error while executing the operation or TimeoutException in case the wait timeout was not long
+   * enough to allow the operation to complete.
+   * @param tableName      table to flush
+   * @param columnFamilies column families within a table
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> flushAsync(TableName tableName, List<byte[]> columnFamilies) throws IOException;
+
+  /**
    * Flush an individual region. Synchronous operation.
    * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs

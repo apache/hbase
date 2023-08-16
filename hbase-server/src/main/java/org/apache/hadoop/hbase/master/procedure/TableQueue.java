@@ -56,6 +56,7 @@ class TableQueue extends Queue<TableName> {
         // we allow concurrent edit on the NS table
         return !proc.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
       case READ:
+      case FLUSH:
       case SNAPSHOT:
         return false;
       // region operations are using the shared-lock on the table

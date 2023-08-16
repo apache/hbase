@@ -437,4 +437,15 @@ public interface MasterServices extends Server {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Flush an existing table
+   * @param tableName      The table name
+   * @param columnFamilies The column families to flush
+   * @param nonceGroup     the nonce group
+   * @param nonce          the nonce
+   * @return the flush procedure id
+   */
+  long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
+    final long nonceGroup, final long nonce) throws IOException;
 }

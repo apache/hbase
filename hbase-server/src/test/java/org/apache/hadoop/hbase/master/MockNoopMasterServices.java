@@ -501,4 +501,10 @@ public class MockNoopMasterServices implements MasterServices {
   public boolean isReplicationPeerModificationEnabled() {
     return false;
   }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    return 0;
+  }
 }
