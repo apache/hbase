@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -28,7 +29,8 @@ public class MetricsIO {
   private final MetricsIOSource source;
   private final MetricsIOWrapper wrapper;
 
-  // visible for testing only
+  @RestrictedApi(explanation = "Should only be called in TestMetricsIO", link = "",
+      allowedOnPath = ".*/(MetricsIO|TestMetricsIO).java")
   MetricsIO(MetricsIOWrapper wrapper) {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
       .createIO(wrapper), wrapper);
