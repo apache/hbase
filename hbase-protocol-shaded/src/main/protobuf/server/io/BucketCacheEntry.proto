@@ -73,6 +73,7 @@ message BucketEntry {
   required int32 deserialiser_index = 4;
   required BlockPriority priority = 5;
   required int64 cachedTime = 6;
+  optional int32 disk_size_with_header = 7;
 }
 
 enum BlockPriority {

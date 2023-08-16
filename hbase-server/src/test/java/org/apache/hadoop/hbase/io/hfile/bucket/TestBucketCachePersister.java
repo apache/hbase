@@ -139,10 +139,10 @@ public class TestBucketCachePersister {
     readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache1);
     Thread.sleep(500);
     // Evict Blocks from cache
+    assertTrue(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
     BlockCacheKey bucketCacheKey = bucketCache1.backingMap.entrySet().iterator().next().getKey();
-    assertTrue(bucketCache1.prefetchCompleted.containsKey(storeFile.getName()));
     bucketCache1.evictBlock(bucketCacheKey);
-    assertFalse(bucketCache1.prefetchCompleted.containsKey(storeFile.getName()));
+    assertFalse(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
   }
 
   public void readStoreFile(Path storeFilePath, long offset, FileSystem fs, CacheConfig cacheConf,

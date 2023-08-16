@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -62,9 +63,11 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -142,10 +145,12 @@ public class BucketCache implements BlockCache, HeapSize {
 
   // Store the block in this map before writing it to cache
   transient final RAMCache ramCache;
+
   // In this map, store the block's meta data like offset, length
-  transient ConcurrentHashMap<BlockCacheKey, BucketEntry> backingMap;
+  transient Map<BlockCacheKey, BucketEntry> backingMap;
+
   /** Set of files for which prefetch is completed */
-  final Map<String, Boolean> prefetchCompleted = new ConcurrentHashMap<>();
+  final Map<String, Boolean> fullyCachedFiles = new ConcurrentHashMap<>();
 
   private BucketCachePersister cachePersister;
 
@@ -324,6 +329,8 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         retrieveFromFile(bucketSizes);
       } catch (IOException ioex) {
+        backingMap.clear();
+        fullyCachedFiles.clear();
         LOG.error("Can't restore from file[" + persistencePath + "] because of ", ioex);
       }
     }
@@ -621,15 +628,13 @@ public class BucketCache implements BlockCache, HeapSize {
       cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     }
     if (ioEngine.isPersistent()) {
-      prefetchCompleted.remove(cacheKey.getHfileName());
+      fullyCachedFiles.remove(cacheKey.getHfileName());
       setCacheInconsistent(true);
     }
   }
 
   public void fileCacheCompleted(String fileName) {
-    if (isCachePersistent()) {
-      prefetchCompleted.put(fileName, true);
-    }
+    fullyCachedFiles.put(fileName, true);
   }
 
   /**
@@ -1372,8 +1377,8 @@ public class BucketCache implements BlockCache, HeapSize {
   private void parsePB(BucketCacheProtos.BucketCacheEntry proto) throws IOException {
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
       this::createRecycler);
-    prefetchCompleted.clear();
-    prefetchCompleted.putAll(proto.getPrefetchedFilesMap());
+    fullyCachedFiles.clear();
+    fullyCachedFiles.putAll(proto.getPrefetchedFilesMap());
     if (proto.hasChecksum()) {
       try {
         ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
@@ -1389,7 +1394,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Removing it from map.", keyEntry.getKey());
             backingMap.remove(keyEntry.getKey());
-            prefetchCompleted.remove(keyEntry.getKey().getHfileName());
+            fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
           }
         }
         LOG.info("Finished validating {} keys in the backing map. Recovered: {}. This took {}ms.",
@@ -1436,6 +1441,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!ioEngine.isPersistent() || persistencePath == null) {
       // If persistent ioengine and a path, we will serialize out the backingMap.
       this.backingMap.clear();
+      this.fullyCachedFiles.clear();
     }
   }
 
@@ -1531,7 +1537,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    this.prefetchCompleted.remove(hfileName);
+    this.fullyCachedFiles.remove(hfileName);
     Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
       true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
@@ -1648,8 +1654,10 @@ public class BucketCache implements BlockCache, HeapSize {
       boolean succ = false;
       BucketEntry bucketEntry = null;
       try {
-        bucketEntry = new BucketEntry(offset, len, accessCounter, inMemory, createRecycler,
-          getByteBuffAllocator());
+        int diskSizeWithHeader = (data instanceof HFileBlock) ?
+          ((HFileBlock)data).getOnDiskSizeWithHeader() : data.getSerializedLength();
+        bucketEntry = new BucketEntry(offset, len, diskSizeWithHeader, accessCounter, inMemory,
+          createRecycler, getByteBuffAllocator());
         bucketEntry.setDeserializerReference(data.getDeserializer());
         if (data instanceof HFileBlock) {
           // If an instance of HFileBlock, save on some allocations.
@@ -1903,4 +1911,27 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
   }
+  public Map<BlockCacheKey, BucketEntry> getBackingMap() {
+    return backingMap;
+  }
+
+  public Map<String, Boolean> getFullyCachedFiles() {
+    return fullyCachedFiles;
+  }
+
+  public static Optional<BucketCache> getBuckedCacheFromCacheConfig(CacheConfig cacheConf){
+    if (cacheConf.getBlockCache().isPresent()) {
+      BlockCache bc = cacheConf.getBlockCache().get();
+      if (bc instanceof CombinedBlockCache) {
+        BlockCache l2 = ((CombinedBlockCache) bc).getSecondLevelCache();
+        if (l2 instanceof BucketCache) {
+          return Optional.of((BucketCache) l2);
+        }
+      } else if (bc instanceof BucketCache) {
+        return Optional.of((BucketCache) bc);
+      }
+    }
+    return Optional.empty();
+  }
+
 }

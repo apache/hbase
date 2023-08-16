@@ -145,9 +145,9 @@ public class TestPrefetchPersistence {
 
   public void closeStoreFile(Path path) throws Exception {
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, true, conf);
-    assertTrue(bucketCache.prefetchCompleted.containsKey(path.getName()));
+    assertTrue(bucketCache.fullyCachedFiles.containsKey(path.getName()));
     reader.close(true);
-    assertFalse(bucketCache.prefetchCompleted.containsKey(path.getName()));
+    assertFalse(bucketCache.fullyCachedFiles.containsKey(path.getName()));
   }
 
   public void readStoreFile(Path storeFilePath, long offset) throws Exception {

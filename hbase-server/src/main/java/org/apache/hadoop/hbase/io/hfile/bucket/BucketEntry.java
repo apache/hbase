@@ -43,13 +43,15 @@ import org.apache.yetus.audience.InterfaceAudience;
  * bytes gives us 256TB or so.
  */
 @InterfaceAudience.Private
-class BucketEntry implements HBaseReferenceCounted {
+public class BucketEntry implements HBaseReferenceCounted {
   // access counter comparator, descending order
   static final Comparator<BucketEntry> COMPARATOR =
     Comparator.comparingLong(BucketEntry::getAccessCounter).reversed();
 
   private int offsetBase;
   private int length;
+
+  private int onDiskSizeWithHeader;
   private byte offset1;
 
   /**
@@ -98,23 +100,23 @@ class BucketEntry implements HBaseReferenceCounted {
    *                       becoming 0. NOTICE that {@link ByteBuffAllocator#NONE} could only be used
    *                       for test.
    */
-  BucketEntry(long offset, int length, long accessCounter, boolean inMemory,
+  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter, boolean inMemory,
     Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
-    this(offset, length, accessCounter, System.nanoTime(), inMemory, createRecycler, allocator);
+    this(offset, length, onDiskSizeWithHeader, accessCounter, System.nanoTime(), inMemory, createRecycler, allocator);
   }
 
-  BucketEntry(long offset, int length, long accessCounter, long cachedTime, boolean inMemory,
+  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter, long cachedTime, boolean inMemory,
     Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
     if (createRecycler == null) {
       throw new IllegalArgumentException("createRecycler could not be null!");
     }
     setOffset(offset);
     this.length = length;
+    this.onDiskSizeWithHeader = onDiskSizeWithHeader;
     this.accessCounter = accessCounter;
     this.cachedTime = cachedTime;
     this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.MULTI;
     this.refCnt = RefCnt.create(createRecycler.apply(this));
-
     this.markedAsEvicted = new AtomicBoolean(false);
     this.allocator = allocator;
   }
@@ -165,8 +167,12 @@ class BucketEntry implements HBaseReferenceCounted {
     return this.priority;
   }
 
-  long getCachedTime() {
+  public long getCachedTime() {
     return cachedTime;
+  }
+
+  public int getOnDiskSizeWithHeader() {
+    return onDiskSizeWithHeader;
   }
 
   /**
