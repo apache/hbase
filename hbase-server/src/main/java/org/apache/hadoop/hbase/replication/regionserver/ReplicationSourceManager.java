@@ -122,6 +122,8 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   private AtomicLong totalBufferUsed = new AtomicLong();
 
+  private int peerChangeMaxRetries;
+
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
    * @param replicationQueues the interface for manipulating replication queues
@@ -172,6 +174,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.latestPaths = new HashSet<Path>();
     replicationForBulkLoadDataEnabled = conf.getBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY,
       HConstants.REPLICATION_BULKLOAD_ENABLE_DEFAULT);
+    this.peerChangeMaxRetries =
+        conf.getInt("replication.peer.change.max.try", 3);
   }
 
   /**
@@ -623,7 +627,17 @@ public class ReplicationSourceManager implements ReplicationListener {
       try {
         boolean added = this.replicationPeers.peerConnected(id);
         if (added) {
-          addSource(id);
+          int num_retries = 0;
+          while (num_retries < peerChangeMaxRetries) {
+            try {
+              addSource(id);
+              break;
+            } catch (IOException e) {
+              if (++num_retries == peerChangeMaxRetries) {
+                throw e;
+              }
+            }
+          }
           if (replicationForBulkLoadDataEnabled) {
             this.replicationQueues.addPeerToHFileRefs(id);
           }
