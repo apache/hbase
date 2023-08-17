@@ -28,6 +28,7 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelDuplexHandler;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelHandlerContext;
 import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
+import org.apache.hbase.thirdparty.io.netty.util.ReferenceCountUtil;
 
 /**
  * Handler to enforce writability protections on our server channels: <br>
@@ -42,15 +43,6 @@ import org.apache.hbase.thirdparty.io.netty.channel.ChannelPromise;
  */
 @InterfaceAudience.Private
 public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandler {
-
-  private static final ConnectionClosedException EXCEPTION =
-    new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold") {
-      @Override
-      public Throwable fillInStackTrace() {
-        // the stacktrace is noisy and not very useful here.
-        return this;
-      }
-    };
 
   static final String NAME = "NettyRpcServerChannelWritabilityHandler";
 
@@ -72,7 +64,13 @@ public class NettyRpcServerChannelWritabilityHandler extends ChannelDuplexHandle
   public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
     throws Exception {
     if (handleFatalThreshold(ctx)) {
-      promise.setFailure(EXCEPTION);
+      promise.setFailure(
+        new ConnectionClosedException("Channel outbound bytes exceeded fatal threshold"));
+      if (msg instanceof RpcResponse) {
+        ((RpcResponse) msg).done();
+      } else {
+        ReferenceCountUtil.release(msg);
+      }
       return;
     }
     ctx.write(msg, promise);
