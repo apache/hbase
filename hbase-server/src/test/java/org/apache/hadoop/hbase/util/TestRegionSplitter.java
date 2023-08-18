@@ -23,17 +23,31 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseFaultInjector;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionSplitter.DecimalStringSplit;
@@ -41,6 +55,7 @@ import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -63,6 +78,7 @@ public class TestRegionSplitter {
 
     private final static Logger LOG = LoggerFactory.getLogger(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+    private final static HBaseTestingUtility UTIL1 = new HBaseTestingUtility();
     private final static String CF_NAME = "SPLIT_TEST_CF";
     private final static byte xFF = (byte) 0xff;
 
@@ -71,13 +87,81 @@ public class TestRegionSplitter {
 
     @BeforeClass
     public static void setup() throws Exception {
-        UTIL.startMiniCluster();
+      UTIL.startMiniCluster();
+      UTIL1.startMiniCluster(2);
     }
 
     @AfterClass
     public static void teardown() throws Exception {
-        UTIL.shutdownMiniCluster();
+      UTIL.shutdownMiniCluster();
+      UTIL1.shutdownMiniCluster();
     }
+
+    @Test
+    public void testSplittingLog() throws Exception {
+      // Create the table
+      final TableName tableName = TableName.valueOf("test");
+      final byte[] famName = Bytes.toBytes("f");
+      final byte[] noRepfamName = Bytes.toBytes("norep");
+      TableDescriptor table = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName).setMaxVersions(100)
+          .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(noRepfamName)).build();
+      UTIL1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+      Table htable1 = UTIL1.getConnection().getTable(tableName);
+
+      // Put some data
+      final byte[] row = Bytes.toBytes("row");
+      int batch_size = 100;
+      for (int i = 0; i < batch_size; i++) {
+        Put put = new Put(Bytes.toBytes("" + i));
+        put.addColumn(famName, row, row);
+        htable1.put(put);
+      }
+      Scan scan1 = new Scan();
+      ResultScanner scanner1 = htable1.getScanner(scan1);
+      Result[] res1 = scanner1.next(batch_size);
+      scanner1.close();
+      assertEquals(batch_size, res1.length);
+
+      // Restart to trigger SplitLog
+      LOG.info("Restarting....");
+      UTIL1.getMiniHBaseCluster().abortRegionServer(0);
+
+      // Do the fault injection
+      // One to simulate disk failure after the log is moved
+      // The other to simulate server down for rescheduling the task
+      AtomicBoolean metFNF = new AtomicBoolean(false);
+      HBaseFaultInjector faultInjector = new HBaseFaultInjector() {
+
+        @Override
+        public void injectIOException() throws IOException{
+          throw new IOException("Inject Error!");
+        }
+
+        @Override
+        public void killTaskNode(ServerName name) {
+          UTIL1.getMiniHBaseCluster().getMaster().getServerManager().expireServer(name);
+        }
+
+        @Override
+        public void collectFNFException() {
+          metFNF.compareAndSet(false,true);
+        }
+      };
+      HBaseFaultInjector.set(faultInjector);
+      final int attempts = 60;
+      // Wait Until the IOException is injected
+      for (int i = 0; i < attempts; i++) {
+        if (metFNF.get()) {
+          break;
+        }
+        if (i == (attempts - 1)) {
+          Assert.fail("Should have reproduce the FileNotFoundException");
+        }
+        Thread.sleep(1000);
+      }
+  }
 
     /**
      * Test creating a pre-split table using the HexStringSplit algorithm.

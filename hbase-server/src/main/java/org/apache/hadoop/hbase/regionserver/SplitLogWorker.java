@@ -25,6 +25,7 @@ import java.net.SocketTimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseFaultInjector;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -114,6 +115,7 @@ public class SplitLogWorker implements Runnable {
       if (e instanceof FileNotFoundException) {
         // A wal file may not exist anymore. Nothing can be recovered so move on
         LOG.warn("Done, WAL {} does not exist anymore", filename, e);
+        HBaseFaultInjector.get().collectFNFException();
         return Status.DONE;
       }
       Throwable cause = e.getCause();
