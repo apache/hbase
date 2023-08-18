@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseFaultInjector;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -93,6 +94,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       public Status finish(ServerName workerName, String logfile) {
         try {
           WALSplitUtil.finishSplitLogFile(logfile, conf);
+          HBaseFaultInjector.get().injectIOException();
         } catch (IOException e) {
           LOG.warn("Could not finish splitting of log file " + logfile, e);
           return Status.ERR;
@@ -177,6 +179,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener implements
       // 2) after a configurable timeout if the server is not marked as dead but has still not
       // finished the task. This allows to continue if the worker cannot actually handle it,
       // for any reason.
+      HBaseFaultInjector.get().killTaskNode(task.cur_worker_name);
       final long time = EnvironmentEdgeManager.currentTime() - task.last_update;
       final boolean alive =
           details.getMaster().getServerManager() != null ? details.getMaster().getServerManager()
