@@ -17,8 +17,21 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -30,7 +43,6 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -38,19 +50,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
-import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetchWithBucketCache {
@@ -97,19 +98,19 @@ public class TestPrefetchWithBucketCache {
   @Test
   public void testPrefetchDoesntOverwork() throws Exception {
     Path storeFile = writeStoreFile("TestPrefetchDoesntOverwork");
-    //Prefetches the file blocks
+    // Prefetches the file blocks
     readStoreFile(storeFile);
     BucketCache bc = BucketCache.getBuckedCacheFromCacheConfig(cacheConf).get();
     Map<BlockCacheKey, BucketEntry> snapshot = ImmutableMap.copyOf(bc.getBackingMap());
-    //Reads file again and check we are not prefetching it again
+    // Reads file again and check we are not prefetching it again
     readStoreFile(storeFile);
-    //Makes sure the cache hasn't changed
-    snapshot.entrySet().forEach( e -> {
+    // Makes sure the cache hasn't changed
+    snapshot.entrySet().forEach(e -> {
       BucketEntry entry = bc.getBackingMap().get(e.getKey());
       assertNotNull(entry);
       assertEquals(e.getValue().getCachedTime(), entry.getCachedTime());
     });
-    //forcibly removes first block from the bc backing map, in order to cause it to be cached again
+    // forcibly removes first block from the bc backing map, in order to cause it to be cached again
     BlockCacheKey key = snapshot.keySet().stream().findFirst().get();
     bc.getBackingMap().remove(key);
     bc.getFullyCachedFiles().remove(storeFile.getName());

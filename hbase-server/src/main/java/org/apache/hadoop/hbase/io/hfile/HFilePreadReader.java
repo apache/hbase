@@ -40,12 +40,13 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
-    BucketCache.getBuckedCacheFromCacheConfig(cacheConf).ifPresent( bc ->
-      fileAlreadyCached.setValue(bc.getFullyCachedFiles().get(path.getName())==null ? false : true)
-    );
+    BucketCache.getBuckedCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
+      .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()
-      && !fileAlreadyCached.booleanValue()) {
+    if (
+      cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()
+        && !fileAlreadyCached.booleanValue()
+    ) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -72,10 +73,10 @@ public class HFilePreadReader extends HFileReaderImpl {
               if (Thread.interrupted()) {
                 break;
               }
-              //BucketCache can be persistent and resilient to restarts, so we check first if the
+              // BucketCache can be persistent and resilient to restarts, so we check first if the
               // block exists on its in-memory index, if so, we just update the offset and move on
               // to the next block without actually going read all the way to the cache.
-              if (bucketCacheOptional.isPresent()){
+              if (bucketCacheOptional.isPresent()) {
                 BucketCache cache = bucketCacheOptional.get();
                 BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
                 BucketEntry entry = cache.getBackingMap().get(cacheKey);
@@ -108,8 +109,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
-            BucketCache.getBuckedCacheFromCacheConfig(cacheConf).
-              ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
+            BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
+              .ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
 
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)

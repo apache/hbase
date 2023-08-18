@@ -1654,8 +1654,9 @@ public class BucketCache implements BlockCache, HeapSize {
       boolean succ = false;
       BucketEntry bucketEntry = null;
       try {
-        int diskSizeWithHeader = (data instanceof HFileBlock) ?
-          ((HFileBlock)data).getOnDiskSizeWithHeader() : data.getSerializedLength();
+        int diskSizeWithHeader = (data instanceof HFileBlock)
+          ? ((HFileBlock) data).getOnDiskSizeWithHeader()
+          : data.getSerializedLength();
         bucketEntry = new BucketEntry(offset, len, diskSizeWithHeader, accessCounter, inMemory,
           createRecycler, getByteBuffAllocator());
         bucketEntry.setDeserializerReference(data.getDeserializer());
@@ -1911,6 +1912,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
   }
+
   public Map<BlockCacheKey, BucketEntry> getBackingMap() {
     return backingMap;
   }
@@ -1919,7 +1921,7 @@ public class BucketCache implements BlockCache, HeapSize {
     return fullyCachedFiles;
   }
 
-  public static Optional<BucketCache> getBuckedCacheFromCacheConfig(CacheConfig cacheConf){
+  public static Optional<BucketCache> getBuckedCacheFromCacheConfig(CacheConfig cacheConf) {
     if (cacheConf.getBlockCache().isPresent()) {
       BlockCache bc = cacheConf.getBlockCache().get();
       if (bc instanceof CombinedBlockCache) {

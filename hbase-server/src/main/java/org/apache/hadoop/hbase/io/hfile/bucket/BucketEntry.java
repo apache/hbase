@@ -100,13 +100,15 @@ public class BucketEntry implements HBaseReferenceCounted {
    *                       becoming 0. NOTICE that {@link ByteBuffAllocator#NONE} could only be used
    *                       for test.
    */
-  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter, boolean inMemory,
-    Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
-    this(offset, length, onDiskSizeWithHeader, accessCounter, System.nanoTime(), inMemory, createRecycler, allocator);
+  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter,
+    boolean inMemory, Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
+    this(offset, length, onDiskSizeWithHeader, accessCounter, System.nanoTime(), inMemory,
+      createRecycler, allocator);
   }
 
-  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter, long cachedTime, boolean inMemory,
-    Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
+  BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter,
+    long cachedTime, boolean inMemory, Function<BucketEntry, Recycler> createRecycler,
+    ByteBuffAllocator allocator) {
     if (createRecycler == null) {
       throw new IllegalArgumentException("createRecycler could not be null!");
     }
