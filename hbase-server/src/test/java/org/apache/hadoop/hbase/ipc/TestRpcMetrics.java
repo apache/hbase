@@ -88,6 +88,9 @@ public class TestRpcMetrics {
     HELPER.assertGauge("numCallsInWriteQueue", 50, serverSource);
     HELPER.assertGauge("numCallsInReadQueue", 50, serverSource);
     HELPER.assertGauge("numCallsInScanQueue", 2, serverSource);
+    HELPER.assertGauge("nettyDirectMemoryUsage", 100, serverSource);
+    HELPER.assertGauge("nettyTotalPendingOutboundBytes", 100, serverSource);
+    HELPER.assertGauge("nettyMaxPendingOutboundBytes", 5, serverSource);
   }
 
   /**
@@ -98,6 +101,12 @@ public class TestRpcMetrics {
     MetricsHBaseServer mrpc =
       new MetricsHBaseServer("HMaster", new MetricsHBaseServerWrapperStub());
     MetricsHBaseServerSource serverSource = mrpc.getMetricsSource();
+
+    mrpc.unwritableTime(100);
+    mrpc.maxOutboundBytesExceeded();
+    mrpc.maxOutboundBytesExceeded();
+    HELPER.assertCounter("maxOutboundBytesExceeded", 2, serverSource);
+    HELPER.assertCounter("unwritableTime_NumOps", 1, serverSource);
 
     for (int i = 0; i < 12; i++) {
       mrpc.authenticationFailure();

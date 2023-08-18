@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.metrics.ExceptionTrackingSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -36,10 +37,12 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   private final MutableFastCounter authenticationFallbacks;
   private final MutableFastCounter sentBytes;
   private final MutableFastCounter receivedBytes;
+  private final MutableFastCounter maxOutboundBytesExceeded;
 
   private MetricHistogram queueCallTime;
   private MetricHistogram processCallTime;
   private MetricHistogram totalCallTime;
+  private MetricHistogram unwritableTime;
   private MetricHistogram requestSize;
   private MetricHistogram responseSize;
 
@@ -67,6 +70,10 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
       this.getMetricsRegistry().newTimeHistogram(PROCESS_CALL_TIME_NAME, PROCESS_CALL_TIME_DESC);
     this.totalCallTime =
       this.getMetricsRegistry().newTimeHistogram(TOTAL_CALL_TIME_NAME, TOTAL_CALL_TIME_DESC);
+    this.unwritableTime =
+      this.getMetricsRegistry().newTimeHistogram(UNWRITABLE_TIME_NAME, UNWRITABLE_TIME_DESC);
+    this.maxOutboundBytesExceeded = this.getMetricsRegistry()
+      .newCounter(MAX_OUTBOUND_BYTES_EXCEEDED_NAME, MAX_OUTBOUND_BYTES_EXCEEDED_DESC, 0);
     this.requestSize =
       this.getMetricsRegistry().newSizeHistogram(REQUEST_SIZE_NAME, REQUEST_SIZE_DESC);
     this.responseSize =
@@ -134,6 +141,16 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
   }
 
   @Override
+  public void unwritableTime(long unwritableTime) {
+    this.unwritableTime.add(unwritableTime);
+  }
+
+  @Override
+  public void maxOutboundBytesExceeded() {
+    maxOutboundBytesExceeded.incr();
+  }
+
+  @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
 
@@ -173,6 +190,13 @@ public class MetricsHBaseServerSourceImpl extends ExceptionTrackingSourceImpl
           wrapper.getActiveScanRpcHandlerCount())
         .addGauge(Interns.info(NETTY_DM_USAGE_NAME, NETTY_DM_USAGE_DESC),
           wrapper.getNettyDmUsage());
+
+      Pair<Long, Long> totalAndMax = wrapper.getTotalAndMaxNettyOutboundBytes();
+      mrb.addGauge(
+        Interns.info(NETTY_TOTAL_PENDING_OUTBOUND_NAME, NETTY_TOTAL_PENDING_OUTBOUND_DESC),
+        totalAndMax.getFirst());
+      mrb.addGauge(Interns.info(NETTY_MAX_PENDING_OUTBOUND_NAME, NETTY_MAX_PENDING_OUTBOUND_DESC),
+        totalAndMax.getSecond());
     }
 
     metricsRegistry.snapshot(mrb, all);

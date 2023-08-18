@@ -95,6 +95,14 @@ public class MetricsHBaseServer {
     source.queuedAndProcessedCall(totalTime);
   }
 
+  void unwritableTime(long unwritableTime) {
+    source.unwritableTime(unwritableTime);
+  }
+
+  void maxOutboundBytesExceeded() {
+    source.maxOutboundBytesExceeded();
+  }
+
   public void exception(Throwable throwable) {
     source.exception();
 
