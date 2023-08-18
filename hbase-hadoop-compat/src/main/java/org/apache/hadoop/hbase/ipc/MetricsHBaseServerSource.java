@@ -46,6 +46,14 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String PROCESS_CALL_TIME_DESC = "Processing call time.";
   String TOTAL_CALL_TIME_NAME = "totalCallTime";
   String TOTAL_CALL_TIME_DESC = "Total call time, including both queued and processing time.";
+
+  String UNWRITABLE_TIME_NAME = "unwritableTime";
+  String UNWRITABLE_TIME_DESC =
+    "Time where an channel was unwritable due to having too many outbound bytes";
+  String MAX_OUTBOUND_BYTES_EXCEEDED_NAME = "maxOutboundBytesExceeded";
+  String MAX_OUTBOUND_BYTES_EXCEEDED_DESC =
+    "Number of times a connection was closed because the channel outbound "
+      + "bytes exceeded the configured max.";
   String QUEUE_SIZE_NAME = "queueSize";
   String QUEUE_SIZE_DESC = "Number of bytes in the call queues; request has been read and "
     + "parsed and is waiting to run or is currently being executed.";
@@ -93,6 +101,10 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   String NETTY_DM_USAGE_NAME = "nettyDirectMemoryUsage";
 
   String NETTY_DM_USAGE_DESC = "Current Netty direct memory usage.";
+  String NETTY_TOTAL_PENDING_OUTBOUND_NAME = "nettyTotalPendingOutboundBytes";
+  String NETTY_TOTAL_PENDING_OUTBOUND_DESC = "Current total bytes pending write to all channel";
+  String NETTY_MAX_PENDING_OUTBOUND_NAME = "nettyMaxPendingOutboundBytes";
+  String NETTY_MAX_PENDING_OUTBOUND_DESC = "Current maximum bytes pending write to any channel";
 
   void authorizationSuccess();
 
@@ -117,4 +129,8 @@ public interface MetricsHBaseServerSource extends ExceptionTrackingSource {
   void processedCall(int processingTime);
 
   void queuedAndProcessedCall(int totalTime);
+
+  void unwritableTime(long unwritableTime);
+
+  void maxOutboundBytesExceeded();
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.util.Pair;
+
 public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper {
   @Override
   public long getTotalQueueSize() {
@@ -116,5 +118,10 @@ public class MetricsHBaseServerWrapperStub implements MetricsHBaseServerWrapper 
   @Override
   public int getActiveMetaPriorityRpcHandlerCount() {
     return 1;
+  }
+
+  @Override
+  public Pair<Long, Long> getTotalAndMaxNettyOutboundBytes() {
+    return Pair.newPair(100L, 5L);
   }
 }
