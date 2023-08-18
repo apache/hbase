@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -64,4 +65,10 @@ public interface MetricsHBaseServerWrapper {
   int getActiveScanRpcHandlerCount();
 
   long getNettyDmUsage();
+
+  /**
+   * These two metrics are calculated together, so we want to return them in one call
+   * @return pair containing total (first) and max (second) pending outbound bytes.
+   */
+  Pair<Long, Long> getTotalAndMaxNettyOutboundBytes();
 }
