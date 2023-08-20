@@ -1179,6 +1179,11 @@ public class Bytes implements Comparable<Bytes> {
 
   }
 
+  static abstract class CommonPrefixer {
+    abstract int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
+      int rightOffset, int rightLength);
+  }
+
   static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
   }
@@ -1449,6 +1454,99 @@ public class Bytes implements Comparable<Bytes> {
           }
         }
         return length1 - length2;
+      }
+    }
+  }
+
+  static class CommonPrefixerHolder {
+    static final String UNSAFE_COMMON_PREFIXER_NAME =
+      CommonPrefixerHolder.class.getName() + "$UnsafeCommonPrefixer";
+
+    static final CommonPrefixer BEST_COMMON_PREFIXER = getBestCommonPrefixer();
+
+    static CommonPrefixer getBestCommonPrefixer() {
+      try {
+        Class<? extends CommonPrefixer> theClass =
+          Class.forName(UNSAFE_COMMON_PREFIXER_NAME).asSubclass(CommonPrefixer.class);
+
+        return theClass.getConstructor().newInstance();
+      } catch (Throwable t) { // ensure we really catch *everything*
+        return CommonPrefixerHolder.PureJavaCommonPrefixer.INSTANCE;
+      }
+    }
+
+    static final class PureJavaCommonPrefixer extends CommonPrefixer {
+      static final PureJavaCommonPrefixer INSTANCE = new PureJavaCommonPrefixer();
+
+      private PureJavaCommonPrefixer() {
+      }
+
+      @Override
+      public int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
+        int rightOffset, int rightLength) {
+        int length = Math.min(leftLength, rightLength);
+        int result = 0;
+
+        while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
+          result++;
+        }
+        return result;
+      }
+    }
+
+    static final class UnsafeCommonPrefixer extends CommonPrefixer {
+
+      static {
+        if (!UNSAFE_UNALIGNED) {
+          throw new Error();
+        }
+
+        // sanity check - this should never fail
+        if (HBasePlatformDependent.arrayIndexScale(byte[].class) != 1) {
+          throw new AssertionError();
+        }
+      }
+
+      public UnsafeCommonPrefixer() {
+      }
+
+      @Override
+      public int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
+        int rightOffset, int rightLength) {
+        final int stride = 8;
+        final int minLength = Math.min(leftLength, rightLength);
+        int strideLimit = minLength & ~(stride - 1);
+        final long leftOffsetAdj = leftOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        final long rightOffsetAdj = rightOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        int result = 0;
+        int i;
+
+        for (i = 0; i < strideLimit; i += stride) {
+          long lw = HBasePlatformDependent.getLong(left, leftOffsetAdj + i);
+          long rw = HBasePlatformDependent.getLong(right, rightOffsetAdj + i);
+          if (lw != rw) {
+            if (!UnsafeAccess.LITTLE_ENDIAN) {
+              return result + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            } else {
+              return result + (Long.numberOfTrailingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            }
+          } else {
+            result += Bytes.SIZEOF_LONG;
+          }
+        }
+
+        // The epilogue to cover the last (minLength % stride) elements.
+        for (; i < minLength; i++) {
+          int il = (left[leftOffset + i]);
+          int ir = (right[rightOffset + i]);
+          if (il != ir) {
+            return result;
+          } else {
+            result++;
+          }
+        }
+
+        return result;
       }
     }
   }
@@ -2429,12 +2527,7 @@ public class Bytes implements Comparable<Bytes> {
 
   public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
     int leftOffset, int rightOffset) {
-    int length = Math.min(leftLength, rightLength);
-    int result = 0;
-
-    while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
-      result++;
-    }
-    return result;
+    return CommonPrefixerHolder.BEST_COMMON_PREFIXER.findCommonPrefix(left, leftOffset, leftLength,
+      right, rightOffset, rightLength);
   }
 }
