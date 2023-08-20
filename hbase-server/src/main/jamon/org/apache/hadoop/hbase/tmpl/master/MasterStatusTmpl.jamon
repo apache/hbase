@@ -43,6 +43,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.TableName;
+org.apache.hadoop.hbase.RSGroupTableAccessor;
 org.apache.hadoop.hbase.client.Admin;
 org.apache.hadoop.hbase.client.MasterSwitchType;
 org.apache.hadoop.hbase.client.TableState;
@@ -51,6 +52,7 @@ org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.master.ServerManager;
+org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.security.access.PermissionStorage;
@@ -701,17 +703,43 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th></th>
         <th>ServerName</th>
         <th>Stop time</th>
+        <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+            && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
+            &&  master.getServerManager().getOnlineServersList().size() > 0 %>
+                <th>RSGroup</th>
+        </%if>
     </tr>
     <%java>
-       DeadServer deadServerUtil = master.getServerManager().getDeadServers();
-       ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
-         Arrays.sort(deadServerNames);
-         for (ServerName deadServerName: deadServerNames) {
+        List<RSGroupInfo> groups = null;
+        DeadServer deadServerUtil = master.getServerManager().getDeadServers();
+        if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+            && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
+            && master.getServerManager().getOnlineServersList().size() > 0) {
+                groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
+        }
+        ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
+        Arrays.sort(deadServerNames);
+        for (ServerName deadServerName: deadServerNames) {
+            String rsGroupName = null;
+            if (groups != null){
+                for (RSGroupInfo rsGroupInfo : groups) {
+                    if (rsGroupInfo.containsServer(deadServerName.getAddress())) {
+                        rsGroupName = rsGroupInfo.getName();
+                        break;
+                    }
+                }
+                if (rsGroupName == null) {
+                    rsGroupName = RSGroupInfo.DEFAULT_GROUP;
+                }
+            }
     </%java>
     <tr>
     	<th></th>
         <td><% deadServerName %></td>
         <td><% deadServerUtil.getTimeOfDeath(deadServerName) %></td>
+        <%if rsGroupName != null %>
+            <td><% rsGroupName %></td>
+        </%if>
     </tr>
     <%java>
         }
