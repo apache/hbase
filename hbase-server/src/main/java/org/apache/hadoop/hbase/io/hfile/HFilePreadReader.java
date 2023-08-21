@@ -91,6 +91,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                       cacheKey);
                     continue;
                   }
+                } else {
+                  LOG.debug("No entry in the backing map for cache key {}", cacheKey);
                 }
               }
               // Perhaps we got our block from cache? Unlikely as this may be, if it happens, then

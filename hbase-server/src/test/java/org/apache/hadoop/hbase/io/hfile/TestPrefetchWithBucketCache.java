@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
@@ -52,9 +53,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetchWithBucketCache {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchWithBucketCache.class);
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
@@ -99,10 +104,12 @@ public class TestPrefetchWithBucketCache {
   public void testPrefetchDoesntOverwork() throws Exception {
     Path storeFile = writeStoreFile("TestPrefetchDoesntOverwork");
     // Prefetches the file blocks
+    LOG.debug("First read should prefetch the blocks.");
     readStoreFile(storeFile);
     BucketCache bc = BucketCache.getBuckedCacheFromCacheConfig(cacheConf).get();
     Map<BlockCacheKey, BucketEntry> snapshot = ImmutableMap.copyOf(bc.getBackingMap());
     // Reads file again and check we are not prefetching it again
+    LOG.debug("Second read, no prefetch should happen here.");
     readStoreFile(storeFile);
     // Makes sure the cache hasn't changed
     snapshot.entrySet().forEach(e -> {
@@ -112,11 +119,13 @@ public class TestPrefetchWithBucketCache {
     });
     // forcibly removes first block from the bc backing map, in order to cause it to be cached again
     BlockCacheKey key = snapshot.keySet().stream().findFirst().get();
+    LOG.debug("removing block {}", key);
     bc.getBackingMap().remove(key);
     bc.getFullyCachedFiles().remove(storeFile.getName());
     assertTrue(snapshot.size() > bc.getBackingMap().size());
+    LOG.debug("Third read should prefetch again, as we removed one block for the file.");
     readStoreFile(storeFile);
-    assertEquals(snapshot.size(), bc.getBackingMap().size());
+    Waiter.waitFor(conf, 300, () -> snapshot.size() == bc.getBackingMap().size());
     assertTrue(snapshot.get(key).getCachedTime() < bc.getBackingMap().get(key).getCachedTime());
   }
 
