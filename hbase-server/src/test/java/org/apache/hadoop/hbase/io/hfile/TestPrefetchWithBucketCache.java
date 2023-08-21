@@ -51,10 +51,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 @Category({ IOTests.class, MediumTests.class })
 public class TestPrefetchWithBucketCache {
@@ -107,6 +107,8 @@ public class TestPrefetchWithBucketCache {
     LOG.debug("First read should prefetch the blocks.");
     readStoreFile(storeFile);
     BucketCache bc = BucketCache.getBuckedCacheFromCacheConfig(cacheConf).get();
+    // Our file should have 6 DATA blocks. We should wait for all of them to be cached
+    Waiter.waitFor(conf, 300, () -> bc.getBackingMap().size() == 6);
     Map<BlockCacheKey, BucketEntry> snapshot = ImmutableMap.copyOf(bc.getBackingMap());
     // Reads file again and check we are not prefetching it again
     LOG.debug("Second read, no prefetch should happen here.");
