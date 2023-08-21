@@ -541,6 +541,16 @@ public class TestRegionsRecoveryChore {
       public CompactionState getCompactionState() {
         return null;
       }
+
+      @Override
+      public float getPrefetchCacheRatio() {
+        return 0.0f;
+      }
+
+      @Override
+      public ServerName getServerName() {
+        return null;
+      }
     };
     return regionMetrics;
   }

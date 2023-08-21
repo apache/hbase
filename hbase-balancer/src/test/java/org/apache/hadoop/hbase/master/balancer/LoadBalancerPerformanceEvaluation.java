@@ -86,6 +86,7 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   private void setupConf() {
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
       LoadBalancer.class);
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
   }
 

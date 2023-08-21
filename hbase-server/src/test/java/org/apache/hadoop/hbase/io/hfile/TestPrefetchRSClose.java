@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -75,7 +76,7 @@ public class TestPrefetchRSClose {
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "file:" + testDir + "/bucket.cache");
     conf.setInt("hbase.bucketcache.size", 400);
     conf.set("hbase.bucketcache.persistent.path", testDir + "/bucket.persistence");
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, testDir + "/prefetch.persistence");
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, testDir + "/prefetch.persistence");
     zkCluster = TEST_UTIL.startMiniZKCluster();
     cluster = TEST_UTIL.startMiniHBaseCluster(option);
     assertEquals(2, cluster.getRegionServerThreads().size());

@@ -106,9 +106,11 @@ import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -1526,6 +1528,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long totalStaticBloomSize = 0L;
     long totalCompactingKVs = 0L;
     long currentCompactedKVs = 0L;
+    int filesAlreadyPrefetched = 0;
     List<HStore> storeList = r.getStores();
     stores += storeList.size();
     for (HStore store : storeList) {
@@ -1547,6 +1550,23 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       rootLevelIndexSize += store.getStorefilesRootLevelIndexSize();
       totalStaticIndexSize += store.getTotalStaticIndexSize();
       totalStaticBloomSize += store.getTotalStaticBloomSize();
+      Collection<HStoreFile> filesInStore = store.getStorefiles();
+      if (!filesInStore.isEmpty()) {
+        for (HStoreFile hStoreFile : filesInStore) {
+          String tempFileName = hStoreFile.getPath().getName();
+          // PrefetchExecutor adds the encoded HFile name if the file has been prefetched. Every
+          // store file in this region is then checked if it has been prefetched. If the storefile
+          // is a link, then it's format is <table=region-hfile>. The comparison here would fail if
+          // this format is used. In order for this comparison to success in such case, the HFile
+          // name needs to be extracted from the HFileLink
+          if (HFileLink.isHFileLink(tempFileName)) {
+            tempFileName = HFileLink.getReferencedHFileName(tempFileName);
+          }
+          if (PrefetchExecutor.isFilePrefetched(tempFileName)) {
+            filesAlreadyPrefetched++;
+          }
+        }
+      }
     }
 
     int unitMB = 1024 * 1024;
@@ -1566,6 +1586,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     long blocksTotalWeight = hdfsBd.getUniqueBlocksTotalWeight();
     long blocksLocalWeight = hdfsBd.getBlocksLocalWeight(serverName.getHostname());
     long blocksLocalWithSsdWeight = hdfsBd.getBlocksLocalWithSsdWeight(serverName.getHostname());
+
+    float ratioOfFilesAlreadyCached =
+      (storefiles == 0) ? 0 : filesAlreadyPrefetched / ((float) storefiles);
+
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1589,7 +1613,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setDataLocalityForSsd(dataLocalityForSsd).setBlocksLocalWeight(blocksLocalWeight)
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
-      .setLastMajorCompactionTs(r.getOldestHfileTs(true));
+      .setLastMajorCompactionTs(r.getOldestHfileTs(true))
+      .setPrefetchCacheRatio(ratioOfFilesAlreadyCached)
+      .setServerName(ProtobufUtil.toServerName(serverName));
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }

@@ -213,6 +213,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(new Size(i, Size.Unit.MEGABYTE));
+      when(rl.getPrefetchCacheRatio()).thenReturn(0.0f);
 
       Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);
@@ -317,6 +318,7 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
   @Test
   public void testNeedBalance() {
     conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", 1.0f);
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, -1f);
     conf.setBoolean("hbase.master.balancer.stochastic.runMaxSteps", false);
     conf.setLong("hbase.master.balancer.stochastic.maxSteps", 5000L);
@@ -603,6 +605,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
 
   @Test
   public void testDefaultCostFunctionList() {
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
+    loadBalancer.loadConf(conf);
     List<String> expected = Arrays.asList(RegionCountSkewCostFunction.class.getSimpleName(),
       PrimaryRegionCountSkewCostFunction.class.getSimpleName(),
       MoveCostFunction.class.getSimpleName(), RackLocalityCostFunction.class.getSimpleName(),
@@ -611,7 +615,8 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       RegionReplicaRackCostFunction.class.getSimpleName(),
       ReadRequestCostFunction.class.getSimpleName(), CPRequestCostFunction.class.getSimpleName(),
       WriteRequestCostFunction.class.getSimpleName(),
-      MemStoreSizeCostFunction.class.getSimpleName(), StoreFileCostFunction.class.getSimpleName());
+      MemStoreSizeCostFunction.class.getSimpleName(), StoreFileCostFunction.class.getSimpleName(),
+      PrefetchCacheCostFunction.class.getSimpleName());
 
     List<String> actual = Arrays.asList(loadBalancer.getCostFunctionNames());
     assertTrue("ExpectedCostFunctions: " + expected + " ActualCostFunctions: " + actual,
@@ -623,7 +628,6 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
       && Arrays.stream(cluster).anyMatch(x -> x < 1);
   }
 
-  // This mock allows us to test the LocalityCostFunction
   private class MockCluster extends BalancerClusterState {
 
     private int[][] localities = null; // [region][server] = percent of blocks

@@ -138,4 +138,10 @@ public interface RegionMetrics {
 
   /** Returns the compaction state of this region */
   CompactionState getCompactionState();
+
+  /** Returns the ratio of files already in cache */
+  float getPrefetchCacheRatio();
+
+  /** Returns the name of the server hosting this region */
+  ServerName getServerName();
 }

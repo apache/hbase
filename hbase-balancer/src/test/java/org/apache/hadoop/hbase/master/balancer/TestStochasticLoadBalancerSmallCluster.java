@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.ClassRule;
@@ -38,6 +39,7 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
@@ -48,6 +50,7 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 40; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, true, true);
   }
 
@@ -58,6 +61,7 @@ public class TestStochasticLoadBalancerSmallCluster extends StochasticBalancerTe
     int numRegionsPerServer = 1; // all servers except one
     int replication = 1;
     int numTables = 10;
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, "/tmp/prefetch_persistence");
     // fails because of max moves
     testWithCluster(numNodes, numRegions, numRegionsPerServer, replication, numTables, false,
       false);

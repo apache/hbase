@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -107,7 +108,7 @@ public class TestPrefetchPersistence {
     testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     prefetchPersistencePath = testDir + "/prefetch.persistence";
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, prefetchPersistencePath);
+    conf.set(HConstants.PREFETCH_PERSISTENCE_PATH_KEY, prefetchPersistencePath);
     fs = HFileSystem.get(conf);
   }
 

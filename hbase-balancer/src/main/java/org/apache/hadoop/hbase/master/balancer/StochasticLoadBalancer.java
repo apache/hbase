@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.BalancerRejection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,6 +60,7 @@ import org.slf4j.LoggerFactory;
  * <li>Data Locality</li>
  * <li>Memstore Sizes</li>
  * <li>Storefile Sizes</li>
+ * <li>Prefetch</li>
  * </ul>
  * <p>
  * Every cost function returns a number between 0 and 1 inclusive; where 0 is the lowest cost best
@@ -72,6 +74,7 @@ import org.slf4j.LoggerFactory;
  * <li>hbase.master.balancer.stochastic.localityCost</li>
  * <li>hbase.master.balancer.stochastic.memstoreSizeCost</li>
  * <li>hbase.master.balancer.stochastic.storefileSizeCost</li>
+ * <li>hbase.master.balancer.stochastic.prefetchCacheCost</li>
  * </ul>
  * <p>
  * You can also add custom Cost function by setting the the following configuration value:
@@ -129,6 +132,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
 
+  // Map of old prefetch ratio (region name ---> old server name ---> old prefetch ratio)
+  Map<String, Map<Address, Float>> historicRegionServerPrefetchRatio =
+    new HashMap<String, Map<Address, Float>>();
+
   // values are defaults
   private int maxSteps = DEFAULT_MAX_STEPS;
   private boolean runMaxSteps = DEFAULT_RUN_MAX_STEPS;
@@ -153,6 +160,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RackLocalityCostFunction rackLocalityCost;
   private RegionReplicaHostCostFunction regionReplicaHostCostFunction;
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
+  private PrefetchCacheCostFunction prefetchCacheCost;
+  private PrefetchBasedCandidateGenerator prefetchCandidateGenerator;
 
   protected List<CandidateGenerator> candidateGenerators;
 
@@ -160,7 +169,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     RANDOM,
     LOAD,
     LOCALITY,
-    RACK
+    RACK,
+    PREFETCH
   }
 
   /**
@@ -221,6 +231,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     candidateGenerators.add(GeneratorType.LOCALITY.ordinal(), localityCandidateGenerator);
     candidateGenerators.add(GeneratorType.RACK.ordinal(),
       new RegionReplicaRackCandidateGenerator());
+    candidateGenerators.add(GeneratorType.PREFETCH.ordinal(), prefetchCandidateGenerator);
     return candidateGenerators;
   }
 
@@ -237,6 +248,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     localityCandidateGenerator = new LocalityBasedCandidateGenerator();
     localityCost = new ServerLocalityCostFunction(conf);
     rackLocalityCost = new RackLocalityCostFunction(conf);
+    prefetchCacheCost = new PrefetchCacheCostFunction(conf);
+    prefetchCandidateGenerator = new PrefetchBasedCandidateGenerator();
 
     this.candidateGenerators = createCandidateGenerators();
 
@@ -256,6 +269,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     addCostFunction(new WriteRequestCostFunction(conf));
     addCostFunction(new MemStoreSizeCostFunction(conf));
     addCostFunction(new StoreFileCostFunction(conf));
+    addCostFunction(prefetchCacheCost);
     loadCustomCostFunctions(conf);
 
     curFunctionCosts = new double[costFunctions.size()];
@@ -290,8 +304,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if ((this.localityCost != null) || (this.rackLocalityCost != null)) {
       finder = this.regionFinder;
     }
-    BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+    BalancerClusterState cluster = new BalancerClusterState(loadOfOneTable, loads, finder,
+      rackManager, historicRegionServerPrefetchRatio);
 
     initCosts(cluster);
     curOverallCost = computeCost(cluster, Double.MAX_VALUE);
@@ -459,8 +473,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager);
+    BalancerClusterState cluster = new BalancerClusterState(loadOfOneTable, loads, finder,
+      rackManager, historicRegionServerPrefetchRatio);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
@@ -711,6 +725,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private void updateRegionLoad() {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
+    // The old prefetch ratio of a region on a region server is stored for finding out if the region
+    // was prefetched on the old server before moving it to the new server because of the server
+    // crash procedure.
     Map<String, Deque<BalancerRegionLoad>> oldLoads = loads;
     loads = new HashMap<>();
 
@@ -718,10 +735,23 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       sm.getRegionMetrics().forEach((byte[] regionName, RegionMetrics rm) -> {
         String regionNameAsString = RegionInfo.getRegionNameAsString(regionName);
         Deque<BalancerRegionLoad> rLoads = oldLoads.get(regionNameAsString);
+        ServerName oldServerName = null;
+        float oldPrefetchRatio = 0.0f;
         if (rLoads == null) {
           rLoads = new ArrayDeque<>(numRegionLoadsToRemember + 1);
-        } else if (rLoads.size() >= numRegionLoadsToRemember) {
-          rLoads.remove();
+        } else {
+          // Get the old server name and the prefetch ratio for this region on this server
+          oldServerName = rLoads.getLast().getServerName();
+          oldPrefetchRatio = rLoads.getLast().getPrefetchCacheRatio();
+          if (rLoads.size() >= numRegionLoadsToRemember) {
+            rLoads.remove();
+          }
+        }
+        if (oldServerName != null && !ServerName.isSameAddress(oldServerName, rm.getServerName())) {
+          // Record the old region server prefetch ratio
+          Map<Address, Float> serverPrefetchRatio = new HashMap<>();
+          serverPrefetchRatio.put(oldServerName.getAddress(), oldPrefetchRatio);
+          historicRegionServerPrefetchRatio.put(regionNameAsString, serverPrefetchRatio);
         }
         rLoads.add(new BalancerRegionLoad(rm));
         loads.put(regionNameAsString, rLoads);
@@ -738,6 +768,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       c.prepare(cluster);
       c.updateWeight(weightsOfGenerators);
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*(/src/test/.*|StochasticLoadBalancer).java")
+  List<CostFunction> getCostFunctions() {
+    return costFunctions;
   }
 
   /**
