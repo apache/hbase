@@ -551,12 +551,10 @@ public class TestBytes extends TestCase {
     }
   }
 
-  @Test
   public void testFindCommonPrefix() throws Exception {
     testFindCommonPrefix(false);
   }
 
-  @Test
   public void testFindCommonPrefixUnsafe() throws Exception {
     testFindCommonPrefix(true);
   }
