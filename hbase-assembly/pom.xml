@@ -34,6 +34,10 @@
     <license.bundles.dependencies>true</license.bundles.dependencies>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-netty-tcnative</artifactId>
+    </dependency>
     <!--
       Added by HubSpot since this module was in the original hadoop-three-compat moduleSet include list,
       which is now converted to a dependencySet.

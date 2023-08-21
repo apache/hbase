@@ -31,6 +31,7 @@
   <name>Apache HBase - Shaded</name>
   <description>Module of HBase with most deps shaded.</description>
   <modules>
+    <module>hbase-shaded-netty-tcnative</module>
     <module>hbase-shaded-client-byo-hadoop</module>
     <module>hbase-shaded-client</module>
     <module>hbase-shaded-mapreduce</module>

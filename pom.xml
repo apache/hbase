@@ -1001,6 +1001,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-shaded-netty-tcnative</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-shaded-client</artifactId>
         <version>${project.version}</version>
       </dependency>

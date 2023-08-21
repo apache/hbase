@@ -117,7 +117,7 @@
       </exclusions>
     </dependency>
 
-    <!-- 
+    <!--
     These are all provided by hbase-client-bundle. We set them as scope
     provided here so that they are excluded from the resulting dependency
     reduced pom. This should be kept in-sync with the inclusion list

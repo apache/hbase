@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -14,6 +12,10 @@
   <artifactId>hbase-client-bundle</artifactId>
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-shaded-netty-tcnative</artifactId>
+    </dependency>
     <!--
     One main dependency: hbase-client. The rest pulled in transitively.
     Additionally, need hbase-endpoint for AggregationClient. We need to make sure it
@@ -86,6 +88,7 @@
                   to manage those versions in parent-pom
                   -->
                   <include>org.apache.hbase.thirdparty:*</include>
+                  <include>org.apache.hbase:hbase-shaded-netty-tcnative</include>
                   <!-- for AggregationClient. we filter to just client classes below -->
                   <include>org.apache.hbase:hbase-endpoint</include>
 
