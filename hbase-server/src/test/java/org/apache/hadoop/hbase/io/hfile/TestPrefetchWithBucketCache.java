@@ -142,13 +142,13 @@ public class TestPrefetchWithBucketCache {
       return block;
     }, (key, block) -> {
       boolean isCached = blockCache.getBlock(key, true, false, true) != null;
-      if (
-        block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
-          || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
-      ) {
-        assertTrue(isCached);
-      }
-    });
+        if (
+          block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
+            || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
+        ) {
+          assertTrue(isCached);
+        }
+      });
   }
 
   private void readStoreFile(Path storeFilePath,

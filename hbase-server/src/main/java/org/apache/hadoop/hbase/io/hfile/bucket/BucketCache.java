@@ -1476,7 +1476,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   protected void finalize() {
-    if (cachePersister != null) {
+    if (cachePersister != null && !cachePersister.isInterrupted()) {
       cachePersister.interrupt();
     }
   }

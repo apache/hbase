@@ -253,7 +253,7 @@ public class BucketEntry implements HBaseReferenceCounted {
    * also release its refCnt (case.1 will do this) and no other rpc reference, then it will free the
    * area in bucketAllocator. <br>
    * 3.evict those block without any rpc reference if cache size exceeded. we'll only free those
-   * blocks with zero rpc reference count, as the {@link BucketEntry#markStaleAsEvicted()} do.
+   * blocks with zero rpc reference count.
    * @return true to indicate we've decreased to zero and do the de-allocation.
    */
   @Override
