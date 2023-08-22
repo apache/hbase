@@ -87,14 +87,15 @@ public interface RpcCall extends RpcCallContext {
   RequestHeader getHeader();
 
   /**
-   * Returns the map of attributes specified when building the Connection See the Map argument on
-   * {@link org.apache.hadoop.hbase.client.ConnectionFactory#createConnection(Configuration, ExecutorService, User, Map)}
+   * Returns the map of attributes specified when building the Connection.
+   * @see org.apache.hadoop.hbase.client.ConnectionFactory#createConnection(Configuration,
+   *      ExecutorService, User, Map)
    */
   Map<String, byte[]> getConnectionAttributes();
 
   /**
-   * Returns the map of attributes specified when building the request See
-   * {@link org.apache.hadoop.hbase.client.TableBuilder#setRequestAttribute(String, byte[])}
+   * Returns the map of attributes specified when building the request.
+   * @see org.apache.hadoop.hbase.client.TableBuilder#setRequestAttribute(String, byte[])
    */
   Map<String, byte[]> getRequestAttributes();
 

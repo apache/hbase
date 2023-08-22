@@ -102,7 +102,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   // cumulative size of serialized exceptions
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
-  private Map<String, byte[]> requestAttributes;
+  private volatile Map<String, byte[]> requestAttributes;
 
   // This is a dirty hack to address HBASE-22539. The highest bit is for rpc ref and cleanup, and
   // the rest of the bits are for WAL reference count. We can only call release if all of them are
@@ -223,11 +223,12 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
       if (header.getAttributeList().isEmpty()) {
         this.requestAttributes = Collections.emptyMap();
       } else {
-        this.requestAttributes = Maps.newHashMapWithExpectedSize(header.getAttributeList().size());
+        Map<String, byte[]> requestAttributes =
+          Maps.newHashMapWithExpectedSize(header.getAttributeList().size());
         for (HBaseProtos.NameBytesPair nameBytesPair : header.getAttributeList()) {
-          this.requestAttributes.put(nameBytesPair.getName(),
-            nameBytesPair.getValue().toByteArray());
+          requestAttributes.put(nameBytesPair.getName(), nameBytesPair.getValue().toByteArray());
         }
+        this.requestAttributes = requestAttributes;
       }
     }
     return this.requestAttributes;

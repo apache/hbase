@@ -410,6 +410,9 @@ abstract class ServerRpcConnection implements Closeable {
   // Reads the connection header following version
   private void processConnectionHeader(ByteBuff buf) throws IOException {
     this.connectionHeader = ConnectionHeader.parseFrom(createCis(buf));
+
+    // we want to copy the attributes prior to releasing the buffer so that they don't get corrupted
+    // eventually
     if (connectionHeader.getAttributeList().isEmpty()) {
       this.connectionAttributes = Collections.emptyMap();
     } else {
