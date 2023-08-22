@@ -31,8 +31,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.crypto.random.CryptoRandom;
 import org.apache.commons.crypto.random.CryptoRandomFactory;
@@ -75,6 +77,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -103,6 +106,7 @@ abstract class ServerRpcConnection implements Closeable {
   protected int remotePort;
   protected InetAddress addr;
   protected ConnectionHeader connectionHeader;
+  protected Map<String, byte[]> connectionAttributes;
 
   /**
    * Codec the client asked use.
@@ -405,6 +409,9 @@ abstract class ServerRpcConnection implements Closeable {
   // Reads the connection header following version
   private void processConnectionHeader(ByteBuff buf) throws IOException {
     this.connectionHeader = ConnectionHeader.parseFrom(createCis(buf));
+    this.connectionAttributes = connectionHeader.getAttributeList().stream()
+      .collect(Collectors.toMap(HBaseProtos.NameBytesPair::getName,
+        nameBytesPair -> nameBytesPair.getValue().toByteArray()));
     String serviceName = connectionHeader.getServiceName();
     if (serviceName == null) {
       throw new EmptyServiceNameException();

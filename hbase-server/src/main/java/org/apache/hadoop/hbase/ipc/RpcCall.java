@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -27,7 +28,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
@@ -83,7 +83,7 @@ public interface RpcCall extends RpcCallContext {
   /** Returns The request header of this call. */
   RequestHeader getHeader();
 
-  ConnectionHeader getConnectionHeader();
+  Map<String, byte[]> getConnectionAttributes();
 
   /** Returns Port of remote address in this call */
   int getRemotePort();

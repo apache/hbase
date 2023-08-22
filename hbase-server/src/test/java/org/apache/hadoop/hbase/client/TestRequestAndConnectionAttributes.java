@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.io.ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -84,6 +86,8 @@ public class TestRequestAndConnectionAttributes {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(ALLOCATOR_POOL_ENABLED_KEY, true);
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(REQUEST_ATTRIBUTES_TEST_TABLE,
       new byte[][] { REQUEST_ATTRIBUTES_TEST_TABLE_CF }, 1, HConstants.DEFAULT_BLOCKSIZE,
@@ -101,21 +105,34 @@ public class TestRequestAndConnectionAttributes {
   }
 
   @Test
-  public void testConnectionAttributes() throws IOException {
+  public void testConnectionHeaderOverwrittenAttributesRemain() throws IOException {
     TableName tableName = TableName.valueOf("testConnectionAttributes");
-    TEST_UTIL.createTable(tableName, new byte[][] { Bytes.toBytes("0") }, 1,
-      HConstants.DEFAULT_BLOCKSIZE, AttributesCoprocessor.class.getName());
+    byte[] cf = Bytes.toBytes("0");
+    TEST_UTIL.createTable(tableName, new byte[][] { cf }, 1, HConstants.DEFAULT_BLOCKSIZE,
+      AttributesCoprocessor.class.getName());
 
     Configuration conf = TEST_UTIL.getConfiguration();
     try (Connection conn = ConnectionFactory.createConnection(conf, null,
       AuthUtil.loginClient(conf), CONNECTION_ATTRIBUTES); Table table = conn.getTable(tableName)) {
+
+      ensureBuffersAreOverwritten(table, cf);
       Result result = table.get(new Get(Bytes.toBytes(0)));
+
       assertEquals(CONNECTION_ATTRIBUTES.size(), result.size());
       for (Map.Entry<String, byte[]> attr : CONNECTION_ATTRIBUTES.entrySet()) {
         byte[] val = result.getValue(Bytes.toBytes("c"), Bytes.toBytes(attr.getKey()));
         assertEquals(Bytes.toStringBinary(attr.getValue()), Bytes.toStringBinary(val));
       }
     }
+  }
+
+  private void ensureBuffersAreOverwritten(Table table, byte[] cf) throws IOException {
+    // this will cause unread connection attributes on the
+    Put put = new Put(Bytes.toBytes(UUID.randomUUID().toString()));
+    byte[] bytes = new byte[100];
+    new Random().nextBytes(bytes);
+    put.addColumn(cf, bytes, bytes);
+    table.put(put);
   }
 
   @Test
@@ -275,10 +292,10 @@ public class TestRequestAndConnectionAttributes {
           .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getName()))
           .setValue(attr.getValue().toByteArray()).setType(Cell.Type.Put).setTimestamp(1).build());
       }
-      for (HBaseProtos.NameBytesPair attr : rpcCall.getConnectionHeader().getAttributeList()) {
+      for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("c")).setQualifier(Bytes.toBytes(attr.getName()))
-          .setValue(attr.getValue().toByteArray()).setType(Cell.Type.Put).setTimestamp(1).build());
+          .setFamily(Bytes.toBytes("c")).setQualifier(Bytes.toBytes(attr.getKey()))
+          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
       }
       result.sort(CellComparator.getInstance());
       c.bypass();
