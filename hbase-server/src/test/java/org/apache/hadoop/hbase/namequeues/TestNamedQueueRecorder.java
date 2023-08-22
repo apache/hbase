@@ -701,6 +701,11 @@ public class TestNamedQueueRecorder {
       }
 
       @Override
+      public Map<String, byte[]> getRequestAttributes() {
+        return null;
+      }
+
+      @Override
       public int getRemotePort() {
         return 0;
       }

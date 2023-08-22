@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.io.ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -61,8 +60,6 @@ import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
-
 @Category({ ClientTests.class, MediumTests.class })
 public class TestRequestAndConnectionAttributes {
 
@@ -86,8 +83,6 @@ public class TestRequestAndConnectionAttributes {
   @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(ALLOCATOR_POOL_ENABLED_KEY, true);
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(REQUEST_ATTRIBUTES_TEST_TABLE,
       new byte[][] { REQUEST_ATTRIBUTES_TEST_TABLE_CF }, 1, HConstants.DEFAULT_BLOCKSIZE,
@@ -115,8 +110,11 @@ public class TestRequestAndConnectionAttributes {
     try (Connection conn = ConnectionFactory.createConnection(conf, null,
       AuthUtil.loginClient(conf), CONNECTION_ATTRIBUTES); Table table = conn.getTable(tableName)) {
 
-      ensureBuffersAreOverwritten(table, cf);
-      Result result = table.get(new Get(Bytes.toBytes(0)));
+      // submit a 300 byte rowkey here to encourage netty's allocator to overwrite the connection
+      // header
+      byte[] bytes = new byte[300];
+      new Random().nextBytes(bytes);
+      Result result = table.get(new Get(bytes));
 
       assertEquals(CONNECTION_ATTRIBUTES.size(), result.size());
       for (Map.Entry<String, byte[]> attr : CONNECTION_ATTRIBUTES.entrySet()) {
@@ -124,15 +122,6 @@ public class TestRequestAndConnectionAttributes {
         assertEquals(Bytes.toStringBinary(attr.getValue()), Bytes.toStringBinary(val));
       }
     }
-  }
-
-  private void ensureBuffersAreOverwritten(Table table, byte[] cf) throws IOException {
-    // this will cause unread connection attributes on the
-    Put put = new Put(Bytes.toBytes(UUID.randomUUID().toString()));
-    byte[] bytes = new byte[100];
-    new Random().nextBytes(bytes);
-    put.addColumn(cf, bytes, bytes);
-    table.put(put);
   }
 
   @Test
@@ -287,10 +276,10 @@ public class TestRequestAndConnectionAttributes {
 
       // for connection attrs test
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
-      for (HBaseProtos.NameBytesPair attr : rpcCall.getHeader().getAttributeList()) {
+      for (Map.Entry<String, byte[]> attr : rpcCall.getRequestAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getName()))
-          .setValue(attr.getValue().toByteArray()).setType(Cell.Type.Put).setTimestamp(1).build());
+          .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getKey()))
+          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
       }
       for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
@@ -316,15 +305,15 @@ public class TestRequestAndConnectionAttributes {
 
     private void validateRequestAttributes() {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
-      List<HBaseProtos.NameBytesPair> attrs = rpcCall.getHeader().getAttributeList();
+      Map<String, byte[]> attrs = rpcCall.getRequestAttributes();
       if (attrs.size() != REQUEST_ATTRIBUTES.size()) {
         return;
       }
-      for (HBaseProtos.NameBytesPair attr : attrs) {
-        if (!REQUEST_ATTRIBUTES.containsKey(attr.getName())) {
+      for (Map.Entry<String, byte[]> attr : attrs.entrySet()) {
+        if (!REQUEST_ATTRIBUTES.containsKey(attr.getKey())) {
           return;
         }
-        if (!Arrays.equals(REQUEST_ATTRIBUTES.get(attr.getName()), attr.getValue().toByteArray())) {
+        if (!Arrays.equals(REQUEST_ATTRIBUTES.get(attr.getKey()), attr.getValue())) {
           return;
         }
       }
