@@ -710,28 +710,28 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         </%if>
     </tr>
     <%java>
-        List<RSGroupInfo> groups = null;
-        DeadServer deadServerUtil = master.getServerManager().getDeadServers();
-        if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
-            && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
-            && master.getServerManager().getOnlineServersList().size() > 0) {
-                groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
-        }
-        ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
-        Arrays.sort(deadServerNames);
-        for (ServerName deadServerName: deadServerNames) {
-            String rsGroupName = null;
-            if (groups != null){
-                for (RSGroupInfo rsGroupInfo : groups) {
-                    if (rsGroupInfo.containsServer(deadServerName.getAddress())) {
-                        rsGroupName = rsGroupInfo.getName();
-                        break;
-                    }
-                }
-                if (rsGroupName == null) {
-                    rsGroupName = RSGroupInfo.DEFAULT_GROUP;
-                }
+      List<RSGroupInfo> groups = null;
+      DeadServer deadServerUtil = master.getServerManager().getDeadServers();
+      if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+        && master.getMasterCoprocessorHost().findCoprocessor("RSGroupAdminEndpoint") != null
+        && master.getServerManager().getOnlineServersList().size() > 0) {
+          groups = RSGroupTableAccessor.getAllRSGroupInfo(master.getConnection());
+      }
+      ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
+      Arrays.sort(deadServerNames);
+      for (ServerName deadServerName: deadServerNames) {
+        String rsGroupName = null;
+        if (groups != null){
+          for (RSGroupInfo rsGroupInfo : groups) {
+            if (rsGroupInfo.containsServer(deadServerName.getAddress())) {
+              rsGroupName = rsGroupInfo.getName();
+              break;
             }
+          }
+          if (rsGroupName == null) {
+            rsGroupName = RSGroupInfo.DEFAULT_GROUP;
+          }
+        }
     </%java>
     <tr>
     	<th></th>
