@@ -111,8 +111,9 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
+            final long fileSize = offset;
             BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
-              .ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
+              .ifPresent(bc -> bc.fileCacheCompleted(path,fileSize));
 
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
