@@ -893,7 +893,9 @@ public interface Admin extends Abortable, Closeable {
    * @param columnFamilies column families within a table
    * @throws IOException if a remote or network exception occurs
    */
-  void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException;
+  default void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException {
+    get(flushAsync(tableName, columnFamilies), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
 
   /**
    * Flush a table but does not block and wait for it to finish. You can use Future.get(long,

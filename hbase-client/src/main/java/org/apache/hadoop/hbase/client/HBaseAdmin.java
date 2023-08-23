@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.apache.hadoop.hbase.util.FutureUtils.get;
-
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -1258,43 +1256,53 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void flush(TableName tableName, List<byte[]> columnFamilyList) throws IOException {
+  public Future<Void> flushAsync(TableName tableName, List<byte[]> columnFamilies)
+    throws IOException {
     // check if the table exists and enabled
     if (!isTableEnabled(tableName)) {
       throw new TableNotEnabledException(tableName.getNameAsString());
     }
-
-    List<byte[]> columnFamilies = columnFamilyList.stream()
+    // remove duplicate column families
+    List<byte[]> columnFamilyList = columnFamilies.stream()
       .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
 
     try {
-      get(flushAsync(tableName, columnFamilies), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+      FlushTableResponse resp = executeCallable(
+        new MasterCallable<FlushTableResponse>(getConnection(), getRpcControllerFactory()) {
+          final long nonceGroup = ng.getNonceGroup();
+          final long nonce = ng.newNonce();
+
+          @Override
+          protected FlushTableResponse rpcCall() throws Exception {
+            FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName,
+              columnFamilyList, nonceGroup, nonce);
+            return master.flushTable(getRpcController(), request);
+          }
+        });
+      return new FlushTableFuture(this, tableName, resp);
     } catch (DoNotRetryIOException e) {
       // This is for keeping compatibility with old implementation.
       // usually the exception caused by the method is not present on the server or
       // the hbase hadoop version does not match the running hadoop version or
       // the FlushTableProcedure is disabled, if that happens, we need fall back
       // to the old flush implementation.
-      legacyFlush(tableName, columnFamilies);
+      Map<String, String> props = new HashMap<>();
+      if (!columnFamilies.isEmpty()) {
+        props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
+          .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
+      }
+      ProcedureDescription desc = ProtobufUtil.buildProcedureDescription("flush-table-proc",
+        tableName.getNameAsString(), props);
+      ExecProcedureRequest request = ExecProcedureRequest.newBuilder().setProcedure(desc).build();
+      ExecProcedureResponse resp = executeCallable(
+        new MasterCallable<ExecProcedureResponse>(getConnection(), getRpcControllerFactory()) {
+          @Override
+          protected ExecProcedureResponse rpcCall() throws Exception {
+            return master.execProcedure(getRpcController(), request);
+          }
+        });
+      return new LegacyFlushFuture(this, tableName, props);
     }
-  }
-
-  @Override
-  public Future<Void> flushAsync(TableName tableName, List<byte[]> columnFamilies)
-    throws IOException {
-    FlushTableResponse resp = executeCallable(
-      new MasterCallable<FlushTableResponse>(getConnection(), getRpcControllerFactory()) {
-        final long nonceGroup = ng.getNonceGroup();
-        final long nonce = ng.newNonce();
-
-        @Override
-        protected FlushTableResponse rpcCall() throws Exception {
-          FlushTableRequest request =
-            RequestConverter.buildFlushTableRequest(tableName, columnFamilies, nonceGroup, nonce);
-          return master.flushTable(getRpcController(), request);
-        }
-      });
-    return new FlushTableFuture(this, tableName, resp);
   }
 
   private static class FlushTableFuture extends TableFuture<Void> {
@@ -1310,13 +1318,31 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  private void legacyFlush(TableName tableName, List<byte[]> columnFamilies) throws IOException {
-    Map<String, String> props = new HashMap<>();
-    if (!columnFamilies.isEmpty()) {
-      props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
-        .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
+  private static class LegacyFlushFuture extends TableFuture<Void> {
+
+    private final Map<String, String> props;
+
+    public LegacyFlushFuture(HBaseAdmin admin, TableName tableName, Map<String, String> props) {
+      super(admin, tableName, null);
+      this.props = props;
     }
-    execProcedure("flush-table-proc", tableName.getNameAsString(), props);
+
+    @Override
+    public String getOperationType() {
+      return "FLUSH";
+    }
+
+    @Override
+    protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().isProcedureFinished("flush-table-proc",
+            getTableName().getNameAsString(), props);
+        }
+      });
+      return null;
+    }
   }
 
   @Override
