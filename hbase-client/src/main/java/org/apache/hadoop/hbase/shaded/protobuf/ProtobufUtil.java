@@ -3462,7 +3462,7 @@ public final class ProtobufUtil {
     RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
 
     Collection<Address> addresses = proto.getServersList().parallelStream()
-      .map(serverName -> Address.fromParts(serverName.getHostName(), serverName.getPort()))
+      .map(serverName -> Address.fromParts(serverName.getHostName().toLowerCase(Locale.ROOT), serverName.getPort()))
       .collect(Collectors.toList());
     rsGroupInfo.addAllServers(addresses);
 
