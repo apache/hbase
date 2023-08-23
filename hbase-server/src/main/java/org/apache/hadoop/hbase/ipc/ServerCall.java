@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.CellScanner;
@@ -43,14 +45,15 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.VersionInfo;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -100,6 +103,7 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   // cumulative size of serialized exceptions
   private long exceptionSize = 0;
   private final boolean retryImmediatelySupported;
+  private volatile Map<String, byte[]> requestAttributes;
 
   // This is a dirty hack to address HBASE-22539. The highest bit is for rpc ref and cleanup, and
   // the rest of the bits are for WAL reference count. We can only call release if all of them are
@@ -209,8 +213,25 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
   }
 
   @Override
-  public RPCProtos.ConnectionHeader getConnectionHeader() {
-    return this.connection.connectionHeader;
+  public Map<String, byte[]> getConnectionAttributes() {
+    return this.connection.connectionAttributes;
+  }
+
+  @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    if (this.requestAttributes == null) {
+      if (header.getAttributeList().isEmpty()) {
+        this.requestAttributes = Collections.emptyMap();
+      } else {
+        Map<String, byte[]> requestAttributes =
+          Maps.newHashMapWithExpectedSize(header.getAttributeList().size());
+        for (HBaseProtos.NameBytesPair nameBytesPair : header.getAttributeList()) {
+          requestAttributes.put(nameBytesPair.getName(), nameBytesPair.getValue().toByteArray());
+        }
+        this.requestAttributes = requestAttributes;
+      }
+    }
+    return this.requestAttributes;
   }
 
   @Override

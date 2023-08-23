@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,8 +59,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
 @Category({ ClientTests.class, MediumTests.class })
 public class TestRequestAndConnectionAttributes {
@@ -101,15 +100,22 @@ public class TestRequestAndConnectionAttributes {
   }
 
   @Test
-  public void testConnectionAttributes() throws IOException {
+  public void testConnectionHeaderOverwrittenAttributesRemain() throws IOException {
     TableName tableName = TableName.valueOf("testConnectionAttributes");
-    TEST_UTIL.createTable(tableName, new byte[][] { Bytes.toBytes("0") }, 1,
-      HConstants.DEFAULT_BLOCKSIZE, AttributesCoprocessor.class.getName());
+    byte[] cf = Bytes.toBytes("0");
+    TEST_UTIL.createTable(tableName, new byte[][] { cf }, 1, HConstants.DEFAULT_BLOCKSIZE,
+      AttributesCoprocessor.class.getName());
 
     Configuration conf = TEST_UTIL.getConfiguration();
     try (Connection conn = ConnectionFactory.createConnection(conf, null,
       AuthUtil.loginClient(conf), CONNECTION_ATTRIBUTES); Table table = conn.getTable(tableName)) {
-      Result result = table.get(new Get(Bytes.toBytes(0)));
+
+      // submit a 300 byte rowkey here to encourage netty's allocator to overwrite the connection
+      // header
+      byte[] bytes = new byte[300];
+      new Random().nextBytes(bytes);
+      Result result = table.get(new Get(bytes));
+
       assertEquals(CONNECTION_ATTRIBUTES.size(), result.size());
       for (Map.Entry<String, byte[]> attr : CONNECTION_ATTRIBUTES.entrySet()) {
         byte[] val = result.getValue(Bytes.toBytes("c"), Bytes.toBytes(attr.getKey()));
@@ -291,15 +297,15 @@ public class TestRequestAndConnectionAttributes {
 
       // for connection attrs test
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
-      for (HBaseProtos.NameBytesPair attr : rpcCall.getHeader().getAttributeList()) {
+      for (Map.Entry<String, byte[]> attr : rpcCall.getRequestAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getName()))
-          .setValue(attr.getValue().toByteArray()).setType(Cell.Type.Put).setTimestamp(1).build());
+          .setFamily(Bytes.toBytes("r")).setQualifier(Bytes.toBytes(attr.getKey()))
+          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
       }
-      for (HBaseProtos.NameBytesPair attr : rpcCall.getConnectionHeader().getAttributeList()) {
+      for (Map.Entry<String, byte[]> attr : rpcCall.getConnectionAttributes().entrySet()) {
         result.add(c.getEnvironment().getCellBuilder().clear().setRow(get.getRow())
-          .setFamily(Bytes.toBytes("c")).setQualifier(Bytes.toBytes(attr.getName()))
-          .setValue(attr.getValue().toByteArray()).setType(Cell.Type.Put).setTimestamp(1).build());
+          .setFamily(Bytes.toBytes("c")).setQualifier(Bytes.toBytes(attr.getKey()))
+          .setValue(attr.getValue()).setType(Cell.Type.Put).setTimestamp(1).build());
       }
       result.sort(CellComparator.getInstance());
       c.bypass();
@@ -320,15 +326,15 @@ public class TestRequestAndConnectionAttributes {
 
     private void validateRequestAttributes() {
       RpcCall rpcCall = RpcServer.getCurrentCall().get();
-      List<HBaseProtos.NameBytesPair> attrs = rpcCall.getHeader().getAttributeList();
+      Map<String, byte[]> attrs = rpcCall.getRequestAttributes();
       if (attrs.size() != REQUEST_ATTRIBUTES.size()) {
         return;
       }
-      for (HBaseProtos.NameBytesPair attr : attrs) {
-        if (!REQUEST_ATTRIBUTES.containsKey(attr.getName())) {
+      for (Map.Entry<String, byte[]> attr : attrs.entrySet()) {
+        if (!REQUEST_ATTRIBUTES.containsKey(attr.getKey())) {
           return;
         }
-        if (!Arrays.equals(REQUEST_ATTRIBUTES.get(attr.getName()), attr.getValue().toByteArray())) {
+        if (!Arrays.equals(REQUEST_ATTRIBUTES.get(attr.getKey()), attr.getValue())) {
           return;
         }
       }
