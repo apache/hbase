@@ -606,6 +606,37 @@ public class TestByteBufferUtils {
     assertTrue(ByteBufferUtils.equals(bb, 0, a.length, a, 0, a.length));
   }
 
+  @Test
+  public void testFindCommonPrefix() {
+    ByteBuffer bb1 = ByteBuffer.allocate(135);
+    ByteBuffer bb2 = ByteBuffer.allocate(135);
+    ByteBuffer bb3 = ByteBuffer.allocateDirect(135);
+    byte[] b = new byte[71];
+
+    fillBB(bb1, (byte) 5);
+    fillBB(bb2, (byte) 5);
+    fillBB(bb3, (byte) 5);
+    fillArray(b, (byte) 5);
+
+    assertEquals(135,
+      ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()));
+    assertEquals(71, ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), b, 0, b.length));
+    assertEquals(135,
+      ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), bb3, 0, bb3.remaining()));
+    assertEquals(71, ByteBufferUtils.findCommonPrefix(bb3, 0, bb3.remaining(), b, 0, b.length));
+
+    b[13] = 9;
+    assertEquals(13, ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), b, 0, b.length));
+
+    bb2.put(134, (byte) 6);
+    assertEquals(134,
+      ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()));
+
+    bb2.put(6, (byte) 4);
+    assertEquals(6,
+      ByteBufferUtils.findCommonPrefix(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()));
+  }
+
   private static void fillBB(ByteBuffer bb, byte b) {
     for (int i = bb.position(); i < bb.limit(); i++) {
       bb.put(i, b);

@@ -1807,23 +1807,23 @@ Chaos monkey can be run without SSH using the Chaos service and ZNode cluster ma
 with many cluster managers, available in the `hbase-it/src/test/java/org/apache/hadoop/hbase/` directory.
 
 Set the following property in hbase configuration to switch to `ZNodeClusterManager`:
-`hbase.it.clustermanager.class=org.apache.hadoop.hbase.ZNodeClusterManager`
+[source,xml]
+----
+<property>
+  <name>hbase.it.clustermanager.class</name>
+  <value>org.apache.hadoop.hbase.ZNodeClusterManager</value>
+</property>
+----
 
 Start chaos agent on all hosts where you want to test chaos scenarios.
 
 [source,bash]
 ----
 $ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
+----
 
 Start chaos monkey runner from any one host, preferrably an edgenode.
-An example log while running chaos monkey with default policy PeriodicRandomActionPolicy is shown below.
-Command Options:
- -c <arg>             Name of extra configurations file to find on CLASSPATH
- -m,--monkey <arg>    Which chaos monkey to run
- -monkeyProps <arg>   The properties file for specifying chaos monkey properties.
- -tableName <arg>     Table name in the test to run chaos monkey against
- -familyName <arg>    Family name in the test to run chaos monkey against
-
+An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
 [source,bash]
 ----
 $ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner
@@ -1858,6 +1858,28 @@ Number of requests: 118645157
 Number of regions: 2654
 Number of regions in transition: 0
 INFO  [ChaosMonkey-3] policies.Policy: Sleeping for 89614 ms
+----
+
+For info on more customisations we can see help for the `ChaosMonkeyRunner`. For example we can pass the table name on which the chaos operations to be performed etc.
+Below is the output of the help command, listing all the supported options.
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner --help
+
+usage: hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner <options>
+Options:
+ -c <arg>             Name of extra configurations file to find on CLASSPATH
+ -m,--monkey <arg>    Which chaos monkey to run
+ -monkeyProps <arg>   The properties file for specifying chaos monkey properties.
+ -tableName <arg>     Table name in the test to run chaos monkey against
+ -familyName <arg>    Family name in the test to run chaos monkey against
+----
+
+For example, running the following will start `ServerKillingMonkeyFactory` that chooses among actions to rolling batch restart RS, graceful rolling restart RS one at a time, restart active master, force balancer run etc.
+[source,bash]
+----
+$ bin/hbase org.apache.hadoop.hbase.chaos.util.ChaosMonkeyRunner -m org.apache.hadoop.hbase.chaos.factories.ServerKillingMonkeyFactory
+----
 
 ==== Available Policies
 HBase ships with several ChaosMonkey policies, available in the

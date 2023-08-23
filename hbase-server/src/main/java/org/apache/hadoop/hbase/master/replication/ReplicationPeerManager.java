@@ -32,7 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -110,9 +109,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
         SyncReplicationState.STANDBY, EnumSet.of(SyncReplicationState.DOWNGRADE_ACTIVE),
         SyncReplicationState.DOWNGRADE_ACTIVE,
         EnumSet.of(SyncReplicationState.STANDBY, SyncReplicationState.ACTIVE)));
-
-  // Only allow to add one sync replication peer concurrently
-  private final Semaphore syncReplicationPeerLock = new Semaphore(1);
 
   private final String clusterId;
 
@@ -711,14 +707,6 @@ public class ReplicationPeerManager implements ConfigurationObserver {
       return StringUtils.isBlank(s2);
     }
     return s1.equals(s2);
-  }
-
-  public boolean tryAcquireSyncReplicationPeerLock() {
-    return syncReplicationPeerLock.tryAcquire();
-  }
-
-  public void releaseSyncReplicationPeerLock() {
-    syncReplicationPeerLock.release();
   }
 
   @Override

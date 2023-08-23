@@ -52,6 +52,7 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.quotas.QuotaUtil;
 org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
+org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 org.apache.hadoop.hbase.rsgroup.RSGroupUtil;
 org.apache.hadoop.hbase.security.access.PermissionStorage;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
@@ -698,17 +699,35 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th></th>
         <th>ServerName</th>
         <th>Stop time</th>
+        <%if !master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null %>
+            <%if RSGroupUtil.isRSGroupEnabled(master.getConfiguration()) %>
+                <th>RSGroup</th>
+            </%if>
+        </%if>
     </tr>
     <%java>
-       DeadServer deadServerUtil = master.getServerManager().getDeadServers();
-       ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
-         Arrays.sort(deadServerNames);
-         for (ServerName deadServerName: deadServerNames) {
+        RSGroupInfoManager inMgr = null;
+        DeadServer deadServerUtil = master.getServerManager().getDeadServers();
+        ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
+        Arrays.sort(deadServerNames);
+        if (!master.isInMaintenanceMode() && master.getMasterCoprocessorHost() != null
+            && RSGroupUtil.isRSGroupEnabled(master.getConfiguration())) {
+                inMgr = master.getRSGroupInfoManager();
+        }
+        for (ServerName deadServerName: deadServerNames) {
+            String rsGroupName = null;
+            if (inMgr != null){
+                RSGroupInfo groupInfo = inMgr.getRSGroupOfServer(deadServerName.getAddress());
+                rsGroupName = groupInfo == null ? RSGroupInfo.DEFAULT_GROUP : groupInfo.getName();
+            }
     </%java>
     <tr>
     	<th></th>
         <td><% deadServerName %></td>
         <td><% deadServerUtil.getTimeOfDeath(deadServerName) %></td>
+        <%if rsGroupName != null %>
+            <td><% rsGroupName %></td>
+        </%if>
     </tr>
     <%java>
         }

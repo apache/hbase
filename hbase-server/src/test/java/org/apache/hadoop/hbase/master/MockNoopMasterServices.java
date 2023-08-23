@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -529,5 +530,16 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
     return null;
+  }
+
+  @Override
+  public Semaphore getSyncReplicationPeerLock() {
+    return null;
+  }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    return 0;
   }
 }
