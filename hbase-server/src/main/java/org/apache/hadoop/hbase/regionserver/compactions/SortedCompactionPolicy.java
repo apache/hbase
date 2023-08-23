@@ -72,9 +72,9 @@ public abstract class SortedCompactionPolicy extends CompactionPolicy {
         >= storeConfigInfo.getBlockingFileCount();
 
     candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
-    LOG.debug("Selecting compaction from " + candidateFiles.size() + " store files, "
-      + filesCompacting.size() + " compacting, " + candidateSelection.size() + " eligible, "
-      + storeConfigInfo.getBlockingFileCount() + " blocking");
+    LOG.debug("Selecting compaction from {} store files, {} compacting, {} eligible, {} blocking, mayUseOffPeak {}," +
+        "forceMajor {}", candidateFiles.size(), filesCompacting.size(), candidateSelection.size(),
+      storeConfigInfo.getBlockingFileCount(), mayUseOffPeak, forceMajor);
 
     // If we can't have all files, we cannot do major anyway
     boolean isAllFiles = candidateFiles.size() == candidateSelection.size();
