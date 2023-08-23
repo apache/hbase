@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.hadoop.hbase.CellScanner;
@@ -222,7 +223,12 @@ public class TestRegionProcedureStore extends RegionProcedureStoreTestBase {
       }
 
       @Override
-      public RPCProtos.ConnectionHeader getConnectionHeader() {
+      public Map<String, byte[]> getConnectionAttributes() {
+        return null;
+      }
+
+      @Override
+      public Map<String, byte[]> getRequestAttributes() {
         return null;
       }
 
