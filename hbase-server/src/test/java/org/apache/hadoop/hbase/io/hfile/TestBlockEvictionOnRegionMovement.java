@@ -78,7 +78,6 @@ public class TestBlockEvictionOnRegionMovement {
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "file:" + testDir + "/bucket.cache");
     conf.setInt("hbase.bucketcache.size", 400);
     conf.set("hbase.bucketcache.persistent.path", testDir + "/bucket.persistence");
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, testDir + "/prefetch.persistence");
     conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, 100);
     conf.setBoolean(CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY, true);
     zkCluster = TEST_UTIL.startMiniZKCluster();

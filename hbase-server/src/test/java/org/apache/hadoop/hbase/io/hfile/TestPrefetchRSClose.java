@@ -74,7 +74,6 @@ public class TestPrefetchRSClose {
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "file:" + testDir + "/bucket.cache");
     conf.setInt("hbase.bucketcache.size", 400);
     conf.set("hbase.bucketcache.persistent.path", testDir + "/bucket.persistence");
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, testDir + "/prefetch.persistence");
     zkCluster = TEST_UTIL.startMiniZKCluster();
     cluster = TEST_UTIL.startMiniHBaseCluster(option);
     assertEquals(2, cluster.getRegionServerThreads().size());
@@ -113,18 +112,15 @@ public class TestPrefetchRSClose {
     // Default interval for cache persistence is 1000ms. So after 1000ms, both the persistence files
     // should exist.
     assertTrue(new File(testDir + "/bucket.persistence").exists());
-    assertTrue(new File(testDir + "/prefetch.persistence").exists());
 
     // Stop the RS
     cluster.stopRegionServer(0);
     LOG.info("Stopped Region Server 0.");
     Thread.sleep(1000);
     assertTrue(new File(testDir + "/bucket.persistence").exists());
-    assertTrue(new File(testDir + "/prefetch.persistence").exists());
 
     // Start the RS and validate
     cluster.startRegionServer();
-    assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
   }
 
