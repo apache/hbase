@@ -1291,13 +1291,14 @@ public class HBaseAdmin implements Admin {
         props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
           .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
       }
-      ProcedureDescription desc = ProtobufUtil.buildProcedureDescription("flush-table-proc",
-        tableName.getNameAsString(), props);
-      ExecProcedureRequest request = ExecProcedureRequest.newBuilder().setProcedure(desc).build();
-      ExecProcedureResponse resp = executeCallable(
+      executeCallable(
         new MasterCallable<ExecProcedureResponse>(getConnection(), getRpcControllerFactory()) {
           @Override
           protected ExecProcedureResponse rpcCall() throws Exception {
+            ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
+              .setProcedure(ProtobufUtil.buildProcedureDescription("flush-table-proc",
+                tableName.getNameAsString(), props))
+              .build();
             return master.execProcedure(getRpcController(), request);
           }
         });
