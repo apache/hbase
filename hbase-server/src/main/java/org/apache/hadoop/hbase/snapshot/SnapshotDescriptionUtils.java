@@ -432,10 +432,7 @@ public final class SnapshotDescriptionUtils {
 
   static boolean shouldSkipRenameSnapshotDirectories(URI workingURI, URI rootURI) {
     // check scheme, e.g. file, hdfs
-    if (
-      workingURI.getScheme() == null
-        && (rootURI.getScheme() != null && !rootURI.getScheme().equalsIgnoreCase("file"))
-    ) {
+    if (workingURI.getScheme() == null && rootURI.getScheme() != null) {
       return true;
     }
     if (workingURI.getScheme() != null && !workingURI.getScheme().equals(rootURI.getScheme())) {
