@@ -401,7 +401,7 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
-      public Map<String, Integer> getRegionPrefetchInfo() {
+      public Map<String, Integer> getRegionCachedInfo() {
         return new HashMap<>();
       }
     };
@@ -552,7 +552,7 @@ public class TestRegionsRecoveryChore {
       }
 
       @Override
-      public float getCurrentRegionPrefetchRatio() {
+      public float getCurrentRegionCachedRatio() {
         return 0.0f;
       }
     };

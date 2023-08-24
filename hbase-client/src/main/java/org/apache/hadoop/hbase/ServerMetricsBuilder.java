@@ -85,7 +85,7 @@ public final class ServerMetricsBuilder {
         : null)
       .setTasks(serverLoadPB.getTasksList().stream().map(ProtobufUtil::getServerTask)
         .collect(Collectors.toList()))
-      .setRegionPrefetchInfo(serverLoadPB.getRegionPrefetchInfoMap())
+      .setRegionCachedInfo(serverLoadPB.getRegionCachedInfoMap())
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version).build();
@@ -112,7 +112,7 @@ public final class ServerMetricsBuilder {
         .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
       .addAllTasks(
         metrics.getTasks().stream().map(ProtobufUtil::toServerTask).collect(Collectors.toList()))
-      .putAllRegionPrefetchInfo(metrics.getRegionPrefetchInfo())
+      .putAllRegionCachedInfo(metrics.getRegionCachedInfo())
       .setReportStartTime(metrics.getLastReportTimestamp())
       .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
@@ -144,7 +144,7 @@ public final class ServerMetricsBuilder {
   private long reportTimestamp = EnvironmentEdgeManager.currentTime();
   private long lastReportTimestamp = 0;
   private final List<ServerTask> tasks = new ArrayList<>();
-  private Map<String, Integer> regionPrefetchInfo = new HashMap<>();
+  private Map<String, Integer> regionCachedInfo = new HashMap<>();
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -235,8 +235,8 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
-  public ServerMetricsBuilder setRegionPrefetchInfo(Map<String, Integer> value) {
-    this.regionPrefetchInfo = value;
+  public ServerMetricsBuilder setRegionCachedInfo(Map<String, Integer> value) {
+    this.regionCachedInfo = value;
     return this;
   }
 
@@ -244,7 +244,7 @@ public final class ServerMetricsBuilder {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, readRequestCount, writeRequestCount, usedHeapSize, maxHeapSize, infoServerPort,
       sources, sink, regionStatus, coprocessorNames, reportTimestamp, lastReportTimestamp,
-      userMetrics, tasks, regionPrefetchInfo);
+      userMetrics, tasks, regionCachedInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -267,7 +267,7 @@ public final class ServerMetricsBuilder {
     private final long lastReportTimestamp;
     private final Map<byte[], UserMetrics> userMetrics;
     private final List<ServerTask> tasks;
-    private final Map<String, Integer> regionPrefetchInfo;
+    private final Map<String, Integer> regionCachedInfo;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
       long requestCountPerSecond, long requestCount, long readRequestsCount,
@@ -275,7 +275,7 @@ public final class ServerMetricsBuilder {
       List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
       Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
       long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, List<ServerTask> tasks,
-      Map<String, Integer> regionPrefetchInfo) {
+      Map<String, Integer> regionCachedInfo) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -294,7 +294,7 @@ public final class ServerMetricsBuilder {
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
       this.tasks = tasks;
-      this.regionPrefetchInfo = regionPrefetchInfo;
+      this.regionCachedInfo = regionCachedInfo;
     }
 
     @Override
@@ -398,8 +398,8 @@ public final class ServerMetricsBuilder {
     }
 
     @Override
-    public Map<String, Integer> getRegionPrefetchInfo() {
-      return Collections.unmodifiableMap(regionPrefetchInfo);
+    public Map<String, Integer> getRegionCachedInfo() {
+      return Collections.unmodifiableMap(regionCachedInfo);
     }
 
     @Override

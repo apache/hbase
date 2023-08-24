@@ -187,13 +187,13 @@ final class BucketProtoUtils {
         throw new Error("Unrecognized BlockType.");
     }
   }
+
   static Map<String, BucketCacheProtos.RegionFileSizeMap>
-  toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
     Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
     prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
       BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
-        BucketCacheProtos.RegionFileSizeMap.newBuilder()
-          .setRegionName(regionPrefetchMap.getFirst())
+        BucketCacheProtos.RegionFileSizeMap.newBuilder().setRegionName(regionPrefetchMap.getFirst())
           .setRegionCachedSize(regionPrefetchMap.getSecond()).build();
       tmpMap.put(hfileName, tmpRegionFileSize);
     });
@@ -201,7 +201,7 @@ final class BucketProtoUtils {
   }
 
   static Map<String, Pair<String, Long>>
-  fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
+    fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
     Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
     prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
       hfileMap.put(hfileName,

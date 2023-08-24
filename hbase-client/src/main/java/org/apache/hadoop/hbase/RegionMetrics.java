@@ -143,5 +143,5 @@ public interface RegionMetrics {
   Size getRegionSizeMB();
 
   /** Returns current prefetch ratio of this region on this server */
-  float getCurrentRegionPrefetchRatio();
+  float getCurrentRegionCachedRatio();
 }
