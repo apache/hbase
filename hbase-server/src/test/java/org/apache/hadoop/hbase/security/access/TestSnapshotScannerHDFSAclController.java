@@ -196,10 +196,10 @@ public class TestSnapshotScannerHDFSAclController {
     // create table in namespace1 and snapshot
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
-    admin.grant(new UserPermission(grantUserName,
-      Permission.newBuilder(namespace1).withActions(READ).build()), false);
     // grant G(W)
     SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, WRITE);
+    admin.grant(new UserPermission(grantUserName,
+      Permission.newBuilder(namespace1).withActions(READ).build()), false);
     // create table in namespace2 and snapshot
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table2);
     snapshotAndWait(snapshot2, table2);
@@ -230,11 +230,11 @@ public class TestSnapshotScannerHDFSAclController {
     // grant table1(R)
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table1);
     snapshotAndWait(snapshot1, table1);
-    TestHDFSAclHelper.grantOnTable(TEST_UTIL, grantUserName, table1, READ);
-    // grant G(W)
-    SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, WRITE);
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table2);
     snapshotAndWait(snapshot2, table2);
+    // grant G(W)
+    SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, WRITE);
+    TestHDFSAclHelper.grantOnTable(TEST_UTIL, grantUserName, table1, READ);
     // check scan snapshot
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, 6);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, -1);
