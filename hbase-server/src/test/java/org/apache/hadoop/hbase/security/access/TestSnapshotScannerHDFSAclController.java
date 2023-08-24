@@ -158,6 +158,7 @@ public class TestSnapshotScannerHDFSAclController {
 
     TestHDFSAclHelper.createTableAndPut(TEST_UTIL, table);
     snapshotAndWait(snapshot1, table);
+    snapshotAndWait(snapshot2, table);
     // grant G(R)
     SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, READ);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, 6);
@@ -174,8 +175,6 @@ public class TestSnapshotScannerHDFSAclController {
     // grant G(R)
     SecureTestUtil.grantGlobal(TEST_UTIL, grantUserName, READ);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot1, 6);
-    // take a snapshot and ACLs are inherited automatically
-    snapshotAndWait(snapshot2, table);
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot2, 6);
     assertTrue(hasUserGlobalHdfsAcl(aclTable, grantUserName));
     deleteTable(table);
