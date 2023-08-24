@@ -219,6 +219,18 @@ public final class HConstants {
   public static final String CLIENT_ZOOKEEPER_CLIENT_PORT =
     "hbase.client.zookeeper.property.clientPort";
 
+  /** Supported ZooKeeper client TLS properties */
+  public static final List<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
+    Arrays.asList(
+      "client.secure",
+      "clientCnxnSocket",
+      "ssl.keyStore.location",
+      "ssl.keyStore.password",
+      "ssl.keyStore.passwordPath",
+      "ssl.trustStore.location",
+      "ssl.trustStore.password",
+      "ssl.trustStore.passwordPath");
+
   /** Indicate whether the client ZK are observer nodes of the server ZK */
   public static final String CLIENT_ZOOKEEPER_OBSERVER_MODE =
     "hbase.client.zookeeper.observer.mode";

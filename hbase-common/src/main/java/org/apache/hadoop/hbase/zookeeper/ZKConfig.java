@@ -38,6 +38,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
+  private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
 
   private ZKConfig() {
   }
@@ -123,6 +124,7 @@ public final class ZKConfig {
    * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
+    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     return getZKQuorumServersStringFromHbaseConfig(conf);
   }
 
@@ -318,6 +320,7 @@ public final class ZKConfig {
    * @return Client quorum servers, or null if not specified
    */
   public static String getClientZKQuorumServersString(Configuration conf) {
+    setZooKeeperClientSystemProperties(HConstants.ZK_CFG_PROPERTY_PREFIX, conf);
     String clientQuromServers = conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM);
     if (clientQuromServers == null) {
       return null;
@@ -329,5 +332,28 @@ public final class ZKConfig {
     // Build the ZK quorum server string with "server:clientport" list, separated by ','
     final String[] serverHosts = StringUtils.getStrings(clientQuromServers);
     return buildZKQuorumServerString(serverHosts, clientZkClientPort);
+  }
+
+  private static void setZooKeeperClientSystemProperties(String prefix, Configuration conf) {
+    synchronized (conf) {
+      for (Entry<String, String> entry : conf) {
+        String key = entry.getKey();
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        String zkKey = key.substring(prefix.length());
+        if (!HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
+          continue;
+        }
+        String value = entry.getValue();
+        // If the value has variables substitutions, need to do a get.
+        if (value.contains(VARIABLE_START)) {
+          value = conf.get(key);
+        }
+        if (System.getProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey) == null) {
+          System.setProperty(ZOOKEEPER_JAVA_PROPERTY_PREFIX + zkKey, value);
+        }
+      }
+    }
   }
 }

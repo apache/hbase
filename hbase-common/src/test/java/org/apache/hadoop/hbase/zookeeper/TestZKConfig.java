@@ -90,6 +90,48 @@ public class TestZKConfig {
     testKey("server1:2182,server2:2183,server1", 2181, "/hbase", true);
   }
 
+  @Test
+  public void testZooKeeperTlsPropertiesClient() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
+    }
+
+    // Act
+    ZKConfig.getClientZKQuorumServersString(conf);
+
+    // Assert
+    for (String p : HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      String zkprop = "zookeeper." + p;
+      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
+      System.clearProperty(zkprop);
+    }
+  }
+
+  @Test
+  public void testZooKeeperTlsPropertiesServer() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
+    }
+
+    // Act
+    ZKConfig.getZKQuorumServersString(conf);
+
+    // Assert
+    for (String p : HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      String zkprop = "zookeeper." + p;
+      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
+      System.clearProperty(zkprop);
+    }
+  }
+
   private void testKey(String ensemble, int port, String znode) throws IOException {
     testKey(ensemble, port, znode, false); // not support multiple client ports
   }
