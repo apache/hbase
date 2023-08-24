@@ -204,7 +204,7 @@ public class TestSnapshotDescriptionUtils {
 
     workingDirURI = URI.create("/User/test1");
     rootDirURI = URI.create("file:///User/test2");
-    assertFalse(
+    assertTrue(
       SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
 
     // skip rename when either scheme or authority are the not same
