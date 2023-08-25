@@ -61,6 +61,8 @@ public class StoreFileScanner implements KeyValueScanner {
   // A flag represents whether could stop skipping KeyValues for MVCC
   // if have encountered the next row. Only used for reversed scan
   private boolean stopSkippingKVsIfNextRow = false;
+  // A Cell that represents the row before the most previously seeked to row in seekToPreviousRow
+  private Cell previousRow = null;
 
   private static LongAdder seekCount;
 
@@ -486,49 +488,107 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public boolean seekToPreviousRow(Cell originalKey) throws IOException {
     try {
-      try {
-        boolean keepSeeking = false;
-        Cell key = originalKey;
-        do {
-          Cell seekKey = PrivateCellUtil.createFirstOnRow(key);
-          if (seekCount != null) seekCount.increment();
-          if (!hfs.seekBefore(seekKey)) {
-            this.cur = null;
-            return false;
-          }
-          Cell curCell = hfs.getCell();
-          Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
+      if (previousRow == null || getComparator().compareRows(previousRow, originalKey) > 0) {
+        return seekToPreviousRowWithoutHint(originalKey);
+      } else {
+        try {
+          do {
+            if (previousRow == null) {
+              return seekToPreviousRowWithoutHint(originalKey);
+            }
 
-          if (seekCount != null) seekCount.increment();
-          if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
-            this.cur = null;
-            return false;
-          }
+            Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(previousRow);
 
-          setCurrentCell(hfs.getCell());
-          this.stopSkippingKVsIfNextRow = true;
-          boolean resultOfSkipKVs;
-          try {
-            resultOfSkipKVs = skipKVsNewerThanReadpoint();
-          } finally {
-            this.stopSkippingKVsIfNextRow = false;
-          }
-          if (!resultOfSkipKVs || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
-            keepSeeking = true;
-            key = firstKeyOfPreviousRow;
-            continue;
-          } else {
-            keepSeeking = false;
-          }
-        } while (keepSeeking);
-        return true;
-      } finally {
-        realSeekDone = true;
+            if (seekCount != null) seekCount.increment();
+            if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
+              if (!hfs.seekTo()) {
+                this.cur = null;
+                return false;
+              }
+              this.previousRow = null;
+            } else {
+              this.previousRow = hfs.getCell();
+            }
+
+            if (seekCount != null) seekCount.increment();
+            if (!reseekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+              this.cur = null;
+              return false;
+            }
+            setCurrentCell(hfs.getCell());
+
+            this.stopSkippingKVsIfNextRow = true;
+            boolean resultOfSkipKVs;
+            try {
+              resultOfSkipKVs = skipKVsNewerThanReadpoint();
+            } finally {
+              this.stopSkippingKVsIfNextRow = false;
+            }
+            if (resultOfSkipKVs && getComparator().compareRows(cur, firstKeyOfPreviousRow) <= 0) {
+              return true;
+            }
+          } while (true);
+        } finally {
+          realSeekDone = true;
+        }
       }
     } catch (FileNotFoundException e) {
       throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not seekToPreviousRow " + this + " to key " + originalKey, ioe);
+    }
+  }
+
+  private boolean seekToPreviousRowWithoutHint(Cell originalKey) throws IOException {
+    try {
+      boolean keepSeeking = false;
+      Cell key = originalKey;
+      do {
+        // Rewind to the cell before the beginning of this row
+        Cell seekKey = PrivateCellUtil.createFirstOnRow(key);
+        if (seekCount != null) seekCount.increment();
+        if (!hfs.seekBefore(seekKey)) {
+          this.cur = null;
+          return false;
+        }
+
+        Cell curCell = hfs.getCell();
+        // We want to see to here eventually, but along the way lets get a seek hint for the prior
+        // row since
+        // previousRow is null
+        Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
+
+        if (seekCount != null) seekCount.increment();
+        if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
+          this.previousRow = null;
+        } else {
+          this.previousRow = hfs.getCell();
+        }
+
+        if (seekCount != null) seekCount.increment();
+        if (!reseekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+          this.cur = null;
+          return false;
+        }
+
+        setCurrentCell(hfs.getCell());
+        this.stopSkippingKVsIfNextRow = true;
+        boolean resultOfSkipKVs;
+        try {
+          resultOfSkipKVs = skipKVsNewerThanReadpoint();
+        } finally {
+          this.stopSkippingKVsIfNextRow = false;
+        }
+        if (!resultOfSkipKVs || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
+          keepSeeking = true;
+          key = firstKeyOfPreviousRow;
+        } else {
+          keepSeeking = false;
+        }
+      } while (keepSeeking);
+      return true;
+    } finally {
+      realSeekDone = true;
     }
   }
 
@@ -548,6 +608,10 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean backwardSeek(Cell key) throws IOException {
+    if (cur != null && getComparator().compareRows(cur, key) != 0) {
+      previousRow = null;
+    }
+
     seek(key);
     if (cur == null || getComparator().compareRows(cur, key) > 0) {
       return seekToPreviousRow(key);
