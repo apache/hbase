@@ -28,8 +28,9 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * HConstants holds a bunch of HBase-related constants
