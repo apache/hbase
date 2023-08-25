@@ -24,9 +24,11 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -220,8 +222,8 @@ public final class HConstants {
     "hbase.client.zookeeper.property.clientPort";
 
   /** Supported ZooKeeper client TLS properties */
-  public static final List<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
-    Arrays.asList("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
+  public static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
+    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
       "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
       "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
