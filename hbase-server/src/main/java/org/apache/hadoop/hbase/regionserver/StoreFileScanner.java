@@ -501,6 +501,9 @@ public class StoreFileScanner implements KeyValueScanner {
 
             if (seekCount != null) seekCount.increment();
             if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
+              // Since the above seek failed, we need to position ourselves back at the start of the
+              // block
+              // or else our re-seek might fail
               if (!hfs.seekTo()) {
                 this.cur = null;
                 return false;
@@ -560,6 +563,13 @@ public class StoreFileScanner implements KeyValueScanner {
 
         if (seekCount != null) seekCount.increment();
         if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
+          // Since the above seek failed, we need to position ourselves back at the start of the
+          // block
+          // or else our re-seek might fail
+          if (!hfs.seekTo()) {
+            this.cur = null;
+            return false;
+          }
           this.previousRow = null;
         } else {
           this.previousRow = hfs.getCell();
