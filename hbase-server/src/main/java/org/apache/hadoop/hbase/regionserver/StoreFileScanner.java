@@ -228,6 +228,7 @@ public class StoreFileScanner implements KeyValueScanner {
         }
       } finally {
         realSeekDone = true;
+        previousRow = null;
       }
     } catch (FileNotFoundException e) {
       throw e;
@@ -255,6 +256,7 @@ public class StoreFileScanner implements KeyValueScanner {
         }
       } finally {
         realSeekDone = true;
+        previousRow = null;
       }
     } catch (FileNotFoundException e) {
       throw e;
@@ -502,8 +504,7 @@ public class StoreFileScanner implements KeyValueScanner {
             if (seekCount != null) seekCount.increment();
             if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
               // Since the above seek failed, we need to position ourselves back at the start of the
-              // block
-              // or else our re-seek might fail
+              // block or else our re-seek might fail
               if (!hfs.seekTo()) {
                 this.cur = null;
                 return false;
@@ -557,15 +558,13 @@ public class StoreFileScanner implements KeyValueScanner {
 
         Cell curCell = hfs.getCell();
         // We want to see to here eventually, but along the way lets get a seek hint for the prior
-        // row since
-        // previousRow is null
+        // row since previousRow is null
         Cell firstKeyOfPreviousRow = PrivateCellUtil.createFirstOnRow(curCell);
 
         if (seekCount != null) seekCount.increment();
         if (!hfs.seekBefore(firstKeyOfPreviousRow)) {
           // Since the above seek failed, we need to position ourselves back at the start of the
-          // block
-          // or else our re-seek might fail
+          // block or else our reseek might fail
           if (!hfs.seekTo()) {
             this.cur = null;
             return false;
@@ -618,10 +617,6 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean backwardSeek(Cell key) throws IOException {
-    if (cur != null && getComparator().compareRows(cur, key) != 0) {
-      previousRow = null;
-    }
-
     seek(key);
     if (cur == null || getComparator().compareRows(cur, key) > 0) {
       return seekToPreviousRow(key);
