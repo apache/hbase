@@ -24,13 +24,10 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -221,12 +218,6 @@ public final class HConstants {
   /** Client port of ZooKeeper for client to locate meta */
   public static final String CLIENT_ZOOKEEPER_CLIENT_PORT =
     "hbase.client.zookeeper.property.clientPort";
-
-  /** Supported ZooKeeper client TLS properties */
-  public static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
-    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
-      "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
-      "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
   /** Indicate whether the client ZK are observer nodes of the server ZK */
   public static final String CLIENT_ZOOKEEPER_OBSERVER_MODE =

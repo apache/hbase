@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -28,6 +29,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration. The order and priority for
@@ -39,6 +41,12 @@ public final class ZKConfig {
 
   private static final String VARIABLE_START = "${";
   private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
+
+  /** Supported ZooKeeper client TLS properties */
+  private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
+    ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
+      "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
+      "ssl.trustStore.password", "ssl.trustStore.passwordPath");
 
   private ZKConfig() {
   }
@@ -342,7 +350,7 @@ public final class ZKConfig {
           continue;
         }
         String zkKey = key.substring(prefix.length());
-        if (!HConstants.ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
+        if (!ZOOKEEPER_CLIENT_TLS_PROPERTIES.contains(zkKey)) {
           continue;
         }
         String value = entry.getValue();
