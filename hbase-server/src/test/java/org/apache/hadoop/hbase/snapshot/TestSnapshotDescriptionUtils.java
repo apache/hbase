@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -191,4 +192,52 @@ public class TestSnapshotDescriptionUtils {
     assertTrue(SnapshotDescriptionUtils.isWithinDefaultWorkingDir(
       new Path("file:" + hbsaeDir + "/.hbase-snapshot/.tmp/snapshot"), conf));
   }
+
+  @Test
+  public void testShouldSkipRenameSnapshotDirectories() {
+    URI workingDirURI = URI.create("/User/test1");
+    URI rootDirURI = URI.create("hdfs:///User/test2");
+
+    // should skip rename if it's not the same scheme;
+    assertTrue(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    workingDirURI = URI.create("/User/test1");
+    rootDirURI = URI.create("file:///User/test2");
+    assertTrue(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    // skip rename when either scheme or authority are the not same
+    workingDirURI = URI.create("hdfs://localhost:8020/User/test1");
+    rootDirURI = URI.create("hdfs://otherhost:8020/User/test2");
+    assertTrue(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    workingDirURI = URI.create("file:///User/test1");
+    rootDirURI = URI.create("hdfs://localhost:8020/User/test2");
+    assertTrue(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    workingDirURI = URI.create("hdfs:///User/test1");
+    rootDirURI = URI.create("hdfs:///User/test2");
+    assertFalse(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    workingDirURI = URI.create("hdfs://localhost:8020/User/test1");
+    rootDirURI = URI.create("hdfs://localhost:8020/User/test2");
+    assertFalse(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    workingDirURI = URI.create("hdfs://user:password@localhost:8020/User/test1");
+    rootDirURI = URI.create("hdfs://user:password@localhost:8020/User/test2");
+    assertFalse(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+
+    // skip rename when user information is not the same
+    workingDirURI = URI.create("hdfs://user:password@localhost:8020/User/test1");
+    rootDirURI = URI.create("hdfs://user2:password2@localhost:8020/User/test2");
+    assertTrue(
+      SnapshotDescriptionUtils.shouldSkipRenameSnapshotDirectories(workingDirURI, rootDirURI));
+  }
+
 }
