@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DeleteTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
@@ -1905,6 +1906,18 @@ public final class RequestConverter {
    */
   public static ClearSlowLogResponseRequest buildClearSlowLogResponseRequest() {
     return ClearSlowLogResponseRequest.newBuilder().build();
+  }
+
+  public static FlushTableRequest buildFlushTableRequest(final TableName tableName,
+    final List<byte[]> columnFamilies, final long nonceGroup, final long nonce) {
+    FlushTableRequest.Builder builder = FlushTableRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    if (!columnFamilies.isEmpty()) {
+      for (byte[] columnFamily : columnFamilies) {
+        builder.addColumnFamily(UnsafeByteOperations.unsafeWrap(columnFamily));
+      }
+    }
+    return builder.setNonceGroup(nonceGroup).setNonce(nonce).build();
   }
 
 }

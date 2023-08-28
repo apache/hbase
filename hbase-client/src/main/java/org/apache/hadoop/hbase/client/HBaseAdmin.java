@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -100,6 +101,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -164,6 +166,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.EnableTabl
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetLocksRequest;
@@ -1243,21 +1247,104 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public void flush(final TableName tableName) throws IOException {
-    flush(tableName, null);
+    flush(tableName, Collections.emptyList());
   }
 
   @Override
   public void flush(final TableName tableName, byte[] columnFamily) throws IOException {
-    checkTableExists(tableName);
-    if (isTableDisabled(tableName)) {
-      LOG.info("Table is disabled: " + tableName.getNameAsString());
-      return;
+    flush(tableName, Collections.singletonList(columnFamily));
+  }
+
+  @Override
+  public Future<Void> flushAsync(TableName tableName, List<byte[]> columnFamilies)
+    throws IOException {
+    // check if the table exists and enabled
+    if (!isTableEnabled(tableName)) {
+      throw new TableNotEnabledException(tableName.getNameAsString());
     }
-    Map<String, String> props = new HashMap<>();
-    if (columnFamily != null) {
-      props.put(HConstants.FAMILY_KEY_STR, Bytes.toString(columnFamily));
+    // remove duplicate column families
+    List<byte[]> columnFamilyList = columnFamilies.stream()
+      .filter(cf -> cf != null && cf.length > 0).distinct().collect(Collectors.toList());
+
+    try {
+      FlushTableResponse resp = executeCallable(
+        new MasterCallable<FlushTableResponse>(getConnection(), getRpcControllerFactory()) {
+          final long nonceGroup = ng.getNonceGroup();
+          final long nonce = ng.newNonce();
+
+          @Override
+          protected FlushTableResponse rpcCall() throws Exception {
+            FlushTableRequest request = RequestConverter.buildFlushTableRequest(tableName,
+              columnFamilyList, nonceGroup, nonce);
+            return master.flushTable(getRpcController(), request);
+          }
+        });
+      return new FlushTableFuture(this, tableName, resp);
+    } catch (DoNotRetryIOException e) {
+      // This is for keeping compatibility with old implementation.
+      // usually the exception caused by the method is not present on the server or
+      // the hbase hadoop version does not match the running hadoop version or
+      // the FlushTableProcedure is disabled, if that happens, we need fall back
+      // to the old flush implementation.
+      Map<String, String> props = new HashMap<>();
+      if (!columnFamilies.isEmpty()) {
+        props.put(HConstants.FAMILY_KEY_STR, Strings.JOINER
+          .join(columnFamilies.stream().map(Bytes::toString).collect(Collectors.toList())));
+      }
+
+      executeCallable(
+        new MasterCallable<ExecProcedureResponse>(getConnection(), getRpcControllerFactory()) {
+          @Override
+          protected ExecProcedureResponse rpcCall() throws Exception {
+            ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
+              .setProcedure(ProtobufUtil.buildProcedureDescription("flush-table-proc",
+                tableName.getNameAsString(), props))
+              .build();
+            return master.execProcedure(getRpcController(), request);
+          }
+        });
+      return new LegacyFlushFuture(this, tableName, props);
     }
-    execProcedure("flush-table-proc", tableName.getNameAsString(), props);
+  }
+
+  private static class FlushTableFuture extends TableFuture<Void> {
+
+    public FlushTableFuture(final HBaseAdmin admin, final TableName tableName,
+      final FlushTableResponse resp) {
+      super(admin, tableName, (resp != null && resp.hasProcId()) ? resp.getProcId() : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "FLUSH";
+    }
+  }
+
+  private static class LegacyFlushFuture extends TableFuture<Void> {
+
+    private final Map<String, String> props;
+
+    public LegacyFlushFuture(HBaseAdmin admin, TableName tableName, Map<String, String> props) {
+      super(admin, tableName, null);
+      this.props = props;
+    }
+
+    @Override
+    public String getOperationType() {
+      return "FLUSH";
+    }
+
+    @Override
+    protected Void waitOperationResult(long deadlineTs) throws IOException, TimeoutException {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().isProcedureFinished("flush-table-proc",
+            getTableName().getNameAsString(), props);
+        }
+      });
+      return null;
+    }
   }
 
   @Override

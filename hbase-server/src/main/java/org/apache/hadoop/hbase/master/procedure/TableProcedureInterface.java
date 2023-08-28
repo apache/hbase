@@ -33,6 +33,7 @@ public interface TableProcedureInterface {
     EDIT,
     ENABLE,
     READ,
+    FLUSH,
     SNAPSHOT,
     REGION_SNAPSHOT,
     REGION_EDIT,

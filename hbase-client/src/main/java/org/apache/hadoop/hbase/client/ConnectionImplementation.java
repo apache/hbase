@@ -1848,6 +1848,12 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.FlushTableResponse flushTable(RpcController controller,
+        MasterProtos.FlushTableRequest request) throws ServiceException {
+        return stub.flushTable(controller, request);
+      }
+
+      @Override
       public MasterProtos.ListTableNamesByStateResponse listTableNamesByState(
         RpcController controller, MasterProtos.ListTableNamesByStateRequest request)
         throws ServiceException {

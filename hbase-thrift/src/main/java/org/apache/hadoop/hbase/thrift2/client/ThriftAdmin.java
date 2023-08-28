@@ -1344,6 +1344,11 @@ public class ThriftAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> flushAsync(TableName tableName, List<byte[]> columnFamilies) {
+    throw new NotImplementedException("flushAsync not supported in ThriftAdmin");
+  }
+
+  @Override
   public Pair<Integer, Integer> getAlterStatus(TableName tableName) {
     throw new NotImplementedException("getAlterStatus not supported in ThriftAdmin");
   }
@@ -1487,6 +1492,11 @@ public class ThriftAdmin implements Admin {
     throws IOException {
     throw new NotImplementedException(
       "replicationPeerModificationSwitch not supported in ThriftAdmin");
+  }
+
+  @Override
+  public void flush(TableName tableName, List<byte[]> columnFamilies) {
+    throw new NotImplementedException("flush not supported in ThriftAdmin");
   }
 
   @Override

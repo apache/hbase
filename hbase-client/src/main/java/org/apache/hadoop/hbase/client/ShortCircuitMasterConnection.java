@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.Rev
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AddColumnRequest;
@@ -493,6 +494,12 @@ public class ShortCircuitMasterConnection implements MasterKeepAliveConnection {
   public GetNamespaceDescriptorResponse getNamespaceDescriptor(RpcController controller,
     GetNamespaceDescriptorRequest request) throws ServiceException {
     return stub.getNamespaceDescriptor(controller, request);
+  }
+
+  @Override
+  public MasterProtos.FlushTableResponse flushTable(RpcController controller,
+    MasterProtos.FlushTableRequest request) throws ServiceException {
+    return stub.flushTable(controller, request);
   }
 
   @Override
