@@ -42,7 +42,7 @@ class BalancerRegionLoad {
     memStoreSizeMB = (int) regionMetrics.getMemStoreSize().get(Size.Unit.MEGABYTE);
     storefileSizeMB = (int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
     regionSizeMB = (int) regionMetrics.getRegionSizeMB().get(Size.Unit.MEGABYTE);
-    currentRegionPrefetchRatio = regionMetrics.getCurrentRegionPrefetchRatio();
+    currentRegionPrefetchRatio = regionMetrics.getCurrentRegionCachedRatio();
   }
 
   public long getReadRequestsCount() {

@@ -193,7 +193,7 @@ public class TestCacheCostBalancer extends BalancerTestBase {
     metricsMap.get(serverName).getRegionMetrics().forEach((rn, rm) -> {
       tableRegions.forEach(r -> {
         if (r.getRegionInfo().getRegionNameAsString().equals(rm.getNameAsString()) &&
-          rm.getCurrentRegionPrefetchRatio() == 1.0f) {
+          rm.getCurrentRegionCachedRatio() == 1.0f) {
           regionList.add(rm.getNameAsString());
         }
       });

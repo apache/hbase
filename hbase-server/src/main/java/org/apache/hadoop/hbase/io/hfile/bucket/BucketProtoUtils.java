@@ -47,7 +47,7 @@ final class BucketProtoUtils {
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
-      .putAllFullyCachedFiles(toPrefetchPB(cache.fullyCachedFiles))
+      .putAllCachedFiles(toCachedPB(cache.fullyCachedFiles))
       .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
@@ -189,25 +189,24 @@ final class BucketProtoUtils {
   }
 
   static Map<String, BucketCacheProtos.RegionFileSizeMap>
-    toPrefetchPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
-      Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
-      prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
-        BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
-          BucketCacheProtos.RegionFileSizeMap.newBuilder()
-            .setRegionName(regionPrefetchMap.getFirst())
-            .setRegionPrefetchSize(regionPrefetchMap.getSecond()).build();
-        tmpMap.put(hfileName, tmpRegionFileSize);
-      });
+    toCachedPB(Map<String, Pair<String, Long>> prefetchedHfileNames) {
+    Map<String, BucketCacheProtos.RegionFileSizeMap> tmpMap = new HashMap<>();
+    prefetchedHfileNames.forEach((hfileName, regionPrefetchMap) -> {
+      BucketCacheProtos.RegionFileSizeMap tmpRegionFileSize =
+        BucketCacheProtos.RegionFileSizeMap.newBuilder().setRegionName(regionPrefetchMap.getFirst())
+          .setRegionCachedSize(regionPrefetchMap.getSecond()).build();
+      tmpMap.put(hfileName, tmpRegionFileSize);
+    });
     return tmpMap;
   }
 
   static Map<String, Pair<String, Long>>
     fromPB(Map<String, BucketCacheProtos.RegionFileSizeMap> prefetchHFileNames) {
-      Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
-      prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
-        hfileMap.put(hfileName,
-          new Pair<>(regionPrefetchMap.getRegionName(), regionPrefetchMap.getRegionPrefetchSize()));
-      });
+    Map<String, Pair<String, Long>> hfileMap = new HashMap<>();
+    prefetchHFileNames.forEach((hfileName, regionPrefetchMap) -> {
+      hfileMap.put(hfileName,
+        new Pair<>(regionPrefetchMap.getRegionName(), regionPrefetchMap.getRegionCachedSize()));
+    });
     return hfileMap;
   }
 }

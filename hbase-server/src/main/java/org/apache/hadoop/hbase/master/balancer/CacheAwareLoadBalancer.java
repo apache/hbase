@@ -132,7 +132,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     clusterStatus.getLiveServerMetrics().forEach((ServerName sn, ServerMetrics sm) -> {
       // Find if a region was previously hosted on a server other than the one it is currently
       // hosted on.
-      sm.getRegionPrefetchInfo().forEach((String regionEncodedName, Integer prefetchSize) -> {
+      sm.getRegionCachedInfo().forEach((String regionEncodedName, Integer prefetchSize) -> {
         // If the region is found in currentPrefetchMap, it is currently hosted on this server
         if (currentPrefetchMap.containsKey(regionEncodedName)) {
           ServerName currentServer = currentPrefetchMap.get(regionEncodedName).getFirst();

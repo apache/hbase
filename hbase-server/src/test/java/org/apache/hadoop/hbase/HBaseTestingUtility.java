@@ -3987,7 +3987,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
               String regionNameAsString = r.getRegionInfo().getRegionNameAsString();
               String regionString = rm.getNameAsString();
               if (regionNameAsString.equals(regionString)) {
-                if (rm.getCurrentRegionPrefetchRatio() == 1.0f) {
+                if (rm.getCurrentRegionCachedRatio() == 1.0f) {
                   prefetchedRegionCount.getAndIncrement();
                 }
               }
@@ -4018,7 +4018,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
         for (HRegion r : regions) {
           sm.getRegionMetrics().forEach((rn, rm) -> {
             if (r.getRegionInfo().getRegionNameAsString().equals(rm.getNameAsString()) &&
-              rm.getCurrentRegionPrefetchRatio() == 1.0f) {
+              rm.getCurrentRegionCachedRatio() == 1.0f) {
               prefetchedRegionCount.getAndIncrement();
             }
           });
@@ -4047,7 +4047,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
               String regionNameAsString = r.getRegionInfo().getRegionNameAsString();
               String regionString = rm.getNameAsString();
               if (regionNameAsString.equals(regionString)) {
-                if (rm.getCurrentRegionPrefetchRatio() == 1.0f) {
+                if (rm.getCurrentRegionCachedRatio() == 1.0f) {
                   prefetchedRegionCount.getAndIncrement();
                 }
               }

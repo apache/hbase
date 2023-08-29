@@ -93,7 +93,10 @@ public interface ServerMetrics {
   /** Returns the last timestamp (server side) of generating this metrics */
   long getLastReportTimestamp();
 
-  /** Returns the region prefetch information for the regions hosted on this server */
-  Map<String, Integer> getRegionPrefetchInfo();
-
+  /**
+   * Returns the region cache information for the regions hosted on this server
+   * @return map of region encoded name and the size of the region cached on this region server
+   *         rounded to MB
+   */
+  Map<String, Integer> getRegionCachedInfo();
 }

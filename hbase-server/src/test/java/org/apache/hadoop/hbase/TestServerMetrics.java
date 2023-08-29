@@ -61,7 +61,7 @@ public class TestServerMetrics {
     assertEquals(300, metrics.getRegionMetrics().values().stream()
       .mapToLong(v -> v.getFilteredReadRequestCount()).sum());
     assertEquals(2, metrics.getRegionMetrics().values().stream()
-      .mapToLong(v -> (long) v.getCurrentRegionPrefetchRatio()).count());
+      .mapToLong(v -> (long) v.getCurrentRegionCachedRatio()).count());
     assertEquals(150, metrics.getRegionMetrics().values().stream()
       .mapToDouble(v -> v.getRegionSizeMB().get(Size.Unit.MEGABYTE)).sum(), 0);
   }
@@ -104,13 +104,13 @@ public class TestServerMetrics {
         .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
         .setFilteredReadRequestsCount(100).setStorefileIndexSizeKB(42).setRootIndexSizeKB(201)
         .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-        .setRegionSizeMB(100).setCurrentRegionPrefetchRatio(0.9f).build();
+        .setRegionSizeMB(100).setCurrentRegionCachedRatio(0.9f).build();
     ClusterStatusProtos.RegionLoad rlTwo =
       ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
         .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
         .setFilteredReadRequestsCount(200).setStorefileIndexSizeKB(40).setRootIndexSizeKB(303)
         .setReadRequestsCount(Integer.MAX_VALUE).setWriteRequestsCount(Integer.MAX_VALUE)
-        .setRegionSizeMB(50).setCurrentRegionPrefetchRatio(1.0f).build();
+        .setRegionSizeMB(50).setCurrentRegionCachedRatio(1.0f).build();
 
     ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
       .addRegionLoads(rlOne).addRegionLoads(rlTwo).build();

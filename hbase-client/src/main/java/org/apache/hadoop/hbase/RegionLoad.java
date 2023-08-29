@@ -392,7 +392,7 @@ public class RegionLoad implements RegionMetrics {
   public Size getRegionSizeMB() { return metrics.getRegionSizeMB(); }
 
   @Override
-  public float getCurrentRegionPrefetchRatio() { return metrics.getCurrentRegionPrefetchRatio(); }
+  public float getCurrentRegionCachedRatio() { return metrics.getCurrentRegionCachedRatio(); }
 
   /**
    * @see java.lang.Object#toString()
@@ -427,7 +427,7 @@ public class RegionLoad implements RegionMetrics {
     Strings.appendKeyValue(sb, "completeSequenceId", this.getCompleteSequenceId());
     Strings.appendKeyValue(sb, "dataLocality", this.getDataLocality());
     Strings.appendKeyValue(sb, "regionSizeMB", this.getRegionSizeMB());
-    Strings.appendKeyValue(sb, "currentRegionPrefetchRatio", this.getCurrentRegionPrefetchRatio());
+    Strings.appendKeyValue(sb, "currentRegionCacheRatio", this.getCurrentRegionCachedRatio());
     return sb.toString();
   }
 }

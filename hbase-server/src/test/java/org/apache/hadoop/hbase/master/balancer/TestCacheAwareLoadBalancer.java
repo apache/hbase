@@ -125,7 +125,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       when(rl.getWriteRequestCount()).thenReturn(0L);
       when(rl.getMemStoreSize()).thenReturn(Size.ZERO);
       when(rl.getStoreFileSize()).thenReturn(Size.ZERO);
-      when(rl.getCurrentRegionPrefetchRatio()).thenReturn(currentPrefetchRatio);
+      when(rl.getCurrentRegionCachedRatio()).thenReturn(currentPrefetchRatio);
       when(rl.getRegionSizeMB()).thenReturn(new Size(regionSize, Size.Unit.MEGABYTE));
       regionLoadMap.put(info.getRegionName(), rl);
     }
@@ -134,7 +134,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     for (RegionInfo info : oldPrefechedRegions) {
       oldPrefetchInfoMap.put(info.getEncodedName(), oldPrefetchSize);
     }
-    when(serverMetrics.getRegionPrefetchInfo()).thenReturn(oldPrefetchInfoMap);
+    when(serverMetrics.getRegionCachedInfo()).thenReturn(oldPrefetchInfoMap);
     return serverMetrics;
   }
 

@@ -425,8 +425,8 @@ public class ServerLoad implements ServerMetrics {
   }
 
   @Override
-  public Map<String, Integer> getRegionPrefetchInfo() {
-    return metrics.getRegionPrefetchInfo();
+  public Map<String, Integer> getRegionCachedInfo() {
+    return metrics.getRegionCachedInfo();
   }
 
   /**

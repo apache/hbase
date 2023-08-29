@@ -133,9 +133,9 @@ public interface RegionMetrics {
   /** Returns the compaction state of this region */
   CompactionState getCompactionState();
 
-  /** Returns the total size of the region */
+  /** Returns the total size of the hfiles in the region */
   Size getRegionSizeMB();
 
   /** Returns current prefetch ratio of this region on this server */
-  float getCurrentRegionPrefetchRatio();
+  float getCurrentRegionCachedRatio();
 }

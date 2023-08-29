@@ -84,7 +84,7 @@ public final class ServerMetricsBuilder {
       .setReplicationLoadSink(serverLoadPB.hasReplLoadSink()
         ? ProtobufUtil.toReplicationLoadSink(serverLoadPB.getReplLoadSink())
         : null)
-      .setRegionPrefetchInfo(serverLoadPB.getRegionPrefetchInfoMap())
+      .setRegionCachedInfo(serverLoadPB.getRegionCachedInfoMap())
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version).build();
@@ -109,7 +109,7 @@ public final class ServerMetricsBuilder {
         .map(UserMetricsBuilder::toUserMetrics).collect(Collectors.toList()))
       .addAllReplLoadSource(metrics.getReplicationLoadSourceList().stream()
         .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
-      .putAllRegionPrefetchInfo(metrics.getRegionPrefetchInfo())
+      .putAllRegionCachedInfo(metrics.getRegionCachedInfo())
       .setReportStartTime(metrics.getLastReportTimestamp())
       .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
@@ -139,7 +139,7 @@ public final class ServerMetricsBuilder {
   private final Set<String> coprocessorNames = new TreeSet<>();
   private long reportTimestamp = System.currentTimeMillis();
   private long lastReportTimestamp = 0;
-  private Map<String, Integer> regionPrefetchInfo = new HashMap<>();
+  private Map<String, Integer> regionCachedInfo = new HashMap<>();
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -205,11 +205,6 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
-  public ServerMetricsBuilder setRegionPrefetchInfo(Map<String, Integer> value) {
-    this.regionPrefetchInfo = value;
-    return this;
-  }
-
   public ServerMetricsBuilder setReportTimestamp(long value) {
     this.reportTimestamp = value;
     return this;
@@ -220,10 +215,15 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
+  public ServerMetricsBuilder setRegionCachedInfo(Map<String, Integer> value) {
+    this.regionCachedInfo = value;
+    return this;
+  }
+
   public ServerMetrics build() {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, usedHeapSize, maxHeapSize, infoServerPort, sources, sink, regionStatus,
-      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics, regionPrefetchInfo);
+      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics, regionCachedInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -243,13 +243,14 @@ public final class ServerMetricsBuilder {
     private final long reportTimestamp;
     private final long lastReportTimestamp;
     private final Map<byte[], UserMetrics> userMetrics;
-    private final Map<String, Integer> regionPrefetchInfo;
+    private final Map<String, Integer> regionCachedInfo;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
       long requestCountPerSecond, long requestCount, Size usedHeapSize, Size maxHeapSize,
       int infoServerPort, List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
       Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, Map<String, Integer> regionPrefetchInfo) {
+      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics,
+      Map<String, Integer> regionCachedInfo) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -262,10 +263,10 @@ public final class ServerMetricsBuilder {
       this.sink = sink;
       this.regionStatus = Preconditions.checkNotNull(regionStatus);
       this.userMetrics = Preconditions.checkNotNull(userMetrics);
-      this.regionPrefetchInfo = Preconditions.checkNotNull(regionPrefetchInfo);
       this.coprocessorNames = Preconditions.checkNotNull(coprocessorNames);
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
+      this.regionCachedInfo = Preconditions.checkNotNull(regionCachedInfo);
     }
 
     @Override
@@ -338,12 +339,6 @@ public final class ServerMetricsBuilder {
     }
 
     @Override
-    public Map<String, Integer> getRegionPrefetchInfo() {
-      return Collections.unmodifiableMap(regionPrefetchInfo);
-
-    }
-
-    @Override
     public Set<String> getCoprocessorNames() {
       return Collections.unmodifiableSet(coprocessorNames);
     }
@@ -356,6 +351,11 @@ public final class ServerMetricsBuilder {
     @Override
     public long getLastReportTimestamp() {
       return lastReportTimestamp;
+    }
+
+    @Override
+    public Map<String, Integer> getRegionCachedInfo() {
+      return Collections.unmodifiableMap(regionCachedInfo);
     }
 
     @Override
