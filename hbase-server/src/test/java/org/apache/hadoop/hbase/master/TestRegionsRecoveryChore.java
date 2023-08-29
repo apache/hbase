@@ -385,6 +385,10 @@ public class TestRegionsRecoveryChore {
         return null;
       }
 
+      @Override
+      public Map<String, Integer> getRegionCachedInfo() {
+        return new HashMap<>();
+      }
     };
     return serverMetrics;
   }
@@ -520,6 +524,16 @@ public class TestRegionsRecoveryChore {
       @Override
       public CompactionState getCompactionState() {
         return null;
+      }
+
+      @Override
+      public Size getRegionSizeMB() {
+        return null;
+      }
+
+      @Override
+      public float getCurrentRegionCachedRatio() {
+        return 0.0f;
       }
     };
     return regionMetrics;

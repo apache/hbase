@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -53,6 +54,7 @@ import java.util.function.Function;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
@@ -79,6 +81,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
 import org.apache.hadoop.hbase.util.IdReadWriteLock.ReferenceType;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -147,8 +150,17 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private AtomicBoolean backingMapValidated = new AtomicBoolean(false);
 
-  /** Set of files for which prefetch is completed */
-  final Map<String, Boolean> fullyCachedFiles = new ConcurrentHashMap<>();
+  /**
+   * Map of hFile -> Region -> File size. This map is used to track all files completed prefetch,
+   * together with the region those belong to and the total cached size for the
+   * region.TestBlockEvictionOnRegionMovement
+   */
+  final Map<String, Pair<String, Long>> fullyCachedFiles = new ConcurrentHashMap<>();
+  /**
+   * Map of region -> total size of the region prefetched on this region server. This is the total
+   * size of hFiles for this region prefetched on this region server
+   */
+  final Map<String, Long> regionCachedSizeMap = new ConcurrentHashMap<>();
 
   private BucketCachePersister cachePersister;
 
@@ -596,7 +608,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
         backingMap.remove(key);
-        fullyCachedFiles.remove(key.getHfileName());
+        removeFileFromPrefetch(key.getHfileName());
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -621,7 +633,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fullyCachedFiles.remove(cacheKey.getHfileName());
+        removeFileFromPrefetch(cacheKey.getHfileName());
       }
     }
     if (evictedByEvictionProcess) {
@@ -630,10 +642,6 @@ public class BucketCache implements BlockCache, HeapSize {
     if (ioEngine.isPersistent()) {
       setCacheInconsistent(true);
     }
-  }
-
-  public void fileCacheCompleted(String fileName) {
-    fullyCachedFiles.put(fileName, true);
   }
 
   /**
@@ -1288,6 +1296,10 @@ public class BucketCache implements BlockCache, HeapSize {
     return ioEngine.isPersistent() && persistencePath != null;
   }
 
+  public Map<String, Long> getRegionCachedInfo() {
+    return Collections.unmodifiableMap(regionCachedSizeMap);
+  }
+
   /**
    * @see #persistToFile()
    */
@@ -1318,6 +1330,29 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketAllocator = new BucketAllocator(cacheCapacity, bucketSizes, backingMap, realCacheSize);
       blockNumber.add(backingMap.size());
       LOG.info("Bucket cache retrieved from file successfully");
+    }
+  }
+
+  private void updateRegionSizeMapWhileRetrievingFromFile() {
+    // Update the regionCachedSizeMap with the region size while restarting the region server
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updating region size map after retrieving cached file list");
+      dumpPrefetchList();
+    }
+    regionCachedSizeMap.clear();
+    fullyCachedFiles.forEach((hFileName, hFileSize) -> {
+      // Get the region name for each file
+      String regionEncodedName = hFileSize.getFirst();
+      long cachedFileSize = hFileSize.getSecond();
+      regionCachedSizeMap.merge(regionEncodedName, cachedFileSize,
+        (oldpf, fileSize) -> oldpf + fileSize);
+    });
+  }
+
+  private void dumpPrefetchList() {
+    for (Map.Entry<String, Pair<String, Long>> outerEntry : fullyCachedFiles.entrySet()) {
+      LOG.debug("Cached File Entry:<{},<{},{}>>", outerEntry.getKey(),
+        outerEntry.getValue().getFirst(), outerEntry.getValue().getSecond());
     }
   }
 
@@ -1385,7 +1420,7 @@ public class BucketCache implements BlockCache, HeapSize {
     backingMap = BucketProtoUtils.fromPB(proto.getDeserializersMap(), proto.getBackingMap(),
       this::createRecycler);
     fullyCachedFiles.clear();
-    fullyCachedFiles.putAll(proto.getPrefetchedFilesMap());
+    fullyCachedFiles.putAll(BucketProtoUtils.fromPB(proto.getCachedFilesMap()));
     if (proto.hasChecksum()) {
       try {
         ((PersistentIOEngine) ioEngine).verifyFileIntegrity(proto.getChecksum().toByteArray(),
@@ -1411,7 +1446,7 @@ public class BucketCache implements BlockCache, HeapSize {
             } catch (IOException e1) {
               LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
               evictBlock(keyEntry.getKey());
-              fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
+              removeFileFromPrefetch(keyEntry.getKey().getHfileName());
             }
           }
           backingMapValidated.set(true);
@@ -1428,6 +1463,7 @@ public class BucketCache implements BlockCache, HeapSize {
       LOG.info("Persistent file is old format, it does not support verifying file integrity!");
       backingMapValidated.set(true);
     }
+    updateRegionSizeMapWhileRetrievingFromFile();
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
   }
 
@@ -1566,7 +1602,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
-    this.fullyCachedFiles.remove(hfileName);
+    removeFileFromPrefetch(hfileName);
     Set<BlockCacheKey> keySet = blocksByHFile.subSet(new BlockCacheKey(hfileName, Long.MIN_VALUE),
       true, new BlockCacheKey(hfileName, Long.MAX_VALUE), true);
 
@@ -1956,7 +1992,7 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Optional<Map<String, Boolean>> getFullyCachedFiles() {
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
     return Optional.of(fullyCachedFiles);
   }
 
@@ -1976,7 +2012,8 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public void notifyFileCachingCompleted(String fileName, int totalBlockCount, int dataBlockCount) {
+  public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     // block eviction may be happening in the background as prefetch runs,
     // so we need to count all blocks for this file in the backing map under
     // a read lock for the block offset
@@ -2001,17 +2038,17 @@ public class BucketCache implements BlockCache, HeapSize {
       // We may either place only data blocks on the BucketCache or all type of blocks
       if (dataBlockCount == count.getValue() || totalBlockCount == count.getValue()) {
         LOG.debug("File {} has now been fully cached.", fileName);
-        fileCacheCompleted(fileName);
+        fileCacheCompleted(fileName, size);
       } else {
         LOG.debug(
           "Prefetch executor completed for {}, but only {} blocks were cached. "
             + "Total blocks for file: {}. Checking for blocks pending cache in cache writer queue.",
           fileName, count.getValue(), dataBlockCount);
-        if (ramCache.hasBlocksForFile(fileName)) {
+        if (ramCache.hasBlocksForFile(fileName.getName())) {
           LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
             + "and try the verification again.", fileName);
           Thread.sleep(100);
-          notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount);
+          notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
         } else {
           LOG.info(
             "We found only {} blocks cached from a total of {} for file {}, "
@@ -2030,7 +2067,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public void notifyFileBlockEvicted(String fileName) {
-    fullyCachedFiles.remove(fileName);
+    removeFileFromPrefetch(fileName);
   }
 
   @Override
@@ -2061,4 +2098,34 @@ public class BucketCache implements BlockCache, HeapSize {
     }
 
   }
+
+  private void removeFileFromPrefetch(String hfileName) {
+    // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
+    if (fullyCachedFiles.containsKey(hfileName)) {
+      Pair<String, Long> regionEntry = fullyCachedFiles.get(hfileName);
+      String regionEncodedName = regionEntry.getFirst();
+      long filePrefetchSize = regionEntry.getSecond();
+      LOG.debug("Removing file {} for region {}", hfileName, regionEncodedName);
+      regionCachedSizeMap.computeIfPresent(regionEncodedName, (rn, pf) -> pf - filePrefetchSize);
+      // If all the blocks for a region are evicted from the cache, remove the entry for that region
+      if (
+        regionCachedSizeMap.containsKey(regionEncodedName)
+          && regionCachedSizeMap.get(regionEncodedName) == 0
+      ) {
+        regionCachedSizeMap.remove(regionEncodedName);
+      }
+    }
+    fullyCachedFiles.remove(hfileName);
+  }
+
+  public void fileCacheCompleted(Path filePath, long size) {
+    Pair<String, Long> pair = new Pair<>();
+    // sets the region name
+    String regionName = filePath.getParent().getParent().getName();
+    pair.setFirst(regionName);
+    pair.setSecond(size);
+    fullyCachedFiles.put(filePath.getName(), pair);
+    regionCachedSizeMap.merge(regionName, size, (oldpf, fileSize) -> oldpf + fileSize);
+  }
+
 }

@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -154,8 +156,8 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * made into the cache).
    * @param fileName the file that has been completely cached.
    */
-  default void notifyFileCachingCompleted(String fileName, int totalBlockCount,
-    int dataBlockCount) {
+  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     // noop
   }
 
@@ -225,7 +227,7 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return empty optional if this method is not supported, otherwise the returned optional
    *         contains a map of all files that have been fully cached.
    */
-  default Optional<Map<String, Boolean>> getFullyCachedFiles() {
+  default Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
     return Optional.empty();
   }
 }
