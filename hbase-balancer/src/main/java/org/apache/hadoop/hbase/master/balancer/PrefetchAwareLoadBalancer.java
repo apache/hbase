@@ -90,7 +90,7 @@ public class PrefetchAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public synchronized void updateClusterMetrics(ClusterMetrics clusterMetrics) {
+  public void updateClusterMetrics(ClusterMetrics clusterMetrics) {
     this.clusterStatus = clusterMetrics;
     updateRegionLoad();
   }
@@ -98,7 +98,7 @@ public class PrefetchAwareLoadBalancer extends StochasticLoadBalancer {
   /**
    * Collect the prefetch information for all the regions from all the active region servers.
    */
-  private synchronized void updateRegionLoad() {
+  private void updateRegionLoad() {
     loads = new HashMap<>();
     oldRegionPrefetchMap = new HashMap<>();
     Map<String, Pair<ServerName, Integer>> currentPrefetchMap = new HashMap<>();
