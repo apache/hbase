@@ -22,8 +22,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -423,7 +425,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
    * Returns the list of fully cached files
    */
   @Override
-  public Optional<Map<String, Boolean>> getFullyCachedFiles() {
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
     return this.l2Cache.getFullyCachedFiles();
   }
 
@@ -447,10 +449,11 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public void notifyFileCachingCompleted(String fileName, int totalBlockCount, int dataBlockCount) {
+  public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     l1Cache.getBlockCount();
-    l1Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount);
-    l2Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount);
+    l1Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+    l2Cache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
 
   }
 

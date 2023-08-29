@@ -128,8 +128,8 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             if (!interrupted) {
-              cacheConf.getBlockCache().get().notifyFileCachingCompleted(path.getName(), blockCount,
-                dataBlockCount);
+              cacheConf.getBlockCache().get().notifyFileCachingCompleted(path, blockCount,
+                dataBlockCount, offset);
             }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
@@ -147,7 +147,6 @@ public class HFilePreadReader extends HFileReaderImpl {
                 LOG.warn("Close prefetch stream reader failed, path: " + path, e);
               }
             }
-            String regionName = getRegionName(path);
             PrefetchExecutor.complete(path);
           }
         }
