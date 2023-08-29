@@ -15,46 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.ipc;
 
-import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * This queue allows a ThreadPoolExecutor to steal jobs from another ThreadPoolExecutor. This queue
- * also acts as the factory for creating the PriorityBlockingQueue to be used in the steal-from
- * ThreadPoolExecutor. The behavior of this queue is the same as a normal PriorityBlockingQueue
- * except the take/poll(long,TimeUnit) methods would also check whether there are jobs in the
- * steal-from queue if this q ueue is empty. Note the workers in ThreadPoolExecutor must be
- * pre-started so that they can steal job from the other queue, otherwise the worker will only be
- * started after there are jobs submitted to main queue.
- */
 @InterfaceAudience.Private
-public class StealJobQueue<T> extends PriorityBlockingQueue<T> {
-
-  private static final long serialVersionUID = -6334572230936888291L;
+public class FIFOStealJobQueue<T> extends LinkedBlockingQueue<T> {
+  private static final long serialVersionUID = -4984005244760265988L;
 
   private BlockingQueue<T> stealFromQueue;
 
   private final Lock lock = new ReentrantLock();
   private final transient Condition notEmpty = lock.newCondition();
 
-  public StealJobQueue(Comparator<? super T> comparator) {
-    this(11, 11, comparator);
-  }
+  public FIFOStealJobQueue(int initCapacity, int stealFromQueueInitCapacity) {
+    super(initCapacity);
+    this.stealFromQueue = new LinkedBlockingQueue<T>(stealFromQueueInitCapacity) {
 
-  public StealJobQueue(int initCapacity, int stealFromQueueInitCapacity,
-    Comparator<? super T> comparator) {
-    super(initCapacity, comparator);
-    this.stealFromQueue = new PriorityBlockingQueue<T>(stealFromQueueInitCapacity, comparator) {
-
-      private static final long serialVersionUID = -6805567216580184701L;
+      private static final long serialVersionUID = -6059419446245599796L;
 
       @Override
       public boolean offer(T t) {

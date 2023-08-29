@@ -25,14 +25,10 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX })
 @InterfaceStability.Evolving
-public class StealReadJobRWQueueRpcExecutor extends RWQueueRpcExecutor {
-  private static final Logger LOG = LoggerFactory.getLogger(StealReadJobRWQueueRpcExecutor.class);
-
+public class StealReadJobRWQueueRpcExecutor extends FastPathRWQueueRpcExecutor {
   public StealReadJobRWQueueRpcExecutor(String name, int handlerCount, int maxQueueLength,
     PriorityFunction priority, Configuration conf, Abortable abortable) {
     super(name, handlerCount, maxQueueLength, priority, conf, abortable);
@@ -46,7 +42,8 @@ public class StealReadJobRWQueueRpcExecutor extends RWQueueRpcExecutor {
       int stealQueueCount = Math.min(numReadQueues, numScanQueues);
       List<BlockingQueue<CallRunner>> stealScanQueues = new ArrayList<>(stealQueueCount);
       for (int i = 0; i < stealQueueCount; i++) {
-        StealRpcJobQueue scanQueue = new StealRpcJobQueue(maxQueueLength, maxQueueLength);
+        FIFOStealJobQueue<CallRunner> scanQueue =
+          new FIFOStealJobQueue<>(maxQueueLength, maxQueueLength);
         BlockingQueue<CallRunner> readQueue = scanQueue.getStealFromQueue();
         queues.add(readQueue);
         stealScanQueues.add(scanQueue);
