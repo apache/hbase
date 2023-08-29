@@ -106,7 +106,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             final long fileSize = offset;
-            BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
+            BucketCache.getBucketCacheFromCacheConfig(cacheConf)
               .ifPresent(bc -> bc.fileCacheCompleted(path, fileSize));
 
           } catch (IOException e) {
