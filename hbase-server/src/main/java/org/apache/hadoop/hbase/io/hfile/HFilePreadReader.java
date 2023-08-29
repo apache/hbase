@@ -40,7 +40,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
-    BucketCache.getBuckedCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
+    BucketCache.getBucketCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
       .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
     if (
@@ -66,7 +66,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
             Optional<BucketCache> bucketCacheOptional =
-              BucketCache.getBuckedCacheFromCacheConfig(cacheConf);
+              BucketCache.getBucketCacheFromCacheConfig(cacheConf);
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
             while (offset < end) {
@@ -112,8 +112,8 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             final long fileSize = offset;
-            BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
-              .ifPresent(bc -> bc.fileCacheCompleted(path,fileSize));
+            BucketCache.getBucketCacheFromCacheConfig(cacheConf)
+              .ifPresent(bc -> bc.fileCacheCompleted(path, fileSize));
 
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
