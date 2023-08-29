@@ -123,7 +123,7 @@ public class TestPrefetchWithBucketCache {
     BlockCacheKey key = snapshot.keySet().stream().findFirst().get();
     LOG.debug("removing block {}", key);
     bc.getBackingMap().remove(key);
-    bc.getFullyCachedFiles().remove(storeFile.getName());
+    bc.getFullyCachedFiles().ifPresent(fcf -> fcf.remove(storeFile.getName()));
     assertTrue(snapshot.size() > bc.getBackingMap().size());
     LOG.debug("Third read should prefetch again, as we removed one block for the file.");
     readStoreFile(storeFile);

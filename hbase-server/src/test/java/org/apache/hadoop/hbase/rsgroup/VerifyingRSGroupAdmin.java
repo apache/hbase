@@ -970,6 +970,11 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   }
 
   @Override
+  public List<String> getCachedFilesList(ServerName serverName) throws IOException {
+    return admin.getCachedFilesList(serverName);
+  }
+
+  @Override
   public boolean replicationPeerModificationSwitch(boolean on, boolean drainProcedures)
     throws IOException {
     return admin.replicationPeerModificationSwitch(on, drainProcedures);
