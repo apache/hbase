@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -431,7 +432,7 @@ public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
    * Returns the list of fully cached files
    */
   @Override
-  public Optional<Map<String, Boolean>> getFullyCachedFiles() {
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
     return this.l2Cache.getFullyCachedFiles();
   }
 
