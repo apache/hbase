@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.MetricsIO;
-import org.apache.hadoop.hbase.io.MetricsIOWrapperImpl;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
@@ -169,9 +168,6 @@ public final class HFile {
   // For tests. Gets incremented when we read a block whether from HDFS or from Cache.
   public static final LongAdder DATABLOCK_READ_COUNT = new LongAdder();
 
-  /** Static instance for the metrics so that HFileReaders access the same instance */
-  static final MetricsIO metrics = new MetricsIO(new MetricsIOWrapperImpl());
-
   /**
    * Shutdown constructor.
    */
@@ -195,9 +191,9 @@ public final class HFile {
   public static void updateReadLatency(long latencyMillis, boolean pread, boolean tooSlow) {
     RpcServer.getCurrentCall().ifPresent(call -> call.updateFsReadTime(latencyMillis));
     if (pread) {
-      metrics.updateFsPreadTime(latencyMillis);
+      MetricsIO.getInstance().updateFsPreadTime(latencyMillis);
     } else {
-      metrics.updateFsReadTime(latencyMillis);
+      MetricsIO.getInstance().updateFsReadTime(latencyMillis);
     }
     if (tooSlow) {
       metrics.incrSlowFsRead();
@@ -205,7 +201,7 @@ public final class HFile {
   }
 
   public static final void updateWriteLatency(long latencyMillis) {
-    metrics.updateFsWriteTime(latencyMillis);
+    MetricsIO.getInstance().updateFsWriteTime(latencyMillis);
   }
 
   /** API required to write an {@link HFile} */

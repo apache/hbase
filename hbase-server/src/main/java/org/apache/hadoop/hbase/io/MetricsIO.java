@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -24,10 +25,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsIO {
 
+  private static volatile MetricsIO instance;
   private final MetricsIOSource source;
   private final MetricsIOWrapper wrapper;
 
-  public MetricsIO(MetricsIOWrapper wrapper) {
+  @RestrictedApi(explanation = "Should only be called in TestMetricsIO", link = "",
+      allowedOnPath = ".*/(MetricsIO|TestMetricsIO).java")
+  MetricsIO(MetricsIOWrapper wrapper) {
     this(CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
       .createIO(wrapper), wrapper);
   }
@@ -35,6 +39,21 @@ public class MetricsIO {
   MetricsIO(MetricsIOSource source, MetricsIOWrapper wrapper) {
     this.source = source;
     this.wrapper = wrapper;
+  }
+
+  /**
+   * Get a static instance for the MetricsIO so that accessors access the same instance. We want to
+   * lazy initialize so that correct process name is in place. See HBASE-27966 for more details.
+   */
+  public static MetricsIO getInstance() {
+    if (instance == null) {
+      synchronized (MetricsIO.class) {
+        if (instance == null) {
+          instance = new MetricsIO(new MetricsIOWrapperImpl());
+        }
+      }
+    }
+    return instance;
   }
 
   public MetricsIOSource getMetricsSource() {
