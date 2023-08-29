@@ -85,6 +85,7 @@ public final class ServerMetricsBuilder {
         : null)
       .setTasks(serverLoadPB.getTasksList().stream().map(ProtobufUtil::getServerTask)
         .collect(Collectors.toList()))
+      .setRegionCachedInfo(serverLoadPB.getRegionCachedInfoMap())
       .setReportTimestamp(serverLoadPB.getReportEndTime())
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version).build();
@@ -111,6 +112,7 @@ public final class ServerMetricsBuilder {
         .map(ProtobufUtil::toReplicationLoadSource).collect(Collectors.toList()))
       .addAllTasks(
         metrics.getTasks().stream().map(ProtobufUtil::toServerTask).collect(Collectors.toList()))
+      .putAllRegionCachedInfo(metrics.getRegionCachedInfo())
       .setReportStartTime(metrics.getLastReportTimestamp())
       .setReportEndTime(metrics.getReportTimestamp());
     if (metrics.getReplicationLoadSink() != null) {
@@ -142,6 +144,7 @@ public final class ServerMetricsBuilder {
   private long reportTimestamp = EnvironmentEdgeManager.currentTime();
   private long lastReportTimestamp = 0;
   private final List<ServerTask> tasks = new ArrayList<>();
+  private Map<String, Integer> regionCachedInfo = new HashMap<>();
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -232,11 +235,16 @@ public final class ServerMetricsBuilder {
     return this;
   }
 
+  public ServerMetricsBuilder setRegionCachedInfo(Map<String, Integer> value) {
+    this.regionCachedInfo = value;
+    return this;
+  }
+
   public ServerMetrics build() {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, readRequestCount, writeRequestCount, usedHeapSize, maxHeapSize, infoServerPort,
       sources, sink, regionStatus, coprocessorNames, reportTimestamp, lastReportTimestamp,
-      userMetrics, tasks);
+      userMetrics, tasks, regionCachedInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
@@ -259,13 +267,15 @@ public final class ServerMetricsBuilder {
     private final long lastReportTimestamp;
     private final Map<byte[], UserMetrics> userMetrics;
     private final List<ServerTask> tasks;
+    private final Map<String, Integer> regionCachedInfo;
 
     ServerMetricsImpl(ServerName serverName, int versionNumber, String version,
       long requestCountPerSecond, long requestCount, long readRequestsCount,
       long writeRequestsCount, Size usedHeapSize, Size maxHeapSize, int infoServerPort,
       List<ReplicationLoadSource> sources, ReplicationLoadSink sink,
       Map<byte[], RegionMetrics> regionStatus, Set<String> coprocessorNames, long reportTimestamp,
-      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, List<ServerTask> tasks) {
+      long lastReportTimestamp, Map<byte[], UserMetrics> userMetrics, List<ServerTask> tasks,
+      Map<String, Integer> regionCachedInfo) {
       this.serverName = Preconditions.checkNotNull(serverName);
       this.versionNumber = versionNumber;
       this.version = version;
@@ -284,6 +294,7 @@ public final class ServerMetricsBuilder {
       this.reportTimestamp = reportTimestamp;
       this.lastReportTimestamp = lastReportTimestamp;
       this.tasks = tasks;
+      this.regionCachedInfo = regionCachedInfo;
     }
 
     @Override
@@ -384,6 +395,11 @@ public final class ServerMetricsBuilder {
     @Override
     public List<ServerTask> getTasks() {
       return tasks;
+    }
+
+    @Override
+    public Map<String, Integer> getRegionCachedInfo() {
+      return Collections.unmodifiableMap(regionCachedInfo);
     }
 
     @Override
