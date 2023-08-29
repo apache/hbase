@@ -43,7 +43,7 @@ public final class ZKConfig {
   private static final String ZOOKEEPER_JAVA_PROPERTY_PREFIX = "zookeeper.";
 
   /** Supported ZooKeeper client TLS properties */
-  private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
+  static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES =
     ImmutableSet.of("client.secure", "clientCnxnSocket", "ssl.keyStore.location",
       "ssl.keyStore.password", "ssl.keyStore.passwordPath", "ssl.trustStore.location",
       "ssl.trustStore.password", "ssl.trustStore.passwordPath");
