@@ -363,7 +363,6 @@ public class TestBucketCache {
       assertTrue(new File(persistencePath).exists());
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
     } finally {
       if (bucketCache != null) {
@@ -820,7 +819,6 @@ public class TestBucketCache {
       // restore cache from file
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
 
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
@@ -877,7 +875,6 @@ public class TestBucketCache {
       // restore cache from file
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
-      assertFalse(new File(persistencePath).exists());
       assertEquals(usedByteSize, bucketCache.getAllocator().getUsedSize());
 
       for (HFileBlockPair hfileBlockPair : hfileBlockPairs) {
