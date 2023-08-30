@@ -1347,7 +1347,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return ioEngine.isPersistent() && persistencePath != null;
   }
 
-
   void recordAddition(BlockCacheKey key, BucketEntry entry) {
     recordTransaction(key, entry, BucketCacheProtos.TransactionType.addition);
   }
