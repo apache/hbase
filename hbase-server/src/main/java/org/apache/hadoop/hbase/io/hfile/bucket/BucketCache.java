@@ -342,6 +342,7 @@ public class BucketCache implements BlockCache, HeapSize {
       } catch (IOException ioex) {
         backingMap.clear();
         fullyCachedFiles.clear();
+        regionCachedSizeMap.clear();
         LOG.error("Can't restore from file[" + persistencePath + "] because of ", ioex);
       }
     }
