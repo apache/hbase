@@ -330,7 +330,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       @Override
       public void load(ProcedureIterator procIter) throws IOException {
-        loadProcedures(procIter, abortOnCorruption);
+        loadProcedures(procIter);
       }
 
       @Override
@@ -392,8 +392,7 @@ public class ProcedureExecutor<TEnvironment> {
     });
   }
 
-  private void loadProcedures(ProcedureIterator procIter, boolean abortOnCorruption)
-    throws IOException {
+  private void loadProcedures(ProcedureIterator procIter) throws IOException {
     // 1. Build the rollback stack
     int runnableCount = 0;
     int failedCount = 0;
