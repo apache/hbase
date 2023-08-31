@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
  * A procedure store which uses the master local store to store all the procedures.
  * <p/>
  * We use proc:d column to store the serialized protobuf format procedure, and when deleting we will
- * first fill the info:proc column with an empty byte array, and then actually delete them in the
+ * first fill the proc:d column with an empty byte array, and then actually delete them in the
  * {@link #cleanup()} method. This is because that we need to retain the max procedure id, so we can
  * not directly delete a procedure row as we do not know if it is the one with the max procedure id.
  */
