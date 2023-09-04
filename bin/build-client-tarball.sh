@@ -149,6 +149,13 @@ copy_mapreduce_artifacts() {
   done
 }
 
+# Don't create tarball if there is already a previous one
+clientTarball="$HBASE_HOME/$workDir/hbase-client-tarball.tar.gz"
+if [ -f "$clientTarball" ]; then
+  echo "Tarball already exists at $clientTarball not creating a new"
+  exit 0
+fi
+
 copy_hbase_artifacts
 copy_hadoop_artifacts
 copy_hdfs_artifacts
@@ -159,12 +166,6 @@ copy_mapreduce_artifacts
 mv "$clientTarballDir" "$tmpDir/hbase-client-tarball"
 clientTarballDir="$tmpDir/hbase-client-tarball"
 
-# Remove any previous tarball
-clientTarball="$HBASE_HOME/$workDir/hbase-client-tarball.tar.gz"
-if [ -f "$clientTarball" ]; then
-  echo "Removing previous client tarball at $clientTarball"
-  rm -f "$clientTarball"
-fi
 
 pushd "$tmpDir"
 # Create the client tarball from the same directory (avoid --strip options)
