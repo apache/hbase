@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.apache.hadoop.hbase.zookeeper.ZKConfig.ZOOKEEPER_CLIENT_TLS_PROPERTIES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -88,6 +89,48 @@ public class TestZKConfig {
     testKey("server1:2182,server1:2183,server1", 2181, "/hbase", true);
     // mix of same server/different port and different server
     testKey("server1:2182,server2:2183,server1", 2181, "/hbase", true);
+  }
+
+  @Test
+  public void testZooKeeperTlsPropertiesClient() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
+    }
+
+    // Act
+    ZKConfig.getClientZKQuorumServersString(conf);
+
+    // Assert
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      String zkprop = "zookeeper." + p;
+      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
+      System.clearProperty(zkprop);
+    }
+  }
+
+  @Test
+  public void testZooKeeperTlsPropertiesServer() {
+    // Arrange
+    Configuration conf = HBaseConfiguration.create();
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      conf.set(HConstants.ZK_CFG_PROPERTY_PREFIX + p, p);
+      String zkprop = "zookeeper." + p;
+      System.clearProperty(zkprop);
+    }
+
+    // Act
+    ZKConfig.getZKQuorumServersString(conf);
+
+    // Assert
+    for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
+      String zkprop = "zookeeper." + p;
+      assertEquals("Invalid or unset system property: " + zkprop, p, System.getProperty(zkprop));
+      System.clearProperty(zkprop);
+    }
   }
 
   private void testKey(String ensemble, int port, String znode) throws IOException {
