@@ -71,7 +71,7 @@ class BalancerRegionLoad {
     return regionSizeMB;
   }
 
-  public float getCurrentRegionPrefetchRatio() {
+  public float getCurrentRegionCacheRatio() {
     return currentRegionPrefetchRatio;
   }
 }

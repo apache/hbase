@@ -137,7 +137,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private long maxRunningTime = DEFAULT_MAX_RUNNING_TIME;
   private int numRegionLoadsToRemember = DEFAULT_KEEP_REGION_LOADS;
   private float minCostNeedBalance = DEFAULT_MIN_COST_NEED_BALANCE;
-  Map<String, Pair<ServerName, Float>> oldRegionPrefetchMap = new HashMap<>();
+  Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap = new HashMap<>();
 
   protected List<CostFunction> costFunctions; // FindBugs: Wants this protected;
                                               // IS2_INCONSISTENT_SYNC
@@ -467,8 +467,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     // The clusterState that is given to this method contains the state
     // of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    BalancerClusterState cluster =
-      new BalancerClusterState(loadOfOneTable, loads, finder, rackManager, oldRegionPrefetchMap);
+    BalancerClusterState cluster = new BalancerClusterState(loadOfOneTable, loads, finder,
+      rackManager, regionCacheRatioOnOldServerMap);
 
     long startTime = EnvironmentEdgeManager.currentTime();
 
