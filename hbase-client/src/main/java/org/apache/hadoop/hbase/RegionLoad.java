@@ -329,7 +329,7 @@ public class RegionLoad implements RegionMetrics {
    */
   @Deprecated
   public int getStoreUncompressedSizeMB() {
-    return (int) metrics.getUncompressedStoreFileSize().get(Size.Unit.KILOBYTE);
+    return (int) metrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE);
   }
 
   /** Returns the data locality of region in the regionserver. */
