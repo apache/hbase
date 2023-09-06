@@ -482,9 +482,9 @@ zookeeper.ssl.trustStore.passwordPath=/path/to/secure/file
 
 === HBase configuration
 
-Since HBase version 2.4.18 ZooKeeper client TLS settings are also available in _hbase-site.xml_ via
-`hbase.zookeeper.property` prefix. In contrast to Java system properties this could be more convenient
-under some circumstances.
+By adding link:https://issues.apache.org/jira/browse/HBASE-28038[HBASE-28038], ZooKeeper client TLS
+settings are also available in _hbase-site.xml_ via `hbase.zookeeper.property` prefix. In contrast
+to Java system properties this could be more convenient under some circumstances.
 
 [source,xml]
 ----
@@ -505,6 +505,10 @@ under some circumstances.
 ...
 </configuration>
 ----
+
+[NOTE]
+These settings are eventually transformed into Java system properties, it's just a convenience feature.
+So, the same rules that mentioned in the previous point, applies to them as well.
 
 ifdef::backend-docbook[]
 [index]
