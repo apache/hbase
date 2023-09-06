@@ -161,12 +161,7 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     // start write to store file.
     Path path = writeStoreFile();
-    try {
-      readStoreFile(path, conf, alloc);
-    } catch (Exception e) {
-      // fail test
-      assertTrue(false);
-    }
+    readStoreFile(path, conf, alloc);
     Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
