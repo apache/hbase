@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -42,12 +42,12 @@ import org.slf4j.LoggerFactory;
 
 //Separate Shell test class for Groups
 //Since we need to use a different balancer and run more than 1 RS
-@Category({ClientTests.class, LargeTests.class})
+@Category({ ClientTests.class, LargeTests.class })
 public class TestShellRSGroups {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestShellRSGroups.class);
+    HBaseClassTestRule.forClass(TestShellRSGroups.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -66,13 +66,11 @@ public class TestShellRSGroups {
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     VisibilityTestUtil.enableVisiblityLabels(TEST_UTIL.getConfiguration());
 
-    //Setup RegionServer Groups
-    TEST_UTIL.getConfiguration().set(
-        HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
-        RSGroupBasedLoadBalancer.class.getName());
-    TEST_UTIL.getConfiguration().set(
-        CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
-        RSGroupAdminEndpoint.class.getName());
+    // Setup RegionServer Groups
+    TEST_UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
+      RSGroupBasedLoadBalancer.class.getName());
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      RSGroupAdminEndpoint.class.getName());
 
     TEST_UTIL.startMiniCluster(4);
 
