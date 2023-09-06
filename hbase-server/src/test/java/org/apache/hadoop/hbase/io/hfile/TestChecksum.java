@@ -61,7 +61,7 @@ public class TestChecksum {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestChecksum.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlock.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestChecksum.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = { NONE, GZ };
 
