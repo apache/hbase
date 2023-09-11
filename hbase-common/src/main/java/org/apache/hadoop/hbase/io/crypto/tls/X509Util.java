@@ -277,13 +277,23 @@ public final class X509Util {
     return sslContextBuilder.build();
   }
 
+  /**
+   * Adds SslProvider.OPENSSL if OpenSsl is available and enabled. In order to make it available,
+   * one must ensure that a properly shaded netty-tcnative is on the classpath. Properly shaded
+   * means relocated to be prefixed with "org.apache.hbase.thirdparty" like the rest of the netty
+   * classes.
+   */
   private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
     Configuration conf) {
     if (OpenSsl.isAvailable() && conf.getBoolean(TLS_USE_OPENSSL, true)) {
-      LOG.debug("Using netty-tcnative to accelerate TLS handling");
+      LOG.debug("Using netty-tcnative to accelerate SSL handling");
       sslContextBuilder.sslProvider(SslProvider.OPENSSL);
       return true;
     } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
+          OpenSsl.isAvailable() ? "enabled" : "available");
+      }
       sslContextBuilder.sslProvider(SslProvider.JDK);
       return false;
     }
