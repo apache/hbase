@@ -171,6 +171,10 @@ public class ByteBuffAllocator {
       // that by the time a handler originated response is actually done writing to socket and so
       // released the BBs it used, the handler might have processed one more read req. On an avg 2x
       // we consider and consider that also for the max buffers to pool
+      if (poolBufSize <= 0) {
+        throw new IllegalArgumentException(BUFFER_SIZE_KEY + " must be positive. Please disable " +
+          "the reservoir rather than setting the size of the buffer to zero or negative.");
+      }
       int bufsForTwoMB = (2 * 1024 * 1024) / poolBufSize;
       int maxBuffCount =
         conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
