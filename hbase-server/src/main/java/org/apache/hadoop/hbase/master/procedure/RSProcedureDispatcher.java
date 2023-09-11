@@ -22,6 +22,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ServerName;
@@ -306,6 +307,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
+      if (isSaslError(e)) {
+        LOG.warn("{} is not reachable; give up", serverName, e);
+        return false;
+      }
       if (e instanceof RegionServerAbortedException || e instanceof RegionServerStoppedException) {
         // A better way is to return true here to let the upper layer quit, and then schedule a
         // background task to check whether the region server is dead. And if it is dead, call
@@ -328,6 +333,44 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
+    }
+
+    private boolean isSaslError(IOException e) {
+      if (e instanceof SaslException) {
+        return true;
+      }
+      // check 4 level of cause
+      Throwable cause = e.getCause();
+      if (cause == null) {
+        return false;
+      }
+      if (isSaslError(cause)) {
+        return true;
+      }
+      cause = cause.getCause();
+      if (cause == null) {
+        return false;
+      }
+      if (isSaslError(cause)) {
+        return true;
+      }
+      cause = cause.getCause();
+      if (cause == null) {
+        return false;
+      }
+      if (isSaslError(cause)) {
+        return true;
+      }
+      cause = cause.getCause();
+      if (cause == null) {
+        return false;
+      }
+      return isSaslError(cause);
+    }
+
+    private boolean isSaslError(Throwable cause) {
+      return cause instanceof IOException && unwrapException(
+        (IOException) cause) instanceof SaslException;
     }
 
     private long getMaxWaitTime() {
