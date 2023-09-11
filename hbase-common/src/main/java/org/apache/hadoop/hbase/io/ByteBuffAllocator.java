@@ -180,6 +180,10 @@ public class ByteBuffAllocator {
         conf.getInt(MAX_BUFFER_COUNT_KEY, conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * bufsForTwoMB * 2);
       int minSizeForReservoirUse = conf.getInt(MIN_ALLOCATE_SIZE_KEY, poolBufSize / 6);
+      if (minSizeForReservoirUse == 0) {
+        LOG.warn("The minimal size for reservoir use is set to zero so that all allocations " +
+            "will be from the pool. Set a higher " + MIN_ALLOCATE_SIZE_KEY + " to avoid this.");
+      }
       Class<?> clazz = conf.getClass(BYTEBUFF_ALLOCATOR_CLASS, ByteBuffAllocator.class);
       return (ByteBuffAllocator) ReflectionUtils.newInstance(clazz, true, maxBuffCount, poolBufSize,
         minSizeForReservoirUse);
