@@ -27,8 +27,11 @@ import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
@@ -49,8 +52,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ObjectArrays;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.OpenSsl;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslProvider;
 
 /**
  * Utility code for X509 handling Default cipher suites: Performance testing done by Facebook
@@ -83,9 +88,10 @@ public final class X509Util {
   public static final String TLS_CONFIG_OCSP = CONFIG_PREFIX + "ocsp";
   public static final String TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED =
     CONFIG_PREFIX + "host-verification.reverse-dns.enabled";
-  private static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
-  private static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
+  public static final String TLS_ENABLED_PROTOCOLS = CONFIG_PREFIX + "enabledProtocols";
+  public static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
   public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
+  public static final String TLS_USE_OPENSSL = CONFIG_PREFIX + "useOpenSsl";
   public static final String DEFAULT_PROTOCOL = "TLSv1.2";
 
   //
@@ -130,6 +136,34 @@ public final class X509Util {
   // Note that this performance assumption might not hold true for architectures other than x86_64.
   private static final String[] DEFAULT_CIPHERS_JAVA9 =
     ObjectArrays.concat(getGCMCiphers(), getCBCCiphers(), String.class);
+
+  private static final String[] DEFAULT_CIPHERS_OPENSSL = getOpenSslFilteredDefaultCiphers();
+
+  /**
+   * Not all of our default ciphers are available in OpenSSL. Takes our default cipher lists and
+   * filters them to only those available in OpenSsl. Does GCM first, then CBC because GCM tends to
+   * be better and faster, and we don't need to worry about the java8 vs 9 performance issue if
+   * OpenSSL is handling it.
+   */
+  private static String[] getOpenSslFilteredDefaultCiphers() {
+    if (!OpenSsl.isAvailable()) {
+      return new String[0];
+    }
+
+    Set<String> openSslSuites = OpenSsl.availableJavaCipherSuites();
+    List<String> defaultSuites = new ArrayList<>();
+    for (String cipher : getGCMCiphers()) {
+      if (openSslSuites.contains(cipher)) {
+        defaultSuites.add(cipher);
+      }
+    }
+    for (String cipher : getCBCCiphers()) {
+      if (openSslSuites.contains(cipher)) {
+        defaultSuites.add(cipher);
+      }
+    }
+    return defaultSuites.toArray(new String[0]);
+  }
 
   /**
    * Enum specifying the client auth requirement of server-side TLS sockets created by this
@@ -176,7 +210,10 @@ public final class X509Util {
     // disabled
   }
 
-  static String[] getDefaultCipherSuites() {
+  static String[] getDefaultCipherSuites(boolean useOpenSsl) {
+    if (useOpenSsl) {
+      return DEFAULT_CIPHERS_OPENSSL;
+    }
     return getDefaultCipherSuitesForJavaVersion(System.getProperty("java.specification.version"));
   }
 
@@ -202,6 +239,7 @@ public final class X509Util {
 
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
+    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
     String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
     String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
@@ -234,9 +272,31 @@ public final class X509Util {
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
     sslContextBuilder.protocols(getEnabledProtocols(config));
-    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config, useOpenSsl)));
 
     return sslContextBuilder.build();
+  }
+
+  /**
+   * Adds SslProvider.OPENSSL if OpenSsl is available and enabled. In order to make it available,
+   * one must ensure that a properly shaded netty-tcnative is on the classpath. Properly shaded
+   * means relocated to be prefixed with "org.apache.hbase.thirdparty" like the rest of the netty
+   * classes.
+   */
+  private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
+    Configuration conf) {
+    if (OpenSsl.isAvailable() && conf.getBoolean(TLS_USE_OPENSSL, true)) {
+      LOG.debug("Using netty-tcnative to accelerate SSL handling");
+      sslContextBuilder.sslProvider(SslProvider.OPENSSL);
+      return true;
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
+          OpenSsl.isAvailable() ? "enabled" : "available");
+      }
+      sslContextBuilder.sslProvider(SslProvider.JDK);
+      return false;
+    }
   }
 
   public static SslContext createSslContextForServer(Configuration config)
@@ -254,6 +314,7 @@ public final class X509Util {
     sslContextBuilder = SslContextBuilder
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
+    boolean useOpenSsl = configureOpenSslIfAvailable(sslContextBuilder, config);
     String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
     String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
@@ -277,7 +338,7 @@ public final class X509Util {
 
     sslContextBuilder.enableOcsp(sslOcspEnabled);
     sslContextBuilder.protocols(getEnabledProtocols(config));
-    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config)));
+    sslContextBuilder.ciphers(Arrays.asList(getCipherSuites(config, useOpenSsl)));
     sslContextBuilder.clientAuth(clientAuth.toNettyClientAuth());
 
     return sslContextBuilder.build();
@@ -393,10 +454,10 @@ public final class X509Util {
     return enabledProtocolsInput.split(",");
   }
 
-  private static String[] getCipherSuites(Configuration config) {
+  private static String[] getCipherSuites(Configuration config, boolean useOpenSsl) {
     String cipherSuitesInput = config.get(TLS_CIPHER_SUITES);
     if (cipherSuitesInput == null) {
-      return getDefaultCipherSuites();
+      return getDefaultCipherSuites(useOpenSsl);
     } else {
       return cipherSuitesInput.split(",");
     }
