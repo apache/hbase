@@ -51,6 +51,8 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
 
   private IOException exception;
 
+  private TableName tableName;
+
   /**
    * Rpc target Region's RegionInfo we are going against. May be null.
    * @see #hasRegionInfo()
@@ -144,6 +146,7 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
     exception = null;
     callTimeout = null;
     regionInfo = null;
+    tableName = null;
     // In the implementations of some callable with replicas, rpc calls are executed in a executor
     // and we could cancel the operation from outside which means there could be a race between
     // reset and startCancel. Although I think the race should be handled by the callable since the
@@ -272,5 +275,15 @@ public class HBaseRpcControllerImpl implements HBaseRpcController {
       cancellationCbs.add(callback);
       action.run(false);
     }
+  }
+
+  @Override
+  public void setTableName(TableName tableName) {
+    this.tableName = tableName;
+  }
+
+  @Override
+  public TableName getTableName() {
+    return tableName;
   }
 }
