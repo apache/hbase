@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -336,7 +337,10 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     private boolean isSaslError(IOException e) {
-      if (e instanceof SaslException) {
+      if (
+        e instanceof SaslException
+          || (e.getMessage() != null && e.getMessage().contains(HConstants.RELOGIN_IS_IN_PROGRESS))
+      ) {
         return true;
       }
       // check 4 level of cause
@@ -369,8 +373,13 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     private boolean isSaslError(Throwable cause) {
-      return cause instanceof IOException
-        && unwrapException((IOException) cause) instanceof SaslException;
+      if (cause instanceof IOException) {
+        IOException unwrappedException = unwrapException((IOException) cause);
+        return unwrappedException instanceof SaslException
+          || (unwrappedException.getMessage() != null
+            && unwrappedException.getMessage().contains(HConstants.RELOGIN_IS_IN_PROGRESS));
+      }
+      return false;
     }
 
     private long getMaxWaitTime() {

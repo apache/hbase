@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.ipc.BufferCallBeforeInitHandler.BufferCallEvent;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
@@ -347,7 +348,7 @@ class NettyRpcConnection extends RpcConnection {
   private void sendRequest0(Call call, HBaseRpcController hrc) throws IOException {
     assert eventLoop.inEventLoop();
     if (reloginInProgress) {
-      throw new IOException("Can not send request because relogin is in progress.");
+      throw new IOException(HConstants.RELOGIN_IS_IN_PROGRESS);
     }
     hrc.notifyOnCancel(new RpcCallback<Object>() {
 
