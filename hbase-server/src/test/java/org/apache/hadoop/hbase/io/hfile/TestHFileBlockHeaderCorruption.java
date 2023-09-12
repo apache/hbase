@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -88,7 +88,7 @@ public class TestHFileBlockHeaderCorruption {
 
   public TestHFileBlockHeaderCorruption() throws IOException {
     TestName testName = new TestName();
-    hFileTestRule = new HFileTestRule(new HBaseTestingUtility(), testName);
+    hFileTestRule = new HFileTestRule(new HBaseTestingUtil(), testName);
     ruleChain = RuleChain.outerRule(testName).around(hFileTestRule);
   }
 
@@ -422,13 +422,13 @@ public class TestHFileBlockHeaderCorruption {
 
   public static class HFileTestRule extends ExternalResource {
 
-    private final HBaseTestingUtility testingUtility;
+    private final HBaseTestingUtil testingUtility;
     private final HFileSystem hfs;
     private final HFileContext context;
     private final TestName testName;
     private Path path;
 
-    public HFileTestRule(HBaseTestingUtility testingUtility, TestName testName) throws IOException {
+    public HFileTestRule(HBaseTestingUtil testingUtility, TestName testName) throws IOException {
       this.testingUtility = testingUtility;
       this.testName = testName;
       this.hfs = (HFileSystem) HFileSystem.get(testingUtility.getConfiguration());
