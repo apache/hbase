@@ -934,9 +934,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // We need this check because it may happen that the new scanner that we get
     // during heap.next() is requiring reseek due of fake KV previously generated for
     // ROWCOL bloom filter optimization. See HBASE-19863 for more details
-    if (
-      useRowColBloom && nextCell != null && cell.getTimestamp() == PrivateConstants.OLDEST_TIMESTAMP
-    ) {
+    if (useRowColBloom && nextCell != null && cell.getTimestamp() == HConstants.OLDEST_TIMESTAMP) {
       return false;
     }
     return true;
