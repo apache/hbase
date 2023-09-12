@@ -307,8 +307,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           serverName, e.toString(), numberOfAttemptsSoFar);
         return false;
       }
-      if (isSaslError(e)) {
-        LOG.warn("{} is not reachable; give up", serverName, e);
+      if (isSaslError(e) && numberOfAttemptsSoFar == 0) {
+        LOG.warn("{} is not reachable; give up after first attempt", serverName, e);
         return false;
       }
       if (e instanceof RegionServerAbortedException || e instanceof RegionServerStoppedException) {
@@ -369,8 +369,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     private boolean isSaslError(Throwable cause) {
-      return cause instanceof IOException && unwrapException(
-        (IOException) cause) instanceof SaslException;
+      return cause instanceof IOException
+        && unwrapException((IOException) cause) instanceof SaslException;
     }
 
     private long getMaxWaitTime() {
