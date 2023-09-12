@@ -130,4 +130,14 @@ public interface HBaseRpcController extends RpcController, CellScannable {
   default RegionInfo getRegionInfo() {
     return null;
   }
+
+  /** Sets Region's table name. */
+  default void setTableName(TableName tableName) {
+
+  }
+
+  /** Returns Region's table name or null if not available or pertinent. */
+  default TableName getTableName() {
+    return null;
+  }
 }
