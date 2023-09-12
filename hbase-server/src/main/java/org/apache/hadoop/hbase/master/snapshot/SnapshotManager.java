@@ -674,9 +674,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     throws IOException {
     this.takingSnapshotLock.readLock().lock();
     try {
-      synchronized(this){
         return submitSnapshotProcedure(snapshot, nonceGroup, nonce);
-      }
     } finally {
       this.takingSnapshotLock.readLock().unlock();
     }
