@@ -680,7 +680,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
-  private long submitSnapshotProcedure(SnapshotDescription snapshot, long nonceGroup, long nonce)
+  private synchronized long submitSnapshotProcedure(SnapshotDescription snapshot, long nonceGroup, long nonce)
     throws IOException {
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
