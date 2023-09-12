@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
@@ -202,14 +204,22 @@ public final class BackupSystemTable implements Closeable {
       Configuration conf = connection.getConfiguration();
       if (!admin.tableExists(tableName)) {
         TableDescriptor backupHTD = BackupSystemTable.getSystemTableDescriptor(conf);
-        admin.createTable(backupHTD);
+        createSystemTable(admin, backupHTD);
       }
       if (!admin.tableExists(bulkLoadTableName)) {
         TableDescriptor blHTD = BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
-        admin.createTable(blHTD);
+        createSystemTable(admin, blHTD);
       }
       waitForSystemTable(admin, tableName);
       waitForSystemTable(admin, bulkLoadTableName);
+    }
+  }
+
+  private void createSystemTable(Admin admin, TableDescriptor descriptor) throws IOException {
+    try {
+      admin.createTable(descriptor);
+    } catch (TableExistsException e) {
+      LOG.debug("Table {} already exists, ignoring", descriptor.getTableName(), e);
     }
   }
 
@@ -225,7 +235,11 @@ public final class BackupSystemTable implements Closeable {
       }
     }
     if (!exists) {
-      admin.createNamespace(ns);
+      try {
+        admin.createNamespace(ns);
+      } catch (NamespaceExistException e) {
+        LOG.debug("Namespace {} already exists, ignoring", ns.getName(), e);
+      }
     }
   }
 
