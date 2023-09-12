@@ -144,8 +144,8 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      this.metrics =
-        Optional.of(MetricsConnection.getMetricsConnection(metricsScope, () -> null, () -> null));
+      this.metrics = Optional
+        .of(MetricsConnection.getMetricsConnection(conf, metricsScope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }

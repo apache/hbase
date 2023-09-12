@@ -18,19 +18,23 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.RatioGauge;
 import com.codahale.metrics.RatioGauge.Ratio;
+import com.codahale.metrics.Timer;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.CallTimeoutException;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.security.User;
@@ -38,15 +42,20 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
@@ -56,25 +65,37 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 
+@RunWith(Parameterized.class)
 @Category({ ClientTests.class, MetricsTests.class, SmallTests.class })
 public class TestMetricsConnection {
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestMetricsConnection.class);
 
+  private static final Configuration conf = new Configuration();
   private static MetricsConnection METRICS;
   private static final ThreadPoolExecutor BATCH_POOL =
     (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
 
   private static final String MOCK_CONN_STR = "mocked-connection";
 
-  @BeforeClass
-  public static void beforeClass() {
-    METRICS = MetricsConnection.getMetricsConnection(MOCK_CONN_STR, () -> BATCH_POOL, () -> null);
+  @Parameter()
+  public boolean tableMetricsEnabled;
+
+  @Parameters
+  public static List<Boolean> params() {
+    return Arrays.asList(false, true);
   }
 
-  @AfterClass
-  public static void afterClass() {
+  @Before
+  public void before() {
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_TABLE_METRICS_ENABLED_KEY, tableMetricsEnabled);
+    METRICS =
+      MetricsConnection.getMetricsConnection(conf, MOCK_CONN_STR, () -> BATCH_POOL, () -> null);
+  }
+
+  @After
+  public void after() {
     MetricsConnection.deleteMetricsConnection(MOCK_CONN_STR);
   }
 
@@ -146,35 +167,52 @@ public class TestMetricsConnection {
   @Test
   public void testStaticMetrics() throws IOException {
     final byte[] foo = Bytes.toBytes("foo");
-    final RegionSpecifier region = RegionSpecifier.newBuilder().setValue(ByteString.EMPTY)
-      .setType(RegionSpecifierType.REGION_NAME).build();
+    String table = "TableX";
+    final RegionSpecifier region = RegionSpecifier.newBuilder()
+      .setValue(ByteString.copyFromUtf8(table)).setType(RegionSpecifierType.REGION_NAME).build();
     final int loop = 5;
 
     for (int i = 0; i < loop; i++) {
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Get"),
-        GetRequest.getDefaultInstance(), MetricsConnection.newCallStats(), null);
+        TableName.valueOf(table),
+        GetRequest.newBuilder().setRegion(region).setGet(ProtobufUtil.toGet(new Get(foo))).build(),
+        MetricsConnection.newCallStats(), null);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Scan"),
-        ScanRequest.getDefaultInstance(), MetricsConnection.newCallStats(),
+        TableName.valueOf(table),
+        ScanRequest.newBuilder().setRegion(region)
+          .setScan(ProtobufUtil.toScan(new Scan(new Get(foo)))).build(),
+        MetricsConnection.newCallStats(),
         new RemoteWithExtrasException("java.io.IOException", null, false, false));
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Multi"),
-        MultiRequest.getDefaultInstance(), MetricsConnection.newCallStats(),
+        TableName.valueOf(table),
+        MultiRequest.newBuilder()
+          .addRegionAction(ClientProtos.RegionAction.newBuilder()
+            .addAction(
+              ClientProtos.Action.newBuilder().setGet(ProtobufUtil.toGet(new Get(foo))).build())
+            .setRegion(region).build())
+          .build(),
+        MetricsConnection.newCallStats(),
         new CallTimeoutException("test with CallTimeoutException"));
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        TableName.valueOf(table),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.APPEND, new Append(foo)))
           .setRegion(region).build(),
         MetricsConnection.newCallStats(), null);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        TableName.valueOf(table),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.DELETE, new Delete(foo)))
           .setRegion(region).build(),
         MetricsConnection.newCallStats(), null);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        TableName.valueOf(table),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.INCREMENT, new Increment(foo)))
           .setRegion(region).build(),
         MetricsConnection.newCallStats(), null);
       METRICS.updateRpc(ClientService.getDescriptor().findMethodByName("Mutate"),
+        TableName.valueOf(table),
         MutateRequest.newBuilder()
           .setMutation(ProtobufUtil.toMutation(MutationType.PUT, new Put(foo))).setRegion(region)
           .build(),
@@ -182,47 +220,11 @@ public class TestMetricsConnection {
         new CallTimeoutException("test with CallTimeoutException"));
     }
 
-    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
-    final String rpcFailureCountPrefix =
-      "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
+    testRpcCallMetrics(table, loop);
+
     String metricKey;
     long metricVal;
     Counter counter;
-
-    for (String method : new String[] { "Get", "Scan", "Multi" }) {
-      metricKey = rpcCountPrefix + method;
-      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
-
-      metricKey = rpcFailureCountPrefix + method;
-      counter = METRICS.getRpcCounters().get(metricKey);
-      metricVal = (counter != null) ? counter.getCount() : 0;
-      if (method.equals("Get")) {
-        // no failure
-        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
-      } else {
-        // has failure
-        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
-      }
-    }
-
-    String method = "Mutate";
-    for (String mutationType : new String[] { "Append", "Delete", "Increment", "Put" }) {
-      metricKey = rpcCountPrefix + method + "(" + mutationType + ")";
-      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
-      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
-
-      metricKey = rpcFailureCountPrefix + method + "(" + mutationType + ")";
-      counter = METRICS.getRpcCounters().get(metricKey);
-      metricVal = (counter != null) ? counter.getCount() : 0;
-      if (mutationType.equals("Put")) {
-        // has failure
-        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop);
-      } else {
-        // no failure
-        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
-      }
-    }
 
     // remote exception
     metricKey = "rpcRemoteExceptions_IOException";
@@ -242,6 +244,8 @@ public class TestMetricsConnection {
     metricVal = (counter != null) ? counter.getCount() : 0;
     assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, loop * 3);
 
+    testRpcCallTableMetrics(table, loop);
+
     for (MetricsConnection.CallTracker t : new MetricsConnection.CallTracker[] {
       METRICS.getGetTracker(), METRICS.getScanTracker(), METRICS.getMultiTracker(),
       METRICS.getAppendTracker(), METRICS.getDeleteTracker(), METRICS.getIncrementTracker(),
@@ -256,5 +260,100 @@ public class TestMetricsConnection {
       (RatioGauge) METRICS.getMetricRegistry().getMetrics().get(METRICS.getMetaPoolName());
     assertEquals(Ratio.of(0, 3).getValue(), executorMetrics.getValue(), 0);
     assertEquals(Double.NaN, metaMetrics.getValue(), 0);
+  }
+
+  private void testRpcCallTableMetrics(String table, int expectedVal) {
+    String metricKey;
+    Timer timer;
+    String numOpsSuffix = "_num_ops";
+    String p95Suffix = "_95th_percentile";
+    String p99Suffix = "_99th_percentile";
+    String service = ClientService.getDescriptor().getName();
+    for (String m : new String[] { "Get", "Scan", "Multi" }) {
+      metricKey = "rpcCallDurationMs_" + service + "_" + m + "_" + table;
+      timer = METRICS.getRpcTimers().get(metricKey);
+      if (tableMetricsEnabled) {
+        long numOps = timer.getCount();
+        double p95 = timer.getSnapshot().get95thPercentile();
+        double p99 = timer.getSnapshot().get99thPercentile();
+        assertEquals("metric: " + metricKey + numOpsSuffix + " val: " + numOps, expectedVal,
+          numOps);
+        assertTrue("metric: " + metricKey + p95Suffix + " val: " + p95, p95 >= 0);
+        assertTrue("metric: " + metricKey + p99Suffix + " val: " + p99, p99 >= 0);
+      } else {
+        assertNull(timer);
+      }
+    }
+
+    // Distinguish mutate types for mutate method.
+    String mutateMethod = "Mutate";
+    for (String mutationType : new String[] { "Append", "Delete", "Increment", "Put" }) {
+      metricKey = "rpcCallDurationMs_" + service + "_" + mutateMethod + "(" + mutationType + ")"
+        + "_" + table;
+      timer = METRICS.getRpcTimers().get(metricKey);
+      if (tableMetricsEnabled) {
+        long numOps = timer.getCount();
+        double p95 = timer.getSnapshot().get95thPercentile();
+        double p99 = timer.getSnapshot().get99thPercentile();
+        assertEquals("metric: " + metricKey + numOpsSuffix + " val: " + numOps, expectedVal,
+          numOps);
+        assertTrue("metric: " + metricKey + p95Suffix + " val: " + p95, p95 >= 0);
+        assertTrue("metric: " + metricKey + p99Suffix + " val: " + p99, p99 >= 0);
+      } else {
+        assertNull(timer);
+      }
+    }
+  }
+
+  private void testRpcCallMetrics(String table, int expectedVal) {
+    final String rpcCountPrefix = "rpcCount_" + ClientService.getDescriptor().getName() + "_";
+    final String rpcFailureCountPrefix =
+      "rpcFailureCount_" + ClientService.getDescriptor().getName() + "_";
+    String metricKey;
+    long metricVal;
+    Counter counter;
+
+    for (String method : new String[] { "Get", "Scan", "Multi" }) {
+      // rpc call count
+      metricKey = rpcCountPrefix + method;
+      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
+      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, expectedVal);
+
+      // rpc failure call
+      metricKey = tableMetricsEnabled
+        ? rpcFailureCountPrefix + method + "_" + table
+        : rpcFailureCountPrefix + method;
+      counter = METRICS.getRpcCounters().get(metricKey);
+      metricVal = (counter != null) ? counter.getCount() : 0;
+      if (method.equals("Get")) {
+        // no failure
+        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
+      } else {
+        // has failure
+        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, expectedVal);
+      }
+    }
+
+    String method = "Mutate";
+    for (String mutationType : new String[] { "Append", "Delete", "Increment", "Put" }) {
+      // rpc call count
+      metricKey = rpcCountPrefix + method + "(" + mutationType + ")";
+      metricVal = METRICS.getRpcCounters().get(metricKey).getCount();
+      assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, expectedVal);
+
+      // rpc failure call
+      metricKey = tableMetricsEnabled
+        ? rpcFailureCountPrefix + method + "(" + mutationType + ")" + "_" + table
+        : rpcFailureCountPrefix + method + "(" + mutationType + ")";
+      counter = METRICS.getRpcCounters().get(metricKey);
+      metricVal = (counter != null) ? counter.getCount() : 0;
+      if (mutationType.equals("Put")) {
+        // has failure
+        assertEquals("metric: " + metricKey + " val: " + metricVal, metricVal, expectedVal);
+      } else {
+        // no failure
+        assertEquals("metric: " + metricKey + " val: " + metricVal, 0, metricVal);
+      }
+    }
   }
 }
