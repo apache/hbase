@@ -219,6 +219,9 @@ public final class BackupSystemTable implements Closeable {
     try {
       admin.createTable(descriptor);
     } catch (TableExistsException e) {
+      // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+      // so may be subject to race conditions where one caller succeeds in creating the
+      // table and others fail because it now exists
       LOG.debug("Table {} already exists, ignoring", descriptor.getTableName(), e);
     }
   }
@@ -238,6 +241,9 @@ public final class BackupSystemTable implements Closeable {
       try {
         admin.createNamespace(ns);
       } catch (NamespaceExistException e) {
+        // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+        // so may be subject to race conditions where one caller succeeds in creating the
+        // namespace and others fail because it now exists
         LOG.debug("Namespace {} already exists, ignoring", ns.getName(), e);
       }
     }
