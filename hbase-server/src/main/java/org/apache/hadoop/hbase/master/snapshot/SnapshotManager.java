@@ -670,7 +670,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
-  public synchronized long takeSnapshot(SnapshotDescription snapshot, long nonceGroup, long nonce)
+  public long takeSnapshot(SnapshotDescription snapshot, long nonceGroup, long nonce)
     throws IOException {
     this.takingSnapshotLock.readLock().lock();
     try {
@@ -680,8 +680,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     }
   }
 
-  private long submitSnapshotProcedure(SnapshotDescription snapshot, long nonceGroup, long nonce)
-    throws IOException {
+  private synchronized long submitSnapshotProcedure(SnapshotDescription snapshot, long nonceGroup,
+    long nonce) throws IOException {
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(master, nonceGroup, nonce) {
         @Override
