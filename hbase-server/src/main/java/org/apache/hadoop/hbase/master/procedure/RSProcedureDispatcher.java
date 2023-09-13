@@ -289,27 +289,13 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           numberOfAttemptsSoFar);
         return false;
       }
-      // This exception is thrown in the rpc framework, where we can make sure that the call has not
-      // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
-      // better choose another region server.
-      // Notice that, it is safe to quit only if this is the first time we send request to region
-      // server. Maybe the region server has accepted our request the first time, and then there is
-      // a network error which prevents we receive the response, and the second time we hit a
-      // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
-      // double assign...
-      if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
-        LOG.warn("request to {} failed due to {}, try={}, this usually because"
-          + " server is overloaded, give up", serverName, e.toString(), numberOfAttemptsSoFar);
+      if (unableToConnectToServerInFirstAttempt(e)) {
         return false;
       }
       // Always retry for other exception types if the region server is not dead yet.
       if (!master.getServerManager().isServerOnline(serverName)) {
         LOG.warn("Request to {} failed due to {}, try={} and the server is not online, give up",
           serverName, e.toString(), numberOfAttemptsSoFar);
-        return false;
-      }
-      if (isSaslError(e) && numberOfAttemptsSoFar == 0) {
-        LOG.warn("{} is not reachable; give up after first attempt", serverName, e);
         return false;
       }
       if (e instanceof RegionServerAbortedException || e instanceof RegionServerStoppedException) {
@@ -334,6 +320,27 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           10 * 1000),
         TimeUnit.MILLISECONDS);
       return true;
+    }
+
+    private boolean unableToConnectToServerInFirstAttempt(IOException e) {
+      // This exception is thrown in the rpc framework, where we can make sure that the call has not
+      // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
+      // better choose another region server.
+      // Notice that, it is safe to quit only if this is the first time we send request to region
+      // server. Maybe the region server has accepted our request the first time, and then there is
+      // a network error which prevents we receive the response, and the second time we hit a
+      // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
+      // double assign...
+      if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
+        LOG.warn("request to {} failed due to {}, try={}, this usually because"
+          + " server is overloaded, give up", serverName, e, numberOfAttemptsSoFar);
+        return true;
+      }
+      if (isSaslError(e) && numberOfAttemptsSoFar == 0) {
+        LOG.warn("{} is not reachable; give up after first attempt", serverName, e);
+        return true;
+      }
+      return false;
     }
 
     private boolean isSaslError(IOException e) {
