@@ -43,7 +43,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
@@ -202,14 +204,25 @@ public final class BackupSystemTable implements Closeable {
       Configuration conf = connection.getConfiguration();
       if (!admin.tableExists(tableName)) {
         TableDescriptor backupHTD = BackupSystemTable.getSystemTableDescriptor(conf);
-        admin.createTable(backupHTD);
+        createSystemTable(admin, backupHTD);
       }
       if (!admin.tableExists(bulkLoadTableName)) {
         TableDescriptor blHTD = BackupSystemTable.getSystemTableForBulkLoadedDataDescriptor(conf);
-        admin.createTable(blHTD);
+        createSystemTable(admin, blHTD);
       }
       waitForSystemTable(admin, tableName);
       waitForSystemTable(admin, bulkLoadTableName);
+    }
+  }
+
+  private void createSystemTable(Admin admin, TableDescriptor descriptor) throws IOException {
+    try {
+      admin.createTable(descriptor);
+    } catch (TableExistsException e) {
+      // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+      // so may be subject to race conditions where one caller succeeds in creating the
+      // table and others fail because it now exists
+      LOG.debug("Table {} already exists, ignoring", descriptor.getTableName(), e);
     }
   }
 
@@ -225,7 +238,14 @@ public final class BackupSystemTable implements Closeable {
       }
     }
     if (!exists) {
-      admin.createNamespace(ns);
+      try {
+        admin.createNamespace(ns);
+      } catch (NamespaceExistException e) {
+        // swallow because this class is initialized in concurrent environments (i.e. bulkloads),
+        // so may be subject to race conditions where one caller succeeds in creating the
+        // namespace and others fail because it now exists
+        LOG.debug("Namespace {} already exists, ignoring", ns.getName(), e);
+      }
     }
   }
 
