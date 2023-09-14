@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeClose;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
@@ -231,22 +232,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator3();
   }
 
-  // hadoop 3.3.1 changed the return value of this method from DatanodeInfo[] to
-  // DatanodeInfoWithStorage[], which causes the JVM can not locate the method if we are compiled
-  // with hadoop 3.2 and then link with hadoop 3.3, so here we need to use reflection to make it
-  // work for both hadoop versions, otherwise we need to publish more artifacts for different hadoop
-  // versions...
-  private static final Method GET_LOCATED_BLOCK_LOCATIONS_METHOD;
-
-  static DatanodeInfo[] getLocatedBlockLocations(LocatedBlock block) {
-    try {
-      // DatanodeInfoWithStorage[] can be casted to DatanodeInfo[] directly
-      return (DatanodeInfo[]) GET_LOCATED_BLOCK_LOCATIONS_METHOD.invoke(block);
-    } catch (IllegalAccessException | InvocationTargetException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   // cancel the processing if DFSClient is already closed.
   static final class CancelOnClose implements CancelableProgressable {
 
@@ -266,7 +251,6 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     try {
       LEASE_MANAGER = createLeaseManager();
       FILE_CREATOR = createFileCreator();
-      GET_LOCATED_BLOCK_LOCATIONS_METHOD = LocatedBlock.class.getMethod("getLocations");
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please "
         + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
@@ -512,7 +496,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
           PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
         for (int i = 0, n = futureList.size(); i < n; i++) {
-          DatanodeInfo datanodeInfo = locatedBlock.getLocations()[i];
+          DatanodeInfo datanodeInfo = getLocatedBlockLocations(locatedBlock)[i];
           try {
             datanodes.put(futureList.get(i).syncUninterruptibly().getNow(), datanodeInfo);
           } catch (Exception e) {

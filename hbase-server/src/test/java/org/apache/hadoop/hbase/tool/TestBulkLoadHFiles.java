@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -731,7 +732,7 @@ public class TestBulkLoadHFiles {
           isFavoriteNode = false;
           final LocatedBlock block = locatedBlocks.get(index);
 
-          final DatanodeInfo[] locations = block.getLocations();
+          final DatanodeInfo[] locations = getLocatedBlockLocations(block);
           for (DatanodeInfo location : locations) {
 
             final String hostName = location.getHostName();

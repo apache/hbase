@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.fs;
 
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -245,25 +247,26 @@ public class TestBlockReorderMultiBlocks {
     throws Exception {
     // Multiple times as the order is random
     for (int i = 0; i < 10; i++) {
-      LocatedBlocks l;
+      LocatedBlocks lbs;
       // The NN gets the block list asynchronously, so we may need multiple tries to get the list
       final long max = EnvironmentEdgeManager.currentTime() + 10000;
       boolean done;
       do {
         Assert.assertTrue("Can't get enouth replica", EnvironmentEdgeManager.currentTime() < max);
-        l = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
-        Assert.assertNotNull("Can't get block locations for " + src, l);
-        Assert.assertNotNull(l.getLocatedBlocks());
-        Assert.assertTrue(l.getLocatedBlocks().size() > 0);
+        lbs = getNamenode(dfs.getClient()).getBlockLocations(src, 0, 1);
+        Assert.assertNotNull("Can't get block locations for " + src, lbs);
+        Assert.assertNotNull(lbs.getLocatedBlocks());
+        Assert.assertTrue(lbs.getLocatedBlocks().size() > 0);
 
         done = true;
-        for (int y = 0; y < l.getLocatedBlocks().size() && done; y++) {
-          done = (l.get(y).getLocations().length == repCount);
+        for (int y = 0; y < lbs.getLocatedBlocks().size() && done; y++) {
+          done = getLocatedBlockLocations(lbs.get(y)).length == repCount;
         }
       } while (!done);
 
-      for (int y = 0; y < l.getLocatedBlocks().size() && done; y++) {
-        Assert.assertEquals(localhost, l.get(y).getLocations()[repCount - 1].getHostName());
+      for (int y = 0; y < lbs.getLocatedBlocks().size() && done; y++) {
+        Assert.assertEquals(localhost,
+          getLocatedBlockLocations(lbs.get(y))[repCount - 1].getHostName());
       }
     }
   }
