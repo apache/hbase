@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -101,6 +102,9 @@ public class TestClientScannerTimeouts {
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, scanTimeout);
     conf.setInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, metaScanTimeout);
     conf.setInt(HBASE_CLIENT_META_SCANNER_TIMEOUT, metaScanTimeout);
+    // set to true by default here. it only affects next() calls, and we'll explicitly
+    // set it to false in one of the tests below to test legacy behavior for next call
+    conf.setBoolean(HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, true);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(conf).get();
     CONN = ConnectionFactory.createConnection(conf);
   }
@@ -174,16 +178,25 @@ public class TestClientScannerTimeouts {
    * timed out next() call and mess up the test.
    */
   @Test
-  public void testNormalScanTimeoutOnNext() throws IOException {
+  public void testNormalScanTimeoutOnNextWithLegacyMode() throws IOException {
     setup(false);
-    // Unlike AsyncTable, Table's ResultScanner.next() call uses rpcTimeout and
-    // will retry until scannerTimeout. This makes it more difficult to test the timeouts
-    // of normal next() calls. So we use a separate connection here which has retries disabled.
     Configuration confNoRetries = new Configuration(CONN.getConfiguration());
+    // Disable scanner timeout usage for next calls on this special connection. This way we can
+    // verify that legacy connections use the rpcTimeout rather than scannerTimeout
+    confNoRetries
+      .setBoolean(ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, false);
     confNoRetries.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     try (Connection conn = ConnectionFactory.createConnection(confNoRetries)) {
+      // Now since we disabled HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, verify rpcTimeout
       expectTimeoutOnNext(rpcTimeout, () -> getScanner(conn));
     }
+  }
+
+  @Test
+  public void testNormalScanTimeoutOnNextWithScannerTimeoutEnabled() throws IOException {
+    setup(false);
+    // Since this has HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS enabled, we pass scanTimeout
+    expectTimeoutOnNext(scanTimeout, this::getScanner);
   }
 
   /**
