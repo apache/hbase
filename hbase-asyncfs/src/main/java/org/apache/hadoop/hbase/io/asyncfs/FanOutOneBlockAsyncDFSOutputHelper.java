@@ -231,6 +231,22 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     return createFileCreator3();
   }
 
+  // hadoop 3.3.1 changed the return value of this method from DatanodeInfo[] to
+  // DatanodeInfoWithStorage[], which causes the JVM can not locate the method if we are compiled
+  // with hadoop 3.2 and then link with hadoop 3.3, so here we need to use reflection to make it
+  // work for both hadoop versions, otherwise we need to publish more artifacts for different hadoop
+  // versions...
+  private static final Method GET_LOCATED_BLOCK_LOCATIONS_METHOD;
+
+  static DatanodeInfo[] getLocatedBlockLocations(LocatedBlock block) {
+    try {
+      // DatanodeInfoWithStorage[] can be casted to DatanodeInfo[] directly
+      return (DatanodeInfo[]) GET_LOCATED_BLOCK_LOCATIONS_METHOD.invoke(block);
+    } catch (IllegalAccessException | InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   // cancel the processing if DFSClient is already closed.
   static final class CancelOnClose implements CancelableProgressable {
 
@@ -250,6 +266,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     try {
       LEASE_MANAGER = createLeaseManager();
       FILE_CREATOR = createFileCreator();
+      GET_LOCATED_BLOCK_LOCATIONS_METHOD = LocatedBlock.class.getMethod("getLocations");
     } catch (Exception e) {
       String msg = "Couldn't properly initialize access to HDFS internals. Please "
         + "update your WAL Provider to not make use of the 'asyncfs' provider. See "
@@ -383,7 +400,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     BlockConstructionStage stage, DataChecksum summer, EventLoopGroup eventLoopGroup,
     Class<? extends Channel> channelClass) {
     StorageType[] storageTypes = locatedBlock.getStorageTypes();
-    DatanodeInfo[] datanodeInfos = locatedBlock.getLocations();
+    DatanodeInfo[] datanodeInfos = getLocatedBlockLocations(locatedBlock);
     boolean connectToDnViaHostname =
       conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME, DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
     int timeoutMs = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT);
