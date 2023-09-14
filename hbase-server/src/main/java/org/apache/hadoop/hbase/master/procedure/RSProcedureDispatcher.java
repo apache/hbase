@@ -289,7 +289,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           numberOfAttemptsSoFar);
         return false;
       }
-      if (unableToConnectToServerInFirstAttempt(e)) {
+      if (numberOfAttemptsSoFar == 0 && unableToConnectToServer(e)) {
         return false;
       }
       // Always retry for other exception types if the region server is not dead yet.
@@ -322,7 +322,7 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       return true;
     }
 
-    private boolean unableToConnectToServerInFirstAttempt(IOException e) {
+    private boolean unableToConnectToServer(IOException e) {
       // This exception is thrown in the rpc framework, where we can make sure that the call has not
       // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
       // better choose another region server.
@@ -331,12 +331,12 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       // a network error which prevents we receive the response, and the second time we hit a
       // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
       // double assign...
-      if (e instanceof CallQueueTooBigException && numberOfAttemptsSoFar == 0) {
+      if (e instanceof CallQueueTooBigException) {
         LOG.warn("request to {} failed due to {}, try={}, this usually because"
           + " server is overloaded, give up", serverName, e, numberOfAttemptsSoFar);
         return true;
       }
-      if (isSaslError(e) && numberOfAttemptsSoFar == 0) {
+      if (isSaslError(e)) {
         LOG.warn("{} is not reachable; give up after first attempt", serverName, e);
         return true;
       }
