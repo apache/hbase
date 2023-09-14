@@ -97,8 +97,10 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
         "Closing worker for wal group " + this.walGroupId + " because an error occurred: " + reason,
         cause);
     }
-    entryReader.interrupt();
-    Threads.shutdown(entryReader, sleepForRetries);
+    if (entryReader != null) {
+      entryReader.interrupt();
+      Threads.shutdown(entryReader, sleepForRetries);
+    }
     this.interrupt();
     Threads.shutdown(this, sleepForRetries);
     LOG.info("ReplicationSourceWorker {} terminated", this.getName());
