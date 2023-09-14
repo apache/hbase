@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.fs;
 
-import static org.apache.hadoop.hbase.util.LocatedBlockHelper.*;
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;

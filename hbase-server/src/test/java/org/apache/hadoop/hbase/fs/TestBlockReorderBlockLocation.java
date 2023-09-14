@@ -131,7 +131,7 @@ public class TestBlockReorderBlockLocation {
       } while (getLocatedBlockLocations(lbs.get(0)).length != repCount);
 
       // Should be filtered, the name is different => The order won't change
-      Object originalList[] = lbs.getLocatedBlocks().toArray();
+      Object[] originalList = lbs.getLocatedBlocks().toArray();
       HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
       lrb.reorderBlocks(conf, lbs, fileName);
       Assert.assertArrayEquals(originalList, lbs.getLocatedBlocks().toArray());

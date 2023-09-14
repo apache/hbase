@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * hadoop versions...
  */
 @InterfaceAudience.Private
-public class LocatedBlockHelper {
+public final class LocatedBlockHelper {
 
   private static final Method GET_LOCATED_BLOCK_LOCATIONS_METHOD;
 
@@ -41,6 +41,9 @@ public class LocatedBlockHelper {
     } catch (Exception e) {
       throw new Error("Can not initialize access to HDFS LocatedBlock.getLocations method", e);
     }
+  }
+
+  private LocatedBlockHelper() {
   }
 
   public static DatanodeInfo[] getLocatedBlockLocations(LocatedBlock block) {
