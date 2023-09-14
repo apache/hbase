@@ -23,7 +23,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * Constants to be used by RPC connection based utilities.
  */
 @InterfaceAudience.Private
-public class RpcConnectionConstants {
+public final class RpcConnectionConstants {
+
+  private RpcConnectionConstants() {
+  }
 
   public static final String RELOGIN_IS_IN_PROGRESS =
     "Can not send request because relogin is in progress.";
