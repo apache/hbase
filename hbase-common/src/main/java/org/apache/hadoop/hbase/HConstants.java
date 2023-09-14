@@ -91,9 +91,6 @@ public final class HConstants {
   /** Just an array of bytes of the right size. */
   public static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HFILEBLOCK_HEADER_SIZE];
 
-  public static final String RELOGIN_IS_IN_PROGRESS =
-    "Can not send request because relogin is in progress.";
-
   // End HFileBlockConstants.
 
   /**

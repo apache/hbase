@@ -25,10 +25,10 @@ import java.util.concurrent.TimeUnit;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.ipc.RpcConnectionConstants;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
@@ -345,8 +345,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
 
     private boolean isSaslError(IOException e) {
       if (
-        e instanceof SaslException
-          || (e.getMessage() != null && e.getMessage().contains(HConstants.RELOGIN_IS_IN_PROGRESS))
+        e instanceof SaslException || (e.getMessage() != null
+          && e.getMessage().contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS))
       ) {
         return true;
       }
@@ -383,8 +383,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       if (cause instanceof IOException) {
         IOException unwrappedException = unwrapException((IOException) cause);
         return unwrappedException instanceof SaslException
-          || (unwrappedException.getMessage() != null
-            && unwrappedException.getMessage().contains(HConstants.RELOGIN_IS_IN_PROGRESS));
+          || (unwrappedException.getMessage() != null && unwrappedException.getMessage()
+            .contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS));
       }
       return false;
     }
