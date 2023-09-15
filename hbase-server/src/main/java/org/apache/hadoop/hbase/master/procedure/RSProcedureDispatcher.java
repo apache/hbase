@@ -358,9 +358,8 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       ) {
         return true;
       }
-      // check 4 level of cause
       Throwable cause = e;
-      for (int i = 0; i < 4; i++) {
+      while (true) {
         cause = cause.getCause();
         if (cause == null) {
           return false;
@@ -369,7 +368,6 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           return true;
         }
       }
-      return false;
     }
 
     private boolean isThrowableOfTypeSasl(Throwable cause) {
