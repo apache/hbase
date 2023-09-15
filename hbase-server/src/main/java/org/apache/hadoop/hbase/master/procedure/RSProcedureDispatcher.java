@@ -289,6 +289,14 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
           numberOfAttemptsSoFar);
         return false;
       }
+      // This category of exceptions is thrown in the rpc framework, where we can make sure
+      // that the call has not been executed yet, so it is safe to mark it as fail.
+      // Especially for open a region, we'd better choose another region server.
+      // Notice that, it is safe to quit only if this is the first time we send request to region
+      // server. Maybe the region server has accepted our request the first time, and then there is
+      // a network error which prevents we receive the response, and the second time we hit
+      // this category of exceptions, obviously it is not safe to quit here, otherwise it may lead
+      // to a double assign...
       if (numberOfAttemptsSoFar == 0 && unableToConnectToServer(e)) {
         return false;
       }
@@ -322,15 +330,15 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
       return true;
     }
 
+    /**
+     * The category of exceptions where we can ensure that the request has not yet been received
+     * and/or processed by the target regionserver yet and hence we can determine whether it is safe
+     * to choose different regionserver as the target.
+     * @param e IOException thrown by the underlying rpc framework.
+     * @return true if the exception belongs to the category where the regionserver has not yet
+     *         received the request yet.
+     */
     private boolean unableToConnectToServer(IOException e) {
-      // This exception is thrown in the rpc framework, where we can make sure that the call has not
-      // been executed yet, so it is safe to mark it as fail. Especially for open a region, we'd
-      // better choose another region server.
-      // Notice that, it is safe to quit only if this is the first time we send request to region
-      // server. Maybe the region server has accepted our request the first time, and then there is
-      // a network error which prevents we receive the response, and the second time we hit a
-      // CallQueueTooBigException, obviously it is not safe to quit here, otherwise it may lead to a
-      // double assign...
       if (e instanceof CallQueueTooBigException) {
         LOG.warn("request to {} failed due to {}, try={}, this usually because"
           + " server is overloaded, give up", serverName, e, numberOfAttemptsSoFar);
@@ -351,35 +359,20 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
         return true;
       }
       // check 4 level of cause
-      Throwable cause = e.getCause();
-      if (cause == null) {
-        return false;
+      Throwable cause = e;
+      for (int i = 0; i < 4; i++) {
+        cause = cause.getCause();
+        if (cause == null) {
+          return false;
+        }
+        if (isThrowableOfTypeSasl(cause)) {
+          return true;
+        }
       }
-      if (isSaslError(cause)) {
-        return true;
-      }
-      cause = cause.getCause();
-      if (cause == null) {
-        return false;
-      }
-      if (isSaslError(cause)) {
-        return true;
-      }
-      cause = cause.getCause();
-      if (cause == null) {
-        return false;
-      }
-      if (isSaslError(cause)) {
-        return true;
-      }
-      cause = cause.getCause();
-      if (cause == null) {
-        return false;
-      }
-      return isSaslError(cause);
+      return false;
     }
 
-    private boolean isSaslError(Throwable cause) {
+    private boolean isThrowableOfTypeSasl(Throwable cause) {
       if (cause instanceof IOException) {
         IOException unwrappedException = unwrapException((IOException) cause);
         return unwrappedException instanceof SaslException
