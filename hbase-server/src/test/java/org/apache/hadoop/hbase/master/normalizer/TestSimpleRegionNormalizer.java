@@ -512,18 +512,16 @@ public class TestSimpleRegionNormalizer {
     conf.setInt(MERGE_MAX_REGION_COUNT_KEY, 3);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 5);
-    final Map<byte[], Integer> regionSizes =
-      createRegionSizesMap(regionInfos, 0, 1, 0, 1, 0);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 1, 0, 1, 0);
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertEquals(3, normalizer.getMergeMaxRegionCount());
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
     assertThat(plans,
       contains(
         new MergeNormalizationPlan.Builder().addTarget(regionInfos.get(0), 0)
-          .addTarget(regionInfos.get(1),1)
-          .addTarget(regionInfos.get(2), 0).build(),
+          .addTarget(regionInfos.get(1), 1).addTarget(regionInfos.get(2), 0).build(),
         new MergeNormalizationPlan.Builder().addTarget(regionInfos.get(3), 1)
-          .addTarget(regionInfos.get(4),0).build()));
+          .addTarget(regionInfos.get(4), 0).build()));
   }
 
   @Test
@@ -533,16 +531,12 @@ public class TestSimpleRegionNormalizer {
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
-    final Map<byte[], Integer> regionSizes =
-      createRegionSizesMap(regionInfos, 0, 0, 0);
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 0, 0, 0);
     setupMocksForNormalizer(regionSizes, regionInfos);
     assertEquals(50, normalizer.getMergeMaxRegionCount());
     List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
-    assertThat(plans,
-      contains(
-        new MergeNormalizationPlan.Builder().addTarget(regionInfos.get(0), 0)
-          .addTarget(regionInfos.get(1),0)
-          .addTarget(regionInfos.get(2), 0).build()));
+    assertThat(plans, contains(new MergeNormalizationPlan.Builder().addTarget(regionInfos.get(0), 0)
+      .addTarget(regionInfos.get(1), 0).addTarget(regionInfos.get(2), 0).build()));
   }
 
   @Test

@@ -141,7 +141,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   private static long parseMergeMaxRegionCount(final Configuration conf) {
-    final long parsedValue = conf.getLong(MERGE_MAX_REGION_COUNT_KEY, DEFAULT_MERGE_MAX_REGION_COUNT);
+    final long parsedValue =
+      conf.getLong(MERGE_MAX_REGION_COUNT_KEY, DEFAULT_MERGE_MAX_REGION_COUNT);
     final long settledValue = Math.max(1, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_MAX_REGION_COUNT_KEY, parsedValue, settledValue);
@@ -398,8 +399,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         }
         if (
           (rangeMembers.isEmpty() // when there are no range members, seed the range with whatever
-                                 // we have. this way we're prepared in case the next region is
-                                 // 0-size.
+                                  // we have. this way we're prepared in case the next region is
+                                  // 0-size.
             || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0) // when there is only one
                                                                         // region and the size is 0,
                                                                         // seed the range with
