@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -691,7 +692,7 @@ public final class FSUtils {
   }
 
   private static String[] getHostsForLocations(LocatedBlock block) {
-    DatanodeInfo[] locations = block.getLocations();
+    DatanodeInfo[] locations = getLocatedBlockLocations(block);
     String[] hosts = new String[locations.length];
     for (int i = 0; i < hosts.length; i++) {
       hosts[i] = locations[i].getHostName();
