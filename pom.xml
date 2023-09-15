@@ -245,6 +245,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>huiruan</id>
+      <name>Hui Ruan</name>
+      <email>huiruan@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
       <id>jdcryans</id>
       <name>Jean-Daniel Cryans</name>
       <email>jdcryans@apache.org</email>
