@@ -668,6 +668,12 @@ possible configurations would overwhelm and obscure the important.
       MBs.</description>
   </property>
   <property>
+    <name>hbase.normalizer.merge.merge_request_max_number_of_regions</name>
+    <value>50</value>
+    <description>The maximum number of region count in a merge request for merge
+      normalization.</description>
+  </property>
+  <property>
     <name>hbase.table.normalization.enabled</name>
     <value>false</value>
     <description>This config is used to set default behaviour of normalizer at table level.
