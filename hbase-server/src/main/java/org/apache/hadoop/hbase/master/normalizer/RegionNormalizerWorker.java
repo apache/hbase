@@ -57,7 +57,6 @@ class RegionNormalizerWorker implements PropagatingConfigurationObserver, Runnab
 
   static final String CUMULATIVE_SIZE_LIMIT_MB_KEY = "hbase.normalizer.plans_size_limit.mb";
   static final long DEFAULT_CUMULATIVE_SIZE_LIMIT_MB = Long.MAX_VALUE;
-
   private final MasterServices masterServices;
   private final RegionNormalizer regionNormalizer;
   private final RegionNormalizerWorkQueue<TableName> workQueue;
