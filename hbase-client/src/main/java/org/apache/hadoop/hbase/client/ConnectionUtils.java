@@ -223,13 +223,17 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
-  static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
+  static void resetController(HBaseRpcController controller, long timeoutNs, int priority,
+    TableName tableName) {
     controller.reset();
     if (timeoutNs >= 0) {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
     controller.setPriority(priority);
+    if (tableName != null) {
+      controller.setTableName(tableName);
+    }
   }
 
   static Throwable translateException(Throwable t) {
