@@ -352,32 +352,23 @@ public class RSProcedureDispatcher extends RemoteProcedureDispatcher<MasterProce
     }
 
     private boolean isSaslError(IOException e) {
-      if (
-        e instanceof SaslException || (e.getMessage() != null
-          && e.getMessage().contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS))
-      ) {
-        return true;
-      }
       Throwable cause = e;
       while (true) {
+        if (cause instanceof IOException) {
+          IOException unwrappedCause = unwrapException((IOException) cause);
+          if (
+            unwrappedCause instanceof SaslException
+              || (unwrappedCause.getMessage() != null && unwrappedCause.getMessage()
+                .contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS))
+          ) {
+            return true;
+          }
+        }
         cause = cause.getCause();
         if (cause == null) {
           return false;
         }
-        if (isThrowableOfTypeSasl(cause)) {
-          return true;
-        }
       }
-    }
-
-    private boolean isThrowableOfTypeSasl(Throwable cause) {
-      if (cause instanceof IOException) {
-        IOException unwrappedException = unwrapException((IOException) cause);
-        return unwrappedException instanceof SaslException
-          || (unwrappedException.getMessage() != null && unwrappedException.getMessage()
-            .contains(RpcConnectionConstants.RELOGIN_IS_IN_PROGRESS));
-      }
-      return false;
     }
 
     private long getMaxWaitTime() {
