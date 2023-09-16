@@ -123,6 +123,9 @@ public abstract class RegionServerCallable<T, S> implements RetryingCallable<T> 
           hrc.setPriority(priority);
           hrc.setCallTimeout(callTimeout);
           hrc.setRequestAttributes(requestAttributes);
+          if (tableName != null) {
+            hrc.setTableName(tableName);
+          }
         }
       }
       return rpcCall();
