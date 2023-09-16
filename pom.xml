@@ -2400,6 +2400,23 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-bouncycastle-jdk15on</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.bouncycastle:*-jdk15on</exclude>
+                  </excludes>
+                  <message>Use org.bouncycastle:*-jdk18on instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
