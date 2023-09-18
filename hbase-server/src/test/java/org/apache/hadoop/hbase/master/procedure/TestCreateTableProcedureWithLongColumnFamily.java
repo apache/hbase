@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -43,10 +45,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestCreateTableProcedureWithLongColumnFamily {
@@ -58,8 +56,8 @@ public class TestCreateTableProcedureWithLongColumnFamily {
   @Rule
   public TestName name = new TestName();
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    TestCreateTableProcedureWithLongColumnFamily.class);
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestCreateTableProcedureWithLongColumnFamily.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -67,7 +65,8 @@ public class TestCreateTableProcedureWithLongColumnFamily {
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, DFS_NAMENODE_MAX_COMPONENT_LENGTH);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
+      DFS_NAMENODE_MAX_COMPONENT_LENGTH);
   }
 
   @BeforeClass
@@ -75,6 +74,7 @@ public class TestCreateTableProcedureWithLongColumnFamily {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
   }
+
   @AfterClass
   public static void cleanupTest() throws Exception {
     try {
@@ -98,7 +98,8 @@ public class TestCreateTableProcedureWithLongColumnFamily {
     }
 
     TableName tableName = TableName.valueOf(name.getMethodName());
-    final TableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, longColumnFamilyName.toString());
+    final TableDescriptor htd =
+      MasterProcedureTestingUtility.createHTD(tableName, longColumnFamilyName.toString());
     final RegionInfo[] regions = ModifyRegionUtils.createRegionInfos(htd, null);
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
