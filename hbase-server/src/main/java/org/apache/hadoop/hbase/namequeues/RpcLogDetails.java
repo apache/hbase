@@ -54,6 +54,10 @@ public class RpcLogDetails extends NamedQueuePayload {
     this.className = className;
     this.isSlowLog = isSlowLog;
     this.isLargeLog = isLargeLog;
+
+    // it's important to call getConnectionAttributes and getRequestAttributes here
+    // because otherwise the buffers may get released before the log details are processed which
+    // would result in corrupted attributes
     this.connectionAttributes = rpcCall.getConnectionAttributes();
     this.requestAttributes = rpcCall.getRequestAttributes();
   }
