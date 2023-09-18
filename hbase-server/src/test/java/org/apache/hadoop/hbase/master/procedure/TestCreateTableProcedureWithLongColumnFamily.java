@@ -97,6 +97,7 @@ public class TestCreateTableProcedureWithLongColumnFamily {
       longColumnFamilyName.append("c");
     }
 
+    assertTrue(dfsMaxComponentLength < Byte.MAX_VALUE);
     assertTrue(longColumnFamilyName.toString().length() > dfsMaxComponentLength);
 
     TableName tableName = TableName.valueOf(name.getMethodName());
