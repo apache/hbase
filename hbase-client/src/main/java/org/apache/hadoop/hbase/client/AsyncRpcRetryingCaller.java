@@ -121,7 +121,7 @@ public abstract class AsyncRpcRetryingCaller<T> {
     } else {
       callTimeoutNs = rpcTimeoutNs;
     }
-    resetController(controller, callTimeoutNs, priority);
+    resetController(controller, callTimeoutNs, priority, getTableName().orElse(null));
   }
 
   private void tryScheduleRetry(Throwable error) {

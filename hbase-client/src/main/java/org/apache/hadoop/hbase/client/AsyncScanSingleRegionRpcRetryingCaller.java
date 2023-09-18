@@ -354,7 +354,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
 
   private void closeScanner() {
     incRPCCallsMetrics(scanMetrics, regionServerRemote);
-    resetController(controller, rpcTimeoutNs, HConstants.HIGH_QOS);
+    resetController(controller, rpcTimeoutNs, HConstants.HIGH_QOS, loc.getRegion().getTable());
     ScanRequest req = RequestConverter.buildScanRequest(this.scannerId, 0, true, false);
     stub.scan(controller, req, resp -> {
       if (controller.failed()) {
@@ -573,7 +573,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     if (tries > 1) {
       incRPCRetriesMetrics(scanMetrics, regionServerRemote);
     }
-    resetController(controller, callTimeoutNs, priority);
+    resetController(controller, callTimeoutNs, priority, loc.getRegion().getTable());
     ScanRequest req = RequestConverter.buildScanRequest(scannerId, scan.getCaching(), false,
       nextCallSeq, scan.isScanMetricsEnabled(), false, scan.getLimit());
     final Context context = Context.current();
@@ -595,7 +595,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   private void renewLease() {
     incRPCCallsMetrics(scanMetrics, regionServerRemote);
     nextCallSeq++;
-    resetController(controller, rpcTimeoutNs, priority);
+    resetController(controller, rpcTimeoutNs, priority, loc.getRegion().getTable());
     ScanRequest req =
       RequestConverter.buildScanRequest(scannerId, 0, false, nextCallSeq, false, true, -1);
     stub.scan(controller, req, resp -> {
