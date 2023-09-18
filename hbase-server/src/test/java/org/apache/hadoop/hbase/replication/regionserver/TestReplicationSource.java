@@ -291,8 +291,7 @@ public class TestReplicationSource {
       mock(MetricsSource.class));
     ReplicationSourceWALReader reader =
       new ReplicationSourceWALReader(null, conf, null, 0, null, source, null);
-    ReplicationSourceShipper shipper = new ReplicationSourceShipper(conf, null, null, source);
-    shipper.entryReader = reader;
+    ReplicationSourceShipper shipper = new ReplicationSourceShipper(conf, null, source, reader);
     source.workerThreads.put("testPeer", shipper);
     WALEntryBatch batch = new WALEntryBatch(10, logDir);
     WAL.Entry mockEntry = mock(WAL.Entry.class);

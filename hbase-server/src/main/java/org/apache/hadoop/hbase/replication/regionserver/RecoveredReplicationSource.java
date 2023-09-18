@@ -27,8 +27,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public class RecoveredReplicationSource extends ReplicationSource {
 
   @Override
-  protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId) {
-    return new RecoveredReplicationSourceShipper(conf, walGroupId, logQueue, this, queueStorage,
+  protected RecoveredReplicationSourceShipper createNewShipper(String walGroupId,
+    ReplicationSourceWALReader walReader) {
+    return new RecoveredReplicationSourceShipper(conf, walGroupId, this, walReader, queueStorage,
       () -> {
         if (workerThreads.isEmpty()) {
           this.getSourceMetrics().clear();
