@@ -235,14 +235,16 @@ public class TestCreateNamespaceProcedure {
   public void testCreateLongNameNamespace() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureEnv env = procExec.getEnvironment();
-    int maxComponentLength =
+    int dfsMaxComponentLength =
       env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
 
     StringBuilder sb = new StringBuilder("");
-    for (int i = 0; i <= maxComponentLength; i++) {
+    for (int i = 0; i <= dfsMaxComponentLength; i++) {
       sb.append("N");
     }
+
+    assertTrue(sb.toString().length() > dfsMaxComponentLength);
 
     final NamespaceDescriptor nsd = NamespaceDescriptor.create(sb.toString()).build();
     long procId = ProcedureTestingUtility.submitAndWait(procExec,

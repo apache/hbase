@@ -88,14 +88,16 @@ public class TestCreateTableProcedureWithLongColumnFamily {
   public void testCreateTableWithLongColumnFamily() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     MasterProcedureEnv env = procExec.getEnvironment();
-    int maxComponentLength =
+    int dfsMaxComponentLength =
       env.getMasterConfiguration().getInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
 
     StringBuilder longColumnFamilyName = new StringBuilder("");
-    for (int i = 0; i < maxComponentLength; i++) {
+    for (int i = 0; i <= dfsMaxComponentLength; i++) {
       longColumnFamilyName.append("c");
     }
+
+    assertTrue(longColumnFamilyName.toString().length() > dfsMaxComponentLength);
 
     TableName tableName = TableName.valueOf(name.getMethodName());
     final TableDescriptor htd =
