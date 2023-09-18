@@ -169,8 +169,8 @@ public class SlowLogQueueService implements NamedQueueService {
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
       .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
       .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName)
-      .addAllRequestAttribute(buildNameBytesPairs(rpcCall.getRequestAttributes()))
-      .addAllConnectionAttribute(buildNameBytesPairs(rpcCall.getConnectionAttributes()));
+      .addAllRequestAttribute(buildNameBytesPairs(rpcLogDetails.getRequestAttributes()))
+      .addAllConnectionAttribute(buildNameBytesPairs(rpcLogDetails.getConnectionAttributes()));
     if (slowLogParams != null && slowLogParams.getScan() != null) {
       slowLogPayloadBuilder.setScan(slowLogParams.getScan());
     }
