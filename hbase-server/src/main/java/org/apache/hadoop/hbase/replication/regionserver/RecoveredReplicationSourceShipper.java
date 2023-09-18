@@ -30,9 +30,9 @@ public class RecoveredReplicationSourceShipper extends ReplicationSourceShipper 
   private final Runnable tryFinish;
 
   public RecoveredReplicationSourceShipper(Configuration conf, String walGroupId,
-    ReplicationSourceLogQueue logQueue, RecoveredReplicationSource source,
+    RecoveredReplicationSource source, ReplicationSourceWALReader walReader,
     ReplicationQueueStorage queueStorage, Runnable tryFinish) {
-    super(conf, walGroupId, logQueue, source);
+    super(conf, walGroupId, source, walReader);
     this.tryFinish = tryFinish;
   }
 

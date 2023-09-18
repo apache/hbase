@@ -367,14 +367,13 @@ public class ReplicationSource implements ReplicationSourceInterface {
         return value;
       } else {
         LOG.debug("{} starting shipping worker for walGroupId={}", logPeerId(), walGroupId);
-        ReplicationSourceShipper worker = createNewShipper(walGroupId);
         ReplicationSourceWALReader walReader =
           createNewWALReader(walGroupId, getStartOffset(walGroupId));
+        ReplicationSourceShipper worker = createNewShipper(walGroupId, walReader);
         Threads.setDaemonThreadRunning(
           walReader, Thread.currentThread().getName() + ".replicationSource.wal-reader."
             + walGroupId + "," + queueId,
           (t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
-        worker.setWALReader(walReader);
         worker.startup((t, e) -> this.uncaughtException(t, e, this.manager, this.getPeerId()));
         return worker;
       }
@@ -428,8 +427,9 @@ public class ReplicationSource implements ReplicationSourceInterface {
     return fileSize;
   }
 
-  protected ReplicationSourceShipper createNewShipper(String walGroupId) {
-    return new ReplicationSourceShipper(conf, walGroupId, logQueue, this);
+  protected ReplicationSourceShipper createNewShipper(String walGroupId,
+    ReplicationSourceWALReader walReader) {
+    return new ReplicationSourceShipper(conf, walGroupId, this, walReader);
   }
 
   private ReplicationSourceWALReader createNewWALReader(String walGroupId, long startPosition) {
@@ -665,7 +665,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
     terminate(reason, cause, clearMetrics, true);
   }
 
-  public void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
+  private void terminate(String reason, Exception cause, boolean clearMetrics, boolean join) {
     if (cause == null) {
       LOG.info("{} Closing source {} because: {}", logPeerId(), this.queueId, reason);
     } else {
@@ -684,9 +684,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     for (ReplicationSourceShipper worker : workers) {
       worker.stopWorker();
-      if (worker.entryReader != null) {
-        worker.entryReader.setReaderRunning(false);
-      }
+      worker.entryReader.setReaderRunning(false);
     }
 
     if (this.replicationEndpoint != null) {
