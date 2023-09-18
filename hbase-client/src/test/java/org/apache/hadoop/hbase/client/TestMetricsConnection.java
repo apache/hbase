@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +53,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -162,6 +165,30 @@ public class TestMetricsConnection {
 
     /* shutdown */
     impl.close();
+  }
+
+  @Test
+  public void testMetricsConnectionScopeBlockingClient() throws IOException {
+    Configuration conf = new Configuration();
+    String clusterId = "foo";
+    String scope = "testScope";
+    conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
+
+    ConnectionRegistry mockRegistry = Mockito.mock(ConnectionRegistry.class);
+    Mockito.when(mockRegistry.getClusterId())
+      .thenReturn(CompletableFuture.completedFuture(clusterId));
+
+    ConnectionImplementation impl =
+      new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
+    MetricsConnection metrics = impl.getConnectionMetrics();
+    assertNotNull("Metrics should be present", metrics);
+    assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()), metrics.getMetricScope());
+    conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
+    impl = new ConnectionImplementation(conf, null, User.getCurrent(), mockRegistry);
+
+    metrics = impl.getConnectionMetrics();
+    assertNotNull("Metrics should be present", metrics);
+    assertEquals(scope, metrics.getMetricScope());
   }
 
   @Test
