@@ -81,7 +81,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
-  static final String MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY = "hbase.normalizer.merge.merge_request_max_number_of_regions";
+  static final String MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY =
+    "hbase.normalizer.merge.merge_request_max_number_of_regions";
   static final long DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT = 100;
 
   private MasterServices masterServices;
@@ -141,8 +142,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   private static long parseMergeRequestMaxNumberOfRegionsCount(final Configuration conf) {
-    final long parsedValue =
-      conf.getLong(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY, DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT);
+    final long parsedValue = conf.getLong(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY,
+      DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT);
     final long settledValue = Math.max(2, parsedValue);
     if (parsedValue != settledValue) {
       warnInvalidValue(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY, parsedValue, settledValue);
@@ -404,12 +405,13 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
             // when there is only one region and the size is 0, seed the range with whatever we
             // have.
             || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0)
-            // add an empty region to the current range only if it doesn't exceed max merge request region count
+            // add an empty region to the current range only if it doesn't exceed max merge request
+            // region count
             || (regionSizeMb == 0 && rangeMembers.size() < getMergeRequestMaxNumberOfRegionsCount())
             // add region if current range region size is less than avg region size of table
             // and current range doesn't exceed max merge request region count
-            || ((regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb) && (rangeMembers.size()
-            < getMergeRequestMaxNumberOfRegionsCount()))
+            || ((regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)
+              && (rangeMembers.size() < getMergeRequestMaxNumberOfRegionsCount()))
         ) {
           // add the current region to the range when there's capacity remaining.
           rangeMembers.add(new NormalizationTarget(regionInfo, regionSizeMb));
@@ -555,7 +557,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
         currentConfiguration.getMergeMinRegionSizeMb(), mergeMinRegionSizeMb);
       logConfigurationUpdated(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY,
-        currentConfiguration.getMergeRequestMaxNumberOfRegionsCount(), mergeRequestMaxNumberOfRegionsCount);
+        currentConfiguration.getMergeRequestMaxNumberOfRegionsCount(),
+        mergeRequestMaxNumberOfRegionsCount);
     }
 
     public Configuration getConf() {
