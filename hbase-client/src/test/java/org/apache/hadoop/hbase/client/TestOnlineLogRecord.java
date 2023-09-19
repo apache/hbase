@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -25,6 +28,9 @@ import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Category({ ClientTests.class, SmallTests.class })
 public class TestOnlineLogRecord {
@@ -47,10 +53,56 @@ public class TestOnlineLogRecord {
       + "    \"maxResultSize\": -1,\n" + "    \"families\": {},\n" + "    \"caching\": -1,\n"
       + "    \"maxVersions\": 1,\n" + "    \"timeRange\": [\n" + "      0,\n"
       + "      9223372036854775807\n" + "    ]\n" + "  }\n" + "}";
-    OnlineLogRecord o =
-      new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null, 6, 7, 0, scan);
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
+      6, 7, 0, scan, Collections.emptyMap(), Collections.emptyMap());
     String actualOutput = o.toJsonPrettyPrint();
     System.out.println(actualOutput);
     Assert.assertEquals(actualOutput, expectedOutput);
+  }
+
+  @Test
+  public void itSerializesRequestAttributes() {
+    Map<String, byte[]> requestAttributes = ImmutableMap.<String, byte[]> builder()
+      .put("r", Bytes.toBytes("1")).put("2", Bytes.toBytes(0.0)).build();
+    Set<String> expectedOutputs =
+      ImmutableSet.<String> builder().add("requestAttributes").add("\"r\": \"1\"")
+        .add("\"2\": \"\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\"").build();
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
+      6, 7, 0, null, requestAttributes, Collections.emptyMap());
+    String actualOutput = o.toJsonPrettyPrint();
+    System.out.println(actualOutput);
+    expectedOutputs.forEach(expected -> Assert.assertTrue(actualOutput.contains(expected)));
+  }
+
+  @Test
+  public void itOmitsEmptyRequestAttributes() {
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
+      6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
+    String actualOutput = o.toJsonPrettyPrint();
+    System.out.println(actualOutput);
+    Assert.assertFalse(actualOutput.contains("requestAttributes"));
+  }
+
+  @Test
+  public void itSerializesConnectionAttributes() {
+    Map<String, byte[]> connectionAttributes = ImmutableMap.<String, byte[]> builder()
+      .put("c", Bytes.toBytes("1")).put("2", Bytes.toBytes(0.0)).build();
+    Set<String> expectedOutputs =
+      ImmutableSet.<String> builder().add("connectionAttributes").add("\"c\": \"1\"")
+        .add("\"2\": \"\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\\\\x00\"").build();
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
+      6, 7, 0, null, Collections.emptyMap(), connectionAttributes);
+    String actualOutput = o.toJsonPrettyPrint();
+    System.out.println(actualOutput);
+    expectedOutputs.forEach(expected -> Assert.assertTrue(actualOutput.contains(expected)));
+  }
+
+  @Test
+  public void itOmitsEmptyConnectionAttributes() {
+    OnlineLogRecord o = new OnlineLogRecord(1, 2, 3, 4, 5, null, null, null, null, null, null, null,
+      6, 7, 0, null, Collections.emptyMap(), Collections.emptyMap());
+    String actualOutput = o.toJsonPrettyPrint();
+    System.out.println(actualOutput);
+    Assert.assertFalse(actualOutput.contains("connectionAttributes"));
   }
 }

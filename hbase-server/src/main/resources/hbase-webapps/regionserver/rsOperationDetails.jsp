@@ -26,6 +26,7 @@
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog"
+  import="org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil"
   import="org.apache.hadoop.hbase.namequeues.NamedQueueRecorder"
   import="org.apache.hadoop.hbase.namequeues.RpcLogDetails"
   import="org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest"
@@ -108,6 +109,8 @@
             <th>MultiService Calls</th>
             <th>Call Details</th>
             <th>Param</th>
+            <th>Request Attributes</th>
+            <th>Connection Attributes</th>
           </tr>
           <% if (slowLogs != null && !slowLogs.isEmpty()) {%>
             <% for (TooSlowLog.SlowLogPayload r : slowLogs) { %>
@@ -127,6 +130,8 @@
              <td><%=r.getMultiServiceCalls()%></td>
              <td><%=r.getCallDetails()%></td>
              <td><%=r.getParam()%></td>
+             <td><%=ProtobufUtil.convertAttributesToCsv(r.getRequestAttributeList())%></td>
+             <td><%=ProtobufUtil.convertAttributesToCsv(r.getConnectionAttributeList())%></td>
             </tr>
             <% } %>
           <% } %>
@@ -151,6 +156,8 @@
             <th>MultiService Calls</th>
             <th>Call Details</th>
             <th>Param</th>
+            <th>Request Attributes</th>
+            <th>Connection Attributes</th>
           </tr>
           <% if (largeLogs != null && !largeLogs.isEmpty()) {%>
             <% for (TooSlowLog.SlowLogPayload r : largeLogs) { %>
@@ -170,6 +177,8 @@
              <td><%=r.getMultiServiceCalls()%></td>
              <td><%=r.getCallDetails()%></td>
              <td><%=r.getParam()%></td>
+             <td><%=ProtobufUtil.convertAttributesToCsv(r.getRequestAttributeList())%></td>
+             <td><%=ProtobufUtil.convertAttributesToCsv(r.getConnectionAttributeList())%></td>
             </tr>
             <% } %>
           <% } %>

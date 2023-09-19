@@ -2197,6 +2197,25 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a list of NameBytesPair to a more readable CSV
+   */
+  public static String convertAttributesToCsv(List<NameBytesPair> attributes) {
+    if (attributes.isEmpty()) {
+      return HConstants.EMPTY_STRING;
+    }
+    return deserializeAttributes(convertNameBytesPairsToMap(attributes)).entrySet().stream()
+      .map(entry -> entry.getKey() + " = " + entry.getValue()).collect(Collectors.joining(", "));
+  }
+
+  /**
+   * Convert a map of byte array attributes to a more readable map of binary string representations
+   */
+  public static Map<String, String> deserializeAttributes(Map<String, byte[]> attributes) {
+    return attributes.entrySet().stream().collect(
+      Collectors.toMap(Map.Entry::getKey, entry -> Bytes.toStringBinary(entry.getValue())));
+  }
+
+  /**
    * Print out some subset of a MutationProto rather than all of it and its data
    * @param proto Protobuf to print out
    * @return Short String of mutation proto
@@ -3389,7 +3408,10 @@ public final class ProtobufUtil {
         .setResponseSize(slowLogPayload.getResponseSize())
         .setBlockBytesScanned(slowLogPayload.getBlockBytesScanned())
         .setServerClass(slowLogPayload.getServerClass()).setStartTime(slowLogPayload.getStartTime())
-        .setUserName(slowLogPayload.getUserName());
+        .setUserName(slowLogPayload.getUserName())
+        .setRequestAttributes(convertNameBytesPairsToMap(slowLogPayload.getRequestAttributeList()))
+        .setConnectionAttributes(
+          convertNameBytesPairsToMap(slowLogPayload.getConnectionAttributeList()));
     if (slowLogPayload.hasScan()) {
       try {
         onlineLogRecord.setScan(ProtobufUtil.toScan(slowLogPayload.getScan()));
@@ -3398,6 +3420,12 @@ public final class ProtobufUtil {
       }
     }
     return onlineLogRecord.build();
+  }
+
+  private static Map<String, byte[]>
+    convertNameBytesPairsToMap(List<NameBytesPair> nameBytesPairs) {
+    return nameBytesPairs.stream().collect(Collectors.toMap(NameBytesPair::getName,
+      nameBytesPair -> nameBytesPair.getValue().toByteArray()));
   }
 
   /**
