@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -47,6 +48,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -72,6 +74,20 @@ public class TestNamedQueueRecorder {
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
   private static final HBaseTestingUtil HBASE_TESTING_UTILITY = new HBaseTestingUtil();
+  private static final List<HBaseProtos.NameBytesPair> REQUEST_HEADERS =
+    ImmutableList.<HBaseProtos.NameBytesPair> builder()
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("1")
+        .setValue(ByteString.copyFromUtf8("r")).build())
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("2")
+        .setValue(ByteString.copyFromUtf8("h")).build())
+      .build();
+  private static final List<HBaseProtos.NameBytesPair> CONNECTION_HEADERS =
+    ImmutableList.<HBaseProtos.NameBytesPair> builder()
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("1")
+        .setValue(ByteString.copyFromUtf8("c")).build())
+      .add(HBaseProtos.NameBytesPair.newBuilder().setName("2")
+        .setValue(ByteString.copyFromUtf8("h")).build())
+      .build();
 
   private NamedQueueRecorder namedQueueRecorder;
 
@@ -600,6 +616,54 @@ public class TestNamedQueueRecorder {
     }));
   }
 
+  @Test
+  public void testOnlineSlowLogRequestAttributes() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (slowLogPayload.isPresent() && !slowLogPayload.get().getRequestAttributeList().isEmpty()) {
+        return slowLogPayload.get().getRequestAttributeList().containsAll(REQUEST_HEADERS);
+      }
+      return false;
+    }));
+  }
+
+  @Test
+  public void testOnlineSlowLogConnectionAttributes() throws Exception {
+    Configuration conf = applySlowLogRecorderConf(1);
+    Constructor<NamedQueueRecorder> constructor =
+      NamedQueueRecorder.class.getDeclaredConstructor(Configuration.class);
+    constructor.setAccessible(true);
+    namedQueueRecorder = constructor.newInstance(conf);
+    AdminProtos.SlowLogResponseRequest request =
+      AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
+
+    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    LOG.debug("Initially ringbuffer of Slow Log records is empty");
+    RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
+    namedQueueRecorder.addRecord(rpcLogDetails);
+    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+      Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
+      if (
+        slowLogPayload.isPresent() && !slowLogPayload.get().getConnectionAttributeList().isEmpty()
+      ) {
+        return slowLogPayload.get().getConnectionAttributeList().containsAll(CONNECTION_HEADERS);
+      }
+      return false;
+    }));
+  }
+
   static RpcLogDetails getRpcLogDetails(String userName, String clientAddress, String className,
     int forcedParamIndex) {
     RpcCall rpcCall = getRpcCall(userName, forcedParamIndex);
@@ -697,12 +761,14 @@ public class TestNamedQueueRecorder {
 
       @Override
       public Map<String, byte[]> getConnectionAttributes() {
-        return null;
+        return CONNECTION_HEADERS.stream().collect(Collectors
+          .toMap(HBaseProtos.NameBytesPair::getName, pair -> pair.getValue().toByteArray()));
       }
 
       @Override
       public Map<String, byte[]> getRequestAttributes() {
-        return null;
+        return REQUEST_HEADERS.stream().collect(Collectors.toMap(HBaseProtos.NameBytesPair::getName,
+          pair -> pair.getValue().toByteArray()));
       }
 
       @Override
