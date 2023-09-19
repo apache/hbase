@@ -657,9 +657,9 @@ possible configurations would overwhelm and obscure the important.
       MBs.</description>
   </property>
   <property>
-    <name>hbase.normalizer.merge.max.region.count</name>
+    <name>hbase.normalizer.merge.merge_request_max_number_of_regions</name>
     <value>50</value>
-    <description>The maximum number of regions in a table to consider for merge
+    <description>The maximum number of region count in a merge request for merge
       normalization.</description>
   </property>
   <property>
