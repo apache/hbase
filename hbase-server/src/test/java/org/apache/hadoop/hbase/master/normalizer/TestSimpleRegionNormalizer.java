@@ -505,7 +505,7 @@ public class TestSimpleRegionNormalizer {
   }
 
   @Test
-  public void testHonorsMergeMaxRegionCount() {
+  public void testHonorsMergeRequestMaxNumberOfRegionsCount() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
@@ -525,7 +525,7 @@ public class TestSimpleRegionNormalizer {
   }
 
   @Test
-  public void testHonorsMergeMaxRegionCountDefault() {
+  public void testHonorsMergeRequestMaxNumberOfRegionsCountDefault() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
     conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
