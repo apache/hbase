@@ -76,10 +76,11 @@ public class ConnectionConfiguration {
   public static final String HBASE_CLIENT_META_SCANNER_TIMEOUT =
     "hbase.client.meta.scanner.timeout.period";
 
-  public static final String HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS =
-    "hbase.client.use.scanner.timeout.for.next.calls";
+  public static final String HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS =
+    "hbase.client.use.scanner.timeout.period.for.next.calls";
 
-  public static final boolean HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS_DEFAULT = false;
+  public static final boolean HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS_DEFAULT =
+    false;
 
   private final long writeBufferSize;
   private final long writeBufferPeriodicFlushTimeoutMs;
@@ -165,8 +166,8 @@ public class ConnectionConfiguration {
 
     this.metaScanTimeout = conf.getInt(HBASE_CLIENT_META_SCANNER_TIMEOUT, scanTimeout);
     this.useScannerTimeoutForNextCalls =
-      conf.getBoolean(HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS,
-        HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS_DEFAULT);
+      conf.getBoolean(HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS,
+        HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS_DEFAULT);
 
     long pauseMs = conf.getLong(HBASE_CLIENT_PAUSE, DEFAULT_HBASE_CLIENT_PAUSE);
     long pauseMsForServerOverloaded = conf.getLong(HBASE_CLIENT_PAUSE_FOR_SERVER_OVERLOADED,
@@ -210,7 +211,8 @@ public class ConnectionConfiguration {
     this.metaScanTimeout = scanTimeout;
     this.pauseMs = DEFAULT_HBASE_CLIENT_PAUSE;
     this.pauseMsForServerOverloaded = DEFAULT_HBASE_CLIENT_PAUSE;
-    this.useScannerTimeoutForNextCalls = HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS_DEFAULT;
+    this.useScannerTimeoutForNextCalls =
+      HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS_DEFAULT;
   }
 
   public int getReadRpcTimeout() {

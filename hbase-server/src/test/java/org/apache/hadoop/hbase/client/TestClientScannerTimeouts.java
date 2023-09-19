@@ -19,17 +19,19 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
-import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS;
+import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -42,13 +44,17 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +64,7 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
+@RunWith(Parameterized.class)
 @Category({ MediumTests.class, ClientTests.class })
 public class TestClientScannerTimeouts {
 
@@ -68,8 +75,8 @@ public class TestClientScannerTimeouts {
   private static final Logger LOG = LoggerFactory.getLogger(TestClientScannerTimeouts.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private static AsyncConnection ASYNC_CONN;
-  private static Connection CONN;
+  private AsyncConnection ASYNC_CONN;
+  private Connection CONN;
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final byte[] VALUE = Bytes.toBytes("testValue");
@@ -80,13 +87,22 @@ public class TestClientScannerTimeouts {
   private static final byte[] ROW3 = Bytes.toBytes("row-3");
   private static final int rpcTimeout = 1000;
   private static final int scanTimeout = 3 * rpcTimeout;
-  private static final int metaScanTimeout = 6 * rpcTimeout;
+  private static final int metaReadRpcTimeout = 6 * rpcTimeout;
+  private static final int metaScanTimeout = 9 * rpcTimeout;
   private static final int CLIENT_RETRIES_NUMBER = 3;
 
   private static TableName tableName;
 
   @Rule
   public TestName name = new TestName();
+
+  @Parameterized.Parameter
+  public boolean useScannerTimeoutPeriodForNextCalls;
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> parameters() {
+    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  }
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -98,28 +114,38 @@ public class TestClientScannerTimeouts {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, CLIENT_RETRIES_NUMBER);
     conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 1000);
     TEST_UTIL.startMiniCluster(1);
+  }
 
+  @Before
+  public void setUp() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, scanTimeout);
-    conf.setInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, metaScanTimeout);
+    conf.setInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, metaReadRpcTimeout);
     conf.setInt(HBASE_CLIENT_META_SCANNER_TIMEOUT, metaScanTimeout);
-    // set to true by default here. it only affects next() calls, and we'll explicitly
-    // set it to false in one of the tests below to test legacy behavior for next call
-    conf.setBoolean(HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, true);
+    conf.setBoolean(HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS,
+      useScannerTimeoutPeriodForNextCalls);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(conf).get();
     CONN = ConnectionFactory.createConnection(conf);
   }
 
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  @After
+  public void after() throws Exception {
     CONN.close();
     ASYNC_CONN.close();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   public void setup(boolean isSystemTable) throws IOException {
     RSRpcServicesWithScanTimeout.reset();
 
-    String nameAsString = name.getMethodName();
+    // parameterization adds non-alphanumeric chars to the method name. strip them so
+    // it parses as a table name
+    String nameAsString = name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_") + "-"
+      + useScannerTimeoutPeriodForNextCalls;
     if (isSystemTable) {
       nameAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR + ":" + nameAsString;
     }
@@ -172,31 +198,10 @@ public class TestClientScannerTimeouts {
     expectRetryOutOfOrderScannerNext(this::getAsyncScanner);
   }
 
-  /**
-   * verify that we honor the {@link HConstants#HBASE_RPC_READ_TIMEOUT_KEY} for normal scans. Use a
-   * special connection which has retries disabled, because otherwise the scanner will retry the
-   * timed out next() call and mess up the test.
-   */
   @Test
-  public void testNormalScanTimeoutOnNextWithLegacyMode() throws IOException {
+  public void testNormalScanTimeoutOnNext() throws IOException {
     setup(false);
-    Configuration confNoRetries = new Configuration(CONN.getConfiguration());
-    // Disable scanner timeout usage for next calls on this special connection. This way we can
-    // verify that legacy connections use the rpcTimeout rather than scannerTimeout
-    confNoRetries
-      .setBoolean(ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, false);
-    confNoRetries.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
-    try (Connection conn = ConnectionFactory.createConnection(confNoRetries)) {
-      // Now since we disabled HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, verify rpcTimeout
-      expectTimeoutOnNext(rpcTimeout, () -> getScanner(conn));
-    }
-  }
-
-  @Test
-  public void testNormalScanTimeoutOnNextWithScannerTimeoutEnabled() throws IOException {
-    setup(false);
-    // Since this has HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS enabled, we pass scanTimeout
-    expectTimeoutOnNext(scanTimeout, this::getScanner);
+    testScanTimeoutOnNext(rpcTimeout, scanTimeout);
   }
 
   /**
@@ -234,7 +239,30 @@ public class TestClientScannerTimeouts {
   @Test
   public void testMetaScanTimeoutOnNext() throws IOException {
     setup(true);
-    expectTimeoutOnNext(metaScanTimeout, this::getScanner);
+    testScanTimeoutOnNext(metaReadRpcTimeout, metaScanTimeout);
+  }
+
+  private void testScanTimeoutOnNext(int rpcTimeout, int scannerTimeout) throws IOException {
+    if (useScannerTimeoutPeriodForNextCalls) {
+      // Since this has HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS enabled, we pass
+      // scannerTimeout as the expected timeout duration.
+      expectTimeoutOnNext(scannerTimeout, this::getScanner);
+    } else {
+      // Otherwise we pass rpcTimeout as the expected timeout duration.
+      // In this case we need a special connection which disables retries, otherwise the scanner
+      // will retry the timed out next() call, which will cause out of order exception and mess up
+      // the test
+      try (Connection conn = getNoRetriesConnection()) {
+        // Now since we disabled HBASE_CLIENT_USE_SCANNER_TIMEOUT_FOR_NEXT_CALLS, verify rpcTimeout
+        expectTimeoutOnNext(rpcTimeout, () -> getScanner(conn));
+      }
+    }
+  }
+
+  private Connection getNoRetriesConnection() throws IOException {
+    Configuration confNoRetries = new Configuration(CONN.getConfiguration());
+    confNoRetries.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
+    return ConnectionFactory.createConnection(confNoRetries);
   }
 
   /**
@@ -253,7 +281,7 @@ public class TestClientScannerTimeouts {
   @Test
   public void testMetaScanTimeoutOnOpenScanner() throws IOException {
     setup(true);
-    expectTimeoutOnOpenScanner(metaScanTimeout, this::getScanner);
+    expectTimeoutOnOpenScanner(metaReadRpcTimeout, this::getScanner);
   }
 
   /**
@@ -262,7 +290,7 @@ public class TestClientScannerTimeouts {
   @Test
   public void testMetaScanTimeoutOnOpenScannerAsync() throws IOException {
     setup(true);
-    expectTimeoutOnOpenScanner(metaScanTimeout, this::getAsyncScanner);
+    expectTimeoutOnOpenScanner(metaReadRpcTimeout, this::getAsyncScanner);
   }
 
   private void expectRetryOutOfOrderScannerNext(Supplier<ResultScanner> scannerSupplier)
