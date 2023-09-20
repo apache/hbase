@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
@@ -78,6 +77,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
   protected final TableName tableName;
   protected final int readRpcTimeout;
   protected final int scannerTimeout;
+  private final boolean useScannerTimeoutForNextCalls;
   protected boolean scanMetricsPublished = false;
   protected RpcRetryingCaller<Result[]> caller;
   protected RpcControllerFactory rpcControllerFactory;
@@ -104,7 +104,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
     ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
     RpcControllerFactory controllerFactory, ExecutorService pool, int scanReadRpcTimeout,
-    int scannerTimeout, int primaryOperationTimeout, Map<String, byte[]> requestAttributes)
+    int scannerTimeout, int primaryOperationTimeout,
+    ConnectionConfiguration connectionConfiguration, Map<String, byte[]> requestAttributes)
     throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(
@@ -116,16 +117,15 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.connection = connection;
     this.pool = pool;
     this.primaryOperationTimeout = primaryOperationTimeout;
-    this.retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.retries = connectionConfiguration.getRetriesNumber();
     if (scan.getMaxResultSize() > 0) {
       this.maxScannerResultSize = scan.getMaxResultSize();
     } else {
-      this.maxScannerResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+      this.maxScannerResultSize = connectionConfiguration.getScannerMaxResultSize();
     }
     this.readRpcTimeout = scanReadRpcTimeout;
     this.scannerTimeout = scannerTimeout;
+    this.useScannerTimeoutForNextCalls = connectionConfiguration.isUseScannerTimeoutForNextCalls();
     this.requestAttributes = requestAttributes;
 
     // check if application wants to collect scan metrics
@@ -135,8 +135,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     if (this.scan.getCaching() > 0) {
       this.caching = this.scan.getCaching();
     } else {
-      this.caching = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
+      this.caching = connectionConfiguration.getScannerCaching();
     }
 
     this.caller = rpcFactory.<Result[]> newCaller();
@@ -255,7 +254,7 @@ public abstract class ClientScanner extends AbstractClientScanner {
     this.currentRegion = null;
     this.callable = new ScannerCallableWithReplicas(getTable(), getConnection(),
       createScannerCallable(), pool, primaryOperationTimeout, scan, getRetries(), readRpcTimeout,
-      scannerTimeout, caching, conf, caller);
+      scannerTimeout, useScannerTimeoutForNextCalls, caching, conf, caller);
     this.callable.setCaching(this.caching);
     incRegionCountMetrics(scanMetrics);
     return true;
