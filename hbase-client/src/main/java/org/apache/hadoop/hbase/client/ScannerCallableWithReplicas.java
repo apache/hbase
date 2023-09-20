@@ -57,6 +57,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
   final ClusterConnection cConnection;
   protected final ExecutorService pool;
+  private final boolean useScannerTimeoutForNextCalls;
   protected final int timeBeforeReplicas;
   private final Scan scan;
   private final int retries;
@@ -72,11 +73,12 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
   public ScannerCallableWithReplicas(TableName tableName, ClusterConnection cConnection,
     ScannerCallable baseCallable, ExecutorService pool, int timeBeforeReplicas, Scan scan,
-    int retries, int readRpcTimeout, int scannerTimeout, int caching, Configuration conf,
-    RpcRetryingCaller<Result[]> caller) {
+    int retries, int readRpcTimeout, int scannerTimeout, boolean useScannerTimeoutForNextCalls,
+    int caching, Configuration conf, RpcRetryingCaller<Result[]> caller) {
     this.currentScannerCallable = baseCallable;
     this.cConnection = cConnection;
     this.pool = pool;
+    this.useScannerTimeoutForNextCalls = useScannerTimeoutForNextCalls;
     if (timeBeforeReplicas < 0) {
       throw new IllegalArgumentException("Invalid value of operation timeout on the primary");
     }
@@ -184,9 +186,12 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         pool, regionReplication * 5);
 
     AtomicBoolean done = new AtomicBoolean(false);
+    // make sure we use the same rpcTimeout for current and other replicas
+    int rpcTimeoutForCall = getRpcTimeout();
+
     replicaSwitched.set(false);
     // submit call for the primary replica or user specified replica
-    addCallsForCurrentReplica(cs);
+    addCallsForCurrentReplica(cs, rpcTimeoutForCall);
     int startIndex = 0;
 
     try {
@@ -231,7 +236,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       endIndex = 1;
     } else {
       // TODO: this may be an overkill for large region replication
-      addCallsForOtherReplicas(cs, 0, regionReplication - 1);
+      addCallsForOtherReplicas(cs, 0, regionReplication - 1, rpcTimeoutForCall);
     }
 
     try {
@@ -323,15 +328,41 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable != null ? currentScannerCallable.getCursor() : null;
   }
 
-  private void
-    addCallsForCurrentReplica(ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs) {
+  private void addCallsForCurrentReplica(
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, int rpcTimeout) {
     RetryingRPC retryingOnReplica = new RetryingRPC(currentScannerCallable);
     outstandingCallables.add(currentScannerCallable);
-    cs.submit(retryingOnReplica, readRpcTimeout, scannerTimeout, currentScannerCallable.id);
+    cs.submit(retryingOnReplica, rpcTimeout, scannerTimeout, currentScannerCallable.id);
+  }
+
+  /**
+   * As we have a call sequence for scan, it is useless to have a different rpc timeout which is
+   * less than the scan timeout. If the server does not respond in time(usually this will not happen
+   * as we have heartbeat now), we will get an OutOfOrderScannerNextException when resending the
+   * next request and the only way to fix this is to close the scanner and open a new one.
+   * <p>
+   * The legacy behavior of ScannerCallable has been to use readRpcTimeout despite the above. If
+   * using legacy behavior, we always use that.
+   * <p>
+   * If new behavior is enabled, we determine the rpc timeout to use based on whether the scanner is
+   * open. If scanner is open, use scannerTimeout otherwise use readRpcTimeout.
+   */
+  private int getRpcTimeout() {
+    if (useScannerTimeoutForNextCalls) {
+      return isNextCall() ? scannerTimeout : readRpcTimeout;
+    } else {
+      return readRpcTimeout;
+    }
+  }
+
+  private boolean isNextCall() {
+    return currentScannerCallable != null && currentScannerCallable.scannerId != -1
+      && !currentScannerCallable.renew && !currentScannerCallable.closed;
   }
 
   private void addCallsForOtherReplicas(
-    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, int min, int max) {
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, int min, int max,
+    int rpcTimeout) {
 
     for (int id = min; id <= max; id++) {
       if (currentScannerCallable.id == id) {
@@ -341,7 +372,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       setStartRowForReplicaCallable(s);
       outstandingCallables.add(s);
       RetryingRPC retryingOnReplica = new RetryingRPC(s);
-      cs.submit(retryingOnReplica, readRpcTimeout, scannerTimeout, id);
+      cs.submit(retryingOnReplica, rpcTimeout, scannerTimeout, id);
     }
   }
 

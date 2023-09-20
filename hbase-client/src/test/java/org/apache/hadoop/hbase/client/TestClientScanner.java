@@ -71,6 +71,7 @@ public class TestClientScanner {
   Scan scan;
   ExecutorService pool;
   Configuration conf;
+  ConnectionConfiguration connectionConfig;
 
   ClusterConnection clusterConn;
   RpcRetryingCallerFactory rpcFactory;
@@ -87,7 +88,9 @@ public class TestClientScanner {
     pool = Executors.newSingleThreadExecutor();
     scan = new Scan();
     conf = new Configuration();
+    connectionConfig = new ConnectionConfiguration(conf);
     Mockito.when(clusterConn.getConfiguration()).thenReturn(conf);
+    Mockito.when(clusterConn.getConnectionConfiguration()).thenReturn(connectionConfig);
   }
 
   @After
@@ -105,12 +108,12 @@ public class TestClientScanner {
 
     public MockClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       ClusterConnection connection, RpcRetryingCallerFactory rpcFactory,
-      RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout)
-      throws IOException {
+      RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout,
+      ConnectionConfiguration connectionConfig) throws IOException {
       super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, primaryOperationTimeout,
-        Collections.emptyMap());
+        connectionConfig, Collections.emptyMap());
     }
 
     @Override
@@ -175,7 +178,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
 
       scanner.setRpcFinished(true);
 
@@ -239,7 +242,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
 
       scanner.loadCache();
@@ -302,7 +305,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
 
       scanner.loadCache();
@@ -373,7 +376,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       scanner.setRpcFinished(true);
 
       InOrder inOrder = Mockito.inOrder(caller);
@@ -440,7 +443,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+        rpcFactory, controllerFactory, pool, Integer.MAX_VALUE, connectionConfig)) {
       InOrder inOrder = Mockito.inOrder(caller);
       scanner.setRpcFinished(true);
 
@@ -485,7 +488,7 @@ public class TestClientScanner {
 
     try (MockClientScanner scanner =
       new MockClientScanner(conf, scan, TableName.valueOf(name.getMethodName()), clusterConn,
-        rpcFactory, new RpcControllerFactory(conf), pool, Integer.MAX_VALUE)) {
+        rpcFactory, new RpcControllerFactory(conf), pool, Integer.MAX_VALUE, connectionConfig)) {
       Iterator<Result> iter = scanner.iterator();
       while (iter.hasNext()) {
         iter.next();

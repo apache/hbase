@@ -325,16 +325,16 @@ public class HTable implements Table {
       if (scan.isReversed()) {
         return new ReversedClientScanner(getConfiguration(), scan, getName(), connection,
           rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-          replicaTimeout, requestAttributes);
+          replicaTimeout, connConfiguration, requestAttributes);
       } else {
         if (async) {
           return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), connection,
             rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout, requestAttributes);
+            replicaTimeout, connConfiguration, requestAttributes);
         } else {
           return new ClientSimpleScanner(getConfiguration(), scan, getName(), connection,
             rpcCallerFactory, rpcControllerFactory, pool, scanReadRpcTimeout, scanTimeout,
-            replicaTimeout, requestAttributes);
+            replicaTimeout, connConfiguration, requestAttributes);
         }
       }
     }
