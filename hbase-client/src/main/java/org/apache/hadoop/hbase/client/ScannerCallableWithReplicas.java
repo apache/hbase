@@ -352,10 +352,15 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
    */
   private int getRpcTimeout() {
     if (useScannerTimeoutForNextCalls) {
-      return currentScannerCallable.scannerId == -1 ? readRpcTimeout : scannerTimeout;
+      return isNextCall() ? scannerTimeout : readRpcTimeout;
     } else {
       return readRpcTimeout;
     }
+  }
+
+  private boolean isNextCall() {
+    return currentScannerCallable != null && currentScannerCallable.scannerId != -1
+      && !currentScannerCallable.renew && !currentScannerCallable.closed;
   }
 
   private void addCallsForOtherReplicas(

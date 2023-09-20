@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIEN
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_SCANNER_TIMEOUT;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -293,6 +294,50 @@ public class TestClientScannerTimeouts {
     expectTimeoutOnOpenScanner(metaReadRpcTimeout, this::getAsyncScanner);
   }
 
+  /**
+   * Test renewLease timeout for non-async scanner, which should use rpcTimeout. Async scanner does
+   * lease renewal automatically in the background, so renewLease() always returns false. So this
+   * test doesn't have an Async counterpart like the others.
+   */
+  @Test
+  public void testNormalScanTimeoutOnRenewLease() throws IOException {
+    setup(false);
+    expectTimeoutOnRenewScanner(rpcTimeout, this::getScanner);
+  }
+
+  /**
+   * Test renewLease timeout for non-async scanner, which should use rpcTimeout. Async scanner does
+   * lease renewal automatically in the background, so renewLease() always returns false. So this
+   * test doesn't have an Async counterpart like the others.
+   */
+  @Test
+  public void testMetaScanTimeoutOnRenewLease() throws IOException {
+    setup(true);
+    expectTimeoutOnRenewScanner(metaReadRpcTimeout, this::getScanner);
+  }
+
+  /**
+   * Test close timeout for non-async scanner, which should use rpcTimeout. Async scanner does
+   * closes async and always returns immediately. So this test doesn't have an Async counterpart
+   * like the others.
+   */
+  @Test
+  public void testNormalScanTimeoutOnClose() throws IOException {
+    setup(false);
+    expectTimeoutOnCloseScanner(rpcTimeout, this::getScanner);
+  }
+
+  /**
+   * Test close timeout for non-async scanner, which should use rpcTimeout. Async scanner does
+   * closes async and always returns immediately. So this test doesn't have an Async counterpart
+   * like the others.
+   */
+  @Test
+  public void testMetaScanTimeoutOnClose() throws IOException {
+    setup(true);
+    expectTimeoutOnCloseScanner(metaReadRpcTimeout, this::getScanner);
+  }
+
   private void expectRetryOutOfOrderScannerNext(Supplier<ResultScanner> scannerSupplier)
     throws IOException {
     setup(false);
@@ -399,6 +444,34 @@ public class TestClientScannerTimeouts {
     expectTimeout(start, timeout);
   }
 
+  private void expectTimeoutOnRenewScanner(int timeout, Supplier<ResultScanner> scannerSupplier)
+    throws IOException {
+    RSRpcServicesWithScanTimeout.setSleepForTimeout(timeout);
+    RSRpcServicesWithScanTimeout.sleepOnRenew = true;
+    LOG.info(
+      "Opening scanner, expecting no timeouts from first next() call from openScanner response");
+    long start = System.nanoTime();
+    ResultScanner scanner = scannerSupplier.get();
+    scanner.next();
+    assertFalse("Expected renewLease to fail due to timeout", scanner.renewLease());
+    expectTimeout(start, timeout);
+  }
+
+  private void expectTimeoutOnCloseScanner(int timeout, Supplier<ResultScanner> scannerSupplier)
+    throws IOException {
+    RSRpcServicesWithScanTimeout.setSleepForTimeout(timeout);
+    RSRpcServicesWithScanTimeout.sleepOnClose = true;
+    LOG.info(
+      "Opening scanner, expecting no timeouts from first next() call from openScanner response");
+    long start = System.nanoTime();
+    ResultScanner scanner = scannerSupplier.get();
+    scanner.next();
+    // close doesnt throw or return anything, so we can't verify it directly.
+    // but we can verify that it took as long as we expect below
+    scanner.close();
+    expectTimeout(start, timeout);
+  }
+
   private void expectTimeout(long start, int timeout) {
     long duration = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
     LOG.info("Expected duration >= {}, and got {}", timeout, duration);
@@ -453,6 +526,8 @@ public class TestClientScannerTimeouts {
 
     private static long seqNoToSleepOn = -1;
     private static boolean sleepOnOpen = false;
+    private static boolean sleepOnRenew = false;
+    private static boolean sleepOnClose = false;
     private static volatile boolean slept;
     private static int tryNumber = 0;
 
@@ -470,6 +545,8 @@ public class TestClientScannerTimeouts {
       throwAlways = false;
       threw = false;
       sleepOnOpen = false;
+      sleepOnRenew = false;
+      sleepOnClose = false;
       slept = false;
       tryNumber = 0;
     }
@@ -484,7 +561,19 @@ public class TestClientScannerTimeouts {
       if (request.hasScannerId()) {
         LOG.info("Got request {}", request);
         ScanResponse scanResponse = super.scan(controller, request);
-        if (tableScannerId != request.getScannerId() || request.getCloseScanner()) {
+        if (tableScannerId != request.getScannerId()) {
+          return scanResponse;
+        }
+        if (request.getCloseScanner()) {
+          if (!slept && sleepOnClose) {
+            try {
+              LOG.info("SLEEPING " + sleepTime);
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+            }
+            slept = true;
+            tryNumber++;
+          }
           return scanResponse;
         }
 
@@ -499,7 +588,10 @@ public class TestClientScannerTimeouts {
           throw new ServiceException(new OutOfOrderScannerNextException());
         }
 
-        if (!slept && request.hasNextCallSeq() && seqNoToSleepOn == request.getNextCallSeq()) {
+        if (
+          !slept && (request.hasNextCallSeq() && seqNoToSleepOn == request.getNextCallSeq()
+            || sleepOnRenew && request.getRenew())
+        ) {
           try {
             LOG.info("SLEEPING " + sleepTime);
             Thread.sleep(sleepTime);
