@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
-import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
 import org.apache.hbase.thirdparty.com.google.protobuf.TextFormat;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBufInputStream;
@@ -164,8 +164,13 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     }
     Message value;
     if (call.responseDefaultType != null) {
-      Builder builder = call.responseDefaultType.newBuilderForType();
-      builder.mergeDelimitedFrom(in);
+      Message.Builder builder = call.responseDefaultType.newBuilderForType();
+      if (!builder.mergeDelimitedFrom(in)) {
+        // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
+        // before reading any bytes out, so here we need to manually throw the EOFException out
+        throw new EOFException(
+          "EOF while reading response with type: " + call.responseDefaultType.getClass().getName());
+      }
       value = builder.build();
     } else {
       value = null;
