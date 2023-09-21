@@ -36,20 +36,21 @@ public class BucketCachePersister extends Thread {
   }
 
   public void run() {
-    while (true) {
-      try {
-        Thread.sleep(intervalMillis);
-        if (cache.isCacheInconsistent()) {
-          LOG.debug("Cache is inconsistent, persisting to disk");
-          cache.persistToFile();
-          cache.setCacheInconsistent(false);
+    try {
+      while (true) {
+        try {
+          Thread.sleep(intervalMillis);
+          if (cache.isCacheInconsistent()) {
+            LOG.debug("Cache is inconsistent, persisting to disk");
+            cache.persistToFile();
+            cache.setCacheInconsistent(false);
+          }
+        } catch (IOException e) {
+          LOG.warn("Exception in BucketCachePersister.", e);
         }
-      } catch (IOException e) {
-        LOG.warn("IOException in BucketCachePersister {} ", e.getMessage());
-      } catch (InterruptedException iex) {
-        LOG.warn("InterruptedException in BucketCachePersister {} ", iex.getMessage());
-        break;
       }
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupting BucketCachePersister thread.", e);
     }
   }
 }

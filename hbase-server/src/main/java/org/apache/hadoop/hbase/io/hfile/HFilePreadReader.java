@@ -22,8 +22,8 @@ import java.util.Optional;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -40,7 +40,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
     final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
-    BucketCache.getBuckedCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
+    BucketCache.getBucketCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
       .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
     if (
@@ -66,7 +66,7 @@ public class HFilePreadReader extends HFileReaderImpl {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
             Optional<BucketCache> bucketCacheOptional =
-              BucketCache.getBuckedCacheFromCacheConfig(cacheConf);
+              BucketCache.getBucketCacheFromCacheConfig(cacheConf);
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
             while (offset < end) {
@@ -111,9 +111,8 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
-            BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
-              .ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
-
+            final long fileSize = offset;
+            bucketCacheOptional.ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
