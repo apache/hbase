@@ -397,12 +397,12 @@ public abstract class AbstractTestFSWAL {
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     long filenum = EnvironmentEdgeManager.currentTime();
     Path path = wal.computeFilename(filenum);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     Path parent = path.getParent();
     path = wal.computeFilename(filenum + 1);
     Path newPath = new Path(parent.getParent(), parent.getName() + "-splitting");
     FS.rename(parent, newPath);
-    wal.createWriterInstance(path);
+    wal.createWriterInstance(FS, path);
     fail("It should fail to create the new WAL");
   }
 

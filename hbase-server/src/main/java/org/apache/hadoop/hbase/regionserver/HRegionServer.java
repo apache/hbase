@@ -1734,7 +1734,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * be hooked up to WAL.
    */
   private void setupWALAndReplication() throws IOException {
-    WALFactory factory = new WALFactory(conf, serverName, this, true);
+    WALFactory factory = new WALFactory(conf, serverName, this);
     // TODO Replication make assumptions here based on the default filesystem impl
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String logName = AbstractFSWALProvider.getWALDirectoryName(this.serverName.toString());
@@ -2122,7 +2122,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return walRoller;
   }
 
-  WALFactory getWalFactory() {
+  public WALFactory getWalFactory() {
     return walFactory;
   }
 

@@ -276,17 +276,7 @@ public class TestRegionReplicationForWriteException {
       Class<? extends Channel> channelClass, StreamSlowMonitor monitor)
       throws FailedLogCloseException, IOException {
       super(fs, abortable, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix,
-        suffix, eventLoopGroup, channelClass, monitor);
-
-    }
-
-    public SlowAsyncFSWAL(FileSystem fs, Path rootDir, String logDir, String archiveDir,
-      Configuration conf, List<WALActionsListener> listeners, boolean failIfWALExists,
-      String prefix, String suffix, EventLoopGroup eventLoopGroup,
-      Class<? extends Channel> channelClass) throws FailedLogCloseException, IOException {
-      super(fs, rootDir, logDir, archiveDir, conf, listeners, failIfWALExists, prefix, suffix,
-        eventLoopGroup, channelClass);
-
+        suffix, null, null, eventLoopGroup, channelClass, monitor);
     }
 
     @Override

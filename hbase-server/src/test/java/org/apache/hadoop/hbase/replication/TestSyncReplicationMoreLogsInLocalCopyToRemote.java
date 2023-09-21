@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -31,11 +31,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.DualAsyncFSWAL;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -55,10 +55,10 @@ public class TestSyncReplicationMoreLogsInLocalCopyToRemote extends SyncReplicat
 
   @BeforeClass
   public static void setUp() throws Exception {
-    UTIL1.getConfiguration().setClass(SyncReplicationWALProvider.DUAL_WAL_IMPL,
-      DualAsyncFSWALForTest.class, DualAsyncFSWAL.class);
-    UTIL2.getConfiguration().setClass(SyncReplicationWALProvider.DUAL_WAL_IMPL,
-      DualAsyncFSWALForTest.class, DualAsyncFSWAL.class);
+    UTIL1.getConfiguration().setClass(WALFactory.WAL_PROVIDER, BrokenRemoteAsyncFSWALProvider.class,
+      WALProvider.class);
+    UTIL2.getConfiguration().setClass(WALFactory.WAL_PROVIDER, BrokenRemoteAsyncFSWALProvider.class,
+      WALProvider.class);
     SyncReplicationTestBase.setUp();
   }
 
@@ -70,19 +70,18 @@ public class TestSyncReplicationMoreLogsInLocalCopyToRemote extends SyncReplicat
     UTIL1.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.ACTIVE);
     HRegionServer rs = UTIL1.getRSForFirstRegionInTable(TABLE_NAME);
-    DualAsyncFSWALForTest wal =
-      (DualAsyncFSWALForTest) rs.getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
+
+    BrokenRemoteAsyncFSWALProvider.BrokenRemoteAsyncFSWAL wal =
+      (BrokenRemoteAsyncFSWALProvider.BrokenRemoteAsyncFSWAL) rs.getWalFactory()
+        .getWAL(RegionInfoBuilder.newBuilder(TABLE_NAME).build());
     wal.setRemoteBroken();
+
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(UTIL1.getConfiguration()).get()) {
       AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setMaxAttempts(1).build();
-      try {
-        table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0))).get();
-        fail("Should fail since the rs will crash and we will not retry");
-      } catch (ExecutionException e) {
-        // expected
-        LOG.info("Expected error:", e);
-      }
+      ExecutionException error = assertThrows(ExecutionException.class,
+        () -> table.put(new Put(Bytes.toBytes(0)).addColumn(CF, CQ, Bytes.toBytes(0))).get());
+      LOG.info("Expected error:", error);
     }
     UTIL1.waitFor(60000, new ExplainingPredicate<Exception>() {
 

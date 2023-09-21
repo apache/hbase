@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.SyncReplicationWALProvider;
+import org.apache.hadoop.hbase.wal.AbstractWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -97,7 +97,7 @@ public class SplitLogWorker implements Runnable {
     Path walFile = new Path(walDir, name);
     String filename = walFile.getName();
     Optional<String> optSyncPeerId =
-      SyncReplicationWALProvider.getSyncReplicationPeerIdFromWALName(filename);
+      AbstractWALProvider.getSyncReplicationPeerIdFromWALName(filename);
     if (!optSyncPeerId.isPresent()) {
       return true;
     }
