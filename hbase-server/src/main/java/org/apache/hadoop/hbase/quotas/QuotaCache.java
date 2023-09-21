@@ -371,19 +371,21 @@ public class QuotaCache implements Stoppable {
 
       // Update table machine quota factors
       for (TableName tableName : tableQuotaCache.keySet()) {
-        double factor = 1;
-        try {
-          long regionSize = tableRegionStatesCount.get(tableName).getOpenRegions();
-          if (regionSize == 0) {
-            factor = 0;
-          } else {
-            int localRegionSize = rsServices.getRegions(tableName).size();
-            factor = 1.0 * localRegionSize / regionSize;
+        if (tableRegionStatesCount.containsKey(tableName)) {
+          double factor = 1;
+          try {
+            long regionSize = tableRegionStatesCount.get(tableName).getOpenRegions();
+            if (regionSize == 0) {
+              factor = 0;
+            } else {
+              int localRegionSize = rsServices.getRegions(tableName).size();
+              factor = 1.0 * localRegionSize / regionSize;
+            }
+          } catch (IOException e) {
+            LOG.warn("Get table regions failed: {}", tableName, e);
           }
-        } catch (IOException e) {
-          LOG.warn("Get table regions failed: {}", tableName, e);
+          tableMachineQuotaFactors.put(tableName, factor);
         }
-        tableMachineQuotaFactors.put(tableName, factor);
       }
     }
   }
