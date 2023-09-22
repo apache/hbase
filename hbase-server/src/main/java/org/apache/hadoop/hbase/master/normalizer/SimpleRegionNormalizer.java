@@ -73,7 +73,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final String MERGE_MIN_REGION_AGE_DAYS_KEY = "hbase.normalizer.merge.min_region_age.days";
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
-  static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
+  static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 1;
   static final String MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY =
     "hbase.normalizer.merge.merge_request_max_number_of_regions";
   static final long DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT = 100;
