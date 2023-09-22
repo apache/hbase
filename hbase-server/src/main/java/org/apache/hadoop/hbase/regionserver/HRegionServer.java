@@ -2078,6 +2078,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this);
+    configurationManager.registerObserver(RegionScannerLimiter.create(conf));
   }
 
   /*

@@ -18,12 +18,16 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -39,6 +43,8 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.RegionScannerLimiter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -261,6 +267,40 @@ public class TestServerSideScanMetricsFromClientSide {
     baseScan.setCaching(NUM_ROWS);
     baseScan.setMaxResultSize(getCellHeapSize() * (NUM_COLS - 1));
     testRowsSeenMetric(baseScan);
+  }
+
+  @Test
+  public void testRowsFilteredMetricLimiter() throws Exception {
+    // Base scan configuration
+    Scan baseScan;
+    baseScan = new Scan();
+    baseScan.setScanMetricsEnabled(true);
+
+    // No matching column value should exist in any row. Filter all rows
+    Filter filter =
+      new SingleColumnValueFilter(FAMILIES[0], QUALIFIERS[0], CompareOperator.NOT_EQUAL, VALUE);
+    testRowsFilteredMetric(baseScan, filter, ROWS.length);
+
+    HRegionServer rs1;
+    // update server side max count of rows filtered config.
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE.getName())) {
+      RegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegion();
+      rs1 = TEST_UTIL.getHBaseCluster()
+        .getRegionServer(TEST_UTIL.getHBaseCluster().getServerWith(firstHRI.getRegionName()));
+    }
+
+    Configuration conf = TEST_UTIL.getConfiguration();
+    // set max rows filtered limitation.
+    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 5);
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+
+    assertThrows("Should throw a DoNotRetryIOException when too many rows have been filtered.",
+      DoNotRetryIOException.class, () -> testRowsFilteredMetric(baseScan, filter, ROWS.length));
+
+    // no max rows filtered limitation.
+    conf.setLong(RegionScannerLimiter.HBASE_SERVER_SCANNER_MAX_ROWS_FILTERED_PER_REQUEST_KEY, 0);
+    rs1.getConfigurationManager().notifyAllObservers(conf);
+    testRowsFilteredMetric(baseScan, filter, ROWS.length);
   }
 
   private void testRowsFilteredMetric(Scan baseScan) throws Exception {

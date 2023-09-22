@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -629,7 +630,8 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     }
   }
 
-  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext) {
+  private void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext)
+    throws DoNotRetryIOException {
     region.filteredReadRequestsCount.increment();
     if (region.getMetrics() != null) {
       region.getMetrics().updateFilteredRecords();
@@ -639,7 +641,15 @@ class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
       return;
     }
 
-    scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    long countOfRowsFiltered = scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    long maxRowsFilteredPerRequest = RegionScannerLimiter.get().getMaxRowsFilteredPerRequest();
+    if (maxRowsFilteredPerRequest > 0 && countOfRowsFiltered >= maxRowsFilteredPerRequest) {
+      String errMsg = String.format(
+        "Too many rows filtered, higher than the limit threshold of %s, so kill the scan request!",
+        maxRowsFilteredPerRequest);
+      LOG.warn("ScannerContext={}, errMsg={}", scannerContext, errMsg);
+      throw new DoNotRetryIOException(errMsg);
+    }
   }
 
   private void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
