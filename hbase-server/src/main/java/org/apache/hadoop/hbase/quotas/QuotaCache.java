@@ -385,6 +385,9 @@ public class QuotaCache implements Stoppable {
             LOG.warn("Get table regions failed: {}", tableName, e);
           }
           tableMachineQuotaFactors.put(tableName, factor);
+        } else {
+          // TableName might have already been dropped (outdated)
+            tableMachineQuotaFactors.remove(tableName);
         }
       }
     }
