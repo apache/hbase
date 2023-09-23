@@ -1545,10 +1545,10 @@ under the License.
   <supplement>
     <project>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
 
       <licenses>
-        <!-- bcpkix-jdk15on is licensed under the Bouncy Castle License, which is equivalent to the MIT License -->
+        <!-- bcpkix-jdk18on is licensed under the Bouncy Castle License, which is equivalent to the MIT License -->
         <license>
           <name>MIT License</name>
           <url>http://www.opensource.org/licenses/mit-license.php</url>
