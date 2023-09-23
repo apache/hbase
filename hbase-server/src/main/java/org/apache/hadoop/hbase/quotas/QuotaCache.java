@@ -387,7 +387,7 @@ public class QuotaCache implements Stoppable {
           tableMachineQuotaFactors.put(tableName, factor);
         } else {
           // TableName might have already been dropped (outdated)
-            tableMachineQuotaFactors.remove(tableName);
+          tableMachineQuotaFactors.remove(tableName);
         }
       }
     }
