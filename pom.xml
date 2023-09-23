@@ -599,7 +599,7 @@
     <joni.version>2.1.31</joni.version>
     <jcodings.version>1.0.55</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.70</bouncycastle.version>
+    <bouncycastle.version>1.76</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.0.0</commons-crypto.version>
@@ -1301,7 +1301,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
+        <artifactId>bcprov-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1964,6 +1964,23 @@
                     <exclude>org.slf4j:slf4j-log4j12</exclude>
                   </excludes>
                   <message>Use reload4j instead</message>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-bouncycastle-jdk15on</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.bouncycastle:*-jdk15on</exclude>
+                  </excludes>
+                  <message>Use org.bouncycastle:*-jdk18on instead</message>
+                  <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -3523,6 +3540,10 @@
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>bouncycastle</groupId>
+                <artifactId>bcprov-jdk15</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4090,6 +4111,14 @@
               <exclusion>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
