@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.security.provider.example;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -216,7 +216,7 @@ public class TestShadeSaslAuthenticationProvider {
     }
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testNegativeAuthentication() throws Exception {
     // Validate that we can read that record back out as the user with our custom auth'n
     final Configuration clientConf = new Configuration(CONF);
@@ -226,17 +226,20 @@ public class TestShadeSaslAuthenticationProvider {
         UserGroupInformation.createUserForTesting("user1", new String[0]);
       user1.addToken(
         ShadeClientTokenUtil.obtainToken(conn, "user1", "not a real password".toCharArray()));
-      user1.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws Exception {
-          try (Connection conn = ConnectionFactory.createConnection(clientConf);
-            Table t = conn.getTable(tableName)) {
-            t.get(new Get(Bytes.toBytes("r1")));
-            fail("Should not successfully authenticate with HBase");
-            return null;
+      // Server will close the connection directly once auth failed, so at client side, we do not
+      // know what is the real problem so we will keep retrying, until reached the max retry times
+      // limitation
+      assertThrows("Should not successfully authenticate with HBase",
+        RetriesExhaustedException.class, () -> user1.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            try (Connection conn = ConnectionFactory.createConnection(clientConf);
+              Table t = conn.getTable(tableName)) {
+              t.get(new Get(Bytes.toBytes("r1")));
+              return null;
+            }
           }
-        }
-      });
+        }));
     }
   }
 }
