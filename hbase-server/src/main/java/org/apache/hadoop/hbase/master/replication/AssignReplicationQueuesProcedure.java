@@ -186,7 +186,7 @@ public class AssignReplicationQueuesProcedure
         retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
       }
       long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
-      LOG.warn("Failed to claim replication queues for {}, suspend {}secs {}; {};", crashedServer,
+      LOG.warn("Failed to claim replication queues for {}, suspend {} secs", crashedServer,
         backoff / 1000, e);
       setTimeout(Math.toIntExact(backoff));
       setState(ProcedureProtos.ProcedureState.WAITING_TIMEOUT);

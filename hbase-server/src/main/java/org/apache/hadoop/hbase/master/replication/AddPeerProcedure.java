@@ -86,10 +86,10 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   @Override
   protected void releaseLatch(MasterProcedureEnv env) {
     if (cleanerDisabled) {
-      env.getReplicationPeerManager().getReplicationLogCleanerBarrier().enable();
+      env.getMasterServices().getReplicationLogCleanerBarrier().enable();
     }
     if (peerConfig.isSyncReplication()) {
-      env.getReplicationPeerManager().releaseSyncReplicationPeerLock();
+      env.getMasterServices().getSyncReplicationPeerLock().release();
     }
     super.releaseLatch(env);
   }
@@ -97,7 +97,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
   @Override
   protected void prePeerModification(MasterProcedureEnv env)
     throws IOException, ReplicationException, ProcedureSuspendedException {
-    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
       throw suspend(env.getMasterConfiguration(),
         backoff -> LOG.warn("LogCleaner is run at the same time when adding peer {}, sleep {} secs",
           peerId, backoff / 1000));
@@ -108,7 +108,7 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
       cpHost.preAddReplicationPeer(peerId, peerConfig);
     }
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw suspend(env.getMasterConfiguration(),
           backoff -> LOG.warn(
             "Can not acquire sync replication peer lock for peer {}, sleep {} secs", peerId,
@@ -142,12 +142,12 @@ public class AddPeerProcedure extends ModifyPeerProcedure {
       // when executing the procedure we will try to disable and acquire.
       return;
     }
-    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
       throw new IllegalStateException("can not disable log cleaner, this should not happen");
     }
     cleanerDisabled = true;
     if (peerConfig.isSyncReplication()) {
-      if (!env.getReplicationPeerManager().tryAcquireSyncReplicationPeerLock()) {
+      if (!env.getMasterServices().getSyncReplicationPeerLock().tryAcquire()) {
         throw new IllegalStateException(
           "Can not acquire sync replication peer lock for peer " + peerId);
       }

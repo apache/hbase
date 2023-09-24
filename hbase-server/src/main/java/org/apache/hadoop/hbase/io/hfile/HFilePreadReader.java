@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.IOException;
+import java.util.Optional;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketEntry;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,8 +39,14 @@ public class HFilePreadReader extends HFileReaderImpl {
   public HFilePreadReader(ReaderContext context, HFileInfo fileInfo, CacheConfig cacheConf,
     Configuration conf) throws IOException {
     super(context, fileInfo, cacheConf, conf);
+    final MutableBoolean fileAlreadyCached = new MutableBoolean(false);
+    BucketCache.getBuckedCacheFromCacheConfig(cacheConf).ifPresent(bc -> fileAlreadyCached
+      .setValue(bc.getFullyCachedFiles().get(path.getName()) == null ? false : true));
     // Prefetch file blocks upon open if requested
-    if (cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()) {
+    if (
+      cacheConf.shouldPrefetchOnOpen() && cacheIfCompactionsOff()
+        && !fileAlreadyCached.booleanValue()
+    ) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -55,11 +65,35 @@ public class HFilePreadReader extends HFileReaderImpl {
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch start " + getPathOffsetEndStr(path, offset, end));
             }
+            Optional<BucketCache> bucketCacheOptional =
+              BucketCache.getBuckedCacheFromCacheConfig(cacheConf);
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
             while (offset < end) {
               if (Thread.interrupted()) {
                 break;
+              }
+              // BucketCache can be persistent and resilient to restarts, so we check first if the
+              // block exists on its in-memory index, if so, we just update the offset and move on
+              // to the next block without actually going read all the way to the cache.
+              if (bucketCacheOptional.isPresent()) {
+                BucketCache cache = bucketCacheOptional.get();
+                BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
+                BucketEntry entry = cache.getBackingMap().get(cacheKey);
+                if (entry != null) {
+                  cacheKey = new BlockCacheKey(name, offset);
+                  entry = cache.getBackingMap().get(cacheKey);
+                  if (entry == null) {
+                    LOG.debug("No cache key {}, we'll read and cache it", cacheKey);
+                  } else {
+                    offset += entry.getOnDiskSizeWithHeader();
+                    LOG.debug("Found cache key {}. Skipping prefetch, the block is already cached.",
+                      cacheKey);
+                    continue;
+                  }
+                } else {
+                  LOG.debug("No entry in the backing map for cache key {}", cacheKey);
+                }
               }
               // Perhaps we got our block from cache? Unlikely as this may be, if it happens, then
               // the internal-to-hfileblock thread local which holds the overread that gets the
@@ -77,12 +111,15 @@ public class HFilePreadReader extends HFileReaderImpl {
                 block.release();
               }
             }
+            BucketCache.getBuckedCacheFromCacheConfig(cacheConf)
+              .ifPresent(bc -> bc.fileCacheCompleted(path.getName()));
+
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)
             if (LOG.isTraceEnabled()) {
               LOG.trace("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
             }
-          } catch (Exception e) {
+          } catch (Throwable e) {
             // Other exceptions are interesting
             LOG.warn("Prefetch " + getPathOffsetEndStr(path, offset, end), e);
           } finally {

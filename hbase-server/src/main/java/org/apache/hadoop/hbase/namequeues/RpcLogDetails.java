@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import java.util.Map;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -39,6 +40,8 @@ public class RpcLogDetails extends NamedQueuePayload {
   private final String className;
   private final boolean isSlowLog;
   private final boolean isLargeLog;
+  private final Map<String, byte[]> connectionAttributes;
+  private final Map<String, byte[]> requestAttributes;
 
   public RpcLogDetails(RpcCall rpcCall, Message param, String clientAddress, long responseSize,
     long blockBytesScanned, String className, boolean isSlowLog, boolean isLargeLog) {
@@ -51,6 +54,12 @@ public class RpcLogDetails extends NamedQueuePayload {
     this.className = className;
     this.isSlowLog = isSlowLog;
     this.isLargeLog = isLargeLog;
+
+    // it's important to call getConnectionAttributes and getRequestAttributes here
+    // because otherwise the buffers may get released before the log details are processed which
+    // would result in corrupted attributes
+    this.connectionAttributes = rpcCall.getConnectionAttributes();
+    this.requestAttributes = rpcCall.getRequestAttributes();
   }
 
   public RpcCall getRpcCall() {
@@ -85,11 +94,20 @@ public class RpcLogDetails extends NamedQueuePayload {
     return param;
   }
 
+  public Map<String, byte[]> getConnectionAttributes() {
+    return connectionAttributes;
+  }
+
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this).append("rpcCall", rpcCall).append("param", param)
       .append("clientAddress", clientAddress).append("responseSize", responseSize)
       .append("className", className).append("isSlowLog", isSlowLog)
-      .append("isLargeLog", isLargeLog).toString();
+      .append("isLargeLog", isLargeLog).append("connectionAttributes", connectionAttributes)
+      .append("requestAttributes", requestAttributes).toString();
   }
 }

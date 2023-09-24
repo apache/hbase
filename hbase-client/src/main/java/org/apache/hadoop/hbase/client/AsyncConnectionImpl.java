@@ -31,6 +31,8 @@ import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 import io.opentelemetry.api.trace.Span;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -127,6 +129,11 @@ public class AsyncConnectionImpl implements AsyncConnection {
 
   public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
     SocketAddress localAddress, User user) {
+    this(conf, registry, clusterId, localAddress, user, Collections.emptyMap());
+  }
+
+  public AsyncConnectionImpl(Configuration conf, ConnectionRegistry registry, String clusterId,
+    SocketAddress localAddress, User user, Map<String, byte[]> connectionAttributes) {
     this.conf = conf;
     this.user = user;
     this.metricsScope = MetricsConnection.getScope(conf, clusterId, this);
@@ -137,13 +144,13 @@ public class AsyncConnectionImpl implements AsyncConnection {
     this.connConf = new AsyncConnectionConfiguration(conf);
     this.registry = registry;
     if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
-      this.metrics =
-        Optional.of(MetricsConnection.getMetricsConnection(metricsScope, () -> null, () -> null));
+      this.metrics = Optional
+        .of(MetricsConnection.getMetricsConnection(conf, metricsScope, () -> null, () -> null));
     } else {
       this.metrics = Optional.empty();
     }
-    this.rpcClient =
-      RpcClientFactory.createClient(conf, clusterId, localAddress, metrics.orElse(null));
+    this.rpcClient = RpcClientFactory.createClient(conf, clusterId, localAddress,
+      metrics.orElse(null), connectionAttributes);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcTimeout =
       (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(connConf.getRpcTimeoutNs()));

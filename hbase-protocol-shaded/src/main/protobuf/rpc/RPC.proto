@@ -92,6 +92,7 @@ message ConnectionHeader {
   optional VersionInfo version_info = 5;
   // the transformation for rpc AES encryption with Apache Commons Crypto
   optional string rpc_crypto_cipher_transformation = 6;
+  repeated NameBytesPair attribute = 7;
 }
 
 // This is sent by rpc server to negotiate the data if necessary
@@ -148,6 +149,7 @@ message RequestHeader {
   // See HConstants.
   optional uint32 priority = 6;
   optional uint32 timeout = 7;
+  repeated NameBytesPair attribute = 8;
 }
 
 message ResponseHeader {

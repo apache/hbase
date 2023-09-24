@@ -551,6 +551,15 @@ public interface Admin extends Abortable, Closeable {
   void flush(TableName tableName, byte[] columnFamily) throws IOException;
 
   /**
+   * Flush the specified column family stores on all regions of the passed table. This runs as a
+   * synchronous operation.
+   * @param tableName      table to flush
+   * @param columnFamilies column families within a table
+   * @throws IOException if a remote or network exception occurs
+   */
+  void flush(TableName tableName, List<byte[]> columnFamilies) throws IOException;
+
+  /**
    * Flush an individual region. Synchronous operation.
    * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs

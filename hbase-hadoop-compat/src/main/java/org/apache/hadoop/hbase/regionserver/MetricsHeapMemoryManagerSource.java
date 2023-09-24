@@ -71,6 +71,18 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   void setCurMemStoreSizeGauge(long memStoreSize);
 
   /**
+   * Set the current global memstore on-heap size used gauge
+   * @param memStoreOnHeapSize the current memory usage in memstore on-heap, in bytes.
+   */
+  void setCurMemStoreOnHeapSizeGauge(long memStoreOnHeapSize);
+
+  /**
+   * Set the current global memstore off-heap size used gauge
+   * @param memStoreOffHeapSize the current memory usage in memstore off-heap, in bytes.
+   */
+  void setCurMemStoreOffHeapSizeGauge(long memStoreOffHeapSize);
+
+  /**
    * Update the increase/decrease memstore size histogram
    * @param memStoreDeltaSize the tuning result of memstore.
    */
@@ -118,6 +130,13 @@ public interface MetricsHeapMemoryManagerSource extends BaseSource {
   String UNBLOCKED_FLUSH_GAUGE_DESC = "Gauge for the unblocked flush count before tuning";
   String MEMSTORE_SIZE_GAUGE_NAME = "memStoreSize";
   String MEMSTORE_SIZE_GAUGE_DESC = "Global MemStore used in bytes by the RegionServer";
+  String MEMSTORE_ONHEAP_SIZE_GAUGE_NAME = "memStoreOnHeapSize";
+  String MEMSTORE_ONHEAP_SIZE_GAUGE_DESC =
+    "Global MemStore On-heap size in bytes by the RegionServer";
+  String MEMSTORE_OFFHEAP_SIZE_GAUGE_NAME = "memStoreOffHeapSize";
+  String MEMSTORE_OFFHEAP_SIZE_GAUGE_DESC =
+    "Global MemStore Off-heap size in bytes by the RegionServer";
+
   String BLOCKCACHE_SIZE_GAUGE_NAME = "blockCacheSize";
   String BLOCKCACHE_SIZE_GAUGE_DESC = "BlockCache used in bytes by the RegionServer";
 

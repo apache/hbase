@@ -115,7 +115,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
 
   private void disableReplicationLogCleaner(MasterProcedureEnv env)
     throws ProcedureSuspendedException {
-    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
       // it is not likely that we can reach here as we will schedule this procedure immediately
       // after master restarting, where ReplicationLogCleaner should have not started its first run
       // yet. But anyway, let's make the code more robust. And it is safe to wait a bit here since
@@ -130,7 +130,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
   }
 
   private void enableReplicationLogCleaner(MasterProcedureEnv env) {
-    env.getReplicationPeerManager().getReplicationLogCleanerBarrier().enable();
+    env.getMasterServices().getReplicationLogCleanerBarrier().enable();
   }
 
   private void waitUntilNoPeerProcedure(MasterProcedureEnv env) throws ProcedureSuspendedException {
@@ -224,7 +224,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
             lockEntry = procLock.getLockEntry(getProcId());
           } catch (IOException ioe) {
             LOG.error("Error while acquiring execution lock for procedure {}"
-              + " when trying to wake it up, aborting...", ioe);
+              + " when trying to wake it up, aborting...", this, ioe);
             env.getMasterServices().abort("Can not acquire procedure execution lock", e);
             return;
           }
@@ -304,7 +304,7 @@ public class MigrateReplicationQueueFromZkToTableProcedure
       // when executing the procedure we will try to disable and acquire.
       return;
     }
-    if (!env.getReplicationPeerManager().getReplicationLogCleanerBarrier().disable()) {
+    if (!env.getMasterServices().getReplicationLogCleanerBarrier().disable()) {
       throw new IllegalStateException("can not disable log cleaner, this should not happen");
     }
   }

@@ -45,6 +45,7 @@ final class BucketProtoUtils {
       .setIoClass(cache.ioEngine.getClass().getName())
       .setMapClass(cache.backingMap.getClass().getName())
       .putAllDeserializers(CacheableDeserializerIdManager.save())
+      .putAllPrefetchedFiles(cache.fullyCachedFiles)
       .setBackingMap(BucketProtoUtils.toPB(cache.backingMap))
       .setChecksum(ByteString
         .copyFrom(((PersistentIOEngine) cache.ioEngine).calculateChecksum(cache.getAlgorithm())))
@@ -99,8 +100,10 @@ final class BucketProtoUtils {
 
   private static BucketCacheProtos.BucketEntry toPB(BucketEntry entry) {
     return BucketCacheProtos.BucketEntry.newBuilder().setOffset(entry.offset())
-      .setLength(entry.getLength()).setDeserialiserIndex(entry.deserializerIndex)
-      .setAccessCounter(entry.getAccessCounter()).setPriority(toPB(entry.getPriority())).build();
+      .setCachedTime(entry.getCachedTime()).setLength(entry.getLength())
+      .setDiskSizeWithHeader(entry.getOnDiskSizeWithHeader())
+      .setDeserialiserIndex(entry.deserializerIndex).setAccessCounter(entry.getAccessCounter())
+      .setPriority(toPB(entry.getPriority())).build();
   }
 
   private static BucketCacheProtos.BlockPriority toPB(BlockPriority p) {
@@ -128,7 +131,8 @@ final class BucketProtoUtils {
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.
       BucketEntry value = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
-        protoValue.getAccessCounter(),
+        protoValue.getDiskSizeWithHeader(), protoValue.getAccessCounter(),
+        protoValue.getCachedTime(),
         protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
         ByteBuffAllocator.HEAP);
       // This is the deserializer that we stored

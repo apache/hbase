@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.fs;
 
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+
 import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -117,21 +119,22 @@ public class TestBlockReorderBlockLocation {
 
     for (int i = 0; i < 10; i++) {
       // The interceptor is not set in this test, so we get the raw list at this point
-      LocatedBlocks l;
+      LocatedBlocks lbs;
       final long max = EnvironmentEdgeManager.currentTime() + 10000;
       do {
-        l = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
-        Assert.assertNotNull(l.getLocatedBlocks());
-        Assert.assertEquals(1, l.getLocatedBlocks().size());
-        Assert.assertTrue("Expecting " + repCount + " , got " + l.get(0).getLocations().length,
+        lbs = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
+        Assert.assertNotNull(lbs.getLocatedBlocks());
+        Assert.assertEquals(1, lbs.getLocatedBlocks().size());
+        Assert.assertTrue(
+          "Expecting " + repCount + " , got " + getLocatedBlockLocations(lbs.get(0)).length,
           EnvironmentEdgeManager.currentTime() < max);
-      } while (l.get(0).getLocations().length != repCount);
+      } while (getLocatedBlockLocations(lbs.get(0)).length != repCount);
 
       // Should be filtered, the name is different => The order won't change
-      Object originalList[] = l.getLocatedBlocks().toArray();
+      Object[] originalList = lbs.getLocatedBlocks().toArray();
       HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
-      lrb.reorderBlocks(conf, l, fileName);
-      Assert.assertArrayEquals(originalList, l.getLocatedBlocks().toArray());
+      lrb.reorderBlocks(conf, lbs, fileName);
+      Assert.assertArrayEquals(originalList, lbs.getLocatedBlocks().toArray());
 
       // Should be reordered, as we pretend to be a file name with a compliant stuff
       Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
@@ -144,12 +147,12 @@ public class TestBlockReorderBlockLocation {
         AbstractFSWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(), pseudoLogFile));
 
       // And check we're doing the right reorder.
-      lrb.reorderBlocks(conf, l, pseudoLogFile);
-      Assert.assertEquals(host1, l.get(0).getLocations()[2].getHostName());
+      lrb.reorderBlocks(conf, lbs, pseudoLogFile);
+      Assert.assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
 
       // Check again, it should remain the same.
-      lrb.reorderBlocks(conf, l, pseudoLogFile);
-      Assert.assertEquals(host1, l.get(0).getLocations()[2].getHostName());
+      lrb.reorderBlocks(conf, lbs, pseudoLogFile);
+      Assert.assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
     }
   }
 

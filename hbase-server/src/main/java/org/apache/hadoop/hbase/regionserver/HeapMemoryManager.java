@@ -317,12 +317,15 @@ public class HeapMemoryManager {
       unblockedFlushCnt = unblockedFlushCount.getAndSet(0);
       tunerContext.setUnblockedFlushCount(unblockedFlushCnt);
       metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
-      // TODO : add support for offheap metrics
       tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
       metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
+      long globalMemstoreDataSize = regionServerAccounting.getGlobalMemStoreDataSize();
       long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemStoreHeapSize();
+      long globalMemStoreOffHeapSize = regionServerAccounting.getGlobalMemStoreOffHeapSize();
       tunerContext.setCurMemStoreUsed((float) globalMemstoreHeapSize / maxHeapSize);
-      metricsHeapMemoryManager.setCurMemStoreSizeGauge(globalMemstoreHeapSize);
+      metricsHeapMemoryManager.setCurMemStoreSizeGauge(globalMemstoreDataSize);
+      metricsHeapMemoryManager.setCurMemStoreOnHeapSizeGauge(globalMemstoreHeapSize);
+      metricsHeapMemoryManager.setCurMemStoreOffHeapSizeGauge(globalMemStoreOffHeapSize);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
       TunerResult result = null;

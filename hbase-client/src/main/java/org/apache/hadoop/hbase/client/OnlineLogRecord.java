@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -28,6 +29,8 @@ import org.apache.yetus.audience.InterfaceStability;
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 import org.apache.hbase.thirdparty.com.google.gson.JsonSerializer;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
 /**
  * Slow/Large Log payload for hbase-client, to be used by Admin API get_slow_responses and
@@ -52,6 +55,18 @@ final public class OnlineLogRecord extends LogEntry {
         }
         if (slowLogPayload.getMultiServiceCalls() == 0) {
           jsonObj.remove("multiServiceCalls");
+        }
+        if (slowLogPayload.getRequestAttributes().isEmpty()) {
+          jsonObj.remove("requestAttributes");
+        } else {
+          jsonObj.add("requestAttributes", gson
+            .toJsonTree(ProtobufUtil.deserializeAttributes(slowLogPayload.getRequestAttributes())));
+        }
+        if (slowLogPayload.getConnectionAttributes().isEmpty()) {
+          jsonObj.remove("connectionAttributes");
+        } else {
+          jsonObj.add("connectionAttributes", gson.toJsonTree(
+            ProtobufUtil.deserializeAttributes(slowLogPayload.getConnectionAttributes())));
         }
         if (slowLogPayload.getScan().isPresent()) {
           jsonObj.add("scan", gson.toJsonTree(slowLogPayload.getScan().get().toMap()));
@@ -79,6 +94,8 @@ final public class OnlineLogRecord extends LogEntry {
   private final int multiMutationsCount;
   private final int multiServiceCalls;
   private final Optional<Scan> scan;
+  private final Map<String, byte[]> requestAttributes;
+  private final Map<String, byte[]> connectionAttributes;
 
   public long getStartTime() {
     return startTime;
@@ -152,11 +169,20 @@ final public class OnlineLogRecord extends LogEntry {
     return scan;
   }
 
+  public Map<String, byte[]> getRequestAttributes() {
+    return requestAttributes;
+  }
+
+  public Map<String, byte[]> getConnectionAttributes() {
+    return connectionAttributes;
+  }
+
   OnlineLogRecord(final long startTime, final int processingTime, final int queueTime,
     final long responseSize, final long blockBytesScanned, final String clientAddress,
     final String serverClass, final String methodName, final String callDetails, final String param,
     final String regionName, final String userName, final int multiGetsCount,
-    final int multiMutationsCount, final int multiServiceCalls, final Scan scan) {
+    final int multiMutationsCount, final int multiServiceCalls, final Scan scan,
+    final Map<String, byte[]> requestAttributes, final Map<String, byte[]> connectionAttributes) {
     this.startTime = startTime;
     this.processingTime = processingTime;
     this.queueTime = queueTime;
@@ -173,6 +199,8 @@ final public class OnlineLogRecord extends LogEntry {
     this.multiMutationsCount = multiMutationsCount;
     this.multiServiceCalls = multiServiceCalls;
     this.scan = Optional.ofNullable(scan);
+    this.requestAttributes = requestAttributes;
+    this.connectionAttributes = connectionAttributes;
   }
 
   public static class OnlineLogRecordBuilder {
@@ -192,6 +220,8 @@ final public class OnlineLogRecord extends LogEntry {
     private int multiMutationsCount;
     private int multiServiceCalls;
     private Scan scan = null;
+    private Map<String, byte[]> requestAttributes;
+    private Map<String, byte[]> connectionAttributes;
 
     public OnlineLogRecordBuilder setStartTime(long startTime) {
       this.startTime = startTime;
@@ -276,10 +306,22 @@ final public class OnlineLogRecord extends LogEntry {
       return this;
     }
 
+    public OnlineLogRecordBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      this.requestAttributes = requestAttributes;
+      return this;
+    }
+
+    public OnlineLogRecordBuilder
+      setConnectionAttributes(Map<String, byte[]> connectionAttributes) {
+      this.connectionAttributes = connectionAttributes;
+      return this;
+    }
+
     public OnlineLogRecord build() {
       return new OnlineLogRecord(startTime, processingTime, queueTime, responseSize,
         blockBytesScanned, clientAddress, serverClass, methodName, callDetails, param, regionName,
-        userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan);
+        userName, multiGetsCount, multiMutationsCount, multiServiceCalls, scan, requestAttributes,
+        connectionAttributes);
     }
   }
 
@@ -304,7 +346,8 @@ final public class OnlineLogRecord extends LogEntry {
       .append(serverClass, that.serverClass).append(methodName, that.methodName)
       .append(callDetails, that.callDetails).append(param, that.param)
       .append(regionName, that.regionName).append(userName, that.userName).append(scan, that.scan)
-      .isEquals();
+      .append(requestAttributes, that.requestAttributes)
+      .append(connectionAttributes, that.connectionAttributes).isEquals();
   }
 
   @Override
@@ -313,7 +356,7 @@ final public class OnlineLogRecord extends LogEntry {
       .append(responseSize).append(blockBytesScanned).append(clientAddress).append(serverClass)
       .append(methodName).append(callDetails).append(param).append(regionName).append(userName)
       .append(multiGetsCount).append(multiMutationsCount).append(multiServiceCalls).append(scan)
-      .toHashCode();
+      .append(requestAttributes).append(connectionAttributes).toHashCode();
   }
 
   @Override
@@ -330,7 +373,9 @@ final public class OnlineLogRecord extends LogEntry {
       .append("methodName", methodName).append("callDetails", callDetails).append("param", param)
       .append("regionName", regionName).append("userName", userName)
       .append("multiGetsCount", multiGetsCount).append("multiMutationsCount", multiMutationsCount)
-      .append("multiServiceCalls", multiServiceCalls).append("scan", scan).toString();
+      .append("multiServiceCalls", multiServiceCalls).append("scan", scan)
+      .append("requestAttributes", requestAttributes)
+      .append("connectionAttributes", connectionAttributes).toString();
   }
 
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -208,5 +209,17 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     }
 
     return DirectMemoryUtils.getNettyDirectMemoryUsage();
+  }
+
+  @Override
+  public Pair<Long, Long> getTotalAndMaxNettyOutboundBytes() {
+    if (
+      !isServerStarted() || this.server.getScheduler() == null
+        || !(this.server instanceof NettyRpcServer)
+    ) {
+      return Pair.newPair(0L, 0L);
+    }
+
+    return ((NettyRpcServer) server).getTotalAndMaxNettyOutboundBytes();
   }
 }

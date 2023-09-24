@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.createEncryptor;
 import static org.apache.hadoop.hbase.io.asyncfs.FanOutOneBlockAsyncDFSOutputSaslHelper.trySaslNegotiate;
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.addListener;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeClose;
 import static org.apache.hadoop.hbase.util.NettyFutureUtils.safeWriteAndFlush;
@@ -383,7 +384,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
     BlockConstructionStage stage, DataChecksum summer, EventLoopGroup eventLoopGroup,
     Class<? extends Channel> channelClass) {
     StorageType[] storageTypes = locatedBlock.getStorageTypes();
-    DatanodeInfo[] datanodeInfos = locatedBlock.getLocations();
+    DatanodeInfo[] datanodeInfos = getLocatedBlockLocations(locatedBlock);
     boolean connectToDnViaHostname =
       conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME, DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
     int timeoutMs = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, READ_TIMEOUT);
@@ -495,7 +496,7 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         futureList = connectToDataNodes(conf, client, clientName, locatedBlock, 0L, 0L,
           PIPELINE_SETUP_CREATE, summer, eventLoopGroup, channelClass);
         for (int i = 0, n = futureList.size(); i < n; i++) {
-          DatanodeInfo datanodeInfo = locatedBlock.getLocations()[i];
+          DatanodeInfo datanodeInfo = getLocatedBlockLocations(locatedBlock)[i];
           try {
             datanodes.put(futureList.get(i).syncUninterruptibly().getNow(), datanodeInfo);
           } catch (Exception e) {

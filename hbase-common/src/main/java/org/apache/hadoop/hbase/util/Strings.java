@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+
 /**
  * Utility for Strings.
  */
@@ -27,6 +30,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 public final class Strings {
   public static final String DEFAULT_SEPARATOR = "=";
   public static final String DEFAULT_KEYVALUE_SEPARATOR = ", ";
+
+  public static final Joiner JOINER = Joiner.on(",");
+  public static final Splitter SPLITTER = Splitter.on(",");
 
   private Strings() {
   }

@@ -196,13 +196,17 @@ public final class ConnectionUtils {
     return Bytes.equals(row, EMPTY_END_ROW);
   }
 
-  static void resetController(HBaseRpcController controller, long timeoutNs, int priority) {
+  static void resetController(HBaseRpcController controller, long timeoutNs, int priority,
+    TableName tableName) {
     controller.reset();
     if (timeoutNs >= 0) {
       controller.setCallTimeout(
         (int) Math.min(Integer.MAX_VALUE, TimeUnit.NANOSECONDS.toMillis(timeoutNs)));
     }
     controller.setPriority(priority);
+    if (tableName != null) {
+      controller.setTableName(tableName);
+    }
   }
 
   static Throwable translateException(Throwable t) {
@@ -255,7 +259,7 @@ public final class ConnectionUtils {
   }
 
   // Add a delta to avoid timeout immediately after a retry sleeping.
-  static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
+  public static final long SLEEP_DELTA_NS = TimeUnit.MILLISECONDS.toNanos(1);
 
   static Get toCheckExistenceOnly(Get get) {
     if (get.isCheckExistenceOnly()) {

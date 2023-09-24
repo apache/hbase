@@ -235,6 +235,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushMasterStoreResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FlushTableResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest;
@@ -618,6 +620,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerReportResponse regionServerReport(RpcController controller,
     RegionServerReportRequest request) throws ServiceException {
     try {
@@ -653,6 +656,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public RegionServerStartupResponse regionServerStartup(RpcController controller,
     RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
@@ -684,6 +688,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public ReportRSFatalErrorResponse reportRSFatalError(RpcController controller,
     ReportRSFatalErrorRequest request) throws ServiceException {
     String errorText = request.getErrorMessage();
@@ -3586,5 +3591,22 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
       throw new ServiceException(ioe);
     }
     return FlushMasterStoreResponse.newBuilder().build();
+  }
+
+  @Override
+  public FlushTableResponse flushTable(RpcController controller, FlushTableRequest req)
+    throws ServiceException {
+    TableName tableName = ProtobufUtil.toTableName(req.getTableName());
+    List<byte[]> columnFamilies = req.getColumnFamilyCount() > 0
+      ? req.getColumnFamilyList().stream().filter(cf -> !cf.isEmpty()).map(ByteString::toByteArray)
+        .collect(Collectors.toList())
+      : null;
+    try {
+      long procId =
+        server.flushTable(tableName, columnFamilies, req.getNonceGroup(), req.getNonce());
+      return FlushTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 }

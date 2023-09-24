@@ -54,6 +54,6 @@ class NettyServerCall extends ServerCall<NettyServerRpcConnection> {
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
     this.param = null;
-    connection.channel.writeAndFlush(this);
+    connection.doRespond(this);
   }
 }

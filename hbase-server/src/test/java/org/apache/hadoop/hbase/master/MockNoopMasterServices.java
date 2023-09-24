@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -523,5 +525,21 @@ public class MockNoopMasterServices implements MasterServices {
   @Override
   public boolean isReplicationPeerModificationEnabled() {
     return false;
+  }
+
+  @Override
+  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
+    return null;
+  }
+
+  @Override
+  public Semaphore getSyncReplicationPeerLock() {
+    return null;
+  }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    return 0;
   }
 }

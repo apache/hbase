@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -243,6 +243,12 @@
       <name>Huaxiang Sun</name>
       <email>huaxiangsun@apache.org</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>huiruan</id>
+      <name>Hui Ruan</name>
+      <email>huiruan@apache.org</email>
+      <timezone>+8</timezone>
     </developer>
     <developer>
       <id>jdcryans</id>
@@ -819,7 +825,7 @@
     <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.9</commons-lang3.version>
     <commons-math.version>3.6.1</commons-math.version>
-    <disruptor.version>3.4.2</disruptor.version>
+    <disruptor.version>3.4.4</disruptor.version>
     <httpclient.version>4.5.13</httpclient.version>
     <httpcore.version>4.4.13</httpcore.version>
     <metrics-core.version>3.2.6</metrics-core.version>
@@ -850,7 +856,7 @@
     <joni.version>2.1.43</joni.version>
     <jcodings.version>1.0.57</jcodings.version>
     <spy.version>2.12.2</spy.version>
-    <bouncycastle.version>1.70</bouncycastle.version>
+    <bouncycastle.version>1.76</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <kerby.version>1.0.1</kerby.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
@@ -864,7 +870,7 @@
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
     <checkstyle.version>8.29</checkstyle.version>
-    <exec.maven.version>1.6.0</exec.maven.version>
+    <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.16</error-prone.version>
     <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
@@ -1615,7 +1621,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
+        <artifactId>bcprov-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -1627,7 +1633,7 @@
       </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
+        <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>test</scope>
       </dependency>
@@ -2389,6 +2395,23 @@
                   </excludes>
                   <message>Use OpenTelemetry instead</message>
                   <searchTransitive>false</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-bouncycastle-jdk15on</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.bouncycastle:*-jdk15on</exclude>
+                  </excludes>
+                  <message>Use org.bouncycastle:*-jdk18on instead</message>
+                  <searchTransitive>true</searchTransitive>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -4063,6 +4086,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

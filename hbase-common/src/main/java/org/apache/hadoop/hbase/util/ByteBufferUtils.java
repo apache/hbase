@@ -80,6 +80,14 @@ public final class ByteBufferUtils {
     abstract int putLong(ByteBuffer buffer, int index, long val);
   }
 
+  static abstract class CommonPrefixer {
+    abstract int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
+      int rightOffset, int rightLength);
+
+    abstract int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, ByteBuffer right,
+      int rightOffset, int rightLength);
+  }
+
   static class ComparerHolder {
     static final String UNSAFE_COMPARER_NAME = ComparerHolder.class.getName() + "$UnsafeComparer";
 
@@ -318,6 +326,111 @@ public final class ByteBufferUtils {
       @Override
       int putLong(ByteBuffer buffer, int index, long val) {
         return UnsafeAccess.putLong(buffer, index, val);
+      }
+    }
+  }
+
+  static class CommonPrefixerHolder {
+    static final String UNSAFE_COMMON_PREFIXER_NAME =
+      CommonPrefixerHolder.class.getName() + "$UnsafeCommonPrefixer";
+
+    static final CommonPrefixer BEST_COMMON_PREFIXER = getBestCommonPrefixer();
+
+    static CommonPrefixer getBestCommonPrefixer() {
+      try {
+        Class<? extends CommonPrefixer> theClass =
+          Class.forName(UNSAFE_COMMON_PREFIXER_NAME).asSubclass(CommonPrefixer.class);
+
+        return theClass.getConstructor().newInstance();
+      } catch (Throwable t) { // ensure we really catch *everything*
+        return PureJavaCommonPrefixer.INSTANCE;
+      }
+    }
+
+    static final class PureJavaCommonPrefixer extends CommonPrefixer {
+      static final PureJavaCommonPrefixer INSTANCE = new PureJavaCommonPrefixer();
+
+      private PureJavaCommonPrefixer() {
+      }
+
+      @Override
+      public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
+        int rightOffset, int rightLength) {
+        int length = Math.min(leftLength, rightLength);
+        int result = 0;
+
+        while (
+          result < length
+            && ByteBufferUtils.toByte(left, leftOffset + result) == right[rightOffset + result]
+        ) {
+          result++;
+        }
+
+        return result;
+      }
+
+      @Override
+      int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, ByteBuffer right,
+        int rightOffset, int rightLength) {
+        int length = Math.min(leftLength, rightLength);
+        int result = 0;
+
+        while (
+          result < length && ByteBufferUtils.toByte(left, leftOffset + result)
+              == ByteBufferUtils.toByte(right, rightOffset + result)
+        ) {
+          result++;
+        }
+
+        return result;
+      }
+    }
+
+    static final class UnsafeCommonPrefixer extends CommonPrefixer {
+
+      static {
+        if (!UNSAFE_UNALIGNED) {
+          throw new Error();
+        }
+      }
+
+      public UnsafeCommonPrefixer() {
+      }
+
+      @Override
+      public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
+        int rightOffset, int rightLength) {
+        long offset1Adj;
+        Object refObj1 = null;
+        if (left.isDirect()) {
+          offset1Adj = leftOffset + UnsafeAccess.directBufferAddress(left);
+        } else {
+          offset1Adj = leftOffset + left.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+          refObj1 = left.array();
+        }
+        return findCommonPrefixUnsafe(refObj1, offset1Adj, leftLength, right,
+          rightOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, rightLength);
+      }
+
+      @Override
+      public int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, ByteBuffer right,
+        int rightOffset, int rightLength) {
+        long offset1Adj, offset2Adj;
+        Object refObj1 = null, refObj2 = null;
+        if (left.isDirect()) {
+          offset1Adj = leftOffset + UnsafeAccess.directBufferAddress(left);
+        } else {
+          offset1Adj = leftOffset + left.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+          refObj1 = left.array();
+        }
+        if (right.isDirect()) {
+          offset2Adj = rightOffset + UnsafeAccess.directBufferAddress(right);
+        } else {
+          offset2Adj = rightOffset + right.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+          refObj2 = right.array();
+        }
+        return findCommonPrefixUnsafe(refObj1, offset1Adj, leftLength, refObj2, offset2Adj,
+          rightLength);
       }
     }
   }
@@ -744,14 +857,7 @@ public final class ByteBufferUtils {
    */
   public static int findCommonPrefix(byte[] left, int leftOffset, int leftLength, byte[] right,
     int rightOffset, int rightLength) {
-    int length = Math.min(leftLength, rightLength);
-    int result = 0;
-
-    while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
-      result++;
-    }
-
-    return result;
+    return Bytes.findCommonPrefix(left, right, leftLength, rightLength, leftOffset, rightOffset);
   }
 
   /**
@@ -765,17 +871,23 @@ public final class ByteBufferUtils {
    */
   public static int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength,
     ByteBuffer right, int rightOffset, int rightLength) {
-    int length = Math.min(leftLength, rightLength);
-    int result = 0;
+    return CommonPrefixerHolder.BEST_COMMON_PREFIXER.findCommonPrefix(left, leftOffset, leftLength,
+      right, rightOffset, rightLength);
+  }
 
-    while (
-      result < length && ByteBufferUtils.toByte(left, leftOffset + result)
-          == ByteBufferUtils.toByte(right, rightOffset + result)
-    ) {
-      result++;
-    }
-
-    return result;
+  /**
+   * Find length of common prefix in two arrays.
+   * @param left        ByteBuffer to be compared.
+   * @param leftOffset  Offset in left ByteBuffer.
+   * @param leftLength  Length of left ByteBuffer.
+   * @param right       Array to be compared
+   * @param rightOffset Offset in right Array.
+   * @param rightLength Length of right Array.
+   */
+  public static int findCommonPrefix(ByteBuffer left, int leftOffset, int leftLength, byte[] right,
+    int rightOffset, int rightLength) {
+    return CommonPrefixerHolder.BEST_COMMON_PREFIXER.findCommonPrefix(left, leftOffset, leftLength,
+      right, rightOffset, rightLength);
   }
 
   /**
@@ -946,6 +1058,43 @@ public final class ByteBufferUtils {
       }
     }
     return l1 - l2;
+  }
+
+  static int findCommonPrefixUnsafe(Object left, long leftOffset, int leftLength, Object right,
+    long rightOffset, int rightLength) {
+    final int stride = 8;
+    final int minLength = Math.min(leftLength, rightLength);
+    int strideLimit = minLength & ~(stride - 1);
+    int result = 0;
+    int i;
+
+    for (i = 0; i < strideLimit; i += stride) {
+      long lw = HBasePlatformDependent.getLong(left, leftOffset + (long) i);
+      long rw = HBasePlatformDependent.getLong(right, rightOffset + (long) i);
+
+      if (lw != rw) {
+        if (!UnsafeAccess.LITTLE_ENDIAN) {
+          return result + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+        } else {
+          return result + (Long.numberOfTrailingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+        }
+      } else {
+        result += Bytes.SIZEOF_LONG;
+      }
+    }
+
+    // The epilogue to cover the last (minLength % stride) elements.
+    for (; i < minLength; i++) {
+      byte il = HBasePlatformDependent.getByte(left, leftOffset + i);
+      byte ir = HBasePlatformDependent.getByte(right, rightOffset + i);
+      if (il != ir) {
+        return result;
+      } else {
+        result++;
+      }
+    }
+
+    return result;
   }
 
   /**

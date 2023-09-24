@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -362,6 +364,17 @@ public interface MasterServices extends Server {
   ReplicationPeerManager getReplicationPeerManager();
 
   /**
+   * Returns the {@link ReplicationLogCleanerBarrier}. It will be used at multiple places so we put
+   * it in MasterServices directly.
+   */
+  ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier();
+
+  /**
+   * Returns the SyncReplicationPeerLock.
+   */
+  Semaphore getSyncReplicationPeerLock();
+
+  /**
    * Returns the {@link SyncReplicationReplayWALManager}.
    */
   SyncReplicationReplayWALManager getSyncReplicationReplayWALManager();
@@ -464,4 +477,15 @@ public interface MasterServices extends Server {
    * Flush master local region
    */
   void flushMasterStore() throws IOException;
+
+  /**
+   * Flush an existing table
+   * @param tableName      The table name
+   * @param columnFamilies The column families to flush
+   * @param nonceGroup     the nonce group
+   * @param nonce          the nonce
+   * @return the flush procedure id
+   */
+  long flushTable(final TableName tableName, final List<byte[]> columnFamilies,
+    final long nonceGroup, final long nonce) throws IOException;
 }

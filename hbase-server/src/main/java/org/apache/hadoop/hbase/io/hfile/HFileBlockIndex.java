@@ -399,14 +399,8 @@ public class HFileBlockIndex {
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(midLeafBlockOffset,
           midLeafBlockOnDiskSize, true, true, false, true, BlockType.LEAF_INDEX, null);
         try {
-          ByteBuff b = midLeafBlock.getBufferWithoutHeader();
-          int numDataBlocks = b.getIntAfterPosition(0);
-          int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-          int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) - keyRelOffset
-            - SECONDARY_INDEX_ENTRY_OVERHEAD;
-          int keyOffset =
-            Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset + SECONDARY_INDEX_ENTRY_OVERHEAD;
-          byte[] bytes = b.toBytes(keyOffset, keyLen);
+          byte[] bytes = getNonRootIndexedKey(midLeafBlock.getBufferWithoutHeader(), midKeyEntry);
+          assert bytes != null;
           targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
         } finally {
           midLeafBlock.release();
@@ -699,7 +693,7 @@ public class HFileBlockIndex {
      * @param i the ith position
      * @return The indexed key at the ith position in the nonRootIndex.
      */
-    protected byte[] getNonRootIndexedKey(ByteBuff nonRootIndex, int i) {
+    static byte[] getNonRootIndexedKey(ByteBuff nonRootIndex, int i) {
       int numEntries = nonRootIndex.getInt(0);
       if (i < 0 || i >= numEntries) {
         return null;

@@ -33,6 +33,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -215,6 +216,59 @@ public class TestDataBlockEncoders {
 
         KeyValue keyValue = sampleKv.get(keyValueId);
         checkSeekingConsistency(encodedSeekers, seekBefore, keyValue);
+      }
+    }
+
+    // check edge cases
+    LOG.info("Checking edge cases");
+    checkSeekingConsistency(encodedSeekers, false, sampleKv.get(0));
+    for (boolean seekBefore : new boolean[] { false, true }) {
+      checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
+      KeyValue midKv = sampleKv.get(sampleKv.size() / 2);
+      Cell lastMidKv = PrivateCellUtil.createLastOnRowCol(midKv);
+      checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
+    }
+    LOG.info("Done");
+  }
+
+  @Test
+  public void testSeekingToOffHeapKeyValueInSample() throws IOException {
+    List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
+
+    // create all seekers
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<>();
+    for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      LOG.info("Encoding: " + encoding);
+      DataBlockEncoder encoder = encoding.getEncoder();
+      if (encoder == null) {
+        continue;
+      }
+      LOG.info("Encoder: " + encoder);
+      ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
+        getEncodingContext(conf, Compression.Algorithm.NONE, encoding), this.useOffheapData);
+      HFileContext meta =
+        new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(includesMemstoreTS)
+          .withIncludesTags(includesTags).withCompression(Compression.Algorithm.NONE).build();
+      DataBlockEncoder.EncodedSeeker seeker =
+        encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
+      seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
+      encodedSeekers.add(seeker);
+    }
+    LOG.info("Testing it!");
+    // test it!
+    // try a few random seeks
+    Random rand = ThreadLocalRandom.current();
+    for (boolean seekBefore : new boolean[] { false, true }) {
+      for (int i = 0; i < NUM_RANDOM_SEEKS; ++i) {
+        int keyValueId;
+        if (!seekBefore) {
+          keyValueId = rand.nextInt(sampleKv.size());
+        } else {
+          keyValueId = rand.nextInt(sampleKv.size() - 1) + 1;
+        }
+
+        KeyValue keyValue = sampleKv.get(keyValueId);
+        checkSeekingConsistency(encodedSeekers, seekBefore, buildOffHeapKeyValue(keyValue));
       }
     }
 
@@ -437,5 +491,16 @@ public class TestDataBlockEncoders {
     // mvcc in it.
     assertEquals("Encoding -> decoding gives different results for " + encoder,
       Bytes.toStringBinary(unencodedDataBuf), Bytes.toStringBinary(actualDataset));
+  }
+
+  private static ByteBufferKeyValue buildOffHeapKeyValue(KeyValue keyValue) throws IOException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    keyValue.write(out, false);
+    byte[] bytes = out.toByteArray();
+    ByteBuffer bb = ByteBuffer.allocateDirect(bytes.length);
+    bb.put(bytes);
+    bb.flip();
+
+    return new ByteBufferKeyValue(bb, 0, bytes.length);
   }
 }

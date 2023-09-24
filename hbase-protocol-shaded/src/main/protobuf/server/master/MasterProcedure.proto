@@ -191,6 +191,26 @@ message RestoreParentToChildRegionsPair {
   required string child2_region_name = 3;
 }
 
+enum FlushTableState {
+  FLUSH_TABLE_PREPARE = 1;
+  FLUSH_TABLE_FLUSH_REGIONS = 2;
+}
+
+message FlushTableProcedureStateData {
+  required TableName table_name = 1;
+  repeated bytes column_family = 2;
+}
+
+message FlushRegionProcedureStateData {
+  required RegionInfo region = 1;
+  repeated bytes column_family = 2;
+}
+
+message FlushRegionParameter {
+  required RegionInfo region = 1;
+  repeated bytes column_family = 2;
+}
+
 enum SnapshotState {
   SNAPSHOT_PREPARE = 1;
   SNAPSHOT_PRE_OPERATION = 2;

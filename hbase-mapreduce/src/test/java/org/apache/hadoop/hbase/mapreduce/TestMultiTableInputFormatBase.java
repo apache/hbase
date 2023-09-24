@@ -123,7 +123,8 @@ public class TestMultiTableInputFormatBase {
     private final Configuration configuration;
     static final AtomicInteger creations = new AtomicInteger(0);
 
-    MRSplitsConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
+    MRSplitsConnection(Configuration conf, ExecutorService pool, User user,
+      Map<String, byte[]> connectionAttributes) throws IOException {
       this.configuration = conf;
       creations.incrementAndGet();
     }

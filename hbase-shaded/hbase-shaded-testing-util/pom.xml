@@ -25,7 +25,7 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-shaded</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>hbase-shaded-testing-util</artifactId>

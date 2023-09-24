@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.procedure.flush;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
@@ -41,16 +41,16 @@ public class FlushTableSubprocedure extends Subprocedure {
   private static final Logger LOG = LoggerFactory.getLogger(FlushTableSubprocedure.class);
 
   private final String table;
-  private final String family;
+  private final List<String> families;
   private final List<HRegion> regions;
   private final FlushTableSubprocedurePool taskManager;
 
   public FlushTableSubprocedure(ProcedureMember member, ForeignExceptionDispatcher errorListener,
-    long wakeFrequency, long timeout, List<HRegion> regions, String table, String family,
+    long wakeFrequency, long timeout, List<HRegion> regions, String table, List<String> families,
     FlushTableSubprocedurePool taskManager) {
     super(member, table, errorListener, wakeFrequency, timeout);
     this.table = table;
-    this.family = family;
+    this.families = families;
     this.regions = regions;
     this.taskManager = taskManager;
   }
@@ -70,7 +70,7 @@ public class FlushTableSubprocedure extends Subprocedure {
       region.startRegionOperation();
       try {
         LOG.debug("Flush region " + region.toString() + " started...");
-        if (families == null) {
+        if (families == null || families.isEmpty()) {
           region.flush(true);
         } else {
           region.flushcache(families, false, FlushLifeCycleTracker.DUMMY);
@@ -97,15 +97,16 @@ public class FlushTableSubprocedure extends Subprocedure {
       throw new IllegalStateException(
         "Attempting to flush " + table + " but we currently have outstanding tasks");
     }
-    List<byte[]> families = null;
-    if (family != null) {
-      LOG.debug("About to flush family {} on all regions for table {}", family, table);
-      families = Collections.singletonList(Bytes.toBytes(family));
+
+    List<byte[]> familiesToFlush = null;
+    if (families != null && !families.isEmpty()) {
+      LOG.debug("About to flush family {} on all regions for table {}", families, table);
+      familiesToFlush = families.stream().map(Bytes::toBytes).collect(Collectors.toList());
     }
     // Add all hfiles already existing in region.
     for (HRegion region : regions) {
       // submit one task per region for parallelize by region.
-      taskManager.submitTask(new RegionFlushTask(region, families));
+      taskManager.submitTask(new RegionFlushTask(region, familiesToFlush));
       monitor.rethrowException();
     }
 

@@ -533,7 +533,7 @@ public class TableReplicationQueueStorage implements ReplicationQueueStorage {
   @Override
   public boolean hasData() throws ReplicationException {
     try {
-      return conn.getAdmin().getDescriptor(tableName) != null;
+      return conn.getAdmin().tableExists(tableName);
     } catch (IOException e) {
       throw new ReplicationException("failed to get replication queue table", e);
     }

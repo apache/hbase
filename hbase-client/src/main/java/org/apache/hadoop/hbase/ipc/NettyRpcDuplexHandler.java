@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import io.opentelemetry.context.Scope;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -168,7 +169,12 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
     Message value;
     if (call.responseDefaultType != null) {
       Message.Builder builder = call.responseDefaultType.newBuilderForType();
-      builder.mergeDelimitedFrom(in);
+      if (!builder.mergeDelimitedFrom(in)) {
+        // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
+        // before reading any bytes out, so here we need to manually throw the EOFException out
+        throw new EOFException(
+          "EOF while reading response with type: " + call.responseDefaultType.getClass().getName());
+      }
       value = builder.build();
     } else {
       value = null;

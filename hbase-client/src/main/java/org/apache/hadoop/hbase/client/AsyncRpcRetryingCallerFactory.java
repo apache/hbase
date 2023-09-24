@@ -23,7 +23,9 @@ import static org.apache.hadoop.hbase.client.ConnectionUtils.retries2Attempts;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hbase.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -82,6 +84,8 @@ class AsyncRpcRetryingCallerFactory {
     private int replicaId = RegionReplicaUtil.DEFAULT_REPLICA_ID;
 
     private int priority = PRIORITY_UNSET;
+
+    private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
     public SingleRequestCallerBuilder<T> table(TableName tableName) {
       this.tableName = tableName;
@@ -144,6 +148,12 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public SingleRequestCallerBuilder<T>
+      setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      this.requestAttributes = requestAttributes;
+      return this;
+    }
+
     private void preCheck() {
       checkArgument(replicaId >= 0, "invalid replica id %s", replicaId);
       checkNotNull(tableName, "tableName is null");
@@ -157,7 +167,7 @@ class AsyncRpcRetryingCallerFactory {
       preCheck();
       return new AsyncSingleRequestRpcRetryingCaller<>(retryTimer, conn, tableName, row, replicaId,
         locateType, callable, priority, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-        operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, requestAttributes);
     }
 
     /**
@@ -200,6 +210,8 @@ class AsyncRpcRetryingCallerFactory {
     private long rpcTimeoutNs;
 
     private int priority = PRIORITY_UNSET;
+
+    private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
     public ScanSingleRegionCallerBuilder id(long scannerId) {
       this.scannerId = scannerId;
@@ -278,6 +290,12 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public ScanSingleRegionCallerBuilder
+      setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      this.requestAttributes = requestAttributes;
+      return this;
+    }
+
     private void preCheck() {
       checkArgument(scannerId != null, "invalid scannerId %d", scannerId);
       checkNotNull(scan, "scan is null");
@@ -293,7 +311,7 @@ class AsyncRpcRetryingCallerFactory {
       return new AsyncScanSingleRegionRpcRetryingCaller(retryTimer, conn, scan, scanMetrics,
         scannerId, resultCache, consumer, stub, loc, isRegionServerRemote, priority,
         scannerLeaseTimeoutPeriodNs, pauseNs, pauseNsForServerOverloaded, maxAttempts,
-        scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt);
+        scanTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, requestAttributes);
     }
 
     /**
@@ -321,6 +339,8 @@ class AsyncRpcRetryingCallerFactory {
     private long operationTimeoutNs = -1L;
 
     private long rpcTimeoutNs = -1L;
+
+    private Map<String, byte[]> requestAttributes = Collections.emptyMap();
 
     public BatchCallerBuilder table(TableName tableName) {
       this.tableName = tableName;
@@ -362,10 +382,15 @@ class AsyncRpcRetryingCallerFactory {
       return this;
     }
 
+    public BatchCallerBuilder setRequestAttributes(Map<String, byte[]> requestAttributes) {
+      this.requestAttributes = requestAttributes;
+      return this;
+    }
+
     public <T> AsyncBatchRpcRetryingCaller<T> build() {
       return new AsyncBatchRpcRetryingCaller<>(retryTimer, conn, tableName, actions, pauseNs,
         pauseNsForServerOverloaded, maxAttempts, operationTimeoutNs, rpcTimeoutNs,
-        startLogErrorsCnt);
+        startLogErrorsCnt, requestAttributes);
     }
 
     public <T> List<CompletableFuture<T>> call() {

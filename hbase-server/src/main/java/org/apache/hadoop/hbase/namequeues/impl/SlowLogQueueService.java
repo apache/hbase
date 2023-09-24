@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.namequeues.impl;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -42,12 +44,14 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.EvictingQueue;
 import org.apache.hbase.thirdparty.com.google.common.collect.Queues;
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 
 /**
@@ -164,7 +168,9 @@ public class SlowLogQueueService implements NamedQueueService {
       .setProcessingTime(processingTime).setQueueTime(qTime)
       .setRegionName(slowLogParams != null ? slowLogParams.getRegionName() : StringUtils.EMPTY)
       .setResponseSize(responseSize).setBlockBytesScanned(blockBytesScanned)
-      .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName);
+      .setServerClass(className).setStartTime(startTime).setType(type).setUserName(userName)
+      .addAllRequestAttribute(buildNameBytesPairs(rpcLogDetails.getRequestAttributes()))
+      .addAllConnectionAttribute(buildNameBytesPairs(rpcLogDetails.getConnectionAttributes()));
     if (slowLogParams != null && slowLogParams.getScan() != null) {
       slowLogPayloadBuilder.setScan(slowLogParams.getScan());
     }
@@ -175,6 +181,16 @@ public class SlowLogQueueService implements NamedQueueService {
         slowLogPersistentService.addToQueueForSysTable(slowLogPayload);
       }
     }
+  }
+
+  private static Collection<HBaseProtos.NameBytesPair>
+    buildNameBytesPairs(Map<String, byte[]> attributes) {
+    if (attributes == null) {
+      return Collections.emptySet();
+    }
+    return attributes.entrySet().stream().map(attr -> HBaseProtos.NameBytesPair.newBuilder()
+      .setName(attr.getKey()).setValue(ByteString.copyFrom(attr.getValue())).build())
+      .collect(Collectors.toSet());
   }
 
   @Override

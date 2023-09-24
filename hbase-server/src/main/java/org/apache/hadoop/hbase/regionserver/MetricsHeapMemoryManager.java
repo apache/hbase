@@ -74,6 +74,22 @@ public class MetricsHeapMemoryManager {
   }
 
   /**
+   * Set the current global memstore on-heap size gauge
+   * @param memStoreOnHeapSize the current memory on-heap size in memstore, in bytes.
+   */
+  public void setCurMemStoreOnHeapSizeGauge(final long memStoreOnHeapSize) {
+    source.setCurMemStoreOnHeapSizeGauge(memStoreOnHeapSize);
+  }
+
+  /**
+   * Set the current global memstore off-heap size gauge
+   * @param memStoreOffHeapSize the current memory off-heap size in memstore, in bytes.
+   */
+  public void setCurMemStoreOffHeapSizeGauge(final long memStoreOffHeapSize) {
+    source.setCurMemStoreOffHeapSizeGauge(memStoreOffHeapSize);
+  }
+
+  /**
    * Update the increase/decrease memstore size histogram
    * @param memStoreDeltaSize the tuning result of memstore.
    */

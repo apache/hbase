@@ -49,12 +49,7 @@ public class FailingNettyRpcServer extends NettyRpcServer {
   }
 
   @Override
-  protected NettyRpcServerPreambleHandler createNettyRpcServerPreambleHandler() {
-    return new NettyRpcServerPreambleHandler(FailingNettyRpcServer.this) {
-      @Override
-      protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
-        return new FailingConnection(FailingNettyRpcServer.this, channel);
-      }
-    };
+  protected NettyServerRpcConnection createNettyServerRpcConnection(Channel channel) {
+    return new FailingConnection(FailingNettyRpcServer.this, channel);
   }
 }

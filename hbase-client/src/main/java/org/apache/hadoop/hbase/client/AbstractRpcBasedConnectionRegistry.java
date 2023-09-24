@@ -268,7 +268,7 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           (c, s, d) -> s.getActiveMaster(c, GetActiveMasterRequest.getDefaultInstance(), d),
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
-      getClass().getSimpleName() + ".getClusterId");
+      getClass().getSimpleName() + ".getActiveMaster");
   }
 
   @Override

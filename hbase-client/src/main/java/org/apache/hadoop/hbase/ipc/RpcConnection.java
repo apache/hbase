@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,11 +40,13 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 import org.apache.hbase.thirdparty.io.netty.util.TimerTask;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
@@ -70,6 +73,7 @@ abstract class RpcConnection {
   protected final CompressionCodec compressor;
 
   protected final MetricsConnection metrics;
+  private final Map<String, byte[]> connectionAttributes;
 
   protected final HashedWheelTimer timeoutTimer;
 
@@ -86,12 +90,13 @@ abstract class RpcConnection {
 
   protected RpcConnection(Configuration conf, HashedWheelTimer timeoutTimer, ConnectionId remoteId,
     String clusterId, boolean isSecurityEnabled, Codec codec, CompressionCodec compressor,
-    MetricsConnection metrics) throws IOException {
+    MetricsConnection metrics, Map<String, byte[]> connectionAttributes) throws IOException {
     this.timeoutTimer = timeoutTimer;
     this.codec = codec;
     this.compressor = compressor;
     this.conf = conf;
     this.metrics = metrics;
+    this.connectionAttributes = connectionAttributes;
     User ticket = remoteId.getTicket();
     this.securityInfo = SecurityInfo.getInfo(remoteId.getServiceName());
     this.useSasl = isSecurityEnabled;
@@ -168,6 +173,14 @@ abstract class RpcConnection {
     }
     if (this.compressor != null) {
       builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
+    }
+    if (connectionAttributes != null && !connectionAttributes.isEmpty()) {
+      HBaseProtos.NameBytesPair.Builder attributeBuilder = HBaseProtos.NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute : connectionAttributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(UnsafeByteOperations.unsafeWrap(attribute.getValue()));
+        builder.addAttribute(attributeBuilder.build());
+      }
     }
     builder.setVersionInfo(ProtobufUtil.getVersionInfo());
     boolean isCryptoAESEnable = conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);

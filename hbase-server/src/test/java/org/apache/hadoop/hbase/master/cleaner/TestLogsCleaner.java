@@ -132,10 +132,11 @@ public class TestLogsCleaner {
 
     masterServices = mock(MasterServices.class);
     when(masterServices.getConnection()).thenReturn(TEST_UTIL.getConnection());
+    when(masterServices.getReplicationLogCleanerBarrier())
+      .thenReturn(new ReplicationLogCleanerBarrier());
     ReplicationPeerManager rpm = mock(ReplicationPeerManager.class);
     when(masterServices.getReplicationPeerManager()).thenReturn(rpm);
     when(rpm.getQueueStorage()).thenReturn(queueStorage);
-    when(rpm.getReplicationLogCleanerBarrier()).thenReturn(new ReplicationLogCleanerBarrier());
     when(rpm.listPeers(null)).thenReturn(new ArrayList<>());
     ServerManager sm = mock(ServerManager.class);
     when(masterServices.getServerManager()).thenReturn(sm);

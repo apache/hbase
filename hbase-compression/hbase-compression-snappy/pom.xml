@@ -24,7 +24,7 @@
     <groupId>org.apache.hbase</groupId>
     <artifactId>hbase-compression</artifactId>
     <version>${revision}</version>
-    <relativePath>..</relativePath>
+    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>hbase-compression-snappy</artifactId>
   <name>Apache HBase - Compression - Snappy</name>

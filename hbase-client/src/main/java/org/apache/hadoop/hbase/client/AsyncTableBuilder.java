@@ -138,6 +138,11 @@ public interface AsyncTableBuilder<C extends ScanResultConsumerBase> {
   AsyncTableBuilder<C> setStartLogErrorsCnt(int startLogErrorsCnt);
 
   /**
+   * Set a request attribute
+   */
+  AsyncTableBuilder<C> setRequestAttribute(String key, byte[] value);
+
+  /**
    * Create the {@link AsyncTable} instance.
    */
   AsyncTable<C> build();

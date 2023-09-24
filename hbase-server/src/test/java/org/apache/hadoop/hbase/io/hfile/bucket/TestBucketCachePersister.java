@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -85,7 +84,6 @@ public class TestBucketCachePersister {
   }
 
   public BucketCache setupBucketCache(Configuration conf) throws IOException {
-    conf.set(CacheConfig.PREFETCH_PERSISTENCE_PATH_KEY, (testDir + "/prefetch.persistence"));
     BucketCache bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
@@ -111,9 +109,7 @@ public class TestBucketCachePersister {
     readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache);
     readStoreFile(storeFile2, 0, fs, cacheConf, conf, bucketCache);
     Thread.sleep(bucketCachePersistInterval);
-    assertTrue(new File(testDir + "/prefetch.persistence").exists());
     assertTrue(new File(testDir + "/bucket.persistence").exists());
-    assertTrue(new File(testDir + "/prefetch.persistence").delete());
     assertTrue(new File(testDir + "/bucket.persistence").delete());
     cleanupBucketCache(bucketCache);
   }
@@ -128,7 +124,6 @@ public class TestBucketCachePersister {
     // Load Cache
     Path storeFile = writeStoreFile("TestPrefetch2", conf, cacheConf, fs);
     readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache);
-    assertFalse(new File(testDir + "/prefetch.persistence").exists());
     assertFalse(new File(testDir + "/bucket.persistence").exists());
     cleanupBucketCache(bucketCache);
   }
@@ -144,10 +139,10 @@ public class TestBucketCachePersister {
     readStoreFile(storeFile, 0, fs, cacheConf, conf, bucketCache1);
     Thread.sleep(500);
     // Evict Blocks from cache
+    assertTrue(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
     BlockCacheKey bucketCacheKey = bucketCache1.backingMap.entrySet().iterator().next().getKey();
-    assertTrue(PrefetchExecutor.isFilePrefetched(storeFile.getName()));
     bucketCache1.evictBlock(bucketCacheKey);
-    assertFalse(PrefetchExecutor.isFilePrefetched(storeFile.getName()));
+    assertFalse(bucketCache1.fullyCachedFiles.containsKey(storeFile.getName()));
   }
 
   public void readStoreFile(Path storeFilePath, long offset, FileSystem fs, CacheConfig cacheConf,

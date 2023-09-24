@@ -55,9 +55,8 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   private final Configuration conf;
-  protected final String walGroupId;
-  protected final ReplicationSourceLogQueue logQueue;
-  protected final ReplicationSource source;
+  final String walGroupId;
+  private final ReplicationSource source;
 
   // Last position in the log that we sent to ZooKeeper
   // It will be accessed by the stats thread so make it volatile
@@ -66,22 +65,22 @@ public class ReplicationSourceShipper extends Thread {
   private Path currentPath;
   // Current state of the worker thread
   private volatile WorkerState state;
-  protected ReplicationSourceWALReader entryReader;
+  final ReplicationSourceWALReader entryReader;
 
   // How long should we sleep for each retry
-  protected final long sleepForRetries;
+  private final long sleepForRetries;
   // Maximum number of retries before taking bold actions
-  protected final int maxRetriesMultiplier;
+  private final int maxRetriesMultiplier;
   private final int DEFAULT_TIMEOUT = 20000;
   private final int getEntriesTimeout;
   private final int shipEditsTimeout;
 
-  public ReplicationSourceShipper(Configuration conf, String walGroupId,
-    ReplicationSourceLogQueue logQueue, ReplicationSource source) {
+  public ReplicationSourceShipper(Configuration conf, String walGroupId, ReplicationSource source,
+    ReplicationSourceWALReader walReader) {
     this.conf = conf;
     this.walGroupId = walGroupId;
-    this.logQueue = logQueue;
     this.source = source;
+    this.entryReader = walReader;
     // 1 second
     this.sleepForRetries = this.conf.getLong("replication.source.sleepforretries", 1000);
     // 5 minutes @ 1 sec per
@@ -293,10 +292,6 @@ public class ReplicationSourceShipper extends Thread {
 
   long getCurrentPosition() {
     return currentPosition;
-  }
-
-  void setWALReader(ReplicationSourceWALReader entryReader) {
-    this.entryReader = entryReader;
   }
 
   protected boolean isActive() {

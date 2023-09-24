@@ -23,10 +23,11 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Cell;
@@ -129,7 +130,8 @@ public class MultiThreadedClientExample extends Configured implements Tool {
     //
     // We don't want to mix hbase and business logic.
     //
-    ExecutorService service = new ForkJoinPool(threads * 2);
+    ThreadPoolExecutor service = new ThreadPoolExecutor(threads * 2, threads * 2, 60L,
+      TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
     // Create two different connections showing how it's possible to
     // separate different types of requests onto different connections

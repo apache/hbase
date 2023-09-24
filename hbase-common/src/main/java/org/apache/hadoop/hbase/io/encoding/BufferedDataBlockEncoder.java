@@ -87,21 +87,100 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
   // Having this as static is fine but if META is having DBE then we should
   // change this.
   public static int compareCommonRowPrefix(Cell left, Cell right, int rowCommonPrefix) {
-    return Bytes.compareTo(left.getRowArray(), left.getRowOffset() + rowCommonPrefix,
-      left.getRowLength() - rowCommonPrefix, right.getRowArray(),
-      right.getRowOffset() + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(bbLeft.getRowByteBuffer(),
+          bbLeft.getRowPosition() + rowCommonPrefix, left.getRowLength() - rowCommonPrefix,
+          bbRight.getRowByteBuffer(), bbRight.getRowPosition() + rowCommonPrefix,
+          right.getRowLength() - rowCommonPrefix);
+      } else {
+        return ByteBufferUtils.compareTo(bbLeft.getRowByteBuffer(),
+          bbLeft.getRowPosition() + rowCommonPrefix, left.getRowLength() - rowCommonPrefix,
+          right.getRowArray(), right.getRowOffset() + rowCommonPrefix,
+          right.getRowLength() - rowCommonPrefix);
+      }
+    } else {
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(left.getRowArray(), left.getRowOffset() + rowCommonPrefix,
+          left.getRowLength() - rowCommonPrefix, bbRight.getRowByteBuffer(),
+          bbRight.getRowPosition() + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
+      } else {
+        return Bytes.compareTo(left.getRowArray(), left.getRowOffset() + rowCommonPrefix,
+          left.getRowLength() - rowCommonPrefix, right.getRowArray(),
+          right.getRowOffset() + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
+      }
+    }
   }
 
   public static int compareCommonFamilyPrefix(Cell left, Cell right, int familyCommonPrefix) {
-    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset() + familyCommonPrefix,
-      left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
-      right.getFamilyOffset() + familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix);
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(bbLeft.getFamilyByteBuffer(),
+          bbLeft.getFamilyPosition() + familyCommonPrefix,
+          left.getFamilyLength() - familyCommonPrefix, bbRight.getFamilyByteBuffer(),
+          bbRight.getFamilyPosition() + familyCommonPrefix,
+          right.getFamilyLength() - familyCommonPrefix);
+      } else {
+        return ByteBufferUtils.compareTo(bbLeft.getFamilyByteBuffer(),
+          bbLeft.getFamilyPosition() + familyCommonPrefix,
+          left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+          right.getFamilyOffset() + familyCommonPrefix,
+          right.getFamilyLength() - familyCommonPrefix);
+      }
+    } else {
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(left.getFamilyArray(),
+          left.getFamilyOffset() + familyCommonPrefix, left.getFamilyLength() - familyCommonPrefix,
+          bbRight.getFamilyByteBuffer(), bbRight.getFamilyPosition() + familyCommonPrefix,
+          right.getFamilyLength() - familyCommonPrefix);
+      } else {
+        return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset() + familyCommonPrefix,
+          left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+          right.getFamilyOffset() + familyCommonPrefix,
+          right.getFamilyLength() - familyCommonPrefix);
+      }
+    }
   }
 
   public static int compareCommonQualifierPrefix(Cell left, Cell right, int qualCommonPrefix) {
-    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset() + qualCommonPrefix,
-      left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
-      right.getQualifierOffset() + qualCommonPrefix, right.getQualifierLength() - qualCommonPrefix);
+    if (left instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(bbLeft.getQualifierByteBuffer(),
+          bbLeft.getQualifierPosition() + qualCommonPrefix,
+          left.getQualifierLength() - qualCommonPrefix, bbRight.getQualifierByteBuffer(),
+          bbRight.getQualifierPosition() + qualCommonPrefix,
+          right.getQualifierLength() - qualCommonPrefix);
+      } else {
+        return ByteBufferUtils.compareTo(bbLeft.getQualifierByteBuffer(),
+          bbLeft.getQualifierPosition() + qualCommonPrefix,
+          left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
+          right.getQualifierOffset() + qualCommonPrefix,
+          right.getQualifierLength() - qualCommonPrefix);
+      }
+    } else {
+      if (right instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbRight = (ByteBufferExtendedCell) right;
+        return ByteBufferUtils.compareTo(left.getQualifierArray(),
+          left.getQualifierOffset() + qualCommonPrefix,
+          left.getQualifierLength() - qualCommonPrefix, bbRight.getQualifierByteBuffer(),
+          bbRight.getQualifierPosition() + qualCommonPrefix,
+          right.getQualifierLength() - qualCommonPrefix);
+      } else {
+        return Bytes.compareTo(left.getQualifierArray(),
+          left.getQualifierOffset() + qualCommonPrefix,
+          left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
+          right.getQualifierOffset() + qualCommonPrefix,
+          right.getQualifierLength() - qualCommonPrefix);
+      }
+    }
   }
 
   protected static class SeekerState {
@@ -954,25 +1033,57 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       return 0;
     }
 
-    private static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
-      return Bytes.findCommonPrefix(left.getRowArray(), right.getRowArray(),
-        left.getRowLength() - rowCommonPrefix, right.getRowLength() - rowCommonPrefix,
-        left.getRowOffset() + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
+    // These findCommonPrefix* methods rely on the fact that keyOnlyKv is the "right" cell argument
+    // and always on-heap
+
+    private static int findCommonPrefixInRowPart(Cell left, KeyValue.KeyOnlyKeyValue right,
+      int rowCommonPrefix) {
+      if (left instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+        return ByteBufferUtils.findCommonPrefix(bbLeft.getRowByteBuffer(),
+          bbLeft.getRowPosition() + rowCommonPrefix, left.getRowLength() - rowCommonPrefix,
+          right.getRowArray(), right.getRowOffset() + rowCommonPrefix,
+          right.getRowLength() - rowCommonPrefix);
+      } else {
+        return Bytes.findCommonPrefix(left.getRowArray(), right.getRowArray(),
+          left.getRowLength() - rowCommonPrefix, right.getRowLength() - rowCommonPrefix,
+          left.getRowOffset() + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
+      }
     }
 
-    private static int findCommonPrefixInFamilyPart(Cell left, Cell right, int familyCommonPrefix) {
-      return Bytes.findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(),
-        left.getFamilyLength() - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix,
-        left.getFamilyOffset() + familyCommonPrefix, right.getFamilyOffset() + familyCommonPrefix);
+    private static int findCommonPrefixInFamilyPart(Cell left, KeyValue.KeyOnlyKeyValue right,
+      int familyCommonPrefix) {
+      if (left instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+        return ByteBufferUtils.findCommonPrefix(bbLeft.getFamilyByteBuffer(),
+          bbLeft.getFamilyPosition() + familyCommonPrefix,
+          left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+          right.getFamilyOffset() + familyCommonPrefix,
+          right.getFamilyLength() - familyCommonPrefix);
+      } else {
+        return Bytes.findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(),
+          left.getFamilyLength() - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix,
+          left.getFamilyOffset() + familyCommonPrefix,
+          right.getFamilyOffset() + familyCommonPrefix);
+      }
     }
 
-    private static int findCommonPrefixInQualifierPart(Cell left, Cell right,
+    private static int findCommonPrefixInQualifierPart(Cell left, KeyValue.KeyOnlyKeyValue right,
       int qualifierCommonPrefix) {
-      return Bytes.findCommonPrefix(left.getQualifierArray(), right.getQualifierArray(),
-        left.getQualifierLength() - qualifierCommonPrefix,
-        right.getQualifierLength() - qualifierCommonPrefix,
-        left.getQualifierOffset() + qualifierCommonPrefix,
-        right.getQualifierOffset() + qualifierCommonPrefix);
+      if (left instanceof ByteBufferExtendedCell) {
+        ByteBufferExtendedCell bbLeft = (ByteBufferExtendedCell) left;
+        return ByteBufferUtils.findCommonPrefix(bbLeft.getQualifierByteBuffer(),
+          bbLeft.getQualifierPosition() + qualifierCommonPrefix,
+          left.getQualifierLength() - qualifierCommonPrefix, right.getQualifierArray(),
+          right.getQualifierOffset() + qualifierCommonPrefix,
+          right.getQualifierLength() - qualifierCommonPrefix);
+      } else {
+        return Bytes.findCommonPrefix(left.getQualifierArray(), right.getQualifierArray(),
+          left.getQualifierLength() - qualifierCommonPrefix,
+          right.getQualifierLength() - qualifierCommonPrefix,
+          left.getQualifierOffset() + qualifierCommonPrefix,
+          right.getQualifierOffset() + qualifierCommonPrefix);
+      }
     }
 
     private void moveToPrevious() {

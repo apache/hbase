@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.util.Map;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -113,6 +114,16 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   }
 
   @Override
+  public Map<String, byte[]> getRequestAttributes() {
+    return delegate.getRequestAttributes();
+  }
+
+  @Override
+  public void setRequestAttributes(Map<String, byte[]> requestAttributes) {
+    delegate.setRequestAttributes(requestAttributes);
+  }
+
+  @Override
   public void setFailed(IOException e) {
     delegate.setFailed(e);
   }
@@ -131,5 +142,15 @@ public class DelegatingHBaseRpcController implements HBaseRpcController {
   public void notifyOnCancel(RpcCallback<Object> callback, CancellationCallback action)
     throws IOException {
     delegate.notifyOnCancel(callback, action);
+  }
+
+  @Override
+  public void setTableName(TableName tableName) {
+    delegate.setTableName(tableName);
+  }
+
+  @Override
+  public TableName getTableName() {
+    return delegate.getTableName();
   }
 }

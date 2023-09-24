@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.fs;
 
+import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
@@ -160,8 +162,8 @@ public class TestBlockReorder {
         @Override
         public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
           for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-            if (lb.getLocations().length > 1) {
-              DatanodeInfo[] infos = lb.getLocations();
+            if (getLocatedBlockLocations(lb).length > 1) {
+              DatanodeInfo[] infos = getLocatedBlockLocations(lb);
               if (infos[0].getHostName().equals(lookup)) {
                 LOG.info("HFileSystem bad host, inverting");
                 DatanodeInfo tmp = infos[0];

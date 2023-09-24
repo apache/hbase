@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -44,10 +45,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedOutputStream;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hbase.thirdparty.io.netty.buffer.ByteBuf;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoop;
 import org.apache.hbase.thirdparty.io.netty.util.concurrent.FastThreadLocal;
 
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
@@ -125,6 +128,14 @@ class IPCUtil {
     // Only pass priority if there is one set.
     if (call.priority != HConstants.PRIORITY_UNSET) {
       builder.setPriority(call.priority);
+    }
+    if (call.attributes != null && !call.attributes.isEmpty()) {
+      HBaseProtos.NameBytesPair.Builder attributeBuilder = HBaseProtos.NameBytesPair.newBuilder();
+      for (Map.Entry<String, byte[]> attribute : call.attributes.entrySet()) {
+        attributeBuilder.setName(attribute.getKey());
+        attributeBuilder.setValue(UnsafeByteOperations.unsafeWrap(attribute.getValue()));
+        builder.addAttribute(attributeBuilder.build());
+      }
     }
     builder.setTimeout(call.timeout);
 

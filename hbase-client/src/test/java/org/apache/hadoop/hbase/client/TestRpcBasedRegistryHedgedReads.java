@@ -23,6 +23,7 @@ import static org.junit.Assert.assertThrows;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -95,7 +96,7 @@ public class TestRpcBasedRegistryHedgedReads {
   public static final class RpcClientImpl implements RpcClient {
 
     public RpcClientImpl(Configuration configuration, String clusterId, SocketAddress localAddress,
-      MetricsConnection metrics) {
+      MetricsConnection metrics, Map<String, byte[]> attributes) {
     }
 
     @Override

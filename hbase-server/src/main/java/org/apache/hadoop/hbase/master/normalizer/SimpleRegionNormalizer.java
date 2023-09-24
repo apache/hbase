@@ -81,6 +81,9 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final int DEFAULT_MERGE_MIN_REGION_AGE_DAYS = 3;
   static final String MERGE_MIN_REGION_SIZE_MB_KEY = "hbase.normalizer.merge.min_region_size.mb";
   static final int DEFAULT_MERGE_MIN_REGION_SIZE_MB = 0;
+  static final String MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY =
+    "hbase.normalizer.merge.merge_request_max_number_of_regions";
+  static final long DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT = 100;
 
   private MasterServices masterServices;
   private NormalizerConfiguration normalizerConfiguration;
@@ -138,6 +141,16 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     return settledValue;
   }
 
+  private static long parseMergeRequestMaxNumberOfRegionsCount(final Configuration conf) {
+    final long parsedValue = conf.getLong(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY,
+      DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT);
+    final long settledValue = Math.max(2, parsedValue);
+    if (parsedValue != settledValue) {
+      warnInvalidValue(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY, parsedValue, settledValue);
+    }
+    return settledValue;
+  }
+
   private static <T> void warnInvalidValue(final String key, final T parsedValue,
     final T settledValue) {
     LOG.warn("Configured value {}={} is invalid. Setting value to {}.", key, parsedValue,
@@ -184,6 +197,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
    */
   public long getMergeMinRegionSizeMb() {
     return normalizerConfiguration.getMergeMinRegionSizeMb();
+  }
+
+  public long getMergeRequestMaxNumberOfRegionsCount() {
+    return normalizerConfiguration.getMergeRequestMaxNumberOfRegionsCount();
   }
 
   @Override
@@ -382,19 +399,21 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
           break;
         }
         if (
-          rangeMembers.isEmpty() // when there are no range members, seed the range with whatever
-                                 // we have. this way we're prepared in case the next region is
-                                 // 0-size.
-            || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0) // when there is only one
-                                                                        // region and the size is 0,
-                                                                        // seed the range with
-                                                                        // whatever we have.
-            || regionSizeMb == 0 // always add an empty region to the current range.
-            || (regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)
-        ) { // add the current region
-            // to the range when
-            // there's capacity
-            // remaining.
+          // when there are no range members, seed the range with whatever we have. this way we're
+          // prepared in case the next region is 0-size.
+          rangeMembers.isEmpty()
+            // when there is only one region and the size is 0, seed the range with whatever we
+            // have.
+            || (rangeMembers.size() == 1 && sumRangeMembersSizeMb == 0)
+            // add an empty region to the current range only if it doesn't exceed max merge request
+            // region count
+            || (regionSizeMb == 0 && rangeMembers.size() < getMergeRequestMaxNumberOfRegionsCount())
+            // add region if current range region size is less than avg region size of table
+            // and current range doesn't exceed max merge request region count
+            || ((regionSizeMb + sumRangeMembersSizeMb <= avgRegionSizeMb)
+              && (rangeMembers.size() < getMergeRequestMaxNumberOfRegionsCount()))
+        ) {
+          // add the current region to the range when there's capacity remaining.
           rangeMembers.add(new NormalizationTarget(regionInfo, regionSizeMb));
           sumRangeMembersSizeMb += regionSizeMb;
           continue;
@@ -502,6 +521,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final int mergeMinRegionCount;
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
+    private final long mergeRequestMaxNumberOfRegionsCount;
     private final long cumulativePlansSizeLimitMb;
 
     private NormalizerConfiguration() {
@@ -511,6 +531,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = DEFAULT_MERGE_MIN_REGION_COUNT;
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
+      mergeRequestMaxNumberOfRegionsCount = DEFAULT_MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT;
       cumulativePlansSizeLimitMb = DEFAULT_CUMULATIVE_SIZE_LIMIT_MB;
     }
 
@@ -522,6 +543,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       mergeMinRegionCount = parseMergeMinRegionCount(conf);
       mergeMinRegionAge = parseMergeMinRegionAge(conf);
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
+      mergeRequestMaxNumberOfRegionsCount = parseMergeRequestMaxNumberOfRegionsCount(conf);
       cumulativePlansSizeLimitMb =
         conf.getLong(CUMULATIVE_SIZE_LIMIT_MB_KEY, DEFAULT_CUMULATIVE_SIZE_LIMIT_MB);
       logConfigurationUpdated(SPLIT_ENABLED_KEY, currentConfiguration.isSplitEnabled(),
@@ -534,6 +556,9 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         currentConfiguration.getMergeMinRegionAge(), mergeMinRegionAge);
       logConfigurationUpdated(MERGE_MIN_REGION_SIZE_MB_KEY,
         currentConfiguration.getMergeMinRegionSizeMb(), mergeMinRegionSizeMb);
+      logConfigurationUpdated(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY,
+        currentConfiguration.getMergeRequestMaxNumberOfRegionsCount(),
+        mergeRequestMaxNumberOfRegionsCount);
     }
 
     public Configuration getConf() {
@@ -595,6 +620,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         return getMergeMinRegionSizeMb();
       }
       return mergeMinRegionSizeMb;
+    }
+
+    public long getMergeRequestMaxNumberOfRegionsCount() {
+      return mergeRequestMaxNumberOfRegionsCount;
     }
 
     private long getCumulativePlansSizeLimitMb() {

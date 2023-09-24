@@ -48,6 +48,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   private HRegion region;
   RegionScanner scanner;
   List<Cell> values;
+  boolean hasMore = true;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs, Path rootDir,
     TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics) throws IOException {
@@ -90,12 +91,13 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
   @Override
   public Result next() throws IOException {
-    values.clear();
-    scanner.nextRaw(values);
-    if (values.isEmpty()) {
-      // we are done
-      return null;
-    }
+    do {
+      if (!hasMore) {
+        return null;
+      }
+      values.clear();
+      this.hasMore = scanner.nextRaw(values);
+    } while (values.isEmpty());
 
     Result result = Result.create(values);
     if (this.scanMetrics != null) {

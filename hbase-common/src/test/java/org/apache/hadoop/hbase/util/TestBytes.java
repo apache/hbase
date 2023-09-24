@@ -585,4 +585,47 @@ public class TestBytes {
       assertArrayEquals(testData, result);
     }
   }
+
+  @Test
+  public void testFindCommonPrefix() throws Exception {
+    testFindCommonPrefix(false);
+  }
+
+  @Test
+  public void testFindCommonPrefixUnsafe() throws Exception {
+    testFindCommonPrefix(true);
+  }
+
+  private static void testFindCommonPrefix(boolean unsafe) throws Exception {
+    setUnsafe(unsafe);
+    try {
+      // tests for common prefixes less than 8 bytes in length (i.e. using non-vectorized path)
+      byte[] hello = Bytes.toBytes("hello");
+      byte[] helloWorld = Bytes.toBytes("helloworld");
+
+      assertEquals(5,
+        Bytes.findCommonPrefix(hello, helloWorld, hello.length, helloWorld.length, 0, 0));
+      assertEquals(5, Bytes.findCommonPrefix(hello, hello, hello.length, hello.length, 0, 0));
+      assertEquals(3,
+        Bytes.findCommonPrefix(hello, hello, hello.length - 2, hello.length - 2, 2, 2));
+      assertEquals(0, Bytes.findCommonPrefix(hello, hello, 0, 0, 0, 0));
+
+      // tests for common prefixes greater than 8 bytes in length which may use the vectorized path
+      byte[] hellohello = Bytes.toBytes("hellohello");
+      byte[] hellohellohi = Bytes.toBytes("hellohellohi");
+
+      assertEquals(10, Bytes.findCommonPrefix(hellohello, hellohellohi, hellohello.length,
+        hellohellohi.length, 0, 0));
+      assertEquals(10, Bytes.findCommonPrefix(hellohellohi, hellohello, hellohellohi.length,
+        hellohello.length, 0, 0));
+      assertEquals(10,
+        Bytes.findCommonPrefix(hellohello, hellohello, hellohello.length, hellohello.length, 0, 0));
+
+      hellohello[2] = 0;
+      assertEquals(2, Bytes.findCommonPrefix(hellohello, hellohellohi, hellohello.length,
+        hellohellohi.length, 0, 0));
+    } finally {
+      setUnsafe(HBasePlatformDependent.unaligned());
+    }
+  }
 }

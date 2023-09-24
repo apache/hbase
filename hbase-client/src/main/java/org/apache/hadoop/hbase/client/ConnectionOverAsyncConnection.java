@@ -189,12 +189,13 @@ class ConnectionOverAsyncConnection implements Connection {
       public Table build() {
         IOExceptionSupplier<ExecutorService> poolSupplier =
           pool != null ? () -> pool : ConnectionOverAsyncConnection.this::getBatchPool;
-        return new TableOverAsyncTable(conn,
+        AsyncTableBuilder<AdvancedScanResultConsumer> tableBuilder =
           conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
             .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
             .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
-            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS).build(),
-          poolSupplier);
+            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS);
+        requestAttributes.forEach(tableBuilder::setRequestAttribute);
+        return new TableOverAsyncTable(conn, tableBuilder.build(), poolSupplier);
       }
     };
   }

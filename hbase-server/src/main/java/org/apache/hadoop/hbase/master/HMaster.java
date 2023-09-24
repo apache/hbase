@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -156,6 +157,7 @@ import org.apache.hadoop.hbase.master.procedure.DeleteNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.FlushTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.InitMetaProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -229,6 +231,7 @@ import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.ZKReplicationQueueStorageForMigration;
 import org.apache.hadoop.hbase.replication.master.ReplicationHFileCleaner;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerTableCreator;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp.ReplicationSyncUpToolInfo;
@@ -363,6 +366,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private AssignmentManager assignmentManager;
 
   private RSGroupInfoManager rsGroupInfoManager;
+
+  private final ReplicationLogCleanerBarrier replicationLogCleanerBarrier =
+    new ReplicationLogCleanerBarrier();
+
+  // Only allow to add one sync replication peer concurrently
+  private final Semaphore syncReplicationPeerLock = new Semaphore(1);
 
   // manager of replication
   private ReplicationPeerManager replicationPeerManager;
@@ -4106,6 +4115,16 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return replicationPeerManager;
   }
 
+  @Override
+  public ReplicationLogCleanerBarrier getReplicationLogCleanerBarrier() {
+    return replicationLogCleanerBarrier;
+  }
+
+  @Override
+  public Semaphore getSyncReplicationPeerLock() {
+    return syncReplicationPeerLock;
+  }
+
   public HashMap<String, List<Pair<ServerName, ReplicationLoadSource>>>
     getReplicationLoad(ServerName[] serverNames) {
     List<ReplicationPeerDescription> peerList = this.getReplicationPeerManager().listPeers(null);
@@ -4208,6 +4227,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           continue;
         }
         RegionMetrics regionMetrics = sl.getRegionMetrics().get(regionInfo.getRegionName());
+        if (regionMetrics == null) {
+          LOG.warn("Can not get compaction details for the region: {} , it may be not online.",
+            regionInfo.getRegionNameAsString());
+          continue;
+        }
         if (regionMetrics.getCompactionState() == CompactionState.MAJOR) {
           if (compactionState == CompactionState.MINOR) {
             compactionState = CompactionState.MAJOR_AND_MINOR;
@@ -4357,5 +4381,35 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private void initializeCoprocessorHost(Configuration conf) {
     // initialize master side coprocessors before we start handling requests
     this.cpHost = new MasterCoprocessorHost(this, conf);
+  }
+
+  @Override
+  public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
+    long nonce) throws IOException {
+    checkInitialized();
+
+    if (
+      !getConfiguration().getBoolean(MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED,
+        MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED_DEFAULT)
+    ) {
+      throw new DoNotRetryIOException("FlushTableProcedureV2 is DISABLED");
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          getMaster().getMasterCoprocessorHost().preTableFlush(tableName);
+          LOG.info(getClientIdAuditPrefix() + " flush " + tableName);
+          submitProcedure(
+            new FlushTableProcedure(procedureExecutor.getEnvironment(), tableName, columnFamilies));
+          getMaster().getMasterCoprocessorHost().postTableFlush(tableName);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "FlushTableProcedure";
+        }
+      });
   }
 }
