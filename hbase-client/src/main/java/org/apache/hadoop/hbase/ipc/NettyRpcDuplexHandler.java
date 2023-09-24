@@ -133,7 +133,8 @@ class NettyRpcDuplexHandler extends ChannelDuplexHandler {
       Message.Builder builder = call.responseDefaultType.newBuilderForType();
       if (!builder.mergeDelimitedFrom(in)) {
         // The javadoc of mergeDelimitedFrom says returning false means the stream reaches EOF
-        // before reading any bytes out, so here we need to manually throw the EOFException out
+        // before reading any bytes out, so here we need to manually finish create the EOFException
+        // and finish the call
         call.setException(new EOFException("EOF while reading response with type: "
           + call.responseDefaultType.getClass().getName()));
         return;
