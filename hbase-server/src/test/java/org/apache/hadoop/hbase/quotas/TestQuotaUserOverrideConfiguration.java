@@ -84,11 +84,10 @@ public class TestQuotaUserOverrideConfiguration {
     // Add 6req/min limit
     admin.setQuota(QuotaSettingsFactory.throttleUser(userOverrideWithQuota,
       ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
-    Thread.sleep(60_000);
 
-    Table tableWithThrottle = admin.getConnection().getTableBuilder(TABLE_NAME, null)
+    Table tableWithThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
       .setRequestAttribute(CUSTOM_OVERRIDE_KEY, Bytes.toBytes(userOverrideWithQuota)).build();
-    Table tableWithoutThrottle = admin.getConnection().getTableBuilder(TABLE_NAME, null)
+    Table tableWithoutThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
       .setRequestAttribute(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
         Bytes.toBytes(userOverrideWithQuota))
       .build();
