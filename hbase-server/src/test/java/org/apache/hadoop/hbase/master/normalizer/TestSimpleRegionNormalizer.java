@@ -472,7 +472,6 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeRequestMaxNumberOfRegionsCount() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
-    conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
     conf.setInt(MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY, 3);
     final TableName tableName = name.getTableName();
@@ -492,7 +491,6 @@ public class TestSimpleRegionNormalizer {
   @Test
   public void testHonorsMergeRequestMaxNumberOfRegionsCountDefault() {
     conf.setBoolean(SPLIT_ENABLED_KEY, false);
-    conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
     conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
     final TableName tableName = name.getTableName();
     final List<RegionInfo> regionInfos = createRegionInfos(tableName, 3);
