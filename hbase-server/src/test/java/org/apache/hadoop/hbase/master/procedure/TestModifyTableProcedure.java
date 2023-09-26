@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.List;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -47,14 +53,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-import java.io.IOException;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 
 @Category({ MasterTests.class, LargeTests.class })
 public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
@@ -603,10 +601,8 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     // Test 1: Modify table without reopening any regions
     TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
-    TableDescriptor modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd)
-                                                               .setValue("test.hbase.conf",
-                                                                       "test.hbase.conf.value")
-                                                               .build();
+    TableDescriptor modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).setValue("test" +
+            ".hbase.conf", "test.hbase.conf.value").build();
     long procId1 = ProcedureTestingUtility.submitAndWait(procExec,
             new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd,
                     false, reopenRegions));
@@ -614,15 +610,15 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
     assertEquals("test.hbase.conf.value", currentHtd.getValue("test.hbase.conf"));
     List<HRegion> onlineRegions = UTIL.getHBaseCluster().getRegions(tableName);
-    //Regions should not aware of any changes.
+    // Regions should not aware of any changes.
     for (HRegion r : onlineRegions) {
       Assert.assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
     }
-    //Force regions to reopen
+    // Force regions to reopen
     for (HRegion r : onlineRegions) {
       getMaster().getAssignmentManager().move(r.getRegionInfo());
     }
-    //After the regions reopen, ensure that the configuration is updated.
+    // After the regions reopen, ensure that the configuration is updated.
     for (HRegion r : onlineRegions) {
       assertEquals("test.hbase.conf.value",
               r.getTableDescriptor().getValue("test.hbase.conf.value"));
@@ -662,8 +658,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     htd = UTIL.getAdmin().getDescriptor(tableName);
     modifiedDescriptor = TableDescriptorBuilder.newBuilder(htd).modifyColumnFamily(
             ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
-                                         .setCompressionType(Compression.Algorithm.SNAPPY).build())
-                                               .build();
+                    .setCompressionType(Compression.Algorithm.SNAPPY).build()).build();
     try {
       new ModifyTableProcedure(procExec.getEnvironment(), modifiedDescriptor, null, htd, false,
               reopenRegions);

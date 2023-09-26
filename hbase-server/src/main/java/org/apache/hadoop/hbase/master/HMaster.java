@@ -2585,7 +2585,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
         return TableDescriptorBuilder.newBuilder(old).setColumnFamily(column).build();
       }
-    }, nonceGroup, nonce, true, true);
+    }, nonceGroup, nonce, true);
   }
 
   /**
@@ -2612,7 +2612,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
         return TableDescriptorBuilder.newBuilder(old).modifyColumnFamily(descriptor).build();
       }
-    }, nonceGroup, nonce, true, true);
+    }, nonceGroup, nonce, true);
   }
 
   @Override
@@ -2663,7 +2663,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         }
         return TableDescriptorBuilder.newBuilder(old).removeColumnFamily(columnName).build();
       }
-    }, nonceGroup, nonce, true, true);
+    }, nonceGroup, nonce, true);
   }
 
   @Override
@@ -2758,6 +2758,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           return "DisableTableProcedure";
         }
       });
+  }
+
+  private long modifyTable(final TableName tableName,
+          final TableDescriptorGetter newDescriptorGetter, final long nonceGroup, final long nonce,
+          final boolean shouldCheckDescriptor) throws IOException {
+    return modifyTable(tableName, newDescriptorGetter, nonceGroup, nonce, shouldCheckDescriptor,
+            true);
   }
 
   private long modifyTable(final TableName tableName,

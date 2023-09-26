@@ -258,8 +258,13 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
-  public long enableTable(final TableName tableName, final long nonceGroup, final long nonce,
-          final boolean reopenRegions)
+  public long modifyTable(TableName tableName, TableDescriptor descriptor, long nonceGroup,
+          long nonce, boolean reopenRegions) throws IOException {
+    return modifyTable(tableName, descriptor, nonceGroup, nonce, reopenRegions);
+  }
+
+  @Override
+  public long enableTable(final TableName tableName, final long nonceGroup, final long nonce)
     throws IOException {
     return -1;
   }

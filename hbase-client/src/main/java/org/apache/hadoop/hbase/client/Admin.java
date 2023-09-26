@@ -1049,8 +1049,8 @@ public interface Admin extends Abortable, Closeable {
   }
 
   /**
-   * Same as {@link #modifyTableAsync(TableDescriptor td)}. except {@code lazyMode} will control
-   * whether user lazy mode to modify a table
+   * The same as {@link #modifyTableAsync(TableDescriptor td)}, except for the reopenRegions
+   * parameter, which controls whether the process of modifying the table should reopen all regions.
    *
    * @param td            description of the table
    * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT

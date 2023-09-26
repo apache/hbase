@@ -85,6 +85,13 @@ public class ModifyTableProcedure extends AbstractStateMachineTableProcedure<Mod
   }
 
   public ModifyTableProcedure(final MasterProcedureEnv env,
+          final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
+          final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor)
+          throws HBaseIOException {
+    this(env, newTableDescriptor, latch, oldTableDescriptor, shouldCheckDescriptor, true);
+  }
+
+  public ModifyTableProcedure(final MasterProcedureEnv env,
     final TableDescriptor newTableDescriptor, final ProcedurePrepareLatch latch,
     final TableDescriptor oldTableDescriptor, final boolean shouldCheckDescriptor,
           final boolean reopenRegions)

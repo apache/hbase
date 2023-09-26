@@ -63,7 +63,7 @@ public interface TableDescriptor {
   }
 
   /**
-   * This comparator only compare ColumnFamilyDescriptor between two tables
+   * Check if the ColumnFamilyDescriptors in two tableDescriptors are consistent.
    */
   static Comparator<TableDescriptor>
   getColumnFamilyComparator(
