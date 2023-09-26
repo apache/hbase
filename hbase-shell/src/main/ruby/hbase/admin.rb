@@ -774,6 +774,7 @@ module Hbase
       # Get table descriptor
       tdb = TableDescriptorBuilder.newBuilder(@admin.getDescriptor(table_name))
       hasTableUpdate = false
+      reopen_regions = true
 
       # Process all args
       args.each do |arg|
@@ -786,6 +787,12 @@ module Hbase
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
+
+        if !method.nil? && method == 'no_reopen_regions'
+          reopen_regions = false;
+          method = nil
+        end
+
         if method.nil? && arg.key?(NAME)
           descriptor = cfd(arg, tdb)
           column_name = descriptor.getNameAsString
@@ -906,9 +913,13 @@ module Hbase
 
       # Bulk apply all table modifications.
       if hasTableUpdate
-        future = @admin.modifyTableAsync(tdb.build)
-
-        if wait == true
+        future = @admin.modifyTableAsync(tdb.build, reopen_regions)
+        if reopen_regions == false
+          puts("WARNING: You are using 'no_reopen_regions' to modify a table, which will result in
+          inconsistencies in the configuration of online regions and other risks. If you encounter
+          any issues, use the original 'alter' command to make the modification again!")
+          future.get
+        elsif wait == true
           puts 'Updating all regions with the new schema...'
           future.get
         end

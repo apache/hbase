@@ -158,14 +158,28 @@ public interface MasterServices extends Server {
    * @param tableName  The table name
    * @param descriptor The updated table descriptor
    */
-  long modifyTable(final TableName tableName, final TableDescriptor descriptor,
-    final long nonceGroup, final long nonce) throws IOException;
+  default long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+    final long nonceGroup, final long nonce) throws IOException{
+    return modifyTable(tableName, descriptor, nonceGroup, nonce, true);
+  }
 
   /**
    * Modify the store file tracker of an existing table
    */
   long modifyTableStoreFileTracker(final TableName tableName, final String dstSFT,
     final long nonceGroup, final long nonce) throws IOException;
+
+  /**
+   * Modify the descriptor of an existing table
+   * @param tableName The table name
+   * @param descriptor The updated table descriptor
+   * @param nonceGroup
+   * @param nonce
+   * @param reopenRegions Whether to reopen regions after modifying the table descriptor
+   * @throws IOException
+   */
+  long modifyTable(final TableName tableName, final TableDescriptor descriptor,
+          final long nonceGroup, final long nonce, final boolean reopenRegions) throws IOException;
 
   /**
    * Enable an existing table

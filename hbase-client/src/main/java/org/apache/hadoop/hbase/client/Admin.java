@@ -1044,7 +1044,25 @@ public interface Admin extends Abortable, Closeable {
    * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
    *         operation to complete
    */
-  Future<Void> modifyTableAsync(TableDescriptor td) throws IOException;
+  default Future<Void> modifyTableAsync(TableDescriptor td) throws IOException{
+    return modifyTableAsync(td, true);
+  }
+
+  /**
+   * Same as {@link #modifyTableAsync(TableDescriptor td)}. except {@code lazyMode} will control
+   * whether user lazy mode to modify a table
+   *
+   * @param td            description of the table
+   * @param reopenRegions By default, 'modifyTable' reopens all regions, potentially causing a RIT
+   *                      (Region In Transition) storm in large tables. If set to 'false', regions
+   *                      will remain unaware of the modification until they are individually
+   *                      reopened. Please note that this may temporarily result in configuration
+   *                      inconsistencies among regions.
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   * operation to complete
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
 
   /**
    * Change the store file tracker of the given table.
