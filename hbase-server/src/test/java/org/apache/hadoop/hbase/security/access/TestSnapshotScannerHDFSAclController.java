@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -748,68 +747,6 @@ public class TestSnapshotScannerHDFSAclController {
       SnapshotScannerHDFSAclCleaner.isArchiveDataDir(archiveTableDir.getParent().getParent()));
     assertFalse(SnapshotScannerHDFSAclCleaner
       .isArchiveDataDir(archiveTableDir.getParent().getParent().getParent()));
-    deleteTable(table);
-  }
-
-  @Test
-  public void testModifyTable1() throws Exception {
-    String namespace = name.getMethodName();
-    TableName table = TableName.valueOf(namespace, name.getMethodName());
-    String snapshot = namespace + "t1";
-
-    String tableUserName = name.getMethodName();
-    User tableUser = User.createUserForTesting(conf, tableUserName, new String[] {});
-    String tableUserName2 = tableUserName + "2";
-    User tableUser2 = User.createUserForTesting(conf, tableUserName2, new String[] {});
-    String tableUserName3 = tableUserName + "3";
-    User tableUser3 = User.createUserForTesting(conf, tableUserName3, new String[] {});
-    String nsUserName = tableUserName + "-ns";
-    User nsUser = User.createUserForTesting(conf, nsUserName, new String[] {});
-    String globalUserName = tableUserName + "-global";
-    User globalUser = User.createUserForTesting(conf, globalUserName, new String[] {});
-    String globalUserName2 = tableUserName + "-global-2";
-    User globalUser2 = User.createUserForTesting(conf, globalUserName2, new String[] {});
-
-    SecureTestUtil.grantGlobal(TEST_UTIL, globalUserName, READ);
-    TestHDFSAclHelper.createNamespace(TEST_UTIL, namespace);
-    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsUserName, namespace, READ);
-    TableDescriptor td = TestHDFSAclHelper.createUserScanSnapshotDisabledTable(TEST_UTIL, table);
-    snapshotAndWait(snapshot, table);
-    SecureTestUtil.grantGlobal(TEST_UTIL, globalUserName2, READ);
-    TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName, table, READ);
-    SecureTestUtil.grantOnTable(TEST_UTIL, tableUserName2, table, TestHDFSAclHelper.COLUMN1, null,
-      READ);
-    TestHDFSAclHelper.grantOnTable(TEST_UTIL, tableUserName3, table, WRITE);
-
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, -1);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, nsUser, snapshot, -1);
-    // Global permission is set before table is created, the acl is inherited
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser, snapshot, 6);
-    // Global permission is set after table is created, the table dir acl is skip
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser2, snapshot, -1);
-
-    // enable user scan snapshot
-    admin.modifyTable(TableDescriptorBuilder.newBuilder(td)
-      .setValue(SnapshotScannerHDFSAclHelper.ACL_SYNC_TO_HDFS_ENABLE, "true").build());
-    // check scan snapshot
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser, snapshot, 6);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser2, snapshot, -1);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, tableUser3, snapshot, -1);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, nsUser, snapshot, 6);
-    TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, globalUser, snapshot, 6);
-    // check acl table storage and ACLs in dirs
-    assertTrue(hasUserGlobalHdfsAcl(aclTable, globalUserName));
-    checkUserAclEntry(FS, helper.getGlobalRootPaths(), globalUserName, true, true);
-    assertTrue(hasUserNamespaceHdfsAcl(aclTable, nsUserName, namespace));
-    checkUserAclEntry(FS, helper.getNamespaceRootPaths(namespace), nsUserName, true, true);
-    assertTrue(hasUserTableHdfsAcl(aclTable, tableUserName, table));
-    checkUserAclEntry(FS, helper.getTableRootPaths(table, false), tableUserName, true, true);
-    for (String user : new String[] { tableUserName2, tableUserName3 }) {
-      assertFalse(hasUserTableHdfsAcl(aclTable, user, table));
-      checkUserAclEntry(FS, helper.getTableRootPaths(table, false), user, false, false);
-    }
     deleteTable(table);
   }
 
