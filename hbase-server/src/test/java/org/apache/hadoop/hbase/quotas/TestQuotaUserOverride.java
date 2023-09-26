@@ -52,8 +52,7 @@ public class TestQuotaUserOverride {
   private static final int NUM_SERVERS = 1;
   private static final String CUSTOM_OVERRIDE_KEY = "foo";
 
-  private static final TableName TABLE_NAME =
-    TableName.valueOf("TestQuotaUserOverride");
+  private static final TableName TABLE_NAME = TableName.valueOf("TestQuotaUserOverride");
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -91,21 +90,27 @@ public class TestQuotaUserOverride {
       .setRequestAttribute(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
         Bytes.toBytes(userOverrideWithQuota))
       .build();
+    Table tableWithoutThrottle2 =
+      TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null).build();
 
     // warm things up
     doPuts(10, FAMILY, QUALIFIER, tableWithThrottle);
     doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle);
+    doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2);
 
     // should reject some requests
     assertTrue(10 > doPuts(10, FAMILY, QUALIFIER, tableWithThrottle));
     // should accept all puts
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle));
+    // should accept all puts
+    assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2));
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userOverrideWithQuota));
     Thread.sleep(60_000);
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithThrottle));
     assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle));
+    assertEquals(10, doPuts(10, FAMILY, QUALIFIER, tableWithoutThrottle2));
   }
 
 }
