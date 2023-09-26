@@ -50,8 +50,10 @@ public class TestQuotaUserOverride {
   private static final byte[] FAMILY = Bytes.toBytes("cf");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
   private static final int NUM_SERVERS = 1;
+  private static final String CUSTOM_OVERRIDE_KEY = "foo";
 
-  private static final TableName TABLE_NAME = TableName.valueOf("TestQuotaUserOverride");
+  private static final TableName TABLE_NAME =
+    TableName.valueOf("TestQuotaUserOverride");
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -60,6 +62,8 @@ public class TestQuotaUserOverride {
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 1);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 500);
+    TEST_UTIL.getConfiguration().set(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
+      CUSTOM_OVERRIDE_KEY);
     TEST_UTIL.startMiniCluster(NUM_SERVERS);
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     QuotaCache.TEST_FORCE_REFRESH = true;
@@ -73,22 +77,19 @@ public class TestQuotaUserOverride {
   }
 
   @Test
-  public void testUserGlobalThrottleWithOverride() throws Exception {
+  public void testUserGlobalThrottleWithCustomOverride() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
     final String userOverrideWithQuota = User.getCurrent().getShortName() + "123";
-    final String userOverrideWithoutQuota = User.getCurrent().getShortName() + "456";
 
     // Add 6req/min limit
     admin.setQuota(QuotaSettingsFactory.throttleUser(userOverrideWithQuota,
       ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
 
     Table tableWithThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
-      .setRequestAttribute(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
-        Bytes.toBytes(userOverrideWithQuota))
-      .build();
+      .setRequestAttribute(CUSTOM_OVERRIDE_KEY, Bytes.toBytes(userOverrideWithQuota)).build();
     Table tableWithoutThrottle = TEST_UTIL.getConnection().getTableBuilder(TABLE_NAME, null)
       .setRequestAttribute(QuotaCache.QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY,
-        Bytes.toBytes(userOverrideWithoutQuota))
+        Bytes.toBytes(userOverrideWithQuota))
       .build();
 
     // warm things up

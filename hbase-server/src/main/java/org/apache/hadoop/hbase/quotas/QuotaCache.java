@@ -63,7 +63,7 @@ public class QuotaCache implements Stoppable {
   public static final String REFRESH_CONF_KEY = "hbase.quota.refresh.period";
 
   // defines the request attribute key which, when provided, will override the request's username
-  // from the perspective of user quotas. This is also the default request attribute key
+  // from the perspective of user quotas
   public static final String QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY =
     "hbase.quota.user.override.key";
   private static final int REFRESH_DEFAULT_PERIOD = 5 * 60000; // 5min
@@ -90,8 +90,8 @@ public class QuotaCache implements Stoppable {
 
   public QuotaCache(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
-    this.userOverrideRequestAttributeKey = rsServices.getConfiguration()
-      .get(QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY, QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY);
+    this.userOverrideRequestAttributeKey =
+      rsServices.getConfiguration().get(QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY);
   }
 
   public void start() throws IOException {
@@ -178,6 +178,10 @@ public class QuotaCache implements Stoppable {
    * @param ugi The request's UserGroupInformation
    */
   private String getQuotaUserName(final UserGroupInformation ugi) {
+    if (userOverrideRequestAttributeKey == null) {
+      return ugi.getShortUserName();
+    }
+
     Optional<RpcCall> rpcCall = RpcServer.getCurrentCall();
     if (
       rpcCall.isPresent()
