@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +35,11 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
+import org.apache.hadoop.hbase.ipc.RpcCall;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -56,6 +60,11 @@ public class QuotaCache implements Stoppable {
   private static final Logger LOG = LoggerFactory.getLogger(QuotaCache.class);
 
   public static final String REFRESH_CONF_KEY = "hbase.quota.refresh.period";
+
+  // defines the request attribute key which, when provided, will override the request's username
+  // from the perspective of user quotas
+  public static final String QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY =
+    "hbase.quota.user.override.key";
   private static final int REFRESH_DEFAULT_PERIOD = 5 * 60000; // 5min
   private static final int EVICT_PERIOD_FACTOR = 5; // N * REFRESH_DEFAULT_PERIOD
 
@@ -76,12 +85,15 @@ public class QuotaCache implements Stoppable {
   private final ConcurrentHashMap<TableName, Double> tableMachineQuotaFactors =
     new ConcurrentHashMap<>();
   private final RegionServerServices rsServices;
+  private final String userOverrideRequestAttributeKey;
 
   private QuotaRefresherChore refreshChore;
   private boolean stopped = true;
 
   public QuotaCache(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
+    this.userOverrideRequestAttributeKey =
+      rsServices.getConfiguration().get(QUOTA_USER_REQUEST_ATTRIBUTE_OVERRIDE_KEY);
   }
 
   public void start() throws IOException {
@@ -127,7 +139,7 @@ public class QuotaCache implements Stoppable {
    * @return the quota info associated to specified user
    */
   public UserQuotaState getUserQuotaState(final UserGroupInformation ugi) {
-    return computeIfAbsent(userQuotaCache, ugi.getShortUserName(), UserQuotaState::new,
+    return computeIfAbsent(userQuotaCache, getQuotaUserName(ugi), UserQuotaState::new,
       this::triggerCacheRefresh);
   }
 
@@ -160,6 +172,28 @@ public class QuotaCache implements Stoppable {
 
   protected boolean isExceedThrottleQuotaEnabled() {
     return exceedThrottleQuotaEnabled;
+  }
+
+  /**
+   * Applies a request attribute user override if available, otherwise returns the UGI's short
+   * username
+   * @param ugi The request's UserGroupInformation
+   */
+  private String getQuotaUserName(final UserGroupInformation ugi) {
+    if (userOverrideRequestAttributeKey == null) {
+      return ugi.getShortUserName();
+    }
+
+    Optional<RpcCall> rpcCall = RpcServer.getCurrentCall();
+    if (!rpcCall.isPresent()) {
+      return ugi.getShortUserName();
+    }
+
+    byte[] override = rpcCall.get().getRequestAttribute(userOverrideRequestAttributeKey);
+    if (override == null) {
+      return ugi.getShortUserName();
+    }
+    return Bytes.toString(override);
   }
 
   /**
